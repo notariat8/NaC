@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "title": "Business-OS Onboarding Flow",
+  "modes": ["founding", "existing"],
+  "phases": [
+    {
+      "id": "phase_1_context",
+      "title": "Ausgangslage klaeren"
+    },
+    {
+      "id": "phase_2_feasibility",
+      "title": "Machbarkeit bewerten"
+    },
+    {
+      "id": "phase_3_target_model",
+      "title": "Zielmodell und Governance festlegen"
+    },
+    {
+      "id": "phase_4_rollout",
+      "title": "Pilot und Einfuehrungsplan"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q_mode",
+      "phase": "phase_1_context",
+      "prompt": "Starten Sie mit Gruendung oder Bestandsunternehmen?",
+      "options": ["founding", "existing"],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung"]
+    },
+    {
+      "id": "q_company_scope",
+      "phase": "phase_1_context",
+      "prompt": "Welche Einheiten sollen zuerst betrachtet werden (Standort, Team, Bereich)?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "sachbearbeitung"]
+    },
+    {
+      "id": "q_critical_processes",
+      "phase": "phase_1_context",
+      "prompt": "Welche 3 Kernprozesse haben oberste Prioritaet?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung"]
+    },
+    {
+      "id": "q_existing_systems",
+      "phase": "phase_2_feasibility",
+      "prompt": "Welche bestehenden Systeme muessen integriert werden?",
+      "options": [],
+      "required_for_modes": ["existing"],
+      "required_roles": ["sachbearbeitung", "prozessverantwortung"]
+    },
+    {
+      "id": "q_regulatory_needs",
+      "phase": "phase_2_feasibility",
+      "prompt": "Welche regulatorischen Nachweise sind zwingend?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["freigabeverantwortung", "revision_audit"]
+    },
+    {
+      "id": "q_role_mapping",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche generischen und fachspezifischen Rollen werden genutzt?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "freigabeverantwortung"]
+    },
+    {
+      "id": "q_approval_rules",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche Vorgaenge sind self_resolve und welche approval-pflichtig?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["freigabeverantwortung"]
+    },
+    {
+      "id": "q_pilot_definition",
+      "phase": "phase_4_rollout",
+      "prompt": "Wie sieht der Pilot aus (Prozesse, Team, Dauer, Erfolgskriterien)?",
+      "options": [],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "sachbearbeitung"]
+    }
+  ],
+  "role_knowledge_model": {
+    "mitarbeiter": ["ticket_erstellung", "beobachtung", "basisprozessverstaendnis"],
+    "sachbearbeitung": ["prozessausfuehrung", "datenqualitaet", "self_resolve_grenzen"],
+    "prozessverantwortung": ["prozessdesign", "risikobewertung", "rolloutplanung"],
+    "freigabeverantwortung": ["approval_regeln", "compliance", "eskalation"],
+    "revision_audit": ["nachweispruefung", "dokumentationspflichten"]
+  }
+}

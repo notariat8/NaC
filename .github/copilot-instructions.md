@@ -29,6 +29,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 - `policies/data-protection-policy.yaml`
 - `policies/sbom-policy.yaml`
 - `policies/role-model-policy.yaml`
+- `policies/github-identity-registry.json`
 - `docs/governance.md`
 
 ## Sprache und Kultur

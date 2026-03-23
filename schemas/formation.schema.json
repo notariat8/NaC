@@ -6,6 +6,7 @@
     "process_type",
     "request_id",
     "idempotency_key",
+    "actor_context",
     "status",
     "year",
     "venture_name",
@@ -23,6 +24,38 @@
     "idempotency_key": {
       "type": "string",
       "minLength": 8
+    },
+    "actor_context": {
+      "type": "object",
+      "required": [
+        "actor_role",
+        "requested_decision_type",
+        "impact_level",
+        "compliance_impact"
+      ],
+      "properties": {
+        "actor_role": { "type": "string", "minLength": 2 },
+        "actor_display": { "type": "string" },
+        "requested_decision_type": {
+          "type": "string",
+          "enum": ["self_resolve", "requires_review", "requires_approval"]
+        },
+        "impact_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "compliance_impact": { "type": "boolean" },
+        "requested_qualification": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "qualification_evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "approver_role": { "type": "string" },
+        "resolver_role": { "type": "string" }
+      }
     },
     "status": {
       "type": "string",

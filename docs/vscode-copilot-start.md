@@ -4,6 +4,9 @@
 
 Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
 
+Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefuehrten Pfad:
+`docs/vscode-first-user-path.md`
+
 ## Voraussetzungen
 
 - GitHub-Organisation oder Unternehmenskonto

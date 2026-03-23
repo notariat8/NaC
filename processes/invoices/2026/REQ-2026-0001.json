@@ -2,6 +2,21 @@
   "process_type": "invoice",
   "request_id": "REQ-2026-0001",
   "idempotency_key": "invoice-acme-20260301",
+  "actor_context": {
+    "actor_role": "sachbearbeitung",
+    "actor_display": "ReNo Team",
+    "requested_decision_type": "requires_approval",
+    "impact_level": "medium",
+    "compliance_impact": true,
+    "requested_qualification": [
+      "rvg_billing_trained"
+    ],
+    "qualification_evidence": [
+      "TRAINING-CERT-2026-001"
+    ],
+    "approver_role": "anwalt_fachlich",
+    "resolver_role": "sachbearbeitung"
+  },
   "status": "draft",
   "year": 2026,
   "customer": {
@@ -24,6 +39,7 @@
   "external_ref": "CRM-2026-44",
   "metadata": {
     "channel": "llm",
-    "owner": "sales"
+    "owner": "sales",
+    "billing_regime": "rvg"
   }
 }

@@ -148,6 +148,65 @@ class BusinessProcessEngine:
             if payload["status"] == "submitted" and payload.get("requires_review", False):
                 errors.append("submitted darf nur nach expliziter Freigabe ausserhalb dieses Referenzsystems erfolgen")
 
+        errors.extend(self._validate_actor_context(payload))
+
+        if process_type == "invoice":
+            errors.extend(self._validate_rvg_requirements(payload))
+
+        return errors
+
+    def _validate_actor_context(self, payload: dict[str, Any]) -> list[str]:
+        errors: list[str] = []
+        actor_context = payload.get("actor_context", {})
+        if not isinstance(actor_context, dict):
+            return ["actor_context muss ein Objekt sein"]
+
+        decision_type = actor_context.get("requested_decision_type")
+        impact_level = actor_context.get("impact_level")
+        compliance_impact = actor_context.get("compliance_impact")
+        approver_role = actor_context.get("approver_role")
+        actor_role = actor_context.get("actor_role")
+
+        if decision_type == "requires_approval" and not approver_role:
+            errors.append("requires_approval erfordert approver_role")
+
+        if decision_type == "self_resolve":
+            if impact_level in {"medium", "high"}:
+                errors.append("self_resolve ist nur fuer low impact erlaubt")
+            if compliance_impact is True:
+                errors.append("self_resolve ist bei compliance_impact=true nicht erlaubt")
+
+        if (
+            decision_type == "requires_approval"
+            and isinstance(actor_role, str)
+            and isinstance(approver_role, str)
+            and actor_role == approver_role
+        ):
+            errors.append("actor_role und approver_role muessen fuer Vier-Augen-Prinzip verschieden sein")
+
+        requested_qualification = actor_context.get("requested_qualification", [])
+        qualification_evidence = actor_context.get("qualification_evidence", [])
+        if requested_qualification and not qualification_evidence:
+            errors.append("requested_qualification erfordert qualification_evidence")
+
+        return errors
+
+    def _validate_rvg_requirements(self, payload: dict[str, Any]) -> list[str]:
+        errors: list[str] = []
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return errors
+
+        if metadata.get("billing_regime") != "rvg":
+            return errors
+
+        actor_context = payload.get("actor_context", {})
+        qualifications = actor_context.get("requested_qualification", [])
+        decision_type = actor_context.get("requested_decision_type")
+        if not isinstance(qualifications, list) or "rvg_billing_trained" not in qualifications:
+            errors.append("RVG-Rechnung erfordert Qualifikation rvg_billing_trained")
+        if decision_type == "self_resolve":
+            errors.append("RVG-Rechnung darf nicht als self_resolve eingereicht werden")
         return errors
 
     def _build_warnings(self, document: ProcessDocument) -> list[str]:

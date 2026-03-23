@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "questions": {
+    "q_mode": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#mode-gateway",
+      "mermaid": "flowchart TD\n    Start[Start] --> Mode{Gruendung oder Bestand}\n    Mode -->|Gruendung| Founding[Pfad Gruendung]\n    Mode -->|Bestand| Existing[Pfad Bestandsunternehmen]"
+    },
+    "q_company_scope": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#scope-definition",
+      "mermaid": "flowchart TD\n    Scope[Scope erfassen] --> Units[Einheiten definieren]\n    Units --> Owners[Verantwortliche je Einheit]"
+    },
+    "q_critical_processes": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#priority-processes",
+      "mermaid": "flowchart TD\n    Proc[Prozessliste] --> Priorize[Top-3 priorisieren]\n    Priorize --> Pilot[Pilotkandidaten festlegen]"
+    },
+    "q_existing_systems": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#system-integration",
+      "mermaid": "flowchart TD\n    Ist[Bestehende Systeme] --> Fit[Integrationsfit]\n    Fit --> Gap[Gap-Liste]"
+    },
+    "q_regulatory_needs": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#regulatory-check",
+      "mermaid": "flowchart TD\n    Rules[Regulatorik] --> Evidence[Nachweise festlegen]\n    Evidence --> Gate[Freigabegate]"
+    },
+    "q_role_mapping": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#role-mapping",
+      "mermaid": "flowchart TD\n    Generic[Generische Rollen] --> Domain[Fachspezifische Rollen]\n    Domain --> Qual[Qualifikationen zuordnen]"
+    },
+    "q_approval_rules": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#approval-matrix",
+      "mermaid": "flowchart TD\n    Impact[Impact ermitteln] --> Decision{self, review, approval}\n    Decision --> Audit[Dokumentation speichern]"
+    },
+    "q_pilot_definition": {
+      "bpmn_ref": "bpmn/onboarding-entry.bpmn#pilot-plan",
+      "mermaid": "flowchart TD\n    Pilot[Pilotplan] --> Metrics[Erfolgskriterien]\n    Metrics --> Rollout[Rolloutentscheidung]"
+    }
+  }
+}

@@ -21,6 +21,9 @@ required_files:
   - policies/technology-policy.yaml
   - policies/data-protection-policy.yaml
   - policies/role-model-policy.yaml
+  - policies/onboarding-flow.json
+  - policies/onboarding-diagrams.json
+  - policies/github-identity-registry.json
 
 vscode_extensions_required:
   - github.copilot

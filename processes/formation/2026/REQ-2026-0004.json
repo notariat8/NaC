@@ -2,6 +2,14 @@
   "process_type": "formation",
   "request_id": "REQ-2026-0004",
   "idempotency_key": "formation-exampleco-2026",
+  "actor_context": {
+    "actor_role": "mitarbeiter",
+    "actor_display": "Founding Team",
+    "requested_decision_type": "requires_review",
+    "impact_level": "medium",
+    "compliance_impact": true,
+    "approver_role": "prozessverantwortung"
+  },
   "status": "validated",
   "year": 2026,
   "venture_name": "ExampleCo UG",

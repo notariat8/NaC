@@ -22,6 +22,7 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `docs/fachanwender-guide.md` erklaert das Modell ohne IT-Vorkenntnisse.
 - `docs/START_HERE.md` fuehrt neue Nutzer durch die Einfuehrung.
 - `docs/vscode-copilot-start.md` ist der Startpfad fuer VS Code + GitHub Copilot.
+- `docs/vscode-first-user-path.md` fuehrt Erstnutzer mit einem Formularpfad.
 - `docs/copilot-quickstart-15min.md` ist die 15-Minuten-Kurzanleitung fuer Copilot.
 - `docs/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
@@ -30,14 +31,20 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `docs/issue-backlog-public.md` enthaelt priorisierte Public-Issues.
 - `docs/startup-verification.md` beschreibt den lokalen Startcheck.
 - `docs/role-model.md` enthaelt Rollen, Qualifikationen und Approval-Matrix.
+- `docs/github-identity-role-model.md` erklaert GitHub-Login zu Rollenreferenz.
 - `prompts/` enthaelt Prompt-Standards fuer das LLM-Frontend.
 - `prompts/onboarding/` enthaelt gefuehrte Einfuehrungs-Prompts je Branche.
+- `prompts/onboarding/vscode-first-user-assistant.md` ist der gefuehrte Erstnutzer-Prompt.
 - `scripts/startup_check.py` prueft Setup, Policies und optional Tests.
+- `scripts/onboarding_wizard.py` speichert Onboarding-Status ueber mehrere Tage/Personen.
 - `policies/` enthaelt Kultur-, Sprach- und Prozessvorgaben.
 - `policies/technology-policy.yaml` definiert den verbindlichen Technikstack.
 - `policies/data-protection-policy.yaml` definiert Datenschutz- und Secret-Regeln.
 - `policies/sbom-policy.yaml` definiert den verbindlichen SBOM-Standard.
 - `policies/role-model-policy.yaml` definiert Rollenrechte und Qualifikations-Gates.
+- `policies/onboarding-flow.json` definiert Fragen, Phasen und Rollenwissen fuer Onboarding.
+- `policies/onboarding-diagrams.json` definiert BPMN-/Mermaid-Referenzen je Frage.
+- `policies/github-identity-registry.json` mappt GitHub-Login auf technische Rollen.
 - `.cursor/rules/` enthaelt persistente Cursor-Regeln fuer das Vorgehen.
 - `schemas/` definiert strukturierte Prozessantraege.
 - `bpmn/` enthaelt fachlich verbindliche BPMN-2.0-Quellmodelle.

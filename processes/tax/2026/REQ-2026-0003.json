@@ -2,6 +2,20 @@
   "process_type": "tax",
   "request_id": "REQ-2026-0003",
   "idempotency_key": "ustva-2026-03",
+  "actor_context": {
+    "actor_role": "steuerfachkraft",
+    "actor_display": "Tax Team",
+    "requested_decision_type": "requires_review",
+    "impact_level": "high",
+    "compliance_impact": true,
+    "requested_qualification": [
+      "tax_professional"
+    ],
+    "qualification_evidence": [
+      "CERT-TAX-TEAM-001"
+    ],
+    "approver_role": "freigabeverantwortung"
+  },
   "status": "prepared",
   "year": 2026,
   "tax_type": "ustva",

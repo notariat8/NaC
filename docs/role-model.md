@@ -63,6 +63,16 @@ flowchart TD
     Approver --> Done
 ```
 
+Technische Pflichtfelder je Prozessantrag:
+
+- `actor_context.actor_role`
+- `actor_context.requested_decision_type`
+- `actor_context.impact_level`
+- `actor_context.compliance_impact`
+- optional `actor_context.requested_qualification`
+- optional `actor_context.qualification_evidence`
+- je nach Entscheidung `actor_context.approver_role`
+
 ## 7) Gender und Rollennamen
 
 Die interne Rollen-ID bleibt neutral und stabil, z. B. `anwalt_fachlich` als technische Kennung.

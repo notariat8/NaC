@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "description": "Source of truth for GitHub user to technical role mapping.",
+  "role_aliases": {
+    "anwalt": "anwalt_fachlich",
+    "anwaeltin": "anwalt_fachlich",
+    "reno": "reno",
+    "refa": "refa",
+    "mitarbeiter": "mitarbeiter",
+    "mitarbeiterin": "mitarbeiter",
+    "praktikant": "mitarbeiter",
+    "praktikantin": "mitarbeiter"
+  },
+  "users": [
+    {
+      "github_login": "ofunk-nvidia",
+      "display_name": "Default Maintainer",
+      "technical_role_id": "prozessverantwortung",
+      "qualifications": [
+        "process_design"
+      ],
+      "active": true
+    }
+  ]
+}

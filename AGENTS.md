@@ -21,6 +21,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 - Keine realen Secrets oder personenbezogenen Daten im Repository speichern (`policies/data-protection-policy.yaml`).
 - SBOM-Vorgaben sind verbindlich nach `policies/sbom-policy.yaml`.
 - Rollen und Qualifikationsgrenzen sind verbindlich nach `policies/role-model-policy.yaml`.
+- GitHub-Identitaeten und Rollenbindung sind verbindlich nach `policies/github-identity-registry.json`.
 
 ## Erststart fuer neue Nutzer
 

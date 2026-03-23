@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_OnboardingEntry"
+                  targetNamespace="https://github.com/ofunk-nvidia/GITaaS/bpmn">
+  <bpmn:process id="OnboardingEntryProcess" name="Onboarding Entry Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Onboarding" name="Onboarding Start">
+      <bpmn:outgoing>Flow_O1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ModeGateway" name="Modus waehlen (Gruendung/Bestand)">
+      <bpmn:incoming>Flow_O1</bpmn:incoming>
+      <bpmn:outgoing>Flow_O2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ScopeDefinition" name="Scope und Einheiten definieren">
+      <bpmn:incoming>Flow_O2</bpmn:incoming>
+      <bpmn:outgoing>Flow_O3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_SystemAndRegulatoryCheck" name="System- und Regulatorik-Check">
+      <bpmn:incoming>Flow_O3</bpmn:incoming>
+      <bpmn:outgoing>Flow_O4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_RoleAndApprovalDesign" name="Rollen- und Approval-Matrix festlegen">
+      <bpmn:incoming>Flow_O4</bpmn:incoming>
+      <bpmn:outgoing>Flow_O5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_PilotPlan" name="Pilotplan erstellen">
+      <bpmn:incoming>Flow_O5</bpmn:incoming>
+      <bpmn:outgoing>Flow_O6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_OnboardingDone" name="Onboarding Plan finalisiert">
+      <bpmn:incoming>Flow_O6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_O1" sourceRef="StartEvent_Onboarding" targetRef="Task_ModeGateway"/>
+    <bpmn:sequenceFlow id="Flow_O2" sourceRef="Task_ModeGateway" targetRef="Task_ScopeDefinition"/>
+    <bpmn:sequenceFlow id="Flow_O3" sourceRef="Task_ScopeDefinition" targetRef="Task_SystemAndRegulatoryCheck"/>
+    <bpmn:sequenceFlow id="Flow_O4" sourceRef="Task_SystemAndRegulatoryCheck" targetRef="Task_RoleAndApprovalDesign"/>
+    <bpmn:sequenceFlow id="Flow_O5" sourceRef="Task_RoleAndApprovalDesign" targetRef="Task_PilotPlan"/>
+    <bpmn:sequenceFlow id="Flow_O6" sourceRef="Task_PilotPlan" targetRef="EndEvent_OnboardingDone"/>
+  </bpmn:process>
+</bpmn:definitions>
