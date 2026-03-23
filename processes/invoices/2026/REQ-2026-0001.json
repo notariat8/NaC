@@ -1,0 +1,29 @@
+{
+  "process_type": "invoice",
+  "request_id": "REQ-2026-0001",
+  "idempotency_key": "invoice-acme-20260301",
+  "status": "draft",
+  "year": 2026,
+  "customer": {
+    "name": "Acme GmbH",
+    "customer_id": "C-1000",
+    "email": "billing@acme.example"
+  },
+  "currency": "EUR",
+  "issue_date": "2026-03-01",
+  "due_date": "2026-03-15",
+  "items": [
+    {
+      "description": "Strategie-Workshop",
+      "quantity": 1,
+      "unit_price": 1200.0,
+      "account_code": "8400",
+      "tax_rate": 19.0
+    }
+  ],
+  "external_ref": "CRM-2026-44",
+  "metadata": {
+    "channel": "llm",
+    "owner": "sales"
+  }
+}

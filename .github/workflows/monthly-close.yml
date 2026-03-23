@@ -1,0 +1,47 @@
+name: Monthly Close
+
+on:
+  schedule:
+    - cron: "0 5 1 * *"
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Abschlussjahr"
+        required: true
+        type: string
+      month:
+        description: "Abschlussmonat"
+        required: true
+        type: string
+
+jobs:
+  monthly-close:
+    runs-on: ubuntu-latest
+    environment: month-close
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Create close report
+        shell: bash
+        run: |
+          mkdir -p out
+          python -m business_os monthly-close \
+            --year "${{ inputs.year || '2026' }}" \
+            --month "${{ inputs.month || '3' }}" \
+            --repo-root . > out/monthly-close-report.json
+
+      - name: Upload close report
+        uses: actions/upload-artifact@v4
+        with:
+          name: monthly-close-report
+          path: out/monthly-close-report.json

@@ -1,0 +1,33 @@
+{
+  "process_type": "bookkeeping",
+  "request_id": "REQ-2026-0002",
+  "idempotency_key": "bank-20260304-10001",
+  "status": "validated",
+  "year": 2026,
+  "entry_date": "2026-03-04",
+  "currency": "EUR",
+  "document_ref": "BANK-20260304-1",
+  "lines": [
+    {
+      "account_code": "1200",
+      "direction": "debit",
+      "amount": 1428.0
+    },
+    {
+      "account_code": "8400",
+      "direction": "credit",
+      "amount": 1200.0,
+      "tax_code": "U19"
+    },
+    {
+      "account_code": "1776",
+      "direction": "credit",
+      "amount": 228.0,
+      "tax_code": "U19"
+    }
+  ],
+  "external_ref": "BANKAPI-9981",
+  "metadata": {
+    "source": "bank_feed"
+  }
+}

@@ -1,0 +1,39 @@
+name: Validate Business Processes
+
+on:
+  pull_request:
+    paths:
+      - "processes/**/*.json"
+      - "schemas/**/*.json"
+      - "src/business_os/**/*.py"
+      - "tests/**/*.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Validate all process documents
+        run: python -m business_os validate-all --repo-root .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+
+      - name: Render summaries
+        shell: bash
+        run: |
+          python -m business_os render-summary processes/invoices/2026/REQ-2026-0001.json
+          python -m business_os render-summary processes/bookkeeping/2026/REQ-2026-0002.json

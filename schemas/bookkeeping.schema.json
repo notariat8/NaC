@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BookkeepingProcess",
+  "type": "object",
+  "required": [
+    "process_type",
+    "request_id",
+    "idempotency_key",
+    "status",
+    "year",
+    "entry_date",
+    "currency",
+    "lines"
+  ],
+  "properties": {
+    "process_type": {
+      "const": "bookkeeping"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}-[0-9]{4}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "validated", "posted", "closed"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2020
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "document_ref": {
+      "type": "string"
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["account_code", "direction", "amount"],
+        "properties": {
+          "account_code": { "type": "string", "minLength": 1 },
+          "direction": { "type": "string", "enum": ["debit", "credit"] },
+          "amount": { "type": "number", "exclusiveMinimum": 0 },
+          "tax_code": { "type": "string" },
+          "cost_center": { "type": "string" }
+        }
+      }
+    },
+    "external_ref": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "process_type": "formation",
+  "request_id": "REQ-2026-0004",
+  "idempotency_key": "formation-exampleco-2026",
+  "status": "validated",
+  "year": 2026,
+  "venture_name": "ExampleCo UG",
+  "legal_form": "ug",
+  "seat": "Berlin",
+  "steps": [
+    {
+      "name": "Gesellschafterliste finalisieren",
+      "owner": "legal",
+      "due_date": "2026-03-10",
+      "status": "done"
+    },
+    {
+      "name": "Notartermin bestaetigen",
+      "owner": "founder",
+      "due_date": "2026-03-12",
+      "status": "open"
+    },
+    {
+      "name": "Steuerliche Erfassung vorbereiten",
+      "owner": "finance",
+      "due_date": "2026-03-20",
+      "status": "open"
+    }
+  ],
+  "metadata": {
+    "workspace": "newco"
+  }
+}

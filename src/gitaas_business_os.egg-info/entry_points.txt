@@ -1,0 +1,2 @@
+[console_scripts]
+business-os = business_os.cli:main

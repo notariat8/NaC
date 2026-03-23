@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InvoiceProcess",
+  "type": "object",
+  "required": [
+    "process_type",
+    "request_id",
+    "idempotency_key",
+    "status",
+    "year",
+    "customer",
+    "currency",
+    "issue_date",
+    "due_date",
+    "items"
+  ],
+  "properties": {
+    "process_type": {
+      "const": "invoice"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}-[0-9]{4}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "approved", "issued", "paid", "cancelled"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2020
+    },
+    "customer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "customer_id": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["description", "quantity", "unit_price", "account_code", "tax_rate"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "quantity": { "type": "number", "exclusiveMinimum": 0 },
+          "unit_price": { "type": "number", "minimum": 0 },
+          "account_code": { "type": "string", "minLength": 1 },
+          "tax_rate": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "external_ref": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

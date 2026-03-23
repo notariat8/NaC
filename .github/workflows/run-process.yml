@@ -1,0 +1,32 @@
+name: Run Business Process
+
+on:
+  workflow_dispatch:
+    inputs:
+      process_path:
+        description: "Pfad zur JSON-Datei unter processes/"
+        required: true
+        type: string
+
+jobs:
+  run-process:
+    runs-on: ubuntu-latest
+    environment: business-operations
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Validate selected process
+        run: python -m business_os validate "${{ inputs.process_path }}"
+
+      - name: Render business summary
+        run: python -m business_os render-summary "${{ inputs.process_path }}"

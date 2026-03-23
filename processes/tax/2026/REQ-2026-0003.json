@@ -1,0 +1,22 @@
+{
+  "process_type": "tax",
+  "request_id": "REQ-2026-0003",
+  "idempotency_key": "ustva-2026-03",
+  "status": "prepared",
+  "year": 2026,
+  "tax_type": "ustva",
+  "period": "2026-03",
+  "source_refs": [
+    "REQ-2026-0001",
+    "REQ-2026-0002"
+  ],
+  "requires_review": true,
+  "totals": {
+    "net_amount": 1200.0,
+    "tax_amount": 228.0,
+    "gross_amount": 1428.0
+  },
+  "metadata": {
+    "owner": "finance"
+  }
+}

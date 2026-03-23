@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaxProcess",
+  "type": "object",
+  "required": [
+    "process_type",
+    "request_id",
+    "idempotency_key",
+    "status",
+    "year",
+    "tax_type",
+    "period"
+  ],
+  "properties": {
+    "process_type": {
+      "const": "tax"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}-[0-9]{4}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "prepared", "approved", "submitted", "archived"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2020
+    },
+    "tax_type": {
+      "type": "string",
+      "enum": ["ustva", "jahreserklaerung", "lohnsteuer", "gewerbesteuer"]
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^[0-9]{4}(-[0-9]{2})?$"
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_review": {
+      "type": "boolean"
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "net_amount": { "type": "number" },
+        "tax_amount": { "type": "number" },
+        "gross_amount": { "type": "number" }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
