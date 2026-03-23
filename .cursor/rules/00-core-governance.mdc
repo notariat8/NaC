@@ -1,0 +1,15 @@
+---
+description: Verbindliche Governance fuer alle Prozessaenderungen
+alwaysApply: true
+---
+
+# Core Governance (MUSS)
+
+- Aenderungen an Prozessen nur ueber Branch + Pull Request.
+- Direkte Aenderungen am Hauptstand sind nicht erlaubt.
+- Jede Aenderung braucht Zweck, Risiko und Verantwortliche.
+- Sensible Prozesse brauchen fachliche Freigabe.
+- Abschlussstaende werden versioniert markiert.
+- Keine vertraulichen Daten ungeschuetzt in Prozessdateien.
+
+Wenn unklar ist, ob eine Aenderung sensibel ist, gilt sie als sensibel.

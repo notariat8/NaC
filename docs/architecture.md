@@ -70,6 +70,22 @@ stateDiagram-v2
 - Tag: versionierter Abschluss
 - Release-Artefakt: extern pruefbare Ableitung
 
+## Referenz, Fork und Rueckfluss
+
+```mermaid
+flowchart TD
+    RefModel["Referenz-Musterunternehmen"] --> BranchPack["Branchenmodul anwalt notariat steuer software"]
+    RefModel --> GenericPack["Generische Kernprozesse"]
+    GenericPack --> CompanyFork["Unternehmens-Fork"]
+    BranchPack --> CompanyFork
+    CompanyFork --> LocalChange["Lokale Aenderung als Change Request"]
+    LocalChange --> LocalApprove["Lokale Freigabe und Versionierung"]
+    LocalApprove --> CompanyRun["Betrieb im Unternehmen"]
+    LocalApprove --> UpstreamProposal["Optionale Rueckgabe an Referenz"]
+    UpstreamProposal --> RefReview["Review im Referenzgremium oder Verband"]
+    RefReview --> RefModel
+```
+
 ## Python-Komponenten
 
 - `models.py`: normalisierte Datenklassen fuer Prozessantraege

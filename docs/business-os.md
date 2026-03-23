@@ -18,6 +18,15 @@ Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Ni
 - `auditor`: prueft Historie, Nachweise, Status und Abschluesse.
 - `automation`: GitHub Actions und Python-Engine fuehren deterministische Schritte aus.
 
+Erweiterung fuer den operativen Betrieb:
+
+- Ticket erstellen darf jede Rolle (`everyone_can_open_ticket=true`).
+- Selbst loesen ist nur innerhalb der freigegebenen Kompetenz erlaubt.
+- Fachkritische Schritte laufen ueber Review/Approval je Impact und Compliance.
+- Fachliche Spezialfaelle koennen Qualifikationspflichten erzwingen (z. B. RVG-Rechnung).
+
+Details: `docs/role-model.md` und `policies/role-model-policy.yaml`
+
 ## Prozessdomänen
 
 ### Gruendung
@@ -89,6 +98,47 @@ Typische Zustaende:
 - Merge nach `main` repraesentiert die verbindliche Uebernahme.
 - Tags repraesentieren Abschluesse wie `close/2026-03`.
 - Releases oder Artefakte repraesentieren exportierte Nachweise.
+
+## Generisch vs. branchenspezifisch
+
+Die Prozesswelt wird in zwei Schichten organisiert:
+
+- `generisch`: fuer alle Unternehmen nutzbar
+- `branche`: zusaetzliche Fachlogik je Unternehmensart
+
+Beispielstruktur:
+
+- generisch: Rollen, Freigaben, Rechnung, Buchfuehrung, Steuer, Fristen
+- branche anwaltskanzlei: Mandat, Fristenkontrolle, Aktenlogik
+- branche notariat: Urkundenprozess, Vollzug, Registerkommunikation
+- branche steuerbuero: Mandantenzyklen, Deklarationsablauf, Rueckfragenmanagement
+- branche softwareunternehmen: Release, Incident, SLA und Lizenznachweise
+
+Die Kombination aus generisch + branche bildet die operative Prozesslandkarte des jeweiligen Unternehmens.
+
+## Variantenfaehigkeit statt Einheitsprozess
+
+Unterschiedliche Unternehmen brauchen unterschiedliche Auspraegungen. Deshalb werden Varianten explizit versioniert:
+
+- welche Variante gilt,
+- fuer welche Einheit sie gilt,
+- ab wann sie gilt,
+- wer sie freigegeben hat.
+
+So bleiben Unterschiede erlaubt, aber transparent und pruefbar.
+
+## Change Request und Vererbung
+
+Empfohlenes Modell:
+
+1. Referenzprozess (z. B. Verband oder Musterunternehmen)
+2. Unternehmens-Fork mit lokaler Anpassung
+3. Change Request mit Begruendung und Nachweis
+4. Review und Freigabe
+5. Versionierte Uebernahme in den lokalen Standard
+6. optional Rueckfuehrung in den Referenzprozess
+
+Dieses Modell erlaubt gemeinsames Lernen ohne Verlust der lokalen Steuerbarkeit.
 
 ## Grenzen des Modells
 

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Invoice"
+                  targetNamespace="https://github.com/ofunk-nvidia/GITaaS/bpmn">
+  <bpmn:process id="InvoiceProcess" name="Invoice Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_InvoiceRequest" name="Prompt erhalten">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateRequest" name="Prozessantrag erzeugen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Validate" name="Python-Validierung">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Review" name="Freigabe noetig?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4_yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Review" name="Fachliche Freigabe">
+      <bpmn:incoming>Flow_4_yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_IssueInvoice" name="Rechnung ausstellen">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_4_no</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_InvoiceIssued" name="Rechnung freigegeben">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_InvoiceRequest" targetRef="Task_CreateRequest"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CreateRequest" targetRef="Task_Validate"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Validate" targetRef="Gateway_Review"/>
+    <bpmn:sequenceFlow id="Flow_4_yes" sourceRef="Gateway_Review" targetRef="Task_Review" name="ja"/>
+    <bpmn:sequenceFlow id="Flow_4_no" sourceRef="Gateway_Review" targetRef="Task_IssueInvoice" name="nein"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Review" targetRef="Task_IssueInvoice"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_IssueInvoice" targetRef="EndEvent_InvoiceIssued"/>
+  </bpmn:process>
+</bpmn:definitions>

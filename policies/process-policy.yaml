@@ -1,0 +1,47 @@
+version: 1
+baseline:
+  generic_modules:
+    - formation
+    - invoice
+    - bookkeeping
+    - tax
+  required_controls:
+    - pull_request
+    - review
+    - traceability
+    - periodic_close
+    - role_based_permissions
+    - qualification_gates
+branch_modules:
+  law_firm:
+    enabled: false
+    includes:
+      - mandate_intake
+      - conflict_check
+      - deadline_control
+  notary:
+    enabled: false
+    includes:
+      - deed_preparation
+      - identity_verification
+      - execution_tracking
+  tax_office:
+    enabled: false
+    includes:
+      - client_onboarding
+      - declaration_cycle
+      - plausibility_checks
+  software_company:
+    enabled: false
+    includes:
+      - release_governance
+      - incident_management
+      - service_level_reporting
+change_management:
+  require_change_request: true
+  require_impact_assessment: true
+  require_version_bump: true
+
+role_model:
+  required_policy: policies/role-model-policy.yaml
+  everyone_can_open_ticket: true

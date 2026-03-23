@@ -1,0 +1,14 @@
+---
+description: Unternehmenskultur und Sprachregeln fuer alle Inhalte
+alwaysApply: true
+---
+
+# Kultur- und Sprachregeln
+
+- Wende die Vorgaben aus `policies/culture-policy.yaml` verbindlich an.
+- Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.
+- Wenn die Policy fehlt, verwende neutrale Formulierungen und frage einmal nach.
+- Rechtstexte und Originalzitate werden unveraendert zitiert.
+- Interne Prozesssprache bleibt konsistent ueber alle Dokumente.
+
+Konflikte zwischen Stil und Compliance werden immer zugunsten Compliance geloest.

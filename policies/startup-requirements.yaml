@@ -1,0 +1,27 @@
+version: 1
+status: mandatory
+
+required_commands:
+  - git
+  - python
+  - gh
+
+recommended_commands:
+  - pandoc
+  - code
+
+python:
+  min_version: "3.11"
+
+required_files:
+  - AGENTS.md
+  - docs/START_HERE.md
+  - policies/process-policy.yaml
+  - policies/culture-policy.yaml
+  - policies/technology-policy.yaml
+  - policies/data-protection-policy.yaml
+  - policies/role-model-policy.yaml
+
+vscode_extensions_required:
+  - github.copilot
+  - github.copilot-chat

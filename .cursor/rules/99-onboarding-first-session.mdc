@@ -1,0 +1,16 @@
+---
+description: Erststart-Check fuer neue Nutzer in Cursor
+alwaysApply: true
+---
+
+# Erststart in diesem Repository
+
+Bei erster Nutzung dieses Repositories:
+
+1. Lies `docs/START_HERE.md`.
+2. Nutze das passende Onboarding unter `prompts/onboarding/`.
+3. Bestaetige Unternehmensart und gewuenschte Branchenmodule.
+4. Bestaetige Kultur-, Sprach- und Technologie-Policy.
+5. Starte mit einem Pilotprozess statt mit Vollausrollung.
+
+Ohne diese Schritte keine produktive Prozessaenderung vorschlagen.

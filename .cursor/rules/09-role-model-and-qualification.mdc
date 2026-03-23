@@ -1,0 +1,14 @@
+---
+description: Rollenmodell mit Ticketrecht und Qualifikations-Gates erzwingen
+alwaysApply: true
+---
+
+# Rollenmodell und Qualifikation (MUSS)
+
+- Jede Rolle darf Tickets eroefnnen.
+- Self-Resolve ist nur innerhalb der freigegebenen Kompetenz erlaubt.
+- Fachkritische Schritte brauchen Review/Approval nach Impact.
+- Qualifikationspflichten haben Vorrang vor allgemeinen Rollenrechten.
+- Rolle und Entscheidungstyp muessen in jedem relevanten Workflow dokumentiert sein.
+
+Verbindliche Quelle: `policies/role-model-policy.yaml`

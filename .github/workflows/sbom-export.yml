@@ -1,0 +1,40 @@
+name: SBOM Export
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SBOM tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cyclonedx-bom
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate CycloneDX SBOM (Python)
+        run: |
+          mkdir -p out/sbom
+          cyclonedx-py environment --output-file out/sbom/sbom-cyclonedx-python.json --output-format JSON
+
+      - name: Generate SPDX SBOM (Filesystem)
+        run: |
+          syft dir:. -o spdx-json > out/sbom/sbom-spdx-filesystem.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-artifacts
+          path: out/sbom/

@@ -1,0 +1,47 @@
+name: Export Documentation PDF
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "README.md"
+      - "docs/**/*.md"
+      - "policies/**/*.yaml"
+
+jobs:
+  export-pdf:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pandoc and LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-xetex
+
+      - name: Build business handbook PDF
+        run: |
+          mkdir -p out
+          pandoc \
+            README.md \
+            docs/START_HERE.md \
+            docs/fachanwender-guide.md \
+            docs/business-os.md \
+            docs/governance.md \
+            docs/technology-decision.md \
+            docs/vscode-copilot-start.md \
+            docs/copilot-quickstart-15min.md \
+            docs/public-readiness.md \
+            --from gfm \
+            --toc \
+            --number-sections \
+            --pdf-engine=xelatex \
+            -o out/business-os-handbook.pdf
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-os-handbook-pdf
+          path: out/business-os-handbook.pdf

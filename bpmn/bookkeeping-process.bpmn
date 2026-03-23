@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Bookkeeping"
+                  targetNamespace="https://github.com/ofunk-nvidia/GITaaS/bpmn">
+  <bpmn:process id="BookkeepingProcess" name="Bookkeeping Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_BookkeepingInput" name="Buchungsereignis eingegangen">
+      <bpmn:outgoing>Flow_A1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateEntryRequest" name="Buchungsantrag anlegen">
+      <bpmn:incoming>Flow_A1</bpmn:incoming>
+      <bpmn:outgoing>Flow_A2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CheckIdempotency" name="Idempotenz pruefen">
+      <bpmn:incoming>Flow_A2</bpmn:incoming>
+      <bpmn:outgoing>Flow_A3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ValidateBalance" name="Soll/Haben validieren">
+      <bpmn:incoming>Flow_A3</bpmn:incoming>
+      <bpmn:outgoing>Flow_A4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_PostingAllowed" name="Buchung korrekt?">
+      <bpmn:incoming>Flow_A4</bpmn:incoming>
+      <bpmn:outgoing>Flow_A5_yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A5_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_PostEntry" name="Buchung posten">
+      <bpmn:incoming>Flow_A5_yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_A6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Posted" name="Buchung abgeschlossen">
+      <bpmn:incoming>Flow_A6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Rework" name="Korrektur erforderlich">
+      <bpmn:incoming>Flow_A5_no</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="StartEvent_BookkeepingInput" targetRef="Task_CreateEntryRequest"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_CreateEntryRequest" targetRef="Task_CheckIdempotency"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Task_CheckIdempotency" targetRef="Task_ValidateBalance"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="Task_ValidateBalance" targetRef="Gateway_PostingAllowed"/>
+    <bpmn:sequenceFlow id="Flow_A5_yes" sourceRef="Gateway_PostingAllowed" targetRef="Task_PostEntry" name="ja"/>
+    <bpmn:sequenceFlow id="Flow_A5_no" sourceRef="Gateway_PostingAllowed" targetRef="EndEvent_Rework" name="nein"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="Task_PostEntry" targetRef="EndEvent_Posted"/>
+  </bpmn:process>
+</bpmn:definitions>

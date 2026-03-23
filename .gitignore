@@ -3,3 +3,9 @@ __pycache__/
 .pytest_cache/
 dist/
 build/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx

@@ -1,0 +1,36 @@
+version: 1
+status: mandatory
+
+sbom:
+  required: true
+  minimum_formats:
+    - cyclonedx_json
+    - spdx_json
+  export_directory: out/sbom/
+
+generation_stack:
+  cyclonedx:
+    product: cyclonedx-python
+    license_model: opensource
+    subscription_required: false
+  spdx:
+    product: syft
+    license_model: opensource
+    subscription_required: false
+
+platform_features:
+  github_actions:
+    required: true
+    subscription_required: false
+  github_dependency_graph:
+    required: recommended
+    subscription_required: false
+  github_advanced_security:
+    required: optional
+    subscription_required: true
+    notes:
+      - "Bietet zusaetzliche Security-Funktionen, ist aber fuer SBOM-Erzeugung nicht zwingend."
+
+governance:
+  required_on_release: true
+  required_on_pull_request: recommended

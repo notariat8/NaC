@@ -1,0 +1,49 @@
+version: 1
+status: mandatory
+
+principles:
+  - data_minimization
+  - need_to_know
+  - privacy_by_default
+  - no_real_secrets_in_repo
+
+repository_rules:
+  allow_real_personal_data: false
+  allow_real_credentials: false
+  allow_real_customer_records: false
+  sample_data_only: true
+
+sample_data_constraints:
+  emails:
+    allowed_domains:
+      - example
+      - example.com
+      - example.org
+      - example.net
+    forbid_non_example_domains: true
+  names:
+    use_placeholders: true
+  identifiers:
+    use_fictitious_ids: true
+  financial_accounts:
+    use_fake_values: true
+
+forbidden_patterns:
+  - password
+  - api_key
+  - token
+  - client_secret
+  - private_key
+
+required_controls:
+  - pull_request_review
+  - secret_scanning_ci
+  - privacy_lint_ci
+  - incident_response_documented
+
+incident_response:
+  immediate_actions:
+    - revoke_exposed_secret
+    - remove_sensitive_data
+    - rotate_credentials
+    - create_incident_issue

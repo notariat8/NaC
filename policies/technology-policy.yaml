@@ -1,0 +1,44 @@
+version: 1
+status: mandatory
+
+approved_stack:
+  documentation:
+    canonical_format: markdown
+    export:
+      pdf: pandoc
+      assets: svg_png
+    notes:
+      - "Markdown ist die einzig manuell gepflegte Quellform."
+      - "AsciiDoc oder andere Formate duerfen nur als generierte Artefakte entstehen."
+  process_logic:
+    execution_language: python
+    approach: model_first
+    notes:
+      - "Python implementiert Ausfuehrung, Validierung und Integrationen."
+      - "Fachlicher Ablauf wird primaer als BPMN 2.0 modelliert."
+  visualization:
+    canonical_business_model: bpmn_2_0
+    canonical_source_format: bpmn_xml
+    canonical_directory: bpmn/
+    allowed_overview_format: mermaid
+    disallowed_for_bpmn_source:
+      - mermaid
+      - plantuml
+    notes:
+      - "Mermaid ist nur fuer Uebersichtsdiagramme erlaubt."
+      - "PlantUML ist optional fuer technische Architektur, nicht fuer BPMN-Quellen."
+
+repository_constraints:
+  enforce_cross_ide_sync: true
+  required_sync_targets:
+    - .cursor/rules
+    - .github/copilot-instructions.md
+    - docs/START_HERE.md
+    - docs/vscode-copilot-start.md
+
+exceptions:
+  allowed: true
+  process:
+    - "Change Request mit Begruendung"
+    - "Bewertung durch Prozessverantwortliche"
+    - "Dokumentierte Freigabe mit Versionshinweis"

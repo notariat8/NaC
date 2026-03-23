@@ -1,0 +1,33 @@
+version: 1
+language:
+  default: de
+  style: fachlich_klar
+gender:
+  mode: neutral
+  options:
+    - neutral
+    - generisches_maskulinum
+    - paarform
+    - mirror_user
+  notes:
+    - "Empfehlung fuer Musterunternehmen: neutral."
+    - "Originalzitate aus Gesetzen, Urteilen oder Vertraegen unveraendert lassen."
+role_naming:
+  technical_role_ids_are_neutral: true
+  visible_text_follows_gender_mode: true
+  aliases:
+    anwalt_fachlich:
+      - anwalt
+      - anwaeltin
+    mitarbeiter:
+      - mitarbeiter
+      - mitarbeiterin
+tone:
+  external: professionell_respektvoll
+  internal: klar_knapp
+conflict_resolution:
+  priority:
+    - compliance
+    - legal_accuracy
+    - policy_consistency
+    - style_preference

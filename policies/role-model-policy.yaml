@@ -1,0 +1,94 @@
+version: 1
+status: mandatory
+
+principles:
+  - everyone_can_open_ticket
+  - permission_by_role_and_qualification
+  - approval_by_risk_level
+  - auditability_of_role_decisions
+
+generic_roles:
+  mitarbeiter:
+    can_open_ticket: true
+    can_self_resolve:
+      low_impact_only: true
+    can_approve: false
+  sachbearbeitung:
+    can_open_ticket: true
+    can_self_resolve:
+      low_impact_only: true
+      medium_impact_if_preapproved: true
+    can_approve: false
+  prozessverantwortung:
+    can_open_ticket: true
+    can_self_resolve:
+      low_impact_only: true
+    can_review: true
+    can_approve: true
+  freigabeverantwortung:
+    can_open_ticket: true
+    can_review: true
+    can_approve: true
+  revision_audit:
+    can_open_ticket: true
+    can_review: true
+    can_approve: false
+  automation:
+    can_open_ticket: false
+    can_execute: true
+    can_approve: false
+
+domain_roles:
+  law_firm:
+    anwalt_fachlich:
+      can_approve_legal: true
+      required_qualifications:
+        - legal_profession
+    reno:
+      can_open_ticket: true
+      can_operate_casework: true
+    refa:
+      can_open_ticket: true
+      can_operate_administration: true
+  notary:
+    notar_fachlich:
+      can_approve_notarial: true
+      required_qualifications:
+        - notary_qualification
+  tax_office:
+    steuerfachkraft:
+      can_approve_tax: true
+      required_qualifications:
+        - tax_professional
+
+qualification_gates:
+  invoice_rvg_creation:
+    required_qualification:
+      - rvg_billing_trained
+    required_role_one_of:
+      - anwalt_fachlich
+      - sachbearbeitung
+    approval_required: true
+
+ticket_rules:
+  everyone_can_open_ticket: true
+  required_ticket_fields:
+    - title
+    - impact_level
+    - compliance_impact
+    - requested_decision_type
+  decision_types:
+    - self_resolve
+    - requires_review
+    - requires_approval
+
+approval_matrix:
+  low:
+    legal_or_compliance_impact: false
+    decision: self_resolve
+  medium:
+    legal_or_compliance_impact: true
+    decision: requires_review
+  high:
+    legal_or_compliance_impact: true
+    decision: requires_approval

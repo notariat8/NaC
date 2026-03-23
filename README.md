@@ -19,11 +19,34 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 ## Repository-Struktur
 
 - `docs/` erklaert das fachliche Modell und die Architektur.
+- `docs/fachanwender-guide.md` erklaert das Modell ohne IT-Vorkenntnisse.
+- `docs/START_HERE.md` fuehrt neue Nutzer durch die Einfuehrung.
+- `docs/vscode-copilot-start.md` ist der Startpfad fuer VS Code + GitHub Copilot.
+- `docs/copilot-quickstart-15min.md` ist die 15-Minuten-Kurzanleitung fuer Copilot.
+- `docs/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
+- `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
+- `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
+- `docs/public-readiness.md` enthaelt den Public-Go-Live-Status.
+- `docs/issue-backlog-public.md` enthaelt priorisierte Public-Issues.
+- `docs/startup-verification.md` beschreibt den lokalen Startcheck.
+- `docs/role-model.md` enthaelt Rollen, Qualifikationen und Approval-Matrix.
 - `prompts/` enthaelt Prompt-Standards fuer das LLM-Frontend.
+- `prompts/onboarding/` enthaelt gefuehrte Einfuehrungs-Prompts je Branche.
+- `scripts/startup_check.py` prueft Setup, Policies und optional Tests.
+- `policies/` enthaelt Kultur-, Sprach- und Prozessvorgaben.
+- `policies/technology-policy.yaml` definiert den verbindlichen Technikstack.
+- `policies/data-protection-policy.yaml` definiert Datenschutz- und Secret-Regeln.
+- `policies/sbom-policy.yaml` definiert den verbindlichen SBOM-Standard.
+- `policies/role-model-policy.yaml` definiert Rollenrechte und Qualifikations-Gates.
+- `.cursor/rules/` enthaelt persistente Cursor-Regeln fuer das Vorgehen.
 - `schemas/` definiert strukturierte Prozessantraege.
+- `bpmn/` enthaelt fachlich verbindliche BPMN-2.0-Quellmodelle.
 - `processes/` enthaelt beispielhafte fachliche Instanzen.
 - `src/business_os/` enthaelt die Python-Engine.
 - `.github/workflows/` enthaelt Governance- und Runtime-Workflows.
+- `.github/workflows/sbom-export.yml` erzeugt SBOM-Artefakte fuer Releases.
+- `.github/copilot-instructions.md` enthaelt Repository-Anweisungen fuer Copilot.
+- `.github/ISSUE_TEMPLATE/` enthaelt strukturierte Issue-Formulare.
 
 ## Schnellstart
 
@@ -51,3 +74,39 @@ python -m business_os monthly-close --year 2026 --month 3
 ## Hinweise
 
 Dieses Repo ist ein Referenzsystem. Es ersetzt kein vorgeschriebenes Fachsystem, sondern zeigt, wie Git als Orchestrierungs-, Kontroll- und Nachweisschicht fuer kaufmaennische Prozesse dienen kann.
+
+## Lizenz
+
+Dieses Repository steht unter `GPL-3.0` (siehe `LICENSE`).
+
+## Empfohlene Lesereihenfolge fuer Nicht-IT
+
+1. `docs/fachanwender-guide.md` fuer Zielbild, Nutzen und Einfuehrung.
+2. `docs/START_HERE.md` fuer den konkreten Start im eigenen Unternehmen.
+3. `docs/business-os.md` fuer Rollen, Prozesslogik und Grenzen.
+4. `docs/governance.md` fuer Freigabe- und Nachweispflichten.
+
+## Branchen-Onboarding
+
+- Kanzlei: `prompts/onboarding/law-firm-first-setup.md`
+- Notariat: `prompts/onboarding/notary-first-setup.md`
+- Steuerbuero: `prompts/onboarding/tax-office-first-setup.md`
+- VS Code + Copilot Start: `prompts/onboarding/vscode-copilot-business-os-setup.md`
+
+## Plattform-Regel
+
+Konzeptaenderungen werden immer fuer Cursor und VS Code + Copilot synchron gepflegt.
+
+## Startcheck
+
+Vor produktiver Arbeit:
+
+`python scripts/startup_check.py --ide auto --run-tests`
+
+## Technik-Regel
+
+In diesem Musterrepo sind nur Techniken aus `policies/technology-policy.yaml` zulaessig.
+
+## Datenschutz-Regel
+
+In diesem Musterrepo sind keine echten personenbezogenen Daten oder Secrets zulaessig.

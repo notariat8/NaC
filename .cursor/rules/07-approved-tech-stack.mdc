@@ -1,0 +1,15 @@
+---
+description: Verbindlicher Technikstack fuer alle Loesungswege
+alwaysApply: true
+---
+
+# Approved Tech Stack (MUSS)
+
+- Folge immer `policies/technology-policy.yaml`.
+- Dokumentationsquelle ist Markdown; keine parallele manuelle Zweitquelle in AsciiDoc.
+- PDF-Exports werden aus Markdown automatisiert erzeugt.
+- Fachliche Prozessmodelle sind BPMN-2.0-first.
+- Mermaid ist nur fuer Uebersichten, nicht als BPMN-Quelle.
+- Python ist die Ausfuehrungsschicht fuer validierte Prozesslogik.
+
+Bei Abweichungen ist ein formaler Change Request erforderlich.

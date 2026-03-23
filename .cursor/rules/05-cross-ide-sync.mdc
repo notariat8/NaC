@@ -1,0 +1,18 @@
+---
+description: Konzeptaenderungen immer IDE-uebergreifend synchron halten
+alwaysApply: true
+---
+
+# Cross-IDE Sync (MUSS)
+
+- Jede Konzeptaenderung gilt fuer alle unterstuetzten IDE-Pfade.
+- Bei Aenderungen an Regeln, Onboarding oder Governance immer auch Cursor- und VS-Code-Copilot-Dokumente pruefen.
+- Keine einseitige Pflege nur fuer eine Plattform.
+- Wenn eine Plattform noch keinen gleichwertigen Abschnitt hat, muss dieser in derselben Aenderung angelegt werden.
+
+Minimum fuer jede konzeptuelle Aenderung:
+
+1. `AGENTS.md`
+2. `.cursor/rules/` relevante Regeln
+3. `.github/copilot-instructions.md`
+4. `docs/START_HERE.md` oder plattformspezifische Startdokumente

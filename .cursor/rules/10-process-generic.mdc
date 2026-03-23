@@ -1,0 +1,14 @@
+---
+description: Generische Prozessregeln fuer alle Unternehmensarten
+alwaysApply: true
+---
+
+# Generische Prozessregeln
+
+- Trenne Prozessschritte in klare Statuswerte.
+- Nutze idempotente Schluessel gegen Doppelausfuehrung.
+- Dokumentiere Eingang, Entscheidung, Freigabe und Ergebnis.
+- Halte Rechnungs-, Buchfuehrungs- und Steuerprozesse nachvollziehbar.
+- Leite periodische Abschluesse aus versionierten Prozessdaten ab.
+
+Ziel: Wiederholbarkeit, Pruefbarkeit und klare Verantwortlichkeit.

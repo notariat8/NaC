@@ -39,6 +39,7 @@ Empfohlenes Zielbild fuer `main`:
 
 - `draft -> approved` nur ueber Pull Request.
 - `approved -> issued` nur in einer gesicherten Runtime oder nach dokumentierter Freigabe.
+- RVG-bezogene Rechnungen nur mit dokumentierter Qualifikation und Freigabe.
 
 ### Buchfuehrung
 
@@ -49,3 +50,12 @@ Empfohlenes Zielbild fuer `main`:
 
 - `prepared -> approved` immer mit Vier-Augen-Prinzip.
 - `submitted` sollte nur nach manueller Freigabe und moeglichem externen Filing gesetzt werden.
+
+## Rollenbasierte Entscheidungslogik
+
+- Jede Rolle darf Tickets eroefnnen.
+- `low impact` ohne Compliance-Effekt kann self-resolve sein.
+- `medium/high impact` oder rechtlicher Effekt braucht Review/Approval.
+- Qualifikationspflichten haben Vorrang vor allgemeinen Rollenrechten.
+
+Referenz: `policies/role-model-policy.yaml`
