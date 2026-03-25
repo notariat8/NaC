@@ -11,5 +11,8 @@ alwaysApply: true
 - Sensible Prozesse brauchen fachliche Freigabe.
 - Abschlussstaende werden versioniert markiert.
 - Keine vertraulichen Daten ungeschuetzt in Prozessdateien.
+- Upstream-Aenderungen in Unternehmens-Forks nur per dokumentiertem Sync-PR.
+- Laufende Vorgaenge bleiben im Mischbetrieb auf der beim Start gebundenen Version.
+- Rollen-/Rechtevorgaben werden nur in `policies/` gepflegt; Rule-Texte sind nur abgeleitete Spiegel.
 
 Wenn unklar ist, ob eine Aenderung sensibel ist, gilt sie als sensibel.

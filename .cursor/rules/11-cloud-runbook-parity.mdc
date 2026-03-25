@@ -1,0 +1,17 @@
+---
+description: Eventstream-Runbooks fuer alle Cloud-Plattformen synchron halten
+alwaysApply: true
+---
+
+# Cloud Runbook Parity (MUSS)
+
+- Eventstream- und Revisionssicherheitsvorgaben sind fuer `aws`, `azure`, `gcp`, `oci` gleichwertig zu pflegen.
+- Bei Aenderungen an einer Plattform muessen die anderen Plattform-Runbooks im fachlichen Kern abgeglichen werden.
+- Einseitige Pflege nur einer Plattform ist nicht zulaessig.
+- Verbindliche Quellen:
+  - `policies/revisionssicherheit-eventstream-policy.yaml`
+  - `docs/eventstream-implementation-templates.md`
+  - `docs/eventstream-runbook-aws.md`
+  - `docs/eventstream-runbook-azure.md`
+  - `docs/eventstream-runbook-gcp.md`
+  - `docs/eventstream-runbook-oci.md`

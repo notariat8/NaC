@@ -40,6 +40,7 @@ required_controls:
   - secret_scanning_ci
   - privacy_lint_ci
   - incident_response_documented
+  - dpa_avv_required_for_saas_processing
 
 incident_response:
   immediate_actions:

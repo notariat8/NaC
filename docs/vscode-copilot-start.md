@@ -24,6 +24,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 6. Nutzen Sie ein Onboarding-Prompt aus `prompts/onboarding/` fuer Ihre Branche.
 7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
 8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
+9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/`.
 
 ## Empfohlener Copilot-Startprompt
 
@@ -54,3 +55,16 @@ Danach:
 - Testen Sie die neue Variante im Pilot.
 - Uebernehmen Sie sie versioniert in Ihr Unternehmensmodell.
 - Optional: geben Sie bewahrte Verbesserungen an das Referenzmuster zurueck.
+
+## Betriebsdokumente fuer Unternehmens-Fork
+
+- `docs/fork-and-release-operating-model.md`
+- `docs/release-sync-playbook.md`
+- `docs/parallelbetrieb-version-binding.md`
+- `docs/issue-taxonomie-pro-repo.md`
+- `docs/einfuehrung-greenfield-brownfield.md`
+- `docs/service-business-core-vertical-blueprint.md`
+- `docs/vertical-starter-prozesskatalog.md`
+- `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/arbeitsmodell-agile-cadence.md`
+- `docs/access-and-issue-operations.md`

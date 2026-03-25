@@ -1,0 +1,15 @@
+---
+description: Function8-Leistungen offen dokumentieren und ersetzbar halten
+alwaysApply: true
+---
+
+# Open Service Portability (MUSS)
+
+- Alle Function8-Leistungen im Kontext `GIT OS` muessen in `docs/function8-service-catalog.md` dokumentiert sein.
+- Leistungen mit AVV-Pflicht muessen verlinkte AVV-Artefakte besitzen.
+- Fuer jede Leistung muss ein Drittbetriebs- und Exit-Pfad dokumentiert sein.
+- Hidden Dependencies ausserhalb des Repos sind nicht zulaessig.
+- Verbindliche Quellen:
+  - `policies/provider-open-services-policy.yaml`
+  - `docs/function8-service-catalog.md`
+  - `docs/third-party-operations-and-exit.md`

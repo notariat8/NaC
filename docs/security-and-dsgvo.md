@@ -15,6 +15,7 @@ Deshalb kombiniert dieses Musterrepo Regeln, Reviews und automatische Scans.
 ## Schutzmechanismen im Repo
 
 - Policy: `policies/data-protection-policy.yaml`
+- AVV-Checkliste fuer SaaS-Betrieb: `docs/avv-checkliste-eventlock-saas.md`
 - PR-Checks: `.github/PULL_REQUEST_TEMPLATE.md`
 - Secret-Scan in CI: `.github/workflows/privacy-and-secrets.yml`
 - Privacy-Lint in CI: `.github/workflows/privacy-and-secrets.yml`

@@ -1,0 +1,57 @@
+version: 1
+status: mandatory
+
+objective:
+  reduce_admin_load_for_non_it_teams: true
+  preserve_compliance_and_auditability: true
+  enforce_customer_data_separation: true
+
+tenant_models:
+  customer_owned_tenant:
+    description: Kunde betreibt Event-Journal komplett im eigenen Cloud-Tenant.
+    compliance_strength: very_high
+    admin_effort_for_customer: high
+  provider_managed_shared_service:
+    description: Anbieter betreibt zentrale Plattform, Kunde nutzt dedizierte Subinstanz.
+    compliance_strength: medium_to_high
+    admin_effort_for_customer: low
+  provider_managed_dedicated_subtenant:
+    description: Anbieter betreibt Service, Kunde erhaelt logisch/operativ isolierte Subinstanz mit separaten Schluesseln.
+    compliance_strength: high
+    admin_effort_for_customer: low_to_medium
+
+default_recommendation:
+  model: provider_managed_dedicated_subtenant
+  rationale:
+    - reduziert Betriebsaufwand fuer Fachkanzleien
+    - erhaelt Mandantentrennung und tenant-spezifische Nachweise
+    - unterstuetzt zentrale Governance bei lokaler Datenisolation
+
+required_controls:
+  - dedicated_namespace_or_account_per_customer
+  - dedicated_encryption_key_per_customer
+  - immutable_retention_per_customer
+  - customer_scoped_audit_access
+  - dual_control_for_retention_or_legal_hold_changes
+
+ownership_matrix:
+  function8_provider:
+    owns:
+      - platform_operations
+      - shared_security_baseline
+      - service_sla
+    cannot_unilaterally_change:
+      - customer_retention_policy
+      - customer_legal_hold
+  customer:
+    owns:
+      - data_classification
+      - legal_hold_decisions
+      - audit_release_scope
+      - role_assignment_approval
+
+fork_integration:
+  each_customer_fork_must_reference:
+    - policies/tenant-ownership-policy.yaml
+    - policies/access-control-policy.yaml
+    - policies/revisionssicherheit-eventstream-policy.yaml

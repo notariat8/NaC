@@ -78,6 +78,38 @@
       "required_roles": ["freigabeverantwortung"]
     },
     {
+      "id": "q_work_method",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche Arbeitsmethode wird fuer den Start genutzt?",
+      "options": ["agile", "kanban"],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "freigabeverantwortung"]
+    },
+    {
+      "id": "q_sprint_duration",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche Sprintdauer wird genutzt (bei kanban: not_used)?",
+      "options": ["1w", "2w", "4w", "not_used"],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung"]
+    },
+    {
+      "id": "q_daily_duration",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche Daily-/Sync-Dauer wird genutzt?",
+      "options": ["5m", "10m", "20m"],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "sachbearbeitung"]
+    },
+    {
+      "id": "q_kanban_review_cadence",
+      "phase": "phase_3_target_model",
+      "prompt": "Welche Kanban-Review-Cadence wird genutzt (bei agile: not_used)?",
+      "options": ["1w", "2w", "4w", "not_used"],
+      "required_for_modes": ["founding", "existing"],
+      "required_roles": ["prozessverantwortung", "sachbearbeitung"]
+    },
+    {
       "id": "q_pilot_definition",
       "phase": "phase_4_rollout",
       "prompt": "Wie sieht der Pilot aus (Prozesse, Team, Dauer, Erfolgskriterien)?",

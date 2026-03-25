@@ -133,6 +133,21 @@ Damit entstehen:
 - gemeinsamer Lerngewinn,
 - stabiler, versionierter Dokumentationsstandard.
 
+## Alt- und Neu-Prozess parallel betreiben
+
+Wenn waehrend laufender Verfahren ein neues Release kommt, gilt:
+
+- laufende Faelle bleiben auf ihrer Startversion,
+- neue Faelle starten auf der neu freigegebenen Version,
+- beide Linien bleiben im Audit sauber trennbar.
+
+Beispiel Notariat:
+
+- Akte A startet um 10:15 auf `v1.4.0` und bleibt dort.
+- Akte B startet nach Freigabe um 13:00 auf `v1.5.0`.
+
+Details: `docs/parallelbetrieb-version-binding.md`
+
 ## Rolle von Verbaenden und Zertifizierung
 
 Ihre Idee ist fachlich sehr sinnvoll: Wenn z. B. 1000 Kanzleien denselben Kernprozess nutzen, kann ein Verband eine referenzierte Standardversion fachlich pruefen und empfehlen.

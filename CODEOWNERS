@@ -1,0 +1,7 @@
+# Governance-relevante Dateien nur mit Owner-Review aendern.
+policies/* @ofunk
+.cursor/rules/* @ofunk
+.github/copilot-instructions.md @ofunk
+AGENTS.md @ofunk
+scripts/validate_governance_sync.py @ofunk
+.github/workflows/governance-policy-sync.yml @ofunk

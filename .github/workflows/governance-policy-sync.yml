@@ -1,0 +1,29 @@
+name: Governance Policy Sync
+
+on:
+  pull_request:
+    paths:
+      - "policies/**/*.yaml"
+      - "policies/**/*.json"
+      - ".cursor/rules/**/*.mdc"
+      - ".github/copilot-instructions.md"
+      - "AGENTS.md"
+      - "scripts/validate_governance_sync.py"
+  workflow_dispatch:
+
+jobs:
+  validate-governance-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate governance policy sync
+        run: python scripts/validate_governance_sync.py

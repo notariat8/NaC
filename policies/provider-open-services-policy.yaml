@@ -1,0 +1,63 @@
+version: 1
+status: mandatory
+
+principles:
+  - function8_services_must_be_repo_documented
+  - avv_relevant_services_must_have_avv_artifacts
+  - third_party_operability_required
+  - vendor_replacement_readiness_required
+  - no_hidden_operational_dependencies
+
+scope:
+  applies_to:
+    - all_function8_service_offerings_related_to_gitos
+    - all_saas_or_managed_components_with_customer_data
+    - all_customer_fork_integration_paths
+
+service_catalog:
+  required: true
+  required_path: docs/function8-service-catalog.md
+  required_fields:
+    - service_id
+    - service_name
+    - service_type
+    - avv_required
+    - data_scope
+    - required_policies
+    - runbook_references
+    - portability_notes
+
+avv_artifacts:
+  required_for_services_with_avv: true
+  checklist_reference: docs/avv-checkliste-eventlock-saas.md
+  minimum_artifacts:
+    - avv_checklist_status
+    - subprocessors_and_regions
+    - retention_and_legal_hold_definition
+    - incident_reporting_path
+    - audit_and_evidence_access_path
+
+third_party_enablement:
+  required: true
+  documentation_path: docs/third-party-operations-and-exit.md
+  must_cover:
+    - external_operator_takeover
+    - customer_self_operation_path
+    - migration_interfaces_and_formats
+    - key_and_access_handover
+    - rollback_and_fallback
+
+replacement_readiness:
+  lock_in_risk_target: low
+  mandatory_controls:
+    - documented_export_interfaces
+    - documented_event_schema
+    - documented_runbooks_for_all_supported_clouds
+    - documented_tenant_ownership_options
+    - testable_exit_checklist
+
+change_control:
+  require_pull_request: true
+  required_approval_roles:
+    - prozessverantwortung
+    - freigabeverantwortung

@@ -113,6 +113,7 @@ Beispielstruktur:
 - branche notariat: Urkundenprozess, Vollzug, Registerkommunikation
 - branche steuerbuero: Mandantenzyklen, Deklarationsablauf, Rueckfragenmanagement
 - branche softwareunternehmen: Release, Incident, SLA und Lizenznachweise
+- branche schreinerei: Aufmass, Werkstattablauf, Montage und Gewaehrleistung
 
 Die Kombination aus generisch + branche bildet die operative Prozesslandkarte des jeweiligen Unternehmens.
 
@@ -126,6 +127,14 @@ Unterschiedliche Unternehmen brauchen unterschiedliche Auspraegungen. Deshalb we
 - wer sie freigegeben hat.
 
 So bleiben Unterschiede erlaubt, aber transparent und pruefbar.
+
+Fuer den Mischbetrieb gilt zusaetzlich:
+
+- Version wird je Vorgang beim Start gebunden,
+- laufende Vorgaenge bleiben auf ihrer gebundenen Version,
+- neue Releases gelten nur fuer neu gestartete Vorgaenge.
+
+Details: `docs/parallelbetrieb-version-binding.md`
 
 ## Change Request und Vererbung
 

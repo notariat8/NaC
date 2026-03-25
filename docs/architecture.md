@@ -86,6 +86,16 @@ flowchart TD
     RefReview --> RefModel
 ```
 
+Operative Details sind ausgelagert nach:
+
+- `docs/fork-and-release-operating-model.md`
+- `docs/release-sync-playbook.md`
+- `docs/parallelbetrieb-version-binding.md`
+- `docs/issue-taxonomie-pro-repo.md`
+- `docs/service-business-core-vertical-blueprint.md`
+- `docs/vertical-starter-prozesskatalog.md`
+- `docs/repo-refactor-plan-single-repo-modules.md`
+
 ## Python-Komponenten
 
 - `models.py`: normalisierte Datenklassen fuer Prozessantraege

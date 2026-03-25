@@ -1,0 +1,31 @@
+name: Cloud Runbook Parity
+
+on:
+  pull_request:
+    paths:
+      - "docs/eventstream-runbook-aws.md"
+      - "docs/eventstream-runbook-azure.md"
+      - "docs/eventstream-runbook-gcp.md"
+      - "docs/eventstream-runbook-oci.md"
+      - "docs/eventstream-implementation-templates.md"
+      - "docs/revisionssicherheit-eventstreaming.md"
+      - "policies/revisionssicherheit-eventstream-policy.yaml"
+      - "scripts/validate_cloud_runbook_parity.py"
+  workflow_dispatch:
+
+jobs:
+  parity-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate cloud runbook parity
+        run: python scripts/validate_cloud_runbook_parity.py

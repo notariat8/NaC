@@ -25,6 +25,26 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `docs/vscode-first-user-path.md` fuehrt Erstnutzer mit einem Formularpfad.
 - `docs/copilot-quickstart-15min.md` ist die 15-Minuten-Kurzanleitung fuer Copilot.
 - `docs/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
+- `docs/fork-and-release-operating-model.md` definiert Upstream/Fork/Domaenen-Betrieb.
+- `docs/release-sync-playbook.md` beschreibt den verbindlichen Upstream-Sync-Ablauf.
+- `docs/parallelbetrieb-version-binding.md` regelt Alt-/Neu-Mischbetrieb je Vorgangsstart.
+- `docs/issue-taxonomie-pro-repo.md` definiert Issue-Fuehrung ueber mehrere Repos.
+- `docs/einfuehrung-greenfield-brownfield.md` trennt Einfuehrungspfade fuer Greenfield/Brownfield.
+- `docs/service-business-core-vertical-blueprint.md` beschreibt Core-und-Vertical-Struktur fuer Dienstleister.
+- `docs/vertical-starter-prozesskatalog.md` liefert Starter-Prozesse fuer fuenf Verticals.
+- `docs/repo-refactor-plan-single-repo-modules.md` beschreibt Zielstruktur und Migration in einem Repo.
+- `docs/arbeitsmodell-agile-cadence.md` definiert Arbeits-Cadence fuer `agile` und `kanban`.
+- `docs/access-and-issue-operations.md` regelt Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
+- `docs/revisionssicherheit-eventstreaming.md` definiert revisionssicheren Event-Journal-Betrieb.
+- `docs/eventstream-implementation-templates.md` liefert konkrete AWS-/Azure-Implementierungsvorlagen.
+- `docs/eventstream-runbook-azure.md` ist das konkrete Azure-Betriebsrunbook.
+- `docs/eventstream-runbook-aws.md` ist das konkrete AWS-Betriebsrunbook.
+- `docs/eventstream-runbook-gcp.md` ist das konkrete GCP-Betriebsrunbook.
+- `docs/eventstream-runbook-oci.md` ist das konkrete OCI-Betriebsrunbook.
+- `docs/tenant-ownership-and-eventlock-service.md` beschreibt Tenant-Owner- und Service-Modell.
+- `docs/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
+- `docs/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
+- `docs/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
 - `docs/public-readiness.md` enthaelt den Public-Go-Live-Status.
@@ -42,10 +62,16 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `policies/data-protection-policy.yaml` definiert Datenschutz- und Secret-Regeln.
 - `policies/sbom-policy.yaml` definiert den verbindlichen SBOM-Standard.
 - `policies/role-model-policy.yaml` definiert Rollenrechte und Qualifikations-Gates.
+- `policies/access-control-policy.yaml` definiert verbindlich Zugriff, Sichtbarkeit und Gastregeln.
+- `policies/revisionssicherheit-eventstream-policy.yaml` definiert Eventstream- und WORM-Pflichten.
+- `policies/tenant-ownership-policy.yaml` definiert Tenant-Ownership und Provider/Kunden-Verantwortung.
+- `policies/provider-open-services-policy.yaml` erzwingt offene Leistungsdokumentation und Ersetzbarkeit.
 - `policies/onboarding-flow.json` definiert Fragen, Phasen und Rollenwissen fuer Onboarding.
 - `policies/onboarding-diagrams.json` definiert BPMN-/Mermaid-Referenzen je Frage.
 - `policies/github-identity-registry.json` mappt GitHub-Login auf technische Rollen.
 - `.cursor/rules/` enthaelt persistente Cursor-Regeln fuer das Vorgehen.
+- `.cursor/rules/11-cloud-runbook-parity.mdc` erzwingt Pflegeparitaet fuer AWS, Azure, GCP, OCI.
+- `.cursor/rules/12-open-service-portability.mdc` erzwingt offene Leistungsdoku und Ersetzbarkeit.
 - `schemas/` definiert strukturierte Prozessantraege.
 - `bpmn/` enthaelt fachlich verbindliche BPMN-2.0-Quellmodelle.
 - `processes/` enthaelt beispielhafte fachliche Instanzen.
@@ -54,6 +80,7 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `.github/workflows/sbom-export.yml` erzeugt SBOM-Artefakte fuer Releases.
 - `.github/copilot-instructions.md` enthaelt Repository-Anweisungen fuer Copilot.
 - `.github/ISSUE_TEMPLATE/` enthaelt strukturierte Issue-Formulare.
+- `.github/workflows/governance-policy-sync.yml` erzwingt Policy-zu-Rule-Synchronitaet.
 
 ## Schnellstart
 
@@ -77,6 +104,7 @@ python -m business_os monthly-close --year 2026 --month 3
 - Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
 - Tags und Releases repraesentieren Monats- oder Quartalsabschluesse.
 - Erzeugte Artefakte koennen als Actions-Artefakte archiviert werden.
+- Laufende Vorgaenge bleiben auf der beim Start gebundenen Prozessversion.
 
 ## Hinweise
 

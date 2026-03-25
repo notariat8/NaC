@@ -23,9 +23,15 @@ Der Wizard arbeitet zustandsbehaftet ueber mehrere Tage und bindet GitHub-Login,
 6. Bestaetigen Sie den verbindlichen Technikstack in `policies/technology-policy.yaml`.
 7. Bestaetigen Sie Datenschutz- und Secret-Regeln in `policies/data-protection-policy.yaml`.
 8. Definieren Sie generische und branchenspezifische Rollen in `policies/role-model-policy.yaml`.
-9. Fahren Sie den lokalen Startcheck (`docs/startup-verification.md`).
-10. Starten Sie das passende Onboarding-Prompt unter `prompts/onboarding/`.
-11. Fahren Sie einen Pilot mit 1-2 Kernprozessen vor Vollausrollung.
+9. Definieren Sie Repo-/Issue-Zugriff und Gastregeln in `policies/access-control-policy.yaml`.
+10. Aktivieren Sie revisionssicheren Event-Journal-Betrieb nach `policies/revisionssicherheit-eventstream-policy.yaml`.
+11. Fahren Sie den lokalen Startcheck (`docs/startup-verification.md`).
+12. Starten Sie das passende Onboarding-Prompt unter `prompts/onboarding/`.
+13. Fahren Sie einen Pilot mit 1-2 Kernprozessen vor Vollausrollung.
+14. Legen Sie das Betriebsmodell nach `docs/fork-and-release-operating-model.md` verbindlich fest.
+15. Definieren Sie den Release-Sync nach `docs/release-sync-playbook.md`.
+16. Aktivieren Sie Mischbetrieb-Regeln nach `docs/parallelbetrieb-version-binding.md`.
+17. Waehlen Sie die Arbeits-Cadence nach `docs/arbeitsmodell-agile-cadence.md` (Methode `agile|kanban`, Taktoptionen dokumentieren).
 
 Hinweis: Fachlich verbindliche Prozessdarstellungen liegen als BPMN-2.0-Quelle unter `bpmn/`.
 
@@ -56,6 +62,29 @@ Uebersicht: `docs/platform-onboarding-matrix.md`
 - Jede Verbesserung wird als Change Request dokumentiert.
 - Jede Aenderung bekommt Begruendung, Review und Versionsnummer.
 - Bewaehrte lokale Verbesserungen koennen in den Referenzstandard zurueckfliessen.
+
+## Betriebsdokumente fuer Unternehmens-Forks
+
+- `docs/fork-and-release-operating-model.md`
+- `docs/release-sync-playbook.md`
+- `docs/parallelbetrieb-version-binding.md`
+- `docs/issue-taxonomie-pro-repo.md`
+- `docs/einfuehrung-greenfield-brownfield.md`
+- `docs/service-business-core-vertical-blueprint.md`
+- `docs/vertical-starter-prozesskatalog.md`
+- `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/arbeitsmodell-agile-cadence.md`
+- `docs/access-and-issue-operations.md`
+- `docs/revisionssicherheit-eventstreaming.md`
+- `docs/eventstream-implementation-templates.md`
+- `docs/eventstream-runbook-azure.md`
+- `docs/eventstream-runbook-aws.md`
+- `docs/eventstream-runbook-gcp.md`
+- `docs/eventstream-runbook-oci.md`
+- `docs/tenant-ownership-and-eventlock-service.md`
+- `docs/avv-checkliste-eventlock-saas.md`
+- `docs/function8-service-catalog.md`
+- `docs/third-party-operations-and-exit.md`
 
 ## Verbandsmodell und Testat
 

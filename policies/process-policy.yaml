@@ -37,10 +37,53 @@ branch_modules:
       - release_governance
       - incident_management
       - service_level_reporting
+  carpentry:
+    enabled: false
+    includes:
+      - customer_intake
+      - quoting_and_measurement
+      - workshop_and_installation
+      - warranty_tracking
 change_management:
   require_change_request: true
   require_impact_assessment: true
   require_version_bump: true
+
+release_sync:
+  upstream_sync_only_via_pull_request: true
+  default_sync_cycle: monthly_or_quarterly
+  require_upstream_release_reference: true
+
+parallel_operation:
+  bind_case_to_version_on_start: true
+  running_cases_keep_bound_version: true
+  require_exception_approval_for_rebinding: true
+
+issue_governance:
+  single_leading_issue_per_topic: true
+  require_cross_repo_issue_links: true
+
+operating_cadence:
+  default_method: agile
+  allowed_methods:
+    - agile
+    - kanban
+  allowed_sprint_durations:
+    - 1w
+    - 2w
+    - 4w
+  allowed_daily_durations:
+    - 5m
+    - 10m
+    - 20m
+  allowed_kanban_review_cadences:
+    - 1w
+    - 2w
+    - 4w
+  allowed_kanban_sync_durations:
+    - 5m
+    - 10m
+    - 20m
 
 role_model:
   required_policy: policies/role-model-policy.yaml

@@ -18,6 +18,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 - Jede Prozessaenderung muss begruendet und versioniert sein.
 - Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
+- Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.
 
 ## Pflichtquellen im Repository
 
@@ -27,10 +28,33 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 - `policies/process-policy.yaml`
 - `policies/technology-policy.yaml`
 - `policies/data-protection-policy.yaml`
+- `docs/avv-checkliste-eventlock-saas.md`
 - `policies/sbom-policy.yaml`
 - `policies/role-model-policy.yaml`
+- `policies/access-control-policy.yaml`
+- `policies/revisionssicherheit-eventstream-policy.yaml`
+- `policies/tenant-ownership-policy.yaml`
+- `policies/provider-open-services-policy.yaml`
 - `policies/github-identity-registry.json`
 - `docs/governance.md`
+- `docs/eventstream-implementation-templates.md`
+- `docs/eventstream-runbook-aws.md`
+- `docs/eventstream-runbook-azure.md`
+- `docs/eventstream-runbook-gcp.md`
+- `docs/eventstream-runbook-oci.md`
+- `docs/tenant-ownership-and-eventlock-service.md`
+- `docs/function8-service-catalog.md`
+- `docs/third-party-operations-and-exit.md`
+- `docs/fork-and-release-operating-model.md`
+- `docs/release-sync-playbook.md`
+- `docs/parallelbetrieb-version-binding.md`
+- `docs/issue-taxonomie-pro-repo.md`
+- `docs/einfuehrung-greenfield-brownfield.md`
+- `docs/service-business-core-vertical-blueprint.md`
+- `docs/vertical-starter-prozesskatalog.md`
+- `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/arbeitsmodell-agile-cadence.md`
+- `docs/access-and-issue-operations.md`
 
 ## Sprache und Kultur
 
@@ -57,3 +81,4 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 2. Fuehre `python scripts/startup_check.py --ide vscode --run-tests` aus.
 3. Waehle das passende Branchen-Onboarding unter `prompts/onboarding/`.
 4. Beginne mit einem Pilotprozess statt Vollausrollung.
+5. Nutze fuer Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in `docs/`.

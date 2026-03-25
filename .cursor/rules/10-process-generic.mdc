@@ -10,5 +10,6 @@ alwaysApply: true
 - Dokumentiere Eingang, Entscheidung, Freigabe und Ergebnis.
 - Halte Rechnungs-, Buchfuehrungs- und Steuerprozesse nachvollziehbar.
 - Leite periodische Abschluesse aus versionierten Prozessdaten ab.
+- Fuer Teamsteuerung nur freigegebene Cadence-Optionen verwenden (`agile|kanban` mit den in Policy freigegebenen Takten).
 
 Ziel: Wiederholbarkeit, Pruefbarkeit und klare Verantwortlichkeit.

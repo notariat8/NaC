@@ -1,0 +1,54 @@
+version: 1
+status: mandatory
+
+source_of_truth:
+  access_rules_live_only_in: policies/
+  forbid_direct_rule_only_changes: true
+  require_sync_to_ai_rule_surfaces: true
+
+repository_model:
+  repo_types:
+    - core_repo
+    - domain_repo
+    - case_repo
+    - audit_repo
+  naming_patterns:
+    core_repo: core-*
+    domain_repo: domain-*
+    case_repo: case-*
+    audit_repo: audit-*
+
+organization_project:
+  required_for_cross_repo_issue_overview: true
+  issue_visibility_is_repo_permission_inherited: true
+  required_fields:
+    - case_id
+    - domain
+    - repo_type
+    - impact_level
+    - decision_type
+
+access_defaults:
+  notary_must_see_all_notary_case_repos: true
+  employees_without_repo_assignment_have_no_access: true
+  external_guest_default_permission: read
+
+guest_access_rules:
+  client_guest_user:
+    allowed_repo_types:
+      - case_repo
+    deny_other_repo_types: true
+    allow_only_assigned_case_repo: true
+  auditor_guest_user:
+    allowed_repo_types:
+      - case_repo
+      - audit_repo
+    deny_other_repo_types: true
+    requires_timeboxed_access: true
+
+change_control:
+  required_approval_roles:
+    - prozessverantwortung
+    - freigabeverantwortung
+  mandatory_review_count: 1
+  require_pull_request: true

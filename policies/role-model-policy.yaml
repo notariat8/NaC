@@ -92,3 +92,25 @@ approval_matrix:
   high:
     legal_or_compliance_impact: true
     decision: requires_approval
+
+access_model:
+  github_scope: repository_level
+  issue_scope: inherited_from_repository_permissions
+  require_org_project_for_cross_repo_visibility: true
+
+external_access:
+  client_guest_user:
+    allowed_repo_types:
+      - case_repo
+    default_permission: read
+    can_see_only_assigned_case_repo: true
+  auditor_guest_user:
+    allowed_repo_types:
+      - case_repo
+      - audit_repo
+    default_permission: read
+    requires_timeboxed_access: true
+
+team_visibility:
+  notary_must_see_all_notary_case_repos: true
+  employees_without_repo_assignment_have_no_access: true

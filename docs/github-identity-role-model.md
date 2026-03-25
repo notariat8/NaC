@@ -12,7 +12,9 @@ GitHub-Profile sind fuer Darstellung gedacht, nicht als verbindliches Berechtigu
    - `policies/github-identity-registry.json`
 2. Rollen- und Qualifikationsregeln:
    - `policies/role-model-policy.yaml`
-3. Onboarding-Fragen und Berechtigungen:
+3. Zugriffs- und Sichtbarkeitsregeln:
+   - `policies/access-control-policy.yaml`
+4. Onboarding-Fragen und Berechtigungen:
    - `policies/onboarding-flow.json`
 
 Damit ist klar und auditierbar:
@@ -20,6 +22,7 @@ Damit ist klar und auditierbar:
 - welcher GitHub-Login welche technische Rolle hat,
 - welche Fragen von welcher Rolle beantwortet werden duerfen,
 - welche Qualifikationen fuer kritische Schritte erforderlich sind.
+- welche Repo-/Issue-Sichtbarkeitsregeln fuer Mitarbeitende und Gaeste gelten.
 
 ## Empfohlene Zusatzabsicherung
 

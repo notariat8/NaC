@@ -1,0 +1,72 @@
+version: 1
+status: mandatory
+
+objective:
+  establish_immutable_audit_trail: true
+  issues_are_operational_layer_only: true
+  legal_record_is_event_journal: true
+
+event_sources:
+  required:
+    - github_org_audit_log
+    - github_issue_events
+    - github_issue_comments
+    - github_project_events
+    - workflow_approval_events
+
+delivery:
+  mode: near_realtime_webhook_stream
+  webhook_signature_required: true
+  retry_policy_required: true
+  dead_letter_queue_required: true
+
+transport:
+  broker_required: true
+  required_platform_coverage:
+    - aws
+    - azure
+    - gcp
+    - oci
+  accepted_brokers:
+    - kafka
+    - azure_event_hubs
+    - aws_kinesis
+    - gcp_pubsub
+    - oci_streaming
+  tls_required: true
+  producer_identity_required: true
+
+immutability_store:
+  required: true
+  accepted_targets:
+    - s3_object_lock_compliance_mode
+    - azure_blob_immutable_policy
+    - gcs_retention_lock
+    - oci_object_storage_retention
+    - compliant_worm_dms
+  append_only: true
+  delete_before_retention_end_forbidden: true
+  minimum_retention_years: 10
+
+integrity:
+  hash_chain_required: true
+  detached_signature_required: true
+  daily_anchor_required: true
+  anchor_contains:
+    - first_event_id
+    - last_event_id
+    - chain_hash
+    - signature_reference
+
+operational_controls:
+  separation_of_duties_required: true
+  dual_control_for_policy_change: true
+  monthly_access_review_required: true
+  quarterly_restore_test_required: true
+
+compliance_controls:
+  evidence_catalog_required: true
+  documented_retention_schedule_required: true
+  documented_legal_hold_process_required: true
+  incident_playbook_required: true
+  cross_platform_runbook_parity_required: true
