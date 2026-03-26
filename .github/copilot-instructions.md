@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konkreter Betriebsauspraegung.
 
 ## Verbindliche Prioritaet
 
@@ -12,7 +12,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als ko
 ## Arbeitsweise
 
 - Behandle das LLM als Assistent fuer Eingaben, nicht als finale fachliche Autoritaet.
-- Rahmen: `Organization as Code` + `Enterprise GitOps`; `GIT OS` ist die konkrete Umsetzung.
+- Rahmen: `Organization as Code` + `Enterprise GitOps`; `OaC8` ist die konkrete Umsetzung.
 - Schlage keine direkten Aenderungen an `main` vor.
 - Erzwinge Vorschlaege ueber Branch + Pull Request + Review.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
@@ -20,6 +20,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als ko
 - Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
 - Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.
+- Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 
 ## Pflichtquellen im Repository
 
@@ -82,5 +83,6 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als ko
 1. Lies `docs/vscode-copilot-start.md`.
 2. Fuehre `python scripts/startup_check.py --ide vscode --run-tests` aus.
 3. Waehle das passende Branchen-Onboarding unter `prompts/onboarding/`.
+   Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.
 4. Beginne mit einem Pilotprozess statt Vollausrollung.
 5. Nutze fuer Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in `docs/`.

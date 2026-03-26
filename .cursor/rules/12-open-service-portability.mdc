@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Open Service Portability (MUSS)
 
-- Alle Function8-Leistungen im Kontext `GIT OS` muessen in `docs/function8-service-catalog.md` dokumentiert sein.
+- Alle Function8-Leistungen im Kontext `OaC8` muessen in `docs/function8-service-catalog.md` dokumentiert sein.
 - Leistungen mit AVV-Pflicht muessen verlinkte AVV-Artefakte besitzen.
 - Fuer jede Leistung muss ein Drittbetriebs- und Exit-Pfad dokumentiert sein.
 - Hidden Dependencies ausserhalb des Repos sind nicht zulaessig.

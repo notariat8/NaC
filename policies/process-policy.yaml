@@ -2,7 +2,7 @@ version: 1
 positioning:
   model: organization_as_code
   operating_principle: enterprise_gitops
-  implementation_label: gitos
+  implementation_label: oac8
 baseline:
   generic_modules:
     - formation
@@ -24,7 +24,7 @@ branch_modules:
       - conflict_check
       - deadline_control
   notary:
-    enabled: false
+    enabled: true
     includes:
       - deed_preparation
       - identity_verification
@@ -36,11 +36,18 @@ branch_modules:
       - declaration_cycle
       - plausibility_checks
   software_company:
-    enabled: false
+    enabled: true
     includes:
       - release_governance
       - incident_management
       - service_level_reporting
+  wealth_management:
+    enabled: true
+    includes:
+      - client_intake_and_kyc
+      - portfolio_rebalancing_control
+      - suitability_and_risk_profile_review
+      - mandate_reporting_and_audit
   carpentry:
     enabled: false
     includes:

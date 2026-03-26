@@ -45,7 +45,15 @@ Waehlen Sie den passenden Onboarding-Prompt:
 
 - Kanzlei: `prompts/onboarding/law-firm-first-setup.md`
 - Notariat: `prompts/onboarding/notary-first-setup.md`
+- Softwareunternehmen: `prompts/onboarding/software-company-first-setup.md`
 - Steuerbuero: `prompts/onboarding/tax-office-first-setup.md`
+- Vermoegensverwaltung: `prompts/onboarding/wealth-management-first-setup.md`
+
+Synchroner MVP-Default im Referenzrepo:
+
+- `software_company`
+- `notary`
+- `wealth_management`
 
 ## Minute 12-15: Pilot verbindlich starten
 

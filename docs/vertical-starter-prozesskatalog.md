@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer fuenf Verticals auf Basis desselben Core-Modells.
+Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sechs Verticals auf Basis desselben Core-Modells.
 
 ## Einheitliche Statuswerte
 
@@ -77,6 +77,21 @@ Core-Mapping:
 - Intake/Auftragsstart
 - Incident- und Abweichungsbehandlung
 - Freigaben und Rollen
+- Nachweis/Audit
+
+## Starterset: Vermoegensverwaltung (`wealth_management`)
+
+1. Mandatsaufnahme und KYC-Pruefung
+2. Eignungs- und Risikoprofilfreigabe
+3. Portfolio-Aenderung mit Rebalancing-Kontrolle
+4. Rollen- und Zugriffswechsel fuer Mandatsteams
+5. Mandatsreporting mit Audit-Nachweis
+
+Core-Mapping:
+
+- Intake/Auftragsstart
+- Freigaben und Rollen
+- Risiko- und Kontrollpunkte
 - Nachweis/Audit
 
 ## Starterset: Schreinerei (`carpentry`)

@@ -2,12 +2,13 @@
 
 ## Ziel
 
-Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `GIT OS`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
+Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `OaC8`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
 
 - Anwaltskanzlei (`law_firm`)
 - Notariat (`notary`)
 - Steuerberatung (`tax_office`)
 - Softwareunternehmen (`software_company`)
+- Vermoegensverwaltung (`wealth_management`)
 - Schreinerei (`carpentry`)
 
 Das Modell setzt auf **einen gemeinsamen Core** plus **Vertical Modules** im selben Repository.
@@ -39,6 +40,7 @@ Jedes Vertical erweitert den Core um branchenspezifisches Wissen:
 - `notary`: Aktenanlage, Identitaetspruefung, Urkundenvollzug, Registerkommunikation
 - `tax_office`: Mandantenzyklen, Deklarationsfristen, Plausibilitaetspruefungen
 - `software_company`: Release-Governance, Incident-Management, SLA-/Lizenznachweise
+- `wealth_management`: KYC/Client-Intake, Eignungs- und Risikoprofilpruefung, Rebalancing-Kontrollen, Mandatsreporting
 - `carpentry`: Aufmass, Materialplanung, Werkstatt-/Montagekoordination, Gewaehrleistungsfaelle
 
 ## Abgrenzungsregel Core vs. Vertical
@@ -63,6 +65,7 @@ flowchart LR
   coreTopics --> notaryVertical[NotaryVertical]
   coreTopics --> taxOfficeVertical[TaxOfficeVertical]
   coreTopics --> softwareVertical[SoftwareVertical]
+  coreTopics --> wealthVertical[WealthManagementVertical]
   coreTopics --> carpentryVertical[CarpentryVertical]
   coreTopics --> governanceLayer[SharedGovernanceAndRelease]
 ```

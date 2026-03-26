@@ -10,7 +10,7 @@ principles:
 
 scope:
   applies_to:
-    - all_function8_service_offerings_related_to_gitos
+    - all_function8_service_offerings_related_to_oac8
     - all_saas_or_managed_components_with_customer_data
     - all_customer_fork_integration_paths
 

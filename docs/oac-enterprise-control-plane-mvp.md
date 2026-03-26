@@ -2,7 +2,7 @@
 
 ## Ziel und Rahmen
 
-Dieses Dokument konkretisiert ein realistisches MVP fuer `Organization as Code` im bestehenden Modell `OaC + Enterprise GitOps + GIT OS`.
+Dieses Dokument konkretisiert ein realistisches MVP fuer `Organization as Code` im bestehenden Modell `OaC + Enterprise GitOps + OaC8`.
 
 Das MVP schliesst einen kleinen, aber vollstaendigen End-to-End-Kreis:
 
@@ -11,7 +11,8 @@ Das MVP schliesst einen kleinen, aber vollstaendigen End-to-End-Kreis:
 - Reconciliation in Zielsysteme,
 - Audit- und Drift-Sichtbarkeit.
 
-Default fuer den Pilot ist `software_company`. Branchenmodule bleiben ueber `policies/process-policy.yaml` umstellbar.
+Default fuer synchrone Pilotpfade sind `software_company`, `notary` und `wealth_management`.
+Branchenmodule bleiben ueber `policies/process-policy.yaml` umstellbar.
 
 ## MVP-Scope
 

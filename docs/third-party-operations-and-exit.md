@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieses Dokument beschreibt, wie Kunden `GIT OS` und zugehoerige Services auch ohne Function8 als SaaS-Betreiber sicher weiterfuehren oder zu einem Drittanbieter migrieren koennen.
+Dieses Dokument beschreibt, wie Kunden `OaC8` und zugehoerige Services auch ohne Function8 als SaaS-Betreiber sicher weiterfuehren oder zu einem Drittanbieter migrieren koennen.
 
 ## Grundsatz
 

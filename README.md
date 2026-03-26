@@ -1,6 +1,6 @@
-# OaC8: Organization as Code mit GIT OS
+# OaC8: Organization as Code mit Enterprise Control Plane
 
-Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Organization as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `GIT OS` ist dabei die konkrete Auspraegung dieses Modells.
+Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Organization as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `OaC8` ist dabei die konkrete Auspraegung als Enterprise Control Plane.
 
 ## Kernidee
 
@@ -11,10 +11,25 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 
 ## Positionierung
 
-- Architekturmodell: `Organization as Code (OaC)`
+- Architekturmodell: `Organization as Code`
 - Betriebsprinzip: `Enterprise GitOps`
-- konkrete Umsetzung in diesem Repo: `GIT OS`
+- konkrete Umsetzung in diesem Repo: `OaC8`
+- Plattformname: `Enterprise Control Plane`
 - Referenz: `docs/organization-as-code-positioning.md`
+
+## Meine konkrete Empfehlung
+
+Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, wuerde ich es so framen:
+
+- Begriff: `Organization as Code`
+- Plattformname: `Enterprise Control Plane`
+- erstes Produktversprechen: "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
+
+Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
+
+Der Ein-Satz-Pitch:
+
+Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
 
 ## Prozessklassen
 
@@ -53,7 +68,7 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 - `docs/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
 - `docs/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
-- `docs/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/GIT OS.
+- `docs/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/OaC8.
 - `docs/oac-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
@@ -135,8 +150,16 @@ Dieses Repository steht unter `GPL-3.0` (siehe `LICENSE`).
 
 - Kanzlei: `prompts/onboarding/law-firm-first-setup.md`
 - Notariat: `prompts/onboarding/notary-first-setup.md`
+- Softwareunternehmen: `prompts/onboarding/software-company-first-setup.md`
 - Steuerbuero: `prompts/onboarding/tax-office-first-setup.md`
+- Vermoegensverwaltung: `prompts/onboarding/wealth-management-first-setup.md`
 - VS Code + Copilot Start: `prompts/onboarding/vscode-copilot-business-os-setup.md`
+
+Default fuer synchrone MVP-Pfade in diesem Repo:
+
+- `software_company`
+- `notary`
+- `wealth_management`
 
 ## Plattform-Regel
 

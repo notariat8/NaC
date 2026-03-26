@@ -3,7 +3,7 @@
 ## Ziel
 
 Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
-Der fachliche Rahmen ist `Organization as Code` mit `Enterprise GitOps`; `GIT OS` ist die konkrete Umsetzung.
+Der fachliche Rahmen ist `Organization as Code` mit `Enterprise GitOps`; `OaC8` ist die konkrete Umsetzung.
 
 Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefuehrten Pfad:
 `docs/vscode-first-user-path.md`
@@ -23,6 +23,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 4. Installieren und aktivieren Sie GitHub Copilot im Editor.
 5. Lesen Sie `docs/START_HERE.md` und bestaetigen Sie die Policies unter `policies/`.
 6. Nutzen Sie ein Onboarding-Prompt aus `prompts/onboarding/` fuer Ihre Branche.
+   Standard fuer den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
 7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
 8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
 9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/`.
@@ -40,7 +41,7 @@ Lies zuerst folgende Dateien und erklaere mir dann die naechsten 3 Schritte ohne
 Danach:
 1) Frage mich nach Unternehmensart und Prioritaetsprozessen.
 2) Schlage passende Branchenmodule vor.
-3) Erstelle einen 30-Tage-Pilotplan fuer Rechnung und Buchfuehrung.
+3) Erstelle einen 30-Tage-Pilotplan fuer Team-, Rollen- und Zugriffsprozesse.
 ```
 
 ## Operative Regeln fuer Copilot-Nutzung

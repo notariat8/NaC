@@ -5,4 +5,4 @@ Summary: Reference implementation for Git-driven business processes.
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 
-# OaC8: Organization as Code mit GIT OS
+# OaC8: Organization as Code mit Enterprise Control Plane

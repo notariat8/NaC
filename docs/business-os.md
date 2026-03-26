@@ -1,4 +1,4 @@
-# Fachkonzept: Organization as Code mit GIT OS
+# Fachkonzept: Organization as Code mit OaC8
 
 ## Leitprinzip
 
@@ -11,9 +11,9 @@ Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Ni
 
 ## Positionierung
 
-- `Organization as Code (OaC)` beschreibt das uebergeordnete Zielmodell.
+- `Organization as Code` beschreibt das uebergeordnete Zielmodell.
 - `Enterprise GitOps` beschreibt den operativen Aenderungsfluss.
-- `GIT OS` ist die konkrete Betriebsumsetzung in diesem Repository.
+- `OaC8` ist die konkrete Betriebsumsetzung in diesem Repository.
 
 Referenz: `docs/organization-as-code-positioning.md`
 

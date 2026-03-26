@@ -19,6 +19,7 @@ Die folgenden Inhalte muessen inhaltlich auf beiden Plattformen gleich bleiben:
 - Review- und Freigabelogik
 - Kultur- und Sprachpolicy
 - Onboarding-Reihenfolge fuer Nicht-IT-Nutzer
+- Default-MVP-Module und zugehoerige Onboarding-Prompts
 
 ## Aenderungsregel
 
@@ -28,3 +29,9 @@ Bei jeder konzeptuellen Aenderung:
 2. Cursor-Pfad aktualisieren
 3. VS-Code-Copilot-Pfad aktualisieren
 4. Verlinkungen im `README.md` und `docs/START_HERE.md` pruefen
+
+## Aktueller synchroner MVP-Default
+
+- `software_company` -> `prompts/onboarding/software-company-first-setup.md`
+- `notary` -> `prompts/onboarding/notary-first-setup.md`
+- `wealth_management` -> `prompts/onboarding/wealth-management-first-setup.md`

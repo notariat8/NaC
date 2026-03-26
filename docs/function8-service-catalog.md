@@ -1,8 +1,8 @@
-# Function8 Service Catalog fuer GIT OS
+# Function8 Service Catalog fuer OaC8
 
 ## Ziel
 
-Dieses Dokument listet alle Function8-Leistungen im Kontext `GIT OS` transparent und oeffentlich nachvollziehbar.
+Dieses Dokument listet alle Function8-Leistungen im Kontext `OaC8` transparent und oeffentlich nachvollziehbar.
 Leistungen mit AVV-Pflicht muessen als solche gekennzeichnet und mit den erforderlichen Artefakten verlinkt sein.
 
 ## Katalogprinzip
@@ -17,7 +17,7 @@ Leistungen mit AVV-Pflicht muessen als solche gekennzeichnet und mit den erforde
 | service_id | service_name | service_type | avv_required | data_scope | required_policies | runbook_references | portability_notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | f8-eventlock-saas | EventLock-as-a-Service | managed_saas | yes | event_journal_and_metadata | `policies/revisionssicherheit-eventstream-policy.yaml`, `policies/tenant-ownership-policy.yaml`, `policies/provider-open-services-policy.yaml` | `docs/revisionssicherheit-eventstreaming.md`, `docs/eventstream-implementation-templates.md`, `docs/eventstream-runbook-aws.md`, `docs/eventstream-runbook-azure.md`, `docs/eventstream-runbook-gcp.md`, `docs/eventstream-runbook-oci.md` | dedizierte Subinstanz pro Kunde, dokumentierter Exit |
-| f8-gitos-governance-pack | Governance und Policy Pack | documentation_and_controls | no | governance_metadata | `policies/process-policy.yaml`, `policies/role-model-policy.yaml`, `policies/access-control-policy.yaml` | `docs/governance.md`, `docs/access-and-issue-operations.md` | vollstaendig repo-basiert, durch Dritte uebernehmbar |
+| f8-oac8-governance-pack | Governance und Policy Pack | documentation_and_controls | no | governance_metadata | `policies/process-policy.yaml`, `policies/role-model-policy.yaml`, `policies/access-control-policy.yaml` | `docs/governance.md`, `docs/access-and-issue-operations.md` | vollstaendig repo-basiert, durch Dritte uebernehmbar |
 | f8-onboarding-pack | Onboarding und Einfuehrungsunterlagen | documentation | no | onboarding_metadata | `policies/onboarding-flow.json`, `policies/provider-open-services-policy.yaml` | `docs/START_HERE.md`, `docs/vscode-copilot-start.md`, `docs/platform-onboarding-matrix.md` | offen dokumentiert, kein proprietaerer Zwang |
 
 ## AVV-Referenz

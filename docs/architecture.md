@@ -3,7 +3,7 @@
 ## Architekturrahmen
 
 Diese Architektur folgt dem Modell `Organization as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
-`GIT OS` ist die konkrete Auspraegung dieses Rahmens.
+`OaC8` ist die konkrete Auspraegung dieses Rahmens.
 
 Referenz: `docs/organization-as-code-positioning.md`
 

@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieses Dokument beschreibt das verbindliche Betriebsmodell fuer Unternehmen, die das zentrale `GIT OS` als Referenz nutzen:
+Dieses Dokument beschreibt das verbindliche Betriebsmodell fuer Unternehmen, die das zentrale `OaC8` als Referenz nutzen:
 
 - zentraler Upstream als Referenzstandard,
 - ein Unternehmens-Fork als verbindlicher Betriebsstand,

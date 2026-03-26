@@ -6,7 +6,7 @@ Dieses Dokument definiert, welche Themen in welches Repository gehoeren und wie 
 
 ## Repo-Typen
 
-### Upstream-Repo (zentrales GIT OS)
+### Upstream-Repo (zentrales OaC8)
 
 Zustaendig fuer:
 

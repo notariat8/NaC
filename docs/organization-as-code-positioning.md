@@ -4,7 +4,7 @@
 
 Dieses Dokument schaerft den Begriffsrahmen:
 
-- `GIT OS` ist der konkrete Produkt- und Betriebsansatz in diesem Repository.
+- `OaC8` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
 - Das uebergeordnete Architekturmodell ist `Organization as Code (OaC)`.
 - Das operative Steuerungsprinzip ist `Enterprise GitOps`.
 
@@ -29,9 +29,9 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 - Review/Freigabe
 - automatisierte Policy- und Compliance-Checks
 
-### GIT OS
+### OaC8
 
-`GIT OS` ist die konkrete Umsetzung von OaC + Enterprise GitOps in diesem Repo.
+`OaC8` ist die konkrete Umsetzung von OaC + Enterprise GitOps in diesem Repo.
 
 ## Warum diese Trennung wichtig ist
 
@@ -45,3 +45,25 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 - `Control Layer`: PR, Review, Approval, Rulesets
 - `Execution Layer`: Runtime, Automationen, Prozessausfuehrung
 - `Evidence Layer`: revisionssicheres Event-Journal
+
+## Meine konkrete Empfehlung
+
+Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, sollte es so geframed werden.
+
+Begriff:
+
+- `Organization as Code`
+
+Plattformname:
+
+- `Enterprise Control Plane`
+
+Erstes Produktversprechen:
+
+- "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
+
+Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
+
+## Der Ein-Satz-Pitch
+
+Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.

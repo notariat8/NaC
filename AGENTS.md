@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konkreter Betriebsauspraegung.
 
 ## Prioritaet der Vorgaben
 
@@ -45,6 +45,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als ko
 2. `policies/culture-policy.yaml`, `policies/process-policy.yaml`, `policies/technology-policy.yaml`, `policies/data-protection-policy.yaml` und `policies/role-model-policy.yaml` bestaetigen.
 3. `python scripts/startup_check.py --ide auto --run-tests` erfolgreich ausfuehren.
 4. Passendes Onboarding-Prompt unter `prompts/onboarding/` starten.
+   Standard-MVP-Set im Referenzrepo: `software_company`, `notary`, `wealth_management`.
 5. Erst danach mit produktiven Prozessaenderungen beginnen.
 6. Fuer Greenfield/Brownfield den Pfad aus `docs/einfuehrung-greenfield-brownfield.md` waehlen.
 
