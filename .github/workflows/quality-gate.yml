@@ -21,6 +21,9 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +40,47 @@ jobs:
 
       - name: Run strict quality gate
         run: python scripts/quality_gate.py --profile strict
+
+      - name: Render PR quality gate comment
+        if: always() && github.event_name == 'pull_request'
+        run: python scripts/render_quality_gate_comment.py --input out/quality/status.json --output out/quality/comment.md
+
+      - name: Upsert PR quality gate comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- oac8-quality-gate-comment -->';
+            const body = fs.readFileSync('out/quality/comment.md', 'utf8');
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                per_page: 100,
+              }
+            );
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(`Updated quality gate comment ${existing.id}`);
+            } else {
+              const created = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body,
+              });
+              core.info(`Created quality gate comment ${created.data.id}`);
+            }
 
       - name: Upload quality gate artifacts
         if: always()

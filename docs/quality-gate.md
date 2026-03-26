@@ -44,6 +44,7 @@ Standardausgabe:
 
 - JSON: `out/quality/status.json`
 - Markdown: `out/quality/report.md`
+- PR-Kommentar: `out/quality/comment.md` (fuer Upsert in Pull Requests)
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 
