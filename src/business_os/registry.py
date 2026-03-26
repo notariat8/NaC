@@ -65,6 +65,48 @@ PROCESS_DEFINITIONS: dict[str, ProcessDefinition] = {
         },
         review_statuses=("approved", "submitted"),
     ),
+    "team": ProcessDefinition(
+        process_type="team",
+        schema_name="team.schema.json",
+        allowed_statuses=("draft", "validated", "needs_review", "approved", "executed", "archived"),
+        allowed_transitions={
+            "draft": ("validated",),
+            "validated": ("needs_review", "approved"),
+            "needs_review": ("approved", "draft"),
+            "approved": ("executed",),
+            "executed": ("archived",),
+            "archived": (),
+        },
+        review_statuses=("needs_review",),
+    ),
+    "role_change": ProcessDefinition(
+        process_type="role_change",
+        schema_name="role_change.schema.json",
+        allowed_statuses=("draft", "validated", "needs_review", "approved", "executed", "archived"),
+        allowed_transitions={
+            "draft": ("validated",),
+            "validated": ("needs_review", "approved"),
+            "needs_review": ("approved", "draft"),
+            "approved": ("executed",),
+            "executed": ("archived",),
+            "archived": (),
+        },
+        review_statuses=("needs_review",),
+    ),
+    "joiner_mover": ProcessDefinition(
+        process_type="joiner_mover",
+        schema_name="joiner_mover.schema.json",
+        allowed_statuses=("draft", "validated", "needs_review", "approved", "executed", "archived"),
+        allowed_transitions={
+            "draft": ("validated",),
+            "validated": ("needs_review", "approved"),
+            "needs_review": ("approved", "draft"),
+            "approved": ("executed",),
+            "executed": ("archived",),
+            "archived": (),
+        },
+        review_statuses=("needs_review",),
+    ),
 }
 
 

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JoinerMoverProcess",
+  "type": "object",
+  "required": [
+    "process_type",
+    "request_id",
+    "idempotency_key",
+    "actor_context",
+    "status",
+    "year",
+    "person_position"
+  ],
+  "properties": {
+    "process_type": {
+      "const": "joiner_mover"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}-[0-9]{4}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "actor_context": {
+      "type": "object",
+      "required": [
+        "actor_role",
+        "requested_decision_type",
+        "impact_level",
+        "compliance_impact"
+      ],
+      "properties": {
+        "actor_role": { "type": "string", "minLength": 2 },
+        "actor_display": { "type": "string" },
+        "requested_decision_type": {
+          "type": "string",
+          "enum": ["self_resolve", "requires_review", "requires_approval"]
+        },
+        "impact_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "compliance_impact": { "type": "boolean" },
+        "approver_role": { "type": "string" },
+        "resolver_role": { "type": "string" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "validated", "needs_review", "approved", "executed", "archived"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2020
+    },
+    "person_position": {
+      "type": "object",
+      "required": [
+        "action",
+        "person_ref",
+        "position_id",
+        "target_team",
+        "access_profile",
+        "effective_date",
+        "cost_center"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["joiner", "mover"]
+        },
+        "person_ref": {
+          "type": "string",
+          "minLength": 2
+        },
+        "position_id": {
+          "type": "string",
+          "minLength": 2
+        },
+        "target_team": {
+          "type": "string",
+          "minLength": 2
+        },
+        "access_profile": {
+          "type": "string",
+          "minLength": 2
+        },
+        "effective_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "cost_center": {
+          "type": "string",
+          "minLength": 2
+        },
+        "required_trainings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          }
+        },
+        "required_assets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

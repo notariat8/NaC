@@ -1,0 +1,25 @@
+{
+  "process_type": "team",
+  "request_id": "REQ-2026-0005",
+  "idempotency_key": "team-model-eval-2026",
+  "actor_context": {
+    "actor_role": "org_manager",
+    "requested_decision_type": "requires_review",
+    "impact_level": "medium",
+    "compliance_impact": true,
+    "approver_role": "security_reviewer"
+  },
+  "status": "validated",
+  "year": 2026,
+  "team": {
+    "id": "model-eval",
+    "org_unit": "ai-platform",
+    "manager": "dir-eval",
+    "members_target": 6,
+    "access_profile": "ml-standard",
+    "tools": ["github", "jira", "slack", "mlflow"]
+  },
+  "metadata": {
+    "pilot_domain": "software_company"
+  }
+}

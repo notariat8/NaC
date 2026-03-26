@@ -45,4 +45,26 @@ def render_process_summary(payload: dict[str, Any]) -> str:
             f"schritte={completed}/{total_steps}, status={payload['status']}"
         )
 
+    if process_type == "team":
+        team = payload["team"]
+        return (
+            f"Team {team['id']} in {team['org_unit']}: "
+            f"zielgroesse={team['members_target']}, access_profile={team['access_profile']}, "
+            f"status={payload['status']}"
+        )
+
+    if process_type == "role_change":
+        change = payload["role_change"]
+        return (
+            f"Rollenwechsel {change['subject_kind']} {change['subject_id']}: "
+            f"{change['current_role']} -> {change['target_role']}, status={payload['status']}"
+        )
+
+    if process_type == "joiner_mover":
+        pos = payload["person_position"]
+        return (
+            f"{pos['action']} fuer {pos['person_ref']} in Team {pos['target_team']}: "
+            f"access_profile={pos['access_profile']}, status={payload['status']}"
+        )
+
     return f"Unbekannter Prozess {payload['request_id']}"

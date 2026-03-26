@@ -22,6 +22,7 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 - `invoice`: Angebot, Rechnungsentwurf, Freigabe, Versand, Zahlung
 - `bookkeeping`: Buchungssatz, Kontierung, Belegbezug, Monatsabschluss
 - `tax`: Steuerfall, Aggregation, Voranmeldung, Abgabevorbereitung
+- `team`, `role_change`, `joiner_mover`: MVP-Startset fuer Org/Access/Tooling-Onboarding
 
 ## Repository-Struktur
 
@@ -53,6 +54,7 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 - `docs/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
 - `docs/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/GIT OS.
+- `docs/oac-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
 - `docs/public-readiness.md` enthaelt den Public-Go-Live-Status.

@@ -1,0 +1,26 @@
+{
+  "process_type": "role_change",
+  "request_id": "REQ-2026-0006",
+  "idempotency_key": "role-model-eval-deployer-2026",
+  "actor_context": {
+    "actor_role": "team_manager",
+    "requested_decision_type": "requires_review",
+    "impact_level": "medium",
+    "compliance_impact": true,
+    "approver_role": "iam_reviewer"
+  },
+  "status": "needs_review",
+  "year": 2026,
+  "role_change": {
+    "subject_kind": "team",
+    "subject_id": "model-eval",
+    "current_role": "viewer",
+    "target_role": "deployer",
+    "effective_date": "2026-04-01",
+    "security_review_required": true,
+    "justification": "Deployment-Verantwortung fuer Produktionsmodelle."
+  },
+  "metadata": {
+    "pilot_domain": "software_company"
+  }
+}

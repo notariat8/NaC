@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RoleChangeProcess",
+  "type": "object",
+  "required": [
+    "process_type",
+    "request_id",
+    "idempotency_key",
+    "actor_context",
+    "status",
+    "year",
+    "role_change"
+  ],
+  "properties": {
+    "process_type": {
+      "const": "role_change"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}-[0-9]{4}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "actor_context": {
+      "type": "object",
+      "required": [
+        "actor_role",
+        "requested_decision_type",
+        "impact_level",
+        "compliance_impact"
+      ],
+      "properties": {
+        "actor_role": { "type": "string", "minLength": 2 },
+        "actor_display": { "type": "string" },
+        "requested_decision_type": {
+          "type": "string",
+          "enum": ["self_resolve", "requires_review", "requires_approval"]
+        },
+        "impact_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "compliance_impact": { "type": "boolean" },
+        "approver_role": { "type": "string" },
+        "resolver_role": { "type": "string" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "validated", "needs_review", "approved", "executed", "archived"]
+    },
+    "year": {
+      "type": "integer",
+      "minimum": 2020
+    },
+    "role_change": {
+      "type": "object",
+      "required": [
+        "subject_kind",
+        "subject_id",
+        "current_role",
+        "target_role",
+        "effective_date",
+        "justification"
+      ],
+      "properties": {
+        "subject_kind": {
+          "type": "string",
+          "enum": ["person", "team"]
+        },
+        "subject_id": {
+          "type": "string",
+          "minLength": 2
+        },
+        "current_role": {
+          "type": "string",
+          "minLength": 2
+        },
+        "target_role": {
+          "type": "string",
+          "minLength": 2
+        },
+        "effective_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "security_review_required": {
+          "type": "boolean"
+        },
+        "justification": {
+          "type": "string",
+          "minLength": 8
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
