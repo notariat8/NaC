@@ -70,6 +70,7 @@ Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Polici
 - `docs/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
 - `docs/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/OaC8.
 - `docs/oac-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
+- `docs/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
 - `docs/public-readiness.md` enthaelt den Public-Go-Live-Status.

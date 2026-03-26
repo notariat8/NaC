@@ -1,0 +1,46 @@
+name: OaC8 Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - "processes/**/*.json"
+      - "schemas/**/*.json"
+      - "src/business_os/**/*.py"
+      - "tests/**/*.py"
+      - "scripts/**/*.py"
+      - "policies/**/*.yaml"
+      - "policies/**/*.json"
+      - "docs/**/*.md"
+      - ".cursor/rules/**/*.mdc"
+      - ".github/workflows/*.yml"
+      - ".github/copilot-instructions.md"
+      - "AGENTS.md"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run strict quality gate
+        run: python scripts/quality_gate.py --profile strict
+
+      - name: Upload quality gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oac8-quality-gate
+          path: out/quality/
