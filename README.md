@@ -151,6 +151,7 @@ Dieses Repository steht unter `GPL-3.0` (siehe `LICENSE`).
 
 - Kanzlei: `prompts/onboarding/law-firm-first-setup.md`
 - Notariat: `prompts/onboarding/notary-first-setup.md`
+- Hausverwaltung: `prompts/onboarding/property-management-first-setup.md`
 - Softwareunternehmen: `prompts/onboarding/software-company-first-setup.md`
 - Steuerbuero: `prompts/onboarding/tax-office-first-setup.md`
 - Vermoegensverwaltung: `prompts/onboarding/wealth-management-first-setup.md`
@@ -161,6 +162,10 @@ Default fuer synchrone MVP-Pfade in diesem Repo:
 - `software_company`
 - `notary`
 - `wealth_management`
+
+Zusaetzlicher MVP-Use-Case:
+
+- `property_management`
 
 ## Plattform-Regel
 

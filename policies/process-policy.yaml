@@ -48,6 +48,13 @@ branch_modules:
       - portfolio_rebalancing_control
       - suitability_and_risk_profile_review
       - mandate_reporting_and_audit
+  property_management:
+    enabled: true
+    includes:
+      - tenant_intake_and_contract_setup
+      - maintenance_ticket_and_vendor_dispatch
+      - service_charge_and_budget_control
+      - handover_and_damage_documentation
   carpentry:
     enabled: false
     includes:

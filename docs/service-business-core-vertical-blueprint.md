@@ -7,6 +7,7 @@ Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `OaC8`,
 - Anwaltskanzlei (`law_firm`)
 - Notariat (`notary`)
 - Steuerberatung (`tax_office`)
+- Hausverwaltung (`property_management`)
 - Softwareunternehmen (`software_company`)
 - Vermoegensverwaltung (`wealth_management`)
 - Schreinerei (`carpentry`)
@@ -39,6 +40,7 @@ Jedes Vertical erweitert den Core um branchenspezifisches Wissen:
 - `law_firm`: Mandat, Konfliktpruefung, Fristenmanagement, RVG-Bezug
 - `notary`: Aktenanlage, Identitaetspruefung, Urkundenvollzug, Registerkommunikation
 - `tax_office`: Mandantenzyklen, Deklarationsfristen, Plausibilitaetspruefungen
+- `property_management`: Mieteraufnahme, Objektbetrieb, Wartungssteuerung, Nebenkostenkontrollen, Uebergaben
 - `software_company`: Release-Governance, Incident-Management, SLA-/Lizenznachweise
 - `wealth_management`: KYC/Client-Intake, Eignungs- und Risikoprofilpruefung, Rebalancing-Kontrollen, Mandatsreporting
 - `carpentry`: Aufmass, Materialplanung, Werkstatt-/Montagekoordination, Gewaehrleistungsfaelle
@@ -64,6 +66,7 @@ flowchart LR
   coreTopics[CoreTopicsGemeinsam] --> lawFirmVertical[LawFirmVertical]
   coreTopics --> notaryVertical[NotaryVertical]
   coreTopics --> taxOfficeVertical[TaxOfficeVertical]
+  coreTopics --> propertyVertical[PropertyManagementVertical]
   coreTopics --> softwareVertical[SoftwareVertical]
   coreTopics --> wealthVertical[WealthManagementVertical]
   coreTopics --> carpentryVertical[CarpentryVertical]

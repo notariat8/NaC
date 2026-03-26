@@ -18,7 +18,9 @@ processes/
     law_firm/
     notary/
     tax_office/
+    property_management/
     software_company/
+    wealth_management/
     carpentry/
 ```
 
@@ -40,7 +42,7 @@ processes/
 4. **Validierung und Review**
    - Validierung/Tests und fachliche Freigabe auf Pilotvertical.
 5. **Weitere Verticals migrieren**
-   - law_firm, tax_office, software_company, carpentry in festem Takt.
+   - law_firm, tax_office, property_management, software_company, wealth_management, carpentry in festem Takt.
 6. **Abschluss**
    - Index-/Doku-Referenzen aktualisieren und Release taggen.
 

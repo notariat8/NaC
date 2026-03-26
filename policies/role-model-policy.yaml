@@ -60,6 +60,11 @@ domain_roles:
       can_approve_tax: true
       required_qualifications:
         - tax_professional
+  property_management:
+    hausverwalter_fachlich:
+      can_approve_property_ops: true
+      required_qualifications:
+        - property_management_qualification
 
 qualification_gates:
   invoice_rvg_creation:

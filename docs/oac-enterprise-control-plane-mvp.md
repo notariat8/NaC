@@ -19,6 +19,7 @@ Branchenmodule bleiben ueber `policies/process-policy.yaml` umstellbar.
 Fokusdomaene:
 
 - Org + Access + Tooling Onboarding.
+- Zusaetzlicher Branchenpfad als MVP-Use-Case: `property_management` (Hausverwaltung).
 
 Enthaltene Change-Typen (Schema v1):
 

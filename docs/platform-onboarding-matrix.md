@@ -35,3 +35,7 @@ Bei jeder konzeptuellen Aenderung:
 - `software_company` -> `prompts/onboarding/software-company-first-setup.md`
 - `notary` -> `prompts/onboarding/notary-first-setup.md`
 - `wealth_management` -> `prompts/onboarding/wealth-management-first-setup.md`
+
+Zusaetzlicher MVP-Use-Case:
+
+- `property_management` -> `prompts/onboarding/property-management-first-setup.md`

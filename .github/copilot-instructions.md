@@ -21,6 +21,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
 - Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
+- Zusaetzlicher MVP-Use-Case: `property_management`.
 
 ## Pflichtquellen im Repository
 
@@ -84,5 +85,6 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 2. Fuehre `python scripts/startup_check.py --ide vscode --run-tests` aus.
 3. Waehle das passende Branchen-Onboarding unter `prompts/onboarding/`.
    Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.
+   Zusaetzlicher MVP-Pfad: `property-management-first-setup.md`.
 4. Beginne mit einem Pilotprozess statt Vollausrollung.
 5. Nutze fuer Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in `docs/`.

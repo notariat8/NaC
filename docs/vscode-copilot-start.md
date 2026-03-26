@@ -24,6 +24,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 5. Lesen Sie `docs/START_HERE.md` und bestaetigen Sie die Policies unter `policies/`.
 6. Nutzen Sie ein Onboarding-Prompt aus `prompts/onboarding/` fuer Ihre Branche.
    Standard fuer den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
+   Zusaetzlicher MVP-Use-Case: `property_management`.
 7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
 8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
 9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/`.

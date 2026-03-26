@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sechs Verticals auf Basis desselben Core-Modells.
+Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sieben Verticals auf Basis desselben Core-Modells.
 
 ## Einheitliche Statuswerte
 
@@ -77,6 +77,21 @@ Core-Mapping:
 - Intake/Auftragsstart
 - Incident- und Abweichungsbehandlung
 - Freigaben und Rollen
+- Nachweis/Audit
+
+## Starterset: Hausverwaltung (`property_management`)
+
+1. Objekt- und Mieteraufnahme
+2. Vertrags- und Fristenanlage
+3. Wartungsticket und Dienstleistersteuerung
+4. Rollen- und Zugriffswechsel im Objektteam
+5. Uebergabe-/Schadensdokumentation mit Abschlussnachweis
+
+Core-Mapping:
+
+- Intake/Auftragsstart
+- Freigaben und Rollen
+- Incident- und Abweichungsbehandlung
 - Nachweis/Audit
 
 ## Starterset: Vermoegensverwaltung (`wealth_management`)

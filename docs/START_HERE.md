@@ -28,6 +28,7 @@ Der Wizard arbeitet zustandsbehaftet ueber mehrere Tage und bindet GitHub-Login,
 3. Definieren Sie Rollen fuer Vorschlag, Pruefung und Freigabe.
 4. Aktivieren Sie in `policies/process-policy.yaml` die passenden Branchenmodule.
    Standard fuer den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
+   Zusaetzlicher MVP-Use-Case: `property_management`.
 5. Legen Sie in `policies/culture-policy.yaml` die Sprach- und Gender-Regel fest.
 6. Bestaetigen Sie den verbindlichen Technikstack in `policies/technology-policy.yaml`.
 7. Bestaetigen Sie Datenschutz- und Secret-Regeln in `policies/data-protection-policy.yaml`.
@@ -48,6 +49,7 @@ Hinweis: Fachlich verbindliche Prozessdarstellungen liegen als BPMN-2.0-Quelle u
 
 - `prompts/onboarding/law-firm-first-setup.md`
 - `prompts/onboarding/notary-first-setup.md`
+- `prompts/onboarding/property-management-first-setup.md`
 - `prompts/onboarding/software-company-first-setup.md`
 - `prompts/onboarding/tax-office-first-setup.md`
 - `prompts/onboarding/wealth-management-first-setup.md`

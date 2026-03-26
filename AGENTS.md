@@ -46,6 +46,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 3. `python scripts/startup_check.py --ide auto --run-tests` erfolgreich ausfuehren.
 4. Passendes Onboarding-Prompt unter `prompts/onboarding/` starten.
    Standard-MVP-Set im Referenzrepo: `software_company`, `notary`, `wealth_management`.
+   Zusaetzlicher MVP-Use-Case: `property_management`.
 5. Erst danach mit produktiven Prozessaenderungen beginnen.
 6. Fuer Greenfield/Brownfield den Pfad aus `docs/einfuehrung-greenfield-brownfield.md` waehlen.
 
