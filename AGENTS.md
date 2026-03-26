@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
+Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als konkreter Betriebsauspraegung.
 
 ## Prioritaet der Vorgaben
 
@@ -12,6 +12,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 ## Arbeitsprinzip
 
 - Das LLM ist Eingabeoberflaeche, nicht die fachliche Wahrheit.
+- Das Zielmodell ist `Organization as Code`, der operative Aenderungsfluss ist `Enterprise GitOps`.
 - Fachliche Wahrheit entsteht durch versionierte Aenderung + Review + Freigabe.
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessaenderungen werden immer mit Begruendung dokumentiert.

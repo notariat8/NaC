@@ -2,7 +2,7 @@
 <bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   id="Definitions_Bookkeeping"
-                  targetNamespace="https://github.com/ofunk-nvidia/GITaaS/bpmn">
+                  targetNamespace="https://github.com/ofunk-nvidia/OaC8/bpmn">
   <bpmn:process id="BookkeepingProcess" name="Bookkeeping Process" isExecutable="false">
     <bpmn:startEvent id="StartEvent_BookkeepingInput" name="Buchungsereignis eingegangen">
       <bpmn:outgoing>Flow_A1</bpmn:outgoing>

@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
+Dieses Repository ist ein Muster fuer `Organization as Code` mit `GIT OS` als konkreter Betriebsauspraegung.
 
 ## Verbindliche Prioritaet
 
@@ -12,6 +12,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 ## Arbeitsweise
 
 - Behandle das LLM als Assistent fuer Eingaben, nicht als finale fachliche Autoritaet.
+- Rahmen: `Organization as Code` + `Enterprise GitOps`; `GIT OS` ist die konkrete Umsetzung.
 - Schlage keine direkten Aenderungen an `main` vor.
 - Erzwinge Vorschlaege ueber Branch + Pull Request + Review.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
@@ -45,6 +46,7 @@ Dieses Repository ist ein Muster fuer ein Git-basiertes Business-OS.
 - `docs/tenant-ownership-and-eventlock-service.md`
 - `docs/function8-service-catalog.md`
 - `docs/third-party-operations-and-exit.md`
+- `docs/organization-as-code-positioning.md`
 - `docs/fork-and-release-operating-model.md`
 - `docs/release-sync-playbook.md`
 - `docs/parallelbetrieb-version-binding.md`

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gitaas-business-os"
+name = "oac8-business-os"
 version = "0.1.0"
 description = "Reference implementation for Git-driven business processes."
 readme = "README.md"

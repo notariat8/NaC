@@ -3,6 +3,7 @@
 ## Ziel
 
 Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
+Der fachliche Rahmen ist `Organization as Code` mit `Enterprise GitOps`; `GIT OS` ist die konkrete Umsetzung.
 
 Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefuehrten Pfad:
 `docs/vscode-first-user-path.md`

@@ -7,6 +7,13 @@ Dieses Dokument hilft Entscheidern (z. B. Notar, Anwalt, Steuerberater), das Mus
 Sie muessen nicht alle Markdown-Dateien lesen. Fuer den Start reicht der gefuehrte Pfad in `docs/vscode-first-user-path.md` inklusive Formular-Wizard.
 Der Wizard arbeitet zustandsbehaftet ueber mehrere Tage und bindet GitHub-Login, Rolle und BPMN-Referenz je Frage ein.
 
+## Begriffsrahmen fuer den Start
+
+- Das Zielmodell ist `Organization as Code (OaC)`.
+- Die Steuerung erfolgt ueber `Enterprise GitOps`.
+- `GIT OS` ist die konkrete Umsetzung in diesem Repository.
+- Referenz: `docs/organization-as-code-positioning.md`
+
 ## Warum zuerst ein Muster und dann Einfuehrung
 
 - Prozesse werden erst sauber beschrieben und geprueft.
@@ -85,6 +92,7 @@ Uebersicht: `docs/platform-onboarding-matrix.md`
 - `docs/avv-checkliste-eventlock-saas.md`
 - `docs/function8-service-catalog.md`
 - `docs/third-party-operations-and-exit.md`
+- `docs/organization-as-code-positioning.md`
 
 ## Verbandsmodell und Testat
 

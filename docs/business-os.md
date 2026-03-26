@@ -1,4 +1,4 @@
-# Fachkonzept: Git als Business-OS
+# Fachkonzept: Organization as Code mit GIT OS
 
 ## Leitprinzip
 
@@ -8,6 +8,14 @@ Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Ni
 2. die fachliche Validierung besteht,
 3. die erforderlichen Freigaben durchlaufen hat,
 4. in den verbindlichen Hauptstand uebernommen wurde.
+
+## Positionierung
+
+- `Organization as Code (OaC)` beschreibt das uebergeordnete Zielmodell.
+- `Enterprise GitOps` beschreibt den operativen Aenderungsfluss.
+- `GIT OS` ist die konkrete Betriebsumsetzung in diesem Repository.
+
+Referenz: `docs/organization-as-code-positioning.md`
 
 ## Rollenmodell
 

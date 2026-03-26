@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   id="Definitions_OnboardingEntry"
-                  targetNamespace="https://github.com/ofunk-nvidia/GITaaS/bpmn">
+                  targetNamespace="https://github.com/ofunk-nvidia/OaC8/bpmn">
   <bpmn:process id="OnboardingEntryProcess" name="Onboarding Entry Process" isExecutable="false">
     <bpmn:startEvent id="StartEvent_Onboarding" name="Onboarding Start">
       <bpmn:outgoing>Flow_O1</bpmn:outgoing>

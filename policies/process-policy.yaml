@@ -1,4 +1,8 @@
 version: 1
+positioning:
+  model: organization_as_code
+  operating_principle: enterprise_gitops
+  implementation_label: gitos
 baseline:
   generic_modules:
     - formation

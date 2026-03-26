@@ -1,6 +1,6 @@
-# GITaaS: Git als Business-OS
+# OaC8: Organization as Code mit GIT OS
 
-Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensprozesse genutzt werden kann. Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen.
+Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Organization as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `GIT OS` ist dabei die konkrete Auspraegung dieses Modells.
 
 ## Kernidee
 
@@ -8,6 +8,13 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - Git repraesentiert den offiziellen Lebenszyklus eines Geschaeftsvorgangs.
 - Python validiert fachliche Regeln und fuehrt wiederholbare Prozesse deterministisch aus.
 - GitHub Actions orchestrieren Checks, Freigaben, periodische Jobs und Artefakt-Erzeugung.
+
+## Positionierung
+
+- Architekturmodell: `Organization as Code (OaC)`
+- Betriebsprinzip: `Enterprise GitOps`
+- konkrete Umsetzung in diesem Repo: `GIT OS`
+- Referenz: `docs/organization-as-code-positioning.md`
 
 ## Prozessklassen
 
@@ -36,7 +43,7 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `docs/arbeitsmodell-agile-cadence.md` definiert Arbeits-Cadence fuer `agile` und `kanban`.
 - `docs/access-and-issue-operations.md` regelt Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
 - `docs/revisionssicherheit-eventstreaming.md` definiert revisionssicheren Event-Journal-Betrieb.
-- `docs/eventstream-implementation-templates.md` liefert konkrete AWS-/Azure-Implementierungsvorlagen.
+- `docs/eventstream-implementation-templates.md` liefert konkrete AWS-/Azure-/GCP-/OCI-Implementierungsvorlagen.
 - `docs/eventstream-runbook-azure.md` ist das konkrete Azure-Betriebsrunbook.
 - `docs/eventstream-runbook-aws.md` ist das konkrete AWS-Betriebsrunbook.
 - `docs/eventstream-runbook-gcp.md` ist das konkrete GCP-Betriebsrunbook.
@@ -45,6 +52,7 @@ Dieses Repository zeigt, wie Git als zentrales Betriebsmodell fuer Unternehmensp
 - `docs/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
 - `docs/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
+- `docs/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/GIT OS.
 - `docs/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
 - `docs/public-readiness.md` enthaelt den Public-Go-Live-Status.

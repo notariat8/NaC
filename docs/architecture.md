@@ -1,5 +1,12 @@
 # Architektur
 
+## Architekturrahmen
+
+Diese Architektur folgt dem Modell `Organization as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
+`GIT OS` ist die konkrete Auspraegung dieses Rahmens.
+
+Referenz: `docs/organization-as-code-positioning.md`
+
 ## Schichten
 
 1. `Prompt Frontend`
@@ -10,6 +17,15 @@
    Die Engine validiert Schemas, prueft Zustandsuebergaenge, berechnet Folgewerte und erzeugt Zusammenfassungen.
 4. `Automation Plane`
    GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
+
+## OaC-Layer-Mapping
+
+```mermaid
+flowchart LR
+  intentLayer[IntentLayerPoliciesRolesProcesses] --> controlLayer[ControlLayerPRReviewApproval]
+  controlLayer --> executionLayer[ExecutionLayerRuntimeAutomation]
+  executionLayer --> evidenceLayer[EvidenceLayerImmutableEventJournal]
+```
 
 ## Datenfluss
 
