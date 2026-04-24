@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -117,6 +118,17 @@ def check_vscode_extensions(required_extensions: list[str]) -> tuple[list[str], 
     return ok, warnings, errors
 
 
+def build_python_env() -> dict[str, str]:
+    env = os.environ.copy()
+    src_path = str(REPO_ROOT / "src")
+    env["PYTHONPATH"] = (
+        src_path
+        if not env.get("PYTHONPATH")
+        else f"{src_path}{os.pathsep}{env['PYTHONPATH']}"
+    )
+    return env
+
+
 def main() -> int:
     args = parse_args()
     requirements = parse_simple_yaml(REQ_FILE)
@@ -161,14 +173,17 @@ def main() -> int:
         errors.extend(ext_err)
 
     if args.run_tests:
+        python_env = build_python_env()
         validate = subprocess.run(
             [sys.executable, "-m", "business_os", "validate-all", "--repo-root", "."],
             cwd=REPO_ROOT,
+            env=python_env,
             check=False,
         )
         tests = subprocess.run(
             [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
             cwd=REPO_ROOT,
+            env=python_env,
             check=False,
         )
         if validate.returncode == 0:

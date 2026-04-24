@@ -11,6 +11,7 @@ on:
       - "policies/**/*.yaml"
       - "policies/**/*.json"
       - "docs/**/*.md"
+      - "prompts/**/*.md"
       - ".cursor/rules/**/*.mdc"
       - ".github/workflows/*.yml"
       - ".github/copilot-instructions.md"

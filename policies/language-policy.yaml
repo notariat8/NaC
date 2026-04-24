@@ -1,0 +1,34 @@
+version: 1
+status: mandatory
+
+standard_languages:
+  - de
+  - en
+
+language_code_standard: iso_639
+
+localized_surfaces:
+  - docs
+  - prompts
+
+folder_rules:
+  docs:
+    required_language_roots:
+      - docs/de
+      - docs/en
+  prompts:
+    required_language_roots:
+      - prompts/de
+      - prompts/en
+
+maintenance_rules:
+  require_all_standard_languages: true
+  prompt_language_does_not_limit_output_languages: true
+  every_change_updates_all_standard_languages: true
+  missing_counterpart_blocks_merge: true
+
+notes:
+  - "Deutsch (de) und Englisch (en) sind die verpflichtenden Standardsprachen."
+  - "Sprachabhaengige Inhalte liegen unter ISO-639-Sprachordnern."
+  - "Unabhaengig von der Sprache des Prompts muessen alle Standardsprachen gepflegt werden."
+  - "Neue Sprachen duerfen ergaenzt werden, aber de und en bleiben immer Pflicht."

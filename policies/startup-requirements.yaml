@@ -15,9 +15,11 @@ python:
 
 required_files:
   - AGENTS.md
-  - docs/START_HERE.md
+  - docs/de/START_HERE.md
+  - docs/en/START_HERE.md
   - policies/process-policy.yaml
   - policies/culture-policy.yaml
+  - policies/language-policy.yaml
   - policies/technology-policy.yaml
   - policies/data-protection-policy.yaml
   - policies/role-model-policy.yaml

@@ -33,8 +33,11 @@ repository_constraints:
   required_sync_targets:
     - .cursor/rules
     - .github/copilot-instructions.md
-    - docs/START_HERE.md
-    - docs/vscode-copilot-start.md
+    - docs/de/START_HERE.md
+    - docs/en/START_HERE.md
+    - docs/de/vscode-copilot-start.md
+    - docs/en/vscode-copilot-start.md
+    - policies/language-policy.yaml
 
 exceptions:
   allowed: true

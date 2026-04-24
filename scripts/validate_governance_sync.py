@@ -16,6 +16,7 @@ POLICY_FILES = {
     "policies/revisionssicherheit-eventstream-policy.yaml",
     "policies/tenant-ownership-policy.yaml",
     "policies/provider-open-services-policy.yaml",
+    "policies/language-policy.yaml",
 }
 
 MIRROR_FILES = {
@@ -31,6 +32,15 @@ MANDATORY_ACCESS_POLICY_KEYS = (
     "organization_project:",
     "guest_access_rules:",
     "change_control:",
+)
+
+MANDATORY_LANGUAGE_POLICY_KEYS = (
+    "standard_languages:",
+    "- de",
+    "- en",
+    "language_code_standard:",
+    "localized_surfaces:",
+    "require_all_standard_languages:",
 )
 
 
@@ -56,7 +66,20 @@ def changed_files() -> list[str]:
         print("ERROR: Konnte geaenderte Dateien nicht bestimmen.")
         print(diff.stderr.strip())
         return []
-    return [line.strip() for line in diff.stdout.splitlines() if line.strip()]
+
+    untracked = run_git(["ls-files", "--others", "--exclude-standard"])
+    if untracked.returncode != 0:
+        print("ERROR: Konnte ungetrackte Dateien nicht bestimmen.")
+        print(untracked.stderr.strip())
+        return []
+
+    files = {
+        line.strip()
+        for output in (diff.stdout, untracked.stdout)
+        for line in output.splitlines()
+        if line.strip()
+    }
+    return sorted(files)
 
 
 def is_policy_file(path: str) -> bool:
@@ -81,6 +104,20 @@ def validate_access_policy_file() -> list[str]:
     return errors
 
 
+def validate_language_policy_file() -> list[str]:
+    errors: list[str] = []
+    policy_path = REPO_ROOT / "policies" / "language-policy.yaml"
+    if not policy_path.exists():
+        errors.append("Pflichtdatei fehlt: policies/language-policy.yaml")
+        return errors
+
+    text = policy_path.read_text(encoding="utf-8")
+    for key in MANDATORY_LANGUAGE_POLICY_KEYS:
+        if key not in text:
+            errors.append(f"Pflichtabschnitt fehlt in language-policy: {key}")
+    return errors
+
+
 def main() -> int:
     files = changed_files()
     if not files:
@@ -91,6 +128,7 @@ def main() -> int:
     mirror_changed = any(is_mirror_file(path) for path in files)
 
     errors = validate_access_policy_file()
+    errors.extend(validate_language_policy_file())
 
     if mirror_changed and not policy_changed:
         errors.append(

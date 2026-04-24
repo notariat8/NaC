@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -80,6 +81,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_governance_sync.py"],
                 ),
                 (
+                    "language_parity",
+                    "Language Parity",
+                    [sys.executable, "scripts/validate_language_parity.py"],
+                ),
+                (
                     "cloud_runbook_parity",
                     "Cloud Runbook Parity",
                     [sys.executable, "scripts/validate_cloud_runbook_parity.py"],
@@ -91,9 +97,17 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
 
 def run_check(check_id: str, title: str, command: list[str]) -> CheckResult:
     started = datetime.now(tz=UTC)
+    env = os.environ.copy()
+    src_path = str(REPO_ROOT / "src")
+    env["PYTHONPATH"] = (
+        src_path
+        if not env.get("PYTHONPATH")
+        else f"{src_path}{os.pathsep}{env['PYTHONPATH']}"
+    )
     result = subprocess.run(
         command,
         cwd=REPO_ROOT,
+        env=env,
         text=True,
         capture_output=True,
         check=False,

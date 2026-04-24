@@ -21,27 +21,46 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pandoc texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-xetex
 
-      - name: Build business handbook PDF
+      - name: Build German business handbook PDF
         run: |
-          mkdir -p out
+          mkdir -p out/de
           pandoc \
             README.md \
-            docs/START_HERE.md \
-            docs/fachanwender-guide.md \
-            docs/business-os.md \
-            docs/governance.md \
-            docs/technology-decision.md \
-            docs/vscode-copilot-start.md \
-            docs/copilot-quickstart-15min.md \
-            docs/public-readiness.md \
+            docs/de/START_HERE.md \
+            docs/de/fachanwender-guide.md \
+            docs/de/business-os.md \
+            docs/de/governance.md \
+            docs/de/technology-decision.md \
+            docs/de/vscode-copilot-start.md \
+            docs/de/copilot-quickstart-15min.md \
+            docs/de/public-readiness.md \
             --from gfm \
             --toc \
             --number-sections \
             --pdf-engine=xelatex \
-            -o out/business-os-handbook.pdf
+            -o out/de/business-os-handbook.pdf
+
+      - name: Build English business handbook PDF
+        run: |
+          mkdir -p out/en
+          pandoc \
+            README.md \
+            docs/en/START_HERE.md \
+            docs/en/fachanwender-guide.md \
+            docs/en/business-os.md \
+            docs/en/governance.md \
+            docs/en/technology-decision.md \
+            docs/en/vscode-copilot-start.md \
+            docs/en/copilot-quickstart-15min.md \
+            docs/en/public-readiness.md \
+            --from gfm \
+            --toc \
+            --number-sections \
+            --pdf-engine=xelatex \
+            -o out/en/business-os-handbook.pdf
 
       - name: Upload PDF artifact
         uses: actions/upload-artifact@v4
         with:
           name: business-os-handbook-pdf
-          path: out/business-os-handbook.pdf
+          path: out/

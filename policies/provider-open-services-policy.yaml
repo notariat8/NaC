@@ -16,7 +16,9 @@ scope:
 
 service_catalog:
   required: true
-  required_path: docs/function8-service-catalog.md
+  required_paths:
+    - docs/de/function8-service-catalog.md
+    - docs/en/function8-service-catalog.md
   required_fields:
     - service_id
     - service_name
@@ -29,7 +31,9 @@ service_catalog:
 
 avv_artifacts:
   required_for_services_with_avv: true
-  checklist_reference: docs/avv-checkliste-eventlock-saas.md
+  checklist_references:
+    - docs/de/avv-checkliste-eventlock-saas.md
+    - docs/en/avv-checkliste-eventlock-saas.md
   minimum_artifacts:
     - avv_checklist_status
     - subprocessors_and_regions
@@ -39,7 +43,9 @@ avv_artifacts:
 
 third_party_enablement:
   required: true
-  documentation_path: docs/third-party-operations-and-exit.md
+  documentation_paths:
+    - docs/de/third-party-operations-and-exit.md
+    - docs/en/third-party-operations-and-exit.md
   must_cover:
     - external_operator_takeover
     - customer_self_operation_path

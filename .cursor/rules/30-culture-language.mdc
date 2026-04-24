@@ -6,6 +6,9 @@ alwaysApply: true
 # Kultur- und Sprachregeln
 
 - Wende die Vorgaben aus `policies/culture-policy.yaml` verbindlich an.
+- Wende die Vorgaben aus `policies/language-policy.yaml` verbindlich an.
+- Sprachabhaengige Inhalte liegen in ISO-639-Ordnern.
+- `de` und `en` sind immer zu pflegen, unabhaengig von der Prompt-Sprache.
 - Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.
 - Wenn die Policy fehlt, verwende neutrale Formulierungen und frage einmal nach.
 - Rechtstexte und Originalzitate werden unveraendert zitiert.
