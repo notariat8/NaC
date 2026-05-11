@@ -25,6 +25,12 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 | `github-control-plane.md` | GitHub als GitOps-Steuerung | Auth und Repo-Zugriff | PRs, Checks, Reviews | Branchschutz, Audit, Drift |
 | `oci-infrastructure.md` | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Evidence | Drift, Rotation, Kostenkontrolle |
 | `domain-connector-runtime.md` | Fachsystem-Connectoren | Vertragsmodell | Plan/Apply/Reconcile | Monitoring, Replays, Exit |
+| `handelsregister-bundesapi.md` | Handelsregister-Recherche ueber technischen Spike | Nutzungs- und Lizenzpruefung | Dry-run Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
+| `bnotk-xnp-notariatssoftware.md` | XNP/Notariatssoftware lokaler Companion | Arbeitsplatz- und Schnittstellenpruefung | lokaler Plan/Apply-Companion | lokale Logs, Evidence, Updatepflege |
+| `bea-portal-plugin-integration.md` | beA-Portal und Client-Security Companion | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Workflow | Stoerungen, Versionen, Evidence |
+| `elster-developer-plugin-integration.md` | ELSTER/ERiC Developer- und Local-Companion | Hersteller-/Tooling-Pruefung | Dry-run Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
+| `cyberjack-rfid-plugin-integration.md` | cyberJack RFID Kartenleser-Companion | lokale Geraete-/Treiberpruefung | eID-/Kartenleser-Challenges | Firmware, Treiber, Evidence |
+| `grundbuch-portal-plugin-integration.md` | Grundbuchportal Workflow- und Evidence-Companion | Zulassung und berechtigtes Interesse | Abrufplan und Evidence-Import | Bundesland-Drift, Protokolle, Gebuehren |
 
 ## Verbindliches Adapter-Muster
 
