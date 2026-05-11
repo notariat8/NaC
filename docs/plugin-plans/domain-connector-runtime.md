@@ -68,6 +68,8 @@ Jeder Connector braucht:
 3. Jira-Connector fuer Ticket- und Prozessuebergabe.
 4. Benachrichtigungsconnector fuer Slack oder Teams.
 5. OCI-Evidence-Connector fuer Eventstream und Audit Journal.
+6. Handelsregister-Spike fuer Registerrecherche ohne produktive Automatisierung.
+7. XNP-Companion fuer lokale Notariatssoftware-Integration.
 
 ## Akzeptanzkriterien
 
