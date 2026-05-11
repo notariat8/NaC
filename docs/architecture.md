@@ -17,6 +17,8 @@ Referenz: `docs/organization-as-code-positioning.md`
    Die Engine validiert Schemas, prueft Zustandsuebergaenge, berechnet Folgewerte und erzeugt Zusammenfassungen.
 4. `Automation Plane`
    GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
+5. `Plugin and Connector Plane`
+   Lokale Plugin- und Connector-Adapter erzeugen Plan-Previews, fuehren freigegebene Aenderungen idempotent aus und schreiben Audit-Evidence zurueck.
 
 ## OaC-Layer-Mapping
 
@@ -111,6 +113,15 @@ Operative Details sind ausgelagert nach:
 - `docs/service-business-core-vertical-blueprint.md`
 - `docs/vertical-starter-prozesskatalog.md`
 - `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/plugin-plans/README.md`
+
+## Plugin- und Connector-Prinzip
+
+Plugins und Connectoren sind Ausfuehrungsadapter, nicht fachliche Wahrheit.
+Die fachliche Wahrheit bleibt in Git, Policies, Schemas und Review-Entscheidungen.
+Jeder Adapter muss vor einer Aenderung einen lesbaren Plan erzeugen, nach Freigabe idempotent reconciled werden koennen und Day2-Drift sichtbar machen.
+
+Lokale Ausfuehrung erfolgt im WSL-Workspace `~/OaC`. Omnistation ist fuer OaC kein Ausfuehrungsort.
 
 ## Python-Komponenten
 

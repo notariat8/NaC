@@ -58,6 +58,7 @@ Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Polici
 - `docs/repo-refactor-plan-single-repo-modules.md` beschreibt Zielstruktur und Migration in einem Repo.
 - `docs/arbeitsmodell-agile-cadence.md` definiert Arbeits-Cadence fuer `agile` und `kanban`.
 - `docs/access-and-issue-operations.md` regelt Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
+- `docs/plugin-plans/` enthaelt lokale Plugin- und Connector-Plaene fuer GitHub, OCI, Fachsysteme und Codex-Laufzeit.
 - `docs/revisionssicherheit-eventstreaming.md` definiert revisionssicheren Event-Journal-Betrieb.
 - `docs/eventstream-implementation-templates.md` liefert konkrete AWS-/Azure-/GCP-/OCI-Implementierungsvorlagen.
 - `docs/eventstream-runbook-azure.md` ist das konkrete Azure-Betriebsrunbook.

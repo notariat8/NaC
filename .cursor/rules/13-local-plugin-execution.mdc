@@ -1,0 +1,20 @@
+---
+description: Local OaC plugin and connector execution rule
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Local Plugin Execution
+
+- OaC work runs locally in WSL in `~/OaC`.
+- Do not use Omnistation as an execution workspace for OaC.
+- Remote hosts may be used for non-critical research only.
+- Plugin and connector plans are documented under `docs/plugin-plans/`.
+- Plans must distinguish:
+  - proposed intent,
+  - plan preview,
+  - human review,
+  - reconciler execution,
+  - audit evidence,
+  - Day2 drift handling.
+- No secrets, API keys, browser callback tokens, or local credentials may be stored in the repository.

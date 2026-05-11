@@ -38,6 +38,8 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 - Starter-Prozesse je Vertical stehen in `docs/vertical-starter-prozesskatalog.md`.
 - Arbeitsmethode und Team-Cadence werden nach `docs/arbeitsmodell-agile-cadence.md` dokumentiert.
 - Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in `docs/access-and-issue-operations.md`.
+- Plugin- und Connector-Plaene werden lokal in WSL unter `docs/plugin-plans/` gepflegt.
+- OaC-Ausfuehrung erfolgt lokal im Workspace `~/OaC`; Omnistation ist fuer OaC kein Ausfuehrungsort.
 
 ## Erststart fuer neue Nutzer
 

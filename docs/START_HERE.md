@@ -86,6 +86,7 @@ Uebersicht: `docs/platform-onboarding-matrix.md`
 - `docs/service-business-core-vertical-blueprint.md`
 - `docs/vertical-starter-prozesskatalog.md`
 - `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/plugin-plans/README.md`
 - `docs/arbeitsmodell-agile-cadence.md`
 - `docs/access-and-issue-operations.md`
 - `docs/revisionssicherheit-eventstreaming.md`

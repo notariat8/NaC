@@ -22,6 +22,8 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 - Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
+- Plugin- und Connector-Plaene liegen unter `docs/plugin-plans/`.
+- OaC-Ausfuehrung und Plugin-Regeneration erfolgen lokal in WSL im Workspace `~/OaC`, nicht ueber Omnistation.
 
 ## Pflichtquellen im Repository
 
@@ -57,6 +59,7 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 - `docs/service-business-core-vertical-blueprint.md`
 - `docs/vertical-starter-prozesskatalog.md`
 - `docs/repo-refactor-plan-single-repo-modules.md`
+- `docs/plugin-plans/README.md`
 - `docs/arbeitsmodell-agile-cadence.md`
 - `docs/access-and-issue-operations.md`
 
