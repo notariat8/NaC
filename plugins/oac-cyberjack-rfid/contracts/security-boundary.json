@@ -1,0 +1,44 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "oac-cyberjack-rfid",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/cyberjack-rfid-plugin-integration.md",
+  "runtime_mode": "local-device-companion",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Prepare local reader readiness checks and evidence templates.",
+    "Record anonymized reader fingerprints and driver version metadata.",
+    "Route PIN/card issues to the human operator without requesting values."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass human review for regulated filing, register, mailbox, or notarial actions.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm supported reader model, driver source and local admin path."
+  ],
+  "day1": [
+    "Run readiness checklist and produce non-secret evidence metadata."
+  ],
+  "day2": [
+    "Recertify driver, firmware, PC/SC service and reader inventory."
+  ],
+  "required_accounts_or_approvals": [
+    "Approved hardware procurement",
+    "Local workstation admin approval",
+    "Driver/vendor support channel"
+  ]
+}

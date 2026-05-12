@@ -1,0 +1,45 @@
+{
+  "name": "oac-regulated-core",
+  "version": "0.1.0",
+  "description": "Shared regulated-industry workflow guardrails.",
+  "author": {
+    "name": "OaC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/OaC"
+  },
+  "homepage": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/OaC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "regulated",
+    "governance",
+    "evidence",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OaC Regulated Core",
+    "shortDescription": "Shared regulated-industry workflow guardrails.",
+    "longDescription": "Shared local workflow, safety boundary, plan-preview, approval and evidence guidance for OaC plugins used by law firms, notaries and adjacent regulated operations.",
+    "developerName": "OaC Maintainers",
+    "category": "Compliance",
+    "capabilities": [
+      "Local",
+      "Governance",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Run OaC Regulated Core readiness.",
+      "Create a Day1 plan for OaC Regulated Core.",
+      "Review Day2 drift for OaC Regulated Core."
+    ],
+    "brandColor": "#245C4F",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

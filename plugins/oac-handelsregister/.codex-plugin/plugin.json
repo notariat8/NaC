@@ -1,0 +1,45 @@
+{
+  "name": "oac-handelsregister",
+  "version": "0.1.0",
+  "description": "Register research planning with rate-limit guardrails.",
+  "author": {
+    "name": "OaC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/OaC"
+  },
+  "homepage": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/OaC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "handelsregister",
+    "register",
+    "research",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OaC Handelsregister",
+    "shortDescription": "Register research planning with rate-limit guardrails.",
+    "longDescription": "Local Handelsregister research companion for dry-run search planning, source tracking, rate-limit discipline and evidence capture without adopting unreviewed third-party code as production dependency.",
+    "developerName": "OaC Maintainers",
+    "category": "Compliance",
+    "capabilities": [
+      "Local",
+      "Readiness",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Run OaC Handelsregister readiness.",
+      "Create a Day1 plan for OaC Handelsregister.",
+      "Review Day2 drift for OaC Handelsregister."
+    ],
+    "brandColor": "#2F5C8A",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

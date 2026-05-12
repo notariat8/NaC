@@ -1,0 +1,45 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "oac-bnotk-xnp",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/bnotk-xnp-notariatssoftware.md",
+  "runtime_mode": "local-workstation-companion",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Document local XNP readiness and interface status.",
+    "Record boolean presence of local configuration without values.",
+    "Prepare local-only handoff steps for notarial software."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass human review for regulated filing, register, mailbox, or notarial actions.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm XNP installed on the same workstation/user context.",
+    "Confirm notarial software vendor support and local admin ownership."
+  ],
+  "day1": [
+    "Create local readiness plan and evidence shell without credential values."
+  ],
+  "day2": [
+    "Recertify local interface status after XNP or notarial software updates."
+  ],
+  "required_accounts_or_approvals": [
+    "BNotK/XNP access for the notary office",
+    "Notarial software vendor interface approval",
+    "Local workstation admin approval"
+  ]
+}

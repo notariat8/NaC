@@ -1,0 +1,45 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "oac-handelsregister",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/handelsregister-bundesapi.md",
+  "runtime_mode": "local-research-companion",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Prepare search intents, source checklists and evidence templates.",
+    "Track rate-limit assumptions and manual retrieval provenance.",
+    "Treat bundesAPI/handelsregister as a spike until license and operations are reviewed."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass human review for regulated filing, register, mailbox, or notarial actions.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm lawful research purpose and source terms.",
+    "Confirm whether Registerportal or another approved source is used."
+  ],
+  "day1": [
+    "Generate dry-run search plan and manual evidence checklist."
+  ],
+  "day2": [
+    "Review source terms, rate limits, retrieval logs and rejected searches."
+  ],
+  "required_accounts_or_approvals": [
+    "Registerportal user access if required",
+    "License review for any third-party client",
+    "Rate-limit owner approval"
+  ]
+}

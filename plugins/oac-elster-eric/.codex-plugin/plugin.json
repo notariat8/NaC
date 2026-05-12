@@ -1,0 +1,45 @@
+{
+  "name": "oac-elster-eric",
+  "version": "0.1.0",
+  "description": "ELSTER and ERiC workflow companion.",
+  "author": {
+    "name": "OaC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/OaC"
+  },
+  "homepage": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/OaC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "elster",
+    "eric",
+    "tax",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OaC ELSTER ERiC",
+    "shortDescription": "ELSTER and ERiC workflow companion.",
+    "longDescription": "Local ELSTER/ERiC workflow companion for filing readiness, local credential boundary, evidence import and manufacturer/onboarding checks without central tax credential storage.",
+    "developerName": "OaC Maintainers",
+    "category": "Compliance",
+    "capabilities": [
+      "Local",
+      "Readiness",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Run OaC ELSTER ERiC readiness.",
+      "Create a Day1 plan for OaC ELSTER ERiC.",
+      "Review Day2 drift for OaC ELSTER ERiC."
+    ],
+    "brandColor": "#4D6A2F",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

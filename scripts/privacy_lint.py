@@ -6,7 +6,15 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCAN_GLOBS = ("docs/**/*.md", "processes/**/*.json", "prompts/**/*.md", "policies/**/*.yaml")
+SCAN_GLOBS = (
+    ".agents/plugins/*.json",
+    "docs/**/*.md",
+    "plugins/**/*.json",
+    "plugins/**/*.md",
+    "processes/**/*.json",
+    "prompts/**/*.md",
+    "policies/**/*.yaml",
+)
 
 EMAIL_PATTERN = re.compile(r"\b([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
 SECRET_PATTERN = re.compile(

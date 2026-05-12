@@ -1,0 +1,104 @@
+{
+  "name": "oac-regulated-industry",
+  "interface": {
+    "displayName": "OaC Regulated Industry Plugins"
+  },
+  "plugins": [
+    {
+      "name": "oac-regulated-core",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-regulated-core"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-handelsregister",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-handelsregister"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-bnotk-xnp",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-bnotk-xnp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-bea-portal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-bea-portal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-elster-eric",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-elster-eric"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-cyberjack-rfid",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-cyberjack-rfid"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-grundbuch-portal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-grundbuch-portal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "oac-oci-evidence",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-oci-evidence"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    }
+  ]
+}
