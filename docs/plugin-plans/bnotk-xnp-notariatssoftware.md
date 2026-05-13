@@ -19,17 +19,23 @@ Direkte API-Calls bleiben deaktiviert, bis die offizielle BNotK-Schnittstellende
 
 ## Reihenfolge fuer Handelsregister-Online-Anmeldungen
 
-Dieser Plan ist der erste technische Baustein, wenn OaC einen echten notariatsseitigen
+Dieser Plan ist der zweite technische Baustein, wenn OaC einen echten notariatsseitigen
 Handelsregister- oder HRA-Workflow vorbereiten soll.
+
+Korrektur nach Karten-/Login-Abhaengigkeit: XNP selbst ist erst testbar, wenn der
+lokale Kartenpfad steht. Daher ist `oac-cyberjack-rfid` als Card/SAK-Gate dem
+XNP-Gate vorgelagert.
 
 `oac-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
 Registerspur und Paket-Readiness strukturieren. Der Startpunkt ist vorher:
 
-1. Notar-/Notariatsrolle klaeren.
-2. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
-3. Amtstaetigkeitskontext lokal bestaetigen.
-4. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
-5. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
+1. BNotK Chip-/Signaturkarte oder lokal verwendete Schneider/SCP-Karte klaeren.
+2. Kartenleser Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad und secureFramework pruefen.
+3. Notar-/Notariatsrolle klaeren.
+4. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
+5. Amtstaetigkeitskontext lokal bestaetigen.
+6. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
+7. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
 
 Wenn OaC nur einen Buerger-/Mandanten-Preflight fuer `online.notar.de` anbietet, kann
 `oac-handelsregister` ohne XNP starten. Sobald aber ein Notariatsarbeitsplatz,
@@ -60,6 +66,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 ## Day0
 
 - Zielrolle klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
+- Bei Notariatsarbeitsplatz zuerst Card/SAK-Gate abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
 - XNP-Installationskontext lokal pruefen.
 - Lokale XNP-Anmeldung, Nutzerrolle und Amtstaetigkeitskontext als Voraussetzung behandeln.
 - Klaeren, ob die Notariatssoftware-Schnittstelle aktiv ist.

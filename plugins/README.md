@@ -5,11 +5,11 @@ This directory contains installable repo-local Codex plugins for OaC regulated-i
 ## Installable Plugins
 
 - `oac-regulated-core`: Shared regulated-industry workflow guardrails.
-- `oac-bnotk-xnp`: Local XNP authentication gate for notary-side workflows.
+- `oac-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
+- `oac-bnotk-xnp`: Local XNP authentication gate after card readiness.
 - `oac-handelsregister`: HRA-first online register application readiness after mode decision.
 - `oac-bea-portal`: beA workflow and evidence companion.
 - `oac-elster-eric`: ELSTER and ERiC workflow companion.
-- `oac-cyberjack-rfid`: Local card-reader readiness companion.
 - `oac-grundbuch-portal`: Land register access and evidence companion.
 - `oac-oci-evidence`: OCI landing-zone evidence and audit companion.
 

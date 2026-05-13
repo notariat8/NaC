@@ -1,19 +1,19 @@
 ---
 name: oac-cyberjack-rfid
-description: Use when checking local cyberJack RFID reader readiness, PC/SC state, driver versions, firmware notes or evidence metadata for card-based workflows.
+description: Use first when notary-side XNP login or Online HRA testing needs BNotK chip/signature card or local Schneider/SCP-card readiness, security-class-3 reader checks, BNotK SAK lite/XNP card path, secureFramework, PC/SC state, driver versions, firmware notes or evidence metadata.
 ---
 
-# OaC cyberJack RFID
+# OaC Card SAK Gate
 
 ## Operating Boundary
 
-Runtime mode: `local-device-companion`.
+Runtime mode: `local-card-sak-gate`.
 
-This plugin is for regulated-industry work. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+This installable local Codex plugin is the first gate before XNP login testing for notary-side Online HRA. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
 
 ## Allowed Work
 
-- Prepare local reader readiness checks and evidence templates.
+- Prepare local card, security-class-3 reader, SAK-lite/XNP-card-path and secureFramework readiness checks.
 - Record anonymized reader fingerprints and driver version metadata.
 - Route PIN/card issues to the human operator without requesting values.
 
@@ -26,11 +26,11 @@ This plugin is for regulated-industry work. Default to plan-preview, local execu
 
 ## Workflow
 
-1. Classify the matter, actor role, reviewer role, data class and target system.
-2. Check Day0 prerequisites and list missing accounts or approvals.
+1. Classify the target: XNP login test, Online HRA gate, beA/BNotK precheck or other card workflow.
+2. Check Day0 prerequisites: BNotK chip/signature card or local Schneider/SCP card, security-class-3 reader, PC/SC, driver, BNotK SAK lite or XNP card path and secureFramework.
 3. Produce a human-readable Day1 plan preview before any local or external action.
-4. Ask for explicit human approval for regulated submissions, register retrievals, mailbox actions, notarial actions or cloud applies.
-5. Capture evidence metadata only: timestamp, actor role, source, hash, decision, result and follow-up owner.
+4. Ask for explicit human approval for any PIN prompt, certificate selection, XNP login test or notarial action.
+5. Capture evidence metadata only: timestamp, actor role, non-secret reader fingerprint hash, component readiness, decision, result and follow-up owner.
 6. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
 
 ## Output Shape

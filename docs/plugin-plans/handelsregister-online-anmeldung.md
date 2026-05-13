@@ -7,9 +7,11 @@ Status: `proposed`
 `oac-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
 
 Korrektur der Entwicklungsreihenfolge: Fuer einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist `oac-bnotk-xnp` der erste technische Baustein.
-`oac-handelsregister` ist dann der fachliche Layer fuer Registerspur, HRA-/HRB-
-Plausibilitaet und Paket-Readiness.
+Anmelde- oder Vollzugspfad ist zuerst das Card/SAK-Gate (`oac-cyberjack-rfid`)
+erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
+XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt
+`oac-bnotk-xnp`; `oac-handelsregister` ist dann der fachliche Layer fuer
+Registerspur, HRA-/HRB-Plausibilitaet und Paket-Readiness.
 
 Nur ein reiner Buerger-/Mandanten-Preflight fuer `online.notar.de` kann ohne
 Notar-/XNP-Authentifizierung starten. Dieser Preflight darf keine Einreichung,
@@ -31,7 +33,7 @@ Es darf:
 - den Online-Anmeldefall strukturieren,
 - HRA/HRB-Track, Rechtsform und fehlende Angaben pruefen,
 - Voraussetzungen fuer das notarielle Online-Verfahren abfragen,
-- bei notariatsseitigem Ziel auf `oac-bnotk-xnp` als vorgelagerten Auth-/XNP-Readiness-Gate verweisen,
+- bei notariatsseitigem Ziel auf `oac-cyberjack-rfid` und danach `oac-bnotk-xnp` als vorgelagerte Card-/XNP-Gates verweisen,
 - ein Anmeldepaket als Plan Preview vorbereiten,
 - Evidence-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
 
@@ -50,7 +52,8 @@ Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet we
 ## Day0
 
 - Betriebsmodus klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `oac-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
+- Bei Notariatsarbeitsplatz zuerst `oac-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- Danach `oac-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
 - Registerspur klaeren: HRA, HRB oder anderes Register.
 - Rechtsform klaeren.
 - Firma, Sitz, Registergericht, Beteiligte und Vertretungsbefugnis erfassen.
@@ -62,7 +65,7 @@ Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet we
 
 Das Plugin erzeugt eine Plan Preview mit:
 
-- Betriebsmodus und Auth-/XNP-Gate-Status,
+- Betriebsmodus, Card/SAK-Gate-Status und Auth-/XNP-Gate-Status,
 - Registerspur und Plausibilitaetswarnungen,
 - fehlenden Pflichtangaben,
 - Unterlagenliste fuer den Notar,

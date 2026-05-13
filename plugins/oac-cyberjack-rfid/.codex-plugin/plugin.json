@@ -1,7 +1,7 @@
 {
   "name": "oac-cyberjack-rfid",
   "version": "0.1.0",
-  "description": "Local card-reader readiness companion.",
+  "description": "Installable card and SAK-lite gate before XNP login.",
   "author": {
     "name": "OaC Maintainers",
     "email": "security@example.com",
@@ -15,18 +15,29 @@
     "cyberjack",
     "rfid",
     "pcsc",
+    "bnotk",
+    "sak-lite",
+    "secureframework",
+    "signature-card",
+    "schneider-scp-card",
+    "xnp-login",
+    "online-hra",
     "local-companion"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "OaC cyberJack RFID",
-    "shortDescription": "Local card-reader readiness companion.",
-    "longDescription": "Local cyberJack RFID readiness companion for PC/SC checks, driver inventory, reader fingerprint hashing and evidence metadata without PIN capture or card data extraction.",
+    "displayName": "OaC Card SAK Gate",
+    "shortDescription": "Installable card-reader prerequisite before XNP login.",
+    "longDescription": "Installable local Codex plugin for notary card-readiness before XNP login and Online HRA work. It checks BNotK chip/signature card or local Schneider/SCP-card availability where deployed, security-class-3 reader readiness, PC/SC state, BNotK SAK lite or XNP card path, secureFramework readiness and evidence metadata without PIN capture or card data extraction.",
     "developerName": "OaC Maintainers",
     "category": "Compliance",
     "capabilities": [
       "Local",
       "DeviceReadiness",
+      "Installable",
+      "NotaryCardGate",
+      "SakLite",
+      "XnpPrerequisite",
       "Evidence",
       "NoPIN"
     ],
@@ -34,9 +45,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run OaC cyberJack RFID readiness.",
-      "Create a Day1 plan for OaC cyberJack RFID.",
-      "Review Day2 drift for OaC cyberJack RFID."
+      "Check card and SAK-lite readiness before XNP login.",
+      "Create a notary card gate plan for Online HRA.",
+      "Review card-reader drift before XNP testing."
     ],
     "brandColor": "#7A4D2D",
     "composerIcon": "./assets/icon.png",

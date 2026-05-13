@@ -1,10 +1,12 @@
-# cyberJack RFID Plugin Integration Plan
+# Card / cyberJack RFID Plugin Integration Plan
 
 Stand: 2026-05-11
 
 ## Ziel
 
-Dieses Dokument plant die Integration des REINER SCT cyberJack RFID standard als lokales Sicherheits-Plugin fuer OaC8. Ziel ist ein belastbarer Einstieg fuer eID-, Kartenleser- und spaeter Signatur-Workflows, ohne dass PIN, Kartenrohdaten oder lokale Geraetekontrolle in die SaaS wandern.
+Dieses Dokument plant die Integration des REINER SCT cyberJack RFID standard und vergleichbarer lokaler Kartenpfade als Sicherheits-Plugin fuer OaC8. Ziel ist ein belastbarer Einstieg fuer eID-, BNotK-/Notar-Kartenleser-, SAK-lite-, secureFramework- und spaeter Signatur-Workflows, ohne dass PIN, Kartenrohdaten oder lokale Geraetekontrolle in die SaaS wandern.
+
+Fuer notariatsseitige Online-HRA-Workflows ist dieses Plugin dem XNP-Plugin vorgelagert. XNP-Login-Tests sind erst sinnvoll, wenn BNotK Chip-/Signaturkarte oder die lokal verwendete Schneider/SCP-Karte, Kartenleser Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad und secureFramework bereit sind.
 
 Der cyberJack wird nicht als Cloud-Geraet behandelt. Er bleibt am Arbeitsplatz des Nutzers. Die OaC8 SaaS erzeugt nur Challenges, fuehrt Policies, speichert Evidenz und protokolliert auditierbare Entscheidungen.
 
@@ -14,6 +16,9 @@ Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrati
 
 - Der cyberJack RFID standard ist ein USB-Kartenleser fuer kontaktbehaftete und kontaktlose RFID-Chipkarten.
 - Er unterstuetzt nPA/eID, Secoder-Funktion, beA/BRAK/BNotK, D-Trust Card 4.x/5.x und elektronischen Aufenthaltstitel.
+- Die BNotK beschreibt fuer Chipkartenanmeldungen den Bedarf an Chipkarte, Kartenlesegeraet der Sicherheitsklasse 3 und BNotK SAK lite oder XNP.
+- Fuer die Kommunikation mit dem Kartenleser wird im BNotK-Kartenloginpfad secureFramework verwendet.
+- XNP kann sich mit Signaturkarte/Chipkarte und PIN anmelden; die PIN-Eingabe erfolgt am Kartenlesegeraet bzw. in der lokalen zertifizierten Komponente, nicht in OaC.
 - Der Leser nutzt PC/SC 2.0 und CT-API als lokale Schnittstellen.
 - Der Leser bietet sichere PIN-Eingabe am Geraet; PIN-Eingabe darf nicht in OaC8 oder ein LLM wandern.
 - REINER SCT nennt BSI-/TUEV-IT-Zertifizierung und Sicherheitsklasse 3.
@@ -28,7 +33,10 @@ Die Integration erfolgt ueber einen lokalen Adapter, nicht ueber direkte Cloud-H
 
 ```text
 User Workstation
+  BNotK chip/signature card or local Schneider/SCP card
   cyberJack RFID standard
+  BNotK SAK lite / XNP card path
+  secureFramework
   REINER SCT Treiber / PCSC
   AusweisApp
   oac8-cyberjack-local-plugin
@@ -49,6 +57,7 @@ OaC8 SaaS / OCI
 Das lokale Plugin laeuft auf dem Arbeitsplatz oder einem kontrollierten lokalen Terminal. Es darf:
 
 - Kartenleserstatus pruefen,
+- BNotK SAK lite oder XNP-Kartenpfad und secureFramework-Bereitschaft pruefen,
 - AusweisApp-Status pruefen,
 - einen eID-Workflow starten,
 - eine SaaS-Challenge binden,
@@ -86,9 +95,11 @@ Das Plugin sollte als lokaler MCP- oder HTTP-Adapter startbar sein. MCP ist fuer
 ### Minimale Tools
 
 - `cyberjack.health`
-  - prueft Plugin-Version, Betriebssystem, PC/SC-Verfuegbarkeit und AusweisApp-Erreichbarkeit.
+  - prueft Plugin-Version, Betriebssystem, PC/SC-Verfuegbarkeit, SAK-lite/XNP-Kartenpfad und AusweisApp-Erreichbarkeit.
 - `cyberjack.list_readers`
   - listet erkannte PC/SC-Reader mit anonymisiertem Reader-Fingerprint.
+- `cyberjack.check_bnotk_card_path`
+  - prueft ohne Kartendaten, ob BNotK Chip-/Signaturkarte oder lokale Schneider/SCP-Karte, Sicherheitsklasse-3-Leser, SAK lite/XNP-Kartenpfad und secureFramework einsatzbereit erscheinen.
 - `cyberjack.check_ausweisapp`
   - ruft den AusweisApp-Status ab und prueft WebSocket-Faehigkeit.
 - `cyberjack.start_eid_auth`
@@ -133,23 +144,24 @@ Personenbezogene Attribute duerfen nicht Teil des Default-Evidenzobjekts sein. W
 
 ## MVP-Scope
 
-Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit einem unterstuetzten Leser gestartet und gegen eine SaaS-Challenge abgeschlossen wurde.
+Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XNP-Login-Tests bereit ist. Der eID-Workflow bleibt ein weiterer lokaler Kartenfall.
 
 1. Lokales Plugin installieren und starten.
 2. Reader ueber PC/SC erkennen.
-3. AusweisApp-Status ueber lokalen HTTP-Status pruefen.
-4. WebSocket-Verbindung zur AusweisApp aufbauen.
-5. Challenge vom OaC8 Identity Service beziehen.
-6. eID-Workflow starten.
+3. Sicherheitsklasse-3- und Treiberpfad dokumentieren.
+4. BNotK SAK lite oder XNP-Kartenpfad pruefen.
+5. secureFramework-Bereitschaft pruefen.
+6. Keine PIN und keine Kartenrohdaten erfassen.
 7. Ergebnis minimiert als Evidence speichern.
-8. Evidence in einem OaC-Prozess referenzieren.
-9. Audit Event erzeugen.
+8. `oac-bnotk-xnp` erst nach erfolgreichem Card/SAK-Gate testen.
+9. Evidence in einem OaC-Prozess referenzieren.
+10. Audit Event erzeugen.
 
 ## Nicht im MVP
 
 - Direkte APDU-Kommunikation mit dem nPA.
 - Eigene eID-Implementierung ausserhalb der AusweisApp.
-- beA/BNotK produktiv.
+- beA/BNotK produktive Anmeldung oder XNP-Login-Automation.
 - D-Trust/QES produktiv.
 - Gesundheitskartenproduktivbetrieb.
 - Cloud-Zugriff auf USB-Geraete.
@@ -211,7 +223,8 @@ Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit ein
 
 ### Phase 1: MVP
 
-- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_ausweisapp` implementieren.
+- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` implementieren.
+- `cyberjack.check_ausweisapp` bleibt fuer eID-Folgefaelle vorgesehen.
 - Challenge-Flow stubben.
 - Evidence-Schema in `schemas/` definieren.
 - Beispielprozess unter `processes/` anlegen.
@@ -254,6 +267,9 @@ Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit ein
 ## Quellen
 
 - REINER SCT cyberJack RFID standard: https://www.reiner-sct.com/produkt/cyberjack-rfid-standard/
+- BNotK SAK lite: https://onlinehilfe.bnotk.de/einrichtungen/zertifizierungsstelle/bnotk-sak-lite.html
+- BNotK Einstieg ins Bestellsystem / Chipkartenanmeldung: https://onlinehilfe.bnotk.de/einrichtungen/zertifizierungsstelle/einstieg-ins-bestellsystem.html
+- BNotK XNP Anmeldung: https://onlinehilfe.bnotk.de/einrichtungen/bundesnotarkammer/xnp/nutzung-von-xnp/anmelden-in-xnp.html
 - AusweisApp SDK Desktop/WebSocket: https://www.ausweisapp.bund.de/sdk/desktop.html
 - AusweisApp SDK Einfuehrung: https://www.ausweisapp.bund.de/sdk/intro.html
 - AusweisApp Entwickler-FAQ: https://www.ausweisapp.bund.de/en/faq-for-developers

@@ -19,6 +19,7 @@
   ],
   "allowed_work": [
     "Document local XNP readiness, current local authentication and interface status.",
+    "Require completed OaC Card SAK Gate readiness before XNP login testing.",
     "Record boolean presence of local configuration without values.",
     "Prepare local-only XNotar/register handoff steps for notarial software."
   ],
@@ -30,6 +31,7 @@
   ],
   "day0": [
     "Confirm target mode: citizen preflight or notary-side workstation workflow.",
+    "Confirm completed OaC Card SAK Gate readiness for card, security-class-3 reader, SAK lite/XNP card path and secureFramework.",
     "Confirm XNP installed on the same workstation/user context.",
     "Confirm local XNP login, user role and Amtstaetigkeitskontext are available without storing values.",
     "Confirm XNotar/register module or exchange-folder route.",
@@ -43,6 +45,7 @@
   ],
   "required_accounts_or_approvals": [
     "BNotK/XNP access for the notary office",
+    "Completed OaC Card SAK Gate readiness",
     "Local XNP login and active Amtstaetigkeitskontext",
     "XNotar/register module or exchange-folder route",
     "Notarial software vendor interface approval",

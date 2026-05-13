@@ -27,10 +27,10 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 | `domain-connector-runtime.md` | Fachsystem-Connectoren | Vertragsmodell | Plan/Apply/Reconcile | Monitoring, Replays, Exit |
 | `handelsregister-online-anmeldung.md` | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Evidence-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |
 | `handelsregister-bundesapi.md` | Deprecated Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzpruefung | Dry-run Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
-| `bnotk-xnp-notariatssoftware.md` | XNP/Notariatssoftware lokaler Companion | Arbeitsplatz- und Schnittstellenpruefung | lokaler Plan/Apply-Companion | lokale Logs, Evidence, Updatepflege |
+| `bnotk-xnp-notariatssoftware.md` | XNP/Notariatssoftware lokaler Companion | Card/SAK-Gate, Arbeitsplatz- und Schnittstellenpruefung | lokaler Plan/Apply-Companion | lokale Logs, Evidence, Updatepflege |
 | `bea-portal-plugin-integration.md` | beA-Portal und Client-Security Companion | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Workflow | Stoerungen, Versionen, Evidence |
 | `elster-developer-plugin-integration.md` | ELSTER/ERiC Developer- und Local-Companion | Hersteller-/Tooling-Pruefung | Dry-run Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
-| `cyberjack-rfid-plugin-integration.md` | cyberJack RFID Kartenleser-Companion | lokale Geraete-/Treiberpruefung | eID-/Kartenleser-Challenges | Firmware, Treiber, Evidence |
+| `cyberjack-rfid-plugin-integration.md` | Card/SAK-Gate vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Card/SAK-Readiness fuer XNP-Test | Firmware, Treiber, Kartenpfad, Evidence |
 | `grundbuch-portal-plugin-integration.md` | Grundbuchportal Workflow- und Evidence-Companion | Zulassung und berechtigtes Interesse | Abrufplan und Evidence-Import | Bundesland-Drift, Protokolle, Gebuehren |
 
 ## Reihenfolge bei Handelsregister-/HRA-Workflows
@@ -38,9 +38,10 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 Der erste technische Baustein haengt vom Betriebsmodus ab:
 
 - Buerger-/Mandanten-Preflight: `oac-handelsregister` darf nur Readiness, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
-- Notariatsseitiger Vollzug oder einreichungsnaher Workflow: `oac-bnotk-xnp` kommt zuerst. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `oac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
+- Notariatsseitiger Vollzug oder einreichungsnaher Workflow: `oac-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
+- Danach kommt `oac-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `oac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
 
-Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb des Notar-/XNP-Gates.
+Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb von Card/SAK-Gate und Notar-/XNP-Gate.
 
 ## Verbindliches Adapter-Muster
 

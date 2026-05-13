@@ -1,6 +1,6 @@
 ---
 name: oac-bnotk-xnp
-description: Use first when a notary-side Online HRA, Handelsregister, XNotar or notarial software workflow needs an installable local Codex plugin for XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
+description: Use after oac-cyberjack-rfid when a notary-side Online HRA, Handelsregister, XNotar or notarial software workflow needs an installable local Codex plugin for XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
 ---
 
 # OaC BNotK XNP
@@ -9,7 +9,7 @@ description: Use first when a notary-side Online HRA, Handelsregister, XNotar or
 
 Runtime mode: `local-xnp-auth-gate`.
 
-This installable local Codex plugin is the first gate for notary-side Online HRA workflows. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+This installable local Codex plugin is the XNP gate for notary-side Online HRA workflows. Run `oac-cyberjack-rfid` first because XNP login testing depends on card-reader, BNotK SAK lite or XNP-card-path and secureFramework readiness. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
 
 ## Allowed Work
 
@@ -27,12 +27,13 @@ This installable local Codex plugin is the first gate for notary-side Online HRA
 ## Workflow
 
 1. Classify the mode: citizen preflight or notary-side workstation workflow.
-2. For notary-side workflows, check local XNP installation, local login, user role and Amtstaetigkeitskontext before any Handelsregister-specific work.
-3. Check XNotar/register module or exchange-folder route, local admin ownership and vendor interface status.
-4. Produce a human-readable Day1 plan preview before any local or external action.
-5. Ask for explicit human approval for regulated submissions, register applications, notarial actions or cloud applies.
-6. Capture evidence metadata only: timestamp, actor role, local readiness status, source, hash, decision, result and follow-up owner.
-7. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
+2. Confirm completed `oac-cyberjack-rfid` card/SAK readiness before any XNP login testing.
+3. For notary-side workflows, check local XNP installation, local login, user role and Amtstaetigkeitskontext before any Handelsregister-specific work.
+4. Check XNotar/register module or exchange-folder route, local admin ownership and vendor interface status.
+5. Produce a human-readable Day1 plan preview before any local or external action.
+6. Ask for explicit human approval for regulated submissions, register applications, notarial actions or cloud applies.
+7. Capture evidence metadata only: timestamp, actor role, local readiness status, source, hash, decision, result and follow-up owner.
+8. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
 
 ## Output Shape
 

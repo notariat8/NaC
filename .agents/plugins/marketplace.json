@@ -17,6 +17,18 @@
       "category": "Compliance"
     },
     {
+      "name": "oac-cyberjack-rfid",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oac-cyberjack-rfid"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
       "name": "oac-bnotk-xnp",
       "source": {
         "source": "local",
@@ -57,18 +69,6 @@
       "source": {
         "source": "local",
         "path": "./plugins/oac-elster-eric"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Compliance"
-    },
-    {
-      "name": "oac-cyberjack-rfid",
-      "source": {
-        "source": "local",
-        "path": "./plugins/oac-cyberjack-rfid"
       },
       "policy": {
         "installation": "AVAILABLE",

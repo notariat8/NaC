@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 REQUIRED_PLUGIN_FIELDS = ["name", "version", "description", "author", "homepage", "repository", "license", "skills", "interface"]
 REQUIRED_INTERFACE_FIELDS = ["displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt", "brandColor"]
+REQUIRED_MARKETPLACE_ORDER = ["oac-cyberjack-rfid", "oac-bnotk-xnp", "oac-handelsregister"]
 
 
 def load_json(path: Path) -> dict:
@@ -40,11 +41,13 @@ def validate() -> list[str]:
         return errors
 
     seen: set[str] = set()
+    plugin_names: list[str] = []
     for entry in plugins:
         name = entry.get("name")
         if not isinstance(name, str) or not name:
             errors.append("Marketplace entry missing name")
             continue
+        plugin_names.append(name)
         if name in seen:
             errors.append(f"Duplicate marketplace plugin entry: {name}")
         seen.add(name)
@@ -93,6 +96,10 @@ def validate() -> list[str]:
         for asset in ["assets/icon.png", "assets/logo.png"]:
             if not (plugin_root / asset).exists():
                 errors.append(f"{name}: missing {asset}")
+
+    for before, after in zip(REQUIRED_MARKETPLACE_ORDER, REQUIRED_MARKETPLACE_ORDER[1:]):
+        if before in plugin_names and after in plugin_names and plugin_names.index(before) > plugin_names.index(after):
+            errors.append(f"Marketplace order must place {before} before {after}")
     return errors
 
 
