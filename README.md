@@ -39,6 +39,38 @@ Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Polici
 - `tax`: Steuerfall, Aggregation, Voranmeldung, Abgabevorbereitung
 - `team`, `role_change`, `joiner_mover`: MVP-Startset fuer Org/Access/Tooling-Onboarding
 
+## Aktuelle Workflow-Prioritaeten
+
+Die Online-HRA-Schiene ist notariatsseitig eine Gate-Kette. Die Reihenfolge ist verbindlich, weil XNP erst nach lokal funktionierendem Kartenpfad sinnvoll getestet werden kann.
+
+| Prio | Workflow | Blockiert | Sichtbares Ergebnis |
+| --- | --- | --- | --- |
+| P0 | `oac-cyberjack-rfid` Card/SAK Gate | XNP-Login-Test | Karte, Kartenleser, PC/SC, SAK lite/XNP-Kartenpfad und secureFramework sind lokal readiness-geprueft |
+| P0 | `oac-bnotk-xnp` XNP Gate | HRA/XNotar-Workflow | XNP, lokale Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner sind readiness-geprueft |
+| P0 | `oac-handelsregister` Online-HRA Layer | produktionsnahes HRA-Paket | HRA/HRB-Spur, Pflichtangaben, Notarroute, Freigaben und Evidence-Metadaten sind vorbereitet |
+| P1 | Installierbarkeit und Validierung | Pilotbetrieb | Codex-Marketplace-Reihenfolge, Plugin-Manifeste und Validator sind stabil |
+| P2 | Folgeadapter beA, Grundbuch, ELSTER | Cross-Domain-Ausbau | bleiben nachgelagert, bis Card/SAK-, XNP- und HRA-Gates stabil sind |
+
+```mermaid
+gantt
+    title Online-HRA Workflow-Prioritaeten ab 2026-05-13
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d.%m.
+    excludes    weekends
+
+    section P0 Gate-Kette
+    Card/SAK Gate installieren und testen       :crit, p0_card, 2026-05-13, 7d
+    XNP Gate nach Card/SAK readiness            :crit, p0_xnp, after p0_card, 7d
+    Online-HRA Fachworkflow nach XNP readiness  :crit, p0_hra, after p0_xnp, 7d
+
+    section P1 Codex-Installierbarkeit
+    Marketplace-Reihenfolge validieren          :active, p1_market, 2026-05-13, 3d
+    Plugin-Doku und Evidence-Schema haerten     :p1_docs, after p1_market, 5d
+
+    section P2 Folgeadapter
+    beA, Grundbuch und ELSTER nach Gates planen :p2_follow, after p0_hra, 14d
+```
+
 ## Repository-Struktur
 
 - `docs/` erklaert das fachliche Modell und die Architektur.
