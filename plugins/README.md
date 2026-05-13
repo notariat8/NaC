@@ -5,7 +5,7 @@ This directory contains installable repo-local Codex plugins for OaC regulated-i
 ## Installable Plugins
 
 - `oac-regulated-core`: Shared regulated-industry workflow guardrails.
-- `oac-handelsregister`: Register research planning with rate-limit guardrails.
+- `oac-handelsregister`: HRA-first online register application readiness.
 - `oac-bnotk-xnp`: Local XNP companion for notarial workflows.
 - `oac-bea-portal`: beA workflow and evidence companion.
 - `oac-elster-eric`: ELSTER and ERiC workflow companion.

@@ -1,7 +1,7 @@
 {
   "name": "oac-handelsregister",
   "version": "0.1.0",
-  "description": "Register research planning with rate-limit guardrails.",
+  "description": "HRA-first online Handelsregister application readiness.",
   "author": {
     "name": "OaC Maintainers",
     "email": "security@example.com",
@@ -14,29 +14,32 @@
     "oac",
     "handelsregister",
     "register",
-    "research",
+    "hra",
+    "online-application",
+    "notary",
     "evidence"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "OaC Handelsregister",
-    "shortDescription": "Register research planning with rate-limit guardrails.",
-    "longDescription": "Local Handelsregister research companion for dry-run search planning, source tracking, rate-limit discipline and evidence capture without adopting unreviewed third-party code as production dependency.",
+    "shortDescription": "Prepare HRA online register applications with notary readiness guardrails.",
+    "longDescription": "Local HRA-first Handelsregister companion for preparing online register application packages, notary video-procedure readiness, eID/app prerequisites, approval checkpoints and metadata-only evidence. It does not retrieve register data or automate protected portals.",
     "developerName": "OaC Maintainers",
     "category": "Compliance",
     "capabilities": [
       "Local",
-      "Readiness",
-      "DryRun",
+      "NotaryReadiness",
+      "HRA",
+      "OnlineProcedure",
       "Evidence"
     ],
     "websiteURL": "https://github.com/ofunk/OaC/tree/main/docs/plugin-plans",
     "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run OaC Handelsregister readiness.",
-      "Create a Day1 plan for OaC Handelsregister.",
-      "Review Day2 drift for OaC Handelsregister."
+      "Prepare an HRA online register application.",
+      "Check notary online-procedure readiness.",
+      "Create evidence metadata for an HRA filing."
     ],
     "brandColor": "#2F5C8A",
     "composerIcon": "./assets/icon.png",
