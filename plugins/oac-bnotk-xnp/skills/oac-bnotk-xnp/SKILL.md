@@ -1,37 +1,38 @@
 ---
 name: oac-bnotk-xnp
-description: Use when preparing BNotK XNP or notarial software integration work, checking local readiness, documenting API-key presence without values, or creating evidence plans.
+description: Use first when a notary-side Handelsregister, HRA, XNotar or notarial software workflow needs local XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
 ---
 
 # OaC BNotK XNP
 
 ## Operating Boundary
 
-Runtime mode: `local-workstation-companion`.
+Runtime mode: `local-xnp-auth-gate`.
 
-This plugin is for regulated-industry work. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+This plugin is the first gate for notary-side workflows. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
 
 ## Allowed Work
 
-- Document local XNP readiness and interface status.
+- Document local XNP readiness, current local authentication and interface status.
 - Record boolean presence of local configuration without values.
-- Prepare local-only handoff steps for notarial software.
+- Prepare local-only XNotar/register handoff steps for notarial software.
 
 ## Prohibited Work
 
 - Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.
-- Bypass human review for regulated filing, register, mailbox, or notarial actions.
+- Bypass local XNP authentication, Amtstaetigkeitskontext validation, human review, register, mailbox, or notarial action controls.
 - Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.
 - Scrape protected portals or exceed published usage limits.
 
 ## Workflow
 
-1. Classify the matter, actor role, reviewer role, data class and target system.
-2. Check Day0 prerequisites and list missing accounts or approvals.
-3. Produce a human-readable Day1 plan preview before any local or external action.
-4. Ask for explicit human approval for regulated submissions, register retrievals, mailbox actions, notarial actions or cloud applies.
-5. Capture evidence metadata only: timestamp, actor role, source, hash, decision, result and follow-up owner.
-6. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
+1. Classify the mode: citizen preflight or notary-side workstation workflow.
+2. For notary-side workflows, check local XNP installation, local login, user role and Amtstaetigkeitskontext before any Handelsregister-specific work.
+3. Check XNotar/register module or exchange-folder route, local admin ownership and vendor interface status.
+4. Produce a human-readable Day1 plan preview before any local or external action.
+5. Ask for explicit human approval for regulated submissions, register applications, notarial actions or cloud applies.
+6. Capture evidence metadata only: timestamp, actor role, local readiness status, source, hash, decision, result and follow-up owner.
+7. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
 
 ## Output Shape
 

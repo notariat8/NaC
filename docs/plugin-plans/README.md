@@ -33,6 +33,15 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 | `cyberjack-rfid-plugin-integration.md` | cyberJack RFID Kartenleser-Companion | lokale Geraete-/Treiberpruefung | eID-/Kartenleser-Challenges | Firmware, Treiber, Evidence |
 | `grundbuch-portal-plugin-integration.md` | Grundbuchportal Workflow- und Evidence-Companion | Zulassung und berechtigtes Interesse | Abrufplan und Evidence-Import | Bundesland-Drift, Protokolle, Gebuehren |
 
+## Reihenfolge bei Handelsregister-/HRA-Workflows
+
+Der erste technische Baustein haengt vom Betriebsmodus ab:
+
+- Buerger-/Mandanten-Preflight: `oac-handelsregister` darf nur Readiness, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
+- Notariatsseitiger Vollzug oder einreichungsnaher Workflow: `oac-bnotk-xnp` kommt zuerst. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `oac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
+
+Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb des Notar-/XNP-Gates.
+
 ## Verbindliches Adapter-Muster
 
 Jeder Plugin- oder Connector-Plan folgt diesem Ablauf:

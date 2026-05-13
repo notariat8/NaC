@@ -23,12 +23,13 @@
   "interface": {
     "displayName": "OaC Handelsregister",
     "shortDescription": "Prepare HRA online register applications with notary readiness guardrails.",
-    "longDescription": "Local HRA-first Handelsregister companion for preparing online register application packages, notary video-procedure readiness, eID/app prerequisites, approval checkpoints and metadata-only evidence. It does not retrieve register data or automate protected portals.",
+    "longDescription": "Local HRA-first Handelsregister companion for preparing online register application packages, notary video-procedure readiness, eID/app prerequisites, approval checkpoints and metadata-only evidence. For notary-side filing workflows it depends on the OaC BNotK XNP authentication gate first. It does not retrieve register data or automate protected portals.",
     "developerName": "OaC Maintainers",
     "category": "Compliance",
     "capabilities": [
       "Local",
       "NotaryReadiness",
+      "DependsOnXnpGate",
       "HRA",
       "OnlineProcedure",
       "Evidence"
@@ -37,7 +38,7 @@
     "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Prepare an HRA online register application.",
+      "Prepare an HRA online register application after the XNP gate.",
       "Check notary online-procedure readiness.",
       "Create evidence metadata for an HRA filing."
     ],

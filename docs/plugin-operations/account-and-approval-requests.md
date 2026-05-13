@@ -9,15 +9,15 @@ This file is the Day0 request register for productive regulated-industry plugin 
 | GitHub | Repository write access, branch protection, required checks and CODEOWNER review | productive plugin releases | platform owner | Private repo access must be explicit. |
 | Evidence | DMS or audit store decision, retention class, hash policy and deletion hold process | any evidence import | compliance owner | Metadata-only by default. |
 | Security | Secret storage decision for future connectors | any write adapter | security owner | Use local OS store or tenant Vault, not Git. |
-| Review | Two-person approval matrix for regulated actions | Day1 regulated workflows | managing partner or notary | Required before submissions, register applications or notarial actions. |
+| Review | Two-person approval matrix for regulated actions | Day1 regulated workflows | managing partner or notary | Required before submissions, register applications, XNP/XNotar handoffs or notarial actions. |
 
 ## Plugin-Specific Requests
 
 | Plugin | Accounts / Approvals To Request | Blocking For |
 | --- | --- | --- |
 | `oac-regulated-core` | GitHub repository write access; Approved reviewer roster; Evidence storage decision | Day1 productive use |
-| `oac-handelsregister` | Notary appointment or notary office workflow; Bundesnotarkammer online procedure app; eID-capable official ID and PIN; Applicant and reviewer approval for the register application package | Day1 productive use |
-| `oac-bnotk-xnp` | BNotK/XNP access for the notary office; Notarial software vendor interface approval; Local workstation admin approval | Day1 productive use |
+| `oac-handelsregister` | Mode decision: citizen preflight or notary-side workflow; Completed `oac-bnotk-xnp` readiness for notary-side workflows; Notary appointment or notary office workflow; Bundesnotarkammer online procedure app; eID-capable official ID and PIN; Applicant and reviewer approval for the register application package | Day1 productive use |
+| `oac-bnotk-xnp` | BNotK/XNP access for the notary office; Local XNP login and active Amtstaetigkeitskontext; XNotar/register module or exchange-folder route; Notarial software vendor interface approval; Local workstation admin approval | Day1 productive use |
 | `oac-bea-portal` | beA mailbox access; beA card or approved authentication method; beA Client Security on local workstation; Firm policy for eEB and exports | Day1 productive use |
 | `oac-elster-eric` | ELSTER organization or user access; Local certificate or approved auth method; ERiC manufacturer registration if server-side integration is pursued; Tax representation approval | Day1 productive use |
 | `oac-cyberjack-rfid` | Approved hardware procurement; Local workstation admin approval; Driver/vendor support channel | Day1 productive use |
@@ -29,10 +29,10 @@ This file is the Day0 request register for productive regulated-industry plugin 
 Do not implement or enable direct external write adapters until these are approved in writing:
 
 - beA send/receive/eEB automation path and Client Security boundary.
-- XNP/notarial software official interface contract and local credential boundary.
+- XNP/notarial software official interface contract, local authentication gate, Amtstaetigkeitskontext and credential boundary.
 - ELSTER/ERiC manufacturer or portal-operator onboarding, if server-side integration is pursued.
 - Grundbuchportal authorized direct adapter, state-specific terms and legitimate-interest evidence.
-- Handelsregister online application route, notary workflow, applicant authority and eID/app readiness.
+- Handelsregister online application route, mode decision, completed XNP gate for notary-side workflows, applicant authority and eID/app readiness.
 - OCI Resource Manager apply permissions, Vault policy and audit retention.
 
 ## Day2 Recertification

@@ -1,6 +1,6 @@
 # Plugin Plan: BNotK XNP Notariatssoftware Companion
 
-Status: `draft`
+Status: `proposed`
 
 ## Kernentscheidung
 
@@ -16,6 +16,25 @@ OaC SaaS oder Remote-Ausfuehrung bekommen nur:
 - Freigabe- und Audit-Metadaten.
 
 Direkte API-Calls bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
+
+## Reihenfolge fuer Handelsregister-Online-Anmeldungen
+
+Dieser Plan ist der erste technische Baustein, wenn OaC einen echten notariatsseitigen
+Handelsregister- oder HRA-Workflow vorbereiten soll.
+
+`oac-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
+Registerspur und Paket-Readiness strukturieren. Der Startpunkt ist vorher:
+
+1. Notar-/Notariatsrolle klaeren.
+2. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
+3. Amtstaetigkeitskontext lokal bestaetigen.
+4. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
+5. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
+
+Wenn OaC nur einen Buerger-/Mandanten-Preflight fuer `online.notar.de` anbietet, kann
+`oac-handelsregister` ohne XNP starten. Sobald aber ein Notariatsarbeitsplatz,
+XNotar, Registervollzug oder Einreichungsnahe betroffen ist, blockiert dieser
+XNP-/Notariats-Readiness-Schritt die weitere Entwicklung.
 
 ## Ziel
 
@@ -40,8 +59,11 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 
 ## Day0
 
+- Zielrolle klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
 - XNP-Installationskontext lokal pruefen.
+- Lokale XNP-Anmeldung, Nutzerrolle und Amtstaetigkeitskontext als Voraussetzung behandeln.
 - Klaeren, ob die Notariatssoftware-Schnittstelle aktiv ist.
+- Fuer Handelsregister-/HRA-Faelle XNotar-Modul und Datenaustauschverzeichnis klaeren.
 - Lokale Port-Konfiguration dokumentieren, ohne Secrets zu speichern.
 - Offizielle Schnittstellendefinition beschaffen.
 - Datenschutz-, Rollen- und AVV-Relevanz pruefen.
@@ -51,9 +73,11 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 
 - Lokalen Dry-run Companion bauen:
   - XNP-Verfuegbarkeit pruefen.
+  - lokale Anmeldung und Amtstaetigkeitskontext nur attestieren, nicht uebertragen.
   - lokalen Port aus Konfiguration lesen oder per erlaubtem Discovery-Verfahren finden.
   - keine Login- oder API-Key-Daten speichern.
   - OaC-Intent in menschenlesbaren XNP-Plan uebersetzen.
+  - fuer Registerfaelle XNotar-Austauschordner und XJustiz-Paketstruktur validieren.
   - Nutzer bestaetigt lokal vor jedem echten Schritt.
 - API-Calls bleiben standardmaessig deaktiviert.
 - Erst nach Freigabe:

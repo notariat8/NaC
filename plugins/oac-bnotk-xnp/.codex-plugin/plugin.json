@@ -1,7 +1,7 @@
 {
   "name": "oac-bnotk-xnp",
   "version": "0.1.0",
-  "description": "Local XNP companion for notarial workflows.",
+  "description": "Local XNP gate for notary-side workflows.",
   "author": {
     "name": "OaC Maintainers",
     "email": "security@example.com",
@@ -14,19 +14,23 @@
     "oac",
     "bnotk",
     "xnp",
+    "xnotar",
     "notary",
+    "authentication",
     "local-companion"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "OaC BNotK XNP",
-    "shortDescription": "Local XNP companion for notarial workflows.",
-    "longDescription": "Local-only XNP companion for notarial workplace readiness, Schnittstellenstatus, API-key presence attestation and evidence flow while keeping XNP credentials and Amtstaetigkeitskontext out of SaaS and Git.",
+    "shortDescription": "Check local XNP readiness before notary-side filings.",
+    "longDescription": "Local-only XNP gate for notarial workplace readiness, current local authentication and Amtstaetigkeitskontext attestation, XNotar/register-package handoff readiness, API-key presence attestation and evidence flow while keeping XNP credentials out of SaaS and Git.",
     "developerName": "OaC Maintainers",
     "category": "Compliance",
     "capabilities": [
       "Local",
       "Readiness",
+      "NotaryAuthGate",
+      "XNotar",
       "Evidence",
       "NoCloudControl"
     ],
@@ -34,9 +38,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/OaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/OaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run OaC BNotK XNP readiness.",
-      "Create a Day1 plan for OaC BNotK XNP.",
-      "Review Day2 drift for OaC BNotK XNP."
+      "Check XNP readiness for a notary-side register workflow.",
+      "Create a local XNP authentication gate plan.",
+      "Validate XNotar handoff readiness without credential values."
     ],
     "brandColor": "#62513D",
     "composerIcon": "./assets/icon.png",

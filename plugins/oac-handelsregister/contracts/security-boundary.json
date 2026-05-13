@@ -13,6 +13,7 @@
   "human_approval_required_for": [
     "regulated_external_submission",
     "online_register_application",
+    "xnp_or_xnotar_handoff",
     "notarial_video_procedure",
     "notarial_action",
     "cloud_apply_or_policy_change"
@@ -20,6 +21,7 @@
   "allowed_work": [
     "Prepare HRA-first online Handelsregister application packages.",
     "Check eID, Bundesnotarkammer app, notary appointment and signature readiness.",
+    "For notary-side workflows, require the OaC BNotK XNP gate before XNotar or filing handoff work.",
     "Prepare metadata-only evidence for human-approved register application workflows."
   ],
   "prohibited_work": [
@@ -29,6 +31,8 @@
     "Retrieve register data, scrape protected portals or submit applications automatically."
   ],
   "day0": [
+    "Confirm mode: citizen preflight or notary-side workstation workflow.",
+    "For notary-side workflow, confirm OaC BNotK XNP readiness first.",
     "Confirm legal form, register track and whether the case is HRA or HRB.",
     "Confirm applicant role, notary route, eID readiness and Bundesnotarkammer app readiness."
   ],
@@ -40,6 +44,7 @@
   ],
   "required_accounts_or_approvals": [
     "Notary appointment or notary office workflow",
+    "Completed OaC BNotK XNP readiness for notary-side workflows",
     "Bundesnotarkammer online procedure app",
     "eID-capable official ID and PIN",
     "Applicant and reviewer approval for the register application package"
