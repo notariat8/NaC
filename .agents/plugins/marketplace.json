@@ -17,10 +17,10 @@
       "category": "Compliance"
     },
     {
-      "name": "oac-handelsregister",
+      "name": "oac-bnotk-xnp",
       "source": {
         "source": "local",
-        "path": "./plugins/oac-handelsregister"
+        "path": "./plugins/oac-bnotk-xnp"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -29,10 +29,10 @@
       "category": "Compliance"
     },
     {
-      "name": "oac-bnotk-xnp",
+      "name": "oac-handelsregister",
       "source": {
         "source": "local",
-        "path": "./plugins/oac-bnotk-xnp"
+        "path": "./plugins/oac-handelsregister"
       },
       "policy": {
         "installation": "AVAILABLE",

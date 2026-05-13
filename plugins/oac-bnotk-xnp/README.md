@@ -1,14 +1,15 @@
 # OaC BNotK XNP
 
-Local-only XNP gate for notarial workplace readiness, local authentication and Amtstaetigkeitskontext attestation, XNotar/register-package handoff readiness, API-key presence attestation and evidence flow while keeping XNP credentials out of SaaS and Git.
+Installable local Codex plugin for notaries and notary-office workstations. It gates Online HRA and other notary-side register workflows by checking local XNP readiness, local authentication and Amtstaetigkeitskontext attestation, XNotar/register-package handoff readiness, API-key presence attestation and evidence flow while keeping XNP credentials out of SaaS and Git.
 
 ## Status
 
-Installable MVP plugin scaffold. For notary-side Handelsregister or HRA workflows, this plugin comes before `oac-handelsregister`. External write adapters are intentionally not enabled in this first version.
+Installable MVP plugin scaffold. For notary-side Handelsregister or HRA workflows, this plugin comes before `oac-handelsregister` and is listed first in the repo-local Codex marketplace. External write adapters are intentionally not enabled in this first version.
 
 ## Install Boundary
 
 - Runs as a local Codex plugin from this repository.
+- Is installable from `.agents/plugins/marketplace.json` for the Notary/XNP gate use case.
 - Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
 - Treats local XNP login and Amtstaetigkeitskontext as the gate before register workflow automation.
 - Produces plan previews and evidence metadata before any sensitive action.

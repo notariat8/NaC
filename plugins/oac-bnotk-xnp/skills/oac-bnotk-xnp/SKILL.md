@@ -1,6 +1,6 @@
 ---
 name: oac-bnotk-xnp
-description: Use first when a notary-side Handelsregister, HRA, XNotar or notarial software workflow needs local XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
+description: Use first when a notary-side Online HRA, Handelsregister, XNotar or notarial software workflow needs an installable local Codex plugin for XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
 ---
 
 # OaC BNotK XNP
@@ -9,7 +9,7 @@ description: Use first when a notary-side Handelsregister, HRA, XNotar or notari
 
 Runtime mode: `local-xnp-auth-gate`.
 
-This plugin is the first gate for notary-side workflows. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+This installable local Codex plugin is the first gate for notary-side Online HRA workflows. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
 
 ## Allowed Work
 
