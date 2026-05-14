@@ -177,7 +177,7 @@ On Linux, the MVP now also probes cyberJack/PCSC package status, `pcscd`, USB vi
 
 On Windows, the MVP now also probes the installed REINER SCT DriverPackage path, central driver files, CT-API/PCSC files and the installed REINER SCT SmartCardReader provider through `pnputil`. Connected reader hardware is checked separately; an installed driver stack does not prove that a cyberJack reader is currently attached.
 
-Where morris is installed, the MVP now also probes the local morris path, the Windows service `morris`, the running processes `morrisServer` and `morrisDispatcherService`, and local named-pipe endpoints such as `net.pipe://localhost/morris`. No morris card operation, PIN prompt or portal action is executed.
+Where morris is installed, the MVP now also probes the local morris path, the Windows service `morris`, the running processes `morrisServer` and `morrisDispatcherService`, and local named-pipe endpoints such as `net.pipe://localhost/morris`. With `--probe-morris-api`, it can also test the real morris loopback path through `http://127.0.0.1:8800`: `system::check`, `system::auth`, `system::list_provider`, `pcsc::establishcontext` and `pcsc::listreaders`. SID and authorization values are stored only as hashes, and card ATR data is not stored. Responses such as `NoReader` or `NoCard` are treated as a successful middleware binding without attached reader hardware or inserted card; physical cyberJack readiness remains a separate reader gate. No PIN prompt, card data, certificate material or portal action is executed.
 
 Under the current repository rule, Omnistation is not a general NoC execution workspace. For an isolated hardware lab, Omnistation is only useful if the cyberJack USB reader is visible there through USB passthrough and a documented policy exception or policy update exists. Without USB passthrough, an Omnistation cloud desktop cannot test the physical RFID/card reader.
 
@@ -252,6 +252,7 @@ Under the current repository rule, Omnistation is not a general NoC execution wo
 - Local readiness script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implemented.
 - Windows DriverPackage/SmartCardReader provider detection implemented.
 - Windows morris browser middleware detection implemented.
+- Optional Windows morris loopback probe through `--probe-morris-api` implemented.
 - Linux driver/PCSC/USB preflight implemented in the readiness script.
 - Evidence schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implemented.
 - `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` will be derived from the script core for the later MCP/HTTP adapter.

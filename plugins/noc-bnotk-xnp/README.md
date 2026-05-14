@@ -22,6 +22,12 @@ python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --manual-card-present yes 
 
 This does not perform an XNP login and does not call a productive XNP write endpoint. It creates a local dry-run prompt for the approved cyberJack reader route, invokes the `noc-cyberjack-rfid` readiness check, probes only XNP localhost ports `12774` to `12784`, and writes evidence according to `contracts/reader-prompt-evidence.schema.json`.
 
+To include the active morris browser-middleware and PC/SC list-readers probe from the cyberJack gate, add:
+
+```powershell
+python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
+```
+
 The prompt is for checking local reader response, not for activating contactless RFID in a BNotK chip-card workflow. Do not enter PINs, card values, certificates, passwords or XNP API keys into Codex.
 
 ## Install Boundary

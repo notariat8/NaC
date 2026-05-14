@@ -13,8 +13,9 @@ import sys
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.error import URLError
+from urllib.parse import urlencode
 from urllib.request import urlopen
 
 
@@ -26,6 +27,16 @@ LINUX_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT|Smart Card|0c4b)", re
 WINDOWS_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT)", re.IGNORECASE)
 WINDOWS_SMARTCARD_PATTERNS = re.compile(r"(SmartCardReader|Smart Card|Smartcard|Smartcard-Leser)", re.IGNORECASE)
 MORRIS_ENDPOINT_PATTERNS = re.compile(r"net\.pipe://localhost/[A-Za-z0-9]+", re.IGNORECASE)
+MORRIS_STATUS_TID_PATTERN = re.compile(
+    r"<td[^>]*>\s*tid\s*</td>\s*<td[^>]*>\s*(?P<tid>[0-9]+)\s*</td>",
+    re.IGNORECASE,
+)
+MORRIS_HTTP_BASE_URL = "http://127.0.0.1:8800"
+MORRIS_PROBE_APP_NAME = "NoCReadinessProbe"
+MORRIS_STATUS_OK = 0
+MORRIS_STATUS_NO_CARD = -19
+MORRIS_STATUS_NO_READER = -20
+MorrisHttpGet = Callable[[str, dict[str, str] | None, float], dict[str, Any]]
 
 
 def utc_now() -> str:
@@ -363,6 +374,242 @@ def probe_windows_morris_stack(base_paths: list[Path] | None = None) -> dict[str
         "REINER SCT morris installation was not confirmed.",
         details,
     )
+
+
+def morris_http_get(path: str, params: dict[str, str] | None = None, timeout: float = 3.0) -> dict[str, Any]:
+    normalized_path = path if path.startswith("/") else f"/{path}"
+    url = f"{MORRIS_HTTP_BASE_URL}{normalized_path}"
+    if params is not None:
+        url = f"{url}?{urlencode(params)}"
+    with urlopen(url, timeout=timeout) as response:
+        raw = response.read(32768).decode("utf-8", errors="replace")
+        payload: Any = None
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            payload = None
+        return {
+            "http_status": int(response.status),
+            "content_type": response.headers.get("Content-Type"),
+            "payload": payload,
+            "raw": raw,
+        }
+
+
+def extract_morris_tid(status_html: str) -> str | None:
+    match = MORRIS_STATUS_TID_PATTERN.search(status_html)
+    if not match:
+        return None
+    return match.group("tid")
+
+
+def int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def summarize_morris_status_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {"status": None}
+    summary: dict[str, Any] = {
+        "status": int_or_none(payload.get("status")),
+        "status_desc": payload.get("status_desc"),
+    }
+    if payload.get("morrisversion"):
+        summary["morrisversion"] = str(payload.get("morrisversion"))
+    if payload.get("pcsc_status"):
+        summary["pcsc_status"] = str(payload.get("pcsc_status"))
+    if payload.get("pcsc_status_desc"):
+        summary["pcsc_status_desc"] = str(payload.get("pcsc_status_desc"))
+    if payload.get("cmd_org"):
+        summary["cmd_org"] = str(payload.get("cmd_org"))
+    return summary
+
+
+def summarize_morris_auth_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    summary = summarize_morris_status_payload(payload)
+    if not isinstance(payload, dict):
+        return summary
+    summary["sid_hash"] = hash_identifier(str(payload.get("sid") or ""))
+    summary["auth_data_hash"] = hash_identifier(str(payload.get("auth_data") or ""))
+    license_data = payload.get("license")
+    if isinstance(license_data, dict):
+        summary["license"] = {
+            key: license_data.get(key)
+            for key in ["provider", "reader", "valid_till"]
+            if license_data.get(key) is not None
+        }
+    return summary
+
+
+def summarize_morris_listreaders_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    summary = summarize_morris_status_payload(payload)
+    readers = payload.get("readers") if isinstance(payload, dict) else None
+    if not isinstance(readers, list):
+        readers = []
+
+    reader_summaries: list[dict[str, Any]] = []
+    for reader in readers:
+        if not isinstance(reader, dict):
+            continue
+        name = str(reader.get("name") or "")
+        reader_summaries.append(
+            {
+                "name": name[:120],
+                "name_hash": hash_identifier(name),
+                "reiner_sct_match": bool(WINDOWS_READER_PATTERNS.search(name)),
+                "atr_present": bool(reader.get("atr")),
+                "action": str(reader.get("action") or "")[:40] or None,
+            }
+        )
+
+    summary["reader_count"] = len(reader_summaries)
+    summary["reiner_sct_reader_count"] = sum(1 for item in reader_summaries if item["reiner_sct_match"])
+    summary["readers"] = reader_summaries
+    if isinstance(payload, dict) and payload.get("pnp") is not None:
+        summary["pnp"] = payload.get("pnp")
+    return summary
+
+
+def probe_windows_morris_loopback_api(http_get: MorrisHttpGet | None = None) -> dict[str, Any]:
+    if platform.system().lower() != "windows":
+        return check_result(
+            "windows_morris_loopback_api",
+            "Windows morris loopback API",
+            "passed",
+            "info",
+            "morris loopback API check is not required on this operating system.",
+        )
+
+    getter = http_get or morris_http_get
+    details: dict[str, Any] = {
+        "base_url": MORRIS_HTTP_BASE_URL,
+        "app_name": MORRIS_PROBE_APP_NAME,
+        "transport": "localhost-http",
+        "pin_captured": False,
+        "card_data_captured": False,
+    }
+    sid: str | None = None
+
+    try:
+        status_response = getter("/", None, 2.0)
+        tid = extract_morris_tid(str(status_response.get("raw") or ""))
+        details["status_monitor"] = {
+            "http_status": status_response.get("http_status"),
+            "content_type": status_response.get("content_type"),
+            "tid_hash": hash_identifier(tid),
+            "tid_seen": bool(tid),
+        }
+        if not tid:
+            return check_result(
+                "windows_morris_loopback_api",
+                "Windows morris loopback API",
+                "manual_review",
+                "manual",
+                "morris status monitor answered, but no active terminal id was found.",
+                details,
+            )
+
+        system_check = getter("/system", {"tid": tid, "cmd": "check"}, 3.0)
+        system_check_payload = system_check.get("payload")
+        details["system_check"] = summarize_morris_status_payload(system_check_payload)
+        if details["system_check"]["status"] != MORRIS_STATUS_OK:
+            return check_result(
+                "windows_morris_loopback_api",
+                "Windows morris loopback API",
+                "manual_review",
+                "manual",
+                "morris system::check did not return OK.",
+                details,
+            )
+
+        auth_response = getter(
+            "/system",
+            {
+                "tid": tid,
+                "cmd": "auth",
+                "app_name": MORRIS_PROBE_APP_NAME,
+                "auth_data": "",
+                "lic_data": "",
+                "no_always_allow_button": "1",
+            },
+            8.0,
+        )
+        auth_payload = auth_response.get("payload")
+        details["auth"] = summarize_morris_auth_payload(auth_payload)
+        sid = str(auth_payload.get("sid") or "") if isinstance(auth_payload, dict) else ""
+        if details["auth"]["status"] != MORRIS_STATUS_OK or not sid:
+            return check_result(
+                "windows_morris_loopback_api",
+                "Windows morris loopback API",
+                "manual_review",
+                "manual",
+                "morris system::auth did not return a usable local session id.",
+                details,
+            )
+
+        provider_response = getter("/system", {"tid": tid, "sid": sid, "cmd": "list_provider"}, 3.0)
+        provider_payload = provider_response.get("payload")
+        details["list_provider"] = summarize_morris_status_payload(provider_payload)
+        if isinstance(provider_payload, dict):
+            details["list_provider"]["provider_licensed"] = provider_payload.get("provider_licensed")
+            details["list_provider"]["provider_not_licensed"] = provider_payload.get("provider_not_licensed")
+
+        context_response = getter("/pcsc", {"tid": tid, "sid": sid, "cmd": "establishcontext"}, 3.0)
+        details["pcsc_establishcontext"] = summarize_morris_status_payload(context_response.get("payload"))
+
+        readers_response = getter("/pcsc", {"tid": tid, "sid": sid, "cmd": "listreaders"}, 5.0)
+        readers_payload = readers_response.get("payload")
+        details["pcsc_listreaders"] = summarize_morris_listreaders_payload(readers_payload)
+
+        listreaders_status = details["pcsc_listreaders"]["status"]
+        accepted_statuses = {MORRIS_STATUS_OK, MORRIS_STATUS_NO_CARD, MORRIS_STATUS_NO_READER}
+        if listreaders_status not in accepted_statuses:
+            return check_result(
+                "windows_morris_loopback_api",
+                "Windows morris loopback API",
+                "manual_review",
+                "manual",
+                "morris reached PC/SC, but pcsc::listreaders did not return a known successful or no-reader state.",
+                details,
+            )
+
+        reiner_count = int(details["pcsc_listreaders"].get("reiner_sct_reader_count") or 0)
+        if listreaders_status == MORRIS_STATUS_NO_READER:
+            message = "morris loopback API reached PC/SC and returned NoReader; the binding works without attached reader hardware."
+        elif listreaders_status == MORRIS_STATUS_NO_CARD:
+            message = "morris loopback API reached PC/SC and returned NoCard; the binding works without reading card data."
+        elif reiner_count:
+            message = "morris loopback API reached PC/SC and returned a REINER SCT/cyberJack reader."
+        else:
+            message = "morris loopback API reached PC/SC and returned local readers, but no REINER SCT/cyberJack reader."
+
+        return check_result(
+            "windows_morris_loopback_api",
+            "Windows morris loopback API",
+            "passed",
+            "info",
+            message,
+            details,
+        )
+    except (OSError, URLError, TimeoutError) as exc:
+        details["error"] = safe_error(str(exc))
+        return check_result(
+            "windows_morris_loopback_api",
+            "Windows morris loopback API",
+            "manual_review",
+            "manual",
+            "morris loopback API could not be queried.",
+            details,
+        )
+    finally:
+        if sid:
+            try:
+                getter("/system", {"tid": tid, "sid": sid, "cmd": "close"}, 2.0)
+            except (OSError, URLError, TimeoutError):
+                pass
 
 
 def linux_os_release() -> dict[str, str]:
@@ -1027,6 +1274,8 @@ def build_evidence(args: argparse.Namespace) -> dict[str, Any]:
     if platform.system().lower() == "windows":
         checks.append(probe_windows_driver_stack())
         checks.append(probe_windows_morris_stack())
+        if getattr(args, "probe_morris_api", False):
+            checks.append(probe_windows_morris_loopback_api())
     checks.extend(
         [
             probe_pcsc_service(),
@@ -1112,6 +1361,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Print full JSON evidence to stdout.",
+    )
+    parser.add_argument(
+        "--probe-morris-api",
+        action="store_true",
+        help="Actively probe the local morris localhost API and PC/SC listreaders path without reading card data.",
     )
     parser.add_argument(
         "--strict",

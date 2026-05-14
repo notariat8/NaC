@@ -177,7 +177,7 @@ Auf Linux prueft der MVP zusaetzlich cyberJack-/PCSC-Paketstatus, `pcscd`, USB-S
 
 Auf Windows prueft der MVP zusaetzlich den installierten REINER-SCT-DriverPackage-Pfad, zentrale Treiberdateien, CT-API/PCSC-Dateien und den installierten REINER-SCT-SmartCardReader-Provider ueber `pnputil`. Angeschlossene Reader-Hardware wird getrennt geprueft; ein installierter Treiberstack beweist noch keinen angeschlossenen cyberJack-Reader.
 
-Wenn morris installiert ist, prueft der MVP zusaetzlich den lokalen morris-Pfad, den Windows-Dienst `morris`, die laufenden Prozesse `morrisServer` und `morrisDispatcherService` sowie lokale Named-Pipe-Endpunkte wie `net.pipe://localhost/morris`. Es werden keine morris-Kartenoperationen, PIN-Abfragen oder Portalaktionen ausgefuehrt.
+Wenn morris installiert ist, prueft der MVP zusaetzlich den lokalen morris-Pfad, den Windows-Dienst `morris`, die laufenden Prozesse `morrisServer` und `morrisDispatcherService` sowie lokale Named-Pipe-Endpunkte wie `net.pipe://localhost/morris`. Optional kann der MVP mit `--probe-morris-api` den echten morris-Loopback-Pfad ueber `http://127.0.0.1:8800` pruefen: `system::check`, `system::auth`, `system::list_provider`, `pcsc::establishcontext` und `pcsc::listreaders`. SID und Auth-Daten werden nur gehasht, Karten-ATR wird nicht gespeichert. Antworten wie `NoReader` oder `NoCard` gelten als erfolgreiche Middleware-Anbindung ohne angeschlossene bzw. ohne eingelegte Karte; die physische cyberJack-Bereitschaft bleibt ein separater Reader-Gate. Es werden keine PIN-Abfragen, Kartendaten, Zertifikate oder Portalaktionen ausgefuehrt.
 
 Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrungsort genutzt werden. Fuer einen isolierten Hardware-Lab-Test waere Omnistation nur dann sinnvoll, wenn der cyberJack-USB-Reader per USB-Passthrough dort sichtbar ist und eine dokumentierte Policy-Ausnahme oder Policy-Aenderung vorliegt. Ohne USB-Passthrough kann ein Omnistation-Cloud-Desktop den physischen RFID-/Kartenleser nicht testen.
 
@@ -252,6 +252,7 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrung
 - Lokales Readiness-Script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implementiert.
 - Windows-DriverPackage-/SmartCardReader-Provider-Erkennung implementiert.
 - Windows-morris-Browser-Middleware-Erkennung implementiert.
+- Optionaler Windows-morris-Loopback-Probe ueber `--probe-morris-api` implementiert.
 - Linux-Treiber-/PCSC-/USB-Preflight im Readiness-Script implementiert.
 - Evidence-Schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implementiert.
 - `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` werden aus dem Script-Kern in den spaeteren MCP-/HTTP-Adapter abgeleitet.

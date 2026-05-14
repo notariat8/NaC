@@ -15,7 +15,9 @@ This installable local Codex plugin is the first gate before XNP login testing f
 
 - Prepare local card, compatible security-class-3 reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checks.
 - Run `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json` from the repository root to create a local readiness evidence preview.
+- Run `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api` when the operator explicitly wants the local morris localhost API and PC/SC list-readers path tested without reading card data.
 - Record anonymized reader fingerprints and driver version metadata.
+- Record morris SID/auth values only as hashes and never expose raw authorization data in evidence.
 - Route PIN/card issues to the human operator without requesting values.
 - Record only non-secret XNP local-interface metadata such as active state and localhost port range.
 

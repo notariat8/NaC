@@ -15,6 +15,7 @@ This installable local Codex plugin is the XNP gate for notary-side Online HRA w
 
 - Document local XNP readiness, current local authentication and interface status.
 - Run `python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json` from the repository root to create a local XNP reader-prompt preflight for the cyberJack reader path.
+- Add `--probe-morris-api` when the operator explicitly wants the underlying `noc-cyberjack-rfid` gate to test the morris localhost API and PC/SC list-readers path.
 - Record boolean presence of local configuration without values.
 - Prepare local-only XNotar/register handoff steps for notarial software.
 

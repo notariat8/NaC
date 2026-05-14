@@ -204,6 +204,51 @@ class CyberJackReadinessTests(unittest.TestCase):
         self.assertEqual(result["status"], "passed")
         self.assertEqual(result["id"], "windows_morris_stack")
 
+    def test_extract_morris_tid_from_status_monitor(self) -> None:
+        html = "<tr><td class='systemTableTag'>tid</td><td class='systemTableValue'>1222268423741458</td></tr>"
+        self.assertEqual(readiness.extract_morris_tid(html), "1222268423741458")
+
+    def test_morris_loopback_accepts_no_reader_response_without_raw_auth(self) -> None:
+        original_system = readiness.platform.system
+        calls = []
+
+        def fake_http_get(path, params=None, timeout=3.0):
+            calls.append((path, dict(params or {})))
+            if path == "/":
+                return {
+                    "http_status": 200,
+                    "content_type": "text/HTML",
+                    "raw": "<td class='systemTableTag'>tid</td><td class='systemTableValue'>123456</td>",
+                    "payload": None,
+                }
+            if path == "/system" and params.get("cmd") == "check":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "morrisversion": "2.0.0", "tid": "123456", "status_desc": "OK"}}
+            if path == "/system" and params.get("cmd") == "auth":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "sid": "123456#sid456", "auth_data": "secret-auth", "status_desc": "OK"}}
+            if path == "/system" and params.get("cmd") == "list_provider":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "provider_licensed": "system,pcsc", "status_desc": "OK"}}
+            if path == "/pcsc" and params.get("cmd") == "establishcontext":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "pcsc_status": "0x00000000", "status_desc": "OK"}}
+            if path == "/pcsc" and params.get("cmd") == "listreaders":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": -20, "status_desc": "NoReader", "cmd_org": "listreaders"}}
+            if path == "/system" and params.get("cmd") == "close":
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0}}
+            raise AssertionError(f"Unexpected morris probe call: {path} {params}")
+
+        readiness.platform.system = lambda: "Windows"
+        try:
+            result = readiness.probe_windows_morris_loopback_api(fake_http_get)
+        finally:
+            readiness.platform.system = original_system
+
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["id"], "windows_morris_loopback_api")
+        self.assertEqual(result["details"]["pcsc_listreaders"]["status"], -20)
+        serialized_details = str(result["details"])
+        self.assertNotIn("123456#sid456", serialized_details)
+        self.assertNotIn("secret-auth", serialized_details)
+        self.assertTrue(any(path == "/system" and params.get("cmd") == "close" for path, params in calls))
+
 
 if __name__ == "__main__":
     unittest.main()

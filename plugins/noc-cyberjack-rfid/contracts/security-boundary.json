@@ -23,9 +23,11 @@
     "Prepare local card, compatible security-class-3 reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checks.",
     "Check Windows REINER SCT DriverPackage path, driver files and installed SmartCardReader provider as metadata only.",
     "Check Windows morris browser middleware installation, service state and local named-pipe metadata only.",
+    "Optionally probe the morris localhost HTTP API and PC/SC list-readers path without PIN, card-value or certificate capture.",
     "Check Linux cyberJack driver, PC/SC daemon and USB/PCSC reader visibility as metadata only.",
     "Run the local readiness evidence check in scripts/check_readiness.py without PIN, card-value or API-key capture.",
     "Record anonymized reader fingerprints and driver version metadata.",
+    "Record morris session ids and authorization values only as hashes in evidence metadata.",
     "Record non-secret XNP local-interface metadata such as active state and local port range.",
     "Route PIN/card issues to the human operator without requesting values."
   ],

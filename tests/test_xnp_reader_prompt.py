@@ -28,6 +28,7 @@ def args(prompt: str | None = None) -> argparse.Namespace:
         intent="reader_function_check",
         manual_card_present="yes",
         manual_rfid_off="yes",
+        probe_morris_api=False,
     )
 
 

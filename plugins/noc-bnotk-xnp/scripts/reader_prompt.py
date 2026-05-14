@@ -107,6 +107,7 @@ def build_cyberjack_evidence(args: argparse.Namespace) -> dict[str, Any]:
     cyberjack_args = argparse.Namespace(
         manual_card_present=args.manual_card_present,
         manual_rfid_off=args.manual_rfid_off,
+        probe_morris_api=getattr(args, "probe_morris_api", False),
     )
     return cyberjack.build_evidence(cyberjack_args)
 
@@ -278,6 +279,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Print full JSON evidence to stdout.",
+    )
+    parser.add_argument(
+        "--probe-morris-api",
+        action="store_true",
+        help="Ask the cyberJack card gate to actively test the local morris localhost API and PC/SC listreaders path.",
     )
     parser.add_argument(
         "--strict",

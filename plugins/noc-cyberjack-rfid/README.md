@@ -22,6 +22,14 @@ python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --manual-card-prese
 
 Use `--strict` in automation when any non-ready state should return a non-zero exit code. The generated JSON follows `contracts/readiness-evidence.schema.json` and records only metadata: local component status, manual attestations, anonymized reader fingerprints, localhost XNP port reachability and AusweisApp status reachability.
 
+To actively test the local morris browser middleware and PC/SC path without reading card data, add:
+
+```powershell
+python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
+```
+
+This uses `http://127.0.0.1:8800` only, performs `system::check`, a local `system::auth` handshake, `system::list_provider`, `pcsc::establishcontext` and `pcsc::listreaders`, and stores only redacted metadata. A morris response such as `NoReader` or `NoCard` is treated as a successful middleware binding state, while physical cyberJack readiness remains a separate reader-detection gate.
+
 The check does not read PINs, card values, certificates, XNP API keys, portal sessions or mandate content. RFID-off is captured as a manual attestation until a reviewed vendor or operating-system interface can verify it deterministically.
 
 ## Windows DriverPackage Detection
@@ -44,6 +52,8 @@ REINER SCT describes morris as middleware that allows browser applications to ac
 - local named-pipe endpoints such as `net.pipe://localhost/morris`
 
 This can be the easier integration path for browser-guided operator checks, but it stays local and metadata-only in NoC. The plugin must not use morris to request PINs, card data, certificates or productive portal actions.
+
+With `--probe-morris-api`, the readiness script also verifies the real morris localhost API. On the current workstation the API returns `status=0` for morris, authorization, licensed providers and PC/SC list-readers; no REINER SCT/cyberJack reader is currently returned by morris.
 
 ## Linux Driver And Omnistation Lab
 

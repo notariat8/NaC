@@ -17,7 +17,7 @@ NoC SaaS oder Remote-Ausfuehrung bekommen nur:
 
 Direkte API-Calls bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
 
-The first runnable MVP now lives at `plugins/noc-bnotk-xnp/scripts/reader_prompt.py`. It creates a local dry-run reader prompt for the cyberJack reader path, invokes the `noc-cyberjack-rfid` card gate, checks only XNP localhost reachability in the `12774` to `12784` port range and writes evidence according to `plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. It does not perform XNP login, use an XNP API key or write productive XNP data.
+The first runnable MVP now lives at `plugins/noc-bnotk-xnp/scripts/reader_prompt.py`. It creates a local dry-run reader prompt for the cyberJack reader path, invokes the `noc-cyberjack-rfid` card gate, checks only XNP localhost reachability in the `12774` to `12784` port range and writes evidence according to `plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. With `--probe-morris-api`, the reader prompt can pass through the optional morris loopback and PC/SC probe from the card gate. It does not perform XNP login, use an XNP API key or write productive XNP data.
 
 ## Reihenfolge fuer Handelsregister-Online-Anmeldungen
 
