@@ -16,6 +16,7 @@ installable plugins and from reusable workflow execution logic.
 | --- | --- | --- | --- |
 | Online GmbH formation | `online-gmbh-gruendung/` | Active intake | `noc-regulated-core`, `noc-cyberjack-rfid`, `noc-bnotk-xnp`, `noc-handelsregister` |
 | AO52 nonprofit software company | `ao52aas-gemeinnuetzigkeit/` | Active intake | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-elster-eric` |
+| Steuer-aaS tax readiness | `steuer-aas/` | Active intake | `noc-regulated-core`, `noc-elster-eric` |
 | Real-estate purchase contract | `grundstueckskaufvertrag/` | Starter | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
 | Testament | `testament/` | Starter | `noc-regulated-core` |
 

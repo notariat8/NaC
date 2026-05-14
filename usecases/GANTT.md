@@ -15,13 +15,14 @@ gantt
     section Priority usecases
     Online GmbH formation                       :active, u3, 2026-05-14, 28d
     AO52 nonprofit software company            :active, u4, 2026-05-14, 28d
-    Real-estate purchase contract              :        u5, after u4, 28d
-    Testament                                  :        u6, after u5, 21d
+    Steuer-aaS tax readiness                    :active, u5, 2026-05-14, 28d
+    Real-estate purchase contract              :        u6, after u5, 28d
+    Testament                                  :        u7, after u6, 21d
 
     section Pilot readiness
-    Bind usecases to plugin dependencies        :        u7, 2026-06-15, 28d
-    Bind usecases to workflow contracts         :        u8, after u7, 28d
-    Pilot package review                        :        u9, after u8, 21d
+    Bind usecases to plugin dependencies        :        u8, 2026-06-15, 28d
+    Bind usecases to workflow contracts         :        u9, after u8, 28d
+    Pilot package review                        :        u10, after u9, 21d
 ```
 
 ## Status
@@ -30,5 +31,6 @@ gantt
 | --- | --- | --- | --- |
 | Online GmbH formation | `usecases/online-gmbh-gruendung/` | Active | Canonicalized from the empty GitHub repo `ofunk/Online-GmbH-Gruendung`. |
 | AO52 nonprofit software company | `usecases/ao52aas-gemeinnuetzigkeit/` | Active | Migrated from `ofunk/AO52aaS`. |
+| Steuer-aaS tax readiness | `usecases/steuer-aas/` | Active | Canonicalized from the empty GitHub repo `ofunk/Steuer-aaS`. |
 | Real-estate purchase contract | `usecases/grundstueckskaufvertrag/` | Planned | New canonical starter in this repository. |
 | Testament | `usecases/testament/` | Planned | New canonical starter in this repository. |
