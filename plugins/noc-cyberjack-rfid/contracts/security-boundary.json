@@ -1,0 +1,52 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "noc-cyberjack-rfid",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/cyberjack-rfid-plugin-integration.md",
+  "runtime_mode": "local-card-sak-gate",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "pin_prompt_or_certificate_selection",
+    "xnp_login_test",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Prepare local card, security-class-3 reader, SAK-lite/XNP-card-path and secureFramework readiness checks.",
+    "Record anonymized reader fingerprints and driver version metadata.",
+    "Route PIN/card issues to the human operator without requesting values."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass human review for regulated filing, register, mailbox, or notarial actions.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm BNotK chip/signature card or local Schneider/SCP-card availability without reading card values.",
+    "Confirm security-class-3 reader model, driver source, PC/SC service and local admin path.",
+    "Confirm BNotK SAK lite or XNP card path and secureFramework readiness."
+  ],
+  "day1": [
+    "Run card-reader, SAK-lite/XNP-card-path and secureFramework readiness checklist before XNP login testing."
+  ],
+  "day2": [
+    "Recertify card-reader, driver, firmware, PC/SC service, SAK-lite/XNP-card-path and secureFramework readiness."
+  ],
+  "required_accounts_or_approvals": [
+    "Approved hardware procurement",
+    "BNotK chip/signature card or local Schneider/SCP-card availability",
+    "Security-class-3 card reader",
+    "BNotK SAK lite or XNP card path",
+    "secureFramework communication path",
+    "Local workstation admin approval",
+    "Driver/vendor support channel"
+  ]
+}

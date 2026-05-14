@@ -26,6 +26,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Die Sprache des Prompts begrenzt die Aenderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
+- Plugin- und Connector-Plaene liegen unter `docs/plugin-plans/`.
+- NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal in WSL im Workspace `~/NoC`, nicht ueber Omnistation.
 
 ## Pflichtquellen im Repository
 
@@ -64,6 +66,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - `docs/de/service-business-core-vertical-blueprint.md`
 - `docs/de/vertical-starter-prozesskatalog.md`
 - `docs/de/repo-refactor-plan-single-repo-modules.md`
+- `docs/de/plugin-plans/README.md`
 - `docs/de/arbeitsmodell-agile-cadence.md`
 - `docs/de/access-and-issue-operations.md`
 

@@ -1,0 +1,21 @@
+# NoC Regulated Industry Plugins
+
+This directory contains installable repo-local Codex plugins for NoC regulated-industry workflows. The first suite focuses on lawyers, notaries, tax workflows and cloud evidence operations.
+
+## Installable Plugins
+
+- `noc-regulated-core`: Shared regulated-industry workflow guardrails.
+- `noc-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
+- `noc-bnotk-xnp`: Local XNP authentication gate after card readiness.
+- `noc-handelsregister`: HRA-first online register application readiness after mode decision.
+- `noc-bea-portal`: beA workflow and evidence companion.
+- `noc-elster-eric`: ELSTER and ERiC workflow companion.
+- `noc-grundbuch-portal`: Land register access and evidence companion.
+- `noc-oci-evidence`: OCI landing-zone evidence and audit companion.
+
+## Safety Model
+
+- Plugins default to local companion, dry-run, plan-preview and metadata-only evidence.
+- External write adapters are not enabled in this MVP.
+- Missing accounts or approvals are tracked in `docs/plugin-operations/account-and-approval-requests.md`.
+- Validate with `python3 scripts/validate_plugins.py` before publishing or installing.

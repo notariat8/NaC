@@ -61,6 +61,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
             "Unit Tests",
             [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
         ),
+        (
+            "plugin_validate",
+            "Plugin Manifest Validation",
+            [sys.executable, "scripts/validate_plugins.py"],
+        ),
     ]
 
     if profile in {"standard", "strict"}:

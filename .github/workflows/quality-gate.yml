@@ -1,4 +1,4 @@
-name: OaC8 Quality Gate
+name: NoC Quality Gate
 
 on:
   pull_request:
@@ -52,7 +52,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- oac8-quality-gate-comment -->';
+            const marker = '<!-- noc-quality-gate-comment -->';
             const body = fs.readFileSync('out/quality/comment.md', 'utf8');
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(
@@ -87,5 +87,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oac8-quality-gate
+          name: noc-quality-gate
           path: out/quality/

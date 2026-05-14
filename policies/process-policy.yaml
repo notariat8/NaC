@@ -72,6 +72,18 @@ change_management:
   completion_target_branch: main
   completion_remote: github
 
+plugin_execution:
+  local_workspace: ~/NoC
+  omnistation_execution_allowed: false
+  require_plan_preview: true
+  require_human_review_before_execution: true
+  require_audit_evidence: true
+  require_day2_drift_handling: true
+  require_plugin_manifest_validation: true
+  plan_documentation_roots:
+    - docs/de/plugin-plans
+    - docs/en/plugin-plans
+
 release_sync:
   upstream_sync_only_via_pull_request: true
   default_sync_cycle: monthly_or_quarterly

@@ -39,6 +39,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Starter-Prozesse je Vertical stehen in `docs/de/vertical-starter-prozesskatalog.md`.
 - Arbeitsmethode und Team-Cadence werden nach `docs/de/arbeitsmodell-agile-cadence.md` dokumentiert.
 - Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in `docs/de/access-and-issue-operations.md`.
+- Plugin- und Connector-Plaene werden unter `docs/de/plugin-plans/` und `docs/en/plugin-plans/` gepflegt.
+- NoC-Ausfuehrung erfolgt lokal im Workspace `~/NoC`; Omnistation ist fuer NoC kein Ausfuehrungsort.
 - Mehrsprachigkeit ist verbindlich nach `policies/language-policy.yaml`.
 - Sprachabhaengige Inhalte werden in ISO-639-Sprachordnern gepflegt, mindestens `de` und `en`.
 - Unabhaengig von der Sprache des Prompts muessen Aenderungen an lokalisierten Inhalten immer alle Standardsprachen pflegen.

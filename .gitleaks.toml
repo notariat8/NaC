@@ -1,0 +1,12 @@
+title = "NoC gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Allow documented non-secret product terms and deterministic test identifiers"
+regexTarget = "match"
+regexes = [
+  '''ElsterAuthenticator,\s*Sicherheitsstick/Signaturkarte''',
+  '''idempotency_key"\s*:\s*"invoice-acme-20260301"''',
+]

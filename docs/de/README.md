@@ -69,7 +69,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `docs/de/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/de/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
 - `docs/de/organization-as-code-positioning.md` schaerft den Begriffsrahmen Notariat/GitOps/NoC.
-- `docs/de/oac-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
+- `docs/de/noc-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
 - `docs/de/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
 - `docs/de/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/de/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.

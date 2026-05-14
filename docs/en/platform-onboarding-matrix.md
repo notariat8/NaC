@@ -8,8 +8,8 @@ Sicherstellen, dass Konzept-, Regel- und Onboarding-Aenderungen fuer alle Plattf
 
 | Plattform | Pflichtdateien |
 | --- | --- |
-| Cursor | `AGENTS.md`, `.cursor/rules/`, `docs/en/START_HERE.md` |
-| VS Code + Copilot | `AGENTS.md`, `.github/copilot-instructions.md`, `docs/en/vscode-copilot-start.md` |
+| Cursor | `AGENTS.md`, `.cursor/rules/`, `docs/en/START_HERE.md`, `docs/en/plugin-plans/README.md` |
+| VS Code + Copilot | `AGENTS.md`, `.github/copilot-instructions.md`, `docs/en/vscode-copilot-start.md`, `docs/en/plugin-plans/README.md` |
 
 ## Gemeinsamer Kern
 
@@ -20,6 +20,8 @@ Die folgenden Inhalte muessen inhaltlich auf beiden Plattformen gleich bleiben:
 - Kultur- und Sprachpolicy
 - Onboarding-Reihenfolge fuer Nicht-IT-Nutzer
 - Default-MVP-Module und zugehoerige Onboarding-Prompts
+- lokaler Ausfuehrungsort fuer NoC (`~/NoC` in WSL)
+- Plugin-/Connector-Planungsmodell
 
 ## Aenderungsregel
 

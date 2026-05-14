@@ -1,0 +1,104 @@
+{
+  "name": "noc-regulated-industry",
+  "interface": {
+    "displayName": "NoC Regulated Industry Plugins"
+  },
+  "plugins": [
+    {
+      "name": "noc-regulated-core",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-regulated-core"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-cyberjack-rfid",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-cyberjack-rfid"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-bnotk-xnp",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-bnotk-xnp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-handelsregister",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-handelsregister"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-bea-portal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-bea-portal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-elster-eric",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-elster-eric"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-grundbuch-portal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-grundbuch-portal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-oci-evidence",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-oci-evidence"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    }
+  ]
+}
