@@ -86,6 +86,36 @@ class CyberJackReadinessTests(unittest.TestCase):
             "no",
         )
 
+    def test_linux_driver_stack_detects_installed_packages(self) -> None:
+        original_system = readiness.platform.system
+        original_command_exists = readiness.command_exists
+        original_run_command = readiness.run_command
+        original_linux_os_release = readiness.linux_os_release
+
+        def fake_run_command(command, timeout=3.0):
+            if command[0] == "dpkg-query" and command[-1] in {"cyberjack", "pcscd"}:
+                return 0, "install ok installed|1.0", ""
+            if command[0] == "dpkg-query":
+                return 1, "", "not installed"
+            if command[:2] == ["apt-cache", "policy"]:
+                return 0, "Candidate: 1.0", ""
+            return 1, "", "unexpected command"
+
+        readiness.platform.system = lambda: "Linux"
+        readiness.command_exists = lambda command: command in {"dpkg-query", "apt-cache"}
+        readiness.run_command = fake_run_command
+        readiness.linux_os_release = lambda: {"ID": "ubuntu", "VERSION_ID": "24.04"}
+        try:
+            result = readiness.probe_linux_driver_stack()
+        finally:
+            readiness.platform.system = original_system
+            readiness.command_exists = original_command_exists
+            readiness.run_command = original_run_command
+            readiness.linux_os_release = original_linux_os_release
+
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["id"], "linux_driver_stack")
+
 
 if __name__ == "__main__":
     unittest.main()

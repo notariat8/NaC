@@ -4,6 +4,8 @@ import argparse
 import hashlib
 import json
 import platform
+import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -19,6 +21,7 @@ PLUGIN_NAME = "noc-cyberjack-rfid"
 SCHEMA_VERSION = "noc.cyberjack.readiness/v1"
 XNP_PORTS = range(12774, 12785)
 AUSWEISAPP_STATUS_URL = "http://127.0.0.1:24727/eID-Client?Status=json"
+LINUX_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT|Smart Card|0c4b)", re.IGNORECASE)
 
 
 def utc_now() -> str:
@@ -73,8 +76,130 @@ def run_command(command: list[str], timeout: float = 3.0) -> tuple[int | None, s
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
+def command_exists(command: str) -> bool:
+    return shutil.which(command) is not None
+
+
 def safe_error(value: str, limit: int = 240) -> str:
     return value.replace("\r", " ").replace("\n", " ").strip()[:limit]
+
+
+def linux_os_release() -> dict[str, str]:
+    path = Path("/etc/os-release")
+    if not path.exists():
+        return {}
+    values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key] = value.strip().strip('"')
+    return values
+
+
+def dpkg_package_state(package: str) -> dict[str, Any]:
+    code, stdout, _stderr = run_command(
+        ["dpkg-query", "-W", "-f=${Status}|${Version}", package],
+        timeout=4.0,
+    )
+    installed = code == 0 and stdout.startswith("install ok installed")
+    version = stdout.split("|", 1)[1] if installed and "|" in stdout else None
+    return {"package": package, "installed": installed, "version": version}
+
+
+def apt_candidate(package: str) -> str | None:
+    if not command_exists("apt-cache"):
+        return None
+    code, stdout, _stderr = run_command(["apt-cache", "policy", package], timeout=4.0)
+    if code != 0:
+        return None
+    for line in stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Candidate:"):
+            candidate = stripped.split(":", 1)[1].strip()
+            return None if candidate == "(none)" else candidate
+    return None
+
+
+def probe_linux_driver_stack() -> dict[str, Any]:
+    if platform.system().lower() != "linux":
+        return check_result(
+            "linux_driver_stack",
+            "Linux cyberJack driver stack",
+            "passed",
+            "info",
+            "Linux driver package check is not required on this operating system.",
+        )
+
+    distro = linux_os_release()
+    details: dict[str, Any] = {"os_release": distro}
+
+    if command_exists("dpkg-query"):
+        packages = [dpkg_package_state(name) for name in ["cyberjack", "pcscd", "pcsc-tools", "libccid"]]
+        details["packages"] = packages
+        details["cyberjack_candidate"] = apt_candidate("cyberjack")
+        cyberjack_installed = any(item["package"] == "cyberjack" and item["installed"] for item in packages)
+        pcscd_installed = any(item["package"] == "pcscd" and item["installed"] for item in packages)
+        if cyberjack_installed and pcscd_installed:
+            return check_result(
+                "linux_driver_stack",
+                "Linux cyberJack driver stack",
+                "passed",
+                "info",
+                "cyberJack and PC/SC packages are installed.",
+                details,
+            )
+        if details["cyberjack_candidate"]:
+            return check_result(
+                "linux_driver_stack",
+                "Linux cyberJack driver stack",
+                "manual_review",
+                "manual",
+                "cyberJack package is available but not confirmed as installed.",
+                details,
+            )
+        return check_result(
+            "linux_driver_stack",
+            "Linux cyberJack driver stack",
+            "manual_review",
+            "manual",
+            "cyberJack package is not confirmed in the Debian/Ubuntu package database.",
+            details,
+        )
+
+    if command_exists("rpm"):
+        package_names = ["cyberjack", "pcsc-lite", "pcsc-tools", "ccid"]
+        packages = []
+        for package in package_names:
+            code, stdout, _stderr = run_command(["rpm", "-q", package], timeout=4.0)
+            packages.append({"package": package, "installed": code == 0, "version": stdout if code == 0 else None})
+        details["packages"] = packages
+        if any(item["package"] == "cyberjack" and item["installed"] for item in packages):
+            return check_result(
+                "linux_driver_stack",
+                "Linux cyberJack driver stack",
+                "passed",
+                "info",
+                "cyberJack RPM package is installed.",
+                details,
+            )
+        return check_result(
+            "linux_driver_stack",
+            "Linux cyberJack driver stack",
+            "manual_review",
+            "manual",
+            "cyberJack RPM package is not confirmed as installed.",
+            details,
+        )
+
+    return check_result(
+        "linux_driver_stack",
+        "Linux cyberJack driver stack",
+        "manual_review",
+        "manual",
+        "No supported Linux package database command was found.",
+        details,
+    )
 
 
 def probe_pcsc_service() -> dict[str, Any]:
@@ -242,9 +367,79 @@ def probe_windows_readers() -> dict[str, Any]:
     )
 
 
+def probe_linux_readers() -> dict[str, Any]:
+    detected: list[dict[str, Any]] = []
+
+    if command_exists("lsusb"):
+        code, stdout, stderr = run_command(["lsusb"], timeout=4.0)
+        if code == 0:
+            for line in stdout.splitlines():
+                if LINUX_READER_PATTERNS.search(line):
+                    detected.append(
+                        {
+                            "source": "lsusb",
+                            "fingerprint_hash": hash_identifier(line),
+                            "description": re.sub(r"\s+", " ", line).strip()[:160],
+                        }
+                    )
+        elif stderr:
+            return check_result(
+                "reader_detection",
+                "Card-reader detection",
+                "manual_review",
+                "manual",
+                "USB reader detection command did not complete successfully.",
+                {"exit_code": code, "error": safe_error(stderr)},
+            )
+
+    if command_exists("pcsc_scan"):
+        code, stdout, stderr = run_command(["pcsc_scan", "-n"], timeout=5.0)
+        if code in {0, 1} and stdout:
+            for line in stdout.splitlines():
+                if LINUX_READER_PATTERNS.search(line):
+                    detected.append(
+                        {
+                            "source": "pcsc_scan",
+                            "fingerprint_hash": hash_identifier(line),
+                            "description": re.sub(r"\s+", " ", line).strip()[:160],
+                        }
+                    )
+        elif stderr and not detected:
+            return check_result(
+                "reader_detection",
+                "Card-reader detection",
+                "manual_review",
+                "manual",
+                "PC/SC reader scan did not complete successfully.",
+                {"exit_code": code, "error": safe_error(stderr)},
+            )
+
+    if detected:
+        return check_result(
+            "reader_detection",
+            "Card-reader detection",
+            "passed",
+            "info",
+            "At least one relevant Linux USB/PCSC card-reader signal was detected.",
+            {"readers": detected},
+        )
+
+    return check_result(
+        "reader_detection",
+        "Card-reader detection",
+        "manual_review",
+        "manual",
+        "No cyberJack, REINER SCT or smart-card reader was detected through Linux USB/PCSC probes.",
+        {"lsusb_available": command_exists("lsusb"), "pcsc_scan_available": command_exists("pcsc_scan")},
+    )
+
+
 def probe_reader_detection() -> dict[str, Any]:
-    if platform.system().lower() == "windows":
+    system = platform.system().lower()
+    if system == "windows":
         return probe_windows_readers()
+    if system == "linux":
+        return probe_linux_readers()
     return check_result(
         "reader_detection",
         "Card-reader detection",
@@ -437,21 +632,27 @@ def build_evidence(args: argparse.Namespace) -> dict[str, Any]:
             "RFID is not disabled for a BNotK chip-card workflow.",
             "RFID-off status needs manual confirmation.",
         ),
-        probe_pcsc_service(),
-        probe_reader_detection(),
-        probe_named_process(
-            "sak_or_xnp_card_path",
-            "BNotK SAK lite or XNP card path",
-            ["xnp", "sak", "bnotk"],
-        ),
-        probe_named_process(
-            "secureframework",
-            "secureFramework",
-            ["secureframework", "secure framework"],
-        ),
-        probe_xnp_local_interface(),
-        probe_ausweisapp_status(),
     ]
+    if platform.system().lower() == "linux":
+        checks.append(probe_linux_driver_stack())
+    checks.extend(
+        [
+            probe_pcsc_service(),
+            probe_reader_detection(),
+            probe_named_process(
+                "sak_or_xnp_card_path",
+                "BNotK SAK lite or XNP card path",
+                ["xnp", "sak", "bnotk"],
+            ),
+            probe_named_process(
+                "secureframework",
+                "secureFramework",
+                ["secureframework", "secure framework"],
+            ),
+            probe_xnp_local_interface(),
+            probe_ausweisapp_status(),
+        ]
+    )
 
     return {
         "schema_version": SCHEMA_VERSION,

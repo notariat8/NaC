@@ -27,6 +27,7 @@ Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrati
 - Der Leser bietet sichere PIN-Eingabe am Geraet; PIN-Eingabe darf nicht in NoC oder ein LLM wandern.
 - REINER SCT nennt BSI-/TUEV-IT-Zertifizierung und Sicherheitsklasse 3.
 - Unter Linux und macOS ist Nutzung moeglich; Firmwareupdate/-upgrade ist laut Herstellerhinweis dort nicht ueber das cyberJack ControlCenter vorgesehen.
+- Fuer Linux verweist REINER SCT darauf, dass cyberJack-Treiber in vielen Distributionen bereits ueber Standard-Repositories verfuegbar sind; falls nicht, sind distributionsspezifische Pakete bzw. Quellcode zu nutzen.
 - Die AusweisApp Desktop-SDK-Schnittstelle ist per WebSocket erreichbar, typischerweise unter `ws://localhost:24727/eID-Kernel`.
 - Der AusweisApp-Status kann ueber `http://localhost:24727/eID-Client?Status=json` gelesen werden.
 - Die AusweisApp nutzt PC/SC und gepaarte Smartphones als Kartenleser; fuer den cyberJack ist PC/SC der relevante MVP-Pfad.
@@ -170,6 +171,10 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 
 Der erste lauffaehige MVP liegt jetzt unter `plugins/noc-cyberjack-rfid/scripts/check_readiness.py`. Er erzeugt ein Evidence-JSON nach `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json`, prueft nur lokale Komponenten, nutzt ausschliesslich localhost fuer XNP/AusweisApp-Erreichbarkeit und speichert keine PINs, Kartendaten oder XNP-API-Keys. RFID-off und Kartenverfuegbarkeit werden als manuelle Attestationen erfasst, bis eine gepruefte lokale Schnittstelle diese Zustaende deterministisch liefern kann.
 
+Auf Linux prueft der MVP zusaetzlich cyberJack-/PCSC-Paketstatus, `pcscd`, USB-Sichtbarkeit ueber `lsusb` und PC/SC-Reader-Signale ueber `pcsc_scan -n`, sofern diese Werkzeuge vorhanden sind.
+
+Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrungsort genutzt werden. Fuer einen isolierten Hardware-Lab-Test waere Omnistation nur dann sinnvoll, wenn der cyberJack-USB-Reader per USB-Passthrough dort sichtbar ist und eine dokumentierte Policy-Ausnahme oder Policy-Aenderung vorliegt. Ohne USB-Passthrough kann ein Omnistation-Cloud-Desktop den physischen RFID-/Kartenleser nicht testen.
+
 ## Nicht im MVP
 
 - Direkte APDU-Kommunikation mit dem nPA.
@@ -239,6 +244,7 @@ Der erste lauffaehige MVP liegt jetzt unter `plugins/noc-cyberjack-rfid/scripts/
 ### Phase 1: MVP
 
 - Lokales Readiness-Script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implementiert.
+- Linux-Treiber-/PCSC-/USB-Preflight im Readiness-Script implementiert.
 - Evidence-Schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implementiert.
 - `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` werden aus dem Script-Kern in den spaeteren MCP-/HTTP-Adapter abgeleitet.
 - `cyberjack.check_ausweisapp` bleibt fuer eID-Folgefaelle vorgesehen.
@@ -285,6 +291,7 @@ Der erste lauffaehige MVP liegt jetzt unter `plugins/noc-cyberjack-rfid/scripts/
 ## Quellen
 
 - REINER SCT cyberJack RFID standard: https://www.reiner-sct.com/produkt/cyberjack-rfid-standard/
+- REINER SCT Linux-Treiber fuer cyberJack Chipkartenleser: https://help.reiner-sct.com/en/support/solutions/articles/101000480008-linux-driver-for-cyberjack-smart-card-reader
 - BNotK Hinweis zu Kartenlesegeraeten: https://onlinehilfe.bnotk.de/einrichtungen/zertifizierungsstelle/hinweis-zu-kartenlesegeraeten.html
 - BNotK Kompatible Kartenlesegeraete: https://onlinehilfe.bnotk.de/einrichtungen/elektronisches-urkundenarchiv/kartenverwaltung/kartenmanagement/kompatible-kartenlesegeraete.html
 - BNotK XNP Integration mit weiteren Notariatsanwendungen: https://onlinehilfe.bnotk.de/einrichtungen/bundesnotarkammer/xnp/notarsoftwarehersteller-systembetreuer/integration-mit-weiteren-notariatsanwendungen.html

@@ -24,6 +24,23 @@ Use `--strict` in automation when any non-ready state should return a non-zero e
 
 The check does not read PINs, card values, certificates, XNP API keys, portal sessions or mandate content. RFID-off is captured as a manual attestation until a reviewed vendor or operating-system interface can verify it deterministically.
 
+## Linux Driver And Omnistation Lab
+
+REINER SCT documents Linux support for cyberJack readers and notes that many Linux distributions already provide cyberJack drivers in their standard package repositories. On Linux, the readiness check now also probes the local driver stack:
+
+- `cyberjack` package presence where a Debian/Ubuntu or RPM package database is available.
+- `pcscd`, `pcsc-tools` and `libccid`/PCSC package signals where available.
+- USB visibility via `lsusb`.
+- PC/SC reader visibility via `pcsc_scan -n`.
+
+Run on the target Linux machine:
+
+```bash
+python3 plugins/noc-cyberjack-rfid/scripts/check_readiness.py --json
+```
+
+Using Omnistation for this is only meaningful as a controlled hardware lab if the cyberJack USB reader is passed through to the Omnistation desktop. A cloud desktop without USB passthrough cannot verify the physical reader. The repository policy currently says Omnistation is not a NoC execution workspace; using it for this hardware lab therefore requires a documented policy exception or a policy update before driver installation.
+
 ## Install Boundary
 
 - Runs as a local Codex plugin from this repository.
@@ -39,6 +56,7 @@ The check does not read PINs, card values, certificates, XNP API keys, portal se
 
 - Confirm BNotK chip/signature card availability without reading card values.
 - Confirm security-class-3 reader model, driver source, PC/SC service and local admin path.
+- On Linux, confirm cyberJack driver package availability or installation, PC/SC daemon state and USB/PCSC reader visibility.
 - Confirm whether the reader has an RFID function and whether it is disabled for the BNotK chip-card workflow.
 - Confirm BNotK SAK lite or XNP card path and secureFramework readiness.
 - Confirm XNP local web-service interface readiness only as metadata: active/inactive, localhost-only binding, configured port range and whether API-key setup is required. Do not store the API key.
