@@ -168,6 +168,8 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 11. Evidence in einem NoC-Prozess referenzieren.
 12. Audit Event erzeugen.
 
+Der erste lauffaehige MVP liegt jetzt unter `plugins/noc-cyberjack-rfid/scripts/check_readiness.py`. Er erzeugt ein Evidence-JSON nach `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json`, prueft nur lokale Komponenten, nutzt ausschliesslich localhost fuer XNP/AusweisApp-Erreichbarkeit und speichert keine PINs, Kartendaten oder XNP-API-Keys. RFID-off und Kartenverfuegbarkeit werden als manuelle Attestationen erfasst, bis eine gepruefte lokale Schnittstelle diese Zustaende deterministisch liefern kann.
+
 ## Nicht im MVP
 
 - Direkte APDU-Kommunikation mit dem nPA.
@@ -236,10 +238,11 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 
 ### Phase 1: MVP
 
-- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` implementieren.
+- Lokales Readiness-Script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implementiert.
+- Evidence-Schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implementiert.
+- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` werden aus dem Script-Kern in den spaeteren MCP-/HTTP-Adapter abgeleitet.
 - `cyberjack.check_ausweisapp` bleibt fuer eID-Folgefaelle vorgesehen.
 - Challenge-Flow stubben.
-- Evidence-Schema in `schemas/` definieren.
 - Beispielprozess unter `processes/` anlegen.
 
 ### Phase 2: eID-Workflow
@@ -272,6 +275,8 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 ## Akzeptanzkriterien fuer den ersten PR
 
 - Neues Dokument beschreibt Architektur, Scope und Sicherheitsgrenzen.
+- Lokales Readiness-Script erzeugt JSON-Evidence ohne PIN-, Karten- oder API-Key-Erfassung.
+- Evidence-Schema ist versioniert im Plugin abgelegt.
 - Kein Secret, keine echte personenbezogene Information und keine Kartenrohdaten im Repo.
 - MVP ist als lokaler Flow beschrieben.
 - Tenant-Onboarding ist als eigener Ablauf beschrieben.

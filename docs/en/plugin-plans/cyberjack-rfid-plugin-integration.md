@@ -168,6 +168,8 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 11. Evidence in einem NoC-Prozess referenzieren.
 12. Audit Event erzeugen.
 
+The first runnable MVP now lives at `plugins/noc-cyberjack-rfid/scripts/check_readiness.py`. It produces evidence JSON according to `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json`, probes local components only, uses localhost-only checks for XNP/AusweisApp reachability and stores no PINs, card data or XNP API keys. RFID-off and card availability are captured as manual attestations until a reviewed local interface can report these states deterministically.
+
 ## Nicht im MVP
 
 - Direkte APDU-Kommunikation mit dem nPA.
@@ -236,10 +238,11 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 
 ### Phase 1: MVP
 
-- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` implementieren.
+- Local readiness script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implemented.
+- Evidence schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implemented.
+- `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` will be derived from the script core for the later MCP/HTTP adapter.
 - `cyberjack.check_ausweisapp` bleibt fuer eID-Folgefaelle vorgesehen.
 - Challenge-Flow stubben.
-- Evidence-Schema in `schemas/` definieren.
 - Beispielprozess unter `processes/` anlegen.
 
 ### Phase 2: eID-Workflow
@@ -272,6 +275,8 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 ## Akzeptanzkriterien fuer den ersten PR
 
 - Neues Dokument beschreibt Architektur, Scope und Sicherheitsgrenzen.
+- Local readiness script produces JSON evidence without PIN, card-data or API-key capture.
+- Evidence schema is versioned inside the plugin.
 - Kein Secret, keine echte personenbezogene Information und keine Kartenrohdaten im Repo.
 - MVP ist als lokaler Flow beschrieben.
 - Tenant-Onboarding ist als eigener Ablauf beschrieben.

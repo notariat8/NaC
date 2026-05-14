@@ -1,7 +1,7 @@
 {
   "name": "noc-cyberjack-rfid",
   "version": "0.1.0",
-  "description": "Installable card and SAK-lite gate before XNP login.",
+  "description": "Runnable card and SAK-lite readiness gate before XNP login.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,7 +19,6 @@
     "sak-lite",
     "secureframework",
     "signature-card",
-    "schneider-scp-card",
     "xnp-login",
     "online-hra",
     "local-companion"
@@ -28,7 +27,7 @@
   "interface": {
     "displayName": "NoC Card SAK Gate",
     "shortDescription": "Installable card-reader prerequisite before XNP login.",
-    "longDescription": "Installable local Codex plugin for notary card-readiness before XNP login and Online HRA work. It checks BNotK chip/signature card or local Schneider/SCP-card availability where deployed, security-class-3 reader readiness, PC/SC state, BNotK SAK lite or XNP card path, secureFramework readiness and evidence metadata without PIN capture or card data extraction.",
+    "longDescription": "Installable local Codex plugin for notary card-readiness before XNP login and Online HRA work. It provides a runnable local readiness check for BNotK chip/signature card availability, compatible REINER SCT cyberJack reader readiness, RFID-off attestation for BNotK chip-card workflows, PC/SC state, BNotK SAK lite or XNP card path, secureFramework readiness, XNP localhost-interface metadata and evidence generation without PIN capture, API-key capture or card data extraction.",
     "developerName": "NoC Maintainers",
     "category": "Compliance",
     "capabilities": [
@@ -45,7 +44,7 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Check card and SAK-lite readiness before XNP login.",
+      "Generate local cyberJack readiness evidence before XNP login.",
       "Create a notary card gate plan for Online HRA.",
       "Review card-reader drift before XNP testing."
     ],

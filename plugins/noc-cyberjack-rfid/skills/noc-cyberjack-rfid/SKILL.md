@@ -14,6 +14,7 @@ This installable local Codex plugin is the first gate before XNP login testing f
 ## Allowed Work
 
 - Prepare local card, compatible security-class-3 reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checks.
+- Run `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json` from the repository root to create a local readiness evidence preview.
 - Record anonymized reader fingerprints and driver version metadata.
 - Route PIN/card issues to the human operator without requesting values.
 - Record only non-secret XNP local-interface metadata such as active state and localhost port range.
@@ -29,7 +30,7 @@ This installable local Codex plugin is the first gate before XNP login testing f
 ## Workflow
 
 1. Classify the target: XNP login test, Online HRA gate, beA/BNotK precheck or other card workflow.
-2. Check Day0 prerequisites: BNotK chip/signature card, compatible security-class-3 reader, RFID disabled where present, PC/SC, driver, BNotK SAK lite or XNP card path, secureFramework and XNP local-interface configuration.
+2. Check Day0 prerequisites with the local readiness script where possible: BNotK chip/signature card, compatible security-class-3 reader, RFID disabled where present, PC/SC, driver, BNotK SAK lite or XNP card path, secureFramework and XNP local-interface configuration.
 3. Produce a human-readable Day1 plan preview before any local or external action.
 4. Ask for explicit human approval for any PIN prompt, certificate selection, XNP login test or notarial action.
 5. Capture evidence metadata only: timestamp, actor role, non-secret reader fingerprint hash, RFID-off status, component readiness, XNP local-interface active/port metadata, decision, result and follow-up owner.
@@ -41,4 +42,5 @@ Return concise sections named `Readiness`, `Plan`, `Approval Needed`, `Evidence`
 
 ## Source Plan
 
-- `docs/plugin-plans/cyberjack-rfid-plugin-integration.md`
+- `docs/de/plugin-plans/cyberjack-rfid-plugin-integration.md`
+- `docs/en/plugin-plans/cyberjack-rfid-plugin-integration.md`

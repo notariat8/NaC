@@ -1,10 +1,28 @@
 # NoC Card SAK Gate
 
-Installable local Codex plugin for notary card-readiness before XNP login and Online HRA work. It checks BNotK chip/signature card availability, REINER SCT cyberJack reader readiness, security-class-3 reader requirements, PC/SC state, BNotK SAK lite or XNP card path, secureFramework readiness, XNP local-interface prerequisites and evidence metadata without PIN capture or card data extraction.
+Installable local Codex plugin for notary card-readiness before XNP login and Online HRA work. It checks BNotK chip/signature card availability, REINER SCT cyberJack reader readiness, security-class-3 reader requirements, PC/SC state, BNotK SAK lite or XNP card path, secureFramework readiness, XNP local-interface prerequisites and evidence metadata without PIN capture, API-key capture or card data extraction.
 
 ## Status
 
-Installable MVP plugin scaffold. For notary-side Online HRA, this plugin comes before `noc-bnotk-xnp`, because XNP login cannot be tested until the local card path is ready. External write adapters are intentionally not enabled in this first version.
+Runnable local MVP. For notary-side Online HRA, this plugin comes before `noc-bnotk-xnp`, because XNP login cannot be tested until the local card path is ready. External write adapters are intentionally not enabled in this first version.
+
+## Runnable MVP
+
+Run the local readiness check from the repository root:
+
+```powershell
+python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json
+```
+
+For an operator-attested local workstation check:
+
+```powershell
+python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --manual-card-present yes --manual-rfid-off yes --output out\cyberjack-readiness.json
+```
+
+Use `--strict` in automation when any non-ready state should return a non-zero exit code. The generated JSON follows `contracts/readiness-evidence.schema.json` and records only metadata: local component status, manual attestations, anonymized reader fingerprints, localhost XNP port reachability and AusweisApp status reachability.
+
+The check does not read PINs, card values, certificates, XNP API keys, portal sessions or mandate content. RFID-off is captured as a manual attestation until a reviewed vendor or operating-system interface can verify it deterministically.
 
 ## Install Boundary
 
@@ -14,6 +32,7 @@ Installable MVP plugin scaffold. For notary-side Online HRA, this plugin comes b
 - Treats BNotK chip/signature card availability, compatible class-3 reader, SAK lite/XNP, secureFramework and XNP local-interface readiness as the gate before XNP login tests.
 - Treats RFID as a reader capability, not as the notarial card workflow. Where the reader has an RFID function, the BNotK guidance is to keep it disabled for chip-card workflows unless a specific contactless use is explicitly needed.
 - Produces plan previews and evidence metadata before any sensitive action.
+- Produces a local readiness evidence JSON via `scripts/check_readiness.py`.
 - Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
 
 ## Day0
@@ -26,7 +45,7 @@ Installable MVP plugin scaffold. For notary-side Online HRA, this plugin comes b
 
 ## Day1
 
-- Run card-reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checklist before XNP login testing.
+- Run `scripts/check_readiness.py` for card-reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness before XNP login testing.
 
 ## Day2
 

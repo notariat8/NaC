@@ -42,7 +42,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 43% | `noc-cyberjack-rfid` now reflects BNotK card-reader, RFID-off and XNP local-interface boundaries; repository retirement remains separate from NoC migration. |
+| A | Installable plugins for notary offices | Active | 48% | `noc-cyberjack-rfid` now has a runnable local readiness evidence script and schema; next gate is hardware pilot validation on a notary workstation. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 
