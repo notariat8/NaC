@@ -33,7 +33,7 @@ gantt
 | `noc-regulated-core` | Shared regulated workflow guardrails | Baseline ready | Recheck GPT Store/workspace packaging assumptions. |
 | `noc-idaas` | German eID verification and IAM projection readiness | Active | Confirm connector boundary and data-processing basis before any production pilot. |
 | `noc-cyberjack-rfid` | Local card, RFID-off, SAK and XNP local-interface readiness | Active | Runnable local readiness evidence script and schema are implemented; next gate is hardware pilot on a notary workstation. |
-| `noc-bnotk-xnp` | XNP authentication readiness | Active | Bind to CyberJack gate output. |
+| `noc-bnotk-xnp` | XNP authentication readiness | Active | Runnable local reader-prompt evidence now binds XNP preflight to the CyberJack gate; next gate is workstation validation with XNP installed. |
 | `noc-handelsregister` | Register filing readiness | Active | Bind to GmbH formation usecase. |
 | `noc-bea-portal` | beA workflow companion | Planned | Confirm notary-office priority. |
 | `noc-elster-eric` | ELSTER/ERiC companion | Planned | Keep separate from notarial core unless needed. |
