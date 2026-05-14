@@ -34,3 +34,9 @@ gantt
 | Steuer-aaS tax readiness | `usecases/steuer-aas/` | Active | Canonicalized from the empty GitHub repo `ofunk/Steuer-aaS`. |
 | Real-estate purchase contract | `usecases/grundstueckskaufvertrag/` | Planned | New canonical starter in this repository. |
 | Testament | `usecases/testament/` | Planned | New canonical starter in this repository. |
+
+## Plugin-Classified Sources
+
+| Source | Decision |
+| --- | --- |
+| `ofunk/IDaaS` | Migrated as `plugins/noc-idaas/`, not as a usecase. |

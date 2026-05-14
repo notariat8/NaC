@@ -12,17 +12,18 @@ gantt
     Regulated core manifest and skill baseline :done,   p1, 2026-04-01, 2026-05-14
     Plugin validation in quality gate          :done,   p2, 2026-04-15, 2026-05-14
     Marketplace packaging policy               :active, p3, 2026-05-14, 14d
+    IDaaS eID/IAM companion                    :active, p4, 2026-05-14, 14d
 
     section Notary entry gates
-    CyberJack RFID readiness plugin            :active, p4, 2026-05-01, 21d
-    BNotK XNP readiness plugin                 :active, p5, after p4, 21d
-    Handelsregister plugin                     :active, p6, after p5, 28d
+    CyberJack RFID readiness plugin            :active, p5, 2026-05-01, 21d
+    BNotK XNP readiness plugin                 :active, p6, after p5, 21d
+    Handelsregister plugin                     :active, p7, after p6, 28d
 
     section Follow-up plugins
-    beA portal companion                       :        p7, 2026-06-15, 28d
-    Grundbuch portal companion                 :        p8, 2026-06-15, 28d
-    ELSTER ERiC companion                      :        p9, 2026-07-01, 28d
-    OCI evidence companion                     :        p10, 2026-07-01, 28d
+    beA portal companion                       :        p8, 2026-06-15, 28d
+    Grundbuch portal companion                 :        p9, 2026-06-15, 28d
+    ELSTER ERiC companion                      :        p10, 2026-07-01, 28d
+    OCI evidence companion                     :        p11, 2026-07-01, 28d
 ```
 
 ## Status
@@ -30,6 +31,7 @@ gantt
 | Plugin | Purpose | Status | Next gate |
 | --- | --- | --- | --- |
 | `noc-regulated-core` | Shared regulated workflow guardrails | Baseline ready | Recheck GPT Store/workspace packaging assumptions. |
+| `noc-idaas` | German eID verification and IAM projection readiness | Active | Confirm connector boundary and data-processing basis before any production pilot. |
 | `noc-cyberjack-rfid` | Local card and SAK readiness | Active | Verify local-only evidence shape. |
 | `noc-bnotk-xnp` | XNP authentication readiness | Active | Bind to CyberJack gate output. |
 | `noc-handelsregister` | Register filing readiness | Active | Bind to GmbH formation usecase. |

@@ -1,0 +1,50 @@
+{
+  "name": "noc-idaas",
+  "version": "0.1.0",
+  "description": "German eID and IAM projection readiness companion for regulated NoC workflows.",
+  "author": {
+    "name": "NoC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NoC"
+  },
+  "homepage": "https://github.com/ofunk/NoC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NoC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "idaas",
+    "eid",
+    "ausweisapp",
+    "iam",
+    "scim",
+    "identity",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "NoC IDaaS",
+    "shortDescription": "Prepare German eID verification and IAM projection workflows with NoC guardrails.",
+    "longDescription": "Local IDaaS companion for planning German eID verification through AusweisApp, verified-claim minimization, consent and audit evidence, and IAM projection readiness for Entra ID, Oracle IAM, and SCIM targets. It creates plan previews and metadata-only evidence; it does not run production eID or IAM writes without a reviewed connector and human approval.",
+    "developerName": "NoC Maintainers",
+    "category": "Compliance",
+    "capabilities": [
+      "Local",
+      "EIDReadiness",
+      "IAMProjection",
+      "ConsentAudit",
+      "Evidence",
+      "DryRun"
+    ],
+    "websiteURL": "https://github.com/ofunk/NoC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prepare an eID verification readiness plan.",
+      "Review IAM projection readiness for a tenant.",
+      "Create metadata-only evidence for an IDaaS flow."
+    ],
+    "brandColor": "#315A8A",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

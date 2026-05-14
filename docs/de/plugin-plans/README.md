@@ -23,6 +23,7 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 | --- | --- | --- | --- | --- |
 | `local-codex-runtime.md` | Lokaler Codex-/LLM-Arbeitsplatz | Workspace und Startcheck | lokale Planerzeugung | regelmaessige Tool-/Policy-Pruefung |
 | `github-control-plane.md` | GitHub als GitOps-Steuerung | Auth und Repo-Zugriff | PRs, Checks, Reviews | Branchschutz, Audit, Drift |
+| `idaas-plugin-integration.md` | Deutsche eID-Verifikation und IAM-Projektionsplanung | Zweck, Tenant, Claim-Set, Datenschutzgrundlage | eID-/IAM-Plan Preview und Vertragscheck | Assertions, Widerrufe, Retention-Drift, Connector-Rezertifizierung |
 | `oci-infrastructure.md` | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Evidence | Drift, Rotation, Kostenkontrolle |
 | `domain-connector-runtime.md` | Fachsystem-Connectoren | Vertragsmodell | Plan/Apply/Reconcile | Monitoring, Replays, Exit |
 | `handelsregister-online-anmeldung.md` | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Evidence-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |

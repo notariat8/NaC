@@ -17,6 +17,18 @@
       "category": "Compliance"
     },
     {
+      "name": "noc-idaas",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-idaas"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
       "name": "noc-cyberjack-rfid",
       "source": {
         "source": "local",

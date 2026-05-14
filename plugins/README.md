@@ -5,6 +5,7 @@ This directory contains installable repo-local Codex plugins for NoC regulated-i
 ## Installable Plugins
 
 - `noc-regulated-core`: Shared regulated-industry workflow guardrails.
+- `noc-idaas`: German eID verification and IAM projection readiness companion.
 - `noc-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
 - `noc-bnotk-xnp`: Local XNP authentication gate after card readiness.
 - `noc-handelsregister`: HRA-first online register application readiness after mode decision.
