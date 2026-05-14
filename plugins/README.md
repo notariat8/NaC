@@ -17,5 +17,18 @@ This directory contains installable repo-local Codex plugins for NoC regulated-i
 
 - Plugins default to local companion, dry-run, plan-preview and metadata-only evidence.
 - External write adapters are not enabled in this MVP.
-- Missing accounts or approvals are tracked in `docs/plugin-operations/account-and-approval-requests.md`.
+- Missing accounts or approvals are tracked in `docs/de/plugin-operations/account-and-approval-requests.md` and `docs/en/plugin-operations/account-and-approval-requests.md`.
 - Validate with `python3 scripts/validate_plugins.py` before publishing or installing.
+
+## Progress Tracking
+
+Plugin progress is tracked in `plugins/GANTT.md` and rolled up into
+`roadmap/GANTT.md`. Every plugin change must update both files before it is
+push-ready.
+
+## Marketplace Boundary
+
+Public GPT Store packages and workspace-only app installations are separate
+release targets. Each plugin must be checked against the current OpenAI
+publishing rules before public release, and actions must retain valid privacy
+and terms URLs.

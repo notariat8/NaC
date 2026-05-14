@@ -35,6 +35,11 @@ regardless of the language used in the prompt.
 8. Run a pilot with 1-2 core processes before full rollout.
 9. Define the operating model using `docs/en/fork-and-release-operating-model.md`.
 10. Define release sync and mixed-version operation using the related runbooks.
+11. Review the product structure: `plugins/` for installable artifacts,
+    `workflows/` for skills and Python workflows, and `usecases/` for concrete
+    notarial scenarios.
+12. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
+    `workflows/`, or `usecases/`, update the matching area Gantt as well.
 
 ## Available Onboarding Prompts
 

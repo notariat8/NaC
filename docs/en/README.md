@@ -29,6 +29,12 @@ regardless of the language used in the prompt. The binding rule is defined in
 - `docs/de/` contains German documentation.
 - `prompts/en/` contains English prompt templates.
 - `prompts/de/` contains German prompt templates.
+- `roadmap/GANTT.md` tracks global progress for plugins, workflows, and usecases.
+- `plugins/GANTT.md`, `workflows/GANTT.md`, and `usecases/GANTT.md` track area progress.
+- `plugins/` contains installable plugin artifacts for GPT Store review or workspace installation.
+- `workflows/` contains installable skills and deterministic Python workflows for notary-office operations.
+- `usecases/` contains concrete notarial scenarios such as online GmbH formation, real-estate purchase contracts, and testaments.
+- `docs/en/gpt-marketplace-operating-model.md` separates public GPT Store, Actions, workspace app, and local plugin channels.
 - `policies/` contains binding governance, technology, language, privacy, and role policies.
 - `schemas/` defines structured process requests.
 - `processes/` contains example business process instances.
@@ -49,6 +55,9 @@ For a full local gate:
 ```bash
 python scripts/quality_gate.py --profile strict
 ```
+
+Every push must update `roadmap/GANTT.md`. Changes under `plugins/`,
+`workflows/`, or `usecases/` must also update the matching area Gantt.
 
 ## Recommended Reading Order
 

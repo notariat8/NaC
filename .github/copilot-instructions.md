@@ -18,6 +18,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
 - Jede Prozessaenderung muss begruendet und versioniert sein.
 - Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
+- Jeder Push muss `roadmap/GANTT.md` aktualisieren; Aenderungen unter `plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
+- Trenne installierbare Plugin-Artefakte (`plugins/`), ausfuehrbare Notariats-Workflows (`workflows/`) und konkrete notarielle Usecases (`usecases/`).
 - Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
 - Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.

@@ -1,6 +1,27 @@
 name: NoC Quality Gate
 
 on:
+  push:
+    paths:
+      - "processes/**/*.json"
+      - "schemas/**/*.json"
+      - "src/business_os/**/*.py"
+      - "tests/**/*.py"
+      - "scripts/**/*.py"
+      - "policies/**/*.yaml"
+      - "policies/**/*.json"
+      - "docs/**/*.md"
+      - "prompts/**/*.md"
+      - "plugins/**"
+      - "workflows/**"
+      - "usecases/**"
+      - "roadmap/**"
+      - ".cursor/rules/**/*.mdc"
+      - ".github/workflows/*.yml"
+      - ".github/copilot-instructions.md"
+      - "AGENTS.md"
+      - "README.md"
+      - "pyproject.toml"
   pull_request:
     paths:
       - "processes/**/*.json"
@@ -12,10 +33,15 @@ on:
       - "policies/**/*.json"
       - "docs/**/*.md"
       - "prompts/**/*.md"
+      - "plugins/**"
+      - "workflows/**"
+      - "usecases/**"
+      - "roadmap/**"
       - ".cursor/rules/**/*.mdc"
       - ".github/workflows/*.yml"
       - ".github/copilot-instructions.md"
       - "AGENTS.md"
+      - "README.md"
       - "pyproject.toml"
   workflow_dispatch:
 

@@ -42,6 +42,8 @@ Der Wizard arbeitet zustandsbehaftet ueber mehrere Tage und bindet GitHub-Login,
 15. Definieren Sie den Release-Sync nach `docs/de/release-sync-playbook.md`.
 16. Aktivieren Sie Mischbetrieb-Regeln nach `docs/de/parallelbetrieb-version-binding.md`.
 17. Waehlen Sie die Arbeits-Cadence nach `docs/de/arbeitsmodell-agile-cadence.md` (Methode `agile|kanban`, Taktoptionen dokumentieren).
+18. Pruefen Sie die Produktstruktur: `plugins/` fuer installierbare Artefakte, `workflows/` fuer Skills und Python-Workflows, `usecases/` fuer notarielle Usecases.
+19. Pruefen Sie vor jedem Push, dass `roadmap/GANTT.md` und bei Aenderungen an `plugins/`, `workflows/` oder `usecases/` auch das passende Themen-Gantt aktualisiert ist.
 
 Hinweis: Fachlich verbindliche Prozessdarstellungen liegen als BPMN-2.0-Quelle unter `bpmn/`.
 

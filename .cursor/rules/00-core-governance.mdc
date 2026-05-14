@@ -10,6 +10,9 @@ alwaysApply: true
 - Direkte Aenderungen am Hauptstand sind nicht erlaubt.
 - Jede Aenderung braucht Zweck, Risiko und Verantwortliche.
 - Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
+- Jeder Push muss `roadmap/GANTT.md` aktualisieren.
+- Aenderungen unter `plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
+- Das Repo trennt installierbare Plugin-Artefakte (`plugins/`), ausfuehrbare Notariats-Workflows (`workflows/`) und konkrete notarielle Usecases (`usecases/`).
 - Sensible Prozesse brauchen fachliche Freigabe.
 - Abschlussstaende werden versioniert markiert.
 - Keine vertraulichen Daten ungeschuetzt in Prozessdateien.

@@ -17,6 +17,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessaenderungen werden immer mit Begruendung dokumentiert.
 - Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
+- Jeder Push muss `roadmap/GANTT.md` aktualisieren; Aenderungen unter `plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
+- Das Repo trennt installierbare Plugin-Artefakte in `plugins/`, ausfuehrbare Notariats-Workflows in `workflows/` und konkrete notarielle Usecases in `usecases/`.
 - Konzeptaenderungen werden IDE-uebergreifend synchron gepflegt (Cursor und VS Code + Copilot).
 - Onboarding wird nie nur fuer eine Plattform gepflegt, sondern fuer alle unterstuetzten Plattformen.
 - Der verbindliche Technikstack steht in `policies/technology-policy.yaml`.

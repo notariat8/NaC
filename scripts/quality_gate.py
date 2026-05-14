@@ -91,6 +91,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_language_parity.py"],
                 ),
                 (
+                    "gantt_progress",
+                    "Gantt Progress Update",
+                    [sys.executable, "scripts/validate_gantt_progress.py"],
+                ),
+                (
                     "cloud_runbook_parity",
                     "Cloud Runbook Parity",
                     [sys.executable, "scripts/validate_cloud_runbook_parity.py"],

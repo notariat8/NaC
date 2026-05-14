@@ -28,6 +28,8 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
 8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
 9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/de/`.
+10. Pruefen Sie die Produktstruktur: `plugins/` fuer installierbare Artefakte, `workflows/` fuer Skills und Python-Workflows, `usecases/` fuer konkrete notarielle Usecases.
+11. Aktualisieren Sie vor jedem Push `roadmap/GANTT.md`; bei Aenderungen an `plugins/`, `workflows/` oder `usecases/` auch das jeweilige Themen-Gantt.
 
 ## Empfohlener Copilot-Startprompt
 
@@ -50,6 +52,7 @@ Danach:
 - Prozessaenderungen nur als Pull Request.
 - Bei sensiblen Schritten immer Review einplanen.
 - Jede Aenderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
+- Jeder Push braucht ein aktualisiertes globales Gantt; Themenaenderungen brauchen zusaetzlich das jeweilige Themen-Gantt.
 - Kultur- und Sprachregeln aus `policies/culture-policy.yaml` verbindlich einhalten.
 
 ## Wenn das Muster nicht passt

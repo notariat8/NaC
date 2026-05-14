@@ -21,6 +21,28 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 - German README: `docs/de/README.md`
 - English README: `docs/en/README.md`
 - Plugin plans: `docs/de/plugin-plans/README.md`, `docs/en/plugin-plans/README.md`
+- Global roadmap: `roadmap/GANTT.md`
+- Plugin roadmap: `plugins/GANTT.md`
+- Workflow roadmap: `workflows/GANTT.md`
+- Usecase roadmap: `usecases/GANTT.md`
+
+## Product Structure
+
+This repository now separates three product layers:
+
+- `plugins/`: installable plugin artifacts for public GPT Store checks or
+  workspace/internal app installation.
+- `workflows/`: reusable notary-office workflows, split into installable skills
+  and deterministic Python execution.
+- `usecases/`: concrete notarial scenarios such as online GmbH formation,
+  real-estate purchase contracts, and testaments.
+
+Every push must update `roadmap/GANTT.md`. Changes below `plugins/`,
+`workflows/`, or `usecases/` must also update the matching area Gantt.
+
+OpenAI publication channels must be checked before release. Public GPT Store
+packages and workspace-only apps are not the same delivery target, especially
+when apps or actions are involved.
 
 ## Current Workflow Priorities
 

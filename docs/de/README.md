@@ -42,6 +42,11 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 ## Repository-Struktur
 
 - `docs/de/` erklaert das fachliche Modell und die Architektur.
+- `roadmap/GANTT.md` zeigt den globalen Fortschritt fuer Plugins, Workflows und Usecases.
+- `plugins/GANTT.md`, `workflows/GANTT.md` und `usecases/GANTT.md` zeigen den Fortschritt je Themenbereich.
+- `plugins/` enthaelt installierbare Plugin-Artefakte fuer GPT-Store-Pruefung oder Workspace-Installation.
+- `workflows/` enthaelt installierbare Skills und deterministische Python-Workflows fuer Notariatsablaeufe.
+- `usecases/` enthaelt konkrete notarielle Usecases wie Online-GmbH-Gruendung, Grundstueckskaufvertrag und Testament.
 - `docs/de/fachanwender-guide.md` erklaert das Modell ohne IT-Vorkenntnisse.
 - `docs/de/START_HERE.md` fuehrt neue Nutzer durch die Einfuehrung.
 - `docs/de/vscode-copilot-start.md` ist der Startpfad fuer VS Code + GitHub Copilot.
@@ -69,6 +74,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `docs/de/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/de/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
 - `docs/de/organization-as-code-positioning.md` schaerft den Begriffsrahmen Notariat/GitOps/NoC.
+- `docs/de/gpt-marketplace-operating-model.md` trennt Public-GPT-Store-, Action-, Workspace-App- und lokale Plugin-Kanaele.
 - `docs/de/noc-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
 - `docs/de/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
 - `docs/de/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
@@ -127,6 +133,7 @@ python -m business_os monthly-close --year 2026 --month 3
 ## Governance
 
 - `main` ist geschuetzt und wird nur per Pull Request aktualisiert.
+- Jeder Push muss `roadmap/GANTT.md` aktualisieren; Aenderungen unter `plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
 - Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
 - Tags und Releases repraesentieren Monats- oder Quartalsabschluesse.
 - Erzeugte Artefakte koennen als Actions-Artefakte archiviert werden.

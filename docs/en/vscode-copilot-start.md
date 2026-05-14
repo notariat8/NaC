@@ -1,65 +1,75 @@
-# VS Code + GitHub Copilot: Startleitfaden
+# VS Code + GitHub Copilot: Start Guide
 
-## Ziel
+## Goal
 
-Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
-Der fachliche Rahmen ist `Notariat as Code` mit `Enterprise GitOps`; `NoC` ist die konkrete Umsetzung.
+This guide shows how an organization can use this reference repository with
+VS Code and GitHub Copilot instead of Cursor. The business frame is `Notariat
+as Code` with `Enterprise GitOps`; `NoC` is the concrete implementation.
 
-Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefuehrten Pfad:
+If you are a first-time user and do not want to read every document, use the
+guided path:
 `docs/en/vscode-first-user-path.md`
 
-## Voraussetzungen
+## Prerequisites
 
-- GitHub-Organisation oder Unternehmenskonto
-- VS Code installiert
-- Git installiert
-- GitHub Copilot Lizenz aktiv
+- GitHub organization or company account
+- VS Code installed
+- Git installed
+- Active GitHub Copilot license
 
-## Einrichtung in 8 Schritten
+## Setup
 
-1. Erstellen Sie ein eigenes Repository fuer Ihr Unternehmen.
-2. Uebernehmen Sie dieses Muster als Basis (Template oder Fork).
-3. Oeffnen Sie das Repo in VS Code.
-4. Installieren und aktivieren Sie GitHub Copilot im Editor.
-5. Lesen Sie `docs/en/START_HERE.md` und bestaetigen Sie die Policies unter `policies/`.
-6. Nutzen Sie ein Onboarding-Prompt aus `prompts/en/onboarding/` fuer Ihre Branche.
-   Standard fuer den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
-   Zusaetzlicher MVP-Use-Case: `property_management`.
-7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
-8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
-9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/en/`.
+1. Create your own company repository.
+2. Use this repository as the base version, either as a template or fork.
+3. Open the repository in VS Code.
+4. Install and activate GitHub Copilot in the editor.
+5. Read `docs/en/START_HERE.md` and confirm the policies under `policies/`.
+6. Use an onboarding prompt from `prompts/en/onboarding/` for your industry.
+   The MVP defaults in this repository are `software_company`, `notary`, and
+   `wealth_management`; the additional MVP usecase is `property_management`.
+7. Start with a pilot process and verify the pull-request workflow.
+8. Roll out more broadly only after the pilot succeeds.
+9. Define fork, sync, and mixed-version operation through the operating
+   documents in `docs/en/`.
+10. Review the product structure: `plugins/` for installable artifacts,
+    `workflows/` for skills and Python workflows, and `usecases/` for concrete
+    notarial usecases.
+11. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
+    `workflows/`, or `usecases/`, update the matching area Gantt as well.
 
-## Empfohlener Copilot-Startprompt
+## Recommended Copilot Start Prompt
 
 ```text
-Lies zuerst folgende Dateien und erklaere mir dann die naechsten 3 Schritte ohne IT-Fachsprache:
+Read these files first and then explain the next 3 steps without IT jargon:
 - docs/en/START_HERE.md
 - docs/en/fachanwender-guide.md
 - policies/process-policy.yaml
 - policies/culture-policy.yaml
 - policies/technology-policy.yaml
 
-Danach:
-1) Frage mich nach Unternehmensart und Prioritaetsprozessen.
-2) Schlage passende Branchenmodule vor.
-3) Erstelle einen 30-Tage-Pilotplan fuer Team-, Rollen- und Zugriffsprozesse.
+Then:
+1) Ask me for company type and priority processes.
+2) Suggest matching industry modules.
+3) Create a 30-day pilot plan for team, role, and access processes.
 ```
 
-## Operative Regeln fuer Copilot-Nutzung
+## Operating Rules
 
-- Prozessaenderungen nur als Pull Request.
-- Bei sensiblen Schritten immer Review einplanen.
-- Jede Aenderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
-- Kultur- und Sprachregeln aus `policies/culture-policy.yaml` verbindlich einhalten.
+- Process changes only through pull requests.
+- Always include review for sensitive steps.
+- Document every change with purpose, risk, and owner.
+- Every push needs an updated global Gantt; area changes also need the matching
+  area Gantt.
+- Follow the culture and language rules from `policies/culture-policy.yaml`.
 
-## Wenn das Muster nicht passt
+## If The Pattern Does Not Fit
 
-- Erfassen Sie die Abweichung als Change Request.
-- Testen Sie die neue Variante im Pilot.
-- Uebernehmen Sie sie versioniert in Ihr Unternehmensmodell.
-- Optional: geben Sie bewahrte Verbesserungen an das Referenzmuster zurueck.
+- Record the deviation as a change request.
+- Test the new variant in a pilot.
+- Adopt it into your company model with a version reference.
+- Optionally contribute proven improvements back to the reference pattern.
 
-## Betriebsdokumente fuer Unternehmens-Fork
+## Operating Documents For Company Forks
 
 - `docs/en/fork-and-release-operating-model.md`
 - `docs/en/release-sync-playbook.md`
