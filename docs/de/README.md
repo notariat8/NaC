@@ -55,6 +55,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `docs/de/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
 - `docs/de/fork-and-release-operating-model.md` definiert Upstream/Fork/Domaenen-Betrieb.
 - `docs/de/release-sync-playbook.md` beschreibt den verbindlichen Upstream-Sync-Ablauf.
+- `docs/de/repository-consolidation.md` zeigt, welche Einzelrepos nach NoC migriert, noch offen oder stillzulegen sind.
 - `docs/de/parallelbetrieb-version-binding.md` regelt Alt-/Neu-Mischbetrieb je Vorgangsstart.
 - `docs/de/issue-taxonomie-pro-repo.md` definiert Issue-Fuehrung ueber mehrere Repos.
 - `docs/de/einfuehrung-greenfield-brownfield.md` trennt Einfuehrungspfade fuer Greenfield/Brownfield.

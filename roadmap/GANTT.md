@@ -19,8 +19,9 @@ gantt
     Plugin inventory and installability gate     :done,    a1, 2026-04-01, 2026-05-14
     GPT Store and workspace packaging split      :active,  a2, 2026-05-14, 21d
     IDaaS plugin migration                       :active,  a3, 2026-05-14, 14d
-    Notary pilot plugin readiness                :         a4, after a3, 35d
-    Publication and support operations           :         a5, after a4, 28d
+    Repository consolidation ledger              :active,  a4, 2026-05-14, 7d
+    Notary pilot plugin readiness                :         a5, after a4, 35d
+    Publication and support operations           :         a6, after a5, 28d
 
     section B: Notary workflows
     Workflow layer separation                    :active,  b1, 2026-05-14, 14d
@@ -41,7 +42,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 40% | `ofunk/IDaaS` is now migrated as `noc-idaas`; publish track must still separate public GPT Store packages from workspace-only apps. |
+| A | Installable plugins for notary offices | Active | 42% | `ofunk/IDaaS` is now migrated as `noc-idaas`; repository retirement remains separate from NoC migration. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 
