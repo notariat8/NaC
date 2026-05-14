@@ -49,7 +49,7 @@ regardless of the language used in the prompt.
 
 ## Change Requests and Learning
 
-- An update is complete only after the change has been validated, committed, and pushed to GitHub. Local changes without a push are only work in progress.
+- An update is complete only after the change has been validated, committed, pushed to GitHub, and merged into the target branch. Local changes and unmerged PR branches are only work in progress.
 - Every improvement is documented as a change request.
 - Every change gets a rationale, review, and version reference.
 - Useful local improvements can flow back into the reference standard.

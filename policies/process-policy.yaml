@@ -68,6 +68,8 @@ change_management:
   require_version_bump: true
   require_commit_for_update_completion: true
   require_github_push_for_update_completion: true
+  require_target_branch_merge_for_update_completion: true
+  completion_target_branch: main
   completion_remote: github
 
 release_sync:

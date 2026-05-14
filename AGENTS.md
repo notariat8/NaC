@@ -16,7 +16,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Fachliche Wahrheit entsteht durch versionierte Aenderung + Review + Freigabe.
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessaenderungen werden immer mit Begruendung dokumentiert.
-- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde.
+- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
 - Konzeptaenderungen werden IDE-uebergreifend synchron gepflegt (Cursor und VS Code + Copilot).
 - Onboarding wird nie nur fuer eine Plattform gepflegt, sondern fuer alle unterstuetzten Plattformen.
 - Der verbindliche Technikstack steht in `policies/technology-policy.yaml`.

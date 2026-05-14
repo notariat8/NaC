@@ -72,7 +72,7 @@ Uebersicht: `docs/de/platform-onboarding-matrix.md`
 
 ## Abschlussregel
 
-Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde. Lokale Aenderungen ohne Push sind nur Zwischenstand.
+Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde. Lokale Aenderungen oder unge-mergte PR-Branches sind nur Zwischenstand.
 
 ## Change Requests und gemeinsames Lernen
 
