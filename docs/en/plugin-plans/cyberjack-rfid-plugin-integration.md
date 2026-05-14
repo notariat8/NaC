@@ -25,6 +25,7 @@ Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrati
 - XNP stellt fuer Notariatssoftware eine lokale Web-Service-Schnittstelle bereit. Sie ist auf den jeweiligen Rechner beschraenkt, bindet standardmaessig den ersten freien Port im Bereich `12774` bis `12784` und kann einen API-Key fuer Anmeldefunktionen nutzen. NoC darf API-Keys nicht speichern.
 - Der Leser nutzt PC/SC 2.0 und CT-API als lokale Schnittstellen.
 - On Windows, the REINER SCT stack is checked through `C:\Program Files\REINER SCT\DriverPackage`, PC/SC/CT-API files and the installed SmartCardReader driver provider.
+- REINER SCT describes morris as local middleware that lets browser applications access the chip-card reader. For NoC, this is relevant as a local, operator-guided browser middleware path, not as cloud control of the reader.
 - Der Leser bietet sichere PIN-Eingabe am Geraet; PIN-Eingabe darf nicht in NoC oder ein LLM wandern.
 - REINER SCT nennt BSI-/TUEV-IT-Zertifizierung und Sicherheitsklasse 3.
 - Unter Linux und macOS ist Nutzung moeglich; Firmwareupdate/-upgrade ist laut Herstellerhinweis dort nicht ueber das cyberJack ControlCenter vorgesehen.
@@ -176,6 +177,8 @@ On Linux, the MVP now also probes cyberJack/PCSC package status, `pcscd`, USB vi
 
 On Windows, the MVP now also probes the installed REINER SCT DriverPackage path, central driver files, CT-API/PCSC files and the installed REINER SCT SmartCardReader provider through `pnputil`. Connected reader hardware is checked separately; an installed driver stack does not prove that a cyberJack reader is currently attached.
 
+Where morris is installed, the MVP now also probes the local morris path, the Windows service `morris`, the running processes `morrisServer` and `morrisDispatcherService`, and local named-pipe endpoints such as `net.pipe://localhost/morris`. No morris card operation, PIN prompt or portal action is executed.
+
 Under the current repository rule, Omnistation is not a general NoC execution workspace. For an isolated hardware lab, Omnistation is only useful if the cyberJack USB reader is visible there through USB passthrough and a documented policy exception or policy update exists. Without USB passthrough, an Omnistation cloud desktop cannot test the physical RFID/card reader.
 
 ## Nicht im MVP
@@ -248,6 +251,7 @@ Under the current repository rule, Omnistation is not a general NoC execution wo
 
 - Local readiness script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implemented.
 - Windows DriverPackage/SmartCardReader provider detection implemented.
+- Windows morris browser middleware detection implemented.
 - Linux driver/PCSC/USB preflight implemented in the readiness script.
 - Evidence schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implemented.
 - `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` will be derived from the script core for the later MCP/HTTP adapter.
@@ -295,6 +299,7 @@ Under the current repository rule, Omnistation is not a general NoC execution wo
 ## Quellen
 
 - REINER SCT cyberJack RFID standard: https://www.reiner-sct.com/produkt/cyberjack-rfid-standard/
+- REINER SCT morris Software: https://www.reiner-sct.com/morris-software/
 - REINER SCT Linux driver for cyberJack smart card reader: https://help.reiner-sct.com/en/support/solutions/articles/101000480008-linux-driver-for-cyberjack-smart-card-reader
 - BNotK Hinweis zu Kartenlesegeraeten: https://onlinehilfe.bnotk.de/einrichtungen/zertifizierungsstelle/hinweis-zu-kartenlesegeraeten.html
 - BNotK Kompatible Kartenlesegeraete: https://onlinehilfe.bnotk.de/einrichtungen/elektronisches-urkundenarchiv/kartenverwaltung/kartenmanagement/kompatible-kartenlesegeraete.html

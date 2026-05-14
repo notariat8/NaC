@@ -163,6 +163,47 @@ class CyberJackReadinessTests(unittest.TestCase):
         self.assertEqual(result["status"], "passed")
         self.assertEqual(result["id"], "windows_driver_stack")
 
+    def test_windows_morris_stack_detects_running_middleware(self) -> None:
+        original_system = readiness.platform.system
+        original_run_command = readiness.run_command
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base = Path(tmp_dir) / "morris"
+            files = [
+                "Server/morrisServer.exe",
+                "Server/IMorrisExternalPlugin.dll",
+                "Server/morrisServer.exe.config",
+                "Service/morrisDispatcherService.exe",
+                "Service/morrisDispatcherService.exe.config",
+            ]
+            for relative in files:
+                target = base / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("net.pipe://localhost/morris", encoding="utf-8")
+
+            def fake_run_command(command, timeout=3.0):
+                if command[:3] == ["sc.exe", "query", "morris"]:
+                    return 0, "STATE              : 4  RUNNING", ""
+                if command[:3] == ["tasklist", "/fo", "csv"]:
+                    return (
+                        0,
+                        '"morrisServer.exe","33868","Console","1","10,000 K"\n'
+                        '"morrisDispatcherService.exe","8660","Services","0","8,000 K"',
+                        "",
+                    )
+                return 1, "", "unexpected command"
+
+            readiness.platform.system = lambda: "Windows"
+            readiness.run_command = fake_run_command
+            try:
+                result = readiness.probe_windows_morris_stack([base])
+            finally:
+                readiness.platform.system = original_system
+                readiness.run_command = original_run_command
+
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["id"], "windows_morris_stack")
+
 
 if __name__ == "__main__":
     unittest.main()

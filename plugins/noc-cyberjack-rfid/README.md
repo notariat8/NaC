@@ -34,6 +34,17 @@ C:\Program Files\REINER SCT\DriverPackage
 
 It checks for the DriverPackage control center, PC/SC library, Windows 10 x64 driver files, CT-API DLL and the installed REINER SCT SmartCardReader provider reported by `pnputil`. Connected reader hardware is checked separately. A successfully installed DriverPackage does not by itself prove that a cyberJack reader is currently attached.
 
+## morris Browser Middleware
+
+REINER SCT describes morris as middleware that allows browser applications to access the chip-card reader from the local customer PC. Where morris is installed, the readiness check now verifies the local middleware without invoking any card operation:
+
+- `C:\Program Files (x86)\REINER SCT\morris`
+- `morris` Windows service state
+- `morrisServer` and `morrisDispatcherService` processes
+- local named-pipe endpoints such as `net.pipe://localhost/morris`
+
+This can be the easier integration path for browser-guided operator checks, but it stays local and metadata-only in NoC. The plugin must not use morris to request PINs, card data, certificates or productive portal actions.
+
 ## Linux Driver And Omnistation Lab
 
 REINER SCT documents Linux support for cyberJack readers and notes that many Linux distributions already provide cyberJack drivers in their standard package repositories. On Linux, the readiness check now also probes the local driver stack:
@@ -67,6 +78,7 @@ Using Omnistation for this is only meaningful as a controlled hardware lab if th
 - Confirm BNotK chip/signature card availability without reading card values.
 - Confirm security-class-3 reader model, driver source, PC/SC service and local admin path.
 - On Windows, confirm REINER SCT DriverPackage path, driver files and installed SmartCardReader provider.
+- On Windows, confirm morris browser middleware installation and running local service where available.
 - On Linux, confirm cyberJack driver package availability or installation, PC/SC daemon state and USB/PCSC reader visibility.
 - Confirm whether the reader has an RFID function and whether it is disabled for the BNotK chip-card workflow.
 - Confirm BNotK SAK lite or XNP card path and secureFramework readiness.

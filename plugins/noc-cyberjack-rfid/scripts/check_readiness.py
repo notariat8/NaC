@@ -25,6 +25,7 @@ AUSWEISAPP_STATUS_URL = "http://127.0.0.1:24727/eID-Client?Status=json"
 LINUX_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT|Smart Card|0c4b)", re.IGNORECASE)
 WINDOWS_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT)", re.IGNORECASE)
 WINDOWS_SMARTCARD_PATTERNS = re.compile(r"(SmartCardReader|Smart Card|Smartcard|Smartcard-Leser)", re.IGNORECASE)
+MORRIS_ENDPOINT_PATTERNS = re.compile(r"net\.pipe://localhost/[A-Za-z0-9]+", re.IGNORECASE)
 
 
 def utc_now() -> str:
@@ -117,6 +118,31 @@ def windows_driver_package_paths() -> list[Path]:
     return unique
 
 
+def windows_morris_paths() -> list[Path]:
+    candidates = []
+    for env_name in ["ProgramFiles(x86)", "ProgramFiles", "ProgramW6432"]:
+        root = os.environ.get(env_name)
+        if root:
+            candidates.append(Path(root) / "REINER SCT" / "morris")
+    candidates.append(Path("C:/Program Files (x86)/REINER SCT/morris"))
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        key = str(path).lower()
+        if key not in seen:
+            unique.append(path)
+            seen.add(key)
+    return unique
+
+
+def read_text_if_exists(path: Path, limit: int = 20000) -> str:
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as handle:
+            return handle.read(limit)
+    except OSError:
+        return ""
+
+
 def parse_reiner_driver_provider(raw: str) -> dict[str, Any]:
     lines = [line.strip() for line in raw.splitlines() if line.strip()]
     provider_seen = any(
@@ -207,6 +233,134 @@ def probe_windows_driver_stack(base_paths: list[Path] | None = None) -> dict[str
         "manual_review",
         "manual",
         "REINER SCT DriverPackage and driver provider were not confirmed.",
+        details,
+    )
+
+
+def parse_sc_state(raw: str) -> str:
+    for line in raw.splitlines():
+        if "STATE" not in line.upper() or ":" not in line:
+            continue
+        state = line.split(":", 1)[1].strip().upper()
+        if "RUNNING" in state:
+            return "running"
+        if "STOPPED" in state:
+            return "stopped"
+        return state.lower()
+    return "unknown"
+
+
+def tasklist_processes() -> list[str]:
+    code, stdout, _stderr = run_command(["tasklist", "/fo", "csv", "/nh"], timeout=6.0)
+    if code == 0 and stdout:
+        names: list[str] = []
+        for line in stdout.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            first = stripped.split(",", 1)[0].strip().strip('"')
+            if first:
+                names.append(first)
+        return names
+
+    code, stdout, _stderr = run_command(
+        ["powershell.exe", "-NoProfile", "-Command", "Get-Process | Select-Object -ExpandProperty ProcessName"],
+        timeout=6.0,
+    )
+    if code != 0 or not stdout:
+        return []
+    return [line.strip() for line in stdout.splitlines() if line.strip()]
+
+
+def probe_windows_morris_stack(base_paths: list[Path] | None = None) -> dict[str, Any]:
+    if platform.system().lower() != "windows":
+        return check_result(
+            "windows_morris_stack",
+            "Windows morris browser middleware",
+            "passed",
+            "info",
+            "morris browser middleware check is not required on this operating system.",
+        )
+
+    candidates = base_paths if base_paths is not None else windows_morris_paths()
+    base_path = next((path for path in candidates if path.exists()), None)
+    details: dict[str, Any] = {
+        "candidate_paths": [str(path) for path in candidates],
+        "morris_path": str(base_path) if base_path else None,
+    }
+
+    if base_path:
+        expected_files = [
+            base_path / "Server" / "morrisServer.exe",
+            base_path / "Server" / "IMorrisExternalPlugin.dll",
+            base_path / "Server" / "morrisServer.exe.config",
+            base_path / "Service" / "morrisDispatcherService.exe",
+            base_path / "Service" / "morrisDispatcherService.exe.config",
+        ]
+        details["files"] = [file_metadata(path) for path in expected_files]
+        endpoints = []
+        for config in [
+            base_path / "Server" / "morrisServer.exe.config",
+            base_path / "Service" / "morrisDispatcherService.exe.config",
+        ]:
+            endpoints.extend(MORRIS_ENDPOINT_PATTERNS.findall(read_text_if_exists(config)))
+        details["local_endpoints"] = sorted(set(endpoints))
+
+    code, stdout, stderr = run_command(["sc.exe", "query", "morris"], timeout=4.0)
+    service_state = parse_sc_state(stdout) if code == 0 else "unknown"
+    details["service"] = {
+        "name": "morris",
+        "query_exit_code": code,
+        "state": service_state,
+        "error": safe_error(stderr) if stderr else None,
+    }
+
+    matched_processes = sorted(
+        name
+        for name in tasklist_processes()
+        if name.lower().removesuffix(".exe") in {"morrisserver", "morrisdispatcherservice"}
+    )
+    details["processes"] = matched_processes
+
+    required_files_present = bool(base_path) and all(item.get("exists") for item in details.get("files", []))
+    service_running = service_state == "running"
+    normalized_processes = {name.lower().removesuffix(".exe") for name in matched_processes}
+    server_running = "morrisserver" in normalized_processes
+    dispatcher_running = "morrisdispatcherservice" in normalized_processes
+
+    if required_files_present and service_running and server_running and dispatcher_running:
+        return check_result(
+            "windows_morris_stack",
+            "Windows morris browser middleware",
+            "passed",
+            "info",
+            "REINER SCT morris is installed and running as local browser middleware.",
+            details,
+        )
+    if required_files_present and service_running:
+        return check_result(
+            "windows_morris_stack",
+            "Windows morris browser middleware",
+            "manual_review",
+            "manual",
+            "REINER SCT morris is installed and the service is running, but all expected processes were not confirmed.",
+            details,
+        )
+    if required_files_present:
+        return check_result(
+            "windows_morris_stack",
+            "Windows morris browser middleware",
+            "manual_review",
+            "manual",
+            "REINER SCT morris is installed, but the service is not confirmed as running.",
+            details,
+        )
+    return check_result(
+        "windows_morris_stack",
+        "Windows morris browser middleware",
+        "manual_review",
+        "manual",
+        "REINER SCT morris installation was not confirmed.",
         details,
     )
 
@@ -872,6 +1026,7 @@ def build_evidence(args: argparse.Namespace) -> dict[str, Any]:
         checks.append(probe_linux_driver_stack())
     if platform.system().lower() == "windows":
         checks.append(probe_windows_driver_stack())
+        checks.append(probe_windows_morris_stack())
     checks.extend(
         [
             probe_pcsc_service(),
