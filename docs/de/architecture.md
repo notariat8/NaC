@@ -2,8 +2,8 @@
 
 ## Architekturrahmen
 
-Diese Architektur folgt dem Modell `Organization as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
-`OaC8` ist die konkrete Auspraegung dieses Rahmens.
+Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
+`NoC` ist die konkrete Auspraegung dieses Rahmens.
 
 Referenz: `docs/de/organization-as-code-positioning.md`
 
@@ -18,7 +18,7 @@ Referenz: `docs/de/organization-as-code-positioning.md`
 4. `Automation Plane`
    GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
 
-## OaC-Layer-Mapping
+## NoC-Layer-Mapping
 
 ```mermaid
 flowchart LR

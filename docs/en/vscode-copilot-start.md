@@ -3,7 +3,7 @@
 ## Ziel
 
 Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
-Der fachliche Rahmen ist `Organization as Code` mit `Enterprise GitOps`; `OaC8` ist die konkrete Umsetzung.
+Der fachliche Rahmen ist `Notariat as Code` mit `Enterprise GitOps`; `NoC` ist die konkrete Umsetzung.
 
 Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefuehrten Pfad:
 `docs/en/vscode-first-user-path.md`

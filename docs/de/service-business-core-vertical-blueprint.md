@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `OaC8`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
+Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `NoC`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
 
 - Anwaltskanzlei (`law_firm`)
 - Notariat (`notary`)

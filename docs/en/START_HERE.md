@@ -8,9 +8,9 @@ before starting.
 
 ## Conceptual Frame
 
-- The target model is `Organization as Code (OaC)`.
+- The target model is `Notariat as Code (NoC)`.
 - The operating model is `Enterprise GitOps`.
-- `OaC8` is the implementation in this repository.
+- `NoC` is the implementation in this repository.
 - The platform name is `Enterprise Control Plane`.
 
 ## Multilingual Rule
@@ -49,6 +49,7 @@ regardless of the language used in the prompt.
 
 ## Change Requests and Learning
 
+- An update is complete only after the change has been validated, committed, and pushed to GitHub. Local changes without a push are only work in progress.
 - Every improvement is documented as a change request.
 - Every change gets a rationale, review, and version reference.
 - Useful local improvements can flow back into the reference standard.

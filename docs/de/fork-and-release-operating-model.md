@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieses Dokument beschreibt das verbindliche Betriebsmodell fuer Unternehmen, die das zentrale `OaC8` als Referenz nutzen:
+Dieses Dokument beschreibt das verbindliche Betriebsmodell fuer Unternehmen, die das zentrale `NoC` als Referenz nutzen:
 
 - zentraler Upstream als Referenzstandard,
 - ein Unternehmens-Fork als verbindlicher Betriebsstand,

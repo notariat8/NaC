@@ -9,9 +9,9 @@ Der Wizard arbeitet zustandsbehaftet ueber mehrere Tage und bindet GitHub-Login,
 
 ## Begriffsrahmen fuer den Start
 
-- Das Zielmodell ist `Organization as Code (OaC)`.
+- Das Zielmodell ist `Notariat as Code (NoC)`.
 - Die Steuerung erfolgt ueber `Enterprise GitOps`.
-- `OaC8` ist die konkrete Umsetzung in diesem Repository.
+- `NoC` ist die konkrete Umsetzung in diesem Repository.
 - Plattformname: `Enterprise Control Plane`.
 - Referenz: `docs/de/organization-as-code-positioning.md`
 
@@ -69,6 +69,10 @@ Wenn Sie statt Cursor VS Code mit GitHub Copilot nutzen, starten Sie mit:
 
 Konzept- und Onboarding-Aenderungen werden fuer alle Plattformen synchron gepflegt.
 Uebersicht: `docs/de/platform-onboarding-matrix.md`
+
+## Abschlussregel
+
+Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde. Lokale Aenderungen ohne Push sind nur Zwischenstand.
 
 ## Change Requests und gemeinsames Lernen
 

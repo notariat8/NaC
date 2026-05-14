@@ -1,8 +1,8 @@
-# OaC Enterprise Control Plane MVP (6 Monate)
+# NoC Enterprise Control Plane MVP (6 Monate)
 
 ## Ziel und Rahmen
 
-Dieses Dokument konkretisiert ein realistisches MVP fuer `Organization as Code` im bestehenden Modell `OaC + Enterprise GitOps + OaC8`.
+Dieses Dokument konkretisiert ein realistisches MVP fuer `Notariat as Code` im bestehenden Modell `NoC + Enterprise GitOps + NoC`.
 
 Das MVP schliesst einen kleinen, aber vollstaendigen End-to-End-Kreis:
 

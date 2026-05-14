@@ -1,16 +1,16 @@
-# Positionierung: Organization as Code und Enterprise GitOps
+# Positionierung: Notariat as Code und Enterprise GitOps
 
 ## Ziel
 
 Dieses Dokument schaerft den Begriffsrahmen:
 
-- `OaC8` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
-- Das uebergeordnete Architekturmodell ist `Organization as Code (OaC)`.
+- `NoC` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
+- Das uebergeordnete Architekturmodell ist `Notariat as Code (NoC)`.
 - Das operative Steuerungsprinzip ist `Enterprise GitOps`.
 
 ## Begriffsrahmen
 
-### Organization as Code (OaC)
+### Notariat as Code (NoC)
 
 Unternehmen wird deklarativ und versioniert beschrieben:
 
@@ -29,9 +29,9 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 - Review/Freigabe
 - automatisierte Policy- und Compliance-Checks
 
-### OaC8
+### NoC
 
-`OaC8` ist die konkrete Umsetzung von OaC + Enterprise GitOps in diesem Repo.
+`NoC` ist die konkrete Umsetzung von Notariat as Code + Enterprise GitOps in diesem Repo.
 
 ## Warum diese Trennung wichtig ist
 
@@ -52,7 +52,7 @@ Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell
 
 Begriff:
 
-- `Organization as Code`
+- `Notariat as Code`
 
 Plattformname:
 
@@ -66,4 +66,4 @@ Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
 
 ## Der Ein-Satz-Pitch
 
-Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
+Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.

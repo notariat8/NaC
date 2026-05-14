@@ -1,4 +1,4 @@
-# Fachkonzept: Organization as Code mit OaC8
+# Fachkonzept: Notariat as Code mit NoC
 
 ## Leitprinzip
 
@@ -11,9 +11,9 @@ Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Ni
 
 ## Positionierung
 
-- `Organization as Code` beschreibt das uebergeordnete Zielmodell.
+- `Notariat as Code` beschreibt das uebergeordnete Zielmodell.
 - `Enterprise GitOps` beschreibt den operativen Aenderungsfluss.
-- `OaC8` ist die konkrete Betriebsumsetzung in diesem Repository.
+- `NoC` ist die konkrete Betriebsumsetzung in diesem Repository.
 
 Referenz: `docs/en/organization-as-code-positioning.md`
 

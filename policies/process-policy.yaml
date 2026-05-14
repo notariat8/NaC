@@ -1,8 +1,8 @@
 version: 1
 positioning:
-  model: organization_as_code
+  model: notariat_as_code
   operating_principle: enterprise_gitops
-  implementation_label: oac8
+  implementation_label: noc
 baseline:
   generic_modules:
     - formation
@@ -66,6 +66,9 @@ change_management:
   require_change_request: true
   require_impact_assessment: true
   require_version_bump: true
+  require_commit_for_update_completion: true
+  require_github_push_for_update_completion: true
+  completion_remote: github
 
 release_sync:
   upstream_sync_only_via_pull_request: true

@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter Betriebsauspraegung.
 
 ## Verbindliche Prioritaet
 
@@ -12,11 +12,12 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 ## Arbeitsweise
 
 - Behandle das LLM als Assistent fuer Eingaben, nicht als finale fachliche Autoritaet.
-- Rahmen: `Organization as Code` + `Enterprise GitOps`; `OaC8` ist die konkrete Umsetzung.
+- Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NoC` ist die konkrete Umsetzung.
 - Schlage keine direkten Aenderungen an `main` vor.
 - Erzwinge Vorschlaege ueber Branch + Pull Request + Review.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
 - Jede Prozessaenderung muss begruendet und versioniert sein.
+- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde.
 - Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
 - Access- und Rollenregeln sind nur unter `policies/` zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.

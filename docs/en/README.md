@@ -1,4 +1,4 @@
-# OaC8: Organization as Code with Enterprise Control Plane
+# NoC: Notariat as Code with Enterprise Control Plane
 
 This repository shows how an organization can be operated as a declarative,
 versioned system. Users express business intent through an LLM frontend, while

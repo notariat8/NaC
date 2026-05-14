@@ -1,6 +1,6 @@
-# OaC8: Organization as Code mit Enterprise Control Plane
+# NoC: Notariat as Code mit Enterprise Control Plane
 
-Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Organization as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `OaC8` ist dabei die konkrete Auspraegung als Enterprise Control Plane.
+Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `NoC` ist dabei die konkrete Auspraegung als Enterprise Control Plane.
 
 ## Kernidee
 
@@ -11,9 +11,9 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 
 ## Positionierung
 
-- Architekturmodell: `Organization as Code`
+- Architekturmodell: `Notariat as Code`
 - Betriebsprinzip: `Enterprise GitOps`
-- konkrete Umsetzung in diesem Repo: `OaC8`
+- konkrete Umsetzung in diesem Repo: `NoC`
 - Plattformname: `Enterprise Control Plane`
 - Referenz: `docs/de/organization-as-code-positioning.md`
 
@@ -21,7 +21,7 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 
 Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, wuerde ich es so framen:
 
-- Begriff: `Organization as Code`
+- Begriff: `Notariat as Code`
 - Plattformname: `Enterprise Control Plane`
 - erstes Produktversprechen: "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
 
@@ -29,7 +29,7 @@ Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
 
 Der Ein-Satz-Pitch:
 
-Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
+Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
 
 ## Prozessklassen
 
@@ -68,7 +68,7 @@ Organization as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Polici
 - `docs/de/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
 - `docs/de/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/de/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
-- `docs/de/organization-as-code-positioning.md` schaerft den Begriffsrahmen OaC/GitOps/OaC8.
+- `docs/de/organization-as-code-positioning.md` schaerft den Begriffsrahmen Notariat/GitOps/NoC.
 - `docs/de/oac-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
 - `docs/de/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
 - `docs/de/technology-decision.md` beschreibt verbindliche Technikentscheidungen.

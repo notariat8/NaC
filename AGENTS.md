@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter Betriebsauspraegung.
 
 ## Prioritaet der Vorgaben
 
@@ -12,10 +12,11 @@ Dieses Repository ist ein Muster fuer `Organization as Code` mit `OaC8` als konk
 ## Arbeitsprinzip
 
 - Das LLM ist Eingabeoberflaeche, nicht die fachliche Wahrheit.
-- Das Zielmodell ist `Organization as Code`, der operative Aenderungsfluss ist `Enterprise GitOps`.
+- Das Zielmodell ist `Notariat as Code`, der operative Aenderungsfluss ist `Enterprise GitOps`.
 - Fachliche Wahrheit entsteht durch versionierte Aenderung + Review + Freigabe.
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessaenderungen werden immer mit Begruendung dokumentiert.
+- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde.
 - Konzeptaenderungen werden IDE-uebergreifend synchron gepflegt (Cursor und VS Code + Copilot).
 - Onboarding wird nie nur fuer eine Plattform gepflegt, sondern fuer alle unterstuetzten Plattformen.
 - Der verbindliche Technikstack steht in `policies/technology-policy.yaml`.

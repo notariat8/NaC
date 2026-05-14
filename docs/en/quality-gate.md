@@ -1,4 +1,4 @@
-# OaC8 Quality Gate
+# NoC Quality Gate
 
 ## Zweck
 

@@ -1,6 +1,6 @@
-# OaC8: Organization as Code
+# NoC: Notariat as Code
 
-This repository is maintained as a multilingual `Organization as Code` reference.
+This repository is maintained as a multilingual `Notariat as Code` reference.
 Language-specific documentation and prompts use ISO-639 folder codes.
 
 ## Languages

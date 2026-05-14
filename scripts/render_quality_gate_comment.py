@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Rendert einen kompakten PR-Kommentar fuer den OaC8 Quality Gate.")
+    parser = argparse.ArgumentParser(description="Rendert einen kompakten PR-Kommentar fuer den NoC Quality Gate.")
     parser.add_argument(
         "--input",
         type=Path,
@@ -39,13 +39,13 @@ def _load_status(path: Path) -> dict:
 
 
 def _build_markdown(payload: dict) -> str:
-    marker = "<!-- oac8-quality-gate-comment -->"
+    marker = "<!-- noc-quality-gate-comment -->"
     status = payload.get("overall_status", "UNKNOWN")
     profile = payload.get("profile", "unknown")
     timestamp = payload.get("timestamp_utc", "unknown")
     checks = payload.get("checks", [])
 
-    lines: list[str] = [marker, "## OaC8 Quality Gate", ""]
+    lines: list[str] = [marker, "## NoC Quality Gate", ""]
     lines.append(f"- Status: **{status}**")
     lines.append(f"- Profil: `{profile}`")
     lines.append(f"- Zeit: `{timestamp}`")

@@ -5,9 +5,11 @@ alwaysApply: true
 
 # Core Governance (MUSS)
 
+- Rahmen ist `Notariat as Code (NoC)` mit `Enterprise GitOps`.
 - Aenderungen an Prozessen nur ueber Branch + Pull Request.
 - Direkte Aenderungen am Hauptstand sind nicht erlaubt.
 - Jede Aenderung braucht Zweck, Risiko und Verantwortliche.
+- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed und zu GitHub gepusht wurde.
 - Sensible Prozesse brauchen fachliche Freigabe.
 - Abschlussstaende werden versioniert markiert.
 - Keine vertraulichen Daten ungeschuetzt in Prozessdateien.
