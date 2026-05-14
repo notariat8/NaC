@@ -32,7 +32,7 @@ gantt
 | --- | --- | --- | --- |
 | `noc-regulated-core` | Shared regulated workflow guardrails | Baseline ready | Recheck GPT Store/workspace packaging assumptions. |
 | `noc-idaas` | German eID verification and IAM projection readiness | Active | Confirm connector boundary and data-processing basis before any production pilot. |
-| `noc-cyberjack-rfid` | Local card and SAK readiness | Active | Verify local-only evidence shape. |
+| `noc-cyberjack-rfid` | Local card, RFID-off, SAK and XNP local-interface readiness | Active | Implement readiness checks for compatible reader, RFID-off status, secureFramework and XNP localhost interface without storing API keys. |
 | `noc-bnotk-xnp` | XNP authentication readiness | Active | Bind to CyberJack gate output. |
 | `noc-handelsregister` | Register filing readiness | Active | Bind to GmbH formation usecase. |
 | `noc-bea-portal` | beA workflow companion | Planned | Confirm notary-office priority. |
