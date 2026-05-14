@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -115,6 +116,52 @@ class CyberJackReadinessTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "passed")
         self.assertEqual(result["id"], "linux_driver_stack")
+
+    def test_windows_driver_stack_detects_driver_package_and_provider(self) -> None:
+        original_system = readiness.platform.system
+        original_command_exists = readiness.command_exists
+        original_run_command = readiness.run_command
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base = Path(tmp_dir) / "DriverPackage"
+            for relative in [
+                "dpcc.exe",
+                "PCSC.dll",
+                "x64-W10/dpumdf-W10.inf",
+                "x64-W10/dpumdf.dll",
+                "ctapi/ctrsct32.dll",
+            ]:
+                target = base / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("test", encoding="utf-8")
+
+            def fake_run_command(command, timeout=3.0):
+                if command[:2] == ["pnputil.exe", "/enum-drivers"]:
+                    return (
+                        0,
+                        "\n".join(
+                            [
+                                "Anbietername:      REINER SCT",
+                                "Klassenname:         SmartCardReader",
+                                "Treiberversion:     04/16/2026 11.17.43.754",
+                            ]
+                        ),
+                        "",
+                    )
+                return 1, "", "unexpected command"
+
+            readiness.platform.system = lambda: "Windows"
+            readiness.command_exists = lambda command: command in {"pnputil.exe", "pnputil"}
+            readiness.run_command = fake_run_command
+            try:
+                result = readiness.probe_windows_driver_stack([base])
+            finally:
+                readiness.platform.system = original_system
+                readiness.command_exists = original_command_exists
+                readiness.run_command = original_run_command
+
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["id"], "windows_driver_stack")
 
 
 if __name__ == "__main__":

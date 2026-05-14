@@ -42,7 +42,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 54% | `noc-cyberjack-rfid` now includes Linux driver/PCSC/USB preflight; Omnistation testing needs USB passthrough and a policy exception before driver installation. |
+| A | Installable plugins for notary offices | Active | 56% | `noc-cyberjack-rfid` now detects the local REINER SCT Windows DriverPackage stack; current local blocker is missing connected cyberJack reader and manual card/RFID attestations. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 

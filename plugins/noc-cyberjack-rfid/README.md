@@ -24,6 +24,16 @@ Use `--strict` in automation when any non-ready state should return a non-zero e
 
 The check does not read PINs, card values, certificates, XNP API keys, portal sessions or mandate content. RFID-off is captured as a manual attestation until a reviewed vendor or operating-system interface can verify it deterministically.
 
+## Windows DriverPackage Detection
+
+On Windows, the readiness check now detects the local REINER SCT stack at the standard path:
+
+```text
+C:\Program Files\REINER SCT\DriverPackage
+```
+
+It checks for the DriverPackage control center, PC/SC library, Windows 10 x64 driver files, CT-API DLL and the installed REINER SCT SmartCardReader provider reported by `pnputil`. Connected reader hardware is checked separately. A successfully installed DriverPackage does not by itself prove that a cyberJack reader is currently attached.
+
 ## Linux Driver And Omnistation Lab
 
 REINER SCT documents Linux support for cyberJack readers and notes that many Linux distributions already provide cyberJack drivers in their standard package repositories. On Linux, the readiness check now also probes the local driver stack:
@@ -56,6 +66,7 @@ Using Omnistation for this is only meaningful as a controlled hardware lab if th
 
 - Confirm BNotK chip/signature card availability without reading card values.
 - Confirm security-class-3 reader model, driver source, PC/SC service and local admin path.
+- On Windows, confirm REINER SCT DriverPackage path, driver files and installed SmartCardReader provider.
 - On Linux, confirm cyberJack driver package availability or installation, PC/SC daemon state and USB/PCSC reader visibility.
 - Confirm whether the reader has an RFID function and whether it is disabled for the BNotK chip-card workflow.
 - Confirm BNotK SAK lite or XNP card path and secureFramework readiness.

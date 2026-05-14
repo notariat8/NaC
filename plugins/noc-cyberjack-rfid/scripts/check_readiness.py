@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import re
 import shutil
@@ -22,6 +23,8 @@ SCHEMA_VERSION = "noc.cyberjack.readiness/v1"
 XNP_PORTS = range(12774, 12785)
 AUSWEISAPP_STATUS_URL = "http://127.0.0.1:24727/eID-Client?Status=json"
 LINUX_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT|Smart Card|0c4b)", re.IGNORECASE)
+WINDOWS_READER_PATTERNS = re.compile(r"(REINER|cyberJack|SCT)", re.IGNORECASE)
+WINDOWS_SMARTCARD_PATTERNS = re.compile(r"(SmartCardReader|Smart Card|Smartcard|Smartcard-Leser)", re.IGNORECASE)
 
 
 def utc_now() -> str:
@@ -82,6 +85,130 @@ def command_exists(command: str) -> bool:
 
 def safe_error(value: str, limit: int = 240) -> str:
     return value.replace("\r", " ").replace("\n", " ").strip()[:limit]
+
+
+def file_metadata(path: Path) -> dict[str, Any]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return {"path": str(path), "exists": False}
+    return {
+        "path": str(path),
+        "exists": True,
+        "size": stat.st_size,
+        "modified_utc": datetime.fromtimestamp(stat.st_mtime, tz=UTC).replace(microsecond=0).isoformat(),
+    }
+
+
+def windows_driver_package_paths() -> list[Path]:
+    candidates = []
+    for env_name in ["ProgramFiles", "ProgramW6432"]:
+        root = os.environ.get(env_name)
+        if root:
+            candidates.append(Path(root) / "REINER SCT" / "DriverPackage")
+    candidates.append(Path("C:/Program Files/REINER SCT/DriverPackage"))
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        key = str(path).lower()
+        if key not in seen:
+            unique.append(path)
+            seen.add(key)
+    return unique
+
+
+def parse_reiner_driver_provider(raw: str) -> dict[str, Any]:
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    provider_seen = any(
+        line.lower().startswith(("anbietername:", "provider name:")) and "reiner" in line.lower()
+        for line in lines
+    )
+    smartcard_seen = any("smartcardreader" in line.lower() or "smart card reader" in line.lower() for line in lines)
+    version = None
+    for line in lines:
+        lower = line.lower()
+        if lower.startswith(("treiberversion:", "driver version:")):
+            version = line.split(":", 1)[1].strip()
+            break
+    return {
+        "provider_seen": provider_seen,
+        "smartcard_reader_class_seen": smartcard_seen,
+        "driver_version": version,
+    }
+
+
+def probe_windows_driver_stack(base_paths: list[Path] | None = None) -> dict[str, Any]:
+    if platform.system().lower() != "windows":
+        return check_result(
+            "windows_driver_stack",
+            "Windows REINER SCT driver stack",
+            "passed",
+            "info",
+            "Windows driver package check is not required on this operating system.",
+        )
+
+    candidates = base_paths if base_paths is not None else windows_driver_package_paths()
+    base_path = next((path for path in candidates if path.exists()), None)
+    details: dict[str, Any] = {
+        "candidate_paths": [str(path) for path in candidates],
+        "driver_package_path": str(base_path) if base_path else None,
+    }
+
+    if base_path:
+        expected_files = [
+            base_path / "dpcc.exe",
+            base_path / "PCSC.dll",
+            base_path / "x64-W10" / "dpumdf-W10.inf",
+            base_path / "x64-W10" / "dpumdf.dll",
+            base_path / "ctapi" / "ctrsct32.dll",
+        ]
+        details["files"] = [file_metadata(path) for path in expected_files]
+
+    provider_details: dict[str, Any] = {}
+    if command_exists("pnputil.exe") or command_exists("pnputil"):
+        code, stdout, stderr = run_command(["pnputil.exe", "/enum-drivers"], timeout=12.0)
+        provider_details = parse_reiner_driver_provider(stdout) if code == 0 else {"error": safe_error(stderr)}
+        provider_details["exit_code"] = code
+    details["pnputil_driver"] = provider_details
+
+    required_files_present = bool(base_path) and all(item.get("exists") for item in details.get("files", []))
+    provider_seen = bool(provider_details.get("provider_seen") and provider_details.get("smartcard_reader_class_seen"))
+
+    if required_files_present and provider_seen:
+        return check_result(
+            "windows_driver_stack",
+            "Windows REINER SCT driver stack",
+            "passed",
+            "info",
+            "REINER SCT DriverPackage and installed SmartCardReader driver provider are visible.",
+            details,
+        )
+    if required_files_present:
+        return check_result(
+            "windows_driver_stack",
+            "Windows REINER SCT driver stack",
+            "manual_review",
+            "manual",
+            "REINER SCT DriverPackage is installed on disk, but the installed driver provider was not confirmed.",
+            details,
+        )
+    if provider_seen:
+        return check_result(
+            "windows_driver_stack",
+            "Windows REINER SCT driver stack",
+            "manual_review",
+            "manual",
+            "REINER SCT SmartCardReader driver provider is installed, but the DriverPackage path was not confirmed.",
+            details,
+        )
+    return check_result(
+        "windows_driver_stack",
+        "Windows REINER SCT driver stack",
+        "manual_review",
+        "manual",
+        "REINER SCT DriverPackage and driver provider were not confirmed.",
+        details,
+    )
 
 
 def linux_os_release() -> dict[str, str]:
@@ -301,6 +428,101 @@ def parse_json_list(raw_json: str) -> list[dict[str, Any]]:
     return []
 
 
+def parse_pnputil_connected_readers(raw: str) -> list[dict[str, Any]]:
+    readers: list[dict[str, Any]] = []
+    current: dict[str, str] = {}
+    label_map = {
+        "instanz-id": "instance_id",
+        "instance id": "instance_id",
+        "gerätebeschreibung": "description",
+        "device description": "description",
+        "klassenname": "class_name",
+        "class name": "class_name",
+        "herstellername": "manufacturer",
+        "manufacturer name": "manufacturer",
+        "status": "status",
+        "treibername": "driver_name",
+        "driver name": "driver_name",
+    }
+
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped or ":" not in stripped:
+            continue
+        label, value = stripped.split(":", 1)
+        key = label_map.get(label.strip().lower())
+        if not key:
+            continue
+        if key == "instance_id" and current:
+            readers.append(current)
+            current = {}
+        current[key] = value.strip()
+    if current:
+        readers.append(current)
+
+    normalized = []
+    for item in readers:
+        text = " ".join(str(value) for value in item.values())
+        normalized.append(
+            {
+                "description": item.get("description"),
+                "manufacturer": item.get("manufacturer"),
+                "status": item.get("status"),
+                "driver_name": item.get("driver_name"),
+                "fingerprint_hash": hash_identifier(item.get("instance_id") or text),
+                "reiner_sct_match": bool(WINDOWS_READER_PATTERNS.search(text)),
+                "smartcard_reader_match": bool(WINDOWS_SMARTCARD_PATTERNS.search(text)),
+            }
+        )
+    return normalized
+
+
+def probe_windows_readers_via_pnputil() -> dict[str, Any] | None:
+    if not (command_exists("pnputil.exe") or command_exists("pnputil")):
+        return None
+    code, stdout, stderr = run_command(
+        ["pnputil.exe", "/enum-devices", "/connected", "/class", "SmartCardReader"],
+        timeout=8.0,
+    )
+    if code != 0:
+        return check_result(
+            "reader_detection",
+            "Card-reader detection",
+            "manual_review",
+            "manual",
+            "PnP smart-card reader detection did not complete successfully.",
+            {"exit_code": code, "error": safe_error(stderr)},
+        )
+
+    readers = parse_pnputil_connected_readers(stdout)
+    reiner_readers = [reader for reader in readers if reader["reiner_sct_match"]]
+    if reiner_readers:
+        return check_result(
+            "reader_detection",
+            "Card-reader detection",
+            "passed",
+            "info",
+            "A connected REINER SCT/cyberJack smart-card reader is visible through PnP.",
+            {"readers": reiner_readers},
+        )
+    if readers:
+        return check_result(
+            "reader_detection",
+            "Card-reader detection",
+            "manual_review",
+            "manual",
+            "Smart-card reader hardware is visible, but no connected REINER SCT/cyberJack reader was confirmed.",
+            {"readers": readers},
+        )
+    return check_result(
+        "reader_detection",
+        "Card-reader detection",
+        "manual_review",
+        "manual",
+        "No connected SmartCardReader device was reported by PnP.",
+    )
+
+
 def probe_windows_readers() -> dict[str, Any]:
     command = [
         "powershell.exe",
@@ -324,6 +546,10 @@ def probe_windows_readers() -> dict[str, Any]:
             {"error": stderr},
         )
     if code != 0:
+        fallback = probe_windows_readers_via_pnputil()
+        if fallback is not None:
+            fallback["details"]["cim_error"] = {"exit_code": code, "error": safe_error(stderr)}
+            return fallback
         return check_result(
             "reader_detection",
             "Card-reader detection",
@@ -349,6 +575,15 @@ def probe_windows_readers() -> dict[str, Any]:
         )
 
     if readers:
+        reiner_readers = [
+            reader
+            for reader in readers
+            if WINDOWS_READER_PATTERNS.search(" ".join(str(value) for value in reader.values()))
+        ]
+        if not reiner_readers:
+            fallback = probe_windows_readers_via_pnputil()
+            if fallback is not None:
+                return fallback
         return check_result(
             "reader_detection",
             "Card-reader detection",
@@ -635,6 +870,8 @@ def build_evidence(args: argparse.Namespace) -> dict[str, Any]:
     ]
     if platform.system().lower() == "linux":
         checks.append(probe_linux_driver_stack())
+    if platform.system().lower() == "windows":
+        checks.append(probe_windows_driver_stack())
     checks.extend(
         [
             probe_pcsc_service(),

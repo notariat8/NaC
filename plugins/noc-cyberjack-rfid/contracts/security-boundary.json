@@ -21,6 +21,7 @@
   ],
   "allowed_work": [
     "Prepare local card, compatible security-class-3 reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checks.",
+    "Check Windows REINER SCT DriverPackage path, driver files and installed SmartCardReader provider as metadata only.",
     "Check Linux cyberJack driver, PC/SC daemon and USB/PCSC reader visibility as metadata only.",
     "Run the local readiness evidence check in scripts/check_readiness.py without PIN, card-value or API-key capture.",
     "Record anonymized reader fingerprints and driver version metadata.",
@@ -37,6 +38,7 @@
   "day0": [
     "Confirm BNotK chip/signature card availability without reading card values.",
     "Confirm security-class-3 reader model, driver source, PC/SC service and local admin path.",
+    "On Windows, confirm REINER SCT DriverPackage path, driver files and installed SmartCardReader provider.",
     "On Linux, confirm cyberJack driver package status, pcscd and USB/PCSC reader visibility.",
     "Confirm RFID function is disabled where present and not explicitly needed.",
     "Confirm BNotK SAK lite or XNP card path, secureFramework and XNP local-interface readiness without storing API keys."
