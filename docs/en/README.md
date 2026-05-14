@@ -33,7 +33,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - `plugins/GANTT.md`, `workflows/GANTT.md`, and `usecases/GANTT.md` track area progress.
 - `plugins/` contains installable plugin artifacts for GPT Store review or workspace installation.
 - `workflows/` contains installable skills and deterministic Python workflows for notary-office operations.
-- `usecases/` contains concrete notarial scenarios such as online GmbH formation, real-estate purchase contracts, and testaments.
+- `usecases/` contains concrete notarial scenarios such as online GmbH formation, AO52 nonprofit software-company formation, real-estate purchase contracts, and testaments.
 - `docs/en/gpt-marketplace-operating-model.md` separates public GPT Store, Actions, workspace app, and local plugin channels.
 - `policies/` contains binding governance, technology, language, privacy, and role policies.
 - `schemas/` defines structured process requests.

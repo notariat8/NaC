@@ -35,7 +35,8 @@ This repository now separates three product layers:
 - `workflows/`: reusable notary-office workflows, split into installable skills
   and deterministic Python execution.
 - `usecases/`: concrete notarial scenarios such as online GmbH formation,
-  real-estate purchase contracts, and testaments.
+  AO52 nonprofit software-company formation, real-estate purchase contracts,
+  and testaments.
 
 Every push must update `roadmap/GANTT.md`. Changes below `plugins/`,
 `workflows/`, or `usecases/` must also update the matching area Gantt.

@@ -30,8 +30,9 @@ gantt
     section C: Notary usecases
     GitHub usecase intake                        :done,    c1, 2026-05-14, 1d
     GmbH formation canonicalization              :active,  c2, 2026-05-14, 21d
-    Purchase contract and testament starters     :         c3, after c2, 28d
-    Pilot-ready usecase packages                 :         c4, after c3, 35d
+    AO52 nonprofit formation intake              :active,  c3, 2026-05-14, 21d
+    Purchase contract and testament starters     :         c4, after c3, 28d
+    Pilot-ready usecase packages                 :         c5, after c4, 35d
 ```
 
 ## Progress Snapshot
@@ -40,7 +41,7 @@ gantt
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 35% | Publish track must separate public GPT Store packages from workspace-only apps. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
-| C | Notarial usecases such as GmbH formation, purchase contract, testament | Active | 15% | GitHub intake identified `ofunk/Online-GmbH-Gruendung` as the first canonical usecase. |
+| C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, purchase contract, testament | Active | 20% | GitHub intake identified `ofunk/Online-GmbH-Gruendung` and `ofunk/AO52aaS` as canonical usecase sources. |
 
 ## Rule
 

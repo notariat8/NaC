@@ -46,7 +46,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `plugins/GANTT.md`, `workflows/GANTT.md` und `usecases/GANTT.md` zeigen den Fortschritt je Themenbereich.
 - `plugins/` enthaelt installierbare Plugin-Artefakte fuer GPT-Store-Pruefung oder Workspace-Installation.
 - `workflows/` enthaelt installierbare Skills und deterministische Python-Workflows fuer Notariatsablaeufe.
-- `usecases/` enthaelt konkrete notarielle Usecases wie Online-GmbH-Gruendung, Grundstueckskaufvertrag und Testament.
+- `usecases/` enthaelt konkrete notarielle Usecases wie Online-GmbH-Gruendung, AO52-Gemeinnuetzigkeitsgruendung, Grundstueckskaufvertrag und Testament.
 - `docs/de/fachanwender-guide.md` erklaert das Modell ohne IT-Vorkenntnisse.
 - `docs/de/START_HERE.md` fuehrt neue Nutzer durch die Einfuehrung.
 - `docs/de/vscode-copilot-start.md` ist der Startpfad fuer VS Code + GitHub Copilot.
