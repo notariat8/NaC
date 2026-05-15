@@ -11,6 +11,7 @@ language. English is translation or orientation only.
 ## Current State
 
 - `docs/de/` contains the German source baseline.
+- [README.md](../../README.md) is the German-led GitHub root page.
 - `usecases/` is maintained as the German subject-matter usecase surface.
 - `docs/en/README.md` and `docs/en/START_HERE.md` are maintained as English entry documents.
 - `prompts/en/` contains English prompt templates.
