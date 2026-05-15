@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.teilungserklaerung_weg`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, WEG Section 8, GBO
 
 ## Goal

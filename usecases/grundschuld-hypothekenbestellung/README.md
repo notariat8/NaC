@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.grundschuld_hypothek`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, GBO, BGB land-charge rules
 
 ## Goal

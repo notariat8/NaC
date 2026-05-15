@@ -6,7 +6,9 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KG_ROOT = REPO_ROOT / "knowledge-graph"
+USECASES_ROOT = REPO_ROOT / "usecases"
+KG_FILE_NAME = "knowledge-graph.graph.json"
+KG_REVIEW_NAME = "knowledge-graph.md"
 ALLOWED_STATUS = {"open", "in_progress", "provided", "blocked", "not_applicable"}
 TOP10_SLUGS = {
     "immobilienkaufvertrag",
@@ -32,20 +34,7 @@ NEXT10_SLUGS = {
     "adoption-familienrechtliche-erklaerungen",
     "vollmacht-immobilien-gesellschaftsgeschaefte",
 }
-KG_CATALOGS = (
-    {
-        "name": "Top-10",
-        "graph": KG_ROOT / "notarial-top10.graph.json",
-        "review": KG_ROOT / "notarial-top10.md",
-        "expected_slugs": TOP10_SLUGS,
-    },
-    {
-        "name": "Next-10",
-        "graph": KG_ROOT / "notarial-next10.graph.json",
-        "review": KG_ROOT / "notarial-next10.md",
-        "expected_slugs": NEXT10_SLUGS,
-    },
-)
+CANONICAL_SLUGS = TOP10_SLUGS | NEXT10_SLUGS
 REQUIRED_CASE_FIELDS = {
     "id",
     "slug",
@@ -111,18 +100,22 @@ def validate_case(case: dict[str, Any]) -> list[str]:
     return errors
 
 
-def validate_catalog(catalog: dict[str, Any]) -> list[str]:
+def usecase_dirs() -> list[Path]:
+    return sorted(path for path in USECASES_ROOT.iterdir() if path.is_dir())
+
+
+def validate_case_graph(usecase_dir: Path) -> tuple[list[str], set[str]]:
     errors: list[str] = []
-    name = str(catalog["name"])
-    kg_file = catalog["graph"]
-    review_file = catalog["review"]
-    expected_slugs = set(catalog["expected_slugs"])
+    slugs: set[str] = set()
+    slug = usecase_dir.name
+    kg_file = usecase_dir / KG_FILE_NAME
+    review_file = usecase_dir / KG_REVIEW_NAME
 
     if not review_file.exists():
-        errors.append(f"{name}: Pflicht-KG-Review fehlt: {review_file.relative_to(REPO_ROOT)}")
+        errors.append(f"{slug}: Pflicht-KG-Review fehlt: {review_file.relative_to(REPO_ROOT)}")
 
     if not kg_file.exists():
-        errors.append(f"{name}: Pflicht-KG fehlt: {kg_file.relative_to(REPO_ROOT)}")
+        errors.append(f"{slug}: Pflicht-KG fehlt: {kg_file.relative_to(REPO_ROOT)}")
     else:
         text = kg_file.read_text(encoding="utf-8")
         for marker in PROHIBITED_MARKERS:
@@ -135,13 +128,14 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             payload = {}
 
         if payload.get("schema_version") != "noc.knowledge-graph/v0.1":
-            errors.append(f"{name}: KG schema_version muss noc.knowledge-graph/v0.1 sein")
+            errors.append(f"{slug}: KG schema_version muss noc.knowledge-graph/v0.1 sein")
+        if payload.get("graph_id") != f"usecase.{slug}":
+            errors.append(f"{slug}: graph_id muss usecase.{slug} sein")
         cases = payload.get("cases")
-        if not isinstance(cases, list) or len(cases) < 10:
-            errors.append(f"{name}: KG muss mindestens 10 notarielle Usecases enthalten")
+        if not isinstance(cases, list) or len(cases) != 1:
+            errors.append(f"{slug}: Usecase-KG muss genau einen Case enthalten")
         else:
             ids: set[str] = set()
-            slugs: set[str] = set()
             for case in cases:
                 case_id = case.get("id")
                 if case_id in ids:
@@ -149,26 +143,31 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
                 ids.add(str(case_id))
                 if isinstance(case.get("slug"), str):
                     slugs.add(str(case["slug"]))
+                if case.get("slug") != slug:
+                    errors.append(f"{slug}: Case-Slug muss zum Usecase-Ordner passen")
+                if case.get("usecase_path") != f"usecases/{slug}":
+                    errors.append(f"{slug}: usecase_path muss usecases/{slug} sein")
                 errors.extend(validate_case(case))
-            missing_slugs = expected_slugs - slugs
-            extra_slugs = slugs - expected_slugs
-            if missing_slugs:
-                errors.append(
-                    f"{name}: KG enthaelt nicht alle erwarteten Slugs: "
-                    + ", ".join(sorted(missing_slugs))
-                )
-            if extra_slugs:
-                errors.append(
-                    f"{name}: KG enthaelt nicht-katalogisierte Slugs: "
-                    + ", ".join(sorted(extra_slugs))
-                )
-    return errors
+    return errors, slugs
 
 
 def main() -> int:
     errors: list[str] = []
-    for catalog in KG_CATALOGS:
-        errors.extend(validate_catalog(catalog))
+    if (REPO_ROOT / "knowledge-graph").exists():
+        errors.append("Zentraler knowledge-graph/ Ordner ist nicht erlaubt; KGs muessen unter usecases/<slug>/ liegen.")
+
+    discovered_slugs: set[str] = set()
+    for usecase_dir in usecase_dirs():
+        graph_errors, graph_slugs = validate_case_graph(usecase_dir)
+        errors.extend(graph_errors)
+        discovered_slugs.update(graph_slugs)
+
+    missing_slugs = CANONICAL_SLUGS - discovered_slugs
+    if missing_slugs:
+        errors.append(
+            "Canonical Top-10/Next-10 Usecase-KGs fehlen: "
+            + ", ".join(sorted(missing_slugs))
+        )
 
     if errors:
         print("STATUS: FAILED")
@@ -177,7 +176,7 @@ def main() -> int:
         return 1
 
     print("STATUS: PASSED")
-    print("OK: Knowledge-Graph-Baselines sind vorhanden und enthalten Top-10 plus Next-10.")
+    print("OK: Usecase-lokale Knowledge-Graph-Baselines sind vorhanden und enthalten Top-10 plus Next-10.")
     return 0
 
 

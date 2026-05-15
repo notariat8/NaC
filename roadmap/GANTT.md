@@ -43,6 +43,7 @@ gantt
     GitHub usecase intake                        :done,    c1, 2026-05-14, 1d
     Top-10 notarial KG baseline                  :done,    c2, 2026-05-15, 1d
     Next-10 notarial KG baseline                 :done,    c3, 2026-05-15, 1d
+    Case-local KG folder migration               :done,    c3a, 2026-05-15, 1d
     GmbH formation canonicalization              :active,  c4, 2026-05-14, 21d
     AO52 nonprofit formation intake              :active,  c5, 2026-05-14, 21d
     Steuer-aaS tax usecase intake                :active,  c6, 2026-05-14, 21d
@@ -56,7 +57,7 @@ gantt
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 67% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, minimum-requirements inventory and strict validator. |
 | B | Installable skills and deterministic Python workflows | Active | 33% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, PDF export is manual-only during active development, and `fertig` means merged to `main` plus clean local `main`. |
-| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 52% | Top-10 and Next-10 usecase catalogs now exist with static KG nodes, detailed usecase folders and a strict KG validator. |
+| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 53% | Every usecase now owns a case-local static KG under its own folder; the old central `knowledge-graph/` directory is rejected by the strict KG validator. |
 
 ## Rule
 

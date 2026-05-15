@@ -37,10 +37,10 @@ The binding rule is defined in [policies/language-policy.yaml](policies/language
 - Plugin roadmap: [plugins/GANTT.md](plugins/GANTT.md)
 - Workflow roadmap: [workflows/GANTT.md](workflows/GANTT.md)
 - Usecase roadmap: [usecases/GANTT.md](usecases/GANTT.md)
-- Static knowledge graph: [knowledge-graph/notarial-top10.graph.json](knowledge-graph/notarial-top10.graph.json),
-  [knowledge-graph/notarial-top10.md](knowledge-graph/notarial-top10.md),
-  [knowledge-graph/notarial-next10.graph.json](knowledge-graph/notarial-next10.graph.json),
-  [knowledge-graph/notarial-next10.md](knowledge-graph/notarial-next10.md)
+- Usecase-local knowledge graphs: [usecases/README.md](usecases/README.md),
+  with each case carrying its own `knowledge-graph.graph.json` and
+  `knowledge-graph.md` files, for example
+  [usecases/immobilienkaufvertrag/knowledge-graph.graph.json](usecases/immobilienkaufvertrag/knowledge-graph.graph.json)
 
 ## Product Structure
 
@@ -52,10 +52,8 @@ This repository now separates three product layers:
   and deterministic Python execution.
 - [usecases/](usecases): concrete notarial scenarios such as online GmbH formation,
   AO52 nonprofit software-company formation, real-estate purchase contracts,
-  and testaments.
-- [knowledge-graph/](knowledge-graph): static KG/DB state for open questions, documents,
-  decisions, gates and evidence references for the canonical Top-10 and Next-10
-  notarial case types.
+  and testaments. Each usecase owns its own static KG/DB state for open
+  questions, documents, decisions, gates and evidence references.
 
 Every push must update [roadmap/GANTT.md](roadmap/GANTT.md). Changes below [plugins/](plugins),
 [workflows/](workflows), or [usecases/](usecases) must also update the matching area Gantt.
@@ -97,4 +95,4 @@ python scripts/quality_gate.py --profile strict
 
 The strict quality gate validates process files, tests, privacy rules,
 governance sync, language parity, cloud runbook parity, plugin manifests,
-AI-SBOM state, Gantt updates and the static knowledge graph.
+AI-SBOM state, Gantt updates and the usecase-local static knowledge graphs.

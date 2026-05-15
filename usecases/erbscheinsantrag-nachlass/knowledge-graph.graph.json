@@ -1,0 +1,347 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.erbscheinsantrag-nachlass",
+  "catalog_group": "top10",
+  "title": "NoC usecase knowledge graph: Erbscheinsantrag / Nachlassangelegenheiten",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.erbscheinsantrag_nachlass",
+      "slug": "erbscheinsantrag-nachlass",
+      "title": "Erbscheinsantrag / Nachlassangelegenheiten",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/erbscheinsantrag-nachlass",
+      "summary": "Application and declarations for certificate of inheritance, estate court proceedings, renunciation, oath and inheritance evidence workflows.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.bgb.2353",
+        "src.gbo"
+      ],
+      "required_information": [
+        {
+          "id": "decedent.identity",
+          "label": "Decedent identity and death metadata",
+          "status": "open",
+          "value": null,
+          "question": "Who died, when and where, and which evidence confirms this?",
+          "owner_role": "applicant",
+          "privacy_class": "personal_data",
+          "required_for": [
+            "application",
+            "court_route"
+          ]
+        },
+        {
+          "id": "residence.jurisdiction",
+          "label": "Last habitual residence and jurisdiction",
+          "status": "open",
+          "value": null,
+          "question": "Which estate court has jurisdiction based on last habitual residence or other route?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "court_route"
+          ]
+        },
+        {
+          "id": "applicants.identity",
+          "label": "Applicant identities and application authority",
+          "status": "open",
+          "value": null,
+          "question": "Who applies and in which legal position?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_data",
+          "required_for": [
+            "identity_gate",
+            "application"
+          ]
+        },
+        {
+          "id": "heirship.basis",
+          "label": "Heirship basis",
+          "status": "open",
+          "value": null,
+          "question": "Is heirship based on statutory succession, will, inheritance contract or European certificate context?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": [
+            "legal_review",
+            "application"
+          ]
+        },
+        {
+          "id": "family.evidence",
+          "label": "Family and civil-status evidence",
+          "status": "open",
+          "value": null,
+          "question": "Which birth, marriage, divorce, adoption or death evidence is required?",
+          "owner_role": "applicant",
+          "privacy_class": "family_data",
+          "required_for": [
+            "evidence_package"
+          ]
+        },
+        {
+          "id": "dispositions.evidence",
+          "label": "Wills, inheritance contracts and opening records",
+          "status": "open",
+          "value": null,
+          "question": "Which dispositions and opening records exist and where are they referenced?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "sensitive_legal_data",
+          "required_for": [
+            "legal_review",
+            "evidence_package"
+          ]
+        },
+        {
+          "id": "renunciations.disclaimers",
+          "label": "Renunciations, disclaimers and contests",
+          "status": "open",
+          "value": null,
+          "question": "Are there renunciations, disclaimers, contests, disinheritance or mandatory-share issues?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_legal_data",
+          "required_for": [
+            "legal_review"
+          ]
+        },
+        {
+          "id": "oath.statement",
+          "label": "Eidesstattliche Versicherung statement scope",
+          "status": "open",
+          "value": null,
+          "question": "Which facts must be declared under oath and by whom?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_process_data",
+          "required_for": [
+            "application",
+            "appointment"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.death_certificate_reference",
+          "label": "Death certificate or official death evidence reference",
+          "status": "open",
+          "source": "manual reviewed evidence store",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.application_draft",
+          "label": "Certificate of inheritance application draft",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.family_evidence",
+          "label": "Civil-status evidence package",
+          "status": "open",
+          "source": "manual reviewed evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.certificate_type",
+          "label": "National certificate, European certificate or other declaration",
+          "status": "open",
+          "options": [
+            "national_erbschein",
+            "european_certificate",
+            "renunciation",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.oath_required",
+          "label": "Oath declaration route",
+          "status": "open",
+          "options": [
+            "notary",
+            "court",
+            "not_required",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.heirship_review",
+          "label": "Heirship and evidence reviewed by notary",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.oath_readiness",
+          "label": "Oath statement and appointment readiness checked",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.evidence_package",
+          "label": "Civil-status and disposition evidence index",
+          "status": "open"
+        },
+        {
+          "id": "evidence.court_submission",
+          "label": "Estate court submission trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "heirship.basis",
+          "to": "gate.heirship_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "oath.statement",
+          "to": "gate.oath_readiness",
+          "type": "requires"
+        },
+        {
+          "from": "family.evidence",
+          "to": "evidence.evidence_package",
+          "type": "evidenced_by"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,324 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.loeschungsbewilligung-grundbuchloeschung",
+  "catalog_group": "next10",
+  "title": "NoC usecase knowledge graph: Loeschungsbewilligung / Grundbuchloeschung",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.loeschungsbewilligung_grundbuchloeschung",
+      "slug": "loeschungsbewilligung-grundbuchloeschung",
+      "title": "Loeschungsbewilligung / Grundbuchloeschung",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/loeschungsbewilligung-grundbuchloeschung",
+      "summary": "Deletion of registered land rights, often old land charges after loan repayment, with creditor authorization, owner consent, deed/evidence form and filing trace.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.gbo.19_29_46",
+        "src.bgb.875"
+      ],
+      "required_information": [
+        {
+          "id": "property.identity",
+          "label": "Property and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which land register district, sheet, section and entry are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "land_register_review",
+            "filing"
+          ]
+        },
+        {
+          "id": "right.identity",
+          "label": "Right to be deleted",
+          "status": "open",
+          "value": null,
+          "question": "Which land charge, mortgage, easement, restriction or other right should be deleted?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "drafting",
+            "filing"
+          ]
+        },
+        {
+          "id": "creditor.authorization",
+          "label": "Creditor or beneficiary authorization",
+          "status": "open",
+          "value": null,
+          "question": "Who is the current beneficiary and how is authorization to consent to deletion proven?",
+          "owner_role": "notary",
+          "privacy_class": "company_or_financial_data",
+          "required_for": [
+            "authority_review"
+          ]
+        },
+        {
+          "id": "owner.consent",
+          "label": "Owner consent and representation",
+          "status": "open",
+          "value": null,
+          "question": "Is owner consent required and who may sign for the owner?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "identity_gate",
+            "filing"
+          ]
+        },
+        {
+          "id": "brief.status",
+          "label": "Brief or book right status",
+          "status": "open",
+          "value": null,
+          "question": "Is the right certificated by a letter, and if so where is the letter or replacement evidence?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "financial_metadata",
+          "required_for": [
+            "evidence_package"
+          ]
+        },
+        {
+          "id": "filing.route",
+          "label": "Filing route and post-deletion notification",
+          "status": "open",
+          "value": null,
+          "question": "Which notary filing route, portal and completion notification should be used?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": [
+            "submission",
+            "closing"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.deletion_consent",
+          "label": "Deletion authorization or consent",
+          "status": "open",
+          "source": "creditor, beneficiary or owner document",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.land_register_excerpt",
+          "label": "Current land register excerpt",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.right_letter",
+          "label": "Land-charge, mortgage or replacement letter evidence if required",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.deletion_type",
+          "label": "Full deletion, partial deletion or correction",
+          "status": "open",
+          "options": [
+            "full",
+            "partial",
+            "correction",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.brief_handling",
+          "label": "Letter handling route",
+          "status": "open",
+          "options": [
+            "book_right",
+            "letter_present",
+            "replacement_evidence",
+            "blocked",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.authority_review",
+          "label": "Beneficiary authorization reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.filing_ready",
+          "label": "Deletion filing package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-grundbuch-portal",
+        "noc-bnotk-xnp"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.authorization_trace",
+          "label": "Authorization and evidence package reference",
+          "status": "open"
+        },
+        {
+          "id": "evidence.deletion_completion",
+          "label": "Deletion application and completion trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "right.identity",
+          "to": "doc.land_register_excerpt",
+          "type": "requires"
+        },
+        {
+          "from": "creditor.authorization",
+          "to": "gate.authority_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "brief.status",
+          "to": "decision.brief_handling",
+          "type": "requires_decision"
+        }
+      ]
+    }
+  ]
+}

@@ -96,6 +96,15 @@ progress_tracking:
   require_area_gantt_update_for_area_changes: true
   enforced_by: scripts/validate_gantt_progress.py
 
+knowledge_graph:
+  location: usecase_local
+  required_files_per_usecase:
+    - knowledge-graph.graph.json
+    - knowledge-graph.md
+  prohibit_central_knowledge_graph_root: true
+  values_must_stay_empty_in_git: true
+  enforced_by: scripts/validate_knowledge_graph.py
+
 plugin_execution:
   local_workspace: ~/NoC
   omnistation_execution_allowed: false

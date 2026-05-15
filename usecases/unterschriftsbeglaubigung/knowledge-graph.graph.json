@@ -1,0 +1,340 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.unterschriftsbeglaubigung",
+  "catalog_group": "top10",
+  "title": "NoC usecase knowledge graph: Beglaubigung von Unterschriften",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.unterschriftsbeglaubigung",
+      "slug": "unterschriftsbeglaubigung",
+      "title": "Beglaubigung von Unterschriften",
+      "status": "open",
+      "priority": "P1",
+      "usecase_path": "usecases/unterschriftsbeglaubigung",
+      "summary": "Public certification of signatures or hand signs for register filings, powers of attorney, approvals, deletion consents or authority declarations.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.hgb.12"
+      ],
+      "required_information": [
+        {
+          "id": "signer.identity",
+          "label": "Signer identity",
+          "status": "open",
+          "value": null,
+          "question": "Who signs and how is identity established?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_data",
+          "required_for": [
+            "identity_gate",
+            "certificate"
+          ]
+        },
+        {
+          "id": "document.purpose",
+          "label": "Document purpose and recipient",
+          "status": "open",
+          "value": null,
+          "question": "What is the document used for and who receives it?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "certificate",
+            "routing"
+          ]
+        },
+        {
+          "id": "signature.mode",
+          "label": "Signature already made or made before notary",
+          "status": "open",
+          "value": null,
+          "question": "Is the signature acknowledged or executed in front of the notary?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "certificate"
+          ]
+        },
+        {
+          "id": "language.understanding",
+          "label": "Language and understanding flags",
+          "status": "open",
+          "value": null,
+          "question": "Can the signer understand the relevant language or is translation/support needed?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_process_data",
+          "required_for": [
+            "legal_review",
+            "appointment"
+          ]
+        },
+        {
+          "id": "representation.context",
+          "label": "Representation or company role",
+          "status": "open",
+          "value": null,
+          "question": "Does the signer act personally, as representative, organ, guardian or agent?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "authority_review"
+          ]
+        },
+        {
+          "id": "copies.routing",
+          "label": "Copies, electronic certificate and routing",
+          "status": "open",
+          "value": null,
+          "question": "Which copies, electronic witnesses or delivery routes are required?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "closing"
+          ]
+        },
+        {
+          "id": "special.form",
+          "label": "Special form or legalization need",
+          "status": "open",
+          "value": null,
+          "question": "Is apostille, legalization, register-specific form or foreign use involved?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "legal_review",
+            "routing"
+          ]
+        },
+        {
+          "id": "fee.metadata",
+          "label": "Fee value and billing metadata",
+          "status": "open",
+          "value": null,
+          "question": "Which value or fee metadata is needed for billing?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "financial_metadata",
+          "required_for": [
+            "closing"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.signed_document",
+          "label": "Document with signature to certify",
+          "status": "open",
+          "source": "manual reviewed upload or paper original",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.certification_note",
+          "label": "Certification note or electronic witness",
+          "status": "open",
+          "source": "notary system",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.certification_scope",
+          "label": "Certify identity/signature only or include authority evidence",
+          "status": "open",
+          "options": [
+            "signature_only",
+            "with_authority_evidence",
+            "blocked",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.routing",
+          "label": "Paper, electronic or register filing route",
+          "status": "open",
+          "options": [
+            "paper",
+            "electronic",
+            "register_filing",
+            "foreign_use",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.identity_and_signature",
+          "label": "Identity and signature act reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.form_route",
+          "label": "Correct form and route selected",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-idaas",
+        "noc-bnotk-xnp"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.identity_check",
+          "label": "Identity check evidence reference",
+          "status": "open"
+        },
+        {
+          "id": "evidence.delivery_trace",
+          "label": "Delivery or filing trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "signer.identity",
+          "to": "gate.identity_and_signature",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "special.form",
+          "to": "decision.routing",
+          "type": "informs"
+        },
+        {
+          "from": "copies.routing",
+          "to": "evidence.delivery_trace",
+          "type": "evidenced_by"
+        }
+      ]
+    }
+  ]
+}

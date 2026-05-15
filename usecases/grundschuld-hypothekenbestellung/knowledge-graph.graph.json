@@ -1,0 +1,345 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.grundschuld-hypothekenbestellung",
+  "catalog_group": "top10",
+  "title": "NoC usecase knowledge graph: Grundschuld / Hypothekenbestellung",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.grundschuld_hypothek",
+      "slug": "grundschuld-hypothekenbestellung",
+      "title": "Grundschuld / Hypothekenbestellung",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/grundschuld-hypothekenbestellung",
+      "summary": "Creation, amendment or refinancing of a land charge or mortgage for bank financing, including owner, debtor, lender, rank and enforceability details.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.gbo"
+      ],
+      "required_information": [
+        {
+          "id": "property.identity",
+          "label": "Charged property identity",
+          "status": "open",
+          "value": null,
+          "question": "Which property or unit is to be charged and which land register excerpt is current?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "land_register_review",
+            "filing"
+          ]
+        },
+        {
+          "id": "owner.identity",
+          "label": "Owner and representation",
+          "status": "open",
+          "value": null,
+          "question": "Who grants the charge and does the signer have authority?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "identity_gate",
+            "drafting"
+          ]
+        },
+        {
+          "id": "debtor.identity",
+          "label": "Personal debtor and borrower relation",
+          "status": "open",
+          "value": null,
+          "question": "Who is the borrower or personal debtor and is this identical with the owner?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "drafting",
+            "consumer_review"
+          ]
+        },
+        {
+          "id": "lender.identity",
+          "label": "Creditor bank and contact route",
+          "status": "open",
+          "value": null,
+          "question": "Which bank is creditor and which reviewed instruction channel applies?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "bank_instruction_review",
+            "filing"
+          ]
+        },
+        {
+          "id": "charge.amount",
+          "label": "Amount, currency, interest and ancillary charges",
+          "status": "open",
+          "value": null,
+          "question": "What amount, currency, annual interest and ancillary performance are requested?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "drafting",
+            "bank_instruction_review"
+          ]
+        },
+        {
+          "id": "security.purpose",
+          "label": "Security purpose and underlying transaction",
+          "status": "open",
+          "value": null,
+          "question": "Which financing or refinancing context explains the security purpose?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "legal_review",
+            "consumer_review"
+          ]
+        },
+        {
+          "id": "ranking.requirement",
+          "label": "Rank, prior rights and deletion consents",
+          "status": "open",
+          "value": null,
+          "question": "Which rank is required and do prior rights or deletion consents affect the application?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "land_register_review",
+            "filing"
+          ]
+        },
+        {
+          "id": "enforcement.clause",
+          "label": "Submission to immediate enforcement",
+          "status": "open",
+          "value": null,
+          "question": "Is submission to immediate enforcement requested against property, personal assets, or both?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "drafting",
+            "legal_review"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.bank_instruction",
+          "label": "Bank land charge order",
+          "status": "open",
+          "source": "bank-provided instruction package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.land_register_excerpt",
+          "label": "Land register excerpt",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.charge_type",
+          "label": "Land charge, mortgage or amendment",
+          "status": "open",
+          "options": [
+            "land_charge",
+            "mortgage",
+            "amendment",
+            "refinancing",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.execution_clause_scope",
+          "label": "Scope of enforcement clause",
+          "status": "open",
+          "options": [
+            "property_only",
+            "personal_assets",
+            "both",
+            "not_requested",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.bank_instruction_review",
+          "label": "Bank instruction matched to draft",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        },
+        {
+          "id": "gate.rank_review",
+          "label": "Rank and prior-rights review completed",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-grundbuch-portal",
+        "noc-bnotk-xnp"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.bank_instruction_hash",
+          "label": "Reviewed bank instruction evidence reference",
+          "status": "open"
+        },
+        {
+          "id": "evidence.land_register_application",
+          "label": "Land register application trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "doc.bank_instruction",
+          "to": "charge.amount",
+          "type": "populates"
+        },
+        {
+          "from": "ranking.requirement",
+          "to": "gate.rank_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "enforcement.clause",
+          "to": "decision.execution_clause_scope",
+          "type": "requires_decision"
+        }
+      ]
+    }
+  ]
+}

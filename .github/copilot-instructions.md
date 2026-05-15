@@ -21,6 +21,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, gepruefter und lokal sauberer Stand fertig.
 - Jeder Push muss [roadmap/GANTT.md](../roadmap/GANTT.md) aktualisieren; Aenderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
 - Trenne installierbare Plugin-Artefakte ([plugins/](../plugins)), ausfuehrbare Notariats-Workflows ([workflows/](../workflows)) und konkrete notarielle Usecases ([usecases/](../usecases)).
+- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulaessig.
 - Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
 - Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
 - README-, START_HERE-, Index- und Agentenregel-Dateien muessen interne Repo-Verweise als klickbare Markdown-Links fuehren; Code-Formatierung ist fuer Befehle, Konfigurationsschluessel, Dateimuster und Code-Identifier reserviert.

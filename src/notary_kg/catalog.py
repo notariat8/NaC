@@ -6,10 +6,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_CATALOG_FILES = (
-    "knowledge-graph/notarial-top10.graph.json",
-    "knowledge-graph/notarial-next10.graph.json",
-)
+DEFAULT_CATALOG_GLOB = "usecases/*/knowledge-graph.graph.json"
 EMPTY_VALUES = (None, "", [], {})
 
 
@@ -158,11 +155,15 @@ class KnowledgeGraphCatalog:
 
 def load_catalogs(
     repo_root: Path,
-    catalog_files: tuple[str, ...] = DEFAULT_CATALOG_FILES,
+    catalog_files: tuple[str, ...] | None = None,
 ) -> list[KnowledgeGraphCatalog]:
     catalogs: list[KnowledgeGraphCatalog] = []
-    for relative_path in catalog_files:
-        path = repo_root / relative_path
+    if catalog_files is None:
+        paths = sorted(repo_root.glob(DEFAULT_CATALOG_GLOB))
+    else:
+        paths = [repo_root / relative_path for relative_path in catalog_files]
+
+    for path in paths:
         payload = json.loads(path.read_text(encoding="utf-8"))
         catalogs.append(KnowledgeGraphCatalog(repo_root=repo_root, source_path=path, payload=payload))
     return catalogs

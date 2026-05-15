@@ -78,7 +78,7 @@ at least one matching implementation surface:
 - tests under [tests/](../../tests)
 - plugin artifacts under [plugins/](../../plugins)
 - workflow contracts under [workflows/contracts/](../../workflows/contracts)
-- KG artifacts under [knowledge-graph/](../../knowledge-graph)
+- KG artifacts directly in the matching usecase folder under [usecases/](../../usecases)
 - roadmap or Gantt status under [roadmap/](../../roadmap), [plugins/](../../plugins), [workflows/](../../workflows) or
   [usecases/](../../usecases)
 
@@ -88,8 +88,7 @@ at least one matching implementation surface:
 | --- | --- |
 | [plugins/](../../plugins) | Installable plugin artifacts for GPT Store, workspace or local integration. |
 | [workflows/](../../workflows) | Skills, workflow contracts and deterministic Python workflows. |
-| [usecases/](../../usecases) | Concrete notarial case types and pilot packages. |
-| [knowledge-graph/](../../knowledge-graph) | Static KG/DB for open information, documents, decisions, gates and evidence. |
+| [usecases/](../../usecases) | Concrete notarial case types and pilot packages with their own static KG/DB as `knowledge-graph.graph.json` and `knowledge-graph.md`. |
 | [docs/en/eventstream/](eventstream) | Event journal, EventLock and cloud runbooks. |
 | [docs/en/issues/](issues) | Issue taxonomy, issue operations and public backlog. |
 | [docs/en/operations/](operations) | Fork/release, upstream sync, version binding, work model and repository consolidation. |

@@ -14,6 +14,7 @@ alwaysApply: true
 - Jeder Push muss [roadmap/GANTT.md](../../roadmap/GANTT.md) aktualisieren.
 - Aenderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
 - Das Repo trennt installierbare Plugin-Artefakte ([plugins/](../../plugins)), ausfuehrbare Notariats-Workflows ([workflows/](../../workflows)) und konkrete notarielle Usecases ([usecases/](../../usecases)).
+- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulaessig.
 - Sensible Prozesse brauchen fachliche Freigabe.
 - Abschlussstaende werden versioniert markiert.
 - Keine vertraulichen Daten ungeschuetzt in Prozessdateien.

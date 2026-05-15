@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.schenkungsvertrag_uebertragung`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Sections 518 and 311b, GBO
 
 ## Goal

@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.handelsregisteranmeldung`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, HGB Section 12, GmbHG
 
 ## Goal

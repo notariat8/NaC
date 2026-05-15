@@ -2,6 +2,7 @@
 
 Status: KG baseline, active intake  
 KG node: `case.online_gmbh_gruendung`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Source repository checked on 2026-05-14: `ofunk/Online-GmbH-Gruendung`  
 Primary source anchors: BeurkG, GmbHG, HGB Section 12
 

@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.adoption_familienrechtliche_erklaerungen`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Section 1750
 
 ## Goal

@@ -1,8 +1,8 @@
 # Notary Usecases
 
 This directory contains concrete notarial usecases. Usecases are separate from
-installable plugins, reusable workflow execution logic and static knowledge
-graph state.
+installable plugins and reusable workflow execution logic. Static knowledge
+graph state is case-local and belongs in the matching usecase folder.
 
 ## Boundary
 
@@ -10,8 +10,9 @@ graph state.
 - `workflows/` provides reusable skills and deterministic Python workflow logic.
 - `usecases/` describes concrete notarial business scenarios and their required
   plugin/workflow bindings.
-- `knowledge-graph/` stores the static KG/DB for open questions, documents,
-  decisions, gates and evidence references.
+- Each `usecases/<slug>/` folder owns its own static KG/DB files:
+  `knowledge-graph.graph.json` for machine-readable state and
+  `knowledge-graph.md` for human review.
 
 ## Canonical Top-10 Catalog
 
@@ -52,21 +53,24 @@ graph state.
 
 ## Knowledge Graph Binding
 
-The static KG is maintained in:
+The static KG is maintained inside each usecase folder:
 
-- `knowledge-graph/notarial-top10.graph.json`
-- `knowledge-graph/notarial-top10.md`
-- `knowledge-graph/notarial-next10.graph.json`
-- `knowledge-graph/notarial-next10.md`
+- [immobilienkaufvertrag/knowledge-graph.graph.json](immobilienkaufvertrag/knowledge-graph.graph.json)
+- [online-gmbh-gruendung/knowledge-graph.graph.json](online-gmbh-gruendung/knowledge-graph.graph.json)
+- [bautraegervertrag/knowledge-graph.graph.json](bautraegervertrag/knowledge-graph.graph.json)
+- [ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json](ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json)
+- [steuer-aas/knowledge-graph.graph.json](steuer-aas/knowledge-graph.graph.json)
 
-Each canonical Top-10 and Next-10 usecase has a matching KG case node. Workflows
-should read KG nodes as open-question state and write updates through reviewed
-Git changes. Real mandate values must stay outside the repository.
+Every usecase folder must carry exactly one case-local KG graph and one Markdown
+review view. Workflows should read that local KG as open-question state and
+write updates through reviewed Git changes. Real mandate values must stay
+outside the repository.
 
 ## Further Backlog Candidates
 
-The next backlog candidates are recorded in `notarial-next10.graph.json` but do
-not yet have canonical usecase folders:
+The next backlog candidates do not yet have canonical usecase folders. Once a
+candidate becomes a usecase folder, it must receive its own
+`knowledge-graph.graph.json` and `knowledge-graph.md` immediately:
 
 - Genehmigungserklaerungen
 - Rangruecktritt/Rangaenderung im Grundbuch

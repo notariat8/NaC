@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.pflichtteilsverzicht_erbverzicht`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Sections 2346 and 2348
 
 ## Goal

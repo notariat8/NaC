@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.ehevertrag_scheidungsfolgen`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Section 1410, Versorgungsausgleich context
 
 ## Goal
