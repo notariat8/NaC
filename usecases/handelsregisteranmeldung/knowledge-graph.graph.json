@@ -1,0 +1,343 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.handelsregisteranmeldung",
+  "catalog_group": "top10",
+  "title": "NoC usecase knowledge graph: Handelsregisteranmeldung",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.handelsregisteranmeldung",
+      "slug": "handelsregisteranmeldung",
+      "title": "Handelsregisteranmeldung",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/handelsregisteranmeldung",
+      "summary": "Register application for changes such as managing director changes, seat relocation, capital measures, company name changes or procuration.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.hgb.12",
+        "src.gmbhg"
+      ],
+      "required_information": [
+        {
+          "id": "entity.identity",
+          "label": "Entity, register court and register number",
+          "status": "open",
+          "value": null,
+          "question": "Which entity and register sheet are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_register_data",
+          "required_for": [
+            "register_review",
+            "application_draft"
+          ]
+        },
+        {
+          "id": "event.type",
+          "label": "Register event type",
+          "status": "open",
+          "value": null,
+          "question": "Which event is being registered: management, seat, capital, company name, object, prokura or other?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": [
+            "application_draft",
+            "legal_review"
+          ]
+        },
+        {
+          "id": "signers.identity",
+          "label": "Signing persons and signing authority",
+          "status": "open",
+          "value": null,
+          "question": "Who must sign and how is authority proven?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "identity_gate",
+            "public_certification"
+          ]
+        },
+        {
+          "id": "corporate.resolution",
+          "label": "Corporate resolution or legal basis",
+          "status": "open",
+          "value": null,
+          "question": "Which resolution, articles clause or external fact authorizes the application?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": [
+            "legal_review",
+            "attachments"
+          ]
+        },
+        {
+          "id": "attachments.required",
+          "label": "Required attachments",
+          "status": "open",
+          "value": null,
+          "question": "Which documents must be filed in machine-readable electronic form?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_data",
+          "required_for": [
+            "filing_package"
+          ]
+        },
+        {
+          "id": "effective.date",
+          "label": "Effective date and wording",
+          "status": "open",
+          "value": null,
+          "question": "Is the change already effective, conditional, future-dated or register-effective only?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": [
+            "application_draft",
+            "legal_review"
+          ]
+        },
+        {
+          "id": "xnp.route",
+          "label": "XNP and signature route",
+          "status": "open",
+          "value": null,
+          "question": "Which notary card, XNP workspace and EGVP/beN route will be used?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": [
+            "technical_readiness",
+            "submission"
+          ]
+        },
+        {
+          "id": "fees.costs",
+          "label": "Cost and invoice metadata",
+          "status": "open",
+          "value": null,
+          "question": "Which value or cost metadata is required for GNotKG and office billing?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "financial_metadata",
+          "required_for": [
+            "closing"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.register_application",
+          "label": "Publicly certified electronic register application",
+          "status": "open",
+          "source": "noc-bnotk-xnp and noc-handelsregister",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.corporate_evidence",
+          "label": "Resolution, appointment, articles or related evidence",
+          "status": "open",
+          "source": "manual reviewed upload or generated draft",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.event_route",
+          "label": "Standard or special register route",
+          "status": "open",
+          "options": [
+            "standard",
+            "special_review",
+            "blocked",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.signature_method",
+          "label": "Signature and certification method",
+          "status": "open",
+          "options": [
+            "in_office",
+            "video",
+            "existing_certified_power",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.public_certification",
+          "label": "Public certification requirements met",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.electronic_format",
+          "label": "Electronic machine-readable package checked",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-bnotk-xnp",
+        "noc-handelsregister",
+        "noc-cyberjack-rfid"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.certification_trace",
+          "label": "Certification and signature evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.register_response",
+          "label": "Register portal submission and response trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "event.type",
+          "to": "attachments.required",
+          "type": "determines"
+        },
+        {
+          "from": "signers.identity",
+          "to": "gate.public_certification",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "xnp.route",
+          "to": "evidence.register_response",
+          "type": "evidenced_by"
+        }
+      ]
+    }
+  ]
+}

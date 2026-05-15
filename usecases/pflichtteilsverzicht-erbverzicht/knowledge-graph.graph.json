@@ -1,0 +1,314 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.pflichtteilsverzicht-erbverzicht",
+  "catalog_group": "next10",
+  "title": "NoC usecase knowledge graph: Pflichtteilsverzicht / Erbverzicht",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.pflichtteilsverzicht_erbverzicht",
+      "slug": "pflichtteilsverzicht-erbverzicht",
+      "title": "Pflichtteilsverzicht / Erbverzicht",
+      "status": "open",
+      "priority": "P1",
+      "usecase_path": "usecases/pflichtteilsverzicht-erbverzicht",
+      "summary": "Contractual inheritance or compulsory-share waiver, often family succession planning, with parties, scope, compensation, extension to descendants and fairness review.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.bgb.2346_2348"
+      ],
+      "required_information": [
+        {
+          "id": "future_decedent.identity",
+          "label": "Future decedent identity and capacity",
+          "status": "open",
+          "value": null,
+          "question": "Who contracts with the waiving party and how is capacity reviewed?",
+          "owner_role": "notary",
+          "privacy_class": "personal_data",
+          "required_for": [
+            "identity_gate",
+            "legal_review"
+          ]
+        },
+        {
+          "id": "waiver_party.identity",
+          "label": "Waiving party identity",
+          "status": "open",
+          "value": null,
+          "question": "Who waives and are representation or approval issues present?",
+          "owner_role": "notary",
+          "privacy_class": "family_data",
+          "required_for": [
+            "identity_gate",
+            "approval_review"
+          ]
+        },
+        {
+          "id": "waiver.scope",
+          "label": "Waiver scope",
+          "status": "open",
+          "value": null,
+          "question": "Is the waiver full inheritance waiver, compulsory-share waiver or limited arrangement?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_legal_data",
+          "required_for": [
+            "drafting"
+          ]
+        },
+        {
+          "id": "descendant.effect",
+          "label": "Effect on descendants",
+          "status": "open",
+          "value": null,
+          "question": "Should or does the waiver extend to descendants?",
+          "owner_role": "notary",
+          "privacy_class": "family_data",
+          "required_for": [
+            "legal_review"
+          ]
+        },
+        {
+          "id": "compensation.model",
+          "label": "Compensation or settlement",
+          "status": "open",
+          "value": null,
+          "question": "Is compensation, settlement, transfer or no consideration intended?",
+          "owner_role": "client",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "drafting",
+            "tax_flags"
+          ]
+        },
+        {
+          "id": "family.fairness_flags",
+          "label": "Family and fairness flags",
+          "status": "open",
+          "value": null,
+          "question": "Are pressure, dependency, minors, care or imbalance flags present?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": [
+            "fairness_review"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.waiver_contract",
+          "label": "Inheritance or compulsory-share waiver contract",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.compensation_evidence",
+          "label": "Compensation or settlement evidence reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.waiver_type",
+          "label": "Waiver type",
+          "status": "open",
+          "options": [
+            "erbverzicht",
+            "pflichtteilsverzicht",
+            "limited",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.compensation",
+          "label": "Compensation arrangement",
+          "status": "open",
+          "options": [
+            "none",
+            "cash",
+            "asset_transfer",
+            "mixed",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.personal_presence_review",
+          "label": "Required personal participation reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.fairness_review",
+          "label": "Family and fairness review completed",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-idaas"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.fairness_notes",
+          "label": "Fairness and instruction evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.execution_trace",
+          "label": "Execution and copy trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "waiver.scope",
+          "to": "decision.waiver_type",
+          "type": "requires_decision"
+        },
+        {
+          "from": "family.fairness_flags",
+          "to": "gate.fairness_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "compensation.model",
+          "to": "decision.compensation",
+          "type": "requires_decision"
+        }
+      ]
+    }
+  ]
+}

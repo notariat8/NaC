@@ -54,8 +54,9 @@ ueberfuehrt werden.
   oder Workspace-Installation.
 - [workflows/](../../workflows) enthaelt installierbare Skills und deterministische
   Python-Workflows fuer Notariatsablaeufe.
-- [usecases/](../../usecases) enthaelt konkrete notarielle Usecases.
-- [knowledge-graph/](../../knowledge-graph) enthaelt statische KG/DB-Artefakte fuer Vorgangsarten.
+- [usecases/](../../usecases) enthaelt konkrete notarielle Usecases; jeder Usecase
+  fuehrt seine eigene KG/DB-Struktur als `knowledge-graph.graph.json` und
+  `knowledge-graph.md` im jeweiligen Usecase-Ordner.
 
 ### Dokumentation
 

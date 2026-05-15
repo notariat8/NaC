@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.erbscheinsantrag_nachlass`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Section 2353, GBO inheritance evidence
 
 ## Goal

@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.vollmacht_immobilien_gesellschaft`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Sections 167 and 129, BGB Section 311b, HGB Section 12
 
 ## Goal

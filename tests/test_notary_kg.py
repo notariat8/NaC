@@ -14,13 +14,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class NotaryKnowledgeGraphTests(unittest.TestCase):
-    def test_loads_top10_and_next10_catalogs(self) -> None:
+    def test_loads_usecase_local_catalogs(self) -> None:
         catalogs = load_catalogs(REPO_ROOT)
         cases = all_case_summaries(catalogs)
+        expected_count = len(list((REPO_ROOT / "usecases").glob("*/knowledge-graph.graph.json")))
 
-        self.assertEqual(len(catalogs), 2)
-        self.assertEqual(len(cases), 20)
-        self.assertEqual({catalog.graph_id for catalog in catalogs}, {"notarial-top10", "notarial-next10"})
+        self.assertEqual(len(catalogs), expected_count)
+        self.assertEqual(len(cases), expected_count)
+        self.assertIn("usecase.bautraegervertrag", {catalog.graph_id for catalog in catalogs})
+        self.assertIn("usecase.ao52aas-gemeinnuetzigkeit", {catalog.graph_id for catalog in catalogs})
 
     def test_all_required_information_values_stay_empty(self) -> None:
         catalogs = load_catalogs(REPO_ROOT)
@@ -49,9 +51,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["totals"]["catalogs"], 2)
-        self.assertEqual(payload["totals"]["cases"], 20)
-        self.assertEqual(payload["totals"]["cases_ready_for_development"], 20)
+        expected_count = len(list((REPO_ROOT / "usecases").glob("*/knowledge-graph.graph.json")))
+        self.assertEqual(payload["totals"]["catalogs"], expected_count)
+        self.assertEqual(payload["totals"]["cases"], expected_count)
+        self.assertEqual(payload["totals"]["cases_ready_for_development"], expected_count)
 
     def test_cli_unknown_case_fails(self) -> None:
         buffer = io.StringIO()

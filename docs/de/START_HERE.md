@@ -80,7 +80,7 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 - Tests unter [tests/](../../tests)
 - Plugin-Artefakte unter [plugins/](../../plugins)
 - Workflow-Vertraege unter [workflows/contracts/](../../workflows/contracts)
-- KG-Artefakte unter [knowledge-graph/](../../knowledge-graph)
+- KG-Artefakte direkt im jeweiligen Usecase-Ordner unter [usecases/](../../usecases)
 - Roadmap-/Gantt-Status unter [roadmap/](../../roadmap), [plugins/](../../plugins), [workflows/](../../workflows) oder
   [usecases/](../../usecases)
 
@@ -90,8 +90,7 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 | --- | --- |
 | [plugins/](../../plugins) | Installierbare Plugin-Artefakte fuer GPT Store, Workspace oder lokale Integration. |
 | [workflows/](../../workflows) | Skills, Workflow-Vertraege und deterministische Python-Workflows. |
-| [usecases/](../../usecases) | Konkrete notarielle Vorgangsarten und Pilotpakete. |
-| [knowledge-graph/](../../knowledge-graph) | Statische KG/DB fuer offene Informationen, Dokumente, Entscheidungen, Gates und Nachweise. |
+| [usecases/](../../usecases) | Konkrete notarielle Vorgangsarten und Pilotpakete mit jeweils eigener statischer KG/DB als `knowledge-graph.graph.json` und `knowledge-graph.md`. |
 | [docs/de/eventstream/](eventstream) | Event-Journal, EventLock und Cloud-Runbooks. |
 | [docs/de/issues/](issues) | Issue-Taxonomie, Issue-Betrieb und Public-Backlog. |
 | [docs/de/operations/](operations) | Fork/Release, Upstream-Sync, Version-Binding, Arbeitsmodell und Repo-Konsolidierung. |

@@ -12,6 +12,7 @@ gantt
     Separate workflow root from plugins         :done,   w1, 2026-05-14, 1d
     Define skill and Python workflow boundary   :done,   w2, 2026-05-14, 14d
     KG runtime status CLI MVP                   :done,   w3, 2026-05-15, 1d
+    Usecase-local KG runtime binding            :done,   w3a, 2026-05-15, 1d
     Add workflow contract format                :active, w4, 2026-05-15, 21d
 
     section Execution
@@ -29,5 +30,5 @@ gantt
 | Layer | Root | Status | Boundary |
 | --- | --- | --- | --- |
 | Installable skills | `workflows/skills/` | Planned | LLM-facing operational guidance, no final legal truth. |
-| Python workflows | `workflows/python/` plus `src/notary_kg/` | Active | Deterministic KG status runtime now implemented; next step is contract generation. |
+| Python workflows | `workflows/python/` plus `src/notary_kg/` | Active | Deterministic KG status runtime now reads usecase-local KG files; next step is contract generation. |
 | Workflow contracts | `workflows/contracts/` | Active next | Inputs, outputs, approvals, data classes, and plugin dependencies. |

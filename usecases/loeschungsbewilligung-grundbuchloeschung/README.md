@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.loeschungsbewilligung_grundbuchloeschung`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, GBO Sections 19/29/46, BGB Section 875
 
 ## Goal

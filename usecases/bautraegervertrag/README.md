@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.bautraegervertrag`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Sections 311b and 650u, AbschlagsV, GBO
 
 ## Goal

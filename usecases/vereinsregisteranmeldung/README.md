@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.vereinsregisteranmeldung`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB Section 77
 
 ## Goal

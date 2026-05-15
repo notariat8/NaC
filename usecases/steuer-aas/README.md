@@ -1,6 +1,7 @@
 # Steuer-aaS Tax Readiness
 
 Status: active intake
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
 Source repository checked on 2026-05-14: `ofunk/Steuer-aaS`
 

@@ -16,8 +16,9 @@ Python workflows must provide:
 
 ## Implemented Runtime Surface
 
-The first implemented runtime is `src/notary_kg/`. It reads the static notarial
-KG catalogs and exposes executable readiness/status views.
+The first implemented runtime is [src/notary_kg/](../../src/notary_kg). It reads
+the usecase-local static notarial KG files and exposes executable
+readiness/status views.
 
 ```bash
 python scripts/notary_kg.py --repo-root . status

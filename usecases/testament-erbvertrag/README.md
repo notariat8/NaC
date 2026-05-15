@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.testament_erbvertrag`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, BGB succession rules
 
 ## Goal

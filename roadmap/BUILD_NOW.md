@@ -2,7 +2,7 @@
 
 Status: active development  
 Last update: 2026-05-15  
-Branch: `codex-gantt-usecase-structure`
+Branch: `main`
 
 ## What Is Being Built
 
@@ -14,14 +14,15 @@ python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 ```
 
-The runtime reads the static KG catalogs, summarizes development readiness and
-exposes case-level open questions, gates, documents and plugin dependencies.
+The runtime reads the usecase-local static KG files, summarizes development
+readiness and exposes case-level open questions, gates, documents and plugin
+dependencies.
 
 ## Current Executable Surface
 
 | Surface | Status | Evidence |
 | --- | --- | --- |
-| KG catalogs | Implemented | `knowledge-graph/notarial-top10.graph.json`, `knowledge-graph/notarial-next10.graph.json` |
+| Case-local KG files | Implemented | `usecases/*/knowledge-graph.graph.json`, `usecases/*/knowledge-graph.md` |
 | KG validator | Implemented | `scripts/validate_knowledge_graph.py` |
 | KG runtime package | Implemented | `src/notary_kg/` |
 | KG CLI | Implemented | `scripts/notary_kg.py`, `notary-kg` after package install |
@@ -32,7 +33,7 @@ exposes case-level open questions, gates, documents and plugin dependencies.
 
 | ID | Work item | Status | Done means |
 | --- | --- | --- | --- |
-| DEV-0001 | Static KG catalogs for Top-10 and Next-10 | Done | JSON catalogs validate and have review Markdown. |
+| DEV-0001 | Case-local static KGs for Top-10, Next-10 and active intake usecases | Done | Every usecase folder has one JSON graph and one review Markdown file. |
 | DEV-0002 | KG validator in strict quality gate | Done | `knowledge_graph` appears in strict quality output. |
 | DEV-0003 | Executable KG status CLI | Done | CLI summarizes catalogs, cases and open nodes. |
 | DEV-0004 | Case-level KG CLI view | Done | CLI returns one case by slug and fails unknown slugs. |

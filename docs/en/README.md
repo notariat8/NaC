@@ -53,7 +53,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [plugins/GANTT.md](../../plugins/GANTT.md), [workflows/GANTT.md](../../workflows/GANTT.md), and [usecases/GANTT.md](../../usecases/GANTT.md) track area progress.
 - [plugins/](../../plugins) contains installable plugin artifacts for GPT Store review or workspace installation.
 - [workflows/](../../workflows) contains installable skills and deterministic Python workflows for notary-office operations.
-- [usecases/](../../usecases) contains concrete notarial scenarios such as online GmbH formation, AO52 nonprofit software-company formation, real-estate purchase contracts, and testaments.
+- [usecases/](../../usecases) contains concrete notarial scenarios such as online GmbH formation, AO52 nonprofit software-company formation, real-estate purchase contracts, and testaments. Each usecase owns its own KG/DB structure as `knowledge-graph.graph.json` and `knowledge-graph.md` in the matching usecase folder.
 - [docs/en/gpt-marketplace-operating-model.md](gpt-marketplace-operating-model.md) separates public GPT Store, Actions, workspace app, and local plugin channels.
 - [docs/en/minimum-requirements.md](minimum-requirements.md) defines minimum requirements for the base workspace, plugin development and local notary workstation.
 - [docs/en/datenschutz-avv-dpa.md](datenschutz-avv-dpa.md) defines the AVV/DPA section for OpenAI-backed processing.

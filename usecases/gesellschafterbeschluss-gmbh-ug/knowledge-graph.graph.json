@@ -1,0 +1,323 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.gesellschafterbeschluss-gmbh-ug",
+  "catalog_group": "next10",
+  "title": "NoC usecase knowledge graph: Gesellschafterbeschluss bei GmbH/UG",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.gesellschafterbeschluss_gmbh_ug",
+      "slug": "gesellschafterbeschluss-gmbh-ug",
+      "title": "Gesellschafterbeschluss bei GmbH/UG",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/gesellschafterbeschluss-gmbh-ug",
+      "summary": "Shareholder resolutions for articles amendment, capital measures, managing-director appointment, consent to share transfers or other company decisions.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.gmbhg.53",
+        "src.hgb.12"
+      ],
+      "required_information": [
+        {
+          "id": "company.identity",
+          "label": "Company and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which GmbH/UG, register court and register number are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_register_data",
+          "required_for": [
+            "register_review"
+          ]
+        },
+        {
+          "id": "resolution.type",
+          "label": "Resolution type and legal basis",
+          "status": "open",
+          "value": null,
+          "question": "Is this an articles amendment, capital measure, appointment, consent or other resolution?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": [
+            "drafting",
+            "legal_review"
+          ]
+        },
+        {
+          "id": "shareholders.present",
+          "label": "Shareholders, votes and representation",
+          "status": "open",
+          "value": null,
+          "question": "Who participates, which votes exist and which representatives act?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "quorum_review",
+            "identity_gate"
+          ]
+        },
+        {
+          "id": "majority.requirement",
+          "label": "Majority and consent requirements",
+          "status": "open",
+          "value": null,
+          "question": "Which statutory and articles-based majority or unanimity requirements apply?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": [
+            "legal_review"
+          ]
+        },
+        {
+          "id": "articles.wording",
+          "label": "Current and amended articles wording",
+          "status": "open",
+          "value": null,
+          "question": "Which current article text is changed and what new wording is proposed?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": [
+            "drafting",
+            "register_application"
+          ]
+        },
+        {
+          "id": "register.filing",
+          "label": "Register filing and notarized certificate route",
+          "status": "open",
+          "value": null,
+          "question": "Which register application, notary certificate and XNP route are required?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": [
+            "submission"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.resolution_minutes",
+          "label": "Shareholder resolution minutes",
+          "status": "open",
+          "source": "notarial deed or certified minutes",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.current_articles",
+          "label": "Current articles and amended wording",
+          "status": "open",
+          "source": "company evidence package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.register_application",
+          "label": "Commercial-register application and certificate",
+          "status": "open",
+          "source": "noc-bnotk-xnp and noc-handelsregister",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.notarial_form",
+          "label": "Resolution form",
+          "status": "open",
+          "options": [
+            "notarial_deed_required",
+            "certified_signature",
+            "private_resolution_only",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.register_relevance",
+          "label": "Register filing required",
+          "status": "open",
+          "options": [
+            "yes",
+            "no",
+            "needs_review",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.quorum_majority_review",
+          "label": "Quorum, votes and majority reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.register_package_ready",
+          "label": "Register package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-bnotk-xnp",
+        "noc-handelsregister",
+        "noc-cyberjack-rfid"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.resolution_review",
+          "label": "Resolution and voting review evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.register_trace",
+          "label": "Register submission and response trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "shareholders.present",
+          "to": "gate.quorum_majority_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "articles.wording",
+          "to": "doc.current_articles",
+          "type": "requires"
+        },
+        {
+          "from": "register.filing",
+          "to": "gate.register_package_ready",
+          "type": "requires"
+        }
+      ]
+    }
+  ]
+}

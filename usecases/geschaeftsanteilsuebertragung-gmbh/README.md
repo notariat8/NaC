@@ -2,6 +2,7 @@
 
 Status: KG baseline  
 KG node: `case.geschaeftsanteilsuebertragung_gmbh`  
+KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 Primary source anchors: BeurkG, GmbHG Section 15, HGB Section 12
 
 ## Goal

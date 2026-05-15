@@ -1,0 +1,323 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "usecase.teilungserklaerung-weg",
+  "catalog_group": "next10",
+  "title": "NoC usecase knowledge graph: Teilungserklaerung nach WEG",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.bgb.1410",
+      "label": "BGB Section 1410 for form of marriage contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.2353",
+      "label": "BGB Section 2353 for certificate of inheritance application",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.bgb.518",
+      "label": "BGB Section 518 for form of gift promise",
+      "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.gbo",
+      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.gmbhg",
+      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    }
+  ],
+  "common_gates": [
+    {
+      "id": "gate.identity",
+      "label": "Identity, capacity and representation reviewed"
+    },
+    {
+      "id": "gate.legal_review",
+      "label": "Notarial legal review completed"
+    },
+    {
+      "id": "gate.data_minimization",
+      "label": "No real mandate data committed to Git"
+    },
+    {
+      "id": "gate.evidence",
+      "label": "Evidence metadata linked to approved storage"
+    }
+  ],
+  "cases": [
+    {
+      "id": "case.teilungserklaerung_weg",
+      "slug": "teilungserklaerung-weg",
+      "title": "Teilungserklaerung nach WEG",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/teilungserklaerung-weg",
+      "summary": "Division of a building into apartment or partial ownership with declaration of division, community rules, plans, certificates and land-register implementation.",
+      "legal_anchors": [
+        "src.beurkg",
+        "src.gbo.19_29_46",
+        "src.weg.8"
+      ],
+      "required_information": [
+        {
+          "id": "property.identity",
+          "label": "Base property identity",
+          "status": "open",
+          "value": null,
+          "question": "Which land register sheet and cadastral object will be divided?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "land_register_review"
+          ]
+        },
+        {
+          "id": "owner.identity",
+          "label": "Owner and authority",
+          "status": "open",
+          "value": null,
+          "question": "Who owns the property and is the owner authorized to divide?",
+          "owner_role": "notary",
+          "privacy_class": "personal_or_company_data",
+          "required_for": [
+            "identity_gate",
+            "drafting"
+          ]
+        },
+        {
+          "id": "unit.structure",
+          "label": "Unit structure and allocation",
+          "status": "open",
+          "value": null,
+          "question": "Which apartment, partial ownership, rooms and special-use rights are planned?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": [
+            "drafting",
+            "plans"
+          ]
+        },
+        {
+          "id": "ownership.shares",
+          "label": "Co-ownership shares",
+          "status": "open",
+          "value": null,
+          "question": "Which co-ownership fractions are assigned to each unit?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": [
+            "declaration"
+          ]
+        },
+        {
+          "id": "plans.certificates",
+          "label": "Plans and separation certificate",
+          "status": "open",
+          "value": null,
+          "question": "Are plans, numbering, completion state and authority certificate available?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": [
+            "evidence_package",
+            "filing"
+          ]
+        },
+        {
+          "id": "encumbrance.handling",
+          "label": "Existing encumbrance allocation",
+          "status": "open",
+          "value": null,
+          "question": "How do existing rights, land charges, easements or restrictions affect the future unit registers?",
+          "owner_role": "notary",
+          "privacy_class": "property_register_data",
+          "required_for": [
+            "legal_review",
+            "filing"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.division_declaration",
+          "label": "Declaration of division and community rules",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.plans_certificate",
+          "label": "Plans and separation certificate reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": false
+        },
+        {
+          "id": "doc.land_register_excerpt",
+          "label": "Current land register excerpt",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.use_case",
+          "label": "Residential ownership, partial ownership or mixed scheme",
+          "status": "open",
+          "options": [
+            "residential",
+            "partial",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "id": "decision.special_use_rights",
+          "label": "Special-use rights included",
+          "status": "open",
+          "options": [
+            "yes",
+            "no",
+            "needs_review",
+            "unknown"
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.plan_certificate_review",
+          "label": "Plans and certificate reviewed",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        },
+        {
+          "id": "gate.land_register_implementation",
+          "label": "Unit-register implementation package ready",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": [
+        "noc-regulated-core",
+        "noc-grundbuch-portal",
+        "noc-bnotk-xnp"
+      ],
+      "workflow_dependencies": [
+        "workflows/contracts",
+        "workflows/python"
+      ],
+      "evidence": [
+        {
+          "id": "evidence.plan_package",
+          "label": "Plans and certificate evidence package",
+          "status": "open"
+        },
+        {
+          "id": "evidence.unit_register_trace",
+          "label": "Land-register implementation trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "unit.structure",
+          "to": "doc.division_declaration",
+          "type": "populates"
+        },
+        {
+          "from": "plans.certificates",
+          "to": "gate.plan_certificate_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "encumbrance.handling",
+          "to": "gate.land_register_implementation",
+          "type": "requires"
+        }
+      ]
+    }
+  ]
+}
