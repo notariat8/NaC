@@ -17,19 +17,26 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 - Plattformname: `Enterprise Control Plane`
 - Referenz: `docs/de/organization-as-code-positioning.md`
 
-## Meine konkrete Empfehlung
+## Projektpositionierung
 
-Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, wuerde ich es so framen:
+Dieses Repository ist der aktive Projektstand fuer `Notariat as Code` mit `NoC`
+als konkreter Enterprise Control Plane.
+
+Verbindliche Positionierung:
 
 - Begriff: `Notariat as Code`
 - Plattformname: `Enterprise Control Plane`
-- erstes Produktversprechen: "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
+- erstes Produktversprechen: "Notarielle Vorgangsarten, Plugins, Workflows,
+  Rollen, Freigaben und Nachweise laufen deklarativ, auditierbar und
+  automatisiert ueber Git."
+- aktueller Entwicklungsstand: `roadmap/BUILD_NOW.md`
 
-Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
+Ein-Satz-Pitch:
 
-Der Ein-Satz-Pitch:
-
-Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
+Notariat as Code ist ein Betriebsmodell, in dem notarielle Vorgangsarten,
+Plugins, Workflows, Policies und operative Aenderungen deklarativ in Git
+beschrieben und ueber eine Enterprise Control Plane in pruefbare Ausfuehrung
+ueberfuehrt werden.
 
 ## Prozessklassen
 

@@ -12,6 +12,26 @@ provide the binding process control.
 - Python validates rules and runs repeatable deterministic checks.
 - GitHub Actions orchestrate checks, approvals, scheduled jobs, and artifacts.
 
+## Project Positioning
+
+This repository is the active project state for `Notariat as Code` with `NoC`
+as the concrete Enterprise Control Plane.
+
+Binding positioning:
+
+- Term: `Notariat as Code`
+- Platform name: `Enterprise Control Plane`
+- First product promise: "Notarial case types, plugins, workflows, roles,
+  approvals and evidence run declaratively, auditable and automated through
+  Git."
+- Current development state: `roadmap/BUILD_NOW.md`
+
+One-sentence pitch:
+
+Notariat as Code is an operating model in which notarial case types, plugins,
+workflows, policies and operational changes are described declaratively in Git
+and moved into verifiable execution through an Enterprise Control Plane.
+
 ## Multilingual Maintenance
 
 Language-specific content is maintained under ISO-639 folder codes:

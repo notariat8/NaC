@@ -28,6 +28,7 @@ gantt
     section B: Notary workflows
     Workflow layer separation                    :active,  b1, 2026-05-14, 14d
     KG runtime status CLI MVP                    :done,    b1a, 2026-05-15, 1d
+    Project voice and active-build docs cleanup  :done,    b1b, 2026-05-15, 1d
     Skill plus Python workflow contracts         :active,  b2, 2026-05-15, 28d
     Deterministic workflow runner MVP            :active,  b3, 2026-05-15, 35d
     Day2 evidence and drift operations           :         b4, after b3, 28d
@@ -48,7 +49,7 @@ gantt
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 64% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, draft artifact and strict validator. |
-| B | Installable skills and deterministic Python workflows | Active | 24% | First executable KG runtime package and CLI are implemented with unit tests; next step is KG-to-contract generation. |
+| B | Installable skills and deterministic Python workflows | Active | 25% | First executable KG runtime package and CLI are implemented with unit tests; project-facing documentation now uses active project decisions and project-internal wording. |
 | C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 52% | Top-10 and Next-10 usecase catalogs now exist with static KG nodes, detailed usecase folders and a strict KG validator. |
 
 ## Rule

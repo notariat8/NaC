@@ -46,9 +46,10 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 - `Execution Layer`: Runtime, Automationen, Prozessausfuehrung
 - `Evidence Layer`: revisionssicheres Event-Journal
 
-## Meine konkrete Empfehlung
+## Projektentscheidung
 
-Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, sollte es so geframed werden.
+Dieses Repository fuehrt die Positionierung als aktive Projektentscheidung. Die
+folgenden Begriffe sind der verbindliche Begriffsrahmen fuer NoC.
 
 Begriff:
 
@@ -60,10 +61,14 @@ Plattformname:
 
 Erstes Produktversprechen:
 
-- "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
+- "Notarielle Vorgangsarten, Plugins, Workflows, Rollen, Freigaben und
+  Nachweise laufen deklarativ, auditierbar und automatisiert ueber Git."
 
-Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
+Der aktuelle Entwicklungsstand wird in `roadmap/BUILD_NOW.md` gepflegt.
 
 ## Der Ein-Satz-Pitch
 
-Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
+Notariat as Code ist ein Betriebsmodell, in dem notarielle Vorgangsarten,
+Plugins, Workflows, Policies und operative Aenderungen deklarativ in Git
+beschrieben und ueber eine Enterprise Control Plane in pruefbare Ausfuehrung
+ueberfuehrt werden.
