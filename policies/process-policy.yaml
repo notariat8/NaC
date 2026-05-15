@@ -71,6 +71,8 @@ change_management:
   require_target_branch_merge_for_update_completion: true
   completion_target_branch: main
   completion_remote: github
+  report_finished_only_after_target_branch_merge: true
+  finished_status_requires_clean_target_branch_workspace: true
 
 portfolio_structure:
   plugin_root: plugins
