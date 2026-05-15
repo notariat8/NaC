@@ -18,6 +18,7 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 
 - German start path: `docs/de/START_HERE.md`
 - English start path: `docs/en/START_HERE.md`
+- Active development board: `roadmap/BUILD_NOW.md`
 - German README: `docs/de/README.md`
 - English README: `docs/en/README.md`
 - AVV/DPA section: `docs/de/datenschutz-avv-dpa.md`, `docs/en/datenschutz-avv-dpa.md`
@@ -53,6 +54,18 @@ Every push must update `roadmap/GANTT.md`. Changes below `plugins/`,
 OpenAI publication channels must be checked before release. Public GPT Store
 packages and workspace-only apps are not the same delivery target, especially
 when apps or actions are involved.
+
+## Current Development Mode
+
+NoC is now being developed as executable software, not only as documentation.
+The current implemented runtime surface is the notarial KG CLI:
+
+```bash
+python scripts/notary_kg.py --repo-root . status
+python scripts/notary_kg.py --repo-root . case bautraegervertrag
+```
+
+The active build board is maintained in `roadmap/BUILD_NOW.md`.
 
 ## Current Workflow Priorities
 

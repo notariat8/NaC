@@ -12,6 +12,7 @@ dependencies = []
 
 [project.scripts]
 business-os = "business_os.cli:main"
+notary-kg = "notary_kg.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
