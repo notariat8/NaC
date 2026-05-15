@@ -58,7 +58,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - `docs/en/minimum-requirements.md` defines minimum requirements for the base workspace, plugin development and local notary workstation.
 - `docs/en/datenschutz-avv-dpa.md` defines the AVV/DPA section for OpenAI-backed processing.
 - `docs/en/sbom-for-ai.md` defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
-- `docs/en/repository-consolidation.md` tracks which standalone repositories are migrated into NoC, still open, or ready for retirement.
+- `docs/en/eventstream/` contains event-journal, EventLock and cloud-runbook documentation.
+- `docs/en/issues/` contains issue taxonomy, issue operations and public backlog.
+- `docs/en/operations/` contains fork/release, upstream sync, version-binding and repository consolidation docs.
+- `docs/en/service-model/` contains core/vertical, provider, tenant and exit docs.
 - `policies/` contains binding governance, technology, language, privacy, and role policies.
 - `schemas/` defines structured process requests.
 - `processes/` contains example business process instances.

@@ -49,7 +49,7 @@ processes/
 ## Risiken und Gegenmassnahmen
 
 - **Risiko:** unklare Zuordnung Core vs. Vertical  
-  **Massnahme:** Abgrenzungsregel aus `docs/de/service-business-core-vertical-blueprint.md` verbindlich anwenden.
+  **Massnahme:** Abgrenzungsregel aus `docs/de/service-model/core-vertical-blueprint.md` verbindlich anwenden.
 
 - **Risiko:** Pfadumbrueche brechen Referenzen  
   **Massnahme:** Migration in kleinen PRs, Referenzpruefung pro PR.

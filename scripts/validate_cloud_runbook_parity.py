@@ -13,7 +13,7 @@ CLOUDS = ("aws", "azure", "gcp", "oci")
 
 RUNBOOKS_BY_LANGUAGE = {
     language: {
-        f"docs/{language}/eventstream-runbook-{cloud}.md"
+        f"docs/{language}/eventstream/runbook-{cloud}.md"
         for cloud in CLOUDS
     }
     for language in STANDARD_LANGUAGES
@@ -22,10 +22,10 @@ RUNBOOKS_BY_LANGUAGE = {
 RUNBOOKS = set().union(*RUNBOOKS_BY_LANGUAGE.values())
 
 PARITY_RELEVANT = RUNBOOKS | {
-    f"docs/{language}/eventstream-implementation-templates.md"
+    f"docs/{language}/eventstream/implementation-templates.md"
     for language in STANDARD_LANGUAGES
 } | {
-    f"docs/{language}/revisionssicherheit-eventstreaming.md"
+    f"docs/{language}/eventstream/revisionssicherheit.md"
     for language in STANDARD_LANGUAGES
 } | {
     "policies/revisionssicherheit-eventstream-policy.yaml",

@@ -80,7 +80,7 @@ flowchart LR
 - Neue Releases gelten nur fuer neue Vorgaenge.
 - Laufende Vorgaenge laufen auf gebundener Version zu Ende.
 
-Details: `docs/en/parallelbetrieb-version-binding.md`
+Details: `docs/en/operations/parallelbetrieb-version-binding.md`
 
 ## Entscheidungslogik fuer Erweiterungen
 

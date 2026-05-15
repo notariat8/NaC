@@ -33,7 +33,7 @@ python3 scripts/startup_check.py --ide auto --run-tests
 
 ## Day1
 
-- Plugin-Plaene lokal in `docs/plugin-plans/` regenerieren.
+- Plugin-Plaene lokal in `docs/en/plugin-plans/` regenerieren.
 - Aenderungen nur ueber Branch, Review und Merge nach `main` fuehren.
 - Bei Konzeptaenderungen Cursor- und VS-Code-Copilot-Pfade synchron halten.
 - Plan Preview als Markdown erzeugen, bevor ein Connector echte Zielsysteme veraendert.

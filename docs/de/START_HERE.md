@@ -92,6 +92,10 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 | `workflows/` | Skills, Workflow-Vertraege und deterministische Python-Workflows. |
 | `usecases/` | Konkrete notarielle Vorgangsarten und Pilotpakete. |
 | `knowledge-graph/` | Statische KG/DB fuer offene Informationen, Dokumente, Entscheidungen, Gates und Nachweise. |
+| `docs/de/eventstream/` | Event-Journal, EventLock und Cloud-Runbooks. |
+| `docs/de/issues/` | Issue-Taxonomie, Issue-Betrieb und Public-Backlog. |
+| `docs/de/operations/` | Fork/Release, Upstream-Sync, Version-Binding, Arbeitsmodell und Repo-Konsolidierung. |
+| `docs/de/service-model/` | Core/Vertical-Struktur, Provider-Leistungen, Tenant-Ownership und Exit. |
 | `src/` | Ausfuehrbare Python-Runtime. |
 | `scripts/` | Lokale und CI-nahe Entwicklerwerkzeuge. |
 | `policies/` | Verbindliche Governance-, Rollen-, Technik-, Datenschutz- und SBOM-Regeln. |

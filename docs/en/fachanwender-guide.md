@@ -146,7 +146,7 @@ Beispiel Notariat:
 - Akte A startet um 10:15 auf `v1.4.0` und bleibt dort.
 - Akte B startet nach Freigabe um 13:00 auf `v1.5.0`.
 
-Details: `docs/en/parallelbetrieb-version-binding.md`
+Details: `docs/en/operations/parallelbetrieb-version-binding.md`
 
 ## Rolle von Verbaenden und Zertifizierung
 

@@ -134,10 +134,10 @@ Jedes Unternehmen dokumentiert vor Go-Live:
 
 ## Detaillierte Runbooks
 
-- Azure-Zielvariante: `docs/en/eventstream-runbook-azure.md`
-- AWS-Zielvariante: `docs/en/eventstream-runbook-aws.md`
-- GCP-Zielvariante: `docs/en/eventstream-runbook-gcp.md`
-- OCI-Zielvariante: `docs/en/eventstream-runbook-oci.md`
+- Azure-Zielvariante: `docs/en/eventstream/runbook-azure.md`
+- AWS-Zielvariante: `docs/en/eventstream/runbook-aws.md`
+- GCP-Zielvariante: `docs/en/eventstream/runbook-gcp.md`
+- OCI-Zielvariante: `docs/en/eventstream/runbook-oci.md`
 
 ## Plattform-Paritaet (verbindlich)
 

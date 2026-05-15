@@ -28,7 +28,7 @@ oci iam region-subscription list --tenancy-id <tenancy_ocid>
 ## Day1
 
 - Resource Manager Stack fuer erste IaC-Konfiguration anlegen.
-- OCI Eventstream-Runbook aus `docs/eventstream-runbook-oci.md` konkretisieren.
+- OCI Eventstream runbook from `docs/en/eventstream/runbook-oci.md` needs to be concretized.
 - Minimalen Plan fuer folgende Komponenten erstellen:
   - Compartment-Struktur.
   - IAM-Policies fuer Operator, Audit Reader und Break Glass.

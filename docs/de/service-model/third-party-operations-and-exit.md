@@ -21,9 +21,9 @@ Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne 
 
 ## Pflichtartefakte fuer Ersetzbarkeit
 
-- Servicekatalog: `docs/de/function8-service-catalog.md`
-- Tenant-Modell: `docs/de/tenant-ownership-and-eventlock-service.md`
-- Revisionssicherheitskonzept: `docs/de/revisionssicherheit-eventstreaming.md`
+- Servicekatalog: `docs/de/service-model/function8-service-catalog.md`
+- Tenant-Modell: `docs/de/service-model/tenant-ownership-and-eventlock-service.md`
+- Revisionssicherheitskonzept: `docs/de/eventstream/revisionssicherheit.md`
 - Cloud-Runbooks: AWS/Azure/GCP/OCI
 - AVV-Checkliste: `docs/de/avv-checkliste-eventlock-saas.md`
 

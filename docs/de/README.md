@@ -48,82 +48,49 @@ ueberfuehrt werden.
 
 ## Repository-Struktur
 
-- `docs/de/` erklaert das fachliche Modell und die Architektur.
-- `roadmap/GANTT.md` zeigt den globalen Fortschritt fuer Plugins, Workflows und Usecases.
-- `plugins/GANTT.md`, `workflows/GANTT.md` und `usecases/GANTT.md` zeigen den Fortschritt je Themenbereich.
-- `plugins/` enthaelt installierbare Plugin-Artefakte fuer GPT-Store-Pruefung oder Workspace-Installation.
-- `workflows/` enthaelt installierbare Skills und deterministische Python-Workflows fuer Notariatsablaeufe.
-- `usecases/` enthaelt konkrete notarielle Usecases wie Online-GmbH-Gruendung, AO52-Gemeinnuetzigkeitsgruendung, Grundstueckskaufvertrag und Testament.
-- `docs/de/fachanwender-guide.md` erklaert das Modell ohne IT-Vorkenntnisse.
-- `docs/de/START_HERE.md` fuehrt neue Nutzer durch die Einfuehrung.
-- `docs/de/vscode-copilot-start.md` ist der Startpfad fuer VS Code + GitHub Copilot.
-- `docs/de/vscode-first-user-path.md` fuehrt Erstnutzer mit einem Formularpfad.
-- `docs/de/copilot-quickstart-15min.md` ist die 15-Minuten-Kurzanleitung fuer Copilot.
-- `docs/de/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
-- `docs/de/fork-and-release-operating-model.md` definiert Upstream/Fork/Domaenen-Betrieb.
-- `docs/de/release-sync-playbook.md` beschreibt den verbindlichen Upstream-Sync-Ablauf.
-- `docs/de/minimum-requirements.md` definiert Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz.
-- `docs/de/repository-consolidation.md` zeigt, welche Einzelrepos nach NoC migriert, noch offen oder stillzulegen sind.
-- `docs/de/parallelbetrieb-version-binding.md` regelt Alt-/Neu-Mischbetrieb je Vorgangsstart.
-- `docs/de/issue-taxonomie-pro-repo.md` definiert Issue-Fuehrung ueber mehrere Repos.
-- `docs/de/einfuehrung-greenfield-brownfield.md` trennt Einfuehrungspfade fuer Greenfield/Brownfield.
-- `docs/de/service-business-core-vertical-blueprint.md` beschreibt Core-und-Vertical-Struktur fuer Dienstleister.
-- `docs/de/vertical-starter-prozesskatalog.md` liefert Starter-Prozesse fuer fuenf Verticals.
-- `docs/de/repo-refactor-plan-single-repo-modules.md` beschreibt Zielstruktur und Migration in einem Repo.
-- `docs/de/arbeitsmodell-agile-cadence.md` definiert Arbeits-Cadence fuer `agile` und `kanban`.
-- `docs/de/access-and-issue-operations.md` regelt Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
-- `docs/de/revisionssicherheit-eventstreaming.md` definiert revisionssicheren Event-Journal-Betrieb.
-- `docs/de/eventstream-implementation-templates.md` liefert konkrete AWS-/Azure-/GCP-/OCI-Implementierungsvorlagen.
-- `docs/de/eventstream-runbook-azure.md` ist das konkrete Azure-Betriebsrunbook.
-- `docs/de/eventstream-runbook-aws.md` ist das konkrete AWS-Betriebsrunbook.
-- `docs/de/eventstream-runbook-gcp.md` ist das konkrete GCP-Betriebsrunbook.
-- `docs/de/eventstream-runbook-oci.md` ist das konkrete OCI-Betriebsrunbook.
-- `docs/de/tenant-ownership-and-eventlock-service.md` beschreibt Tenant-Owner- und Service-Modell.
-- `docs/de/datenschutz-avv-dpa.md` definiert die AVV-/DPA-Sektion fuer OpenAI-gestuetzte Verarbeitung.
-- `docs/de/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
-- `docs/de/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
-- `docs/de/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.
-- `docs/de/organization-as-code-positioning.md` schaerft den Begriffsrahmen Notariat/GitOps/NoC.
-- `docs/de/gpt-marketplace-operating-model.md` trennt Public-GPT-Store-, Action-, Workspace-App- und lokale Plugin-Kanaele.
-- `docs/de/noc-enterprise-control-plane-mvp.md` beschreibt MVP-Scope, 6-Monats-Plan und KPI-Set.
-- `docs/de/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
-- `docs/de/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
-- `docs/de/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
-- `docs/de/sbom-for-ai.md` beschreibt den repo-weiten AI-SBOM-Track nach BSI/G7.
-- `docs/de/public-readiness.md` enthaelt den Public-Go-Live-Status.
-- `docs/de/issue-backlog-public.md` enthaelt priorisierte Public-Issues.
-- `docs/de/startup-verification.md` beschreibt den lokalen Startcheck.
-- `docs/de/role-model.md` enthaelt Rollen, Qualifikationen und Approval-Matrix.
-- `docs/de/github-identity-role-model.md` erklaert GitHub-Login zu Rollenreferenz.
-- `prompts/de/` enthaelt Prompt-Standards fuer das LLM-Frontend.
-- `prompts/de/onboarding/` enthaelt gefuehrte Einfuehrungs-Prompts je Branche.
-- `prompts/de/onboarding/vscode-first-user-assistant.md` ist der gefuehrte Erstnutzer-Prompt.
-- `scripts/startup_check.py` prueft Setup, Policies und optional Tests.
-- `scripts/onboarding_wizard.py` speichert Onboarding-Status ueber mehrere Tage/Personen.
-- `policies/` enthaelt Kultur-, Sprach- und Prozessvorgaben.
-- `policies/technology-policy.yaml` definiert den verbindlichen Technikstack.
-- `policies/data-protection-policy.yaml` definiert Datenschutz- und Secret-Regeln.
-- `policies/sbom-policy.yaml` definiert den verbindlichen SBOM-Standard.
-- `policies/role-model-policy.yaml` definiert Rollenrechte und Qualifikations-Gates.
-- `policies/access-control-policy.yaml` definiert verbindlich Zugriff, Sichtbarkeit und Gastregeln.
-- `policies/revisionssicherheit-eventstream-policy.yaml` definiert Eventstream- und WORM-Pflichten.
-- `policies/tenant-ownership-policy.yaml` definiert Tenant-Ownership und Provider/Kunden-Verantwortung.
-- `policies/provider-open-services-policy.yaml` erzwingt offene Leistungsdokumentation und Ersetzbarkeit.
-- `policies/onboarding-flow.json` definiert Fragen, Phasen und Rollenwissen fuer Onboarding.
-- `policies/onboarding-diagrams.json` definiert BPMN-/Mermaid-Referenzen je Frage.
-- `policies/github-identity-registry.json` mappt GitHub-Login auf technische Rollen.
-- `.cursor/rules/` enthaelt persistente Cursor-Regeln fuer das Vorgehen.
-- `.cursor/rules/11-cloud-runbook-parity.mdc` erzwingt Pflegeparitaet fuer AWS, Azure, GCP, OCI.
-- `.cursor/rules/12-open-service-portability.mdc` erzwingt offene Leistungsdoku und Ersetzbarkeit.
-- `schemas/` definiert strukturierte Prozessantraege.
-- `bpmn/` enthaelt fachlich verbindliche BPMN-2.0-Quellmodelle.
-- `processes/` enthaelt beispielhafte fachliche Instanzen.
-- `src/business_os/` enthaelt die Python-Engine.
-- `.github/workflows/` enthaelt Governance- und Runtime-Workflows.
-- `.github/workflows/sbom-export.yml` erzeugt SBOM-Artefakte fuer Releases.
-- `.github/copilot-instructions.md` enthaelt Repository-Anweisungen fuer Copilot.
-- `.github/ISSUE_TEMPLATE/` enthaelt strukturierte Issue-Formulare.
-- `.github/workflows/governance-policy-sync.yml` erzwingt Policy-zu-Rule-Synchronitaet.
+### Produktbereiche
+
+- `plugins/` enthaelt installierbare Plugin-Artefakte fuer GPT-Store-Pruefung
+  oder Workspace-Installation.
+- `workflows/` enthaelt installierbare Skills und deterministische
+  Python-Workflows fuer Notariatsablaeufe.
+- `usecases/` enthaelt konkrete notarielle Usecases.
+- `knowledge-graph/` enthaelt statische KG/DB-Artefakte fuer Vorgangsarten.
+
+### Dokumentation
+
+- `docs/de/START_HERE.md`: verbindlicher operativer Einstieg.
+- `docs/de/fachanwender-guide.md`: fachliche Einfuehrung ohne IT-Vorkenntnisse.
+- `docs/de/minimum-requirements.md`: Mindestvoraussetzungen fuer Base,
+  Plugin-Entwicklung und lokalen Notariatsarbeitsplatz.
+- `docs/de/eventstream/`: Event-Journal, EventLock und Cloud-Runbooks.
+- `docs/de/issues/`: Issue-Taxonomie, Issue-Betrieb und Public-Backlog.
+- `docs/de/operations/`: Fork/Release, Upstream-Sync, Version-Binding,
+  Arbeitsmodell und Repo-Konsolidierung.
+- `docs/de/service-model/`: Core/Vertical-Struktur, Provider-Leistungen,
+  Tenant-Ownership und Exit.
+- `docs/de/plugin-plans/`: Plugin- und Connector-Plaene.
+- `docs/de/plugin-operations/`: operative Plugin-Nutzung und Pruefpfade.
+- `docs/de/sbom-for-ai.md` und `docs/de/sbom-products.md`: AI-SBOM und
+  klassische SBOM-Produkte.
+- `docs/de/datenschutz-avv-dpa.md` und
+  `docs/de/avv-checkliste-eventlock-saas.md`: Datenschutz, AVV und DPA.
+
+### Governance Und Runtime
+
+- `roadmap/GANTT.md` zeigt den globalen Fortschritt fuer Plugins, Workflows und
+  Usecases.
+- `plugins/GANTT.md`, `workflows/GANTT.md` und `usecases/GANTT.md` zeigen den
+  Fortschritt je Themenbereich.
+- `policies/` enthaelt Kultur-, Sprach-, Prozess-, Technik-, Datenschutz-,
+  Rollen-, Zugriffs-, SBOM- und Provider-Regeln.
+- `.cursor/rules/` und `.github/copilot-instructions.md` spiegeln die
+  verbindlichen Agentenregeln.
+- `schemas/`, `bpmn/`, `processes/`, `src/` und `scripts/` enthalten
+  strukturierte Prozessantraege, Prozessmodelle, Beispiele, Runtime und lokale
+  Werkzeuge.
+- `.github/workflows/` enthaelt Governance-, Runtime-, SBOM- und
+  Cloud-Parity-Workflows.
 
 ## Schnellstart
 

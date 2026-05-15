@@ -28,7 +28,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Die Sprache des Prompts begrenzt die Aenderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
-- Plugin- und Connector-Plaene liegen unter `docs/plugin-plans/`.
+- Plugin- und Connector-Plaene liegen unter `docs/de/plugin-plans/` und
+  `docs/en/plugin-plans/`.
 - Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in `docs/de/minimum-requirements.md` und `docs/en/minimum-requirements.md`.
 - NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
 
@@ -56,26 +57,26 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - `policies/provider-open-services-policy.yaml`
 - `policies/github-identity-registry.json`
 - `docs/de/governance.md`
-- `docs/de/eventstream-implementation-templates.md`
-- `docs/de/eventstream-runbook-aws.md`
-- `docs/de/eventstream-runbook-azure.md`
-- `docs/de/eventstream-runbook-gcp.md`
-- `docs/de/eventstream-runbook-oci.md`
-- `docs/de/tenant-ownership-and-eventlock-service.md`
-- `docs/de/function8-service-catalog.md`
-- `docs/de/third-party-operations-and-exit.md`
+- `docs/de/eventstream/implementation-templates.md`
+- `docs/de/eventstream/runbook-aws.md`
+- `docs/de/eventstream/runbook-azure.md`
+- `docs/de/eventstream/runbook-gcp.md`
+- `docs/de/eventstream/runbook-oci.md`
+- `docs/de/service-model/tenant-ownership-and-eventlock-service.md`
+- `docs/de/service-model/function8-service-catalog.md`
+- `docs/de/service-model/third-party-operations-and-exit.md`
 - `docs/de/organization-as-code-positioning.md`
-- `docs/de/fork-and-release-operating-model.md`
-- `docs/de/release-sync-playbook.md`
-- `docs/de/parallelbetrieb-version-binding.md`
-- `docs/de/issue-taxonomie-pro-repo.md`
+- `docs/de/operations/fork-and-release-operating-model.md`
+- `docs/de/operations/release-sync-playbook.md`
+- `docs/de/operations/parallelbetrieb-version-binding.md`
+- `docs/de/issues/taxonomy.md`
 - `docs/de/einfuehrung-greenfield-brownfield.md`
-- `docs/de/service-business-core-vertical-blueprint.md`
-- `docs/de/vertical-starter-prozesskatalog.md`
-- `docs/de/repo-refactor-plan-single-repo-modules.md`
+- `docs/de/service-model/core-vertical-blueprint.md`
+- `docs/de/service-model/vertical-starter-process-catalog.md`
+- `docs/de/operations/single-repo-refactor-plan.md`
 - `docs/de/plugin-plans/README.md`
-- `docs/de/arbeitsmodell-agile-cadence.md`
-- `docs/de/access-and-issue-operations.md`
+- `docs/de/operations/agile-cadence.md`
+- `docs/de/issues/operations.md`
 
 ## Sprache und Kultur
 

@@ -30,19 +30,19 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Rollen und Qualifikationsgrenzen sind verbindlich nach `policies/role-model-policy.yaml`.
 - Rollen-, Rechte- und Issue-Sichtbarkeitsvorgaben sind verbindlich nach `policies/access-control-policy.yaml`.
 - Revisionssichere Ereignisablage ist verbindlich nach `policies/revisionssicherheit-eventstream-policy.yaml`.
-- Technische Umsetzungsvarianten stehen in `docs/de/eventstream-implementation-templates.md`.
+- Technische Umsetzungsvarianten stehen in `docs/de/eventstream/implementation-templates.md`.
 - Cloud-Runbooks sind fuer AWS, Azure, GCP und OCI gleichwertig zu pflegen.
 - Tenant-Ownership und Provider/Kunden-Grenzen sind verbindlich nach `policies/tenant-ownership-policy.yaml`.
 - Function8-Leistungen mit AVV-Relevanz muessen transparent im Repo dokumentiert und ersetzbar sein (`policies/provider-open-services-policy.yaml`).
 - GitHub-Identitaeten und Rollenbindung sind verbindlich nach `policies/github-identity-registry.json`.
 - Aenderungen an AI-Regelflaechen erfolgen nur als Spiegel von Policy-Aenderungen unter `policies/`.
-- Unternehmensbetrieb mit zentralem Upstream erfolgt nach `docs/de/fork-and-release-operating-model.md`.
-- Upstream-Uebernahmen erfolgen nach `docs/de/release-sync-playbook.md`.
-- Mischbetrieb alt/neu erfolgt mit Version-Binding nach `docs/de/parallelbetrieb-version-binding.md`.
-- Core/Vertical-Struktur fuer Dienstleister erfolgt nach `docs/de/service-business-core-vertical-blueprint.md`.
-- Starter-Prozesse je Vertical stehen in `docs/de/vertical-starter-prozesskatalog.md`.
-- Arbeitsmethode und Team-Cadence werden nach `docs/de/arbeitsmodell-agile-cadence.md` dokumentiert.
-- Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in `docs/de/access-and-issue-operations.md`.
+- Unternehmensbetrieb mit zentralem Upstream erfolgt nach `docs/de/operations/fork-and-release-operating-model.md`.
+- Upstream-Uebernahmen erfolgen nach `docs/de/operations/release-sync-playbook.md`.
+- Mischbetrieb alt/neu erfolgt mit Version-Binding nach `docs/de/operations/parallelbetrieb-version-binding.md`.
+- Core/Vertical-Struktur fuer Dienstleister erfolgt nach `docs/de/service-model/core-vertical-blueprint.md`.
+- Starter-Prozesse je Vertical stehen in `docs/de/service-model/vertical-starter-process-catalog.md`.
+- Arbeitsmethode und Team-Cadence werden nach `docs/de/operations/agile-cadence.md` dokumentiert.
+- Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in `docs/de/issues/operations.md`.
 - Plugin- und Connector-Plaene werden unter `docs/de/plugin-plans/` und `docs/en/plugin-plans/` gepflegt.
 - NoC-Ausfuehrung erfolgt lokal im genehmigten Workspace; Omnistation ist fuer NoC kein Ausfuehrungsort. Kartenleser-, morris- und XNP-Pfade werden ueber das lokale Profil `notary-workstation` geprueft.
 - Mehrsprachigkeit ist verbindlich nach `policies/language-policy.yaml`.

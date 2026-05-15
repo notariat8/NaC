@@ -104,13 +104,13 @@ flowchart TD
 
 Operative Details sind ausgelagert nach:
 
-- `docs/de/fork-and-release-operating-model.md`
-- `docs/de/release-sync-playbook.md`
-- `docs/de/parallelbetrieb-version-binding.md`
-- `docs/de/issue-taxonomie-pro-repo.md`
-- `docs/de/service-business-core-vertical-blueprint.md`
-- `docs/de/vertical-starter-prozesskatalog.md`
-- `docs/de/repo-refactor-plan-single-repo-modules.md`
+- `docs/de/operations/fork-and-release-operating-model.md`
+- `docs/de/operations/release-sync-playbook.md`
+- `docs/de/operations/parallelbetrieb-version-binding.md`
+- `docs/de/issues/taxonomy.md`
+- `docs/de/service-model/core-vertical-blueprint.md`
+- `docs/de/service-model/vertical-starter-process-catalog.md`
+- `docs/de/operations/single-repo-refactor-plan.md`
 
 ## Python-Komponenten
 

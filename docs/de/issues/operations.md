@@ -21,7 +21,7 @@ Ergaenzung fuer Compliance:
 
 - Issues sind die **operative Ebene**.
 - Revisionssichere Ablage erfolgt ueber ein separates, unveraenderbares Event-Journal.
-- Details: `docs/en/revisionssicherheit-eventstreaming.md`
+- Details: `docs/de/eventstream/revisionssicherheit.md`
 
 ## Repo-Typen im Unternehmen
 

@@ -83,7 +83,7 @@ Ein AVV ist in der Regel erforderlich, wenn:
 - Kunde:
   - Datenklassifikation, Legal-Hold-Entscheidungen, Freigabe des Audit-Scopes
 
-Referenz: `docs/de/tenant-ownership-and-eventlock-service.md`
+Referenz: `docs/de/service-model/tenant-ownership-and-eventlock-service.md`
 
 ## Operative Freigabe vor Go-Live
 

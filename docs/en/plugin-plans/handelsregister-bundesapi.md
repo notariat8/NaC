@@ -3,7 +3,7 @@
 Status: `deprecated`
 
 Dieser Plan ist fuer den installierbaren `noc-handelsregister`-Pluginpfad ersetzt durch
-`docs/plugin-plans/handelsregister-online-anmeldung.md`. Er bleibt nur als historischer
+`docs/en/plugin-plans/handelsregister-online-anmeldung.md`. Er bleibt nur als historischer
 Recherche-/Abruf-Spike erhalten und ist nicht die Zielrichtung fuer den aktuellen MVP.
 
 ## Kernentscheidung

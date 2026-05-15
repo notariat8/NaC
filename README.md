@@ -26,6 +26,13 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 - AVV/DPA section: `docs/de/datenschutz-avv-dpa.md`, `docs/en/datenschutz-avv-dpa.md`
 - SBOM for AI: `docs/de/sbom-for-ai.md`, `docs/en/sbom-for-ai.md`
 - Plugin plans: `docs/de/plugin-plans/README.md`, `docs/en/plugin-plans/README.md`
+- Eventstream runbooks: `docs/de/eventstream/README.md`,
+  `docs/en/eventstream/README.md`
+- Issue operations: `docs/de/issues/README.md`, `docs/en/issues/README.md`
+- Operating model: `docs/de/operations/README.md`,
+  `docs/en/operations/README.md`
+- Service model: `docs/de/service-model/README.md`,
+  `docs/en/service-model/README.md`
 - Global roadmap: `roadmap/GANTT.md`
 - Plugin roadmap: `plugins/GANTT.md`
 - Workflow roadmap: `workflows/GANTT.md`

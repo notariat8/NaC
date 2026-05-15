@@ -90,6 +90,10 @@ at least one matching implementation surface:
 | `workflows/` | Skills, workflow contracts and deterministic Python workflows. |
 | `usecases/` | Concrete notarial case types and pilot packages. |
 | `knowledge-graph/` | Static KG/DB for open information, documents, decisions, gates and evidence. |
+| `docs/en/eventstream/` | Event journal, EventLock and cloud runbooks. |
+| `docs/en/issues/` | Issue taxonomy, issue operations and public backlog. |
+| `docs/en/operations/` | Fork/release, upstream sync, version binding, work model and repository consolidation. |
+| `docs/en/service-model/` | Core/vertical structure, provider services, tenant ownership and exit. |
 | `src/` | Executable Python runtime. |
 | `scripts/` | Local and CI-adjacent developer tooling. |
 | `policies/` | Binding governance, role, technology, privacy and SBOM rules. |

@@ -75,13 +75,13 @@ Danach:
 
 ## Betriebsdokumente fuer Unternehmens-Fork
 
-- `docs/de/fork-and-release-operating-model.md`
-- `docs/de/release-sync-playbook.md`
-- `docs/de/parallelbetrieb-version-binding.md`
-- `docs/de/issue-taxonomie-pro-repo.md`
+- `docs/de/operations/fork-and-release-operating-model.md`
+- `docs/de/operations/release-sync-playbook.md`
+- `docs/de/operations/parallelbetrieb-version-binding.md`
+- `docs/de/issues/taxonomy.md`
 - `docs/de/einfuehrung-greenfield-brownfield.md`
-- `docs/de/service-business-core-vertical-blueprint.md`
-- `docs/de/vertical-starter-prozesskatalog.md`
-- `docs/de/repo-refactor-plan-single-repo-modules.md`
-- `docs/de/arbeitsmodell-agile-cadence.md`
-- `docs/de/access-and-issue-operations.md`
+- `docs/de/service-model/core-vertical-blueprint.md`
+- `docs/de/service-model/vertical-starter-process-catalog.md`
+- `docs/de/operations/single-repo-refactor-plan.md`
+- `docs/de/operations/agile-cadence.md`
+- `docs/de/issues/operations.md`
