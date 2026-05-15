@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .catalog import all_case_summaries, find_case, load_catalogs
+from .editor import build_editor_view
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -31,6 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
     case_parser = subparsers.add_parser("case", help="Show one KG case by slug.")
     case_parser.add_argument("slug")
 
+    editor_parser = subparsers.add_parser(
+        "editor-view",
+        help="Show the safe no-code editor view for one KG case.",
+    )
+    editor_parser.add_argument("slug")
+
     return parser
 
 
@@ -51,6 +58,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: Unknown KG case slug: {args.slug}")
             return 1
         _print_payload(summary.to_dict(), args.format)
+        return 0
+
+    if args.command == "editor-view":
+        try:
+            payload = build_editor_view(repo_root, args.slug)
+        except KeyError:
+            print(f"ERROR: Unknown KG case slug: {args.slug}")
+            return 1
+        _print_payload(payload, args.format)
         return 0
 
     parser.error(f"Unknown command: {args.command}")
@@ -100,6 +116,29 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Active development candidates")
         for item in payload["active_development_candidates"]:
             print(f"- {item['slug']}: {item['open_required_information']} open nodes")
+        return
+
+    if payload.get("schema_version") == "noc.kg-editor-view/v0.1":
+        print(f"KG editor view: {payload['usecase_slug']} ({payload['graph_id']})")
+        print(f"- title: {payload['title']}")
+        print(f"- json role: {payload['editor_model']['json_role']}")
+        print(f"- interaction: {payload['editor_model']['interaction_model']}")
+        print("")
+        print("Tabs")
+        for tab in payload["editor_model"]["tabs"]:
+            print(
+                f"- {tab['label_de']} / {tab['label_en']}: "
+                f"{tab['item_count']} items ({tab['render_as']})"
+            )
+        print("")
+        print("Actions")
+        for action in payload["actions"]:
+            print(f"- {action['name']}")
+        print("")
+        print("Patch policy")
+        print(f"- mode: {payload['patch_policy']['mode']}")
+        print(f"- forbidden fields: {', '.join(payload['patch_policy']['forbidden_fields'])}")
+        print(f"- confirmation required: {payload['patch_policy']['confirmation_required']}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")

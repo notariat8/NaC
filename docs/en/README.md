@@ -58,12 +58,15 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/minimum-requirements.md](minimum-requirements.md) defines minimum requirements for the base workspace, plugin development and local notary workstation.
 - [docs/en/datenschutz-avv-dpa.md](datenschutz-avv-dpa.md) defines the AVV/DPA section for OpenAI-backed processing.
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md) defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
+- [docs/en/kg-editor-workstream.md](kg-editor-workstream.md) defines the no-code KG editor,
+  patch principle and sidecar-editor path for subject-matter staff.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.
 - [docs/en/service-model/](service-model) contains core/vertical, provider, tenant and exit docs.
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.
+- [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
 - [processes/](../../processes) contains example business process instances.
 - [src/business_os/](../../src/business_os) contains the Python engine.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.

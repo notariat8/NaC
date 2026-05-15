@@ -76,6 +76,8 @@ ueberfuehrt werden.
   klassische SBOM-Produkte.
 - [docs/de/datenschutz-avv-dpa.md](datenschutz-avv-dpa.md) und
   [docs/de/avv-checkliste-eventlock-saas.md](avv-checkliste-eventlock-saas.md): Datenschutz, AVV und DPA.
+- [docs/de/kg-editor-workstream.md](kg-editor-workstream.md): no-code KG-Editor
+  fuer Fachpersonal, Patch-Prinzip und Sidecar-Editor-Pfad.
 
 ### Governance Und Runtime
 
@@ -90,6 +92,9 @@ ueberfuehrt werden.
 - [schemas/](../../schemas), [bpmn/](../../bpmn), [processes/](../../processes), [src/](../../src) und [scripts/](../../scripts) enthalten
   strukturierte Prozessantraege, Prozessmodelle, Beispiele, Runtime und lokale
   Werkzeuge.
+- [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json)
+  beschreibt den implementierten KG-Editor-Vertrag fuer die usecase-lokalen
+  Knowledge Graphs.
 - [.github/workflows/](../../.github/workflows) enthaelt Governance-, Runtime-, SBOM- und
   Cloud-Parity-Workflows.
 

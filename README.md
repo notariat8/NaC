@@ -30,6 +30,7 @@ Startseite, werden deutsch gefuehrt.
 | Mindestvoraussetzungen / minimum requirements | [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) | [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) |
 | AVV/DPA-Bereich / DPA area | [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md) | [docs/en/datenschutz-avv-dpa.md](docs/en/datenschutz-avv-dpa.md) |
 | SBOM fuer AI / SBOM for AI | [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md) | [docs/en/sbom-for-ai.md](docs/en/sbom-for-ai.md) |
+| KG-Editor-Workstream / KG editor workstream | [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md) | [docs/en/kg-editor-workstream.md](docs/en/kg-editor-workstream.md) |
 | Plugin-Plaene / plugin plans | [docs/de/plugin-plans/README.md](docs/de/plugin-plans/README.md) | [docs/en/plugin-plans/README.md](docs/en/plugin-plans/README.md) |
 | Eventstream-Runbooks / eventstream runbooks | [docs/de/eventstream/README.md](docs/de/eventstream/README.md) | [docs/en/eventstream/README.md](docs/en/eventstream/README.md) |
 | Issue-Betrieb / issue operations | [docs/de/issues/README.md](docs/de/issues/README.md) | [docs/en/issues/README.md](docs/en/issues/README.md) |
@@ -75,6 +76,7 @@ aktuell implementierte Runtime-Oberflaeche ist die notarielle KG-CLI:
 ```bash
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
+python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 ```
 
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
@@ -101,5 +103,5 @@ python scripts/quality_gate.py --profile strict
 
 Das strikte Quality Gate prueft Prozessdateien, Tests, Datenschutzregeln,
 Governance-Sync, Sprachregeln, Cloud-Runbook-Paritaet, Plugin-Manifeste,
-AI-SBOM-Stand, Gantt-Pflege und die usecase-lokalen statischen Knowledge
-Graphs.
+AI-SBOM-Stand, Gantt-Pflege, die usecase-lokalen statischen Knowledge Graphs
+und den KG-Editor-Vertrag.
