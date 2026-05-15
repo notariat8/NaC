@@ -23,11 +23,11 @@ Startseite, werden deutsch gefuehrt.
 
 ## Start
 
-- Deutscher Startpfad: [docs/de/START_HERE.md](docs/de/START_HERE.md)
-- Englischer Startpfad: [docs/en/START_HERE.md](docs/en/START_HERE.md)
+- Startpfad: [docs/de/START_HERE.md](docs/de/START_HERE.md),
+  [docs/en/START_HERE.md](docs/en/START_HERE.md)
 - Aktives Entwicklungsboard: [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
-- Deutscher README: [docs/de/README.md](docs/de/README.md)
-- Englischer README: [docs/en/README.md](docs/en/README.md)
+- README: [docs/de/README.md](docs/de/README.md),
+  [docs/en/README.md](docs/en/README.md)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md),
   [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md)
 - AVV/DPA-Bereich: [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md),
