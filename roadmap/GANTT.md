@@ -1,6 +1,6 @@
 # NoC Global Gantt
 
-Last update: 2026-05-14
+Last update: 2026-05-15
 
 Every push must update this global Gantt. Changes under `plugins/`,
 `workflows/`, or `usecases/` must also update the matching area Gantt:
@@ -20,6 +20,7 @@ gantt
     GPT Store and workspace packaging split      :active,  a2, 2026-05-14, 21d
     IDaaS plugin migration                       :active,  a3, 2026-05-14, 14d
     Repository consolidation ledger              :active,  a4, 2026-05-14, 7d
+    PKCS7 local certificate-bundle evidence      :active,  a4a, 2026-05-15, 14d
     Notary pilot plugin readiness                :         a5, after a4, 35d
     Publication and support operations           :         a6, after a5, 28d
 
@@ -42,7 +43,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 60% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; current local blocker is missing connected cyberJack reader and manual card/RFID attestations. |
+| A | Installable plugins for notary offices | Active | 62% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing, PFX import or private-key access. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 

@@ -8,6 +8,7 @@ This directory contains installable repo-local Codex plugins for NoC regulated-i
 - `noc-idaas`: German eID verification and IAM projection readiness companion.
 - `noc-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
 - `noc-bnotk-xnp`: Local XNP authentication gate after card readiness.
+- `noc-pkcs7-certbundle`: Local PKCS#7/P7B certificate-bundle evidence without signing.
 - `noc-handelsregister`: HRA-first online register application readiness after mode decision.
 - `noc-bea-portal`: beA workflow and evidence companion.
 - `noc-elster-eric`: ELSTER and ERiC workflow companion.

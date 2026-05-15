@@ -1,6 +1,6 @@
 # Plugin Gantt
 
-Last update: 2026-05-14
+Last update: 2026-05-15
 
 ```mermaid
 gantt
@@ -17,6 +17,7 @@ gantt
     section Notary entry gates
     CyberJack RFID readiness plugin            :active, p5, 2026-05-01, 21d
     BNotK XNP readiness plugin                 :active, p6, after p5, 21d
+    PKCS7 certificate-bundle evidence plugin   :active, p6a, 2026-05-15, 14d
     Handelsregister plugin                     :active, p7, after p6, 28d
 
     section Follow-up plugins
@@ -34,6 +35,7 @@ gantt
 | `noc-idaas` | German eID verification and IAM projection readiness | Active | Confirm connector boundary and data-processing basis before any production pilot. |
 | `noc-cyberjack-rfid` | Local card, RFID-off, SAK and XNP local-interface readiness | Active | Windows DriverPackage, morris middleware, optional morris loopback API/PCSC probe and Linux driver preflight are implemented; current local gate still needs a connected cyberJack reader or manual attestation. |
 | `noc-bnotk-xnp` | XNP authentication readiness | Active | Runnable local reader-prompt evidence now binds XNP preflight to the CyberJack gate and can pass through the optional morris API probe; next gate is workstation validation with XNP installed. |
+| `noc-pkcs7-certbundle` | Local PKCS#7/P7B certificate-bundle evidence without signing | Active | Installable MVP added with metadata-only local inspection, no PFX/PKCS#12 import, no private-key access and no signature operation. |
 | `noc-handelsregister` | Register filing readiness | Active | Bind to GmbH formation usecase. |
 | `noc-bea-portal` | beA workflow companion | Planned | Confirm notary-office priority. |
 | `noc-elster-eric` | ELSTER/ERiC companion | Planned | Keep separate from notarial core unless needed. |
