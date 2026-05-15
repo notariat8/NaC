@@ -1,55 +1,137 @@
-# START HERE: Introduction Without IT Background
+# START HERE: Operational Entry Into NoC
 
-## Purpose
+Status: binding start path
+Last content update: 2026-05-15
 
-This document helps decision makers use this reference repository as a starting
-point for their own Business OS. You do not need to read every Markdown file
-before starting.
+## Why This Document Exists Next To The README
 
-## Conceptual Frame
+[README.md](../../README.md) and [docs/en/README.md](README.md) are project overview and index files. This
+document is the operational start sequence for working in the active NoC project.
 
-- The target model is `Notariat as Code (NoC)`.
-- The operating model is `Enterprise GitOps`.
-- `NoC` is the implementation in this repository.
-- The platform name is `Enterprise Control Plane`.
+[START_HERE.md](START_HERE.md) remains necessary, but it has a different job than the README:
 
-## Multilingual Rule
+| Document | Purpose |
+| --- | --- |
+| [README.md](../../README.md) | Repository overview, product structure, quick checks, current build commands. |
+| [docs/en/README.md](README.md) | English business orientation and documentation index. |
+| [docs/en/START_HERE.md](START_HERE.md) | Binding work-start sequence for new sessions, contributors and agents. |
 
-This repository is maintained in ISO-639 language folders:
+This repository is the active project state for `Notariat as Code` with `NoC`
+as the concrete Enterprise Control Plane.
 
-- German: `docs/de/`, `prompts/de/`
-- English: `docs/en/`, `prompts/en/`
+## When To Use START_HERE
 
-`de` and `en` are mandatory. Every localized change must update both languages,
-regardless of the language used in the prompt.
+Use this document:
 
-## First Steps
+- when starting a new work session,
+- before productive changes to code, documentation, policies, plugins,
+  workflows or usecases,
+- after switching branches or pulling changes,
+- when a new contributor or agent starts in the repository,
+- before a push when affected gates or Gantts are unclear.
 
-1. Create your own company repository.
-2. Use this repository as the starting version.
-3. Define roles for proposal, review, and approval.
-4. Confirm the active industry modules in `policies/process-policy.yaml`.
-5. Confirm culture, language, technology, privacy, and role policies.
-6. Run the local startup check from `docs/en/startup-verification.md`.
-7. Start the matching onboarding prompt under `prompts/en/onboarding/`.
-8. Run a pilot with 1-2 core processes before full rollout.
-9. Define the operating model using `docs/en/fork-and-release-operating-model.md`.
-10. Define release sync and mixed-version operation using the related runbooks.
+## Binding Start Sequence
 
-## Available Onboarding Prompts
+1. Read repository rules:
+   - [AGENTS.md](../../AGENTS.md), if present in the workspace.
+   - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
+   - [.cursor/rules/](../../.cursor/rules)
+2. Read project status:
+   - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
+   - [roadmap/GANTT.md](../../roadmap/GANTT.md)
+   - [docs/en/minimum-requirements.md](minimum-requirements.md)
+   - for area work, also [plugins/GANTT.md](../../plugins/GANTT.md), [workflows/GANTT.md](../../workflows/GANTT.md) or
+     [usecases/GANTT.md](../../usecases/GANTT.md)
+3. Check the current Git state:
 
-- `prompts/en/onboarding/law-firm-first-setup.md`
-- `prompts/en/onboarding/notary-first-setup.md`
-- `prompts/en/onboarding/property-management-first-setup.md`
-- `prompts/en/onboarding/software-company-first-setup.md`
-- `prompts/en/onboarding/tax-office-first-setup.md`
-- `prompts/en/onboarding/wealth-management-first-setup.md`
-- `prompts/en/onboarding/vscode-copilot-business-os-setup.md`
-- `prompts/en/onboarding/vscode-first-user-assistant.md`
+   ```bash
+   git status --short --branch
+   ```
 
-## Change Requests and Learning
+4. Check the active runtime:
 
-- An update is complete only after the change has been validated, committed, pushed to GitHub, and merged into the target branch. Local changes and unmerged PR branches are only work in progress.
-- Every improvement is documented as a change request.
-- Every change gets a rationale, review, and version reference.
-- Useful local improvements can flow back into the reference standard.
+   ```bash
+   python scripts/notary_kg.py --repo-root . status
+   ```
+
+5. Run the strict local gate before treating a state as push-ready:
+
+   ```bash
+   python scripts/startup_check.py --profile base --ide auto --run-tests
+   python scripts/quality_gate.py --profile strict
+   ```
+
+For plugin or notary-workstation work, also run the matching profile:
+
+```bash
+python scripts/startup_check.py --profile plugin-dev --ide auto
+python scripts/startup_check.py --profile notary-workstation --ide auto
+```
+
+## Working Mode
+
+NoC is developed as software. Concept work is complete only when it also updates
+at least one matching implementation surface:
+
+- runtime code under [src/](../../src)
+- scripts under [scripts/](../../scripts)
+- tests under [tests/](../../tests)
+- plugin artifacts under [plugins/](../../plugins)
+- workflow contracts under [workflows/contracts/](../../workflows/contracts)
+- KG artifacts under [knowledge-graph/](../../knowledge-graph)
+- roadmap or Gantt status under [roadmap/](../../roadmap), [plugins/](../../plugins), [workflows/](../../workflows) or
+  [usecases/](../../usecases)
+
+## Product Structure
+
+| Area | Purpose |
+| --- | --- |
+| [plugins/](../../plugins) | Installable plugin artifacts for GPT Store, workspace or local integration. |
+| [workflows/](../../workflows) | Skills, workflow contracts and deterministic Python workflows. |
+| [usecases/](../../usecases) | Concrete notarial case types and pilot packages. |
+| [knowledge-graph/](../../knowledge-graph) | Static KG/DB for open information, documents, decisions, gates and evidence. |
+| [docs/en/eventstream/](eventstream) | Event journal, EventLock and cloud runbooks. |
+| [docs/en/issues/](issues) | Issue taxonomy, issue operations and public backlog. |
+| [docs/en/operations/](operations) | Fork/release, upstream sync, version binding, work model and repository consolidation. |
+| [docs/en/service-model/](service-model) | Core/vertical structure, provider services, tenant ownership and exit. |
+| [src/](../../src) | Executable Python runtime. |
+| [scripts/](../../scripts) | Local and CI-adjacent developer tooling. |
+| [policies/](../../policies) | Binding governance, role, technology, privacy and SBOM rules. |
+| [sbom/](../../sbom) | Machine-readable SBOM/AI-SBOM artifacts for runtime, infrastructure and local dependencies. |
+
+## Current Developer Commands
+
+```bash
+python scripts/notary_kg.py --repo-root . status
+python scripts/notary_kg.py --repo-root . case bautraegervertrag
+python scripts/validate_knowledge_graph.py
+python scripts/startup_check.py --profile base --ide auto --run-tests
+python scripts/quality_gate.py --profile strict
+```
+
+## Push Rule
+
+Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes below [plugins/](../../plugins),
+[workflows/](../../workflows) or [usecases/](../../usecases) must also update the matching area Gantt:
+
+- [plugins/GANTT.md](../../plugins/GANTT.md)
+- [workflows/GANTT.md](../../workflows/GANTT.md)
+- [usecases/GANTT.md](../../usecases/GANTT.md)
+
+## Localization Rule
+
+German and English are standard languages. Changes to localized content must
+always maintain both language paths:
+
+- [docs/de/](../de)
+- [docs/en/](.)
+- [prompts/de/](../../prompts/de)
+- [prompts/en/](../../prompts/en)
+
+Parity is checked with [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py).
+
+## Completion Rule
+
+An update is complete only after it has been validated, committed, pushed to
+GitHub and merged into the target branch. Local changes and unmerged PR branches
+are intermediate states.

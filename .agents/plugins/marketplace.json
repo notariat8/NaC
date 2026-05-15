@@ -17,6 +17,18 @@
       "category": "Compliance"
     },
     {
+      "name": "noc-idaas",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-idaas"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
       "name": "noc-cyberjack-rfid",
       "source": {
         "source": "local",
@@ -33,6 +45,18 @@
       "source": {
         "source": "local",
         "path": "./plugins/noc-bnotk-xnp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Compliance"
+    },
+    {
+      "name": "noc-pkcs7-certbundle",
+      "source": {
+        "source": "local",
+        "path": "./plugins/noc-pkcs7-certbundle"
       },
       "policy": {
         "installation": "AVAILABLE",

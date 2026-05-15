@@ -68,17 +68,17 @@ Referenz: `policies/role-model-policy.yaml`
 
 ## Weiterfuehrende Betriebsstandards
 
-- Fork-Modell und Verantwortungen: `docs/en/fork-and-release-operating-model.md`
-- Sync-Zyklus und PR-Gates: `docs/en/release-sync-playbook.md`
-- Mischbetrieb und Audit-Nachweis: `docs/en/parallelbetrieb-version-binding.md`
-- Repo-uebergreifende Issue-Fuehrung: `docs/en/issue-taxonomie-pro-repo.md`
-- Rollen, Zugriffe und zentrale Task-Uebersicht: `docs/en/access-and-issue-operations.md`
-- Revisionssicherheit ueber Event-Journal: `docs/en/revisionssicherheit-eventstreaming.md`
-- Konkrete Plattformvorlagen: `docs/en/eventstream-implementation-templates.md`
-- Azure Runbook: `docs/en/eventstream-runbook-azure.md`
-- AWS Runbook: `docs/en/eventstream-runbook-aws.md`
-- GCP Runbook: `docs/en/eventstream-runbook-gcp.md`
-- OCI Runbook: `docs/en/eventstream-runbook-oci.md`
-- Tenant-Owner- und Service-Modell: `docs/en/tenant-ownership-and-eventlock-service.md`
-- Function8 Leistungskatalog: `docs/en/function8-service-catalog.md`
-- Drittbetrieb und Exit ohne Lock-in: `docs/en/third-party-operations-and-exit.md`
+- Fork-Modell und Verantwortungen: `docs/en/operations/fork-and-release-operating-model.md`
+- Sync-Zyklus und PR-Gates: `docs/en/operations/release-sync-playbook.md`
+- Mischbetrieb und Audit-Nachweis: `docs/en/operations/parallelbetrieb-version-binding.md`
+- Repo-uebergreifende Issue-Fuehrung: `docs/en/issues/taxonomy.md`
+- Rollen, Zugriffe und zentrale Task-Uebersicht: `docs/en/issues/operations.md`
+- Revisionssicherheit ueber Event-Journal: `docs/en/eventstream/revisionssicherheit.md`
+- Konkrete Plattformvorlagen: `docs/en/eventstream/implementation-templates.md`
+- Azure Runbook: `docs/en/eventstream/runbook-azure.md`
+- AWS Runbook: `docs/en/eventstream/runbook-aws.md`
+- GCP Runbook: `docs/en/eventstream/runbook-gcp.md`
+- OCI Runbook: `docs/en/eventstream/runbook-oci.md`
+- Tenant-Owner- und Service-Modell: `docs/en/service-model/tenant-ownership-and-eventlock-service.md`
+- Function8 Leistungskatalog: `docs/en/service-model/function8-service-catalog.md`
+- Drittbetrieb und Exit ohne Lock-in: `docs/en/service-model/third-party-operations-and-exit.md`

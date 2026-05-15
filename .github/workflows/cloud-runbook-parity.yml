@@ -3,12 +3,12 @@ name: Cloud Runbook Parity
 on:
   pull_request:
     paths:
-      - "docs/*/eventstream-runbook-aws.md"
-      - "docs/*/eventstream-runbook-azure.md"
-      - "docs/*/eventstream-runbook-gcp.md"
-      - "docs/*/eventstream-runbook-oci.md"
-      - "docs/*/eventstream-implementation-templates.md"
-      - "docs/*/revisionssicherheit-eventstreaming.md"
+      - "docs/*/eventstream/runbook-aws.md"
+      - "docs/*/eventstream/runbook-azure.md"
+      - "docs/*/eventstream/runbook-gcp.md"
+      - "docs/*/eventstream/runbook-oci.md"
+      - "docs/*/eventstream/implementation-templates.md"
+      - "docs/*/eventstream/revisionssicherheit.md"
       - "policies/revisionssicherheit-eventstream-policy.yaml"
       - "policies/language-policy.yaml"
       - "scripts/validate_cloud_runbook_parity.py"

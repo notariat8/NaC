@@ -106,13 +106,13 @@ flowchart TD
 
 Operative Details sind ausgelagert nach:
 
-- `docs/en/fork-and-release-operating-model.md`
-- `docs/en/release-sync-playbook.md`
-- `docs/en/parallelbetrieb-version-binding.md`
-- `docs/en/issue-taxonomie-pro-repo.md`
-- `docs/en/service-business-core-vertical-blueprint.md`
-- `docs/en/vertical-starter-prozesskatalog.md`
-- `docs/en/repo-refactor-plan-single-repo-modules.md`
+- `docs/en/operations/fork-and-release-operating-model.md`
+- `docs/en/operations/release-sync-playbook.md`
+- `docs/en/operations/parallelbetrieb-version-binding.md`
+- `docs/en/issues/taxonomy.md`
+- `docs/en/service-model/core-vertical-blueprint.md`
+- `docs/en/service-model/vertical-starter-process-catalog.md`
+- `docs/en/operations/single-repo-refactor-plan.md`
 - `docs/en/plugin-plans/README.md`
 
 ## Plugin- und Connector-Prinzip

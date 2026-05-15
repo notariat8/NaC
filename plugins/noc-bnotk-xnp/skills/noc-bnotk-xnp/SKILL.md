@@ -14,6 +14,8 @@ This installable local Codex plugin is the XNP gate for notary-side Online HRA w
 ## Allowed Work
 
 - Document local XNP readiness, current local authentication and interface status.
+- Run `python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json` from the repository root to create a local XNP reader-prompt preflight for the cyberJack reader path.
+- Add `--probe-morris-api` when the operator explicitly wants the underlying `noc-cyberjack-rfid` gate to test the morris localhost API and PC/SC list-readers path.
 - Record boolean presence of local configuration without values.
 - Prepare local-only XNotar/register handoff steps for notarial software.
 
@@ -27,12 +29,12 @@ This installable local Codex plugin is the XNP gate for notary-side Online HRA w
 ## Workflow
 
 1. Classify the mode: citizen preflight or notary-side workstation workflow.
-2. Confirm completed `noc-cyberjack-rfid` card/SAK readiness before any XNP login testing.
+2. Confirm completed `noc-cyberjack-rfid` card/SAK readiness before any XNP login testing, or run the local XNP reader-prompt preflight to produce an evidence preview.
 3. For notary-side workflows, check local XNP installation, local login, user role and Amtstaetigkeitskontext before any Handelsregister-specific work.
 4. Check XNotar/register module or exchange-folder route, local admin ownership and vendor interface status.
 5. Produce a human-readable Day1 plan preview before any local or external action.
 6. Ask for explicit human approval for regulated submissions, register applications, notarial actions or cloud applies.
-7. Capture evidence metadata only: timestamp, actor role, local readiness status, source, hash, decision, result and follow-up owner.
+7. Capture evidence metadata only: timestamp, actor role, local readiness status, reader-prompt route, source, hash, decision, result and follow-up owner.
 8. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
 
 ## Output Shape
@@ -41,4 +43,5 @@ Return concise sections named `Readiness`, `Plan`, `Approval Needed`, `Evidence`
 
 ## Source Plan
 
-- `docs/plugin-plans/bnotk-xnp-notariatssoftware.md`
+- `docs/de/plugin-plans/bnotk-xnp-notariatssoftware.md`
+- `docs/en/plugin-plans/bnotk-xnp-notariatssoftware.md`

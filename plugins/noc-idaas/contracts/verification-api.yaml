@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: IDaaS Verification API
+  version: 0.1.0
+  description: >
+    Technology-neutral contract sketch for verification sessions, status
+    checks, and IAM projections. This contract is documentation for readiness
+    planning and is not active connector code.
+servers:
+  - url: https://api.example.invalid
+paths:
+  /verification-sessions:
+    post:
+      summary: Start a new verification session.
+      operationId: startVerification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartVerificationRequest"
+      responses:
+        "202":
+          description: Verification session accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationSessionResponse"
+  /verification-sessions/{sessionId}:
+    get:
+      summary: Return verification session status.
+      operationId: getVerificationResult
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification status returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationSessionResponse"
+  /iam-projections:
+    post:
+      summary: Start projection into a target IAM system.
+      operationId: createIamProjection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectionRequest"
+      responses:
+        "202":
+          description: Projection accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IamProjectionResponse"
+components:
+  schemas:
+    StartVerificationRequest:
+      type: object
+      required:
+        - tenantId
+        - applicationId
+        - purpose
+        - requestedClaims
+      properties:
+        tenantId:
+          type: string
+        applicationId:
+          type: string
+        purpose:
+          type: string
+        requestedClaims:
+          type: array
+          items:
+            type: string
+        callbackUrl:
+          type: string
+          format: uri
+    VerificationSessionResponse:
+      type: object
+      required:
+        - sessionId
+        - status
+      properties:
+        sessionId:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - redirect_required
+            - in_progress
+            - verified
+            - failed
+            - cancelled
+        redirectUrl:
+          type: string
+          format: uri
+        assertionId:
+          type: string
+        projectionRequestId:
+          type: string
+    CreateProjectionRequest:
+      type: object
+      required:
+        - tenantId
+        - subjectId
+        - targetType
+      properties:
+        tenantId:
+          type: string
+        subjectId:
+          type: string
+        assertionId:
+          type: string
+        targetType:
+          type: string
+          enum:
+            - entra
+            - oracle
+            - scim
+        targetSystemId:
+          type: string
+        mappingProfile:
+          type: string
+    IamProjectionResponse:
+      type: object
+      required:
+        - projectionId
+        - status
+      properties:
+        projectionId:
+          type: string
+        status:
+          type: string
+          enum:
+            - accepted
+            - in_progress
+            - completed
+            - failed
+        targetRecordId:
+          type: string
+        failureCode:
+          type: string

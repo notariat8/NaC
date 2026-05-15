@@ -1,41 +1,66 @@
-# SBOM Produkte und Lizenzmodell
+# SBOM Products And License Model
 
 ## Ziel
 
-Diese Seite legt fest, welche Produkte fuer SBOM verwendet werden und welche davon Open Source oder kostenpflichtig sind.
+This page defines which products are used for SBOM work and which of them are
+open source or subscription-based.
 
-## Kurzantwort zu deinem Beispiel
+## Short Answer
 
-- `Python`: Open Source, keine Subscription noetig.
-- `GitHub Lizenz`: Es gibt kostenlose und kostenpflichtige Stufen; fuer reine SBOM-Erzeugung ist keine zwingende Zusatzsubscription noetig.
+- `Python`: open source, no subscription required.
+- `GitHub license`: free and paid tiers exist; plain SBOM generation does not
+  require an additional subscription.
 
-## Verbindlicher SBOM-Stack im Musterrepo
+## Binding SBOM Stack In This Repository
 
-| Bereich | Produkt | Standard/Format | Open Source | Subscription noetig |
+| Area | Product | Standard/format | Open source | Subscription required |
 | --- | --- | --- | --- | --- |
-| Python-Komponenten-SBOM | `cyclonedx-python` | CycloneDX JSON | Ja | Nein |
-| Dateisystem-/Artefakt-SBOM | `syft` | SPDX JSON | Ja | Nein |
-| CI-Ausfuehrung | GitHub Actions | Artefakt-Export | Nein (Plattformdienst) | Nein (Basisnutzung) |
-| Erweiterte Security-Auswertung | GitHub Advanced Security | Security-Features | Nein | Ja (optional) |
+| Python component SBOM | `cyclonedx-python` | CycloneDX JSON | Yes | No |
+| Filesystem/artifact SBOM | `syft` | SPDX JSON | Yes | No |
+| CI execution | GitHub Actions | Artifact export | No (platform service) | No (basic use) |
+| Extended security analysis | GitHub Advanced Security | Security features | No | Yes (optional) |
 
-## Empfehlung fuer dieses Repository
+## SBOM For AI
 
-1. Erzeuge mindestens zwei SBOM-Artefakte:
-   - CycloneDX JSON (Python-Sicht)
-   - SPDX JSON (Gesamtsicht)
-2. Speichere die Artefakte als CI-Artefakte unter `out/sbom/`.
-3. Verknuepfe Release-Tags mit den passenden SBOM-Artefakten.
+Classic SBOMs are not enough for AI systems. NaC therefore introduces an
+additional `SBOM for AI` track in `docs/en/sbom-for-ai.md` and
+`policies/sbom-policy.yaml`.
 
-## Was ist zwingend vs. optional
+Initial artifacts:
 
-- Zwingend:
-  - SBOM-Erzeugung in offenen Standardformaten
-  - versionierte Ablage je Release
+- `sbom/ai/nac-ai-sbom-draft.json`
+- `scripts/validate_ai_sbom.py`
+
+This track applies repository-wide to AI-enabled plugins, workflows, usecases,
+prompts and external model calls.
+
+Local minimum requirements such as Python, Node.js/npm, GitHub CLI, morris,
+REINER SCT drivers, card reader, PC/SC and XNP are also SBOM-relevant
+runtime/infrastructure components. The binding list is maintained in
+`docs/en/minimum-requirements.md` and mirrored in
+`sbom/ai/nac-ai-sbom-draft.json`.
+
+## Recommendation For This Repository
+
+1. Generate at least two SBOM artifacts:
+   - CycloneDX JSON (Python view)
+   - SPDX JSON (overall filesystem view)
+2. Store artifacts as CI artifacts under `out/sbom/`.
+3. Bind release tags to the matching SBOM artifacts.
+4. Track local workstation, hardware and middleware dependencies in the
+   AI-SBOM until they are fully exported through CycloneDX/SPDX.
+
+## Mandatory vs. Optional
+
+- Mandatory:
+  - SBOM generation in open standard formats
+  - versioned storage per release
 - Optional:
   - GitHub Advanced Security
-  - zusaetzliche proprietaere Compliance-Produkte
+  - additional proprietary compliance products
 
-## Hinweise fuer Unternehmen
+## Notes For Companies
 
-- Wer nur mit Open-Source-Stack starten will, kann das vollstaendig tun.
-- Wer spaeter zusaetzliche Security-Features braucht, kann optional kostenpflichtige GitHub-Funktionen aktivieren, ohne den SBOM-Kernprozess zu aendern.
+- Teams that want to start with an open-source-only stack can do so.
+- Teams that later need additional security features can optionally activate
+  paid GitHub features without changing the core SBOM process.

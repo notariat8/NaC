@@ -9,14 +9,14 @@ alwaysApply: true
 - Bei Aenderungen an einer Plattform muessen die anderen Plattform-Runbooks im fachlichen Kern abgeglichen werden.
 - Einseitige Pflege nur einer Plattform ist nicht zulaessig.
 - Verbindliche Quellen:
-  - `policies/revisionssicherheit-eventstream-policy.yaml`
-  - `docs/de/eventstream-implementation-templates.md`
-  - `docs/en/eventstream-implementation-templates.md`
-  - `docs/de/eventstream-runbook-aws.md`
-  - `docs/de/eventstream-runbook-azure.md`
-  - `docs/de/eventstream-runbook-gcp.md`
-  - `docs/de/eventstream-runbook-oci.md`
-  - `docs/en/eventstream-runbook-aws.md`
-  - `docs/en/eventstream-runbook-azure.md`
-  - `docs/en/eventstream-runbook-gcp.md`
-  - `docs/en/eventstream-runbook-oci.md`
+  - [policies/revisionssicherheit-eventstream-policy.yaml](../../policies/revisionssicherheit-eventstream-policy.yaml)
+  - [docs/de/eventstream/implementation-templates.md](../../docs/de/eventstream/implementation-templates.md)
+  - [docs/en/eventstream/implementation-templates.md](../../docs/en/eventstream/implementation-templates.md)
+  - [docs/de/eventstream/runbook-aws.md](../../docs/de/eventstream/runbook-aws.md)
+  - [docs/de/eventstream/runbook-azure.md](../../docs/de/eventstream/runbook-azure.md)
+  - [docs/de/eventstream/runbook-gcp.md](../../docs/de/eventstream/runbook-gcp.md)
+  - [docs/de/eventstream/runbook-oci.md](../../docs/de/eventstream/runbook-oci.md)
+  - [docs/en/eventstream/runbook-aws.md](../../docs/en/eventstream/runbook-aws.md)
+  - [docs/en/eventstream/runbook-azure.md](../../docs/en/eventstream/runbook-azure.md)
+  - [docs/en/eventstream/runbook-gcp.md](../../docs/en/eventstream/runbook-gcp.md)
+  - [docs/en/eventstream/runbook-oci.md](../../docs/en/eventstream/runbook-oci.md)

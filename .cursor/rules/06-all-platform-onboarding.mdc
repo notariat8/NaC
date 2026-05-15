@@ -12,7 +12,7 @@ alwaysApply: true
 
 Pflichtabgleich bei Onboarding-Aenderungen:
 
-- Cursor-Regeln unter `.cursor/rules/`
-- Copilot-Anweisungen unter `.github/copilot-instructions.md`
-- Startdokumente unter `docs/de/` und `docs/en/`
-- Onboarding-Prompts unter `prompts/de/onboarding/` und `prompts/en/onboarding/`
+- Cursor-Regeln unter [.cursor/rules/](.)
+- Copilot-Anweisungen unter [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
+- Startdokumente unter [docs/de/](../../docs/de) und [docs/en/](../../docs/en)
+- Onboarding-Prompts unter [prompts/de/onboarding/](../../prompts/de/onboarding) und [prompts/en/onboarding/](../../prompts/en/onboarding)

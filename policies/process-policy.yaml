@@ -72,6 +72,28 @@ change_management:
   completion_target_branch: main
   completion_remote: github
 
+portfolio_structure:
+  plugin_root: plugins
+  workflow_root: workflows
+  usecase_root: usecases
+  separation_required: true
+  tracks:
+    plugins:
+      purpose: installable_marketplace_and_workspace_packages
+      gantt: plugins/GANTT.md
+    workflows:
+      purpose: installable_skills_and_deterministic_python_workflows
+      gantt: workflows/GANTT.md
+    usecases:
+      purpose: concrete_notarial_business_scenarios
+      gantt: usecases/GANTT.md
+
+progress_tracking:
+  global_gantt: roadmap/GANTT.md
+  require_global_gantt_update_for_every_push: true
+  require_area_gantt_update_for_area_changes: true
+  enforced_by: scripts/validate_gantt_progress.py
+
 plugin_execution:
   local_workspace: ~/NoC
   omnistation_execution_allowed: false
@@ -97,6 +119,20 @@ parallel_operation:
 issue_governance:
   single_leading_issue_per_topic: true
   require_cross_repo_issue_links: true
+
+documentation_links:
+  require_markdown_links_for_repo_references: true
+  applies_to:
+    - readme_files
+    - start_here_documents
+    - agent_rule_surfaces
+  path_references_should_be_clickable: true
+  allowed_code_spans:
+    - commands
+    - configuration_keys
+    - file_patterns
+    - code_identifiers
+  enforced_by: scripts/validate_doc_links.py
 
 operating_cadence:
   default_method: agile

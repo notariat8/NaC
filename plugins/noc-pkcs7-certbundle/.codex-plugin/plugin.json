@@ -1,0 +1,55 @@
+{
+  "name": "noc-pkcs7-certbundle",
+  "version": "0.1.0",
+  "description": "Local PKCS#7 certificate-bundle evidence without signature or private-key operations.",
+  "author": {
+    "name": "NoC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/plugins/noc-pkcs7-certbundle",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "noc",
+    "pkcs7",
+    "p7b",
+    "p7c",
+    "certificate-bundle",
+    "certificate-chain",
+    "local-companion",
+    "evidence",
+    "no-signature",
+    "no-private-key"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "NoC PKCS7 CertBundle Gate",
+    "shortDescription": "Local PKCS#7/P7B certificate-bundle evidence without signing.",
+    "longDescription": "Installable local Codex plugin for inspecting PKCS#7/P7B/P7C certificate bundles as metadata-only evidence. It verifies local parser availability and records safe bundle metadata without loading private keys, importing PFX/PKCS#12 files, creating signatures, verifying signatures, requesting PINs or sending certificate material to external services.",
+    "developerName": "NoC Maintainers",
+    "category": "Compliance",
+    "capabilities": [
+      "Local",
+      "CertificateEvidence",
+      "Installable",
+      "Pkcs7",
+      "MetadataOnly",
+      "NoSignature",
+      "NoPrivateKey",
+      "NoPIN"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/plugins/noc-pkcs7-certbundle",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Inspect a local PKCS#7 certificate bundle without signing.",
+      "Create metadata-only evidence for a P7B certificate chain.",
+      "Check whether local PKCS#7 tooling is available."
+    ],
+    "brandColor": "#355E3B",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

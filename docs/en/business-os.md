@@ -142,7 +142,7 @@ Fuer den Mischbetrieb gilt zusaetzlich:
 - laufende Vorgaenge bleiben auf ihrer gebundenen Version,
 - neue Releases gelten nur fuer neu gestartete Vorgaenge.
 
-Details: `docs/en/parallelbetrieb-version-binding.md`
+Details: `docs/en/operations/parallelbetrieb-version-binding.md`
 
 ## Change Request und Vererbung
 

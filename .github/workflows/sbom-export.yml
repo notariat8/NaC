@@ -33,6 +33,11 @@ jobs:
         run: |
           syft dir:. -o spdx-json > out/sbom/sbom-spdx-filesystem.json
 
+      - name: Include AI-SBOM baseline
+        run: |
+          mkdir -p out/sbom/ai
+          cp sbom/ai/*.json out/sbom/ai/
+
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@v4
         with:

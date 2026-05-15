@@ -17,6 +17,7 @@ POLICY_FILES = {
     "policies/tenant-ownership-policy.yaml",
     "policies/provider-open-services-policy.yaml",
     "policies/language-policy.yaml",
+    "policies/sbom-policy.yaml",
 }
 
 MIRROR_FILES = {

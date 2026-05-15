@@ -17,6 +17,8 @@ NoC SaaS oder Remote-Ausfuehrung bekommen nur:
 
 Direkte API-Calls bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
 
+The first runnable MVP now lives at `plugins/noc-bnotk-xnp/scripts/reader_prompt.py`. It creates a local dry-run reader prompt for the cyberJack reader path, invokes the `noc-cyberjack-rfid` card gate, checks only XNP localhost reachability in the `12774` to `12784` port range and writes evidence according to `plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. With `--probe-morris-api`, the reader prompt can pass through the optional morris loopback and PC/SC probe from the card gate. It does not perform XNP login, use an XNP API key or write productive XNP data.
+
 ## Reihenfolge fuer Handelsregister-Online-Anmeldungen
 
 Dieser Plan ist der zweite technische Baustein, wenn NoC einen echten notariatsseitigen
@@ -29,13 +31,14 @@ XNP-Gate vorgelagert.
 `noc-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
 Registerspur und Paket-Readiness strukturieren. Der Startpunkt ist vorher:
 
-1. BNotK Chip-/Signaturkarte oder lokal verwendete Schneider/SCP-Karte klaeren.
+1. BNotK Chip-/Signaturkarte klaeren.
 2. Kartenleser Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad und secureFramework pruefen.
-3. Notar-/Notariatsrolle klaeren.
-4. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
-5. Amtstaetigkeitskontext lokal bestaetigen.
-6. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
-7. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
+3. Use `noc-bnotk-xnp` to create local dry-run reader-prompt evidence for the cyberJack reader path.
+4. Notar-/Notariatsrolle klaeren.
+5. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
+6. Amtstaetigkeitskontext lokal bestaetigen.
+7. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
+8. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
 
 Wenn NoC nur einen Buerger-/Mandanten-Preflight fuer `online.notar.de` anbietet, kann
 `noc-handelsregister` ohne XNP starten. Sobald aber ein Notariatsarbeitsplatz,
@@ -79,6 +82,8 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 ## Day1
 
 - Lokalen Dry-run Companion bauen:
+  - create a local reader prompt for the cyberJack reader path.
+  - reference `noc-cyberjack-rfid` evidence.
   - XNP-Verfuegbarkeit pruefen.
   - lokale Anmeldung und Amtstaetigkeitskontext nur attestieren, nicht uebertragen.
   - lokalen Port aus Konfiguration lesen oder per erlaubtem Discovery-Verfahren finden.
@@ -105,6 +110,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 
 - Laufzeit nur auf dem lokalen Arbeitsplatz.
 - Kommunikation nur gegen `localhost`.
+- Reader prompt remains a dry run and does not activate a productive XNP action.
 - Keine Remote-Portweiterleitung.
 - Keine Secrets in Git.
 - Keine zentrale Speicherung von API-Keys.
@@ -124,6 +130,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 
 - Companion startet nur lokal.
 - Dry-run ist Standard.
+- Reader prompt creates evidence without PIN, card, API-key or login values.
 - XNP-Schnittstellendefinition ist dokumentiert.
 - Jeder echte Aufruf erfordert lokale Nutzerbestaetigung.
 - Keine Urkunden-, UVZ-, VVZ- oder API-Key-Inhalte im Repo.

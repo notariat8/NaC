@@ -6,10 +6,13 @@ alwaysApply: true
 
 # Local Plugin Execution
 
-- NoC work runs locally in WSL in `~/NoC`.
+- NoC work runs locally in the approved workspace.
 - Do not use Omnistation as an execution workspace for NoC.
 - Remote hosts may be used for non-critical research only.
-- Plugin and connector plans are documented under `docs/de/plugin-plans/` and `docs/en/plugin-plans/`.
+- Base, plugin and notary-workstation minimum requirements are defined in [docs/de/minimum-requirements.md](../../docs/de/minimum-requirements.md) and [docs/en/minimum-requirements.md](../../docs/en/minimum-requirements.md).
+- Run `python scripts/startup_check.py --profile plugin-dev --ide auto` before plugin development.
+- Run `python scripts/startup_check.py --profile notary-workstation --ide auto` before card-reader, morris or XNP-adjacent tests.
+- Plugin and connector plans are documented under [docs/de/plugin-plans/](../../docs/de/plugin-plans) and [docs/en/plugin-plans/](../../docs/en/plugin-plans).
 - Plans must distinguish:
   - proposed intent,
   - plan preview,

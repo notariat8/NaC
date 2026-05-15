@@ -91,9 +91,29 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_language_parity.py"],
                 ),
                 (
+                    "doc_links",
+                    "Documentation Links",
+                    [sys.executable, "scripts/validate_doc_links.py"],
+                ),
+                (
+                    "gantt_progress",
+                    "Gantt Progress Update",
+                    [sys.executable, "scripts/validate_gantt_progress.py"],
+                ),
+                (
                     "cloud_runbook_parity",
                     "Cloud Runbook Parity",
                     [sys.executable, "scripts/validate_cloud_runbook_parity.py"],
+                ),
+                (
+                    "ai_sbom",
+                    "AI SBOM Baseline",
+                    [sys.executable, "scripts/validate_ai_sbom.py"],
+                ),
+                (
+                    "knowledge_graph",
+                    "Knowledge Graph Baseline",
+                    [sys.executable, "scripts/validate_knowledge_graph.py"],
                 ),
             ]
         )

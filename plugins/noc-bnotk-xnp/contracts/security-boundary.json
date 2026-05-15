@@ -19,6 +19,8 @@
   ],
   "allowed_work": [
     "Document local XNP readiness, current local authentication and interface status.",
+    "Create a local dry-run reader prompt that routes to the NoC Card SAK Gate without performing XNP login or productive XNP writes.",
+    "Optionally pass through the NoC Card SAK Gate morris localhost API and PC/SC list-readers probe without XNP login or productive XNP writes.",
     "Require completed NoC Card SAK Gate readiness before XNP login testing.",
     "Record boolean presence of local configuration without values.",
     "Prepare local-only XNotar/register handoff steps for notarial software."
@@ -38,7 +40,7 @@
     "Confirm notarial software vendor support and local admin ownership."
   ],
   "day1": [
-    "Create local authentication gate, XNotar handoff readiness plan and evidence shell without credential values."
+    "Create local reader-prompt evidence, authentication gate, XNotar handoff readiness plan and evidence shell without credential values."
   ],
   "day2": [
     "Recertify local interface status after XNP or notarial software updates."

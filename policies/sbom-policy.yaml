@@ -34,3 +34,62 @@ platform_features:
 governance:
   required_on_release: true
   required_on_pull_request: recommended
+
+ai_sbom:
+  status: emerging_mandatory
+  applies_to:
+    - ai_enabled_plugins
+    - ai_enabled_workflows
+    - ai_enabled_usecases
+    - external_model_calls
+    - agentic_or_prompt_driven_automation
+  artifact_directory: sbom/ai/
+  export_directory: out/sbom/ai/
+  required_on_ai_release: true
+  required_before_external_ai_processing: true
+  source_references:
+    - https://www.bsi.bund.de/DE/Service-Navi/Presse/Pressemitteilungen/Presse2026/260512_G7_Richtlinie_SBOM_for_AI.html
+    - https://www.bsi.bund.de/EN/Themen/Unternehmen-und-Organisationen/Informationen-und-Empfehlungen/Kuenstliche-Intelligenz/KI.html
+    - https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements
+  minimum_element_clusters:
+    - metadata
+    - system_level_properties
+    - models
+    - datasets
+    - infrastructure
+    - security_properties
+    - key_performance_indicators
+  noc_extensions:
+    - privacy_and_avv_dpa_status
+    - notary_professional_secret_boundary
+    - human_review_and_approval_owner
+    - local_vs_external_processing_boundary
+    - local_runtime_and_hardware_minimum_requirements
+    - operator_workstation_dependency_inventory
+    - evidence_retention_and_release_binding
+  runtime_requirements:
+    required_in_ai_sbom: true
+    documentation:
+      de: docs/de/minimum-requirements.md
+      en: docs/en/minimum-requirements.md
+    includes:
+      - local_operating_system_and_runtime
+      - python_runtime
+      - nodejs_and_npm_when_plugins_are_built
+      - github_cli_and_git
+      - reiner_sct_driver_package
+      - morris_local_middleware
+      - pcsc_service
+      - card_reader_hardware
+      - bnotk_chip_or_signature_card
+      - xnp_local_installation
+      - sak_lite_or_xnp_card_path
+      - secureframework
+      - xnotar_or_exchange_path_when_register_workflows_are_used
+      - optional_ausweisapp_for_eid_paths
+  prohibited_content:
+    - real_personal_data
+    - secrets_or_api_keys
+    - private_keys_or_certificate_material
+    - client_or_mandate_content
+    - account_identifiers_not_needed_for_review

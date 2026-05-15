@@ -17,8 +17,8 @@ scope:
 service_catalog:
   required: true
   required_paths:
-    - docs/de/function8-service-catalog.md
-    - docs/en/function8-service-catalog.md
+    - docs/de/service-model/function8-service-catalog.md
+    - docs/en/service-model/function8-service-catalog.md
   required_fields:
     - service_id
     - service_name
@@ -44,8 +44,8 @@ avv_artifacts:
 third_party_enablement:
   required: true
   documentation_paths:
-    - docs/de/third-party-operations-and-exit.md
-    - docs/en/third-party-operations-and-exit.md
+    - docs/de/service-model/third-party-operations-and-exit.md
+    - docs/en/service-model/third-party-operations-and-exit.md
   must_cover:
     - external_operator_takeover
     - customer_self_operation_path

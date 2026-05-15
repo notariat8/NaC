@@ -1,69 +1,76 @@
-# Positionierung: Notariat as Code und Enterprise GitOps
+# Positioning: Notariat as Code and Enterprise GitOps
 
-## Ziel
+## Goal
 
-Dieses Dokument schaerft den Begriffsrahmen:
+This document defines the project terminology:
 
-- `NoC` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
-- Das uebergeordnete Architekturmodell ist `Notariat as Code (NoC)`.
-- Das operative Steuerungsprinzip ist `Enterprise GitOps`.
+- `NoC` is the concrete product and operating implementation in this repository.
+- The overarching architecture model is `Notariat as Code (NoC)`.
+- The operational control principle is `Enterprise GitOps`.
 
-## Begriffsrahmen
+## Terminology
 
 ### Notariat as Code (NoC)
 
-Unternehmen wird deklarativ und versioniert beschrieben:
+Notarial operations are described declaratively and versioned:
 
-- Policies
-- Rollen und Rechte
-- Prozessmodelle
-- Kontrollpunkte
-- Nachweise
+- policies
+- roles and permissions
+- process models
+- control points
+- evidence
 
 ### Enterprise GitOps
 
-Aenderungen an Organisationslogik laufen kontrolliert ueber:
+Changes to organizational and notarial process logic are controlled through:
 
-- Branch
-- Pull Request
-- Review/Freigabe
-- automatisierte Policy- und Compliance-Checks
+- branches
+- pull requests
+- review and approval
+- automated policy and compliance checks
 
 ### NoC
 
-`NoC` ist die konkrete Umsetzung von Notariat as Code + Enterprise GitOps in diesem Repo.
+`NoC` is the concrete implementation of Notariat as Code plus Enterprise GitOps
+in this repository.
 
-## Warum diese Trennung wichtig ist
+## Why The Separation Matters
 
-- reduziert Missverstaendnisse zwischen Tooling und Zielmodell,
-- macht das Konzept anschlussfaehig fuer Fachseite, Audit und Betriebsverantwortung,
-- erlaubt Drittbetrieb und Ersetzbarkeit ohne Begriffskonflikte.
+- It reduces misunderstandings between tooling and target model.
+- It makes the model easier to review for business users, auditors and
+  operations owners.
+- It supports third-party operation and replaceability without terminology
+  conflicts.
 
-## Architekturzuordnung
+## Architecture Mapping
 
-- `Intent Layer`: Policies, Rollen, Prozessdefinitionen
-- `Control Layer`: PR, Review, Approval, Rulesets
-- `Execution Layer`: Runtime, Automationen, Prozessausfuehrung
-- `Evidence Layer`: revisionssicheres Event-Journal
+- `Intent Layer`: policies, roles, process definitions
+- `Control Layer`: pull requests, reviews, approvals, rulesets
+- `Execution Layer`: runtime, automation, process execution
+- `Evidence Layer`: audit-proof event journal
 
-## Meine konkrete Empfehlung
+## Project Decision
 
-Wenn du das ernsthaft als Produkt, Plattform oder internes Transformationsmodell aufziehen willst, sollte es so geframed werden.
+This repository maintains the positioning as an active project decision. The
+following terms are the binding terminology for NoC.
 
-Begriff:
+Term:
 
 - `Notariat as Code`
 
-Plattformname:
+Platform name:
 
 - `Enterprise Control Plane`
 
-Erstes Produktversprechen:
+First product promise:
 
-- "Team-, Rollen- und Zugriffsaenderungen laufen deklarativ, auditierbar und automatisiert ueber Git."
+- "Notarial case types, plugins, workflows, roles, approvals and evidence run
+  declaratively, auditable and automated through Git."
 
-Das ist konkret, glaubwuerdig und gross genug, um das Paradigma zu zeigen.
+The current development status is maintained in `roadmap/BUILD_NOW.md`.
 
-## Der Ein-Satz-Pitch
+## One-Sentence Pitch
 
-Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies und operative Aenderungen deklarativ in Git beschrieben und ueber eine Enterprise Control Plane in reale Systeme reconciled werden.
+Notariat as Code is an operating model in which notarial case types, plugins,
+workflows, policies and operational changes are described declaratively in Git
+and moved into verifiable execution through an Enterprise Control Plane.

@@ -1,0 +1,240 @@
+{
+  "schema_version": "noc.ai-sbom/v0.1",
+  "status": "draft",
+  "review_date": "2026-05-15",
+  "scope": "NaC repository-wide AI supply-chain baseline for plugins, workflows and usecases",
+  "source_references": [
+    "https://www.bsi.bund.de/DE/Service-Navi/Presse/Pressemitteilungen/Presse2026/260512_G7_Richtlinie_SBOM_for_AI.html",
+    "https://www.bsi.bund.de/EN/Themen/Unternehmen-und-Organisationen/Informationen-und-Empfehlungen/Kuenstliche-Intelligenz/KI.html",
+    "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+  ],
+  "policy_reference": "policies/sbom-policy.yaml",
+  "documentation_reference": {
+    "de": "docs/de/sbom-for-ai.md",
+    "en": "docs/en/sbom-for-ai.md"
+  },
+  "privacy_boundary": {
+    "real_personal_data_in_sbom": false,
+    "secrets_in_sbom": false,
+    "client_or_mandate_content_in_sbom": false,
+    "external_ai_processing_requires_avv_dpa_gate": true
+  },
+  "clusters": {
+    "metadata": {
+      "name": "NaC AI-SBOM baseline",
+      "version": "0.1.0",
+      "owner": "NoC Maintainers",
+      "lifecycle_state": "planning",
+      "release_binding": "draft only until first AI-enabled release package"
+    },
+    "system_level_properties": [
+      {
+        "id": "nac-reference-repository",
+        "type": "enterprise-gitops-reference",
+        "description": "Repository-wide governance and implementation baseline for Notariat as Code."
+      }
+    ],
+    "models": [
+      {
+        "id": "model-inventory-pending",
+        "provider": "to-be-declared-per-plugin-workflow-or-usecase",
+        "purpose": "No production model is bound in this baseline draft.",
+        "personal_data_allowed": false,
+        "review_required_before_external_use": true
+      }
+    ],
+    "datasets": [
+      {
+        "id": "dataset-inventory-pending",
+        "source": "synthetic-or-placeholder-only-until-approved",
+        "personal_data_allowed": false,
+        "professional_secret_allowed": false
+      }
+    ],
+    "infrastructure": [
+      {
+        "id": "local-noc-workspace",
+        "processing_mode": "local-first",
+        "external_service_use": "requires AVV/DPA and channel approval",
+        "minimum_requirements_reference": {
+          "de": "docs/de/minimum-requirements.md",
+          "en": "docs/en/minimum-requirements.md"
+        }
+      },
+      {
+        "id": "local-development-toolchain",
+        "profile": "base",
+        "processing_mode": "local",
+        "minimum_requirements": [
+          {
+            "component": "operating_system",
+            "minimum": "Windows 11 or another current maintained developer OS",
+            "purpose": "local development and GitOps work"
+          },
+          {
+            "component": "git",
+            "minimum": "installed and available in PATH",
+            "purpose": "version control and pull request workflow"
+          },
+          {
+            "component": "github_cli_gh",
+            "minimum": "installed and authenticated",
+            "purpose": "GitHub repository, pull request and Actions operations"
+          },
+          {
+            "component": "python",
+            "minimum": "3.11",
+            "purpose": "deterministic checks, knowledge graph runtime and workflow runtime"
+          }
+        ],
+        "verification": [
+          "python scripts/startup_check.py --profile base --ide auto --run-tests"
+        ]
+      },
+      {
+        "id": "local-plugin-development-toolchain",
+        "profile": "plugin-dev",
+        "processing_mode": "local",
+        "minimum_requirements": [
+          {
+            "component": "nodejs",
+            "minimum": "20 recommended",
+            "purpose": "plugin packaging, local web/action prototypes and validators"
+          },
+          {
+            "component": "npm",
+            "minimum": "matching Node.js installation",
+            "purpose": "package installation and build commands"
+          },
+          {
+            "component": "loopback_networking",
+            "minimum": "127.0.0.1 available",
+            "purpose": "local gateways such as morris and XNP test adapters"
+          },
+          {
+            "component": "browser",
+            "minimum": "current Chromium, Edge, Chrome or Firefox",
+            "purpose": "local middleware and admin surfaces"
+          }
+        ],
+        "verification": [
+          "python scripts/startup_check.py --profile plugin-dev --ide auto"
+        ]
+      },
+      {
+        "id": "local-notary-workstation-xnp-card-path",
+        "profile": "notary-workstation",
+        "processing_mode": "local-only",
+        "minimum_requirements": [
+          {
+            "component": "operating_system",
+            "minimum": "Windows 11 or current supported Windows client",
+            "purpose": "driver, card-reader, morris and XNP compatibility"
+          },
+          {
+            "component": "user_context",
+            "minimum": "same Windows user for Codex, morris, driver and XNP",
+            "purpose": "consistent local permissions and runtime paths"
+          },
+          {
+            "component": "card_reader",
+            "minimum": "REINER SCT cyberJack or equivalent security-class-3 reader",
+            "purpose": "BNotK card path and secure PIN entry"
+          },
+          {
+            "component": "bnotk_chip_or_signature_card",
+            "minimum": "available for domain tests",
+            "purpose": "authentication and signature paths"
+          },
+          {
+            "component": "pcsc_service",
+            "minimum": "installed and running",
+            "purpose": "smart-card access for local software"
+          },
+          {
+            "component": "reiner_sct_driver_package",
+            "minimum": "installed locally, typical Windows path under Program Files",
+            "purpose": "card-reader driver"
+          },
+          {
+            "component": "reiner_sct_morris",
+            "minimum": "installed locally with loopback response",
+            "purpose": "browser and middleware gateway for local reader checks"
+          },
+          {
+            "component": "xnp",
+            "minimum": "installed in the same local workstation context",
+            "purpose": "BNotK and register communication"
+          },
+          {
+            "component": "sak_lite_or_xnp_card_path",
+            "minimum": "installed and configured when card-based XNP access is tested",
+            "purpose": "local card access for XNP"
+          },
+          {
+            "component": "secureframework",
+            "minimum": "installed and configured when required by the card path",
+            "purpose": "local security component"
+          },
+          {
+            "component": "xnotar_or_exchange_path",
+            "minimum": "available when register workflows are tested",
+            "purpose": "HRA/HRB and exchange packages"
+          },
+          {
+            "component": "ausweisapp",
+            "minimum": "optional for IDaaS and eID paths",
+            "purpose": "eID function check"
+          }
+        ],
+        "negative_readiness_responses_allowed": [
+          "NoReader",
+          "NoCard",
+          "no card reader attached"
+        ],
+        "privacy_exclusions": [
+          "no PINs",
+          "no card serial numbers",
+          "no certificate contents",
+          "no mandate data",
+          "no real personal data"
+        ],
+        "verification": [
+          "python scripts/startup_check.py --profile notary-workstation --ide auto",
+          "python plugins\\noc-cyberjack-rfid\\scripts\\check_readiness.py --json --probe-morris-api",
+          "python plugins\\noc-bnotk-xnp\\scripts\\reader_prompt.py --json --probe-morris-api"
+        ]
+      }
+    ],
+    "security_properties": [
+      {
+        "id": "no-secrets-no-personal-data",
+        "control": "Repository privacy lint, secret scan and human review stay mandatory."
+      },
+      {
+        "id": "human-approval",
+        "control": "Regulated or notarial AI use requires documented review before external processing."
+      }
+    ],
+    "key_performance_indicators": [
+      {
+        "id": "coverage",
+        "metric": "Every AI-enabled plugin, workflow and usecase has an AI-SBOM decision before release.",
+        "target": "100_percent_for_ai_enabled_release_packages"
+      },
+      {
+        "id": "privacy-gate",
+        "metric": "Every external AI processing path has AVV/DPA status documented.",
+        "target": "100_percent_before_pilot_with_personal_data"
+      }
+    ]
+  },
+  "open_tasks": [
+    "Inventory all AI touchpoints in plugins, workflows, usecases and prompts.",
+    "Choose final machine-readable mapping to CycloneDX, SPDX or another approved AI-SBOM profile.",
+    "Add release binding so AI-SBOM artifacts are attached to tagged releases.",
+    "Define per-plugin and per-workflow AI-SBOM update responsibilities.",
+    "Map local minimum requirements from docs/de/minimum-requirements.md and docs/en/minimum-requirements.md into CycloneDX/SPDX release exports.",
+    "Add vulnerability and model-risk review hooks after the minimum element mapping is stable."
+  ]
+}

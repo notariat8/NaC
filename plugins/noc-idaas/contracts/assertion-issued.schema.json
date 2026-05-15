@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://idaas.example.invalid/contracts/events/assertion-issued.schema.json",
+  "title": "AssertionIssued",
+  "type": "object",
+  "required": [
+    "eventType",
+    "tenantId",
+    "subjectId",
+    "assertionId",
+    "issuedAt"
+  ],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "assertion-issued"
+    },
+    "tenantId": {
+      "type": "string"
+    },
+    "subjectId": {
+      "type": "string"
+    },
+    "assertionId": {
+      "type": "string"
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "verificationSource": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
