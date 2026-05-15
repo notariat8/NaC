@@ -5,9 +5,9 @@ Backlog.
 
 ## Dokumente
 
-- `operations.md`: Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
-- `taxonomy.md`: Issue-Fuehrung ueber mehrere Repositories.
-- `public-backlog.md`: priorisierte Public-Issues.
+- [operations.md](operations.md): Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
+- [taxonomy.md](taxonomy.md): Issue-Fuehrung ueber mehrere Repositories.
+- [public-backlog.md](public-backlog.md): priorisierte Public-Issues.
 
 ## Pflegehinweis
 

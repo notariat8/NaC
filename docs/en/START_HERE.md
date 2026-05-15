@@ -5,16 +5,16 @@ Last content update: 2026-05-15
 
 ## Why This Document Exists Next To The README
 
-`README.md` and `docs/en/README.md` are project overview and index files. This
+[README.md](../../README.md) and [docs/en/README.md](README.md) are project overview and index files. This
 document is the operational start sequence for working in the active NoC project.
 
-`START_HERE.md` remains necessary, but it has a different job than the README:
+[START_HERE.md](START_HERE.md) remains necessary, but it has a different job than the README:
 
 | Document | Purpose |
 | --- | --- |
-| `README.md` | Repository overview, product structure, quick checks, current build commands. |
-| `docs/en/README.md` | English business orientation and documentation index. |
-| `docs/en/START_HERE.md` | Binding work-start sequence for new sessions, contributors and agents. |
+| [README.md](../../README.md) | Repository overview, product structure, quick checks, current build commands. |
+| [docs/en/README.md](README.md) | English business orientation and documentation index. |
+| [docs/en/START_HERE.md](START_HERE.md) | Binding work-start sequence for new sessions, contributors and agents. |
 
 This repository is the active project state for `Notariat as Code` with `NoC`
 as the concrete Enterprise Control Plane.
@@ -33,15 +33,15 @@ Use this document:
 ## Binding Start Sequence
 
 1. Read repository rules:
-   - `AGENTS.md`, if present in the workspace.
-   - `.github/copilot-instructions.md`
-   - `.cursor/rules/`
+   - [AGENTS.md](../../AGENTS.md), if present in the workspace.
+   - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
+   - [.cursor/rules/](../../.cursor/rules)
 2. Read project status:
-   - `roadmap/BUILD_NOW.md`
-   - `roadmap/GANTT.md`
-   - `docs/en/minimum-requirements.md`
-   - for area work, also `plugins/GANTT.md`, `workflows/GANTT.md` or
-     `usecases/GANTT.md`
+   - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
+   - [roadmap/GANTT.md](../../roadmap/GANTT.md)
+   - [docs/en/minimum-requirements.md](minimum-requirements.md)
+   - for area work, also [plugins/GANTT.md](../../plugins/GANTT.md), [workflows/GANTT.md](../../workflows/GANTT.md) or
+     [usecases/GANTT.md](../../usecases/GANTT.md)
 3. Check the current Git state:
 
    ```bash
@@ -73,31 +73,31 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 NoC is developed as software. Concept work is complete only when it also updates
 at least one matching implementation surface:
 
-- runtime code under `src/`
-- scripts under `scripts/`
-- tests under `tests/`
-- plugin artifacts under `plugins/`
-- workflow contracts under `workflows/contracts/`
-- KG artifacts under `knowledge-graph/`
-- roadmap or Gantt status under `roadmap/`, `plugins/`, `workflows/` or
-  `usecases/`
+- runtime code under [src/](../../src)
+- scripts under [scripts/](../../scripts)
+- tests under [tests/](../../tests)
+- plugin artifacts under [plugins/](../../plugins)
+- workflow contracts under [workflows/contracts/](../../workflows/contracts)
+- KG artifacts under [knowledge-graph/](../../knowledge-graph)
+- roadmap or Gantt status under [roadmap/](../../roadmap), [plugins/](../../plugins), [workflows/](../../workflows) or
+  [usecases/](../../usecases)
 
 ## Product Structure
 
 | Area | Purpose |
 | --- | --- |
-| `plugins/` | Installable plugin artifacts for GPT Store, workspace or local integration. |
-| `workflows/` | Skills, workflow contracts and deterministic Python workflows. |
-| `usecases/` | Concrete notarial case types and pilot packages. |
-| `knowledge-graph/` | Static KG/DB for open information, documents, decisions, gates and evidence. |
-| `docs/en/eventstream/` | Event journal, EventLock and cloud runbooks. |
-| `docs/en/issues/` | Issue taxonomy, issue operations and public backlog. |
-| `docs/en/operations/` | Fork/release, upstream sync, version binding, work model and repository consolidation. |
-| `docs/en/service-model/` | Core/vertical structure, provider services, tenant ownership and exit. |
-| `src/` | Executable Python runtime. |
-| `scripts/` | Local and CI-adjacent developer tooling. |
-| `policies/` | Binding governance, role, technology, privacy and SBOM rules. |
-| `sbom/` | Machine-readable SBOM/AI-SBOM artifacts for runtime, infrastructure and local dependencies. |
+| [plugins/](../../plugins) | Installable plugin artifacts for GPT Store, workspace or local integration. |
+| [workflows/](../../workflows) | Skills, workflow contracts and deterministic Python workflows. |
+| [usecases/](../../usecases) | Concrete notarial case types and pilot packages. |
+| [knowledge-graph/](../../knowledge-graph) | Static KG/DB for open information, documents, decisions, gates and evidence. |
+| [docs/en/eventstream/](eventstream) | Event journal, EventLock and cloud runbooks. |
+| [docs/en/issues/](issues) | Issue taxonomy, issue operations and public backlog. |
+| [docs/en/operations/](operations) | Fork/release, upstream sync, version binding, work model and repository consolidation. |
+| [docs/en/service-model/](service-model) | Core/vertical structure, provider services, tenant ownership and exit. |
+| [src/](../../src) | Executable Python runtime. |
+| [scripts/](../../scripts) | Local and CI-adjacent developer tooling. |
+| [policies/](../../policies) | Binding governance, role, technology, privacy and SBOM rules. |
+| [sbom/](../../sbom) | Machine-readable SBOM/AI-SBOM artifacts for runtime, infrastructure and local dependencies. |
 
 ## Current Developer Commands
 
@@ -111,24 +111,24 @@ python scripts/quality_gate.py --profile strict
 
 ## Push Rule
 
-Every push must update `roadmap/GANTT.md`. Changes below `plugins/`,
-`workflows/` or `usecases/` must also update the matching area Gantt:
+Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes below [plugins/](../../plugins),
+[workflows/](../../workflows) or [usecases/](../../usecases) must also update the matching area Gantt:
 
-- `plugins/GANTT.md`
-- `workflows/GANTT.md`
-- `usecases/GANTT.md`
+- [plugins/GANTT.md](../../plugins/GANTT.md)
+- [workflows/GANTT.md](../../workflows/GANTT.md)
+- [usecases/GANTT.md](../../usecases/GANTT.md)
 
 ## Localization Rule
 
 German and English are standard languages. Changes to localized content must
 always maintain both language paths:
 
-- `docs/de/`
-- `docs/en/`
-- `prompts/de/`
-- `prompts/en/`
+- [docs/de/](../de)
+- [docs/en/](.)
+- [prompts/de/](../../prompts/de)
+- [prompts/en/](../../prompts/en)
 
-Parity is checked with `scripts/validate_language_parity.py`.
+Parity is checked with [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py).
 
 ## Completion Rule
 

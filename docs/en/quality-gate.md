@@ -28,16 +28,21 @@ CI:
 
 - `minimal`: Prozessvalidierung + Unit Tests
 - `standard`: `minimal` + Privacy Lint
-- `strict`: `standard` + Governance Policy Sync + Language Parity + Cloud Runbook Parity
+- `strict`: `standard` + Governance Policy Sync + Language Parity + Documentation Links + Cloud Runbook Parity + Gantt + AI-SBOM + Knowledge Graph
 
 ## Feste Reihenfolge
 
 1. `process_validate`
 2. `unit_tests`
-3. `privacy_lint` (ab `standard`)
-4. `governance_sync` (nur `strict`)
-5. `language_parity` (nur `strict`)
-6. `cloud_runbook_parity` (nur `strict`)
+3. `plugin_validate`
+4. `privacy_lint` (ab `standard`)
+5. `governance_sync` (nur `strict`)
+6. `language_parity` (nur `strict`)
+7. `doc_links` (nur `strict`)
+8. `gantt_progress` (nur `strict`)
+9. `cloud_runbook_parity` (nur `strict`)
+10. `ai_sbom` (nur `strict`)
+11. `knowledge_graph` (nur `strict`)
 
 ## Artefakte
 

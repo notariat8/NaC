@@ -120,6 +120,20 @@ issue_governance:
   single_leading_issue_per_topic: true
   require_cross_repo_issue_links: true
 
+documentation_links:
+  require_markdown_links_for_repo_references: true
+  applies_to:
+    - readme_files
+    - start_here_documents
+    - agent_rule_surfaces
+  path_references_should_be_clickable: true
+  allowed_code_spans:
+    - commands
+    - configuration_keys
+    - file_patterns
+    - code_identifiers
+  enforced_by: scripts/validate_doc_links.py
+
 operating_cadence:
   default_method: agile
   allowed_methods:

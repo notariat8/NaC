@@ -5,11 +5,11 @@ alwaysApply: true
 
 # SBOM And AI-SBOM (MUSS)
 
-- Folge immer `policies/sbom-policy.yaml`.
-- Klassische SBOM-Artefakte werden nach `docs/de/sbom-products.md` und `docs/en/sbom-products.md` gepflegt.
+- Folge immer [policies/sbom-policy.yaml](../../policies/sbom-policy.yaml).
+- Klassische SBOM-Artefakte werden nach [docs/de/sbom-products.md](../../docs/de/sbom-products.md) und [docs/en/sbom-products.md](../../docs/en/sbom-products.md) gepflegt.
 - AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe.
-- Pflege AI-SBOM-Aufgaben nach `docs/de/sbom-for-ai.md` und `docs/en/sbom-for-ai.md`.
-- Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in `docs/de/minimum-requirements.md` und `docs/en/minimum-requirements.md`.
-- Aktualisiere `sbom/ai/nac-ai-sbom-draft.json`, sobald ein AI-faehiges Artefakt, ein Modellaufruf, ein Datensatz, eine Runtime, Hardware, lokale Middleware oder ein externer Verarbeitungskanal eingefuehrt oder geaendert wird.
+- Pflege AI-SBOM-Aufgaben nach [docs/de/sbom-for-ai.md](../../docs/de/sbom-for-ai.md) und [docs/en/sbom-for-ai.md](../../docs/en/sbom-for-ai.md).
+- Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../../docs/en/minimum-requirements.md).
+- Aktualisiere [sbom/ai/nac-ai-sbom-draft.json](../../sbom/ai/nac-ai-sbom-draft.json), sobald ein AI-faehiges Artefakt, ein Modellaufruf, ein Datensatz, eine Runtime, Hardware, lokale Middleware oder ein externer Verarbeitungskanal eingefuehrt oder geaendert wird.
 - Speichere keine echten personenbezogenen Daten, Mandatsinhalte, Secrets, privaten Schluessel, Zertifikatsmaterialien oder Account-IDs in SBOM- oder AI-SBOM-Artefakten.
-- Externe KI-Verarbeitung braucht vor Pilot mit personenbezogenen Daten eine AVV/DPA-Entscheidung nach `docs/de/datenschutz-avv-dpa.md` und `docs/en/datenschutz-avv-dpa.md`.
+- Externe KI-Verarbeitung braucht vor Pilot mit personenbezogenen Daten eine AVV/DPA-Entscheidung nach [docs/de/datenschutz-avv-dpa.md](../../docs/de/datenschutz-avv-dpa.md) und [docs/en/datenschutz-avv-dpa.md](../../docs/en/datenschutz-avv-dpa.md).

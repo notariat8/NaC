@@ -7,8 +7,8 @@ alwaysApply: true
 
 Bei erster Nutzung dieses Repositories:
 
-1. Lies `docs/de/START_HERE.md` oder `docs/en/START_HERE.md`.
-2. Nutze das passende Onboarding unter `prompts/de/onboarding/` oder `prompts/en/onboarding/`.
+1. Lies [docs/de/START_HERE.md](../../docs/de/START_HERE.md) oder [docs/en/START_HERE.md](../../docs/en/START_HERE.md).
+2. Nutze das passende Onboarding unter [prompts/de/onboarding/](../../prompts/de/onboarding) oder [prompts/en/onboarding/](../../prompts/en/onboarding).
 3. Bestaetige Unternehmensart und gewuenschte Branchenmodule.
 4. Bestaetige Kultur-, Sprach-, Language- und Technologie-Policy.
 5. Starte mit einem Pilotprozess statt mit Vollausrollung.
