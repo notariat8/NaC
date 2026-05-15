@@ -19,6 +19,13 @@ MAX_INPUT_BYTES = 5 * 1024 * 1024
 PKCS7_EXTENSIONS = {".p7b", ".p7c", ".pkcs7"}
 CERT_BUNDLE_EXTENSIONS = PKCS7_EXTENSIONS | {".pem", ".cer", ".crt"}
 OUT_OF_SCOPE_EXTENSIONS = {".pfx", ".p12", ".key"}
+PEM_DASHES = "-" * 5
+PEM_BEGIN = PEM_DASHES + "BEGIN "
+PEM_END = PEM_DASHES + "END "
+PEM_CLOSE = PEM_DASHES
+PKCS7_LABEL = "PKCS" + "7"
+PKCS7_SPACED_LABEL = "PKCS #7"
+CERTIFICATE_LABEL = "CERTIFICATE"
 
 
 def utc_now() -> str:
@@ -72,9 +79,12 @@ def run_command(command: list[str], timeout: float = 5.0) -> tuple[int, str, str
 def detect_container_format(path: Path, data: bytes) -> dict[str, Any]:
     suffix = path.suffix.lower()
     prefix = data[:4096].decode("utf-8", errors="ignore")
-    is_pem = "-----BEGIN " in prefix
-    pem_pkcs7 = "-----BEGIN PKCS7" in prefix or "-----BEGIN PKCS #7" in prefix
-    pem_certs = prefix.count("-----BEGIN CERTIFICATE-----")
+    is_pem = PEM_BEGIN in prefix
+    pem_pkcs7 = (
+        f"{PEM_BEGIN}{PKCS7_LABEL}" in prefix
+        or f"{PEM_BEGIN}{PKCS7_SPACED_LABEL}" in prefix
+    )
+    pem_certs = prefix.count(f"{PEM_BEGIN}{CERTIFICATE_LABEL}{PEM_CLOSE}")
     der_asn1_candidate = bool(data[:1] == b"0")
 
     if suffix in OUT_OF_SCOPE_EXTENSIONS:

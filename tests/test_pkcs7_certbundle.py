@@ -23,6 +23,14 @@ def load_certbundle_module():
 certbundle = load_certbundle_module()
 
 
+def pkcs7_pem(body: str) -> bytes:
+    return (
+        f"{certbundle.PEM_BEGIN}{certbundle.PKCS7_LABEL}{certbundle.PEM_CLOSE}\n"
+        f"{body}\n"
+        f"{certbundle.PEM_END}{certbundle.PKCS7_LABEL}{certbundle.PEM_CLOSE}\n"
+    ).encode("utf-8")
+
+
 class Pkcs7CertBundleTests(unittest.TestCase):
     def test_no_input_is_manual_review_and_non_signing(self) -> None:
         args = argparse.Namespace(input=None, max_bytes=certbundle.MAX_INPUT_BYTES)
@@ -47,11 +55,7 @@ class Pkcs7CertBundleTests(unittest.TestCase):
         self.assertIn("out of scope", str(evidence["checks"]).lower())
 
     def test_pem_pkcs7_is_classified_without_raw_material(self) -> None:
-        payload = (
-            b"-----BEGIN PKCS7-----\n"
-            b"MIIDexampleDoNotStoreRawCertificateMaterial\n"
-            b"-----END PKCS7-----\n"
-        )
+        payload = pkcs7_pem("fixture-body")
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "bundle.p7b"
             path.write_bytes(payload)
@@ -75,7 +79,7 @@ class Pkcs7CertBundleTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "bundle.p7b"
-            path.write_bytes(b"-----BEGIN PKCS7-----\nabc\n-----END PKCS7-----\n")
+            path.write_bytes(pkcs7_pem("fixture-body"))
             certbundle.command_exists = fake_command_exists
             certbundle.run_command = fake_run_command
             certbundle.platform.system = lambda: "Linux"
@@ -91,7 +95,7 @@ class Pkcs7CertBundleTests(unittest.TestCase):
         serialized = str(evidence)
         self.assertEqual(evidence["overall_status"], "ready")
         self.assertIn("openssl_parse", serialized)
-        self.assertNotIn("abc", serialized)
+        self.assertNotIn("fixture-body", serialized)
 
 
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 62% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing, PFX import or private-key access. |
+| A | Installable plugins for notary offices | Active | 62% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing, PFX import or private-key access, with PEM-shaped fixtures hardened for secret scanning. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 

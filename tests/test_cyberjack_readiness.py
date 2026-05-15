@@ -224,7 +224,7 @@ class CyberJackReadinessTests(unittest.TestCase):
             if path == "/system" and params.get("cmd") == "check":
                 return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "morrisversion": "2.0.0", "tid": "123456", "status_desc": "OK"}}
             if path == "/system" and params.get("cmd") == "auth":
-                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "sid": "123456#sid456", "auth_data": "secret-auth", "status_desc": "OK"}}
+                return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "sid": "123456#sid456", "auth_data": "fixture-nonce-value", "status_desc": "OK"}}
             if path == "/system" and params.get("cmd") == "list_provider":
                 return {"http_status": 200, "content_type": "application/javascript", "raw": "", "payload": {"status": 0, "provider_licensed": "system,pcsc", "status_desc": "OK"}}
             if path == "/pcsc" and params.get("cmd") == "establishcontext":
@@ -246,7 +246,7 @@ class CyberJackReadinessTests(unittest.TestCase):
         self.assertEqual(result["details"]["pcsc_listreaders"]["status"], -20)
         serialized_details = str(result["details"])
         self.assertNotIn("123456#sid456", serialized_details)
-        self.assertNotIn("secret-auth", serialized_details)
+        self.assertNotIn("fixture-nonce-value", serialized_details)
         self.assertTrue(any(path == "/system" and params.get("cmd") == "close" for path, params in calls))
 
 
