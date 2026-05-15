@@ -19,6 +19,7 @@ gantt
     Static KG binding for Next-10 cases        :done,   u6, 2026-05-15, 1d
     Case-local KG folder migration             :done,   u6a, 2026-05-15, 1d
     German-leading usecase index rule          :done,   u6b, 2026-05-15, 1d
+    No-code KG editor binding                  :done,   u6c, 2026-05-15, 1d
     Online GmbH formation                      :active, u7, 2026-05-14, 28d
     AO52 nonprofit software company            :active, u8, 2026-05-14, 28d
     Steuer-aaS tax readiness                   :active, u9, 2026-05-14, 28d
@@ -40,6 +41,7 @@ gantt
 | Top-10 notarial usecase baseline | `usecases/*/knowledge-graph.graph.json` | Done | Created canonical usecase folders and case-local KG nodes for the ten most important notarial case types. |
 | Next-10 notarial usecase baseline | `usecases/*/knowledge-graph.graph.json` | Done | Created canonical usecase folders and case-local KG nodes for the next ten frequent notarial case types. |
 | German-leading usecase language | `usecases/README.md` | Done | German is now explicit as leading and legally binding language for German-law notarial usecases. |
+| No-code KG editor binding | `usecases/README.md` plus `src/notary_kg/editor.py` | Done | Fachpersonal edits usecase KGs through a form/checklist editor view; raw JSON and `value` fields stay blocked. |
 | Online GmbH-/UG-Gruendung | `usecases/online-gmbh-gruendung/` | Active | Canonicalized from the empty GitHub repo `ofunk/Online-GmbH-Gruendung`; now part of the Top-10 KG. |
 | AO52 nonprofit software company | `usecases/ao52aas-gemeinnuetzigkeit/` | Active | Migrated from `ofunk/AO52aaS`. |
 | Steuer-aaS tax readiness | `usecases/steuer-aas/` | Active | Canonicalized from the empty GitHub repo `ofunk/Steuer-aaS`. |
@@ -75,4 +77,6 @@ Each usecase owns its KG under `usecases/<slug>/knowledge-graph.graph.json` plus
 `usecases/<slug>/knowledge-graph.md`. The strict quality gate rejects a central
 `knowledge-graph/` folder and rejects any usecase folder without a local KG.
 Every KG update must keep all case `value` fields empty in Git and must update
-this Gantt plus the global Gantt when pushed.
+this Gantt plus the global Gantt when pushed. Fachpersonal-facing changes use
+the KG editor view and patch workflow; direct raw-JSON editing is reserved for
+reviewed developer maintenance.

@@ -1,0 +1,80 @@
+{
+  "schema_version": "noc.workflow-contract/v0.1",
+  "contract_id": "workflow.kg_editor",
+  "title": "KG Editor for notarial usecase graphs",
+  "status": "active_mvp",
+  "last_update": "2026-05-15",
+  "purpose": "Expose usecase-local knowledge graphs as safe form and checklist views for notarial Fachpersonal without requiring raw JSON edits.",
+  "source_schema": "schemas/kg-editor-patch.schema.json",
+  "runtime": {
+    "python_module": "notary_kg.editor",
+    "cli": "python scripts/notary_kg.py --repo-root . editor-view <usecase_slug>"
+  },
+  "audience": [
+    "notary",
+    "notary_clerk",
+    "fachadministrator",
+    "developer"
+  ],
+  "tabs": [
+    {
+      "id": "open_information",
+      "label_de": "Offene Angaben",
+      "label_en": "Open Information",
+      "render_as": "checklist",
+      "source": "required_information"
+    },
+    {
+      "id": "documents",
+      "label_de": "Dokumente",
+      "label_en": "Documents",
+      "render_as": "document_status_list",
+      "source": "documents"
+    },
+    {
+      "id": "decisions",
+      "label_de": "Entscheidungen",
+      "label_en": "Decisions",
+      "render_as": "decision_dropdowns",
+      "source": "decisions"
+    },
+    {
+      "id": "gates_evidence",
+      "label_de": "Gates/Evidence",
+      "label_en": "Gates/Evidence",
+      "render_as": "gate_evidence_review",
+      "source": [
+        "gates",
+        "evidence"
+      ]
+    }
+  ],
+  "actions": [
+    "get_graph",
+    "propose_patch",
+    "validate_graph_patch",
+    "create_pull_request"
+  ],
+  "patch_pipeline": [
+    "ChatGPT receives natural-language instruction.",
+    "A structured patch proposal is created.",
+    "The patch is validated against schemas/kg-editor-patch.schema.json.",
+    "Privacy and data-minimization checks reject real mandate data and secrets.",
+    "A diff is shown for review.",
+    "The user confirms the change.",
+    "The change is committed through a pull request."
+  ],
+  "guardrails": {
+    "raw_json_editing_for_fachpersonal": false,
+    "value_fields_editable": false,
+    "real_mandate_data_in_git": false,
+    "blind_overwrite": false,
+    "confirmation_required": true,
+    "graph_visualization_priority": "later_optional_power_user_view"
+  },
+  "future_integration_path": [
+    "MVP 1: GitHub-backed KG editor that reads usecase-local graph files and opens pull requests.",
+    "MVP 2: ChatGPT App with embedded React sidecar for the editor.",
+    "MVP 3: Low-code configuration layer for new usecase views, fields, roles and gates."
+  ]
+}

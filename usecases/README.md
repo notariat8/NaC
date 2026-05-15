@@ -72,6 +72,13 @@ Review-Sicht enthalten. Workflows lesen diesen lokalen KG als Status offener
 Fragen und schreiben Aenderungen nur ueber reviewte Git-Aenderungen zurueck.
 Echte Mandatswerte bleiben ausserhalb des Repository.
 
+Fachpersonal bearbeitet diese Graphen nicht direkt als JSON. Die sichere
+Bearbeitungsschicht ist der KG-Editor-Workstream in
+[docs/de/kg-editor-workstream.md](../docs/de/kg-editor-workstream.md). Die
+ausfuehrbare Editor-View kommt aus
+[src/notary_kg/editor.py](../src/notary_kg/editor.py) und sperrt `value`-Felder
+konsequent.
+
 ## Weitere Backlog-Kandidaten
 
 Die folgenden Kandidaten haben noch keinen kanonischen Usecase-Ordner. Sobald

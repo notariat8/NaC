@@ -115,6 +115,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "Knowledge Graph Baseline",
                     [sys.executable, "scripts/validate_knowledge_graph.py"],
                 ),
+                (
+                    "kg_editor",
+                    "Knowledge Graph Editor Contract",
+                    [sys.executable, "scripts/validate_kg_editor.py"],
+                ),
             ]
         )
     return checks

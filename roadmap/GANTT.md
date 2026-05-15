@@ -38,6 +38,7 @@ gantt
     Repo-wide German-leading language rule       :done,    b1h, 2026-05-15, 1d
     Root README language-pair link cleanup       :done,    b1i, 2026-05-15, 1d
     Localized docs translation cleanup           :done,    b1j, 2026-05-15, 1d
+    No-code KG editor contract MVP              :done,    b1k, 2026-05-15, 1d
     Skill plus Python workflow contracts         :active,  b2, 2026-05-15, 28d
     Deterministic workflow runner MVP            :active,  b3, 2026-05-15, 35d
     Day2 evidence and drift operations           :         b4, after b3, 28d
@@ -48,6 +49,7 @@ gantt
     Next-10 notarial KG baseline                 :done,    c3, 2026-05-15, 1d
     Case-local KG folder migration               :done,    c3a, 2026-05-15, 1d
     German-leading usecase language rule         :done,    c3b, 2026-05-15, 1d
+    KG editor binding for usecase KGs            :done,    c3c, 2026-05-15, 1d
     GmbH formation canonicalization              :active,  c4, 2026-05-14, 21d
     AO52 nonprofit formation intake              :active,  c5, 2026-05-14, 21d
     Steuer-aaS tax usecase intake                :active,  c6, 2026-05-14, 21d
@@ -60,8 +62,8 @@ gantt
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 67% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, minimum-requirements inventory and strict validator. |
-| B | Installable skills and deterministic Python workflows | Active | 37% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, PDF export is manual-only during active development, `fertig` means merged to `main` plus clean local `main`, the GitHub root README uses a Deutsch/English start table, and language parity now blocks copied identical localized Markdown/text mirrors. |
-| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 54% | Every usecase now owns a case-local static KG; German is explicit as the leading and legally binding language for German-law notarial usecases. |
+| B | Installable skills and deterministic Python workflows | Active | 40% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, PDF export is manual-only during active development, `fertig` means merged to `main` plus clean local `main`, the GitHub root README uses a Deutsch/English start table, language parity now blocks copied identical localized Markdown/text mirrors, and the KG editor exposes a safe no-code form/checklist view plus patch contract. |
+| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 56% | Every usecase now owns a case-local static KG; German is explicit as the leading and legally binding language for German-law notarial usecases; Fachpersonal edits those KGs through the no-code editor view instead of raw JSON. |
 
 ## Rule
 

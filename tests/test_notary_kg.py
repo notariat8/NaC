@@ -8,6 +8,7 @@ from pathlib import Path
 
 from notary_kg.catalog import all_case_summaries, find_case, load_catalogs
 from notary_kg.cli import main as kg_main
+from notary_kg.editor import build_editor_view
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +66,53 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertIn("Unknown KG case slug", buffer.getvalue())
 
+    def test_editor_view_exposes_no_code_tabs_without_value_fields(self) -> None:
+        view = build_editor_view(REPO_ROOT, "immobilienkaufvertrag")
+        tabs = view["editor_model"]["tabs"]
+
+        self.assertEqual(
+            [tab["id"] for tab in tabs],
+            ["open_information", "documents", "decisions", "gates_evidence"],
+        )
+        self.assertEqual(
+            [action["name"] for action in view["actions"]],
+            ["get_graph", "propose_patch", "validate_graph_patch", "create_pull_request"],
+        )
+        open_information = tabs[0]
+        self.assertEqual(open_information["render_as"], "checklist")
+        self.assertIn("value", open_information["blocked_fields"])
+        self.assertFalse(_contains_key(view, "value"))
+
+    def test_cli_editor_view_returns_json_tabs(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--format",
+                    "json",
+                    "editor-view",
+                    "immobilienkaufvertrag",
+                ]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "noc.kg-editor-view/v0.1")
+        self.assertEqual(payload["editor_model"]["tabs"][0]["id"], "open_information")
+        self.assertIn("value", payload["patch_policy"]["forbidden_fields"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _contains_key(value, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_contains_key(item, key) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(item, key) for item in value)
+    return False
 

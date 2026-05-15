@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noc.local/schemas/kg-editor-patch.schema.json",
+  "title": "NoC KG Editor Patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "patch_id",
+    "usecase_slug",
+    "graph_id",
+    "summary",
+    "contains_real_mandate_data",
+    "operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "noc.kg-editor-patch/v0.1"
+    },
+    "patch_id": {
+      "type": "string",
+      "pattern": "^kgpatch\\.[a-z0-9][a-z0-9._-]*$"
+    },
+    "usecase_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "graph_id": {
+      "type": "string",
+      "pattern": "^usecase\\.[a-z0-9][a-z0-9-]*$"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10
+    },
+    "contains_real_mandate_data": {
+      "const": false
+    },
+    "policy_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "no_real_personal_data": {
+          "const": true
+        },
+        "no_real_property_data": {
+          "const": true
+        },
+        "no_real_secrets": {
+          "const": true
+        },
+        "value_fields_untouched": {
+          "const": true
+        }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "op",
+          "section",
+          "target_id",
+          "field",
+          "value",
+          "reason",
+          "actor_role"
+        ],
+        "properties": {
+          "op": {
+            "enum": [
+              "set_field",
+              "set_status",
+              "set_owner_role",
+              "set_required_for",
+              "append_gate",
+              "append_evidence",
+              "append_edge"
+            ]
+          },
+          "section": {
+            "enum": [
+              "required_information",
+              "documents",
+              "decisions",
+              "gates",
+              "evidence",
+              "edges"
+            ]
+          },
+          "target_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "field": {
+            "enum": [
+              "status",
+              "owner_role",
+              "required_for",
+              "source",
+              "contains_personal_data",
+              "options",
+              "label",
+              "question",
+              "privacy_class"
+            ]
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10
+          },
+          "actor_role": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
