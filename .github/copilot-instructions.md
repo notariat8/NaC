@@ -29,7 +29,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
 - Plugin- und Connector-Plaene liegen unter `docs/plugin-plans/`.
-- NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal in WSL im Workspace `~/NoC`, nicht ueber Omnistation.
+- Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in `docs/de/minimum-requirements.md` und `docs/en/minimum-requirements.md`.
+- NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
 
 ## Pflichtquellen im Repository
 
@@ -46,6 +47,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - `policies/sbom-policy.yaml`
 - `docs/de/sbom-for-ai.md`
 - `docs/en/sbom-for-ai.md`
+- `docs/de/minimum-requirements.md`
+- `docs/en/minimum-requirements.md`
 - `policies/role-model-policy.yaml`
 - `policies/access-control-policy.yaml`
 - `policies/revisionssicherheit-eventstream-policy.yaml`
@@ -87,7 +90,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Keine echten Zugangsdaten, Keys oder Tokens in Vorschlaegen speichern.
 - Keine echten personenbezogenen Daten in Prozessbeispielen speichern.
 - Fuer Beispieldaten nur Testdomains und Platzhalter verwenden.
-- AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.
+- AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; lokale Runtime-, Hardware- und Middleware-Mindestvoraussetzungen muessen in der AI-SBOM gefuehrt werden; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.
 
 ## Technikvorgaben
 
@@ -99,7 +102,9 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 ## Erststart fuer VS Code + Copilot
 
 1. Lies `docs/de/vscode-copilot-start.md` oder `docs/en/vscode-copilot-start.md`.
-2. Fuehre `python scripts/startup_check.py --ide vscode --run-tests` aus.
+2. Fuehre `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
+   Fuer Plugin-Entwicklung zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
 3. Waehle das passende Branchen-Onboarding unter `prompts/de/onboarding/` oder `prompts/en/onboarding/`.
    Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.
    Zusaetzlicher MVP-Pfad: `property-management-first-setup.md`.

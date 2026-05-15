@@ -62,6 +62,7 @@ ueberfuehrt werden.
 - `docs/de/platform-onboarding-matrix.md` sichert plattformuebergreifende Synchronitaet.
 - `docs/de/fork-and-release-operating-model.md` definiert Upstream/Fork/Domaenen-Betrieb.
 - `docs/de/release-sync-playbook.md` beschreibt den verbindlichen Upstream-Sync-Ablauf.
+- `docs/de/minimum-requirements.md` definiert Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz.
 - `docs/de/repository-consolidation.md` zeigt, welche Einzelrepos nach NoC migriert, noch offen oder stillzulegen sind.
 - `docs/de/parallelbetrieb-version-binding.md` regelt Alt-/Neu-Mischbetrieb je Vorgangsstart.
 - `docs/de/issue-taxonomie-pro-repo.md` definiert Issue-Fuehrung ueber mehrere Repos.
@@ -192,7 +193,15 @@ Konzeptaenderungen werden immer fuer Cursor und VS Code + Copilot synchron gepfl
 
 Vor produktiver Arbeit:
 
-`python scripts/startup_check.py --ide auto --run-tests`
+`python scripts/startup_check.py --profile base --ide auto --run-tests`
+
+Fuer Plugin-Entwicklung:
+
+`python scripts/startup_check.py --profile plugin-dev --ide auto`
+
+Fuer Kartenleser-, morris- und XNP-nahe Arbeit:
+
+`python scripts/startup_check.py --profile notary-workstation --ide auto`
 
 ## Technik-Regel
 

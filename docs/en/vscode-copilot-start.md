@@ -12,9 +12,13 @@ guided path:
 
 ## Prerequisites
 
+- minimum requirements from `docs/en/minimum-requirements.md` fulfilled
 - GitHub organization or company account
 - VS Code installed
 - Git installed
+- Python `>= 3.11`
+- GitHub CLI `gh` installed and authenticated
+- Node.js/npm for plugin development
 - Active GitHub Copilot license
 
 ## Setup
@@ -23,20 +27,24 @@ guided path:
 2. Use this repository as the base version, either as a template or fork.
 3. Open the repository in VS Code.
 4. Install and activate GitHub Copilot in the editor.
-5. Read `docs/en/START_HERE.md` and confirm the policies under `policies/`.
-6. Use an onboarding prompt from `prompts/en/onboarding/` for your industry.
+5. Read `docs/en/START_HERE.md` and `docs/en/minimum-requirements.md`.
+6. Run `python scripts/startup_check.py --profile base --ide vscode --run-tests`.
+   For plugin development, also run `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   For card-reader, morris or XNP-adjacent work, also run `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
+7. Confirm the policies under `policies/`.
+8. Use an onboarding prompt from `prompts/en/onboarding/` for your industry.
    The MVP defaults in this repository are `software_company`, `notary`, and
    `wealth_management`; the additional MVP usecase is `property_management`.
-7. Start with a pilot process and verify the pull-request workflow.
-8. Roll out more broadly only after the pilot succeeds.
-9. Define fork, sync, and mixed-version operation through the operating
+9. Start with a pilot process and verify the pull-request workflow.
+10. Roll out more broadly only after the pilot succeeds.
+11. Define fork, sync, and mixed-version operation through the operating
    documents in `docs/en/`.
-10. Review the product structure: `plugins/` for installable artifacts,
+12. Review the product structure: `plugins/` for installable artifacts,
     `workflows/` for skills and Python workflows, and `usecases/` for concrete
     notarial usecases.
-11. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
+13. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
     `workflows/`, or `usecases/`, update the matching area Gantt as well.
-12. For AI-enabled changes, review `docs/en/sbom-for-ai.md` and update
+14. For AI-enabled changes, review `docs/en/sbom-for-ai.md` and update
     `sbom/ai/nac-ai-sbom-draft.json`.
 
 ## Recommended Copilot Start Prompt
@@ -64,6 +72,8 @@ Then:
   area Gantt.
 - AI-enabled plugins, workflows, usecases, prompts or external model calls need
   an AI-SBOM decision.
+- Local runtime, hardware and middleware dependencies must be maintained in the
+  SBOM/AI-SBOM according to `docs/en/minimum-requirements.md`.
 - Follow the culture and language rules from `policies/culture-policy.yaml`.
 
 ## If The Pattern Does Not Fit

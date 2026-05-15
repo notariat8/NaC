@@ -64,7 +64,29 @@ ai_sbom:
     - notary_professional_secret_boundary
     - human_review_and_approval_owner
     - local_vs_external_processing_boundary
+    - local_runtime_and_hardware_minimum_requirements
+    - operator_workstation_dependency_inventory
     - evidence_retention_and_release_binding
+  runtime_requirements:
+    required_in_ai_sbom: true
+    documentation:
+      de: docs/de/minimum-requirements.md
+      en: docs/en/minimum-requirements.md
+    includes:
+      - local_operating_system_and_runtime
+      - python_runtime
+      - nodejs_and_npm_when_plugins_are_built
+      - github_cli_and_git
+      - reiner_sct_driver_package
+      - morris_local_middleware
+      - pcsc_service
+      - card_reader_hardware
+      - bnotk_chip_or_signature_card
+      - xnp_local_installation
+      - sak_lite_or_xnp_card_path
+      - secureframework
+      - xnotar_or_exchange_path_when_register_workflows_are_used
+      - optional_ausweisapp_for_eid_paths
   prohibited_content:
     - real_personal_data
     - secrets_or_api_keys

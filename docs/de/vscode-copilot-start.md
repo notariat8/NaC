@@ -10,9 +10,13 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 
 ## Voraussetzungen
 
+- Mindestvoraussetzungen aus `docs/de/minimum-requirements.md` erfuellt
 - GitHub-Organisation oder Unternehmenskonto
 - VS Code installiert
 - Git installiert
+- Python `>= 3.11`
+- GitHub CLI `gh` installiert und angemeldet
+- Node.js/npm fuer Plugin-Entwicklung
 - GitHub Copilot Lizenz aktiv
 
 ## Einrichtung in 8 Schritten
@@ -21,16 +25,20 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 2. Uebernehmen Sie dieses Muster als Basis (Template oder Fork).
 3. Oeffnen Sie das Repo in VS Code.
 4. Installieren und aktivieren Sie GitHub Copilot im Editor.
-5. Lesen Sie `docs/de/START_HERE.md` und bestaetigen Sie die Policies unter `policies/`.
-6. Nutzen Sie ein Onboarding-Prompt aus `prompts/de/onboarding/` fuer Ihre Branche.
+5. Lesen Sie `docs/de/START_HERE.md` und `docs/de/minimum-requirements.md`.
+6. Fuehren Sie `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
+   Fuer Plugin-Entwicklung zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
+7. Bestaetigen Sie die Policies unter `policies/`.
+8. Nutzen Sie ein Onboarding-Prompt aus `prompts/de/onboarding/` fuer Ihre Branche.
    Standard fuer den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
    Zusaetzlicher MVP-Use-Case: `property_management`.
-7. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
-8. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
-9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/de/`.
-10. Pruefen Sie die Produktstruktur: `plugins/` fuer installierbare Artefakte, `workflows/` fuer Skills und Python-Workflows, `usecases/` fuer konkrete notarielle Usecases.
-11. Aktualisieren Sie vor jedem Push `roadmap/GANTT.md`; bei Aenderungen an `plugins/`, `workflows/` oder `usecases/` auch das jeweilige Themen-Gantt.
-12. Pruefen Sie bei AI-faehigen Aenderungen `docs/de/sbom-for-ai.md` und aktualisieren Sie `sbom/ai/nac-ai-sbom-draft.json`.
+9. Starten Sie mit einem Pilotprozess und pruefen Sie den Pull-Request-Workflow.
+10. Fuehren Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
+11. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/de/`.
+12. Pruefen Sie die Produktstruktur: `plugins/` fuer installierbare Artefakte, `workflows/` fuer Skills und Python-Workflows, `usecases/` fuer konkrete notarielle Usecases.
+13. Aktualisieren Sie vor jedem Push `roadmap/GANTT.md`; bei Aenderungen an `plugins/`, `workflows/` oder `usecases/` auch das jeweilige Themen-Gantt.
+14. Pruefen Sie bei AI-faehigen Aenderungen `docs/de/sbom-for-ai.md` und aktualisieren Sie `sbom/ai/nac-ai-sbom-draft.json`.
 
 ## Empfohlener Copilot-Startprompt
 
@@ -55,6 +63,7 @@ Danach:
 - Jede Aenderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
 - Jeder Push braucht ein aktualisiertes globales Gantt; Themenaenderungen brauchen zusaetzlich das jeweilige Themen-Gantt.
 - AI-faehige Plugins, Workflows, Usecases, Prompts oder externe Modellaufrufe brauchen eine AI-SBOM-Entscheidung.
+- Lokale Runtime-, Hardware- und Middleware-Abhaengigkeiten muessen nach `docs/de/minimum-requirements.md` in der SBOM/AI-SBOM gepflegt werden.
 - Kultur- und Sprachregeln aus `policies/culture-policy.yaml` verbindlich einhalten.
 
 ## Wenn das Muster nicht passt

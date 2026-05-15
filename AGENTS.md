@@ -26,6 +26,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Bei SaaS-Verarbeitung mit personenbezogenen Daten ist ein AVV verpflichtend (`docs/de/avv-checkliste-eventlock-saas.md`).
 - SBOM-Vorgaben sind verbindlich nach `policies/sbom-policy.yaml`.
 - AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; Mindestcluster und Artefakte stehen in `docs/de/sbom-for-ai.md` und `docs/en/sbom-for-ai.md`.
+- Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in `docs/de/minimum-requirements.md` und `docs/en/minimum-requirements.md` und muessen in der SBOM/AI-SBOM gespiegelt werden.
 - Rollen und Qualifikationsgrenzen sind verbindlich nach `policies/role-model-policy.yaml`.
 - Rollen-, Rechte- und Issue-Sichtbarkeitsvorgaben sind verbindlich nach `policies/access-control-policy.yaml`.
 - Revisionssichere Ereignisablage ist verbindlich nach `policies/revisionssicherheit-eventstream-policy.yaml`.
@@ -43,7 +44,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Arbeitsmethode und Team-Cadence werden nach `docs/de/arbeitsmodell-agile-cadence.md` dokumentiert.
 - Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in `docs/de/access-and-issue-operations.md`.
 - Plugin- und Connector-Plaene werden unter `docs/de/plugin-plans/` und `docs/en/plugin-plans/` gepflegt.
-- NoC-Ausfuehrung erfolgt lokal im Workspace `~/NoC`; Omnistation ist fuer NoC kein Ausfuehrungsort.
+- NoC-Ausfuehrung erfolgt lokal im genehmigten Workspace; Omnistation ist fuer NoC kein Ausfuehrungsort. Kartenleser-, morris- und XNP-Pfade werden ueber das lokale Profil `notary-workstation` geprueft.
 - Mehrsprachigkeit ist verbindlich nach `policies/language-policy.yaml`.
 - Sprachabhaengige Inhalte werden in ISO-639-Sprachordnern gepflegt, mindestens `de` und `en`.
 - Unabhaengig von der Sprache des Prompts muessen Aenderungen an lokalisierten Inhalten immer alle Standardsprachen pflegen.
@@ -51,13 +52,16 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 ## Erststart fuer neue Nutzer
 
 1. `docs/de/START_HERE.md` oder `docs/en/START_HERE.md` lesen.
-2. `policies/culture-policy.yaml`, `policies/process-policy.yaml`, `policies/technology-policy.yaml`, `policies/data-protection-policy.yaml`, `policies/role-model-policy.yaml` und `policies/language-policy.yaml` bestaetigen.
-3. `python scripts/startup_check.py --ide auto --run-tests` erfolgreich ausfuehren.
-4. Passendes Onboarding-Prompt unter `prompts/de/onboarding/` oder `prompts/en/onboarding/` starten.
+2. `docs/de/minimum-requirements.md` oder `docs/en/minimum-requirements.md` lesen.
+3. `policies/culture-policy.yaml`, `policies/process-policy.yaml`, `policies/technology-policy.yaml`, `policies/data-protection-policy.yaml`, `policies/role-model-policy.yaml` und `policies/language-policy.yaml` bestaetigen.
+4. `python scripts/startup_check.py --profile base --ide auto --run-tests` erfolgreich ausfuehren.
+   Fuer Plugin-Arbeit zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide auto`.
+   Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide auto`.
+5. Passendes Onboarding-Prompt unter `prompts/de/onboarding/` oder `prompts/en/onboarding/` starten.
    Standard-MVP-Set im Referenzrepo: `software_company`, `notary`, `wealth_management`.
    Zusaetzlicher MVP-Use-Case: `property_management`.
-5. Erst danach mit produktiven Prozessaenderungen beginnen.
-6. Fuer Greenfield/Brownfield den Pfad aus `docs/de/einfuehrung-greenfield-brownfield.md` oder `docs/en/einfuehrung-greenfield-brownfield.md` waehlen.
+6. Erst danach mit produktiven Prozessaenderungen beginnen.
+7. Fuer Greenfield/Brownfield den Pfad aus `docs/de/einfuehrung-greenfield-brownfield.md` oder `docs/en/einfuehrung-greenfield-brownfield.md` waehlen.
 
 ## Plattform-Synchronitaet
 

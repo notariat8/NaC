@@ -40,6 +40,7 @@ Dieses Dokument ist zu verwenden:
 2. Projektstatus lesen:
    - `roadmap/BUILD_NOW.md`
    - `roadmap/GANTT.md`
+   - `docs/de/minimum-requirements.md`
    - bei Themenarbeit zusaetzlich `plugins/GANTT.md`, `workflows/GANTT.md` oder
      `usecases/GANTT.md`
 3. Aktuellen Git-Zustand pruefen:
@@ -57,8 +58,17 @@ Dieses Dokument ist zu verwenden:
 5. Strikten lokalen Gate ausfuehren, bevor ein Stand als push-ready gilt:
 
    ```bash
+   python scripts/startup_check.py --profile base --ide auto --run-tests
    python scripts/quality_gate.py --profile strict
    ```
+
+Bei Plugin- oder Notariatsarbeitsplatz-Arbeit zusaetzlich das passende Profil
+ausfuehren:
+
+```bash
+python scripts/startup_check.py --profile plugin-dev --ide auto
+python scripts/startup_check.py --profile notary-workstation --ide auto
+```
 
 ## Arbeitsmodus
 
@@ -85,6 +95,7 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 | `src/` | Ausfuehrbare Python-Runtime. |
 | `scripts/` | Lokale und CI-nahe Entwicklerwerkzeuge. |
 | `policies/` | Verbindliche Governance-, Rollen-, Technik-, Datenschutz- und SBOM-Regeln. |
+| `sbom/` | Maschinenlesbare SBOM-/AI-SBOM-Artefakte fuer Runtime, Infrastruktur und lokale Abhaengigkeiten. |
 
 ## Aktuelle Entwicklerkommandos
 
@@ -92,6 +103,7 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/validate_knowledge_graph.py
+python scripts/startup_check.py --profile base --ide auto --run-tests
 python scripts/quality_gate.py --profile strict
 ```
 

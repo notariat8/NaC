@@ -34,18 +34,20 @@ NaC introduces the following minimum clusters as the working baseline:
 | `system_level_properties` | System boundaries, purpose, autonomy level, human approval |
 | `models` | Model name, provider, version, purpose, local/external processing |
 | `datasets` | Training, test, validation and prompt data sources as metadata |
-| `infrastructure` | Runtime, hosting, tenant, region, local gateways |
+| `infrastructure` | Runtime, hosting, tenant, region, local gateways, minimum requirements for workstation, hardware and middleware |
 | `security_properties` | Controls against data leakage, prompt injection and supply-chain risk |
 | `key_performance_indicators` | Coverage, drift, error rates, review and incident metrics |
 
 NoC additionally tracks privacy/AVV-DPA status, professional-secret boundaries,
-human-review ownership and release/evidence binding.
+human-review ownership, local runtime/hardware minimum requirements and
+release/evidence binding.
 
 ## Initial Artifacts
 
 - Policy: `policies/sbom-policy.yaml`
 - Draft AI-SBOM: `sbom/ai/nac-ai-sbom-draft.json`
 - Validator: `scripts/validate_ai_sbom.py`
+- Minimum requirements: `docs/en/minimum-requirements.md`
 - Classic SBOM products: `docs/en/sbom-products.md`
 - AVV/DPA gate: `docs/en/datenschutz-avv-dpa.md`
 
@@ -55,6 +57,7 @@ human-review ownership and release/evidence binding.
 | --- | --- | --- |
 | P0 | Inventory all AI touchpoints in `plugins/`, `workflows/`, `usecases/` and `prompts/`. | List of AI-enabled artifacts. |
 | P0 | Update `sbom/ai/nac-ai-sbom-draft.json` for every new AI-enabled artifact. | Repository-wide AI-SBOM baseline. |
+| P0 | Track local minimum requirements for runtime, hardware, morris and XNP in the AI-SBOM. | Workstation and middleware dependencies are verifiably inventoried. |
 | P0 | Check external AI processing against `docs/en/datenschutz-avv-dpa.md`. | AVV/DPA status per channel. |
 | P1 | Decide the mapping to CycloneDX, SPDX or another approved AI-SBOM profile. | Machine-readable target profile. |
 | P1 | Extend release binding in `.github/workflows/sbom-export.yml`. | AI-SBOM as release artifact. |
@@ -67,6 +70,9 @@ human-review ownership and release/evidence binding.
 - AI-SBOM documents metadata, ownership and boundaries, not confidential
   contents themselves.
 - Every AI-enabled release needs an AI-SBOM decision.
+- Every local plugin or workflow dependency from
+  `docs/en/minimum-requirements.md` needs an SBOM/AI-SBOM entry or a justified
+  `pending` marker.
 - External AI processing needs a documented AVV/DPA decision before a pilot
   with personal data.
 - Local plugin gates remain the default until external processing is approved.
@@ -77,6 +83,7 @@ An AI-enabled plugin, workflow or usecase is release-ready only when:
 
 1. the artifact is included in the AI-SBOM baseline,
 2. all minimum clusters are populated or explicitly marked as `pending`,
-3. privacy/AVV-DPA status is documented,
-4. a human-review owner is named,
-5. `python scripts/quality_gate.py --profile strict` passes.
+3. runtime, middleware and hardware minimum requirements are documented,
+4. privacy/AVV-DPA status is documented,
+5. a human-review owner is named,
+6. `python scripts/quality_gate.py --profile strict` passes.

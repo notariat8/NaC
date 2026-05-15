@@ -34,6 +34,12 @@ Initial artifacts:
 This track applies repository-wide to AI-enabled plugins, workflows, usecases,
 prompts and external model calls.
 
+Local minimum requirements such as Python, Node.js/npm, GitHub CLI, morris,
+REINER SCT drivers, card reader, PC/SC and XNP are also SBOM-relevant
+runtime/infrastructure components. The binding list is maintained in
+`docs/en/minimum-requirements.md` and mirrored in
+`sbom/ai/nac-ai-sbom-draft.json`.
+
 ## Recommendation For This Repository
 
 1. Generate at least two SBOM artifacts:
@@ -41,6 +47,8 @@ prompts and external model calls.
    - SPDX JSON (overall filesystem view)
 2. Store artifacts as CI artifacts under `out/sbom/`.
 3. Bind release tags to the matching SBOM artifacts.
+4. Track local workstation, hardware and middleware dependencies in the
+   AI-SBOM until they are fully exported through CycloneDX/SPDX.
 
 ## Mandatory vs. Optional
 

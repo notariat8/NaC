@@ -21,6 +21,8 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 - Active development board: `roadmap/BUILD_NOW.md`
 - German README: `docs/de/README.md`
 - English README: `docs/en/README.md`
+- Minimum requirements: `docs/de/minimum-requirements.md`,
+  `docs/en/minimum-requirements.md`
 - AVV/DPA section: `docs/de/datenschutz-avv-dpa.md`, `docs/en/datenschutz-avv-dpa.md`
 - SBOM for AI: `docs/de/sbom-for-ai.md`, `docs/en/sbom-for-ai.md`
 - Plugin plans: `docs/de/plugin-plans/README.md`, `docs/en/plugin-plans/README.md`

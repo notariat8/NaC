@@ -39,6 +39,7 @@ Use this document:
 2. Read project status:
    - `roadmap/BUILD_NOW.md`
    - `roadmap/GANTT.md`
+   - `docs/en/minimum-requirements.md`
    - for area work, also `plugins/GANTT.md`, `workflows/GANTT.md` or
      `usecases/GANTT.md`
 3. Check the current Git state:
@@ -56,8 +57,16 @@ Use this document:
 5. Run the strict local gate before treating a state as push-ready:
 
    ```bash
+   python scripts/startup_check.py --profile base --ide auto --run-tests
    python scripts/quality_gate.py --profile strict
    ```
+
+For plugin or notary-workstation work, also run the matching profile:
+
+```bash
+python scripts/startup_check.py --profile plugin-dev --ide auto
+python scripts/startup_check.py --profile notary-workstation --ide auto
+```
 
 ## Working Mode
 
@@ -84,6 +93,7 @@ at least one matching implementation surface:
 | `src/` | Executable Python runtime. |
 | `scripts/` | Local and CI-adjacent developer tooling. |
 | `policies/` | Binding governance, role, technology, privacy and SBOM rules. |
+| `sbom/` | Machine-readable SBOM/AI-SBOM artifacts for runtime, infrastructure and local dependencies. |
 
 ## Current Developer Commands
 
@@ -91,6 +101,7 @@ at least one matching implementation surface:
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/validate_knowledge_graph.py
+python scripts/startup_check.py --profile base --ide auto --run-tests
 python scripts/quality_gate.py --profile strict
 ```
 

@@ -18,6 +18,12 @@ REQUIRED_CLUSTERS = {
     "security_properties",
     "key_performance_indicators",
 }
+REQUIRED_INFRASTRUCTURE_IDS = {
+    "local-noc-workspace",
+    "local-development-toolchain",
+    "local-plugin-development-toolchain",
+    "local-notary-workstation-xnp-card-path",
+}
 PROHIBITED_MARKERS = {
     "api_key",
     "client_secret",
@@ -62,6 +68,21 @@ def validate_file(path: Path) -> list[str]:
     missing = sorted(REQUIRED_CLUSTERS - set(clusters))
     for cluster in missing:
         errors.append(f"{path.relative_to(REPO_ROOT)}: Cluster fehlt: {cluster}")
+
+    infrastructure = clusters.get("infrastructure")
+    if isinstance(infrastructure, list):
+        infrastructure_ids = {
+            item.get("id")
+            for item in infrastructure
+            if isinstance(item, dict)
+        }
+        missing_infrastructure = sorted(REQUIRED_INFRASTRUCTURE_IDS - infrastructure_ids)
+        for item_id in missing_infrastructure:
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}: Infrastructure-Eintrag fehlt: {item_id}"
+            )
+    else:
+        errors.append(f"{path.relative_to(REPO_ROOT)}: Cluster infrastructure muss eine Liste sein")
 
     return errors
 

@@ -7,16 +7,29 @@ required_commands:
   - gh
 
 recommended_commands:
+  - node
+  - npm
   - pandoc
   - code
 
 python:
   min_version: "3.11"
 
+node:
+  min_version: "20"
+  required_for: "plugin-dev and notary-workstation profiles"
+
+profiles:
+  base: "Repository, policy and Python runtime baseline."
+  plugin-dev: "Base plus Node.js/npm for plugin packaging and local integration tests."
+  notary-workstation: "Plugin-dev plus local Windows card-reader, morris and XNP indicators."
+
 required_files:
   - AGENTS.md
   - docs/de/START_HERE.md
   - docs/en/START_HERE.md
+  - docs/de/minimum-requirements.md
+  - docs/en/minimum-requirements.md
   - policies/process-policy.yaml
   - policies/culture-policy.yaml
   - policies/language-policy.yaml

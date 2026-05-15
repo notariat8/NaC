@@ -32,6 +32,12 @@ Erste Artefakte:
 Dieser Track gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases,
 Prompts und externe Modellaufrufe.
 
+Lokale Mindestvoraussetzungen wie Python, Node.js/npm, GitHub CLI, morris,
+REINER-SCT-Treiber, Kartenleser, PC/SC und XNP gelten ebenfalls als
+SBOM-relevante Runtime-/Infrastruktur-Komponenten. Die verbindliche Liste steht
+in `docs/de/minimum-requirements.md` und wird in
+`sbom/ai/nac-ai-sbom-draft.json` gespiegelt.
+
 ## Empfehlung fuer dieses Repository
 
 1. Erzeuge mindestens zwei SBOM-Artefakte:
@@ -39,6 +45,9 @@ Prompts und externe Modellaufrufe.
    - SPDX JSON (Gesamtsicht)
 2. Speichere die Artefakte als CI-Artefakte unter `out/sbom/`.
 3. Verknuepfe Release-Tags mit den passenden SBOM-Artefakten.
+4. Fuehre lokale Arbeitsplatz-, Hardware- und Middleware-Abhaengigkeiten in der
+   AI-SBOM, solange sie noch nicht vollstaendig in CycloneDX/SPDX exportiert
+   werden.
 
 ## Was ist zwingend vs. optional
 
