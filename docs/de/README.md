@@ -71,6 +71,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `docs/de/eventstream-runbook-gcp.md` ist das konkrete GCP-Betriebsrunbook.
 - `docs/de/eventstream-runbook-oci.md` ist das konkrete OCI-Betriebsrunbook.
 - `docs/de/tenant-ownership-and-eventlock-service.md` beschreibt Tenant-Owner- und Service-Modell.
+- `docs/de/datenschutz-avv-dpa.md` definiert die AVV-/DPA-Sektion fuer OpenAI-gestuetzte Verarbeitung.
 - `docs/de/avv-checkliste-eventlock-saas.md` liefert die AVV-Checkliste fuer EventLock-SaaS.
 - `docs/de/function8-service-catalog.md` listet alle Function8-Leistungen transparent.
 - `docs/de/third-party-operations-and-exit.md` beschreibt Drittbetrieb und Exit ohne Lock-in.

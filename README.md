@@ -20,6 +20,7 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 - English start path: `docs/en/START_HERE.md`
 - German README: `docs/de/README.md`
 - English README: `docs/en/README.md`
+- AVV/DPA section: `docs/de/datenschutz-avv-dpa.md`, `docs/en/datenschutz-avv-dpa.md`
 - Plugin plans: `docs/de/plugin-plans/README.md`, `docs/en/plugin-plans/README.md`
 - Global roadmap: `roadmap/GANTT.md`
 - Plugin roadmap: `plugins/GANTT.md`
