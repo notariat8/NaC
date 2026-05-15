@@ -1,0 +1,1617 @@
+{
+  "schema_version": "noc.knowledge-graph/v0.1",
+  "graph_id": "notarial-next10",
+  "title": "NoC static knowledge graph for the next 10 notarial case types",
+  "status": "draft",
+  "last_update": "2026-05-15",
+  "purpose": "Extend the NoC notarial case catalog with ten additional frequent workflows while keeping real mandate values outside Git.",
+  "privacy_rule": "All value fields are intentionally empty. Real client, property, company, family, estate or health data belongs in approved local evidence stores, not in this repository.",
+  "source_refs": [
+    {
+      "id": "src.beurkg",
+      "label": "Beurkundungsgesetz for notarial recording, certifications and review duties",
+      "url": "https://www.gesetze-im-internet.de/beurkg/"
+    },
+    {
+      "id": "src.gbo.19_29_46",
+      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "url": "https://www.gesetze-im-internet.de/gbo/"
+    },
+    {
+      "id": "src.bgb.875",
+      "label": "BGB Section 875 for cancellation of rights in land",
+      "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
+    },
+    {
+      "id": "src.weg.8",
+      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
+    },
+    {
+      "id": "src.bgb.650u",
+      "label": "BGB Section 650u for developer contracts",
+      "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
+    },
+    {
+      "id": "src.bgb.311b",
+      "label": "BGB Section 311b for contracts concerning real estate",
+      "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
+    },
+    {
+      "id": "src.abschlagsv",
+      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "url": "https://www.gesetze-im-internet.de/abschlagsv/"
+    },
+    {
+      "id": "src.gmbhg.53",
+      "label": "GmbHG Section 53 for form of articles amendments",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
+    },
+    {
+      "id": "src.gmbhg.15",
+      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/"
+    },
+    {
+      "id": "src.hgb.12",
+      "label": "HGB Section 12 for electronic commercial-register applications in publicly certified form",
+      "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
+    },
+    {
+      "id": "src.bgb.77",
+      "label": "BGB Section 77 for association-register applications",
+      "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
+    },
+    {
+      "id": "src.bgb.1945",
+      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
+    },
+    {
+      "id": "src.bgb.2346_2348",
+      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
+    },
+    {
+      "id": "src.bgb.1750",
+      "label": "BGB Section 1750 for adoption consent declarations",
+      "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
+    },
+    {
+      "id": "src.bgb.167_129",
+      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
+    }
+  ],
+  "backlog_candidates": [
+    "genehmigungserklaerungen",
+    "rangruecktritt-rangaenderung-grundbuch",
+    "dienstbarkeiten",
+    "baulasten-bezogene-erklaerungen",
+    "niessbrauchsbestellung",
+    "wohnrechte",
+    "erbauseinandersetzungsvertrag",
+    "scheidungsimmobilien-uebertragung"
+  ],
+  "cases": [
+    {
+      "id": "case.loeschungsbewilligung_grundbuchloeschung",
+      "slug": "loeschungsbewilligung-grundbuchloeschung",
+      "title": "Loeschungsbewilligung / Grundbuchloeschung",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/loeschungsbewilligung-grundbuchloeschung",
+      "summary": "Deletion of registered land rights, often old land charges after loan repayment, with creditor authorization, owner consent, deed/evidence form and filing trace.",
+      "legal_anchors": ["src.beurkg", "src.gbo.19_29_46", "src.bgb.875"],
+      "required_information": [
+        {
+          "id": "property.identity",
+          "label": "Property and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which land register district, sheet, section and entry are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": ["land_register_review", "filing"]
+        },
+        {
+          "id": "right.identity",
+          "label": "Right to be deleted",
+          "status": "open",
+          "value": null,
+          "question": "Which land charge, mortgage, easement, restriction or other right should be deleted?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": ["drafting", "filing"]
+        },
+        {
+          "id": "creditor.authorization",
+          "label": "Creditor or beneficiary authorization",
+          "status": "open",
+          "value": null,
+          "question": "Who is the current beneficiary and how is authorization to consent to deletion proven?",
+          "owner_role": "notary",
+          "privacy_class": "company_or_financial_data",
+          "required_for": ["authority_review"]
+        },
+        {
+          "id": "owner.consent",
+          "label": "Owner consent and representation",
+          "status": "open",
+          "value": null,
+          "question": "Is owner consent required and who may sign for the owner?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": ["identity_gate", "filing"]
+        },
+        {
+          "id": "brief.status",
+          "label": "Brief or book right status",
+          "status": "open",
+          "value": null,
+          "question": "Is the right certificated by a letter, and if so where is the letter or replacement evidence?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "financial_metadata",
+          "required_for": ["evidence_package"]
+        },
+        {
+          "id": "filing.route",
+          "label": "Filing route and post-deletion notification",
+          "status": "open",
+          "value": null,
+          "question": "Which notary filing route, portal and completion notification should be used?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": ["submission", "closing"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.deletion_consent",
+          "label": "Deletion authorization or consent",
+          "status": "open",
+          "source": "creditor, beneficiary or owner document",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.land_register_excerpt",
+          "label": "Current land register excerpt",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.right_letter",
+          "label": "Land-charge, mortgage or replacement letter evidence if required",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.deletion_type",
+          "label": "Full deletion, partial deletion or correction",
+          "status": "open",
+          "options": ["full", "partial", "correction", "unknown"]
+        },
+        {
+          "id": "decision.brief_handling",
+          "label": "Letter handling route",
+          "status": "open",
+          "options": ["book_right", "letter_present", "replacement_evidence", "blocked", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.authority_review",
+          "label": "Beneficiary authorization reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.filing_ready",
+          "label": "Deletion filing package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-grundbuch-portal", "noc-bnotk-xnp"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.authorization_trace",
+          "label": "Authorization and evidence package reference",
+          "status": "open"
+        },
+        {
+          "id": "evidence.deletion_completion",
+          "label": "Deletion application and completion trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "right.identity",
+          "to": "doc.land_register_excerpt",
+          "type": "requires"
+        },
+        {
+          "from": "creditor.authorization",
+          "to": "gate.authority_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "brief.status",
+          "to": "decision.brief_handling",
+          "type": "requires_decision"
+        }
+      ]
+    },
+    {
+      "id": "case.teilungserklaerung_weg",
+      "slug": "teilungserklaerung-weg",
+      "title": "Teilungserklaerung nach WEG",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/teilungserklaerung-weg",
+      "summary": "Division of a building into apartment or partial ownership with declaration of division, community rules, plans, certificates and land-register implementation.",
+      "legal_anchors": ["src.beurkg", "src.gbo.19_29_46", "src.weg.8"],
+      "required_information": [
+        {
+          "id": "property.identity",
+          "label": "Base property identity",
+          "status": "open",
+          "value": null,
+          "question": "Which land register sheet and cadastral object will be divided?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": ["land_register_review"]
+        },
+        {
+          "id": "owner.identity",
+          "label": "Owner and authority",
+          "status": "open",
+          "value": null,
+          "question": "Who owns the property and is the owner authorized to divide?",
+          "owner_role": "notary",
+          "privacy_class": "personal_or_company_data",
+          "required_for": ["identity_gate", "drafting"]
+        },
+        {
+          "id": "unit.structure",
+          "label": "Unit structure and allocation",
+          "status": "open",
+          "value": null,
+          "question": "Which apartment, partial ownership, rooms and special-use rights are planned?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": ["drafting", "plans"]
+        },
+        {
+          "id": "ownership.shares",
+          "label": "Co-ownership shares",
+          "status": "open",
+          "value": null,
+          "question": "Which co-ownership fractions are assigned to each unit?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": ["declaration"]
+        },
+        {
+          "id": "plans.certificates",
+          "label": "Plans and separation certificate",
+          "status": "open",
+          "value": null,
+          "question": "Are plans, numbering, completion state and authority certificate available?",
+          "owner_role": "client",
+          "privacy_class": "property_metadata",
+          "required_for": ["evidence_package", "filing"]
+        },
+        {
+          "id": "encumbrance.handling",
+          "label": "Existing encumbrance allocation",
+          "status": "open",
+          "value": null,
+          "question": "How do existing rights, land charges, easements or restrictions affect the future unit registers?",
+          "owner_role": "notary",
+          "privacy_class": "property_register_data",
+          "required_for": ["legal_review", "filing"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.division_declaration",
+          "label": "Declaration of division and community rules",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.plans_certificate",
+          "label": "Plans and separation certificate reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": false
+        },
+        {
+          "id": "doc.land_register_excerpt",
+          "label": "Current land register excerpt",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.use_case",
+          "label": "Residential ownership, partial ownership or mixed scheme",
+          "status": "open",
+          "options": ["residential", "partial", "mixed", "unknown"]
+        },
+        {
+          "id": "decision.special_use_rights",
+          "label": "Special-use rights included",
+          "status": "open",
+          "options": ["yes", "no", "needs_review", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.plan_certificate_review",
+          "label": "Plans and certificate reviewed",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        },
+        {
+          "id": "gate.land_register_implementation",
+          "label": "Unit-register implementation package ready",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-grundbuch-portal", "noc-bnotk-xnp"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.plan_package",
+          "label": "Plans and certificate evidence package",
+          "status": "open"
+        },
+        {
+          "id": "evidence.unit_register_trace",
+          "label": "Land-register implementation trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "unit.structure",
+          "to": "doc.division_declaration",
+          "type": "populates"
+        },
+        {
+          "from": "plans.certificates",
+          "to": "gate.plan_certificate_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "encumbrance.handling",
+          "to": "gate.land_register_implementation",
+          "type": "requires"
+        }
+      ]
+    },
+    {
+      "id": "case.bautraegervertrag",
+      "slug": "bautraegervertrag",
+      "title": "Bautraegervertrag",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/bautraegervertrag",
+      "summary": "Purchase of a property or unit from a developer with construction obligations, installment plan, completion state, securities and consumer-protection gates.",
+      "legal_anchors": ["src.beurkg", "src.bgb.311b", "src.bgb.650u", "src.abschlagsv", "src.gbo.19_29_46"],
+      "required_information": [
+        {
+          "id": "developer.identity",
+          "label": "Developer identity and authority",
+          "status": "open",
+          "value": null,
+          "question": "Who is developer and how are register, authority and representation proven?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_data",
+          "required_for": ["identity_gate", "drafting"]
+        },
+        {
+          "id": "buyer.identity",
+          "label": "Buyer identity and consumer status",
+          "status": "open",
+          "value": null,
+          "question": "Who buys and is consumer-protection handling required?",
+          "owner_role": "notary",
+          "privacy_class": "personal_data",
+          "required_for": ["consumer_gate", "appointment"]
+        },
+        {
+          "id": "object.identity",
+          "label": "Object, unit and land-register state",
+          "status": "open",
+          "value": null,
+          "question": "Which unit, property, construction phase and land-register state are involved?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "property_register_data",
+          "required_for": ["drafting", "land_register_review"]
+        },
+        {
+          "id": "construction.specification",
+          "label": "Construction specification and completion state",
+          "status": "open",
+          "value": null,
+          "question": "Which building description, plans, permits and completion state define performance?",
+          "owner_role": "developer",
+          "privacy_class": "property_metadata",
+          "required_for": ["drafting", "technical_attachments"]
+        },
+        {
+          "id": "installment.plan",
+          "label": "Installment and maturity plan",
+          "status": "open",
+          "value": null,
+          "question": "Which installment schedule, security model and maturity prerequisites apply?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": ["legal_review", "execution"]
+        },
+        {
+          "id": "defects.acceptance",
+          "label": "Acceptance, defects and handover model",
+          "status": "open",
+          "value": null,
+          "question": "How are acceptance, defects, common property and handover handled?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["drafting", "closing"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.developer_contract_draft",
+          "label": "Developer contract draft",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.specification_package",
+          "label": "Building specification, plans and permits reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.land_register_state",
+          "label": "Land-register and division state reference",
+          "status": "open",
+          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.payment_model",
+          "label": "Installment model",
+          "status": "open",
+          "options": ["installments", "security_alternative", "blocked", "unknown"]
+        },
+        {
+          "id": "decision.object_state",
+          "label": "Object construction state",
+          "status": "open",
+          "options": ["planned", "under_construction", "completed", "mixed", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.consumer_draft_period",
+          "label": "Consumer draft review period checked",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.installment_review",
+          "label": "Installment and security model reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-grundbuch-portal", "noc-bnotk-xnp", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.consumer_release",
+          "label": "Consumer draft period and review evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.construction_package",
+          "label": "Construction, permit and maturity evidence trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "construction.specification",
+          "to": "doc.specification_package",
+          "type": "evidenced_by"
+        },
+        {
+          "from": "installment.plan",
+          "to": "gate.installment_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "buyer.identity",
+          "to": "gate.consumer_draft_period",
+          "type": "requires"
+        }
+      ]
+    },
+    {
+      "id": "case.gesellschafterbeschluss_gmbh_ug",
+      "slug": "gesellschafterbeschluss-gmbh-ug",
+      "title": "Gesellschafterbeschluss bei GmbH/UG",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/gesellschafterbeschluss-gmbh-ug",
+      "summary": "Shareholder resolutions for articles amendment, capital measures, managing-director appointment, consent to share transfers or other company decisions.",
+      "legal_anchors": ["src.beurkg", "src.gmbhg.53", "src.hgb.12"],
+      "required_information": [
+        {
+          "id": "company.identity",
+          "label": "Company and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which GmbH/UG, register court and register number are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_register_data",
+          "required_for": ["register_review"]
+        },
+        {
+          "id": "resolution.type",
+          "label": "Resolution type and legal basis",
+          "status": "open",
+          "value": null,
+          "question": "Is this an articles amendment, capital measure, appointment, consent or other resolution?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": ["drafting", "legal_review"]
+        },
+        {
+          "id": "shareholders.present",
+          "label": "Shareholders, votes and representation",
+          "status": "open",
+          "value": null,
+          "question": "Who participates, which votes exist and which representatives act?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": ["quorum_review", "identity_gate"]
+        },
+        {
+          "id": "majority.requirement",
+          "label": "Majority and consent requirements",
+          "status": "open",
+          "value": null,
+          "question": "Which statutory and articles-based majority or unanimity requirements apply?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "articles.wording",
+          "label": "Current and amended articles wording",
+          "status": "open",
+          "value": null,
+          "question": "Which current article text is changed and what new wording is proposed?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": ["drafting", "register_application"]
+        },
+        {
+          "id": "register.filing",
+          "label": "Register filing and notarized certificate route",
+          "status": "open",
+          "value": null,
+          "question": "Which register application, notary certificate and XNP route are required?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": ["submission"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.resolution_minutes",
+          "label": "Shareholder resolution minutes",
+          "status": "open",
+          "source": "notarial deed or certified minutes",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.current_articles",
+          "label": "Current articles and amended wording",
+          "status": "open",
+          "source": "company evidence package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.register_application",
+          "label": "Commercial-register application and certificate",
+          "status": "open",
+          "source": "noc-bnotk-xnp and noc-handelsregister",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.notarial_form",
+          "label": "Resolution form",
+          "status": "open",
+          "options": ["notarial_deed_required", "certified_signature", "private_resolution_only", "unknown"]
+        },
+        {
+          "id": "decision.register_relevance",
+          "label": "Register filing required",
+          "status": "open",
+          "options": ["yes", "no", "needs_review", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.quorum_majority_review",
+          "label": "Quorum, votes and majority reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.register_package_ready",
+          "label": "Register package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-bnotk-xnp", "noc-handelsregister", "noc-cyberjack-rfid"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.resolution_review",
+          "label": "Resolution and voting review evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.register_trace",
+          "label": "Register submission and response trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "shareholders.present",
+          "to": "gate.quorum_majority_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "articles.wording",
+          "to": "doc.current_articles",
+          "type": "requires"
+        },
+        {
+          "from": "register.filing",
+          "to": "gate.register_package_ready",
+          "type": "requires"
+        }
+      ]
+    },
+    {
+      "id": "case.geschaeftsanteilsuebertragung_gmbh",
+      "slug": "geschaeftsanteilsuebertragung-gmbh",
+      "title": "Geschaeftsanteilsuebertragung GmbH",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/geschaeftsanteilsuebertragung-gmbh",
+      "summary": "Sale, gift or other transfer of GmbH shares with parties, share chain, consent restrictions, purchase price, shareholder list and register filing evidence.",
+      "legal_anchors": ["src.beurkg", "src.gmbhg.15", "src.hgb.12"],
+      "required_information": [
+        {
+          "id": "company.identity",
+          "label": "Company and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which GmbH and register data define the target company?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "company_register_data",
+          "required_for": ["register_review"]
+        },
+        {
+          "id": "share.identity",
+          "label": "Shares and chain of title",
+          "status": "open",
+          "value": null,
+          "question": "Which business shares, nominal amounts and chain of title are transferred?",
+          "owner_role": "notary",
+          "privacy_class": "company_financial_data",
+          "required_for": ["legal_review", "shareholder_list"]
+        },
+        {
+          "id": "seller.identity",
+          "label": "Transferor identity and authority",
+          "status": "open",
+          "value": null,
+          "question": "Who transfers and how is authority verified?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_or_company_data",
+          "required_for": ["identity_gate", "drafting"]
+        },
+        {
+          "id": "buyer.identity",
+          "label": "Acquirer identity and beneficial-owner flags",
+          "status": "open",
+          "value": null,
+          "question": "Who acquires and which beneficial-owner or AML flags must be reviewed?",
+          "owner_role": "notary",
+          "privacy_class": "compliance_data",
+          "required_for": ["aml_review", "shareholder_list"]
+        },
+        {
+          "id": "consents.restrictions",
+          "label": "Consent restrictions and pre-emption rights",
+          "status": "open",
+          "value": null,
+          "question": "Do articles, side agreements or shareholder resolutions require consent?",
+          "owner_role": "notary",
+          "privacy_class": "company_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "consideration.tax",
+          "label": "Purchase price, gift and tax flags",
+          "status": "open",
+          "value": null,
+          "question": "Is this a sale, gift, mixed transfer or other transaction with tax flags?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": ["drafting", "closing"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.transfer_agreement",
+          "label": "Notarial share transfer agreement",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.shareholder_list",
+          "label": "Updated shareholder list",
+          "status": "open",
+          "source": "workflow generated and reviewed",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.consent_evidence",
+          "label": "Consent, waiver or resolution evidence",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.transfer_type",
+          "label": "Transfer route",
+          "status": "open",
+          "options": ["sale", "gift", "mixed", "trust_or_pool", "unknown"]
+        },
+        {
+          "id": "decision.consent_needed",
+          "label": "Consent or waiver needed",
+          "status": "open",
+          "options": ["yes", "no", "already_available", "blocked", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.chain_of_title_review",
+          "label": "Share chain and restrictions reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.shareholder_list_ready",
+          "label": "Updated shareholder list ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-bnotk-xnp", "noc-handelsregister", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.transfer_review",
+          "label": "Transfer review and execution evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.shareholder_list_submission",
+          "label": "Shareholder-list submission trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "share.identity",
+          "to": "gate.chain_of_title_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "buyer.identity",
+          "to": "doc.shareholder_list",
+          "type": "populates"
+        },
+        {
+          "from": "consents.restrictions",
+          "to": "decision.consent_needed",
+          "type": "requires_decision"
+        }
+      ]
+    },
+    {
+      "id": "case.vereinsregisteranmeldung",
+      "slug": "vereinsregisteranmeldung",
+      "title": "Vereinsregisteranmeldung",
+      "status": "open",
+      "priority": "P1",
+      "usecase_path": "usecases/vereinsregisteranmeldung",
+      "summary": "Association-register filings for board changes, articles amendments, formation or dissolution with public certification, resolutions and attachments.",
+      "legal_anchors": ["src.beurkg", "src.bgb.77"],
+      "required_information": [
+        {
+          "id": "association.identity",
+          "label": "Association and register identity",
+          "status": "open",
+          "value": null,
+          "question": "Which e.V., register court and register number are affected?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "association_register_data",
+          "required_for": ["register_review"]
+        },
+        {
+          "id": "filing.type",
+          "label": "Filing type",
+          "status": "open",
+          "value": null,
+          "question": "Is this board change, articles amendment, formation, dissolution or another filing?",
+          "owner_role": "notary",
+          "privacy_class": "association_data",
+          "required_for": ["drafting"]
+        },
+        {
+          "id": "board.identity",
+          "label": "Board signers and authority",
+          "status": "open",
+          "value": null,
+          "question": "Which board members must sign and what representation rule applies?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "personal_data",
+          "required_for": ["identity_gate", "certification"]
+        },
+        {
+          "id": "resolution.evidence",
+          "label": "Meeting and resolution evidence",
+          "status": "open",
+          "value": null,
+          "question": "Which minutes, election records or articles amendment resolutions are needed?",
+          "owner_role": "association",
+          "privacy_class": "association_data",
+          "required_for": ["attachments"]
+        },
+        {
+          "id": "articles.current",
+          "label": "Current articles and changed wording",
+          "status": "open",
+          "value": null,
+          "question": "What is the current articles text and which changes are registered?",
+          "owner_role": "association",
+          "privacy_class": "association_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "filing.route",
+          "label": "Court filing route and copies",
+          "status": "open",
+          "value": null,
+          "question": "Which paper or electronic route and copy package does the register court require?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "technical_metadata",
+          "required_for": ["submission"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.register_application",
+          "label": "Association-register application",
+          "status": "open",
+          "source": "notarial certification package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.minutes_resolution",
+          "label": "Minutes, election or resolution evidence",
+          "status": "open",
+          "source": "association evidence package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.articles",
+          "label": "Articles or amended articles wording",
+          "status": "open",
+          "source": "association evidence package",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.certification_route",
+          "label": "Certification route",
+          "status": "open",
+          "options": ["paper", "video_allowed", "electronic", "unknown"]
+        },
+        {
+          "id": "decision.attachment_complete",
+          "label": "Attachment completeness",
+          "status": "open",
+          "options": ["complete", "incomplete", "special_review", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.signer_authority",
+          "label": "Board signer authority reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.register_package_ready",
+          "label": "Association-register package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-bnotk-xnp", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.certification_trace",
+          "label": "Certification and signer evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.court_submission",
+          "label": "Register-court submission trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "board.identity",
+          "to": "gate.signer_authority",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "resolution.evidence",
+          "to": "doc.minutes_resolution",
+          "type": "evidenced_by"
+        },
+        {
+          "from": "filing.route",
+          "to": "evidence.court_submission",
+          "type": "evidenced_by"
+        }
+      ]
+    },
+    {
+      "id": "case.erbausschlagung",
+      "slug": "erbausschlagung",
+      "title": "Erbausschlagung",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/erbausschlagung",
+      "summary": "Inheritance renunciation declaration to the estate court with deadline, identity, representation, minors or guardianship flags and delivery evidence.",
+      "legal_anchors": ["src.beurkg", "src.bgb.1945"],
+      "required_information": [
+        {
+          "id": "decedent.identity",
+          "label": "Decedent and estate court",
+          "status": "open",
+          "value": null,
+          "question": "Who died and which estate court receives the declaration?",
+          "owner_role": "applicant",
+          "privacy_class": "personal_data",
+          "required_for": ["court_route"]
+        },
+        {
+          "id": "renouncer.identity",
+          "label": "Renouncer identity and capacity",
+          "status": "open",
+          "value": null,
+          "question": "Who renounces and how are identity and capacity verified?",
+          "owner_role": "notary",
+          "privacy_class": "personal_data",
+          "required_for": ["identity_gate", "declaration"]
+        },
+        {
+          "id": "deadline.status",
+          "label": "Deadline and knowledge date",
+          "status": "open",
+          "value": null,
+          "question": "When did the renouncer learn of the inheritance and is the deadline still open?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_process_data",
+          "required_for": ["deadline_review"]
+        },
+        {
+          "id": "heirship.basis",
+          "label": "Inheritance basis and relationship",
+          "status": "open",
+          "value": null,
+          "question": "Why is the renouncer called as heir or substitute heir?",
+          "owner_role": "applicant",
+          "privacy_class": "family_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "representation.minors",
+          "label": "Minor, guardian or representative flags",
+          "status": "open",
+          "value": null,
+          "question": "Are minors, guardians, parental representation or approvals involved?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": ["approval_review"]
+        },
+        {
+          "id": "delivery.route",
+          "label": "Estate-court delivery route",
+          "status": "open",
+          "value": null,
+          "question": "How and when will the declaration reach the competent court?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["submission"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.renunciation_declaration",
+          "label": "Inheritance renunciation declaration",
+          "status": "open",
+          "source": "notarial declaration package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.death_or_court_reference",
+          "label": "Death or estate court reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.approval_evidence",
+          "label": "Family or guardianship approval evidence if required",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.deadline_risk",
+          "label": "Deadline risk",
+          "status": "open",
+          "options": ["low", "urgent", "expired_or_unclear", "unknown"]
+        },
+        {
+          "id": "decision.approval_needed",
+          "label": "Family or guardianship approval needed",
+          "status": "open",
+          "options": ["yes", "no", "needs_review", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.deadline_review",
+          "label": "Deadline reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.court_delivery",
+          "label": "Court delivery completed",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.deadline_review",
+          "label": "Deadline and instruction evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.delivery_trace",
+          "label": "Estate-court delivery trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "deadline.status",
+          "to": "gate.deadline_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "representation.minors",
+          "to": "decision.approval_needed",
+          "type": "requires_decision"
+        },
+        {
+          "from": "delivery.route",
+          "to": "evidence.delivery_trace",
+          "type": "evidenced_by"
+        }
+      ]
+    },
+    {
+      "id": "case.pflichtteilsverzicht_erbverzicht",
+      "slug": "pflichtteilsverzicht-erbverzicht",
+      "title": "Pflichtteilsverzicht / Erbverzicht",
+      "status": "open",
+      "priority": "P1",
+      "usecase_path": "usecases/pflichtteilsverzicht-erbverzicht",
+      "summary": "Contractual inheritance or compulsory-share waiver, often family succession planning, with parties, scope, compensation, extension to descendants and fairness review.",
+      "legal_anchors": ["src.beurkg", "src.bgb.2346_2348"],
+      "required_information": [
+        {
+          "id": "future_decedent.identity",
+          "label": "Future decedent identity and capacity",
+          "status": "open",
+          "value": null,
+          "question": "Who contracts with the waiving party and how is capacity reviewed?",
+          "owner_role": "notary",
+          "privacy_class": "personal_data",
+          "required_for": ["identity_gate", "legal_review"]
+        },
+        {
+          "id": "waiver_party.identity",
+          "label": "Waiving party identity",
+          "status": "open",
+          "value": null,
+          "question": "Who waives and are representation or approval issues present?",
+          "owner_role": "notary",
+          "privacy_class": "family_data",
+          "required_for": ["identity_gate", "approval_review"]
+        },
+        {
+          "id": "waiver.scope",
+          "label": "Waiver scope",
+          "status": "open",
+          "value": null,
+          "question": "Is the waiver full inheritance waiver, compulsory-share waiver or limited arrangement?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_legal_data",
+          "required_for": ["drafting"]
+        },
+        {
+          "id": "descendant.effect",
+          "label": "Effect on descendants",
+          "status": "open",
+          "value": null,
+          "question": "Should or does the waiver extend to descendants?",
+          "owner_role": "notary",
+          "privacy_class": "family_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "compensation.model",
+          "label": "Compensation or settlement",
+          "status": "open",
+          "value": null,
+          "question": "Is compensation, settlement, transfer or no consideration intended?",
+          "owner_role": "client",
+          "privacy_class": "financial_data",
+          "required_for": ["drafting", "tax_flags"]
+        },
+        {
+          "id": "family.fairness_flags",
+          "label": "Family and fairness flags",
+          "status": "open",
+          "value": null,
+          "question": "Are pressure, dependency, minors, care or imbalance flags present?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": ["fairness_review"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.waiver_contract",
+          "label": "Inheritance or compulsory-share waiver contract",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.compensation_evidence",
+          "label": "Compensation or settlement evidence reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.waiver_type",
+          "label": "Waiver type",
+          "status": "open",
+          "options": ["erbverzicht", "pflichtteilsverzicht", "limited", "unknown"]
+        },
+        {
+          "id": "decision.compensation",
+          "label": "Compensation arrangement",
+          "status": "open",
+          "options": ["none", "cash", "asset_transfer", "mixed", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.personal_presence_review",
+          "label": "Required personal participation reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.fairness_review",
+          "label": "Family and fairness review completed",
+          "status": "open",
+          "owner_role": "notary"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.fairness_notes",
+          "label": "Fairness and instruction evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.execution_trace",
+          "label": "Execution and copy trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "waiver.scope",
+          "to": "decision.waiver_type",
+          "type": "requires_decision"
+        },
+        {
+          "from": "family.fairness_flags",
+          "to": "gate.fairness_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "compensation.model",
+          "to": "decision.compensation",
+          "type": "requires_decision"
+        }
+      ]
+    },
+    {
+      "id": "case.adoption_familienrechtliche_erklaerungen",
+      "slug": "adoption-familienrechtliche-erklaerungen",
+      "title": "Adoption / familienrechtliche Erklaerungen",
+      "status": "open",
+      "priority": "P1",
+      "usecase_path": "usecases/adoption-familienrechtliche-erklaerungen",
+      "summary": "Notarial adoption consent and family-law declarations with identity, consent parties, court destination, capacity, irrevocability and sensitive-data handling.",
+      "legal_anchors": ["src.beurkg", "src.bgb.1750"],
+      "required_information": [
+        {
+          "id": "case.type",
+          "label": "Declaration type",
+          "status": "open",
+          "value": null,
+          "question": "Which adoption or family-law declaration is needed?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": ["legal_review"]
+        },
+        {
+          "id": "child.identity_context",
+          "label": "Child or adoptee context",
+          "status": "open",
+          "value": null,
+          "question": "Which child/adoptee context is relevant without storing raw data in Git?",
+          "owner_role": "client",
+          "privacy_class": "sensitive_personal_data",
+          "required_for": ["drafting"]
+        },
+        {
+          "id": "consenting_party.identity",
+          "label": "Consenting party identity and capacity",
+          "status": "open",
+          "value": null,
+          "question": "Who gives consent and are capacity, age or support flags present?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_personal_data",
+          "required_for": ["identity_gate", "capacity_review"]
+        },
+        {
+          "id": "court.destination",
+          "label": "Family court destination",
+          "status": "open",
+          "value": null,
+          "question": "Which court receives the declaration and which reference is used?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["submission"]
+        },
+        {
+          "id": "irrevocability.warning",
+          "label": "Irrevocability and condition prohibition flags",
+          "status": "open",
+          "value": null,
+          "question": "Which warnings about irrevocability, conditions or timing must be documented?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_process_data",
+          "required_for": ["legal_review", "appointment"]
+        },
+        {
+          "id": "additional.approvals",
+          "label": "Additional consents or approvals",
+          "status": "open",
+          "value": null,
+          "question": "Are parental, guardian, spouse, agency or court approvals relevant?",
+          "owner_role": "notary",
+          "privacy_class": "sensitive_family_data",
+          "required_for": ["approval_review"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.consent_declaration",
+          "label": "Adoption or family-law consent declaration",
+          "status": "open",
+          "source": "notarial declaration package",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.court_reference",
+          "label": "Family-court reference and delivery evidence",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.declaration_route",
+          "label": "Declaration route",
+          "status": "open",
+          "options": ["adoption_consent", "withdrawal_or_revocation", "other_family_declaration", "unknown"]
+        },
+        {
+          "id": "decision.approval_status",
+          "label": "Additional approval status",
+          "status": "open",
+          "options": ["not_required", "required", "available", "blocked", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.capacity_and_warning",
+          "label": "Capacity and warning review completed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.court_delivery",
+          "label": "Court delivery package ready",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-idaas"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.warning_notes",
+          "label": "Warning and instruction evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.family_court_delivery",
+          "label": "Family-court delivery trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "irrevocability.warning",
+          "to": "gate.capacity_and_warning",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "additional.approvals",
+          "to": "decision.approval_status",
+          "type": "requires_decision"
+        },
+        {
+          "from": "court.destination",
+          "to": "evidence.family_court_delivery",
+          "type": "evidenced_by"
+        }
+      ]
+    },
+    {
+      "id": "case.vollmacht_immobilien_gesellschaft",
+      "slug": "vollmacht-immobilien-gesellschaftsgeschaefte",
+      "title": "Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte",
+      "status": "open",
+      "priority": "P0",
+      "usecase_path": "usecases/vollmacht-immobilien-gesellschaftsgeschaefte",
+      "summary": "Notarized or publicly certified powers of attorney for real-estate contracts, register filings, shareholder meetings or share transfers with scope, form and evidence gates.",
+      "legal_anchors": ["src.beurkg", "src.bgb.167_129", "src.bgb.311b", "src.hgb.12"],
+      "required_information": [
+        {
+          "id": "principal.identity",
+          "label": "Principal identity and capacity",
+          "status": "open",
+          "value": null,
+          "question": "Who grants the power and how are identity and capacity verified?",
+          "owner_role": "notary",
+          "privacy_class": "personal_or_company_data",
+          "required_for": ["identity_gate"]
+        },
+        {
+          "id": "agent.identity",
+          "label": "Agent identity and relation",
+          "status": "open",
+          "value": null,
+          "question": "Who is authorized and what relationship or conflict flags exist?",
+          "owner_role": "principal",
+          "privacy_class": "personal_data",
+          "required_for": ["drafting"]
+        },
+        {
+          "id": "transaction.scope",
+          "label": "Transaction scope",
+          "status": "open",
+          "value": null,
+          "question": "Which real-estate, register, shareholder or share-transfer acts are covered?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["legal_review", "drafting"]
+        },
+        {
+          "id": "form.requirement",
+          "label": "Required form",
+          "status": "open",
+          "value": null,
+          "question": "Is public certification enough or is notarial recording required for the intended transaction?",
+          "owner_role": "notary",
+          "privacy_class": "legal_metadata",
+          "required_for": ["form_review"]
+        },
+        {
+          "id": "limitations.expiry",
+          "label": "Limitations, substitution and expiry",
+          "status": "open",
+          "value": null,
+          "question": "Which restrictions, self-dealing release, sub-authorization, duration or revocation rules apply?",
+          "owner_role": "notary",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["drafting"]
+        },
+        {
+          "id": "delivery.evidence",
+          "label": "Original, copies and recipient route",
+          "status": "open",
+          "value": null,
+          "question": "Who receives originals or certified copies and how is use evidenced?",
+          "owner_role": "notary_clerk",
+          "privacy_class": "mandate_metadata",
+          "required_for": ["closing"]
+        }
+      ],
+      "documents": [
+        {
+          "id": "doc.power_of_attorney",
+          "label": "Power of attorney deed or certification",
+          "status": "open",
+          "source": "workflow generated draft after review",
+          "contains_personal_data": true
+        },
+        {
+          "id": "doc.scope_reference",
+          "label": "Transaction or register scope reference",
+          "status": "open",
+          "source": "approved evidence store",
+          "contains_personal_data": true
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision.form_route",
+          "label": "Form route",
+          "status": "open",
+          "options": ["notarial_deed", "public_certification", "electronic_certification", "blocked", "unknown"]
+        },
+        {
+          "id": "decision.scope_type",
+          "label": "Scope type",
+          "status": "open",
+          "options": ["real_estate", "company_register", "shareholder_resolution", "share_transfer", "mixed", "unknown"]
+        }
+      ],
+      "gates": [
+        {
+          "id": "gate.form_review",
+          "label": "Form and scope reviewed",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.delivery_control",
+          "label": "Original and copy handling controlled",
+          "status": "open",
+          "owner_role": "notary_clerk"
+        }
+      ],
+      "plugin_dependencies": ["noc-regulated-core", "noc-idaas", "noc-grundbuch-portal", "noc-bnotk-xnp"],
+      "workflow_dependencies": ["workflows/contracts", "workflows/python"],
+      "evidence": [
+        {
+          "id": "evidence.form_review",
+          "label": "Form and scope review evidence",
+          "status": "open"
+        },
+        {
+          "id": "evidence.copy_delivery",
+          "label": "Original, copy and recipient trace",
+          "status": "open"
+        }
+      ],
+      "edges": [
+        {
+          "from": "transaction.scope",
+          "to": "decision.scope_type",
+          "type": "requires_decision"
+        },
+        {
+          "from": "form.requirement",
+          "to": "gate.form_review",
+          "type": "blocks_until_reviewed"
+        },
+        {
+          "from": "delivery.evidence",
+          "to": "evidence.copy_delivery",
+          "type": "evidenced_by"
+        }
+      ]
+    }
+  ]
+}

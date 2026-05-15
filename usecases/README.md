@@ -35,16 +35,47 @@ graph state.
 | AO52 nonprofit software company | `ao52aas-gemeinnuetzigkeit/` | Active intake | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-elster-eric` |
 | Steuer-aaS tax readiness | `steuer-aas/` | Active intake | `noc-regulated-core`, `noc-elster-eric` |
 
+## Canonical Next-10 Catalog
+
+| Usecase | Folder | Status | Primary plugin dependencies |
+| --- | --- | --- | --- |
+| Loeschungsbewilligung / Grundbuchloeschung | `loeschungsbewilligung-grundbuchloeschung/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| Teilungserklaerung nach WEG | `teilungserklaerung-weg/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| Bautraegervertrag | `bautraegervertrag/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp`, `noc-idaas` |
+| Gesellschafterbeschluss bei GmbH/UG | `gesellschafterbeschluss-gmbh-ug/` | KG baseline | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
+| Geschaeftsanteilsuebertragung GmbH | `geschaeftsanteilsuebertragung-gmbh/` | KG baseline | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
+| Vereinsregisteranmeldung | `vereinsregisteranmeldung/` | KG baseline | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-idaas` |
+| Erbausschlagung | `erbausschlagung/` | KG baseline | `noc-regulated-core`, `noc-idaas` |
+| Pflichtteilsverzicht / Erbverzicht | `pflichtteilsverzicht-erbverzicht/` | KG baseline | `noc-regulated-core`, `noc-idaas` |
+| Adoption / familienrechtliche Erklaerungen | `adoption-familienrechtliche-erklaerungen/` | KG baseline | `noc-regulated-core`, `noc-idaas` |
+| Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte | `vollmacht-immobilien-gesellschaftsgeschaefte/` | KG baseline | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+
 ## Knowledge Graph Binding
 
 The static KG is maintained in:
 
 - `knowledge-graph/notarial-top10.graph.json`
 - `knowledge-graph/notarial-top10.md`
+- `knowledge-graph/notarial-next10.graph.json`
+- `knowledge-graph/notarial-next10.md`
 
-Each canonical Top-10 usecase has a matching KG case node. Workflows should
-read KG nodes as open-question state and write updates through reviewed Git
-changes. Real mandate values must stay outside the repository.
+Each canonical Top-10 and Next-10 usecase has a matching KG case node. Workflows
+should read KG nodes as open-question state and write updates through reviewed
+Git changes. Real mandate values must stay outside the repository.
+
+## Further Backlog Candidates
+
+The next backlog candidates are recorded in `notarial-next10.graph.json` but do
+not yet have canonical usecase folders:
+
+- Genehmigungserklaerungen
+- Rangruecktritt/Rangaenderung im Grundbuch
+- Dienstbarkeiten
+- Baulasten-bezogene Erklaerungen
+- Niessbrauchsbestellungen
+- Wohnrechte
+- Auseinandersetzungsvertraege zwischen Erben
+- Scheidungsimmobilien-Uebertragungen
 
 ## Intake Rule
 

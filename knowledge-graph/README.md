@@ -15,6 +15,8 @@ in GitHub.
 | --- | --- |
 | `notarial-top10.graph.json` | Static DB for the ten most important notarial case types. |
 | `notarial-top10.md` | Human review and Mermaid view of the same KG scope. |
+| `notarial-next10.graph.json` | Static DB for the next ten frequent notarial case types. |
+| `notarial-next10.md` | Human review and Mermaid view of the next-ten KG scope. |
 
 ## Operating Rule
 
@@ -26,4 +28,3 @@ in GitHub.
 - Every KG update must update `roadmap/GANTT.md`; when a usecase binding changes,
   `usecases/GANTT.md` must also be updated.
 - `scripts/validate_knowledge_graph.py` is part of the strict quality gate.
-
