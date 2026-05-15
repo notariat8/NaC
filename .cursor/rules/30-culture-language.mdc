@@ -9,6 +9,8 @@ alwaysApply: true
 - Wende die Vorgaben aus [policies/language-policy.yaml](../../policies/language-policy.yaml) verbindlich an.
 - Sprachabhaengige Inhalte liegen in ISO-639-Ordnern.
 - `de` und `en` sind immer zu pflegen, unabhaengig von der Prompt-Sprache.
+- Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
+- Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt; stabile technische Identifier duerfen englisch bleiben.
 - Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.
 - Wenn die Policy fehlt, verwende neutrale Formulierungen und frage einmal nach.
 - Rechtstexte und Originalzitate werden unveraendert zitiert.
