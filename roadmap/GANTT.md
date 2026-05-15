@@ -33,6 +33,7 @@ gantt
     START_HERE operational entry cleanup         :done,    b1c, 2026-05-15, 1d
     Documentation folder taxonomy cleanup        :done,    b1d, 2026-05-15, 1d
     Clickable documentation links rule           :done,    b1e, 2026-05-15, 1d
+    Manual-only PDF export during development    :done,    b1f, 2026-05-15, 1d
     Skill plus Python workflow contracts         :active,  b2, 2026-05-15, 28d
     Deterministic workflow runner MVP            :active,  b3, 2026-05-15, 35d
     Day2 evidence and drift operations           :         b4, after b3, 28d
@@ -53,7 +54,7 @@ gantt
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 67% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, minimum-requirements inventory and strict validator. |
-| B | Installable skills and deterministic Python workflows | Active | 31% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, and README/index references now have clickable-link validation. |
+| B | Installable skills and deterministic Python workflows | Active | 32% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, and PDF export is manual-only during active development. |
 | C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 52% | Top-10 and Next-10 usecase catalogs now exist with static KG nodes, detailed usecase folders and a strict KG validator. |
 
 ## Rule
