@@ -1,0 +1,91 @@
+{
+  "schema_version": "noc.ai-sbom/v0.1",
+  "status": "draft",
+  "review_date": "2026-05-15",
+  "scope": "NaC repository-wide AI supply-chain baseline for plugins, workflows and usecases",
+  "source_references": [
+    "https://www.bsi.bund.de/DE/Service-Navi/Presse/Pressemitteilungen/Presse2026/260512_G7_Richtlinie_SBOM_for_AI.html",
+    "https://www.bsi.bund.de/EN/Themen/Unternehmen-und-Organisationen/Informationen-und-Empfehlungen/Kuenstliche-Intelligenz/KI.html",
+    "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+  ],
+  "policy_reference": "policies/sbom-policy.yaml",
+  "documentation_reference": {
+    "de": "docs/de/sbom-for-ai.md",
+    "en": "docs/en/sbom-for-ai.md"
+  },
+  "privacy_boundary": {
+    "real_personal_data_in_sbom": false,
+    "secrets_in_sbom": false,
+    "client_or_mandate_content_in_sbom": false,
+    "external_ai_processing_requires_avv_dpa_gate": true
+  },
+  "clusters": {
+    "metadata": {
+      "name": "NaC AI-SBOM baseline",
+      "version": "0.1.0",
+      "owner": "NoC Maintainers",
+      "lifecycle_state": "planning",
+      "release_binding": "draft only until first AI-enabled release package"
+    },
+    "system_level_properties": [
+      {
+        "id": "nac-reference-repository",
+        "type": "enterprise-gitops-reference",
+        "description": "Repository-wide governance and implementation baseline for Notariat as Code."
+      }
+    ],
+    "models": [
+      {
+        "id": "model-inventory-pending",
+        "provider": "to-be-declared-per-plugin-workflow-or-usecase",
+        "purpose": "No production model is bound in this baseline draft.",
+        "personal_data_allowed": false,
+        "review_required_before_external_use": true
+      }
+    ],
+    "datasets": [
+      {
+        "id": "dataset-inventory-pending",
+        "source": "synthetic-or-placeholder-only-until-approved",
+        "personal_data_allowed": false,
+        "professional_secret_allowed": false
+      }
+    ],
+    "infrastructure": [
+      {
+        "id": "local-noc-workspace",
+        "processing_mode": "local-first",
+        "external_service_use": "requires AVV/DPA and channel approval"
+      }
+    ],
+    "security_properties": [
+      {
+        "id": "no-secrets-no-personal-data",
+        "control": "Repository privacy lint, secret scan and human review stay mandatory."
+      },
+      {
+        "id": "human-approval",
+        "control": "Regulated or notarial AI use requires documented review before external processing."
+      }
+    ],
+    "key_performance_indicators": [
+      {
+        "id": "coverage",
+        "metric": "Every AI-enabled plugin, workflow and usecase has an AI-SBOM decision before release.",
+        "target": "100_percent_for_ai_enabled_release_packages"
+      },
+      {
+        "id": "privacy-gate",
+        "metric": "Every external AI processing path has AVV/DPA status documented.",
+        "target": "100_percent_before_pilot_with_personal_data"
+      }
+    ]
+  },
+  "open_tasks": [
+    "Inventory all AI touchpoints in plugins, workflows, usecases and prompts.",
+    "Choose final machine-readable mapping to CycloneDX, SPDX or another approved AI-SBOM profile.",
+    "Add release binding so AI-SBOM artifacts are attached to tagged releases.",
+    "Define per-plugin and per-workflow AI-SBOM update responsibilities.",
+    "Add vulnerability and model-risk review hooks after the minimum element mapping is stable."
+  ]
+}

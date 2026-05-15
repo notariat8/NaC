@@ -18,6 +18,20 @@ Diese Seite legt fest, welche Produkte fuer SBOM verwendet werden und welche dav
 | CI-Ausfuehrung | GitHub Actions | Artefakt-Export | Nein (Plattformdienst) | Nein (Basisnutzung) |
 | Erweiterte Security-Auswertung | GitHub Advanced Security | Security-Features | Nein | Ja (optional) |
 
+## SBOM for AI
+
+Klassische SBOMs reichen fuer KI-Systeme nicht aus. NaC fuehrt deshalb einen
+zusaetzlichen `SBOM for AI`-Track nach `docs/de/sbom-for-ai.md` und
+`policies/sbom-policy.yaml`.
+
+Erste Artefakte:
+
+- `sbom/ai/nac-ai-sbom-draft.json`
+- `scripts/validate_ai_sbom.py`
+
+Dieser Track gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases,
+Prompts und externe Modellaufrufe.
+
 ## Empfehlung fuer dieses Repository
 
 1. Erzeuge mindestens zwei SBOM-Artefakte:

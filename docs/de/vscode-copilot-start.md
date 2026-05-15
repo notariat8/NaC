@@ -30,6 +30,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefueh
 9. Definieren Sie Fork/Synchronisierung/Mischbetrieb ueber die Betriebsdokumente in `docs/de/`.
 10. Pruefen Sie die Produktstruktur: `plugins/` fuer installierbare Artefakte, `workflows/` fuer Skills und Python-Workflows, `usecases/` fuer konkrete notarielle Usecases.
 11. Aktualisieren Sie vor jedem Push `roadmap/GANTT.md`; bei Aenderungen an `plugins/`, `workflows/` oder `usecases/` auch das jeweilige Themen-Gantt.
+12. Pruefen Sie bei AI-faehigen Aenderungen `docs/de/sbom-for-ai.md` und aktualisieren Sie `sbom/ai/nac-ai-sbom-draft.json`.
 
 ## Empfohlener Copilot-Startprompt
 
@@ -53,6 +54,7 @@ Danach:
 - Bei sensiblen Schritten immer Review einplanen.
 - Jede Aenderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
 - Jeder Push braucht ein aktualisiertes globales Gantt; Themenaenderungen brauchen zusaetzlich das jeweilige Themen-Gantt.
+- AI-faehige Plugins, Workflows, Usecases, Prompts oder externe Modellaufrufe brauchen eine AI-SBOM-Entscheidung.
 - Kultur- und Sprachregeln aus `policies/culture-policy.yaml` verbindlich einhalten.
 
 ## Wenn das Muster nicht passt

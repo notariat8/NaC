@@ -25,6 +25,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Keine realen Secrets oder personenbezogenen Daten im Repository speichern (`policies/data-protection-policy.yaml`).
 - Bei SaaS-Verarbeitung mit personenbezogenen Daten ist ein AVV verpflichtend (`docs/de/avv-checkliste-eventlock-saas.md`).
 - SBOM-Vorgaben sind verbindlich nach `policies/sbom-policy.yaml`.
+- AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; Mindestcluster und Artefakte stehen in `docs/de/sbom-for-ai.md` und `docs/en/sbom-for-ai.md`.
 - Rollen und Qualifikationsgrenzen sind verbindlich nach `policies/role-model-policy.yaml`.
 - Rollen-, Rechte- und Issue-Sichtbarkeitsvorgaben sind verbindlich nach `policies/access-control-policy.yaml`.
 - Revisionssichere Ereignisablage ist verbindlich nach `policies/revisionssicherheit-eventstream-policy.yaml`.

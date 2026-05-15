@@ -36,6 +36,8 @@ guided path:
     notarial usecases.
 11. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
     `workflows/`, or `usecases/`, update the matching area Gantt as well.
+12. For AI-enabled changes, review `docs/en/sbom-for-ai.md` and update
+    `sbom/ai/nac-ai-sbom-draft.json`.
 
 ## Recommended Copilot Start Prompt
 
@@ -60,6 +62,8 @@ Then:
 - Document every change with purpose, risk, and owner.
 - Every push needs an updated global Gantt; area changes also need the matching
   area Gantt.
+- AI-enabled plugins, workflows, usecases, prompts or external model calls need
+  an AI-SBOM decision.
 - Follow the culture and language rules from `policies/culture-policy.yaml`.
 
 ## If The Pattern Does Not Fit

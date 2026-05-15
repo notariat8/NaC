@@ -100,6 +100,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "Cloud Runbook Parity",
                     [sys.executable, "scripts/validate_cloud_runbook_parity.py"],
                 ),
+                (
+                    "ai_sbom",
+                    "AI SBOM Baseline",
+                    [sys.executable, "scripts/validate_ai_sbom.py"],
+                ),
             ]
         )
     return checks

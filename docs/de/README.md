@@ -81,6 +81,7 @@ Notariat as Code ist ein Betriebsmodell, in dem Unternehmensstruktur, Policies u
 - `docs/de/quality-gate.md` beschreibt den deterministischen Pruefpfad fuer lokale und CI-Gates.
 - `docs/de/technology-decision.md` beschreibt verbindliche Technikentscheidungen.
 - `docs/de/sbom-products.md` beschreibt SBOM-Produkte und Lizenzmodell.
+- `docs/de/sbom-for-ai.md` beschreibt den repo-weiten AI-SBOM-Track nach BSI/G7.
 - `docs/de/public-readiness.md` enthaelt den Public-Go-Live-Status.
 - `docs/de/issue-backlog-public.md` enthaelt priorisierte Public-Issues.
 - `docs/de/startup-verification.md` beschreibt den lokalen Startcheck.

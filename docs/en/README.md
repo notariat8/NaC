@@ -36,6 +36,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - `usecases/` contains concrete notarial scenarios such as online GmbH formation, AO52 nonprofit software-company formation, real-estate purchase contracts, and testaments.
 - `docs/en/gpt-marketplace-operating-model.md` separates public GPT Store, Actions, workspace app, and local plugin channels.
 - `docs/en/datenschutz-avv-dpa.md` defines the AVV/DPA section for OpenAI-backed processing.
+- `docs/en/sbom-for-ai.md` defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
 - `docs/en/repository-consolidation.md` tracks which standalone repositories are migrated into NoC, still open, or ready for retirement.
 - `policies/` contains binding governance, technology, language, privacy, and role policies.
 - `schemas/` defines structured process requests.

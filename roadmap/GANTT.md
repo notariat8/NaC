@@ -21,6 +21,7 @@ gantt
     IDaaS plugin migration                       :active,  a3, 2026-05-14, 14d
     Repository consolidation ledger              :active,  a4, 2026-05-14, 7d
     PKCS7 local certificate-bundle evidence      :active,  a4a, 2026-05-15, 14d
+    SBOM for AI governance baseline              :active,  a4b, 2026-05-15, 21d
     Notary pilot plugin readiness                :         a5, after a4, 35d
     Publication and support operations           :         a6, after a5, 28d
 
@@ -43,7 +44,7 @@ gantt
 
 | Track | Scope | Status | Progress | Current gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 63% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing, OpenAI-backed processing now has an AVV/DPA governance section with the official OpenAI execution path, and the PR secret-scan checkout resolves full commit ranges. |
+| A | Installable plugins for notary offices | Active | 64% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, draft artifact and strict validator. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
 | C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
 

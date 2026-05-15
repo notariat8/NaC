@@ -44,6 +44,8 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - `policies/language-policy.yaml`
 - `docs/de/avv-checkliste-eventlock-saas.md`
 - `policies/sbom-policy.yaml`
+- `docs/de/sbom-for-ai.md`
+- `docs/en/sbom-for-ai.md`
 - `policies/role-model-policy.yaml`
 - `policies/access-control-policy.yaml`
 - `policies/revisionssicherheit-eventstream-policy.yaml`
@@ -85,6 +87,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Keine echten Zugangsdaten, Keys oder Tokens in Vorschlaegen speichern.
 - Keine echten personenbezogenen Daten in Prozessbeispielen speichern.
 - Fuer Beispieldaten nur Testdomains und Platzhalter verwenden.
+- AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.
 
 ## Technikvorgaben
 
