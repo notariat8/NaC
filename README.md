@@ -10,6 +10,8 @@ Language-specific documentation and prompts use ISO-639 folder codes.
 
 `de` and `en` are mandatory standard languages. Any change to localized content
 must update both languages, regardless of the language used in the prompt.
+For German law and notarial usecases, German is the leading and legally binding
+language; English is translation or orientation only.
 
 The binding rule is defined in [policies/language-policy.yaml](policies/language-policy.yaml) and checked by
 [scripts/validate_language_parity.py](scripts/validate_language_parity.py).

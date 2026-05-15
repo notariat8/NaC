@@ -5,10 +5,13 @@
 `de` and `en` are mandatory standard languages according to
 `policies/language-policy.yaml`. Every change to localized content must maintain
 both languages.
+For German law and notarial usecases, German is the leading and legally binding
+language. English is translation or orientation only.
 
 ## Current State
 
 - `docs/de/` contains the German source baseline.
+- `usecases/` is maintained as the German subject-matter usecase surface.
 - `docs/en/README.md` and `docs/en/START_HERE.md` are maintained as English entry documents.
 - `prompts/en/` contains English prompt templates.
 - The deeper subject-matter documents under `docs/en/` are present as the parallel maintenance surface and must be updated in sync with `docs/de/` for every subject-matter change.
