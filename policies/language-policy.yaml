@@ -7,6 +7,18 @@ standard_languages:
 
 language_code_standard: iso_639
 
+repository_language:
+  applies_to: all_repository_content
+  leading_language: de
+  default_human_language: de
+  root_readme_language: de
+  github_project_page_language: de
+  english_role: translation_and_orientation_only
+  conflict_resolution: german_text_prevails
+  machine_readable_keys_may_remain_english: true
+  stable_identifiers_may_remain_english: true
+  code_comments_follow_local_file_context: true
+
 legal_domain_language:
   scope: german_law_notarial_usecases
   leading_language: de
@@ -24,6 +36,9 @@ localized_surfaces:
   - prompts
 
 domain_surfaces:
+  repository_root:
+    default_language: de
+    require_german_readme: true
   usecases:
     default_language: de
     require_german_index: true
@@ -46,9 +61,12 @@ maintenance_rules:
   prompt_language_does_not_limit_output_languages: true
   every_change_updates_all_standard_languages: true
   missing_counterpart_blocks_merge: true
+  non_localized_human_content_defaults_to_german: true
+  github_root_readme_is_human_content: true
 
 notes:
   - "Deutsch (de) und Englisch (en) sind die verpflichtenden Standardsprachen."
+  - "Die Policy gilt repo-weit fuer alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
   - "Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung."
   - "Sprachabhaengige Inhalte liegen unter ISO-639-Sprachordnern."
   - "Unabhaengig von der Sprache des Prompts muessen alle Standardsprachen gepflegt werden."

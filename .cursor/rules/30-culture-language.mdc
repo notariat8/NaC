@@ -7,6 +7,7 @@ alwaysApply: true
 
 - Wende die Vorgaben aus [policies/culture-policy.yaml](../../policies/culture-policy.yaml) verbindlich an.
 - Wende die Vorgaben aus [policies/language-policy.yaml](../../policies/language-policy.yaml) verbindlich an.
+- Die Sprachpolicy gilt repo-weit fuer alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../../README.md).
 - Sprachabhaengige Inhalte liegen in ISO-639-Ordnern.
 - `de` und `en` sind immer zu pflegen, unabhaengig von der Prompt-Sprache.
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.

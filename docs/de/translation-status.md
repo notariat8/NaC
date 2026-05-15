@@ -10,6 +10,7 @@ rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 ## Aktueller Stand
 
 - `docs/de/` enthaelt die deutsche Ausgangsfassung.
+- [README.md](../../README.md) ist die deutsch gefuehrte GitHub-Startseite.
 - `usecases/` wird als deutsche fachliche Usecase-Flaeche gefuehrt.
 - `docs/en/README.md` und `docs/en/START_HERE.md` sind als englische Einstiegsfassung gepflegt.
 - `prompts/en/` enthaelt englische Prompt-Vorlagen.

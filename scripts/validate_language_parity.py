@@ -10,6 +10,7 @@ STANDARD_LANGUAGES = ("de", "en")
 LOCALIZED_SURFACES = ("docs", "prompts")
 LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}$")
 GERMAN_USECASE_MARKER = "Deutsch ist fuer diese Usecases die fuehrende und rechtlich bindende Sprache"
+GERMAN_ROOT_MARKER = "Deutsch ist repo-weit die fuehrende Sprache"
 
 
 def collect_files(surface: str, language: str) -> set[str]:
@@ -64,6 +65,11 @@ def validate_domain_language_rules() -> list[str]:
     errors: list[str] = []
     policy_text = (REPO_ROOT / "policies" / "language-policy.yaml").read_text(encoding="utf-8")
     for required in (
+        "repository_language:",
+        "applies_to: all_repository_content",
+        "root_readme_language: de",
+        "github_project_page_language: de",
+        "non_localized_human_content_defaults_to_german: true",
         "legal_domain_language:",
         "leading_language: de",
         "legally_binding_language: de",
@@ -72,6 +78,18 @@ def validate_domain_language_rules() -> list[str]:
     ):
         if required not in policy_text:
             errors.append(f"Pflicht-Sprachregel fehlt in policies/language-policy.yaml: {required}")
+
+    root_readme = REPO_ROOT / "README.md"
+    if not root_readme.exists():
+        errors.append("GitHub-Root-README fehlt: README.md")
+    else:
+        text = root_readme.read_text(encoding="utf-8")
+        if not text.startswith("# NoC: Notariat as Code"):
+            errors.append("README.md muss als deutscher GitHub-Root-README beginnen: # NoC: Notariat as Code")
+        if GERMAN_ROOT_MARKER not in text:
+            errors.append("README.md muss Deutsch als repo-weit fuehrende Sprache nennen.")
+        if "This repository is maintained" in text:
+            errors.append("README.md ist noch englisch formuliert.")
 
     usecase_index = REPO_ROOT / "usecases" / "README.md"
     if not usecase_index.exists():
