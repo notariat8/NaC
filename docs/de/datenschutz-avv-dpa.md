@@ -15,6 +15,9 @@ Geprueft am 2026-05-15:
 
 - OpenAI Data Processing Addendum v.010126:
   `https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf`
+- Offizielle OpenAI-Seite zum Zusatz zur Datenverarbeitung mit PDF-Download
+  und Link zum Ausfuehren der Datenverarbeitungsvereinbarung:
+  `https://openai.com/de-DE/policies/data-processing-addendum/`
 - Gesellschaft fuer Datenschutz, "ChatGPT, Datenschutz und
   Auftragsverarbeitungsvertrag":
   `https://gesellschaft-datenschutz.de/chatgpt-und-auftragsverarbeitung/`
@@ -25,6 +28,12 @@ Rueckgabe/Loeschung, internationale Transfers und die vom Kunden gesteuerten
 Konfigurationen. Der deutsche Beitrag stellt heraus, dass die
 datenschutzrechtliche Rolle vom Lizenzmodell abhaengt und fuer Unternehmens-
 bzw. API-Nutzung eine AVV/DPA-Pruefung erforderlich ist.
+
+Operativer Hinweis: Der Vertragsabschluss erfolgt nicht ueber die im Repo
+abgelegte PDF-Referenz, sondern ueber den offiziellen OpenAI-Policy-Pfad. Der
+dort am Ende verlinkte Schritt "Datenverarbeitungsvereinbarung ausfuehren" ist
+der zu pruefende Abschluss-/AVV-Pfad. Ergebnisdokumente, Organisations-IDs und
+Accountdaten werden nicht in diesem Repository gespeichert.
 
 ## NoC Grundsatz
 
@@ -53,6 +62,8 @@ bzw. API-Nutzung eine AVV/DPA-Pruefung erforderlich ist.
 ## Pflichtartefakte vor Verarbeitung
 
 - unterschriebene bzw. wirksam akzeptierte DPA/AVV-Version
+- Nachweis, dass der Abschluss ueber den offiziellen OpenAI-DPA-/AVV-Pfad
+  angestossen oder abgeschlossen wurde
 - genaue OpenAI-Produkt-/Lizenzzuordnung
 - Zweck der Verarbeitung und dokumentierte Kundenweisung
 - Kategorien personenbezogener Daten und betroffener Personen

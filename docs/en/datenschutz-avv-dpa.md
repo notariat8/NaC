@@ -15,6 +15,9 @@ Reviewed on 2026-05-15:
 
 - OpenAI Data Processing Addendum v.010126:
   `https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf`
+- Official OpenAI data-processing-addendum page with PDF download and the link
+  to execute the Data Processing Agreement:
+  `https://openai.com/de-DE/policies/data-processing-addendum/`
 - Gesellschaft fuer Datenschutz, "ChatGPT, Datenschutz und
   Auftragsverarbeitungsvertrag":
   `https://gesellschaft-datenschutz.de/chatgpt-und-auftragsverarbeitung/`
@@ -24,6 +27,12 @@ covers instructions, subprocessors, return/deletion, international transfers
 and customer-controlled configuration choices. The German article emphasizes
 that the privacy role depends on the license model and that business/API use
 requires an AVV/DPA assessment.
+
+Operational note: The contract is not executed through the PDF reference stored
+in this repository. It must be initiated through the official OpenAI policy
+path. The page's final "execute data processing agreement" step is the
+agreement/AVV path to review. Resulting documents, organization IDs and account
+data are not stored in this repository.
 
 ## NoC Principle
 
@@ -51,6 +60,8 @@ requires an AVV/DPA assessment.
 ## Required Artifacts Before Processing
 
 - signed or effectively accepted DPA/AVV version
+- evidence that execution was initiated or completed through the official
+  OpenAI DPA/AVV path
 - exact OpenAI product/license mapping
 - processing purpose and documented customer instruction
 - categories of personal data and data subjects
