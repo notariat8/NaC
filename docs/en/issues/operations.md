@@ -1,133 +1,144 @@
-# Zugriff und Issue-Betrieb im Unternehmen
+# Access And Issue Operations In The Organization
 
-## Ziel
+## Goal
 
-Dieses Dokument beschreibt ein umsetzbares Modell fuer:
+This document describes an implementable model for:
 
-- gemeinsame Task-Uebersicht ueber mehrere Repos,
-- strikte Sichtbarkeit je Akte/Repo,
-- Rollen- und Rechtepflege fuer Mitarbeitende, Mandanten und Auditoren.
+- a shared task overview across multiple repositories,
+- strict visibility per file or repository,
+- role and permission maintenance for employees, clients and auditors.
 
-## Grundregel
+## Basic Rule
 
-In GitHub werden Rechte auf **Repository-Ebene** vergeben, nicht auf Issue-Ebene.
+In GitHub, permissions are assigned at **repository level**, not at issue level.
 
-Folge:
+Consequence:
 
-- Wer ein Repo nicht sehen darf, sieht auch dessen Issues nicht.
-- Eine gemeinsame Uebersicht ueber viele Repos erfolgt ueber ein Organization-Project.
+- A user who cannot see a repository cannot see its issues.
+- A shared overview across many repositories is provided through an
+  organization project.
 
-Ergaenzung fuer Compliance:
+Compliance addition:
 
-- Issues sind die **operative Ebene**.
-- Revisionssichere Ablage erfolgt ueber ein separates, unveraenderbares Event-Journal.
-- Details: `docs/en/eventstream/revisionssicherheit.md`
+- Issues are the **operational layer**.
+- Audit-proof storage is provided through a separate immutable event journal.
+- Details: [docs/en/eventstream/revisionssicherheit.md](../eventstream/revisionssicherheit.md)
 
-## Repo-Typen im Unternehmen
+## Repository Types In The Organization
 
 1. `core-repo`
-   - zentrale Regeln, Standards, gemeinsame Workflows
+   - central rules, standards and shared workflows
 2. `domain-repo`
-   - fachlicher Domaenenkontext (z. B. Notariat)
+   - subject-matter domain context, for example notary office
 3. `case-repo`
-   - einzelne Akte/Verfahren, z. B. `case-notary-2026-0042`
+   - individual file or proceeding, for example `case-notary-2026-0042`
 
-## Rollen und technische Zuordnung
+## Roles And Technical Assignment
 
-Fachliche Rollen werden in `policies/role-model-policy.yaml` gepflegt.  
-GitHub-Logins werden in `policies/github-identity-registry.json` den technischen Rollen zugeordnet.
-Repo-/Issue-Sichtbarkeit und Gastzugriffe sind in `policies/access-control-policy.yaml` verbindlich festgelegt.
+Subject-matter roles are maintained in
+[policies/role-model-policy.yaml](../../../policies/role-model-policy.yaml).
+GitHub logins are mapped to technical roles in
+[policies/github-identity-registry.json](../../../policies/github-identity-registry.json).
+Repository and issue visibility plus guest access are bindingly defined in
+[policies/access-control-policy.yaml](../../../policies/access-control-policy.yaml).
 
-Technische Teams in der GitHub-Organisation:
+Technical teams in the GitHub organization:
 
-- `team-notaries-all`: alle Notare mit Vollsicht auf alle Notariats-Akten
-- `team-notary-ops`: operative Mitarbeitende Notariat
-- `team-tax`, `team-law`, `team-software`, `team-carpentry` (je Vertical)
-- `team-audit-readonly`: interne Audit-Sicht, read-only
+- `team-notaries-all`: all notaries with full visibility over all notary files
+- `team-notary-ops`: operational notary-office staff
+- `team-tax`, `team-law`, `team-software`, `team-carpentry` per vertical
+- `team-audit-readonly`: internal audit view, read-only
 
-Externe:
+External users:
 
-- Mandant als Gastnutzer (`outside collaborator`) nur auf seinem `case-repo`
-- Auditor extern als Gastnutzer, read-only nur auf freigegebene `case-repo` oder Audit-Repo
+- Client as guest user, `outside collaborator`, only on their `case-repo`.
+- External auditor as guest user, read-only only on approved `case-repo` or
+  audit repository.
 
-## Rechtematrix (empfohlen)
+## Permission Matrix, Recommended
 
-| Rolle/Gruppe | core-repo | domain-repo | case-repo (eigene Akte) | case-repo (fremde Akte) |
+| Role/group | core-repo | domain-repo | case-repo, own file | case-repo, other file |
 | --- | --- | --- | --- | --- |
-| notar_fachlich | write/maintain | write/maintain | maintain | no access |
-| sachbearbeitung_notary | read/triage | write | write | no access |
-| prozessverantwortung | maintain | maintain | maintain | read (optional) |
-| revision_audit intern | read | read | read | read (nur freigegebene) |
-| mandant_gast | no access | no access | read oder triage | no access |
-| auditor_gast extern | no access | no access | read (freigegebene) | no access |
+| `notar_fachlich` | write/maintain | write/maintain | maintain | no access |
+| `sachbearbeitung_notary` | read/triage | write | write | no access |
+| `prozessverantwortung` | maintain | maintain | maintain | read, optional |
+| internal `revision_audit` | read | read | read | read, approved only |
+| `mandant_gast` | no access | no access | read or triage | no access |
+| external `auditor_gast` | no access | no access | read, approved | no access |
 
-Hinweis:
+Notes:
 
-- Notare mit Gesamtverantwortung erhalten Teamzugriff auf alle Notariats-`case-repo`.
-- Mitarbeitende ohne Repo-Aufgabe erhalten keinen Zugriff auf dieses Repo und sehen dessen Issues nicht.
+- Notaries with overall responsibility receive team access to all notary
+  `case-repo` repositories.
+- Employees without a repository task receive no access to that repository and
+  cannot see its issues.
 
-## Gemeinsame Issue-Uebersicht ueber Repos
+## Shared Issue Overview Across Repositories
 
-Nutzen Sie ein GitHub Organization Project als zentrale Aufgabenansicht.
+Use a GitHub organization project as central task view.
 
-Empfohlene Felder:
+Recommended fields:
 
 - `case_id`
 - `domain`
-- `repo_type` (`core`, `domain`, `case`)
+- `repo_type`, one of `core`, `domain`, `case`
 - `impact_level`
 - `decision_type`
 - `due_date`
 
-Empfohlene Views:
+Recommended views:
 
 - `my_tasks`: `assignee = @me`
 - `notary_all_cases`: `domain = notary`
-- `audit_view`: `impact_level in (medium, high)` und `decision_type = requires_approval`
-- `client_case_view`: nur Issues des jeweiligen `case-repo`
+- `audit_view`: `impact_level in (medium, high)` and
+  `decision_type = requires_approval`
+- `client_case_view`: only issues of the respective `case-repo`
 
-Wichtig:
+Important:
 
-- Das Project zeigt nur Issues aus Repos, auf die der Nutzer bereits Zugriff hat.
-- So entsteht eine zentrale Uebersicht ohne Rechtebruch.
+- The project shows only issues from repositories the user can already access.
+- This creates a central overview without permission leakage.
 
-## Standardablauf: Neue Akte anlegen
+## Standard Flow: Create New File
 
-1. `case-repo` nach Namensstandard anlegen (z. B. `case-notary-2026-0042`).
-2. Repo-Template fuer Akten nutzen (Issue-Templates, Labels, Schutzregeln).
-3. Teamrechte setzen:
-   - `team-notaries-all` mindestens `maintain`
-   - zustaendige Sachbearbeitung `write`
-4. Mandant als Gastnutzer hinzufuegen (`read` oder `triage` je Policy).
-5. Auditor (falls erforderlich) als Gastnutzer mit `read` zuweisen.
-6. Start-Issues aus Vorlage erstellen:
+1. Create `case-repo` according to naming standard, for example
+   `case-notary-2026-0042`.
+2. Use repository template for files: issue templates, labels, protection
+   rules.
+3. Set team permissions:
+   - `team-notaries-all` at least `maintain`,
+   - responsible staff `write`.
+4. Add client as guest user: `read` or `triage` according to policy.
+5. Add auditor, where required, as guest user with `read`.
+6. Create start issues from template:
    - `intake`
    - `identity_check`
    - `document_preparation`
    - `approval_gate`
    - `execution_tracking`
-7. Issues dem Organization-Project zuordnen und Pflichtfelder befuellen.
-8. `process_version` fuer den Vorgang dokumentieren (Version-Binding).
+7. Assign issues to the organization project and fill mandatory fields.
+8. Document `process_version` for the matter through version binding.
 
-## Pflegeprozess fuer Rollen und Rechte
+## Maintenance Process For Roles And Rights
 
-Pflegeorte:
+Maintenance locations:
 
-- fachliche Entscheidung: `policies/role-model-policy.yaml`
-- technische Login-Zuordnung: `policies/github-identity-registry.json`
-- Zugriffsmodell und Gastregeln: `policies/access-control-policy.yaml`
-- Betriebsablauf und Rechteverfahren: dieses Dokument
+- subject-matter decision: [policies/role-model-policy.yaml](../../../policies/role-model-policy.yaml)
+- technical login assignment: [policies/github-identity-registry.json](../../../policies/github-identity-registry.json)
+- access model and guest rules: [policies/access-control-policy.yaml](../../../policies/access-control-policy.yaml)
+- operating flow and rights procedure: this document
 
-Pflegezyklus:
+Maintenance cycle:
 
-1. Monatsweise Rollenreview mit Prozessverantwortung.
-2. Quartalsweise Rezertifizierung fuer Gastzugriffe.
-3. Sofortige Anpassung bei Rollenwechsel, Offboarding oder Incident.
+1. Monthly role review with process owner.
+2. Quarterly recertification for guest access.
+3. Immediate adjustment after role change, offboarding or incident.
 
-## Mindestkontrollen
+## Minimum Controls
 
-- keine direkten Aenderungen auf `main`
-- PR + Review fuer alle Prozessaenderungen
-- CODEOWNERS pro Domain/Case
-- Environment-Gates bei approval-pflichtigen Schritten
-- Audit-Log regelmaessig pruefen (Gastzugriffe, Repo-Berechtigungen, Freigaben)
+- no direct changes on `main`
+- PR and review for all process changes
+- CODEOWNERS per domain or case
+- environment gates for approval-required steps
+- regular audit-log review for guest access, repository permissions and
+  approvals

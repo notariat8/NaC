@@ -1,114 +1,93 @@
-# Plugin Plan: Handelsregister bundesAPI Spike
+# Plugin Plan: Commercial Register bundesAPI Spike
 
 Status: `deprecated`
 
-Dieser Plan ist fuer den installierbaren `noc-handelsregister`-Pluginpfad ersetzt durch
-`docs/en/plugin-plans/handelsregister-online-anmeldung.md`. Er bleibt nur als historischer
-Recherche-/Abruf-Spike erhalten und ist nicht die Zielrichtung fuer den aktuellen MVP.
+## Core Decision
 
-## Kernentscheidung
+This document is retained as a spike assessment only. The current productive
+plugin path is **not** a generic commercial-register scraping connector.
 
-`bundesAPI/handelsregister` wird fuer NoC nur als technischer Spike behandelt.
-Es wird nicht direkt produktiv in NoC uebernommen.
+The repository `bundesAPI/handelsregister` may be useful for technical learning,
+but it must not be adopted as a productive SaaS connector without license,
+usage-terms, portal-boundary, rate-limit, data-protection and compliance review.
 
-Gruende:
+The active filing-oriented path is maintained in
+[handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md).
 
-- Im Repository ist kein sichtbares `LICENSE`-File vorhanden.
-- Das CLI wird im README als work in progress beschrieben.
-- Im Code ist Rate-Limiting noch als TODO markiert.
-- Das Registerportal erlaubt normale Nutzung nur als einzelne Abrufe und begrenzt Such- oder Rechtstraegeraufrufe auf 60 pro Stunde.
-- Systematische Abrufe zum Aufbau oder zur Aktualisierung paralleler Register sind unzulaessig.
+## Goal
 
-## Ziel
+The spike may help evaluate:
 
-NoC soll Handelsregister-Recherchen fuer erlaubte Einzelfaelle nachvollziehbar vorbereiten, dokumentieren und evidenzfaehig machen.
+- how commercial-register research can be represented as a plan,
+- which metadata and evidence references are useful,
+- which legal and technical boundaries block direct automation,
+- how to avoid storing register documents or personal data by default.
 
-Der Spike darf pruefen:
+## Non-Goals
 
-- welche Suchparameter fuer NoC-Prozesse relevant sind,
-- wie ein menschenlesbarer Rechercheplan aussieht,
-- welche Evidence nach einem manuellen oder zulässigen Abruf gespeichert werden darf,
-- welche technische Schnittstelle spaeter rechtlich und betrieblich tragfaehig waere.
+- No productive scraping.
+- No bypass of official portal usage terms.
+- No high-volume lookup.
+- No creation of a cross-customer register copy.
+- No storage of real register documents in Git.
+- No LLM processing of register documents without explicit policy approval.
 
-## Nicht-Ziele
+## Day 0
 
-- Kein produktiver Scraper.
-- Keine Massenabfragen.
-- Kein Aufbau eines parallelen Registers.
-- Keine Umgehung von Sperren, Sessions, Captchas, Nutzungsordnung oder IP-Limits.
-- Keine Speicherung personenbezogener Echtdaten im Repo.
-- Keine direkte Uebernahme von Code ohne Lizenzklaerung.
+- Check visible license and reuse permissions of the referenced spike.
+- Check portal usage terms and legal basis.
+- Decide whether the task is research evidence or filing preparation.
+- Define allowed metadata and prohibited content.
+- Keep all examples synthetic.
 
-## Day0
+## Day 1
 
-- Rechts- und Nutzungsrahmen dokumentieren.
-- Lizenzlage des GitHub-Repositories klaeren.
-- Registerportal-Nutzungsordnung als harte Betriebsgrenze uebernehmen.
-- Spike-Branch getrennt vom produktiven Connector fuehren.
-- Keine echten Suchdaten in Beispieldateien speichern.
+- Create only dry-run research plans.
+- Capture purpose, search parameters, user role and case reference.
+- Store metadata, hashes, source links and attestations by default.
+- Keep retrieved documents in the customer DMS or official system unless a
+  policy explicitly allows storage.
 
-## Day1
+## Day 2
 
-- Nur Dry-run Plan erzeugen:
-  - Suchzweck.
-  - Rechtsgrund oder fachlicher Anlass.
-  - Suchparameter.
-  - erwartete manuelle Pruefschritte.
-  - Rate-Limit-Budget.
-  - Evidence-Policy.
-- Optional technische Recherche gegen Test-/Beispielbegriffe ausfuehren, sofern Nutzungsordnung eingehalten wird.
-- Ergebnis nicht als amtliche Wahrheit behandeln; fachliche Pruefung bleibt menschlich.
-- Plan Preview im PR dokumentieren.
+- Monitor rate-limit and portal-boundary risks.
+- Review rejected or blocked research attempts as incidents.
+- Reassess whether an official interface or manual evidence workflow is the
+  better path.
 
-## Day2
+## Adapter Boundaries
 
-- Abrufzaehlung und Rate-Limit-Log fuehren, falls ein technischer Abruf ueberhaupt aktiviert wird.
-- Quellen- und Nutzungsordnungs-Aenderungen regelmaessig pruefen.
-- Lizenzentscheidung dokumentieren, bevor Code oder Abhaengigkeiten uebernommen werden.
-- Bei Sperren, Fehlern oder Warnhinweisen sofort auf manuellen Einzelabruf zurueckfallen.
-- Audit-Evidence nur als Hash, Zeitstempel, Zweck, Akten-/Vorgangsreferenz und nicht-sensitive Ergebniszusammenfassung speichern.
+The adapter may:
 
-## Adapter-Grenzen
+- structure a research plan,
+- record user attestation,
+- hash imported evidence,
+- document source and retrieval time.
 
-Der Spike darf:
+The adapter must not:
 
-- Recherche-Intent strukturieren.
-- Suchparameter fuer einen menschlichen Abruf vorbereiten.
-- technische Machbarkeit lokal testen.
-- Compliance-Grenzen sichtbar machen.
+- automate protected portals productively,
+- circumvent rate limits or usage terms,
+- use customer traffic to build a shared register database,
+- write secrets or personal document content to Git.
 
-Der Spike darf nicht:
+## Source Assessment
 
-- produktiv automatisiert abrufen.
-- Rate-Limits ausreizen oder parallelisieren.
-- Registerdaten dauerhaft im Repo ablegen.
-- API- oder Scraper-Code ohne Lizenzfreigabe uebernehmen.
-- die Registerportal-Nutzungsordnung umgehen.
+The referenced open-source project is a spike input, not a production
+dependency. Missing or unclear license information blocks code adoption.
 
-## Quellenbewertung
+## Acceptance Criteria For A Later Productive Connector
 
-| Quelle | Befund | NoC-Folge |
-| --- | --- | --- |
-| `bundesAPI/handelsregister` | Python-CLI, wenige Dateien, kein sichtbares LICENSE-File, kein Release | nur Spike, keine direkte Code-Uebernahme |
-| Registerportal Nutzungsordnung | einzelne Abrufe erlaubt, systematische Abrufe unzulaessig, 60 Suchen/Aufrufe pro Stunde | hartes Rate-Limit und kein Massenbetrieb |
-| HGB § 9 | Einsichtnahme zu Informationszwecken durch einzelne Abrufe | Intent und Zweck dokumentieren |
-| HRV § 52 | automatisierter Abruf nur einzeln je Registerblatt und keine gezielte Personensuche | keine Bulk- oder Personensuche |
-| HRV § 53 | Abrufe werden protokolliert | NoC-Audit nicht als Ersatz fuer amtliche Protokollierung behandeln |
+- Legal usage path is approved.
+- License is compatible and documented.
+- Rate limits and abuse controls are implemented.
+- Evidence storage is metadata-first and tenant-isolated.
+- Documents are hashed and stored only in approved systems.
+- Every query has purpose, case reference, actor and timestamp.
 
-## Akzeptanzkriterien fuer einen spaeteren produktiven Connector
+## Sources
 
-- Lizenz und Wiederverwendung sind schriftlich geklaert.
-- Offizielle oder belastbar erlaubte Schnittstelle ist dokumentiert.
-- Rate-Limiting ist technisch zwingend und nicht optional.
-- Dry-run ist Standard.
-- Menschliche Freigabe vor jedem echten Abruf.
-- Keine parallelen Registerkopien.
-- Evidence speichert keine unnoetigen personenbezogenen Daten.
-
-## Quellen
-
-- GitHub: `https://github.com/bundesAPI/handelsregister`
-- Registerportal Nutzungsordnung: `https://www.handelsregister.de/rp_web/information/welcome.xhtml`
-- HGB § 9: `https://www.gesetze-im-internet.de/hgb/__9.html`
-- HRV § 52: `https://www.gesetze-im-internet.de/hdlregvfg/__52.html`
-- HRV § 53: `https://www.gesetze-im-internet.de/hdlregvfg/__53.html`
+- Active filing path:
+  [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md)
+- Register-related NoC plugin plans:
+  [README.md](README.md)

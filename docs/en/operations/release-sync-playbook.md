@@ -1,69 +1,71 @@
-# Release- und Sync-Playbook
+# Release And Sync Playbook
 
-## Zweck
+## Purpose
 
-Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem zentralen Upstream uebernimmt, prueft und freigibt.
+This playbook standardizes how an organization fork adopts, checks and approves
+new versions from the central upstream.
 
-## Uebernahmezyklus
+## Adoption Cycle
 
-- Standardzyklus: monatlich oder quartalsweise.
-- Ausserplanmaessig nur bei sicherheits- oder compliance-kritischen Aenderungen.
-- Uebernommen werden nur freigegebene Upstream-Releases, keine ungeprueften Zwischenstaende.
+- Standard cycle: monthly or quarterly.
+- Out-of-cycle only for security-critical or compliance-critical changes.
+- Only approved upstream releases are adopted, not unchecked intermediate
+  states.
 
-## Rollen im Uebernahmeprozess
+## Roles In The Adoption Process
 
-- `sync_owner`: steuert den gesamten Uebernahmezyklus.
-- `reviewer_fachlich`: prueft fachliche Auswirkungen.
-- `reviewer_compliance`: prueft regulatorische Risiken.
-- `approver`: finales Go fuer produktive Nutzung.
+- `sync_owner`: manages the complete adoption cycle.
+- `reviewer_fachlich`: checks subject-matter effects.
+- `reviewer_compliance`: checks regulatory risks.
+- `approver`: gives the final go for productive use.
 
-## Standardablauf je Release
+## Standard Flow Per Release
 
-1. Upstream-Release identifizieren (`v*` + Changelog).
-2. Sync-Branch erstellen: `sync/upstream-YYYY-MM`.
-3. Upstream-Stand uebernehmen.
-4. Impact-Assessment erfassen (fachlich, technisch, regulatorisch).
-5. Tests und Validierung ausfuehren.
-6. Sync-PR mit Nachweisen eroefnen.
-7. Review und Freigabe nach Rollenmodell.
-8. Merge in Unternehmens-`main`.
-9. Unternehmens-Release taggen (`v*`) und Rollout starten.
+1. Identify upstream release: `v*` plus changelog.
+2. Create sync branch: `sync/upstream-YYYY-MM`.
+3. Adopt the upstream state.
+4. Capture impact assessment: subject-matter, technical, regulatory.
+5. Execute tests and validation.
+6. Open sync PR with evidence.
+7. Review and approve according to role model.
+8. Merge into organization `main`.
+9. Tag organization release `v*` and start rollout.
 
-## Pflichtinhalte eines Sync-PR
+## Mandatory Contents Of A Sync PR
 
-- Referenz auf Upstream-Release-ID.
-- Zusammenfassung der relevanten Aenderungen.
-- Impact-Einstufung (`low`, `medium`, `high`).
-- Testnachweise (Validierung, relevante Regressionen, Pilotfall).
-- Rollout-Entscheidung:
-  - sofort fuer neue Vorgaenge aktiv,
-  - erst nach Pilot,
-  - zurueckgestellt.
+- Reference to upstream release ID.
+- Summary of relevant changes.
+- Impact classification: `low`, `medium`, `high`.
+- Test evidence: validation, relevant regressions, pilot case.
+- Rollout decision:
+  - immediately active for new matters,
+  - active only after pilot,
+  - postponed.
 
-## PR-Gates (Minimum)
+## PR Gates, Minimum
 
-- kein direkter Push nach `main`,
-- mindestens ein fachlicher Review,
-- zusaetzlicher Compliance-Review bei `medium/high impact`,
-- erfolgreiche Validierung der betroffenen Prozessdateien,
-- dokumentierter Verantwortlicher fuer Rollout-Entscheidung.
+- no direct push to `main`,
+- at least one subject-matter review,
+- additional compliance review for `medium/high impact`,
+- successful validation of affected process files,
+- documented owner for the rollout decision.
 
-## Rollback-Regel
+## Rollback Rule
 
-Wenn ein neues Release im Pilot oder Betrieb unzulaessige Risiken erzeugt:
+If a new release creates unacceptable risks in pilot or operation:
 
-1. Rollout fuer neue Vorgaenge sofort stoppen.
-2. Rueckkehr auf zuletzt freigegebenes Release fuer neue Vorgaenge.
-3. Incident und Entscheidungspfad als Issue dokumentieren.
-4. Korrektur als Hotfix oder naechster Sync-PR.
+1. Stop rollout for new matters immediately.
+2. Return to the last approved release for new matters.
+3. Document incident and decision path as an issue.
+4. Correct through hotfix or next sync PR.
 
-Laufende Vorgaenge bleiben auf ihrer Startversion und werden nicht rueckwirkend umgebogen.
+Running matters remain on their start version and are not retroactively moved.
 
-## Artefakte und Nachweise
+## Artifacts And Evidence
 
-Jede Uebernahme erzeugt mindestens:
+Every adoption creates at least:
 
-- Sync-PR mit Freigabehistorie,
-- Release-Tag im Unternehmens-Fork,
-- ggf. SBOM-Artefakt gemaess Policy,
-- Entscheidungseintrag fuer Rollout und Geltungsbeginn.
+- sync PR with approval history,
+- release tag in the organization fork,
+- SBOM artifact where required by policy,
+- decision entry for rollout and start of applicability.

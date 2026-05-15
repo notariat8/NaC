@@ -1,28 +1,12 @@
 # Omnistation Plugin Plan Imports
 
-This directory preserves the original NoC plugin integration plans that were generated in the Omnistation agent sandbox.
+This directory is an import archive, not the active English plugin-plan source.
+The German files under
+[docs/de/plugin-plans/omnistation-imports/](../../../de/plugin-plans/omnistation-imports/)
+preserve the original Omnistation source artifacts with byte-level hashes in
+[SHA256SUMS](SHA256SUMS).
 
-The files are kept as imported source artifacts so no planning work is lost while NoC execution moves to the local WSL workspace.
-
-## Source
-
-Original source directory:
-
-```text
-/home/ofunk/codex/agent-sandbox
-```
-
-Original source host:
-
-```text
-omnistation-omni-lsn-upq77
-```
-
-## Imported Files
-
-See `SHA256SUMS` for byte-level verification hashes.
-
-## Operating Decision
-
-NoC execution is local in WSL under `~/NoC`.
-Omnistation is not an NoC execution workspace.
+Active English plugin plans are maintained one level up in
+[docs/en/plugin-plans/](..). This import folder keeps only short English
+orientation pages so copied German source text is not presented as translated
+documentation.

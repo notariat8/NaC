@@ -10,6 +10,9 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf GCP um:
 - Cloud KMS (Signaturen)
 - Evidence Index (BigQuery oder Search)
 
+Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+englische Fassung wird synchron als Orientierung gepflegt.
+
 ## Referenzkomponenten
 
 - `ingest-api`: Cloud Run oder GKE Service

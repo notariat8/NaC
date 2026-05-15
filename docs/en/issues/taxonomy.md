@@ -1,80 +1,82 @@
-# Issue-Taxonomie pro Repository
+# Issue Taxonomy Per Repository
 
-## Ziel
+## Goal
 
-Dieses Dokument definiert, welche Themen in welches Repository gehoeren und wie Issues zwischen Repos verlinkt werden.
+This document defines which topics belong in which repository and how issues
+are linked across repositories.
 
-## Repo-Typen
+## Repository Types
 
-### Upstream-Repo (zentrales NoC)
+### Upstream Repository, Central NoC
 
-Zustaendig fuer:
+Responsible for:
 
-- generische Referenzprozesse,
-- branchenspezifische Musterbausteine,
-- uebergreifende Governance-Standards,
-- oeffentlich nutzbare Verbesserungen aus Rueckfluss.
+- generic reference processes,
+- domain-specific pattern building blocks,
+- cross-cutting governance standards,
+- publicly usable improvements returned from forks.
 
-Nicht zustaendig fuer:
+Not responsible for:
 
-- unternehmensinterne Sonderfaelle,
-- lokale Betriebsentscheidungen ohne Referenzrelevanz.
+- organization-internal special cases,
+- local operating decisions without reference relevance.
 
-### Unternehmens-Fork
+### Organization Fork
 
-Zustaendig fuer:
+Responsible for:
 
-- lokale Prozessanpassungen,
-- Release-Uebernahmen aus Upstream,
-- Compliance- und Rollout-Entscheidungen im Unternehmen,
-- verbindlichen Betriebsstand und Audit-Nachweise.
+- local process adjustments,
+- release adoption from upstream,
+- compliance and rollout decisions in the organization,
+- binding operating state and audit evidence.
 
-### Optionale Domaenen-Repos
+### Optional Domain Repositories
 
-Zustaendig fuer:
+Responsible for:
 
-- dichte Fachlogik einzelner Domaenen (z. B. Notariat-Akte),
-- dichte operative Aenderungen mit eigener Release-Taktung,
-- domaenenspezifische Integrationen und Fachnachweise.
+- dense subject logic of individual domains, for example notary file,
+- dense operational changes with their own release cadence,
+- domain-specific integrations and subject-matter evidence.
 
-## Issue-Klassen (Mindeststandard)
+## Issue Classes, Minimum Standard
 
-- `process-change`: fachliche Prozessaenderung.
-- `compliance-change`: regulatorische oder governance-relevante Aenderung.
-- `sync-upstream`: Uebernahme eines Upstream-Releases in den Fork.
-- `incident`: Stoerung, Abweichung oder Regelverletzung im Betrieb.
-- `documentation`: Klarstellung oder Nachweisanpassung ohne Prozesslogik-Aenderung.
+- `process-change`: subject-matter process change.
+- `compliance-change`: regulatory or governance-relevant change.
+- `sync-upstream`: adoption of an upstream release into the fork.
+- `incident`: disruption, deviation or rule violation in operation.
+- `documentation`: clarification or evidence adjustment without process-logic
+  change.
 
-## Fuehrungsregel pro Thema
+## Leading-Issue Rule Per Topic
 
-- Ein Thema hat genau ein fuehrendes Issue in genau einem Repo.
-- Verwandte Issues in anderen Repos werden als abgeleitete Issues verlinkt.
-- Der Status des fuehrenden Issues steuert den Gesamtfortschritt.
+- One topic has exactly one leading issue in exactly one repository.
+- Related issues in other repositories are linked as derived issues.
+- The status of the leading issue controls overall progress.
 
-## Verlinkungsstandard
+## Linking Standard
 
-Jedes abhaengige Issue enthaelt:
+Every dependent issue contains:
 
-- Referenz auf das fuehrende Issue (`upstream`, `fork` oder `domain`),
-- kurze Einordnung der lokalen Auswirkung,
-- benoetigten Entscheidungszeitpunkt.
+- reference to the leading issue: `upstream`, `fork` or `domain`,
+- short classification of the local effect,
+- required decision date.
 
-Empfehlung fuer Titelpraefixe:
+Recommended title prefixes:
 
 - `[UPSTREAM]`
 - `[FORK]`
 - `[DOMAIN-NOTARY]`
 
-## Beispielverteilung
+## Example Distribution
 
-Fall: Neuer Notariatsablauf wird im zentralen Standard angepasst.
+Case: a new notary-office flow is adjusted in the central standard.
 
-1. Upstream-Issue beschreibt Referenzaenderung.
-2. Fork-Issue `sync-upstream` plant lokale Uebernahme.
-3. Domain-Issue bewertet Notariat-spezifische Auswirkungen.
-4. Nach Freigabe verweist das Fork-Issue auf den produktiven Release-Tag.
+1. Upstream issue describes the reference change.
+2. Fork issue `sync-upstream` plans local adoption.
+3. Domain issue assesses notary-specific effects.
+4. After approval, the fork issue references the productive release tag.
 
-## Statusmodell (einfach)
+## Simple Status Model
 
 - `backlog`
 - `in_assessment`
@@ -84,4 +86,5 @@ Fall: Neuer Notariatsablauf wird im zentralen Standard angepasst.
 - `released`
 - `closed`
 
-Alle Repos nutzen dieselben Statuswerte, damit uebergreifendes Reporting konsistent bleibt.
+All repositories use the same status values so cross-repository reporting stays
+consistent.

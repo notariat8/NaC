@@ -1,10 +1,12 @@
-# Install Local NoC Plugins
+# Lokale NoC-Plugins installieren
 
-## Purpose
+## Zweck
 
-The plugin suite is repo-local and versioned with NoC. Marketplace metadata lives in `.agents/plugins/marketplace.json`; plugin roots live in `plugins/<plugin-name>`.
+Die Plugin-Suite ist repo-lokal und mit NoC versioniert. Marketplace-Metadaten
+liegen in [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json);
+Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 
-## Day0 Validation
+## Day0-Validierung
 
 ```bash
 cd ~/NoC
@@ -12,18 +14,32 @@ python3 scripts/validate_plugins.py
 PYTHONPATH=src python3 scripts/quality_gate.py --profile standard
 ```
 
-## Local Install Pattern
+## Lokales Installationsmuster
 
-1. Open Codex with workspace `~/NoC`.
-2. Confirm `.agents/plugins/marketplace.json` lists the desired plugins.
-3. For notary-side Online HRA work, install `noc-cyberjack-rfid` before `noc-bnotk-xnp`, then install `noc-handelsregister`.
-4. Install from the repo-local marketplace if supported by the Codex environment.
-5. Confirm the installed card plugin display name is `NoC Card SAK Gate` and the source path is `./plugins/noc-cyberjack-rfid`.
-6. Confirm the installed XNP plugin display name is `NoC Notary XNP Gate` and the source path is `./plugins/noc-bnotk-xnp`.
-7. If the environment only supports home-local marketplaces, copy the reviewed plugin folders and marketplace entry after approval; keep the source of truth in this repository.
+1. Codex mit Workspace `~/NoC` oeffnen.
+2. Pruefen, dass [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json)
+   die gewuenschten Plugins listet.
+3. Fuer notariatsseitige Online-HRA-Arbeit zuerst `noc-cyberjack-rfid`,
+   danach `noc-bnotk-xnp` und danach `noc-handelsregister` installieren.
+4. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marketplace
+   installieren.
+5. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
+   `NoC Card SAK Gate` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
+6. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
+   `NoC Notary XNP Gate` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
+7. Falls die Umgebung nur home-lokale Marketplaces unterstuetzt, die geprueften
+   Plugin-Ordner und Marketplace-Eintraege erst nach Freigabe kopieren; die
+   Quelle der Wahrheit bleibt dieses Repository.
 
-## Operational Boundary
+## Operative Grenze
 
-The current plugins are installable skill plugins. They do not contain direct external write adapters, portal automation, card access, certificate handling or secret storage. Those require a separate reviewed connector PR.
+Die aktuellen Plugins sind installierbare Skill-Plugins. Sie enthalten keine
+direkten externen Schreibadapter, Portalautomatisierung, Karten-Zugriffe,
+Zertifikatshandling oder Secret-Speicherung. Das erfordert jeweils einen
+separat geprueften Connector-PR.
 
-For Online HRA, `noc-cyberjack-rfid` is the installable Card/SAK gate and `noc-bnotk-xnp` is the installable XNP readiness and authentication-gate companion. They do not authenticate as a notary by themselves, store PINs or notary credentials, trigger XNotar imports or submit filings.
+Fuer Online-HRA ist `noc-cyberjack-rfid` das installierbare Card/SAK-Gate und
+`noc-bnotk-xnp` der installierbare XNP-Readiness- und Authentifizierungsgate-
+Companion. Sie authentifizieren nicht eigenstaendig als Notar, speichern keine
+PINs oder Notar-Credentials, loesen keine XNotar-Importe aus und reichen keine
+Anmeldungen ein.

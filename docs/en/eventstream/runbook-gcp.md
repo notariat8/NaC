@@ -1,47 +1,47 @@
-# Runbook: GCP Eventstream fuer Revisionssicherheit
+# Runbook: GCP Eventstream For Audit-Proof Evidence
 
-## Zielbild
+## Target State
 
-Diese Zielvariante setzt das revisionssichere Event-Journal auf GCP um:
+This target variant implements the audit-proof event journal on GCP:
 
-- Ingest API (Webhook)
-- Pub/Sub (Stream)
-- Cloud Storage mit Retention Lock (WORM)
-- Cloud KMS (Signaturen)
-- Evidence Index (BigQuery oder Search)
+- ingest API, webhook,
+- Pub/Sub as stream,
+- Cloud Storage with Retention Lock as WORM journal,
+- Cloud KMS for signatures,
+- evidence index via BigQuery or search.
 
-## Referenzkomponenten
+## Reference Components
 
-- `ingest-api`: Cloud Run oder GKE Service
-- `event-broker`: Pub/Sub Topic + Subscription
-- `journal-store`: GCS Bucket mit Retention Policy + Bucket Lock
-- `anchor-job`: taeglicher Signaturjob (Cloud Run Job/Cloud Functions)
-- `evidence-index`: BigQuery (oder vergleichbarer Suchindex)
+- `ingest-api`: Cloud Run or GKE service.
+- `event-broker`: Pub/Sub topic plus subscription.
+- `journal-store`: GCS bucket with retention policy and bucket lock.
+- `anchor-job`: daily signature job via Cloud Run Job or Cloud Functions.
+- `evidence-index`: BigQuery or comparable search index.
 
-## Mindestkonfiguration
+## Minimum Configuration
 
 ### Pub/Sub
 
-- Topic: `event-journal-ingest`
-- Subscription: Pull (ack deadline passend zur Verarbeitung)
-- DLQ: aktiv (dead-letter topic)
-- Message Retention: 7 Tage (Transportebene)
-- CMEK optional, empfohlen
+- Topic: `event-journal-ingest`.
+- Subscription: pull, with ack deadline matching processing.
+- DLQ: active, dead-letter topic.
+- Message retention: 7 days as transport layer.
+- CMEK optional, recommended.
 
-### GCS Journal (WORM)
+### GCS Journal, WORM
 
-- Bucket: `event-journal-immutable`
-- Retention Policy: z. B. 3650 Tage
-- Bucket Lock: aktiv (Retention nicht reduzierbar)
-- Delete/Rewrite vor Retention-Ende: verboten
+- Bucket: `event-journal-immutable`.
+- Retention policy: for example 3650 days.
+- Bucket Lock: active, retention cannot be reduced.
+- Delete/rewrite before retention end: prohibited.
 
-### Signaturen
+### Signatures
 
-- KMS Key: `event-anchor-signing-key`
-- Algorithmus: RSA-PSS (z. B. PS256)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- KMS key: `event-anchor-signing-key`.
+- Algorithm: RSA-PSS, for example PS256.
+- Anchor frequency: daily at 23:59 UTC.
 
-## Event-Schema (Mussfelder)
+## Event Schema, Required Fields
 
 - `event_id`
 - `event_time_utc`
@@ -57,37 +57,38 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf GCP um:
 - `event_hash`
 - `signature_ref`
 
-## Event-Fluss
+## Event Flow
 
-1. GitHub Events treffen in der Ingest API ein.
-2. Ingest API prueft HMAC-Signatur.
-3. Gueltige Events werden in Pub/Sub publiziert.
-4. Normalizer liest aus Subscription und bildet hash-verkettete Envelopes.
-5. Envelopes werden append-only in GCS (Retention Lock) geschrieben.
-6. Evidence Index wird fuer Audit-Abfragen aktualisiert.
-7. Daily Anchor schliesst den Tag kryptografisch ab.
+1. GitHub events arrive at the ingest API.
+2. The ingest API checks the HMAC signature.
+3. Valid events are published to Pub/Sub.
+4. The normalizer reads from the subscription and creates hash-chained
+   envelopes.
+5. Envelopes are written append-only to GCS with Retention Lock.
+6. Evidence index is updated for audit queries.
+7. Daily anchor closes the day cryptographically.
 
-## Rollen und Verantwortungen
+## Roles And Responsibilities
 
-- `platform_operator`: Cloud Run/GKE, Pub/Sub, Deployments
-- `storage_custodian`: GCS Retention/Bucket Lock
-- `security_operator`: KMS, IAM, Secret Management
-- `audit_reader`: read-only auf Evidence Index + Anchor Reports
-- `compliance_owner`: Freigaben fuer Retention/Legal-Hold-Prozesse
+- `platform_operator`: Cloud Run/GKE, Pub/Sub, deployments.
+- `storage_custodian`: GCS retention and bucket lock.
+- `security_operator`: KMS, IAM, secret management.
+- `audit_reader`: read-only access to evidence index and anchor reports.
+- `compliance_owner`: approvals for retention or legal-hold processes.
 
-## Betriebsgrenzwerte (Start)
+## Operating Thresholds, Start
 
-- Subscriber Lag Warnung: > 60 Sekunden
-- DLQ-Rate Warnung: > 0.5 %
-- Signaturprueffehler Ingest: > 0.1 % / Stunde
-- Anchor-Fehler: 0 toleriert (P1 Incident)
+- Subscriber lag warning: more than 60 seconds.
+- DLQ rate warning: more than 0.5 percent.
+- Ingest signature-check errors: more than 0.1 percent per hour.
+- Anchor error: zero tolerated, P1 incident.
 
-## Go-Live-Checkliste
+## Go-Live Checklist
 
-- [ ] HMAC-Signaturpruefung aktiv
-- [ ] Pub/Sub DLQ getestet
-- [ ] GCS Retention + Bucket Lock aktiv
-- [ ] KMS-Signaturtest erfolgreich
-- [ ] Daily Anchor Report vorhanden
-- [ ] Restore-Test erfolgreich
-- [ ] Rollenrezertifizierung dokumentiert
+- [ ] HMAC signature check active.
+- [ ] Pub/Sub DLQ tested.
+- [ ] GCS retention and bucket lock active.
+- [ ] KMS signature test successful.
+- [ ] Daily anchor report available.
+- [ ] Restore test successful.
+- [ ] Role recertification documented.

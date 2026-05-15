@@ -1,66 +1,73 @@
-# Tenant Ownership und EventLock-as-a-Service
+# Tenant Ownership And EventLock As A Service
 
-## Fragestellung
+## Question
 
-Wer sollte Cloud-Tenant-Owner fuer revisionssicheren Eventstream sein, und ist ein zentraler EventLock-Service durch Function8 sinnvoll?
+Who should be the cloud tenant owner for audit-proof eventstreaming, and is a
+central EventLock service operated by Function8 useful?
 
-## Kurzantwort
+## Short Answer
 
-Ja, ein zentraler EventLock-as-a-Service ist fuer Non-IT-Organisationen sinnvoll, **wenn** pro Kunde eine dedizierte Subinstanz mit separaten Schluesseln und isolierter Aufbewahrung betrieben wird.
+Yes. A central EventLock-as-a-Service is useful for non-IT organizations **if**
+each customer receives a dedicated subinstance with separate keys and isolated
+retention.
 
-## Empfohlenes Zielmodell
+## Recommended Target Model
 
-Empfehlung: `provider_managed_dedicated_subtenant`
+Recommendation: `provider_managed_dedicated_subtenant`
 
-- Function8 betreibt die Plattform zentral (Betrieb, Security-Baseline, SLA).
-- Jeder Kunde erhaelt eine dedizierte Subinstanz (Namespace/Account) mit separatem Journal.
-- Jeder Kunde erhaelt tenant-spezifische Schluessel und immutable Retention.
-- Kritische Aenderungen (Retention, Legal Hold) nur mit Dual Control.
+- Function8 operates the platform centrally: operations, security baseline and
+  SLA.
+- Each customer receives a dedicated subinstance, namespace or account with a
+  separate journal.
+- Each customer receives tenant-specific keys and immutable retention.
+- Critical changes, such as retention or legal hold, require dual control.
 
-## Warum dieses Modell gut passt
+## Why This Model Fits
 
-- reduziert Adminaufwand fuer Notare/Kanzleien ohne tiefes Cloud-Know-how,
-- haelt Compliance-Forderungen durch Isolation und klare Verantwortungsmatrix,
-- ermoeglicht standardisierte, wiederholbare Auditprozesse ueber viele Kunden.
+- Reduces administration effort for notaries and law firms without deep cloud
+  expertise.
+- Satisfies compliance requirements through isolation and a clear
+  responsibility matrix.
+- Enables standardized, repeatable audit processes across many customers.
 
-## Verantwortungsmatrix
+## Responsibility Matrix
 
-### Function8 (Provider)
+### Function8, Provider
 
-- Plattformbetrieb und Monitoring
-- Security-Baseline und Incident-Prozess
-- Wartung von Eventstream-Komponenten
+- Platform operation and monitoring.
+- Security baseline and incident process.
+- Maintenance of eventstream components.
 
-### Kunde (Mandant/Unternehmen)
+### Customer, Tenant Or Organization
 
-- Datenklassifikation
-- Legal-Hold-Entscheidungen
-- Freigabe von Audit-Zugriffen
-- Rollen-/Rechtefreigaben fuer eigene Akten
+- Data classification.
+- Legal-hold decisions.
+- Approval of audit access.
+- Role and access approvals for own files.
 
-## Technische Leitplanken je Kunden-Subinstanz
+## Technical Guardrails Per Customer Subinstance
 
-- dedizierter Stream-Namespace
-- dedizierter immutable Journal-Bucket/Container
-- dedizierter KMS/Key-Vault/Vault Key
-- dedizierter Evidence Index Bereich
-- tenant-spezifische Zugriffspolicies
+- Dedicated stream namespace.
+- Dedicated immutable journal bucket or container.
+- Dedicated KMS, Key Vault or Vault key.
+- Dedicated evidence-index area.
+- Tenant-specific access policies.
 
-## Betriebsprozess bei neuen Kunden
+## Operating Process For New Customers
 
-1. Kunden-Subinstanz provisionieren.
-2. Tenant-Key erzeugen und zuweisen.
-3. Immutable Retention aktivieren.
-4. Rollenmodell aus Fork uebernehmen.
-5. Audit-Lesepfad und Reporting freischalten.
-6. Abnahme mit Go-Live-Checkliste pro Cloud-Runbook.
+1. Provision customer subinstance.
+2. Create and assign tenant key.
+3. Enable immutable retention.
+4. Adopt role model from the fork.
+5. Enable audit read path and reporting.
+6. Accept with go-live checklist per cloud runbook.
 
-## Verbindung zu Kunden-Forks
+## Connection To Customer Forks
 
-Jeder Kunden-Fork referenziert verbindlich:
+Every customer fork references these policies as binding:
 
-- `policies/tenant-ownership-policy.yaml`
-- `policies/access-control-policy.yaml`
-- `policies/revisionssicherheit-eventstream-policy.yaml`
+- [policies/tenant-ownership-policy.yaml](../../../policies/tenant-ownership-policy.yaml)
+- [policies/access-control-policy.yaml](../../../policies/access-control-policy.yaml)
+- [policies/revisionssicherheit-eventstream-policy.yaml](../../../policies/revisionssicherheit-eventstream-policy.yaml)
 
-Damit bleiben Betriebsmodell, Rechte und Revisionssicherheit synchron.
+This keeps operating model, rights and audit-proof evidence synchronized.

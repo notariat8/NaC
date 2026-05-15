@@ -11,6 +11,7 @@ LOCALIZED_SURFACES = ("docs", "prompts")
 LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}$")
 GERMAN_USECASE_MARKER = "Deutsch ist fuer diese Usecases die fuehrende und rechtlich bindende Sprache"
 GERMAN_ROOT_MARKER = "Deutsch ist repo-weit die fuehrende Sprache"
+TEXT_FILE_SUFFIXES = {".md", ".mdc", ".txt"}
 
 
 def collect_files(surface: str, language: str) -> set[str]:
@@ -61,6 +62,25 @@ def validate_file_parity() -> list[str]:
     return errors
 
 
+def validate_localized_text_is_not_copied() -> list[str]:
+    errors: list[str] = []
+    for surface in LOCALIZED_SURFACES:
+        roots = {language: REPO_ROOT / surface / language for language in STANDARD_LANGUAGES}
+        shared = collect_files(surface, "de") & collect_files(surface, "en")
+        for rel_path in sorted(shared):
+            if Path(rel_path).suffix.lower() not in TEXT_FILE_SUFFIXES:
+                continue
+
+            de_text = (roots["de"] / rel_path).read_text(encoding="utf-8").strip()
+            en_text = (roots["en"] / rel_path).read_text(encoding="utf-8").strip()
+            if de_text and de_text == en_text:
+                errors.append(
+                    f"{surface}/de/{rel_path} und {surface}/en/{rel_path} sind identisch; "
+                    "Uebersetzung oder explizite englische Orientierung fehlt"
+                )
+    return errors
+
+
 def validate_domain_language_rules() -> list[str]:
     errors: list[str] = []
     policy_text = (REPO_ROOT / "policies" / "language-policy.yaml").read_text(encoding="utf-8")
@@ -108,6 +128,7 @@ def validate_domain_language_rules() -> list[str]:
 def main() -> int:
     errors = validate_language_roots()
     errors.extend(validate_file_parity())
+    errors.extend(validate_localized_text_is_not_copied())
     errors.extend(validate_domain_language_rules())
 
     if errors:

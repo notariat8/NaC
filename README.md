@@ -23,35 +23,28 @@ Startseite, werden deutsch gefuehrt.
 
 ## Start
 
-- Startpfad: [docs/de/START_HERE.md](docs/de/START_HERE.md),
-  [docs/en/START_HERE.md](docs/en/START_HERE.md)
-- Aktives Entwicklungsboard: [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
-- README: [docs/de/README.md](docs/de/README.md),
-  [docs/en/README.md](docs/en/README.md)
-- Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md),
-  [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md)
-- AVV/DPA-Bereich: [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md),
-  [docs/en/datenschutz-avv-dpa.md](docs/en/datenschutz-avv-dpa.md)
-- SBOM fuer AI: [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md),
-  [docs/en/sbom-for-ai.md](docs/en/sbom-for-ai.md)
-- Plugin-Plaene: [docs/de/plugin-plans/README.md](docs/de/plugin-plans/README.md),
-  [docs/en/plugin-plans/README.md](docs/en/plugin-plans/README.md)
-- Eventstream-Runbooks: [docs/de/eventstream/README.md](docs/de/eventstream/README.md),
-  [docs/en/eventstream/README.md](docs/en/eventstream/README.md)
-- Issue-Betrieb: [docs/de/issues/README.md](docs/de/issues/README.md),
-  [docs/en/issues/README.md](docs/en/issues/README.md)
-- Betriebsmodell: [docs/de/operations/README.md](docs/de/operations/README.md),
-  [docs/en/operations/README.md](docs/en/operations/README.md)
-- Service-Modell: [docs/de/service-model/README.md](docs/de/service-model/README.md),
-  [docs/en/service-model/README.md](docs/en/service-model/README.md)
-- Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
-- Plugin-Roadmap: [plugins/GANTT.md](plugins/GANTT.md)
-- Workflow-Roadmap: [workflows/GANTT.md](workflows/GANTT.md)
-- Usecase-Roadmap: [usecases/GANTT.md](usecases/GANTT.md)
-- Usecase-lokale Knowledge Graphs: [usecases/README.md](usecases/README.md);
-  jeder Vorgang fuehrt eigene Dateien `knowledge-graph.graph.json` und
-  `knowledge-graph.md`, zum Beispiel
-  [usecases/immobilienkaufvertrag/knowledge-graph.graph.json](usecases/immobilienkaufvertrag/knowledge-graph.graph.json)
+| Bereich / area | Deutsch | English |
+| --- | --- | --- |
+| Startpfad / start path | [docs/de/START_HERE.md](docs/de/START_HERE.md) | [docs/en/START_HERE.md](docs/en/START_HERE.md) |
+| Projekt-README / project README | [docs/de/README.md](docs/de/README.md) | [docs/en/README.md](docs/en/README.md) |
+| Mindestvoraussetzungen / minimum requirements | [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) | [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) |
+| AVV/DPA-Bereich / DPA area | [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md) | [docs/en/datenschutz-avv-dpa.md](docs/en/datenschutz-avv-dpa.md) |
+| SBOM fuer AI / SBOM for AI | [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md) | [docs/en/sbom-for-ai.md](docs/en/sbom-for-ai.md) |
+| Plugin-Plaene / plugin plans | [docs/de/plugin-plans/README.md](docs/de/plugin-plans/README.md) | [docs/en/plugin-plans/README.md](docs/en/plugin-plans/README.md) |
+| Eventstream-Runbooks / eventstream runbooks | [docs/de/eventstream/README.md](docs/de/eventstream/README.md) | [docs/en/eventstream/README.md](docs/en/eventstream/README.md) |
+| Issue-Betrieb / issue operations | [docs/de/issues/README.md](docs/de/issues/README.md) | [docs/en/issues/README.md](docs/en/issues/README.md) |
+| Betriebsmodell / operating model | [docs/de/operations/README.md](docs/de/operations/README.md) | [docs/en/operations/README.md](docs/en/operations/README.md) |
+| Service-Modell / service model | [docs/de/service-model/README.md](docs/de/service-model/README.md) | [docs/en/service-model/README.md](docs/en/service-model/README.md) |
+| Aktives Entwicklungsboard / active build board | [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md) | [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md) |
+| Globale Roadmap / global roadmap | [roadmap/GANTT.md](roadmap/GANTT.md) | [roadmap/GANTT.md](roadmap/GANTT.md) |
+| Plugin-Roadmap / plugin roadmap | [plugins/GANTT.md](plugins/GANTT.md) | [plugins/GANTT.md](plugins/GANTT.md) |
+| Workflow-Roadmap / workflow roadmap | [workflows/GANTT.md](workflows/GANTT.md) | [workflows/GANTT.md](workflows/GANTT.md) |
+| Usecase-Roadmap / usecase roadmap | [usecases/GANTT.md](usecases/GANTT.md) | [usecases/GANTT.md](usecases/GANTT.md) |
+| Usecase-lokale Knowledge Graphs / case-local knowledge graphs | [usecases/README.md](usecases/README.md) | [usecases/README.md](usecases/README.md) |
+
+Jeder Usecase fuehrt eigene Dateien `knowledge-graph.graph.json` und
+`knowledge-graph.md`, zum Beispiel
+[usecases/immobilienkaufvertrag/knowledge-graph.graph.json](usecases/immobilienkaufvertrag/knowledge-graph.graph.json).
 
 ## Produktstruktur
 

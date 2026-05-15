@@ -1,10 +1,11 @@
-# Vertical Starter-Prozesskatalog (v1)
+# Vertical Starter Process Catalog, v1
 
-## Zweck
+## Purpose
 
-Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sieben Verticals auf Basis desselben Core-Modells.
+This catalog defines a first comparable starter set for seven verticals based
+on the same core model.
 
-## Einheitliche Statuswerte
+## Uniform Status Values
 
 - `draft`
 - `validated`
@@ -13,120 +14,120 @@ Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sieben Verti
 - `executed`
 - `archived`
 
-## Einheitliche Freigabepunkte
+## Uniform Approval Points
 
-- `validated -> needs_review`: bei fachlicher oder regulatorischer Relevanz
-- `needs_review -> approved`: fachlicher Review
-- `approved -> executed`: operative Freigabe (ggf. Vier-Augen)
+- `validated -> needs_review`: for subject-matter or regulatory relevance.
+- `needs_review -> approved`: subject-matter review.
+- `approved -> executed`: operational approval, where necessary four-eyes.
 
-## Starterset: Anwaltskanzlei (`law_firm`)
+## Starter Set: Law Firm (`law_firm`)
 
-1. Mandatsannahme
-2. Konfliktpruefung
-3. Fristensteuerung
-4. Aktenfuehrung und Dokumentation
-5. RVG-/Leistungsabrechnung
+1. Mandate acceptance.
+2. Conflict check.
+3. Deadline control.
+4. File management and documentation.
+5. RVG or service billing.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Freigaben und Rollen
-- Leistungserfassung und Abrechnung
-- Nachweis/Audit
+- intake/order start,
+- approvals and roles,
+- service recording and billing,
+- evidence/audit.
 
-## Starterset: Notariat (`notary`)
+## Starter Set: Notary Office (`notary`)
 
-1. Aktenanlage fuer Mandant
-2. Identitaetspruefung und Unterlagencheck
-3. Urkundenvorbereitung
-4. Vollzug und Registerkommunikation
-5. Abrechnung und Abschlussnachweis
+1. File creation for client.
+2. Identity check and document check.
+3. Deed preparation.
+4. Completion steps and register communication.
+5. Billing and closure evidence.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Freigaben und Rollen
-- Nachweis/Audit
-- Abschluss und Archivierung
+- intake/order start,
+- approvals and roles,
+- evidence/audit,
+- closure and archiving.
 
-## Starterset: Steuerberatung (`tax_office`)
+## Starter Set: Tax Office (`tax_office`)
 
-1. Mandanten-Onboarding
-2. Belegaufnahme und Strukturierung
-3. Deklarationszyklus (periodisch)
-4. Plausibilitaetspruefung und Rueckfrage
-5. Freigabe und Uebermittlungsvorbereitung
+1. Client onboarding.
+2. Receipt intake and structuring.
+3. Declaration cycle, periodic.
+4. Plausibility check and inquiry.
+5. Approval and transmission preparation.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Vorgangsstatus/Freigaben
-- Buchhaltung und Steuerbezug
-- Audit und Nachweis
+- intake/order start,
+- matter status and approvals,
+- accounting and tax relation,
+- audit and evidence.
 
-## Starterset: Softwareunternehmen (`software_company`)
+## Starter Set: Software Company (`software_company`)
 
-1. Demand-/Ticket-Intake
-2. Release-Planung und Freigabe
-3. Incident-Management
-4. SLA-/Service-Nachweise
-5. Rechnungs- und Leistungsnachweis
+1. Demand/ticket intake.
+2. Release planning and approval.
+3. Incident management.
+4. SLA/service evidence.
+5. Invoice and service evidence.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Incident- und Abweichungsbehandlung
-- Freigaben und Rollen
-- Nachweis/Audit
+- intake/order start,
+- incident and deviation handling,
+- approvals and roles,
+- evidence/audit.
 
-## Starterset: Hausverwaltung (`property_management`)
+## Starter Set: Property Management (`property_management`)
 
-1. Objekt- und Mieteraufnahme
-2. Vertrags- und Fristenanlage
-3. Wartungsticket und Dienstleistersteuerung
-4. Rollen- und Zugriffswechsel im Objektteam
-5. Uebergabe-/Schadensdokumentation mit Abschlussnachweis
+1. Property and tenant intake.
+2. Contract and deadline setup.
+3. Maintenance ticket and vendor control.
+4. Role and access changes in the property team.
+5. Handover or damage documentation with closure evidence.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Freigaben und Rollen
-- Incident- und Abweichungsbehandlung
-- Nachweis/Audit
+- intake/order start,
+- approvals and roles,
+- incident and deviation handling,
+- evidence/audit.
 
-## Starterset: Vermoegensverwaltung (`wealth_management`)
+## Starter Set: Wealth Management (`wealth_management`)
 
-1. Mandatsaufnahme und KYC-Pruefung
-2. Eignungs- und Risikoprofilfreigabe
-3. Portfolio-Aenderung mit Rebalancing-Kontrolle
-4. Rollen- und Zugriffswechsel fuer Mandatsteams
-5. Mandatsreporting mit Audit-Nachweis
+1. Mandate intake and KYC check.
+2. Suitability and risk-profile approval.
+3. Portfolio change with rebalancing control.
+4. Role and access changes for mandate teams.
+5. Mandate reporting with audit evidence.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Freigaben und Rollen
-- Risiko- und Kontrollpunkte
-- Nachweis/Audit
+- intake/order start,
+- approvals and roles,
+- risk and control points,
+- evidence/audit.
 
-## Starterset: Schreinerei (`carpentry`)
+## Starter Set: Carpentry (`carpentry`)
 
-1. Kundenanfrage und Bedarfserfassung
-2. Aufmass und Angebotskalkulation
-3. Auftrag und Materialplanung
-4. Werkstatt-/Montagekoordination
-5. Rechnungsstellung und Gewaehrleistungsnachweis
+1. Customer inquiry and requirements capture.
+2. Measurement and offer calculation.
+3. Order and material planning.
+4. Workshop and installation coordination.
+5. Invoicing and warranty evidence.
 
-Core-Mapping:
+Core mapping:
 
-- Intake/Auftragsstart
-- Leistungserfassung und Abrechnung
-- Freigaben und Rollen
-- Abschluss und Archivierung
+- intake/order start,
+- service recording and billing,
+- approvals and roles,
+- closure and archiving.
 
-## Hinweise fuer den Pilot
+## Notes For The Pilot
 
-- Pro Vertical zuerst nur 1-2 Prozesse produktiv pilotieren.
-- Alle Prozesse laufen ueber Branch + PR + Review.
-- Release-Binding je Vorgangsstart ist verpflichtend.
-- Abweichungen werden als Change Request dokumentiert.
+- Productively pilot only one or two processes per vertical first.
+- All processes run through branch, PR and review.
+- Release binding at matter start is mandatory.
+- Deviations are documented as change requests.

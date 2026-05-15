@@ -1,69 +1,74 @@
-# Rollenmodell: Generisch und fachspezifisch
+# Role Model: Generic And Domain-Specific
 
-## Ziel
+## Goal
 
-Dieses Modell stellt sicher, dass:
+This model ensures that:
 
-- jede Person Tickets erstellen kann,
-- nur qualifizierte Rollen fachkritische Schritte final entscheiden,
-- Freigaben nachvollziehbar und revisionsfest dokumentiert sind.
+- every person can create tickets,
+- only qualified roles can make final decisions in subject-critical steps,
+- approvals are documented in a traceable and audit-proof way.
 
-## 1) Grundprinzip fuer alle Unternehmen
+## 1. Basic Principle For All Organizations
 
-- Beobachten darf jede Rolle.
-- Ein Ticket aufmachen darf jede Rolle.
-- Selbst loesen darf jede Rolle nur innerhalb ihrer freigegebenen Kompetenz.
-- Fachkritische Entscheidungen brauchen qualifizierte Rollen und ggf. Freigabe.
+- Every role may observe.
+- Every role may open a ticket.
+- Every role may self-resolve only within its approved competence.
+- Subject-critical decisions require qualified roles and, where necessary,
+  approval.
 
-Beispiel: Wenn Kopierpapier fehlt, muss niemand Notar sein, um das zu melden.
+Example: if copy paper is missing, nobody has to be a notary to report it.
 
-## 2) Generische Mindestrollen
+## 2. Generic Minimum Roles
 
-- `mitarbeiter`: darf melden, kommentieren, Status aktualisieren.
-- `sachbearbeitung`: darf operative Tickets bearbeiten und abschliessen, sofern kein fachkritischer Impact.
-- `prozessverantwortung`: darf Arbeitsregeln im Fachprozess freigeben.
-- `freigabeverantwortung`: darf approval-pflichtige Schritte final freigeben.
-- `revision_audit`: darf pruefen, aber nicht operativ entscheiden.
-- `automation`: fuehrt technische Standardaufgaben aus, entscheidet nicht fachlich.
+- `mitarbeiter`: may report, comment and update status.
+- `sachbearbeitung`: may process and close operational tickets when there is no
+  subject-critical impact.
+- `prozessverantwortung`: may approve working rules in the subject process.
+- `freigabeverantwortung`: may finally approve approval-required steps.
+- `revision_audit`: may review, but not decide operationally.
+- `automation`: executes technical standard tasks and does not decide on
+  subject matter.
 
-## 3) Fachspezifische Rollen (Beispiel Kanzlei)
+## 3. Domain-Specific Roles, Example Law Office
 
-- `anwalt_fachlich`: fachliche Entscheidung in Mandats-/RVG-relevanten Schritten.
-- `reno`: operativer Ablauf, Fristen, Aktenkoordination.
-- `refa`: organisationsnahe Sachbearbeitung und Ablaufunterstuetzung.
-- `notar_fachlich` (nur Notariat): notarielle Freigaben.
-- `steuerfachkraft` (nur Steuerbuero): deklarationsnahe Freigaben.
+- `anwalt_fachlich`: subject-matter decision in mandate or RVG-relevant steps.
+- `reno`: operational flow, deadlines and file coordination.
+- `refa`: organization-adjacent case handling and process support.
+- `notar_fachlich` for notary offices only: notarial approvals.
+- `steuerfachkraft` for tax offices only: declaration-adjacent approvals.
 
-## 4) Qualifikation statt Titel
+## 4. Qualification Instead Of Title
 
-Entscheidend ist nicht nur die Stellenbezeichnung, sondern die dokumentierte Qualifikation.
+The decisive factor is not only the job title, but the documented
+qualification.
 
-Beispiel:
+Example:
 
-- `rechnung_rvg_erstellen`: erlaubt nur fuer Rollen mit `qualification: rvg_billing_trained`.
+- `rechnung_rvg_erstellen`: allowed only for roles with
+  `qualification: rvg_billing_trained`.
 
-## 5) Entscheidungsmatrix (Self-Resolve vs Approval)
+## 5. Decision Matrix, Self-Resolve vs Approval
 
-- `impact=low` und `compliance=none`: self-resolve erlaubt.
-- `impact=medium` oder `financial=true`: review durch Prozessverantwortung.
-- `impact=high` oder `legal=true`: approval durch freigabeberechtigte Fachrolle.
+- `impact=low` and `compliance=none`: self-resolve allowed.
+- `impact=medium` or `financial=true`: review by process owner.
+- `impact=high` or `legal=true`: approval by an authorized specialist role.
 
-## 6) Workflow-Integration
+## 6. Workflow Integration
 
 ```mermaid
 flowchart TD
-    Event[Ticket oder Anfrage] --> RoleCheck[Rolle und Qualifikation pruefen]
-    RoleCheck --> ImpactCheck[Impact und Compliance pruefen]
-    ImpactCheck --> SelfResolve{Self-Resolve erlaubt}
-    SelfResolve -->|ja| Done[Ticket abgeschlossen]
-    SelfResolve -->|nein| Review[Review durch zustaendige Rolle]
-    Review --> Approval{Finale Freigabe noetig}
-    Approval -->|ja| Approver[Freigabeverantwortung oder Fachrolle]
-    Approval -->|nein| Done
+    Event[Ticket or request] --> RoleCheck[Check role and qualification]
+    RoleCheck --> ImpactCheck[Check impact and compliance]
+    ImpactCheck --> SelfResolve{Self-resolve allowed}
+    SelfResolve -->|yes| Done[Ticket closed]
+    SelfResolve -->|no| Review[Review by responsible role]
+    Review --> Approval{Final approval required}
+    Approval -->|yes| Approver[Approval owner or specialist role]
+    Approval -->|no| Done
     Approver --> Done
 ```
 
-Technische Pflichtfelder je Prozessantrag:
+Required technical fields per process request:
 
 - `actor_context.actor_role`
 - `actor_context.requested_decision_type`
@@ -71,15 +76,16 @@ Technische Pflichtfelder je Prozessantrag:
 - `actor_context.compliance_impact`
 - optional `actor_context.requested_qualification`
 - optional `actor_context.qualification_evidence`
-- je nach Entscheidung `actor_context.approver_role`
+- depending on the decision, `actor_context.approver_role`
 
-## 7) Gender und Rollennamen
+## 7. Gender And Role Names
 
-Die interne Rollen-ID bleibt neutral und stabil, z. B. `anwalt_fachlich` als technische Kennung.
-Die sichtbare Sprachform folgt `policies/culture-policy.yaml`.
+The internal role ID remains neutral and stable, for example
+`anwalt_fachlich` as a technical identifier. Visible wording follows
+[policies/culture-policy.yaml](../../policies/culture-policy.yaml).
 
-Empfehlung:
+Recommendation:
 
-- Technische IDs: neutral/stabil
-- Sichttexte: je nach Policy (neutral, Paarform, etc.)
-- Gleiche Rechte fuer alle Schreibformen
+- Technical IDs: neutral and stable.
+- Display texts: according to policy, for example neutral or paired forms.
+- Same rights for all wording variants.

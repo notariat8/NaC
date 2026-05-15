@@ -1,75 +1,76 @@
-# Copilot Quickstart in 15 Minuten
+# Copilot Quickstart In 15 Minutes
 
-## Zielgruppe
+## Target Group
 
-Fuer Entscheider ohne IT-Spezialwissen, die mit VS Code und GitHub Copilot starten wollen.
+For decision makers without specialist IT knowledge who want to start with
+VS Code and GitHub Copilot.
 
-## Minute 0-3: Basis pruefen
+## Minute 0-3: Check The Basics
 
-- VS Code ist installiert.
-- GitHub Copilot ist aktiviert.
-- Das Unternehmens-Repository ist in VS Code geoeffnet.
+- VS Code is installed.
+- GitHub Copilot is enabled.
+- The organization repository is open in VS Code.
 
-## Minute 3-6: Pflichtdokumente lesen
+## Minute 3-6: Read Mandatory Documents
 
-Lesen Sie nacheinander:
+Read in this order:
 
-1. `docs/en/START_HERE.md`
-2. `docs/en/fachanwender-guide.md`
-3. `policies/process-policy.yaml`
-4. `policies/culture-policy.yaml`
-5. `policies/technology-policy.yaml`
+1. [docs/en/START_HERE.md](START_HERE.md)
+2. [docs/en/fachanwender-guide.md](fachanwender-guide.md)
+3. [policies/process-policy.yaml](../../policies/process-policy.yaml)
+4. [policies/culture-policy.yaml](../../policies/culture-policy.yaml)
+5. [policies/technology-policy.yaml](../../policies/technology-policy.yaml)
 
-Ziel: gleiche Ausgangsbasis fuer Rollen, Prozesse und Sprache.
+Goal: a shared baseline for roles, processes and language.
 
-## Minute 6-9: Copilot mit Startprompt initialisieren
+## Minute 6-9: Initialize Copilot With The Start Prompt
 
-Nutzen Sie in Copilot Chat:
+Use in Copilot Chat:
 
 ```text
-Lies diese Dateien:
+Read these files:
 - docs/en/START_HERE.md
 - docs/en/fachanwender-guide.md
 - policies/process-policy.yaml
 - policies/culture-policy.yaml
 
-Erklaere mir dann ohne IT-Fachsprache:
-1) Welche 3 Pilotprozesse ich zuerst starten sollte.
-2) Welche Freigaben fuer diese Prozesse verpflichtend sind.
-3) Welche offenen Entscheidungen ich heute treffen muss.
+Then explain without IT jargon:
+1. Which three pilot processes I should start first.
+2. Which approvals are mandatory for those processes.
+3. Which open decisions I need to make today.
 ```
 
-## Minute 9-12: Branchenpfad waehlen
+## Minute 9-12: Choose The Domain Path
 
-Waehlen Sie den passenden Onboarding-Prompt:
+Choose the matching onboarding prompt:
 
-- Kanzlei: `prompts/en/onboarding/law-firm-first-setup.md`
-- Notariat: `prompts/en/onboarding/notary-first-setup.md`
-- Hausverwaltung: `prompts/en/onboarding/property-management-first-setup.md`
-- Softwareunternehmen: `prompts/en/onboarding/software-company-first-setup.md`
-- Steuerbuero: `prompts/en/onboarding/tax-office-first-setup.md`
-- Vermoegensverwaltung: `prompts/en/onboarding/wealth-management-first-setup.md`
+- Law firm: [prompts/en/onboarding/law-firm-first-setup.md](../../prompts/en/onboarding/law-firm-first-setup.md)
+- Notary office: [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
+- Property management: [prompts/en/onboarding/property-management-first-setup.md](../../prompts/en/onboarding/property-management-first-setup.md)
+- Software company: [prompts/en/onboarding/software-company-first-setup.md](../../prompts/en/onboarding/software-company-first-setup.md)
+- Tax office: [prompts/en/onboarding/tax-office-first-setup.md](../../prompts/en/onboarding/tax-office-first-setup.md)
+- Wealth management: [prompts/en/onboarding/wealth-management-first-setup.md](../../prompts/en/onboarding/wealth-management-first-setup.md)
 
-Synchroner MVP-Default im Referenzrepo:
+Synchronous MVP defaults in the reference repository:
 
 - `software_company`
 - `notary`
 - `wealth_management`
 
-Zusaetzlicher MVP-Use-Case:
+Additional MVP usecase:
 
 - `property_management`
 
-## Minute 12-15: Pilot verbindlich starten
+## Minute 12-15: Start The Pilot Bindingly
 
-- Legen Sie einen Pilotprozess fest (z. B. Rechnung + Buchung).
-- Definieren Sie Reviewer und Freigabepunkte.
-- Starten Sie den ersten Change Request als Pull Request.
+- Define one pilot process, for example invoice plus booking.
+- Define reviewers and approval points.
+- Start the first change request as a pull request.
 
-## Ergebnis nach 15 Minuten
+## Result After 15 Minutes
 
-Sie haben:
+You have:
 
-- einen konkreten Pilotfokus,
-- klare Freigaberegeln,
-- einen dokumentierten Startpunkt fuer den weiteren Rollout.
+- a concrete pilot focus,
+- clear approval rules,
+- a documented start point for the further rollout.

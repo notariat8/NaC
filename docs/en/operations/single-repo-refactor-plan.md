@@ -1,10 +1,11 @@
-# Repo-Refactor-Plan: Single-Repo Modules
+# Repository Refactor Plan: Single-Repository Modules
 
-## Ziel
+## Goal
 
-Dieser Plan beschreibt die Zielstruktur und eine risikoarme Migration zu einem gemeinsamen Core mit Vertical Modules im selben Repository.
+This plan describes the target structure and a low-risk migration to a shared
+core with vertical modules in the same repository.
 
-## Zielstruktur
+## Target Structure
 
 ```text
 processes/
@@ -24,54 +25,60 @@ processes/
     carpentry/
 ```
 
-## Mapping von Bestand zu Zielbild
+## Mapping From Current State To Target Picture
 
-- Bestehende generische Prozessdateien werden nach `processes/core/` ueberfuehrt.
-- Branchenbezogene Inhalte werden in `processes/verticals/<vertical>/` ueberfuehrt.
-- Gemeinsame Regeln bleiben in `policies/` und `docs/en/`.
-- Branchenaktivierung bleibt zentral in `policies/process-policy.yaml`.
+- Existing generic process files are moved to `processes/core/`.
+- Domain-related content is moved to `processes/verticals/<vertical>/`.
+- Shared rules remain in [policies/](../../../policies) and [docs/en/](..).
+- Domain activation remains centralized in
+  [policies/process-policy.yaml](../../../policies/process-policy.yaml).
 
-## Migrationsreihenfolge
+## Migration Sequence
 
-1. **Inventur**
-   - alle vorhandenen Prozessdateien klassifizieren: `core` oder `vertical`.
-2. **Zielpfade vorbereiten**
-   - Ordnerstruktur anlegen und Naming-Konvention fixieren.
-3. **Pilotvertical migrieren**
-   - zuerst ein Vertical (empfohlen: `notary`) inklusive Kernprozesse migrieren.
-4. **Validierung und Review**
-   - Validierung/Tests und fachliche Freigabe auf Pilotvertical.
-5. **Weitere Verticals migrieren**
-   - law_firm, tax_office, property_management, software_company, wealth_management, carpentry in festem Takt.
-6. **Abschluss**
-   - Index-/Doku-Referenzen aktualisieren und Release taggen.
+1. **Inventory**
+   - classify all existing process files as `core` or `vertical`.
+2. **Prepare target paths**
+   - create folder structure and fix naming convention.
+3. **Migrate pilot vertical**
+   - migrate one vertical first, recommended: `notary`, including core
+     processes.
+4. **Validation and review**
+   - run validation/tests and subject-matter approval on the pilot vertical.
+5. **Migrate additional verticals**
+   - migrate `law_firm`, `tax_office`, `property_management`,
+     `software_company`, `wealth_management`, `carpentry` on a fixed cadence.
+6. **Closure**
+   - update index/documentation references and tag release.
 
-## Risiken und Gegenmassnahmen
+## Risks And Countermeasures
 
-- **Risiko:** unklare Zuordnung Core vs. Vertical  
-  **Massnahme:** Abgrenzungsregel aus `docs/en/service-model/core-vertical-blueprint.md` verbindlich anwenden.
+- **Risk:** unclear assignment of core vs vertical.
+  **Countermeasure:** apply the boundary rule from
+  [docs/en/service-model/core-vertical-blueprint.md](../service-model/core-vertical-blueprint.md)
+  as binding.
 
-- **Risiko:** Pfadumbrueche brechen Referenzen  
-  **Massnahme:** Migration in kleinen PRs, Referenzpruefung pro PR.
+- **Risk:** path changes break references.
+  **Countermeasure:** migrate in small PRs and check references per PR.
 
-- **Risiko:** Branchenspezifische Sonderfaelle verwischen Core  
-  **Massnahme:** Vertical-spezifische Regeln nicht in Core mergen ohne Mehrbranchen-Nachweis.
+- **Risk:** industry-specific special cases blur the core.
+  **Countermeasure:** do not merge vertical-specific rules into core without
+  multi-vertical evidence.
 
-## Rueckfallstrategie
+## Fallback Strategy
 
-- Migration nur ueber kleine, einzeln revertierbare PRs.
-- Jeder Migrationsblock wird separat released.
-- Bei Problemen Rollback auf letztes freigegebenes Release fuer neue Vorgaenge.
-- Laufende Vorgaenge behalten gebundene Version.
+- Migration only through small, individually revertible PRs.
+- Each migration block is released separately.
+- If problems occur, roll back to the last approved release for new matters.
+- Running matters keep their bound version.
 
-## Abnahmekriterien
+## Acceptance Criteria
 
-- Alle Prozesse sind eindeutig einem Zielpfad zugeordnet.
-- Validierung und erforderliche Reviews sind erfolgreich.
-- Doku und Policies referenzieren die neue Struktur korrekt.
-- Mindestens ein erfolgreiches Pilotvertical produktiv nachgewiesen.
+- All processes are clearly assigned to a target path.
+- Validation and required reviews are successful.
+- Documentation and policies reference the new structure correctly.
+- At least one successful pilot vertical is proven productively.
 
-## Umsetzungsgrenze dieser Runde
+## Implementation Boundary For This Round
 
-Dieser Plan beschreibt den Umbau, fuehrt ihn aber nicht automatisch aus.
-Er ist die Arbeitsgrundlage fuer die naechste, kontrollierte Migrationsrunde.
+This plan describes the refactor but does not perform it automatically. It is
+the working basis for the next controlled migration round.

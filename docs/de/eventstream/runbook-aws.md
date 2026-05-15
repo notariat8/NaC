@@ -10,6 +10,9 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf AWS um:
 - KMS fuer Signaturen
 - Evidence Index (OpenSearch oder SQL)
 
+Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+englische Fassung wird synchron als Orientierung gepflegt.
+
 ## Referenzkomponenten
 
 - `ingest-api`: ECS/Fargate oder EKS Service

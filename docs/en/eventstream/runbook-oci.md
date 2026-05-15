@@ -1,47 +1,47 @@
-# Runbook: OCI Eventstream fuer Revisionssicherheit
+# Runbook: OCI Eventstream For Audit-Proof Evidence
 
-## Zielbild
+## Target State
 
-Diese Zielvariante setzt das revisionssichere Event-Journal auf OCI um:
+This target variant implements the audit-proof event journal on OCI:
 
-- Ingest API (Webhook)
-- OCI Streaming (Stream)
-- OCI Object Storage mit Retention/Immutability (WORM)
-- OCI Vault (Signaturen/Schluessel)
-- Evidence Index (OCI OpenSearch oder SQL)
+- ingest API, webhook,
+- OCI Streaming as stream,
+- OCI Object Storage with retention/immutability as WORM journal,
+- OCI Vault for signatures and keys,
+- evidence index via OCI OpenSearch or SQL.
 
-## Referenzkomponenten
+## Reference Components
 
-- `ingest-api`: OCI Container Instance/OKE Service
-- `event-broker`: OCI Streaming Stream + Consumer Group
-- `journal-store`: OCI Object Storage Bucket mit Retention Rule
-- `anchor-job`: taeglicher Signaturjob (Functions/Container Job)
-- `evidence-index`: OpenSearch/SQL fuer Auditabfragen
+- `ingest-api`: OCI Container Instance or OKE service.
+- `event-broker`: OCI Streaming stream plus consumer group.
+- `journal-store`: OCI Object Storage bucket with retention rule.
+- `anchor-job`: daily signature job via Functions or container job.
+- `evidence-index`: OpenSearch/SQL for audit queries.
 
-## Mindestkonfiguration
+## Minimum Configuration
 
 ### OCI Streaming
 
-- Partitions: 3 (Startwert)
-- Retention: 24-168h (Transportebene)
-- Consumer Group: dediziert fuer Normalizer
-- Private Endpoints/VCN Controls: aktiv
-- TLS: aktiv
+- Partitions: 3 as starting value.
+- Retention: 24-168 hours as transport layer.
+- Consumer group: dedicated to normalizer.
+- Private Endpoints/VCN controls: active.
+- TLS: active.
 
-### Object Storage Journal (WORM)
+### Object Storage Journal, WORM
 
-- Bucket: `event-journal-immutable`
-- Retention Rule: z. B. 3650 Tage
-- Loeschung/Mutation vor Frist: verboten
-- Governance-Prozess fuer Retention-Aenderungen dokumentiert
+- Bucket: `event-journal-immutable`.
+- Retention rule: for example 3650 days.
+- Deletion/mutation before deadline: prohibited.
+- Governance process for retention changes documented.
 
-### Signaturen
+### Signatures
 
-- Vault Key: `event-anchor-signing-key`
-- Algorithmus: RSA-PSS (organisationaler Standard)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Vault key: `event-anchor-signing-key`.
+- Algorithm: RSA-PSS or organizational standard.
+- Anchor frequency: daily at 23:59 UTC.
 
-## Event-Schema (Mussfelder)
+## Event Schema, Required Fields
 
 - `event_id`
 - `event_time_utc`
@@ -57,37 +57,37 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf OCI um:
 - `event_hash`
 - `signature_ref`
 
-## Event-Fluss
+## Event Flow
 
-1. GitHub Events gehen an Ingest API.
-2. Ingest API validiert HMAC-Signatur.
-3. Gueltige Events werden in OCI Streaming geschrieben.
-4. Normalizer konsumiert Stream und erstellt hash-verkettete Journal-Events.
-5. Journal-Events werden append-only in Object Storage geschrieben.
-6. Evidence Index wird aktualisiert.
-7. Daily Anchor wird signiert und abgelegt.
+1. GitHub events go to the ingest API.
+2. The ingest API validates the HMAC signature.
+3. Valid events are written to OCI Streaming.
+4. The normalizer consumes the stream and creates hash-chained journal events.
+5. Journal events are written append-only to Object Storage.
+6. Evidence index is updated.
+7. Daily anchor is signed and stored.
 
-## Rollen und Verantwortungen
+## Roles And Responsibilities
 
-- `platform_operator`: Streaming, Runtime, Deployments
-- `storage_custodian`: Object Storage Retention/Immutability
-- `security_operator`: Vault, IAM, Netzwerkabsicherung
-- `audit_reader`: read-only auf Evidence Index + Anchors
-- `compliance_owner`: Freigabe bei Retention-/Legal-Hold-Themen
+- `platform_operator`: Streaming, runtime, deployments.
+- `storage_custodian`: Object Storage retention/immutability.
+- `security_operator`: Vault, IAM, network security.
+- `audit_reader`: read-only access to evidence index and anchors.
+- `compliance_owner`: approval for retention or legal-hold topics.
 
-## Betriebsgrenzwerte (Start)
+## Operating Thresholds, Start
 
-- Consumer Lag Warnung: > 60 Sekunden
-- DLQ-Rate Warnung: > 0.5 %
-- Ingest Signaturfehler: > 0.1 % / Stunde
-- Anchor-Fehler: 0 toleriert (P1 Incident)
+- Consumer lag warning: more than 60 seconds.
+- DLQ rate warning: more than 0.5 percent.
+- Ingest signature errors: more than 0.1 percent per hour.
+- Anchor error: zero tolerated, P1 incident.
 
-## Go-Live-Checkliste
+## Go-Live Checklist
 
-- [ ] HMAC-Signaturpruefung aktiv
-- [ ] OCI Streaming Ausfallszenarien getestet
-- [ ] Object Storage Retention aktiv
-- [ ] Vault-Signaturtest erfolgreich
-- [ ] Daily Anchor Report vorhanden
-- [ ] Restore-Test erfolgreich
-- [ ] Rollenrezertifizierung dokumentiert
+- [ ] HMAC signature check active.
+- [ ] OCI Streaming failure scenarios tested.
+- [ ] Object Storage retention active.
+- [ ] Vault signature test successful.
+- [ ] Daily anchor report available.
+- [ ] Restore test successful.
+- [ ] Role recertification documented.

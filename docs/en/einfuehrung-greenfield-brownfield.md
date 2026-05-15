@@ -1,64 +1,66 @@
-# Einfuehrung: Greenfield und Brownfield
+# Introduction: Greenfield And Brownfield
 
-## Ziel
+## Goal
 
-Dieses Dokument trennt die Einfuehrungspfade fuer:
+This document separates introduction paths for:
 
-- `greenfield`: Unternehmen ohne stabilen Vorprozess im Zielbereich,
-- `brownfield`: Unternehmen mit bereits gelebten Altprozessen.
+- `greenfield`: organizations without a stable existing process in the target
+  area,
+- `brownfield`: organizations with already established legacy processes.
 
-## Greenfield-Pfad
+## Greenfield Path
 
-### Einstieg
+### Entry
 
-1. Unternehmens-Fork aus dem Referenzmodell anlegen.
-2. Rollen, Freigaben und Policies aktivieren.
-3. 1-2 Kernprozesse als Pilot auswaehlen.
-4. Pilot auf aktuellem freigegebenem Release starten.
+1. Create an organization fork from the reference model.
+2. Activate roles, approvals and policies.
+3. Select one or two core processes as a pilot.
+4. Start the pilot on the current approved release.
 
 ### Rollout
 
-1. Pilot bewerten (fachlich, regulatorisch, operativ).
-2. Verbesserungen als Change Requests in den Fork uebernehmen.
-3. Unternehmens-Release taggen.
-4. Stufenweise Ausweitung auf weitere Teams/Standorte.
+1. Evaluate the pilot from subject-matter, regulatory and operational angles.
+2. Bring improvements into the fork as change requests.
+3. Tag an organization release.
+4. Expand step by step to additional teams or locations.
 
-## Brownfield-Pfad
+## Brownfield Path
 
-### Einstieg
+### Entry
 
-1. Bestehende Ist-Prozesse als `legacy`-Version dokumentieren.
-2. Risiko- und Lueckenanalyse gegen Referenzmodell durchfuehren.
-3. Priorisierte Zielprozesse fuer Migration auswaehlen.
-4. Pilotbereich mit klarer Begrenzung festlegen.
+1. Document existing current-state processes as a `legacy` version.
+2. Perform a risk and gap analysis against the reference model.
+3. Select prioritized target processes for migration.
+4. Define a clearly bounded pilot area.
 
-### Migration in Stufen
+### Staged Migration
 
-1. `legacy`-Ablauf revisionssicher weiterfuehren.
-2. Zielablauf als neue Version im Fork aufbauen.
-3. Neue Vorgaenge auf neue Version starten.
-4. Laufende Altfall-Vorgaenge auf `legacy` abschliessen.
-5. Nach Ende der Altfaelle `legacy` geordnet ausser Betrieb nehmen.
+1. Continue the `legacy` flow in an audit-proof way.
+2. Build the target flow as a new version in the fork.
+3. Start new matters on the new version.
+4. Close running legacy matters on `legacy`.
+5. After legacy matters are complete, retire `legacy` in an orderly way.
 
-## Entscheidungsregeln fuer beide Pfade
+## Decision Rules For Both Paths
 
-- Kein Vollausrollung ohne Pilotnachweis.
-- Jede produktive Prozessversion braucht Release-Tag und Freigabe.
-- Bei Compliance-Konflikten hat Nachweisfaehigkeit Vorrang vor Geschwindigkeit.
-- Mischbetrieb wird ueber Version-Binding je Vorgangsstart gesteuert.
+- No full rollout without pilot evidence.
+- Every productive process version needs a release tag and approval.
+- In compliance conflicts, evidence capability takes priority over speed.
+- Mixed operation is controlled through version binding at the start of each
+  matter.
 
-## 90-Tage-Orientierung
+## 90-Day Orientation
 
 ### Greenfield
 
-- Tage 1-15: Zielbild, Rollen, Kernprozesse.
-- Tage 16-45: Pilot fuer Rechnung/Buchfuehrung.
-- Tage 46-75: Ausweitung auf zusaetzliche Prozesse.
-- Tage 76-90: Stabilisierung und Release `v1.0.0`.
+- Days 1-15: target picture, roles, core processes.
+- Days 16-45: pilot for invoice/bookkeeping.
+- Days 46-75: expansion to additional processes.
+- Days 76-90: stabilization and release `v1.0.0`.
 
 ### Brownfield
 
-- Tage 1-20: Ist-Prozesse aufnehmen und `legacy` definieren.
-- Tage 21-50: Zielprozess modellieren, Pilot aufsetzen.
-- Tage 51-75: Alt-/Neu-Mischbetrieb mit Version-Binding.
-- Tage 76-90: Migration bewerten, weitere Umstellungen planen.
+- Days 1-20: capture current processes and define `legacy`.
+- Days 21-50: model target process and set up pilot.
+- Days 51-75: mixed legacy/new operation with version binding.
+- Days 76-90: evaluate migration and plan additional conversions.

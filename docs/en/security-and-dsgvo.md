@@ -1,34 +1,39 @@
-# Security und DSGVO Leitlinie
+# Security And GDPR Guideline
 
-## Wichtigste Aussage
+## Most Important Statement
 
-Es ist nie zu 100 Prozent garantiert, dass in einem Repository keine sensiblen Inhalte landen.  
-Deshalb kombiniert dieses Musterrepo Regeln, Reviews und automatische Scans.
+It is never 100 percent guaranteed that sensitive content will not end up in a
+repository. This pattern repository therefore combines rules, reviews and
+automated scans.
 
-## Was verbindlich gilt
+## Binding Rules
 
-- Keine echten Passwoerter, Tokens, API-Keys oder private Schluessel.
-- Keine echten personenbezogenen Daten in Beispieldateien.
-- Nur synthetische Testdaten und Platzhalter.
-- Nur Test-E-Mails mit Beispiel-Domains.
+- No real passwords, tokens, API keys or private keys.
+- No real personal data in example files.
+- Only synthetic test data and placeholders.
+- Only test email addresses using example domains.
 
-## Schutzmechanismen im Repo
+## Repository Safeguards
 
-- Policy: `policies/data-protection-policy.yaml`
-- AVV/DPA section for OpenAI-backed processing: `docs/en/datenschutz-avv-dpa.md`
-- AVV-Checkliste fuer SaaS-Betrieb: `docs/en/avv-checkliste-eventlock-saas.md`
-- PR-Checks: `.github/PULL_REQUEST_TEMPLATE.md`
-- Secret-Scan in CI: `.github/workflows/privacy-and-secrets.yml`
-- Privacy-Lint in CI: `.github/workflows/privacy-and-secrets.yml`
+- Policy: [policies/data-protection-policy.yaml](../../policies/data-protection-policy.yaml)
+- DPA section for OpenAI-backed processing:
+  [docs/en/datenschutz-avv-dpa.md](datenschutz-avv-dpa.md)
+- DPA checklist for SaaS operations:
+  [docs/en/avv-checkliste-eventlock-saas.md](avv-checkliste-eventlock-saas.md)
+- PR checks: [.github/PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md)
+- Secret scan in CI:
+  [.github/workflows/privacy-and-secrets.yml](../../.github/workflows/privacy-and-secrets.yml)
+- Privacy lint in CI:
+  [.github/workflows/privacy-and-secrets.yml](../../.github/workflows/privacy-and-secrets.yml)
 
-## Reaktion bei Sicherheitsvorfall
+## Incident Response
 
-1. Secret sofort widerrufen/rotieren.
-2. Betroffene Daten aus Repo entfernen und Ersatz einspielen.
-3. Incident als Issue dokumentieren.
-4. Freigabeprozess pruefen und verbessern.
+1. Revoke or rotate the secret immediately.
+2. Remove affected data from the repository and replace it.
+3. Document the incident as an issue.
+4. Review and improve the approval process.
 
-## Hinweis fuer Forks
+## Note For Forks
 
-Forks muessen diese Regeln ebenfalls uebernehmen.  
-Empfehlung: Nach Fork sofort Policies und Workflows aktiv pruefen.
+Forks must adopt these rules as well. Recommended action after forking: actively
+check the policies and workflows.

@@ -1,80 +1,89 @@
-# Fork-and-Release Operating Model
+# Fork-And-Release Operating Model
 
-## Ziel
+## Goal
 
-Dieses Dokument beschreibt das verbindliche Betriebsmodell fuer Unternehmen, die das zentrale `NoC` als Referenz nutzen:
+This document describes the binding operating model for organizations that use
+the central `NoC` repository as a reference:
 
-- zentraler Upstream als Referenzstandard,
-- ein Unternehmens-Fork als verbindlicher Betriebsstand,
-- optionale Domaenen-Repos fuer fachlich eigenstaendige Teilprozesse.
+- a central upstream as reference standard,
+- an organization fork as binding operating state,
+- optional domain repositories for subject-matter subprocesses with independent
+  release cycles.
 
-Das Modell trennt Referenzpflege, lokale Steuerung und kontrollierte Uebernahme neuer Prozessversionen.
+The model separates reference maintenance, local control and controlled
+adoption of new process versions.
 
-## Repository-Topologie
+## Repository Topology
 
-### 1) Zentrales Referenz-Repository (Upstream)
+### 1. Central Reference Repository, Upstream
 
-- enthaelt generische und branchenspezifische Musterprozesse,
-- veroeffentlicht versionierte Releases,
-- nimmt qualitaetsgesicherte Rueckfluesse aus Unternehmens-Forks auf.
+- Contains generic and domain-specific pattern processes.
+- Publishes versioned releases.
+- Accepts quality-assured return flows from organization forks.
 
-### 2) Unternehmens-Fork (verbindlicher Betriebsstand)
+### 2. Organization Fork, Binding Operating State
 
-- ist die operative Wahrheit fuer das jeweilige Unternehmen,
-- fuehrt lokale Policies, Freigaben und Rollenbindung,
-- uebernimmt Upstream-Aenderungen nur per kontrolliertem Sync-PR.
+- Is the operational truth for the respective organization.
+- Maintains local policies, approvals and role binding.
+- Adopts upstream changes only through a controlled sync PR.
 
-### 3) Optionale Domaenen-Repos
+### 3. Optional Domain Repositories
 
-- werden nur angelegt, wenn eine Domaene eigenstaendige Release-Zyklen braucht,
-- bleiben ueber Issue-Referenzen und Release-Referenzen mit dem Unternehmens-Fork gekoppelt,
-- muessen dieselben Mindestkontrollen erfuellen (PR, Review, Nachweis, Versionierung).
+- Are created only when a domain needs independent release cycles.
+- Remain coupled to the organization fork through issue references and release
+  references.
+- Must satisfy the same minimum controls: PR, review, evidence and versioning.
 
-## Verantwortungen
+## Responsibilities
 
-- `upstream_maintainer`: pflegt Referenzmodule und Release-Historie.
-- `enterprise_process_owner`: entscheidet, wann Upstream-Releases in den Fork uebernommen werden.
-- `enterprise_reviewer`: prueft Impact, Compliance und Rollout-Risiko.
-- `enterprise_approver`: gibt die Uebernahme fuer den produktiven Einsatz frei.
-- `domain_owner` (optional): verantwortet ein Domaenen-Repo inklusive lokaler Freigaberegeln.
+- `upstream_maintainer`: maintains reference modules and release history.
+- `enterprise_process_owner`: decides when upstream releases are adopted into
+  the fork.
+- `enterprise_reviewer`: checks impact, compliance and rollout risk.
+- `enterprise_approver`: approves adoption for productive use.
+- `domain_owner` optional: owns a domain repository including local approval
+  rules.
 
-## Verbindlicher Sync-Ablauf
+## Binding Sync Flow
 
-1. Upstream publiziert ein freigegebenes Release (Tag + Changelog).
-2. Unternehmen erstellt einen Sync-Branch im Fork, z. B. `sync/upstream-2026-03`.
-3. Upstream-Aenderung wird in den Sync-Branch uebernommen.
-4. Impact-Assessment und Tests werden dokumentiert.
-5. Sync-PR wird reviewed und freigegeben.
-6. Nach Merge wird im Unternehmens-Fork ein eigenes Release erzeugt.
-7. Rollout erfolgt kontrolliert fuer neue Vorgaenge; laufende Vorgaenge bleiben unveraendert.
+1. Upstream publishes an approved release: tag plus changelog.
+2. The organization creates a sync branch in the fork, for example
+   `sync/upstream-2026-03`.
+3. The upstream change is adopted into the sync branch.
+4. Impact assessment and tests are documented.
+5. The sync PR is reviewed and approved.
+6. After merge, the organization fork creates its own release.
+7. Rollout is controlled for new matters; running matters remain unchanged.
 
-## Branch- und Tag-Konvention
+## Branch And Tag Convention
 
-- Keine direkten Aenderungen auf `main`.
-- Sync-Branches beginnen mit `sync/upstream-`.
-- Hotfix-Branches beginnen mit `hotfix/`.
-- Produktive Prozessreleases nutzen `vMAJOR.MINOR.PATCH`.
-- Optional zusaetzlich fachliche Abschlusstags wie `close/YYYY-MM`.
+- No direct changes on `main`.
+- Sync branches start with `sync/upstream-`.
+- Hotfix branches start with `hotfix/`.
+- Productive process releases use `vMAJOR.MINOR.PATCH`.
+- Optional subject-matter closure tags such as `close/YYYY-MM`.
 
-Empfehlung: Fuer Nachweise wird immer das `v*`-Release als technische Referenz genutzt, auch wenn parallel ein fachlicher Abschluss-Tag besteht.
+Recommendation: for evidence, always use the `v*` release as technical
+reference, even if a subject-matter closure tag exists in parallel.
 
-## Wann ein Domaenen-Repo statt nur Fork?
+## When To Use A Domain Repository Instead Of Only A Fork
 
-Ein eigenes Domaenen-Repo ist sinnvoll, wenn mindestens zwei der folgenden Kriterien gelten:
+A dedicated domain repository is useful when at least two of the following
+criteria apply:
 
-- eigener Freigabeprozess mit abweichender Verantwortungsstruktur,
-- deutlich hoehere Aenderungsfrequenz als im Kernmodell,
-- separate Compliance-Nachweise oder externe Pruefpfade,
-- eigenes Deployment/Automationsschema.
+- its own approval process with a different responsibility structure,
+- significantly higher change frequency than the core model,
+- separate compliance evidence or external review paths,
+- its own deployment or automation scheme.
 
-Wenn diese Kriterien nicht gelten, bleibt der Prozess im Unternehmens-Fork.
+If these criteria do not apply, the process stays in the organization fork.
 
-## Rueckfluss an den Upstream
+## Return Flow To Upstream
 
-Rueckfluss erfolgt optional und nur als separater PR in den Upstream:
+Return flow is optional and only happens as a separate upstream PR:
 
-- mit fachlicher Begruendung,
-- mit Nachweis aus Pilot oder Betrieb,
-- ohne unternehmensspezifische Interna oder vertrauliche Daten.
+- with subject-matter rationale,
+- with evidence from pilot or operation,
+- without organization-specific internal or confidential data.
 
-So bleibt das Referenzmodell lernfaehig, ohne lokale Steuerung zu verlieren.
+This keeps the reference model able to learn without losing local control.

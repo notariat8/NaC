@@ -1,129 +1,135 @@
-# NoC Enterprise Control Plane MVP (6 Monate)
+# NoC Enterprise Control Plane MVP, 6 Months
 
-## Ziel und Rahmen
+## Goal And Frame
 
-Dieses Dokument konkretisiert ein realistisches MVP fuer `Notariat as Code` im bestehenden Modell `NoC + Enterprise GitOps + NoC`.
+This document makes a realistic MVP for `Notariat as Code` concrete within the
+existing `NoC + Enterprise GitOps + NoC` model.
 
-Das MVP schliesst einen kleinen, aber vollstaendigen End-to-End-Kreis:
+The MVP closes a small but complete end-to-end loop:
 
-- deklarative Aenderung in Git,
-- Policy- und Freigabepruefung,
-- Reconciliation in Zielsysteme,
-- Audit- und Drift-Sichtbarkeit.
+- declarative change in Git,
+- policy and approval check,
+- reconciliation into target systems,
+- audit and drift visibility.
 
-Default fuer synchrone Pilotpfade sind `software_company`, `notary` und `wealth_management`.
-Branchenmodule bleiben ueber `policies/process-policy.yaml` umstellbar.
+The default synchronous pilot paths are `software_company`, `notary` and
+`wealth_management`. Domain modules remain switchable through
+[policies/process-policy.yaml](../../policies/process-policy.yaml).
 
-## MVP-Scope
+## MVP Scope
 
-Fokusdomaene:
+Focus domain:
 
-- Org + Access + Tooling Onboarding.
-- Zusaetzlicher Branchenpfad als MVP-Use-Case: `property_management` (Hausverwaltung).
+- organization, access and tooling onboarding,
+- additional domain path as MVP usecase: `property_management`.
 
-Enthaltene Change-Typen (Schema v1):
+Included change types, schema v1:
 
 - `team`
 - `role_change`
 - `joiner_mover`
 
-Nicht im MVP:
+Not in the MVP:
 
-- Compensation,
-- Performance Management,
-- komplexe Finanzplanung,
-- autonome AI-Freigaben fuer sensible Themen.
+- compensation,
+- performance management,
+- complex financial planning,
+- autonomous AI approvals for sensitive topics.
 
-## Referenzfluss
+## Reference Flow
 
 ```mermaid
 flowchart TD
-    A[PR mit Team oder Rollen-Aenderung] --> B[Schema Validation]
-    B --> C[Policy Check]
-    C --> D[Plan Preview im PR]
-    D --> E[Merge nach main]
-    E --> F[Reconciler startet Connector-Tasks]
+    A[PR with team or role change] --> B[Schema validation]
+    B --> C[Policy check]
+    C --> D[Plan preview in PR]
+    D --> E[Merge to main]
+    E --> F[Reconciler starts connector tasks]
     F --> G[IAM GitHub Jira Slack]
-    G --> H[Soll Ist Vergleich und Audit Events]
-    H --> I[Drift oder Fehler als Event]
+    G --> H[Target/actual comparison and audit events]
+    H --> I[Drift or error as event]
 ```
 
-## Repository-Zuschnitt fuer den Pilot
+## Repository Shape For The Pilot
 
-- `org-model` bleibt im aktuellen Repo als modellierende Prozessartefakte (`processes/` + neue Change-Typen) umgesetzt.
-- `policy-repo` entspricht den bestehenden Richtlinien unter `policies/`.
-- `connector-config` wird initial als Konfigurationsdateien unter `docs/en/` und spaeter als eigenes Verzeichnis ausgepraegt.
-- `schemas/` enthaelt die maschinenpruefbaren Vertragsdefinitionen.
+- `org-model` remains implemented in the current repository as modeling process
+  artifacts under [processes/](../../processes) plus new change types.
+- `policy-repo` corresponds to the existing rules under
+  [policies/](../../policies).
+- `connector-config` initially appears as configuration files under `docs/en/`
+  and later becomes its own directory.
+- [schemas/](../../schemas) contains the machine-checkable contract
+  definitions.
 
-## 6-Monats-Plan
+## Six-Month Plan
 
-### Monat 1: Modell fixieren
+### Month 1: Fix The Model
 
-- Kernobjekte und Change-Typen verbindlich machen.
-- Zielsysteme fuer Pilot festlegen (IAM, GitHub, Jira).
-- Policy-Minimum fuer Freigaben und SoD pruefbar machen.
+- Make core objects and change types binding.
+- Define target systems for the pilot, for example IAM, GitHub and Jira.
+- Make the minimum policy for approvals and segregation of duties checkable.
 
-### Monat 2: Validation und Policy
+### Month 2: Validation And Policy
 
-- CI validiert die neuen Schemas.
-- Policy Checks liefern PR-faehiges Feedback.
-- Plan-Preview als menschenlesbare Aenderungsfolge.
+- CI validates the new schemas.
+- Policy checks provide PR-ready feedback.
+- Plan preview becomes a human-readable change sequence.
 
-### Monat 3: Reconciler + erster Connector
+### Month 3: Reconciler Plus First Connector
 
-- Merge-Ereignis startet Reconciliation.
-- Erste reale Zielsystem-Aenderung reproduzierbar und idempotent.
-- Audit Trail fuer jede Ausfuehrung.
+- Merge event starts reconciliation.
+- First real target-system change is reproducible and idempotent.
+- Audit trail exists for every execution.
 
-### Monat 4: Zwei weitere Connectoren
+### Month 4: Two Additional Connectors
 
-- IAM, GitHub, Jira integriert.
-- Retry, Fehlerklassifikation, Idempotenzpfad stabil.
+- IAM, GitHub and Jira are integrated.
+- Retry, error classification and idempotency path are stable.
 
-### Monat 5: Observability und Drift
+### Month 5: Observability And Drift
 
-- Soll/Ist-Abgleich mit klaren Drift-Signalen.
-- Dashboard fuer Durchlaufzeit, Fehler und Governance.
+- Target/actual comparison with clear drift signals.
+- Dashboard for lead time, errors and governance.
 
-### Monat 6: Pilotbetrieb
+### Month 6: Pilot Operation
 
-- Ein echter Bereich arbeitet produktiv ueber den Flow.
-- `joiner_mover`, `team`, `role_change` laufen Ende-zu-Ende.
-- KPI-Review mit Skalierungsentscheidung.
+- One real area works productively through the flow.
+- `joiner_mover`, `team` and `role_change` run end to end.
+- KPI review with scaling decision.
 
-## KPI-Set fuer das MVP
+## KPI Set For The MVP
 
 Delivery:
 
-- Lead Time pro Team- oder Rollenwechsel.
-- Automationsquote gegen manuelle Tickets.
+- lead time per team or role change,
+- automation rate compared with manual tickets.
 
 Governance:
 
-- Policy Violations pro PR.
-- Audit Coverage pro ausgefuehrter Aenderung.
+- policy violations per PR,
+- audit coverage per executed change.
 
-User Value:
+User value:
 
-- Time-to-access fuer neue Mitarbeitende.
-- Time-to-team-setup fuer neue Teams.
+- time to access for new employees,
+- time to team setup for new teams.
 
-Platform Health:
+Platform health:
 
-- Drift Rate.
-- Reconciliation Latency.
-- Connector Failure Rate.
+- drift rate,
+- reconciliation latency,
+- connector failure rate.
 
-## AI-Einsatz im MVP
+## AI Use In The MVP
 
-Erlaubt:
+Allowed:
 
-- Planvorschlaege, Policy-Erklaerung, Priorisierungshilfen.
+- plan suggestions, policy explanation and prioritization support.
 
-Nicht erlaubt:
+Not allowed:
 
-- finale Freigaben in sensiblen HR/Finance/Security-Schritten.
+- final approvals in sensitive HR, finance or security steps.
 
-Prinzip:
+Principle:
 
-- AI schlaegt vor, Menschen entscheiden.
+- AI proposes, humans decide.

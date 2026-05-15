@@ -2,68 +2,70 @@
 
 Status: `proposed`
 
-## Ziel
+## Goal
 
-OCI wird lokal aus WSL angebunden und dient fuer NoC als moegliche Infrastruktur- und Evidence-Plattform:
+OCI is connected locally from WSL and can serve NoC as infrastructure and
+evidence platform:
 
-- OCI CLI fuer lokale Verwaltung.
-- Resource Manager fuer Terraform/OpenTofu-Stacks.
-- OCI Streaming und Object Storage fuer revisionssichere Eventstreams.
-- Vault fuer Signaturen und Schluesselreferenzen.
+- OCI CLI for local administration,
+- Resource Manager for Terraform/OpenTofu stacks,
+- OCI Streaming and Object Storage for audit-proof eventstreams,
+- Vault for signatures and key references.
 
-## Day0
+## Day 0
 
-- OCI CLI lokal installieren.
-- Lokalen API-Key erzeugen, Public Key in OCI hochladen, Private Key lokal halten.
-- `~/.oci/config` lokal pflegen.
-- Zugriff pruefen:
+- Install OCI CLI locally.
+- Create local API key, upload public key to OCI, keep private key local.
+- Maintain `~/.oci/config` locally.
+- Check access:
 
 ```bash
 oci iam region list
 oci iam region-subscription list --tenancy-id <tenancy_ocid>
 ```
 
-- Keine OCI-Keys oder Configs ins Repo committen.
+- Do not commit OCI keys or configs to the repository.
 
-## Day1
+## Day 1
 
-- Resource Manager Stack fuer erste IaC-Konfiguration anlegen.
-- OCI Eventstream runbook from `docs/en/eventstream/runbook-oci.md` needs to be concretized.
-- Minimalen Plan fuer folgende Komponenten erstellen:
-  - Compartment-Struktur.
-  - IAM-Policies fuer Operator, Audit Reader und Break Glass.
-  - Object Storage Bucket fuer Evidence.
-  - Streaming Stream fuer Event Journal.
-  - Vault Key fuer Daily Anchors.
-- Terraform/OpenTofu-Code erst nach Plan-Review anwenden.
+- Create Resource Manager stack for first IaC configuration.
+- Concretize the OCI eventstream runbook:
+  [docs/en/eventstream/runbook-oci.md](../eventstream/runbook-oci.md)
+- Create minimum plan for:
+  - compartment structure,
+  - IAM policies for operator, audit reader and break glass,
+  - Object Storage bucket for evidence,
+  - Streaming stream for event journal,
+  - Vault key for daily anchors.
+- Apply Terraform/OpenTofu code only after plan review.
 
-## Day2
+## Day 2
 
-- API-Keys rotieren.
-- Resource Manager Drift Detection oder refresh-only Plan nutzen.
-- Kosten- und Quota-Grenzen dokumentieren.
-- Retention, Legal Hold und Evidence-Read-Pfad pruefen.
-- Manuelle OCI-Konsoleingriffe in Git reconciled.
+- Rotate API keys.
+- Use Resource Manager drift detection or refresh-only plan.
+- Document cost and quota limits.
+- Check retention, legal hold and evidence read path.
+- Reconcile manual OCI console interventions in Git.
 
-## Connector-Grenzen
+## Connector Boundaries
 
-Der OCI-Connector darf:
+The OCI connector may:
 
-- OCI-Metadaten lesen.
-- Resource-Manager-Plans anstossen.
-- Evidence- und Drift-Status dokumentieren.
-- freigegebene Stacks anwenden.
+- read OCI metadata,
+- trigger Resource Manager plans,
+- document evidence and drift status,
+- apply approved stacks.
 
-Der OCI-Connector darf nicht:
+The OCI connector must not:
 
-- Private Keys ins Repo schreiben.
-- Resource Manager State manuell veraendern.
-- Retention-/Legal-Hold-Regeln ohne Review aendern.
-- Omnistation-Keys oder Remote-Keys wiederverwenden.
+- write private keys to the repository,
+- manually modify Resource Manager state,
+- change retention or legal-hold rules without review,
+- reuse Omnistation keys or remote keys.
 
-## Akzeptanzkriterien
+## Acceptance Criteria
 
-- OCI CLI funktioniert lokal in WSL.
-- Private Keys bleiben lokal.
-- Resource Manager oder Remote State ist vor Teamnutzung entschieden.
-- Eventstream- und Evidence-Komponenten sind mit Runbooks verknuepft.
+- OCI CLI works locally in WSL.
+- Private keys remain local.
+- Resource Manager or remote state is decided before team use.
+- Eventstream and evidence components are linked with runbooks.

@@ -1,36 +1,39 @@
-# Function8 Service Catalog fuer NoC
+# Function8 Service Catalog For NoC
 
-## Ziel
+## Goal
 
-Dieses Dokument listet alle Function8-Leistungen im Kontext `NoC` transparent und oeffentlich nachvollziehbar.
-Leistungen mit AVV-Pflicht muessen als solche gekennzeichnet und mit den erforderlichen Artefakten verlinkt sein.
+This document lists all Function8 services in the `NoC` context transparently
+and publicly traceably. Services that require a DPA must be marked as such and
+linked to the required artifacts.
 
-## Katalogprinzip
+## Catalog Principle
 
-- Jede Leistung hat eine stabile `service_id`.
-- Jede Leistung nennt explizit, ob AVV erforderlich ist.
-- Jede Leistung ist mit Policies, Runbooks und Exit-Pfad verknuepft.
-- Keine versteckten Betriebsabhaengigkeiten ausserhalb dieses Repos.
+- Every service has a stable `service_id`.
+- Every service explicitly states whether a DPA is required.
+- Every service is linked with policies, runbooks and exit path.
+- No hidden operating dependencies outside this repository.
 
-## Leistungskatalog
+## Service Catalog
 
-| service_id | service_name | service_type | avv_required | data_scope | required_policies | runbook_references | portability_notes |
+| service_id | service_name | service_type | dpa_required | data_scope | required_policies | runbook_references | portability_notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| f8-eventlock-saas | EventLock-as-a-Service | managed_saas | yes | event_journal_and_metadata | `policies/revisionssicherheit-eventstream-policy.yaml`, `policies/tenant-ownership-policy.yaml`, `policies/provider-open-services-policy.yaml` | `docs/en/eventstream/revisionssicherheit.md`, `docs/en/eventstream/implementation-templates.md`, `docs/en/eventstream/runbook-aws.md`, `docs/en/eventstream/runbook-azure.md`, `docs/en/eventstream/runbook-gcp.md`, `docs/en/eventstream/runbook-oci.md` | dedizierte Subinstanz pro Kunde, dokumentierter Exit |
-| f8-noc-governance-pack | Governance und Policy Pack | documentation_and_controls | no | governance_metadata | `policies/process-policy.yaml`, `policies/role-model-policy.yaml`, `policies/access-control-policy.yaml` | `docs/en/governance.md`, `docs/en/issues/operations.md` | vollstaendig repo-basiert, durch Dritte uebernehmbar |
-| f8-onboarding-pack | Onboarding und Einfuehrungsunterlagen | documentation | no | onboarding_metadata | `policies/onboarding-flow.json`, `policies/provider-open-services-policy.yaml` | `docs/en/START_HERE.md`, `docs/en/vscode-copilot-start.md`, `docs/en/platform-onboarding-matrix.md` | offen dokumentiert, kein proprietaerer Zwang |
+| `f8-eventlock-saas` | EventLock-as-a-Service | `managed_saas` | yes | event journal and metadata | [policies/revisionssicherheit-eventstream-policy.yaml](../../../policies/revisionssicherheit-eventstream-policy.yaml), [policies/tenant-ownership-policy.yaml](../../../policies/tenant-ownership-policy.yaml), [policies/provider-open-services-policy.yaml](../../../policies/provider-open-services-policy.yaml) | [docs/en/eventstream/revisionssicherheit.md](../eventstream/revisionssicherheit.md), [docs/en/eventstream/implementation-templates.md](../eventstream/implementation-templates.md), [docs/en/eventstream/runbook-aws.md](../eventstream/runbook-aws.md), [docs/en/eventstream/runbook-azure.md](../eventstream/runbook-azure.md), [docs/en/eventstream/runbook-gcp.md](../eventstream/runbook-gcp.md), [docs/en/eventstream/runbook-oci.md](../eventstream/runbook-oci.md) | dedicated subinstance per customer, documented exit |
+| `f8-noc-governance-pack` | Governance and Policy Pack | `documentation_and_controls` | no | governance metadata | [policies/process-policy.yaml](../../../policies/process-policy.yaml), [policies/role-model-policy.yaml](../../../policies/role-model-policy.yaml), [policies/access-control-policy.yaml](../../../policies/access-control-policy.yaml) | [docs/en/governance.md](../governance.md), [docs/en/issues/operations.md](../issues/operations.md) | fully repository-based, transferable to third parties |
+| `f8-onboarding-pack` | Onboarding and introduction materials | `documentation` | no | onboarding metadata | [policies/onboarding-flow.json](../../../policies/onboarding-flow.json), [policies/provider-open-services-policy.yaml](../../../policies/provider-open-services-policy.yaml) | [docs/en/START_HERE.md](../START_HERE.md), [docs/en/vscode-copilot-start.md](../vscode-copilot-start.md), [docs/en/platform-onboarding-matrix.md](../platform-onboarding-matrix.md) | openly documented, no proprietary lock-in |
 
-## AVV-Referenz
+## DPA Reference
 
-Fuer Leistungen mit `avv_required = yes` gilt:
+For services with `dpa_required = yes`:
 
-- `docs/en/avv-checkliste-eventlock-saas.md` ist verpflichtend anzuwenden.
-- Subprozessoren, Regionen, Retention und Incident-Meldewege muessen dokumentiert sein.
+- [docs/en/avv-checkliste-eventlock-saas.md](../avv-checkliste-eventlock-saas.md)
+  is mandatory.
+- Subprocessors, regions, retention and incident notification paths must be
+  documented.
 
-## Pflegeprozess
+## Maintenance Process
 
-1. Neue Leistung nur per PR aufnehmen.
-2. `service_id` eindeutig vergeben.
-3. AVV-Relevanz begruenden.
-4. Runbook-/Policy-Referenzen vervollstaendigen.
-5. Exit-/Ersetzbarkeitsnotiz dokumentieren.
+1. Add new service only by PR.
+2. Assign unique `service_id`.
+3. Explain DPA relevance.
+4. Complete runbook and policy references.
+5. Document exit and replaceability note.

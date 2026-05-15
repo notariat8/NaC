@@ -1,29 +1,30 @@
-# Eventstream-Implementierung: Referenz-Templates
+# Eventstream Implementation: Reference Templates
 
-## Ziel
+## Goal
 
-Dieses Dokument liefert ein direkt nutzbares Umsetzungsraster fuer revisionssicheren Eventstream-Betrieb mit vier verbindlichen Plattformvarianten:
+This document provides a directly usable implementation grid for audit-proof
+eventstream operation with four binding platform variants:
 
-- Template A: AWS (Kafka/MSK + S3 Object Lock)
-- Template B: Azure (Event Hubs + Immutable Blob)
-- Template C: GCP (Pub/Sub + GCS Retention Lock)
-- Template D: OCI (Streaming + Object Storage Retention)
+- Template A: AWS, Kafka/MSK plus S3 Object Lock.
+- Template B: Azure, Event Hubs plus Immutable Blob.
+- Template C: GCP, Pub/Sub plus GCS Retention Lock.
+- Template D: OCI, Streaming plus Object Storage retention.
 
-Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
+Basis: [policies/revisionssicherheit-eventstream-policy.yaml](../../../policies/revisionssicherheit-eventstream-policy.yaml)
 
-## Gemeinsames Sollmodell
+## Shared Target Model
 
-### Pflichtpipeline
+### Mandatory Pipeline
 
-1. GitHub Events (Org Audit, Issues, Projects, Approvals)
-2. Ingest Gateway (Webhook Signaturpruefung, AuthN/AuthZ)
-3. Event Broker (durable stream)
-4. Normalizer (einheitliches Event-Envelope + Hash-Chain)
-5. Immutable Journal Store (WORM)
-6. Evidence Index (Suche/Pruefberichte)
-7. Daily Anchor (Signatur + Kettenabschluss)
+1. GitHub events: organization audit, issues, projects, approvals.
+2. Ingest gateway: webhook signature check, AuthN/AuthZ.
+3. Event broker: durable stream.
+4. Normalizer: uniform event envelope plus hash chain.
+5. Immutable journal store: WORM.
+6. Evidence index: search and audit reports.
+7. Daily anchor: signature and chain closure.
 
-### Event Envelope (Minimum)
+### Event Envelope, Minimum
 
 - `event_id`
 - `event_time_utc`
@@ -37,109 +38,110 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 - `event_hash`
 - `signature_ref`
 
-## Template A: Kafka + S3 Object Lock
+## Template A: Kafka Plus S3 Object Lock
 
-### Bausteine
+### Building Blocks
 
-- Ingest: abgesicherter Webhook-Service (z. B. Python/FastAPI)
-- Broker: Kafka (mind. 3 Broker)
-- Journal Store: S3 Bucket mit Object Lock `Compliance`
-- Evidence Index: OpenSearch/Elasticsearch oder SQL-Index
-- Signaturdienst: KMS-gestuetzte Signatur des Daily Anchors
+- Ingest: protected webhook service, for example Python/FastAPI.
+- Broker: Kafka with at least three brokers.
+- Journal store: S3 bucket with Object Lock `Compliance`.
+- Evidence index: OpenSearch/Elasticsearch or SQL index.
+- Signature service: KMS-backed signature of the daily anchor.
 
-### Mindestparameter
+### Minimum Parameters
 
-- Kafka Retention (operativ): 30-90 Tage
-- WORM Retention (rechtlich): mindestens gem. Policy, z. B. 10 Jahre
-- DLQ aktiviert: ja
-- TLS intern/extern: verpflichtend
-- Idempotenz: `event_id` + dedup cache
-- Daily Anchor Zeit: 23:59 UTC
+- Kafka retention, operational: 30-90 days.
+- WORM retention, legal: at least according to policy, for example 10 years.
+- DLQ enabled: yes.
+- TLS internal and external: mandatory.
+- Idempotency: `event_id` plus dedup cache.
+- Daily anchor time: 23:59 UTC.
 
-### Rollen
+### Roles
 
-- `stream_operator`: betreibt Ingest/Broker
-- `journal_custodian`: verantwortet WORM und Aufbewahrung
-- `security_operator`: Schluessel, Zertifikate, Monitoring
-- `audit_reader`: read-only Zugriff auf Evidence Index
-- `compliance_owner`: Freigabe von Retention- und Legal-Hold-Aenderungen
+- `stream_operator`: operates ingest and broker.
+- `journal_custodian`: owns WORM and retention.
+- `security_operator`: keys, certificates, monitoring.
+- `audit_reader`: read-only access to evidence index.
+- `compliance_owner`: approval of retention and legal-hold changes.
 
-## Template B: Azure Event Hubs + Immutable Blob
+## Template B: Azure Event Hubs Plus Immutable Blob
 
-### Bausteine
+### Building Blocks
 
-- Ingest: abgesicherter Webhook-Service (App Service/Container)
-- Broker: Azure Event Hubs
-- Journal Store: Azure Blob mit Immutable Policy + optional Legal Hold
-- Evidence Index: Azure Data Explorer / SQL / Search
-- Signaturdienst: Key Vault Sign Operations fuer Daily Anchor
+- Ingest: protected webhook service, App Service or container.
+- Broker: Azure Event Hubs.
+- Journal store: Azure Blob with immutable policy and optional legal hold.
+- Evidence index: Azure Data Explorer, SQL or Search.
+- Signature service: Key Vault sign operations for daily anchor.
 
-### Mindestparameter
+### Minimum Parameters
 
-- Event Hubs Capture optional fuer Rohstrom
-- Blob Immutable Retention: mindestens gem. Policy, z. B. 10 Jahre
-- Legal Hold Prozess: dokumentiert und getestet
-- DLQ/Poison-Handling: verpflichtend
-- Private Networking/Firewalling: aktiv
-- Daily Anchor Zeit: 23:59 UTC
+- Event Hubs Capture optional for raw stream.
+- Blob immutable retention: at least according to policy, for example 10 years.
+- Legal-hold process: documented and tested.
+- DLQ/poison handling: mandatory.
+- Private networking/firewalling: active.
+- Daily anchor time: 23:59 UTC.
 
-### Rollen
+### Roles
 
-- `platform_operator`: betreibt Event Hubs und Ingest
-- `storage_custodian`: verwaltet Immutable Policies
-- `security_operator`: Key Vault und Identitaeten
-- `audit_reader`: read-only Evidence-Zugriff
-- `compliance_owner`: Freigaben fuer Aufbewahrung/Legal Hold
+- `platform_operator`: operates Event Hubs and ingest.
+- `storage_custodian`: manages immutable policies.
+- `security_operator`: Key Vault and identities.
+- `audit_reader`: read-only evidence access.
+- `compliance_owner`: approvals for retention and legal hold.
 
-## Betriebsparameter (alle Templates)
+## Operating Parameters, All Templates
 
 - Monitoring:
-  - Ingest-Fail-Rate
-  - DLQ-Anteil
-  - Event-Lag
-  - Daily-Anchor Erfolgsquote
-- Kontrollzyklen:
-  - taegliche Integritaetspruefung (Hash-Chain konsistent)
-  - monatliche Rechte-/Rollenrezertifizierung
-  - quartalsweiser Restore-Test
+  - ingest fail rate,
+  - DLQ share,
+  - event lag,
+  - daily anchor success rate.
+- Control cycles:
+  - daily integrity check: hash chain consistent,
+  - monthly rights and role recertification,
+  - quarterly restore test.
 
-## Mindest-Sicherheitskontrollen
+## Minimum Security Controls
 
-- Webhook-Signaturpruefung zwingend
-- mTLS/TLS fuer alle Transportwege
-- getrennte Betriebsrollen (SoD)
-- keine Loeschrechte auf Journalobjekte vor Retention-Ende
-- Schluesselrotation und dokumentierte Notfallprozesse
+- Webhook signature check is mandatory.
+- mTLS/TLS for all transport paths.
+- Separated operating roles and segregation of duties.
+- No deletion rights on journal objects before retention end.
+- Key rotation and documented emergency processes.
 
-## Einfuehrung in 4 Phasen
+## Introduction In Four Phases
 
 1. **Pilot**
-   - ein Vertical, ein Case-Repo, ein Org-Project
-2. **Stabilisierung**
-   - DLQ-Handling, Observability, Anchor-Reports
+   - one vertical, one case repository, one organization project.
+2. **Stabilization**
+   - DLQ handling, observability, anchor reports.
 3. **Rollout**
-   - alle relevanten Repos und Events anbinden
-4. **Audit Readiness**
-   - Restore-Test, Nachweispaket, Verfahrensfreigabe
+   - connect all relevant repositories and events.
+4. **Audit readiness**
+   - restore test, evidence package, procedure approval.
 
-## Betriebsentscheidungsvorlage
+## Operating Decision Template
 
-Jedes Unternehmen dokumentiert vor Go-Live:
+Each organization documents before go-live:
 
-- gewaehltes Template (`A` oder `B`)
-- verantwortliche Rollen (namentlich)
-- Retention-Frist
-- Legal-Hold-Verfahren
-- Audit-Lesepfad und Eskalationsweg
+- chosen template, `A`, `B`, `C` or `D`,
+- responsible roles by name,
+- retention period,
+- legal-hold procedure,
+- audit read path and escalation path.
 
-## Detaillierte Runbooks
+## Detailed Runbooks
 
-- Azure-Zielvariante: `docs/en/eventstream/runbook-azure.md`
-- AWS-Zielvariante: `docs/en/eventstream/runbook-aws.md`
-- GCP-Zielvariante: `docs/en/eventstream/runbook-gcp.md`
-- OCI-Zielvariante: `docs/en/eventstream/runbook-oci.md`
+- Azure target variant: [docs/en/eventstream/runbook-azure.md](runbook-azure.md)
+- AWS target variant: [docs/en/eventstream/runbook-aws.md](runbook-aws.md)
+- GCP target variant: [docs/en/eventstream/runbook-gcp.md](runbook-gcp.md)
+- OCI target variant: [docs/en/eventstream/runbook-oci.md](runbook-oci.md)
 
-## Plattform-Paritaet (verbindlich)
+## Platform Parity, Binding
 
-- Aenderungen an Eventstream-, Revisionssicherheits- oder Journal-Standards muessen fuer **AWS, Azure, GCP, OCI** synchron gepflegt werden.
-- Einseitige Pflege nur einer Plattform ist nicht zulaessig.
+- Changes to eventstream, audit-proof evidence or journal standards must be
+  maintained synchronously for **AWS, Azure, GCP and OCI**.
+- Maintaining only one platform is not allowed.

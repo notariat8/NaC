@@ -1,60 +1,65 @@
-# Parallelbetrieb mit Version-Binding
+# Parallel Operation With Version Binding
 
-## Ziel
+## Goal
 
-Dieses Dokument regelt den Mischbetrieb, wenn alte und neue Prozessversionen gleichzeitig rechts- und revisionssicher betrieben werden muessen.
+This document regulates mixed operation when old and new process versions must
+run at the same time in a legally robust and audit-proof way.
 
-Kernprinzip: **Die beim Vorgangsstart gueltige Prozessversion bleibt fuer diesen Vorgang verbindlich.**
+Core principle: **the process version valid at matter start remains binding for
+that matter.**
 
-## Verbindliche Regeln
+## Binding Rules
 
-1. Jeder neue Vorgang bekommt beim Start eine Prozessversions-Referenz (`process_version`).
-2. `process_version` verweist auf ein freigegebenes Release-Tag im Unternehmens-Fork.
-3. Laufende Vorgaenge wechseln nicht automatisch auf spaetere Releases.
-4. Neue Releases gelten nur fuer Vorgaenge, die nach Freigabe neu gestartet werden.
-5. Ausnahmen (manueller Umzug eines Vorgangs auf neue Version) brauchen dokumentierte Einzelentscheidung.
+1. Every new matter receives a process-version reference (`process_version`) at
+   start.
+2. `process_version` points to an approved release tag in the organization fork.
+3. Running matters do not automatically move to later releases.
+4. New releases apply only to matters started after approval.
+5. Exceptions, such as manually moving a matter to a new version, require a
+   documented individual decision.
 
-## Mindestmetadaten je Vorgang
+## Minimum Metadata Per Matter
 
 - `request_id`
-- `process_domain` (z. B. `notary`, `invoice`, `tax`)
-- `process_version` (z. B. `v1.6.2`)
-- `version_bound_at` (Zeitpunkt der Bindung)
-- `bound_by_role` (Rolle/Person, die den Vorgang gestartet hat)
-- `compliance_basis` (optional, z. B. interne Richtlinie oder externer Bezug)
+- `process_domain`, for example `notary`, `invoice` or `tax`
+- `process_version`, for example `v1.6.2`
+- `version_bound_at`, timestamp of binding
+- `bound_by_role`, role or person that started the matter
+- `compliance_basis`, optional internal policy or external reference
 
-## Audit-Nachweis
+## Audit Evidence
 
-Fuer jeden Vorgang muss reproduzierbar sein:
+For every matter, it must be reproducible:
 
-- welche Prozessversion galt,
-- wann und warum diese Version gebunden wurde,
-- welche Freigaben fuer diese Version vorlagen,
-- ob und warum es eine dokumentierte Ausnahme gab.
+- which process version applied,
+- when and why that version was bound,
+- which approvals existed for that version,
+- whether and why a documented exception existed.
 
-## Ablauf bei neuem zentralen Update waehrend laufender Faelle
+## Flow When A Central Update Arrives During Running Matters
 
-1. Upstream-Update wird im Unternehmens-Fork ueber Sync-PR bewertet.
-2. Neues Unternehmens-Release wird freigegeben.
-3. Bereits laufende Vorgaenge behalten alte `process_version`.
-4. Neue Vorgaenge nutzen das neue Release.
-5. Reporting/Audit fuehrt Alt- und Neu-Faelle getrennt aus.
+1. The upstream update is assessed in the organization fork through a sync PR.
+2. A new organization release is approved.
+3. Already running matters keep the old `process_version`.
+4. New matters use the new release.
+5. Reporting and audit separate old and new matters.
 
-## Beispiel: Notar legt Akte fuer Mandant an
+## Example: Notary Opens A File For A Client
 
-- 10:15 Uhr: Akte `NOT-2026-0042` startet mit `process_version=v1.4.0`.
-- 12:30 Uhr: Release `v1.5.0` wird freigegeben.
-- 13:00 Uhr: Neue Akte `NOT-2026-0043` startet mit `process_version=v1.5.0`.
-- Ergebnis:
-  - `NOT-2026-0042` laeuft regelkonform auf `v1.4.0` zu Ende.
-  - `NOT-2026-0043` folgt dem neuen Ablauf auf `v1.5.0`.
+- 10:15: file `NOT-2026-0042` starts with `process_version=v1.4.0`.
+- 12:30: release `v1.5.0` is approved.
+- 13:00: new file `NOT-2026-0043` starts with `process_version=v1.5.0`.
+- Result:
+  - `NOT-2026-0042` finishes compliantly on `v1.4.0`.
+  - `NOT-2026-0043` follows the new flow on `v1.5.0`.
 
-Damit bleiben laufende Verfahren stabil und neue Verfahren nutzen den aktualisierten Standard.
+Running matters therefore remain stable and new matters use the updated
+standard.
 
-## Umzugsregel fuer Sonderfaelle
+## Move Rule For Special Cases
 
-Ein Umzug eines laufenden Vorgangs auf eine neue Version ist nur zulaessig, wenn:
+Moving a running matter to a new version is allowed only when:
 
-- fachliche und regulatorische Auswirkungen geprueft wurden,
-- die Entscheidung durch freigabeberechtigte Rolle dokumentiert ist,
-- der Umzug selbst als nachvollziehbarer Nachweisschritt archiviert wird.
+- subject-matter and regulatory effects have been checked,
+- the decision is documented by an authorized role,
+- the move itself is archived as a traceable evidence step.

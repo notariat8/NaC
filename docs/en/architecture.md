@@ -1,26 +1,30 @@
-# Architektur
+# Architecture
 
-## Architekturrahmen
+## Architecture Frame
 
-Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
-`NoC` ist die konkrete Auspraegung dieses Rahmens.
+This architecture follows the `Notariat as Code` model with `Enterprise GitOps`
+as the control principle. `NoC` is the concrete implementation of this frame.
 
-Referenz: `docs/en/organization-as-code-positioning.md`
+Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
-## Schichten
+## Layers
 
 1. `Prompt Frontend`
-   Ein LLM oder Bot nimmt Anfragen in Alltagssprache entgegen und fuellt standardisierte Prozessantraege.
+   An LLM or bot receives natural-language requests and fills standardized
+   process requests.
 2. `Git Control Plane`
-   Branches, Pull Requests, Reviews, Rulesets, Tags und Releases fuehren den offiziellen Lebenszyklus.
+   Branches, pull requests, reviews, rulesets, tags and releases manage the
+   official lifecycle.
 3. `Python Execution Plane`
-   Die Engine validiert Schemas, prueft Zustandsuebergaenge, berechnet Folgewerte und erzeugt Zusammenfassungen.
+   The engine validates schemas, checks state transitions, computes derived
+   values and creates summaries.
 4. `Automation Plane`
-   GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
+   GitHub Actions execute PR checks, periodic processes and approval gates.
 5. `Plugin and Connector Plane`
-   Lokale Plugin- und Connector-Adapter erzeugen Plan-Previews, fuehren freigegebene Aenderungen idempotent aus und schreiben Audit-Evidence zurueck.
+   Local plugin and connector adapters create plan previews, execute approved
+   changes idempotently and write audit evidence back.
 
-## NoC-Layer-Mapping
+## NoC Layer Mapping
 
 ```mermaid
 flowchart LR
@@ -29,104 +33,106 @@ flowchart LR
   executionLayer --> evidenceLayer[EvidenceLayerImmutableEventJournal]
 ```
 
-## Datenfluss
+## Data Flow
 
 ```mermaid
 flowchart TD
-    User["Fachanwender"] --> Prompt["LLM Prompt Frontend"]
-    Prompt --> Draft["JSON Prozessantrag"]
-    Draft --> GitChange["Branch oder Pull Request"]
-    GitChange --> Validate["Python Validierung"]
-    Validate --> Review["Review und Rulesets"]
-    Review --> Runtime["GitHub Actions Runtime"]
-    Runtime --> Outputs["Berichte Exporte Artefakte"]
-    Runtime --> MainState["Verbindlicher main Stand"]
-    MainState --> Close["Tag oder Release fuer Abschluss"]
+    User["Business user"] --> Prompt["LLM prompt frontend"]
+    Prompt --> Draft["JSON process request"]
+    Draft --> GitChange["Branch or pull request"]
+    GitChange --> Validate["Python validation"]
+    Validate --> Review["Review and rulesets"]
+    Review --> Runtime["GitHub Actions runtime"]
+    Runtime --> Outputs["Reports exports artifacts"]
+    Runtime --> MainState["Binding main state"]
+    MainState --> Close["Tag or release for closure"]
 ```
 
-## Fachlicher Zustandsautomat
+## Subject-Matter State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> Draft
-    Draft --> Validated: schema und business rules
-    Validated --> NeedsReview: sensitiver vorgang
-    Validated --> Approved: auto-approval erlaubt
-    NeedsReview --> Approved: reviewer stimmt zu
-    Approved --> Executed: action oder cli fuehrt aus
+    Draft --> Validated: schema and business rules
+    Validated --> NeedsReview: sensitive matter
+    Validated --> Approved: auto approval allowed
+    NeedsReview --> Approved: reviewer approves
+    Approved --> Executed: action or cli executes
     Executed --> Archived: merge tag release
-    Approved --> Rejected: reviewer lehnt ab
-    Rejected --> Draft: neuer entwurf
+    Approved --> Rejected: reviewer rejects
+    Rejected --> Draft: new draft
 ```
 
-## Steuerung per GitHub Actions
+## Control Through GitHub Actions
 
 ### `validate-process.yml`
 
-- startet auf `pull_request` und `workflow_dispatch`
-- validiert geaenderte Prozessdateien
-- erzeugt eine lesbare Zusammenfassung fuer Reviewer
+- starts on `pull_request` and `workflow_dispatch`,
+- validates changed process files,
+- creates a readable summary for reviewers.
 
 ### `run-process.yml`
 
-- erlaubt einen gezielten manuellen Lauf fuer einen Vorgang
-- nutzt den Python-CLI-Einstieg
-- eignet sich fuer Bot-Aufrufe aus einem LLM-Frontend
+- allows a targeted manual run for one matter,
+- uses the Python CLI entry point,
+- is suitable for bot calls from an LLM frontend.
 
 ### `monthly-close.yml`
 
-- laeuft periodisch oder manuell
-- aggregiert Buchungen und Rechnungen fuer einen Monatsabschluss
-- erzeugt einen Abschlussbericht als Artefakt
+- runs periodically or manually,
+- aggregates bookings and invoices for a monthly close,
+- creates a closing report as an artifact.
 
-## Governance-Mapping
+## Governance Mapping
 
-- Pull Request: fachlicher Antrag
-- Review: menschliche Freigabe
-- Environment: harter Freigabepunkt fuer sensible Prozesse
-- Ruleset: Repository-weite Durchsetzungsregel
-- Tag: versionierter Abschluss
-- Release-Artefakt: extern pruefbare Ableitung
+- Pull request: subject-matter request.
+- Review: human approval.
+- Environment: hard approval point for sensitive processes.
+- Ruleset: repository-wide enforcement rule.
+- Tag: versioned closure.
+- Release artifact: externally auditable derivative.
 
-## Referenz, Fork und Rueckfluss
+## Reference, Fork And Return Flow
 
 ```mermaid
 flowchart TD
-    RefModel["Referenz-Musterunternehmen"] --> BranchPack["Branchenmodul anwalt notariat steuer software"]
-    RefModel --> GenericPack["Generische Kernprozesse"]
-    GenericPack --> CompanyFork["Unternehmens-Fork"]
+    RefModel["Reference pattern organization"] --> BranchPack["Domain module law notary tax software"]
+    RefModel --> GenericPack["Generic core processes"]
+    GenericPack --> CompanyFork["Organization fork"]
     BranchPack --> CompanyFork
-    CompanyFork --> LocalChange["Lokale Aenderung als Change Request"]
-    LocalChange --> LocalApprove["Lokale Freigabe und Versionierung"]
-    LocalApprove --> CompanyRun["Betrieb im Unternehmen"]
-    LocalApprove --> UpstreamProposal["Optionale Rueckgabe an Referenz"]
-    UpstreamProposal --> RefReview["Review im Referenzgremium oder Verband"]
+    CompanyFork --> LocalChange["Local change as change request"]
+    LocalChange --> LocalApprove["Local approval and versioning"]
+    LocalApprove --> CompanyRun["Operation in the organization"]
+    LocalApprove --> UpstreamProposal["Optional return to reference"]
+    UpstreamProposal --> RefReview["Review by reference board or association"]
     RefReview --> RefModel
 ```
 
-Operative Details sind ausgelagert nach:
+Operational details are maintained in:
 
-- `docs/en/operations/fork-and-release-operating-model.md`
-- `docs/en/operations/release-sync-playbook.md`
-- `docs/en/operations/parallelbetrieb-version-binding.md`
-- `docs/en/issues/taxonomy.md`
-- `docs/en/service-model/core-vertical-blueprint.md`
-- `docs/en/service-model/vertical-starter-process-catalog.md`
-- `docs/en/operations/single-repo-refactor-plan.md`
-- `docs/en/plugin-plans/README.md`
+- [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
+- [docs/en/operations/release-sync-playbook.md](operations/release-sync-playbook.md)
+- [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
+- [docs/en/issues/taxonomy.md](issues/taxonomy.md)
+- [docs/en/service-model/core-vertical-blueprint.md](service-model/core-vertical-blueprint.md)
+- [docs/en/service-model/vertical-starter-process-catalog.md](service-model/vertical-starter-process-catalog.md)
+- [docs/en/operations/single-repo-refactor-plan.md](operations/single-repo-refactor-plan.md)
+- [docs/en/plugin-plans/README.md](plugin-plans/README.md)
 
-## Plugin- und Connector-Prinzip
+## Plugin And Connector Principle
 
-Plugins und Connectoren sind Ausfuehrungsadapter, nicht fachliche Wahrheit.
-Die fachliche Wahrheit bleibt in Git, Policies, Schemas und Review-Entscheidungen.
-Jeder Adapter muss vor einer Aenderung einen lesbaren Plan erzeugen, nach Freigabe idempotent reconciled werden koennen und Day2-Drift sichtbar machen.
+Plugins and connectors are execution adapters, not subject-matter truth. The
+subject-matter truth remains in Git, policies, schemas and review decisions.
+Every adapter must create a readable plan before a change, reconcile
+idempotently after approval and make Day 2 drift visible.
 
-Lokale Ausfuehrung erfolgt im WSL-Workspace `~/NoC`. Omnistation ist fuer NoC kein Ausfuehrungsort.
+Local execution happens in the WSL workspace `~/NoC`. Omnistation is not an
+execution location for NoC.
 
-## Python-Komponenten
+## Python Components
 
-- `models.py`: normalisierte Datenklassen fuer Prozessantraege
-- `registry.py`: Prozessdefinitionen mit erlaubten Zustandsuebergaengen
-- `schema_tools.py`: leichtgewichtige Validierung gegen JSON-Schemas
-- `engine.py`: Orchestrierung, Idempotenzpruefung und Monatsabschluss
-- `cli.py`: Kommandozeilenoberflaeche fuer lokale und CI-Laeufe
+- `models.py`: normalized data classes for process requests.
+- `registry.py`: process definitions with allowed state transitions.
+- `schema_tools.py`: lightweight validation against JSON schemas.
+- `engine.py`: orchestration, idempotency check and monthly close.
+- `cli.py`: command-line interface for local and CI runs.
