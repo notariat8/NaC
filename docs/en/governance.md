@@ -1,84 +1,99 @@
-# Governance mit Git und GitHub
+# Governance With Git And GitHub
 
-## Repository-Regeln
+## Repository Rules
 
-Empfohlenes Zielbild fuer `main`:
+Recommended target state for `main`:
 
-- Pushes direkt auf `main` verbieten
-- Pull Requests verpflichtend machen
-- Status-Checks aus `Validate Business Processes` verlangen
-- Review durch mindestens eine fachlich verantwortliche Person verlangen
-- Signierte Tags fuer Abschluesse wie `close/2026-03` verwenden
+- prohibit direct pushes to `main`,
+- require pull requests,
+- require status checks from `Validate Business Processes`,
+- require review by at least one subject-matter owner,
+- use signed tags for closures such as `close/2026-03`.
 
-Empfehlung fuer Unternehmens-Forks:
+Recommendation for organization forks:
 
-- technische Prozessreleases als `v*` markieren
-- Upstream-Uebernahme nur ueber dokumentierte Sync-PRs
-- laufende Vorgaenge auf Startversion belassen (Version-Binding)
+- mark technical process releases as `v*`,
+- take upstream changes only through documented sync PRs,
+- keep running matters on their start version through version binding.
 
-## Environment-Mapping
+## Environment Mapping
 
-- `business-operations`: sensible manuelle Ausfuehrung einzelner Prozesse
-- `month-close`: Monatsabschluss und periodische Aggregation
-- optional `tax-submission`: letzte Freigabestufe vor externer Steuerabgabe
+- `business-operations`: sensitive manual execution of individual processes.
+- `month-close`: monthly close and periodic aggregation.
+- optional `tax-submission`: final approval stage before external tax filing.
 
-## Fachliches Mapping
+## Subject-Matter Mapping
 
-| Git/GitHub-Mechanismus | Fachliche Bedeutung |
+| Git/GitHub mechanism | Subject-matter meaning |
 | --- | --- |
-| Branch | in Arbeit befindlicher Geschaeftsvorgang |
-| Pull Request | formaler Antrag mit Freigabebedarf |
-| Review | fachliche Freigabe |
-| Action Run | dokumentierte maschinelle Ausfuehrung |
-| Artifact | exportierter Nachweis oder Bericht |
-| Tag | Abschlussstand |
-| Release | publizierter, versionierter Nachweis |
+| Branch | business matter in progress |
+| Pull request | formal request requiring approval |
+| Review | subject-matter approval |
+| Action run | documented machine execution |
+| Artifact | exported evidence or report |
+| Tag | closure state |
+| Release | published, versioned evidence |
 
-## Praktische Regeln pro Domäne
+## Practical Rules Per Domain
 
-### Gruendung
+### Formation
 
-- Schritte koennen in einem Sammelvorgang oder als einzelne Prozessdateien gefuehrt werden.
-- Status `needs_review` sollte mit manuellem Review gekoppelt werden.
+- Steps can be handled in one grouped matter or as separate process files.
+- Status `needs_review` should be coupled to manual review.
 
-### Rechnungsstellung
+### Invoicing
 
-- `draft -> approved` nur ueber Pull Request.
-- `approved -> issued` nur in einer gesicherten Runtime oder nach dokumentierter Freigabe.
-- RVG-bezogene Rechnungen nur mit dokumentierter Qualifikation und Freigabe.
+- `draft -> approved` only through pull request.
+- `approved -> issued` only in a protected runtime or after documented approval.
+- RVG-related invoices only with documented qualification and approval.
 
-### Buchfuehrung
+### Bookkeeping
 
-- Buchungssaetze muessen ausgeglichen sein.
-- Idempotenzschluessel und Belegreferenzen verhindern Doppelbuchungen.
+- Accounting entries must be balanced.
+- Idempotency keys and receipt references prevent duplicate bookings.
 
-### Steuer
+### Tax
 
-- `prepared -> approved` immer mit Vier-Augen-Prinzip.
-- `submitted` sollte nur nach manueller Freigabe und moeglichem externen Filing gesetzt werden.
+- `prepared -> approved` always with four-eyes principle.
+- `submitted` should be set only after manual approval and possible external
+  filing.
 
-## Rollenbasierte Entscheidungslogik
+## Role-Based Decision Logic
 
-- Jede Rolle darf Tickets eroefnnen.
-- `low impact` ohne Compliance-Effekt kann self-resolve sein.
-- `medium/high impact` oder rechtlicher Effekt braucht Review/Approval.
-- Qualifikationspflichten haben Vorrang vor allgemeinen Rollenrechten.
+- Every role may open tickets.
+- `low impact` without compliance effect can be self-resolved.
+- `medium/high impact` or legal effect requires review or approval.
+- Qualification duties take priority over general role rights.
 
-Referenz: `policies/role-model-policy.yaml`
+Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)
 
-## Weiterfuehrende Betriebsstandards
+## Further Operating Standards
 
-- Fork-Modell und Verantwortungen: `docs/en/operations/fork-and-release-operating-model.md`
-- Sync-Zyklus und PR-Gates: `docs/en/operations/release-sync-playbook.md`
-- Mischbetrieb und Audit-Nachweis: `docs/en/operations/parallelbetrieb-version-binding.md`
-- Repo-uebergreifende Issue-Fuehrung: `docs/en/issues/taxonomy.md`
-- Rollen, Zugriffe und zentrale Task-Uebersicht: `docs/en/issues/operations.md`
-- Revisionssicherheit ueber Event-Journal: `docs/en/eventstream/revisionssicherheit.md`
-- Konkrete Plattformvorlagen: `docs/en/eventstream/implementation-templates.md`
-- Azure Runbook: `docs/en/eventstream/runbook-azure.md`
-- AWS Runbook: `docs/en/eventstream/runbook-aws.md`
-- GCP Runbook: `docs/en/eventstream/runbook-gcp.md`
-- OCI Runbook: `docs/en/eventstream/runbook-oci.md`
-- Tenant-Owner- und Service-Modell: `docs/en/service-model/tenant-ownership-and-eventlock-service.md`
-- Function8 Leistungskatalog: `docs/en/service-model/function8-service-catalog.md`
-- Drittbetrieb und Exit ohne Lock-in: `docs/en/service-model/third-party-operations-and-exit.md`
+- Fork model and responsibilities:
+  [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
+- Sync cycle and PR gates:
+  [docs/en/operations/release-sync-playbook.md](operations/release-sync-playbook.md)
+- Mixed operation and audit evidence:
+  [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
+- Cross-repository issue handling:
+  [docs/en/issues/taxonomy.md](issues/taxonomy.md)
+- Roles, access and central task overview:
+  [docs/en/issues/operations.md](issues/operations.md)
+- Audit-proof event journal:
+  [docs/en/eventstream/revisionssicherheit.md](eventstream/revisionssicherheit.md)
+- Concrete platform templates:
+  [docs/en/eventstream/implementation-templates.md](eventstream/implementation-templates.md)
+- Azure runbook:
+  [docs/en/eventstream/runbook-azure.md](eventstream/runbook-azure.md)
+- AWS runbook:
+  [docs/en/eventstream/runbook-aws.md](eventstream/runbook-aws.md)
+- GCP runbook:
+  [docs/en/eventstream/runbook-gcp.md](eventstream/runbook-gcp.md)
+- OCI runbook:
+  [docs/en/eventstream/runbook-oci.md](eventstream/runbook-oci.md)
+- Tenant-owner and service model:
+  [docs/en/service-model/tenant-ownership-and-eventlock-service.md](service-model/tenant-ownership-and-eventlock-service.md)
+- Function8 service catalog:
+  [docs/en/service-model/function8-service-catalog.md](service-model/function8-service-catalog.md)
+- Third-party operation and exit without lock-in:
+  [docs/en/service-model/third-party-operations-and-exit.md](service-model/third-party-operations-and-exit.md)

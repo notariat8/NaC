@@ -1,88 +1,103 @@
-# Plugin Plan: Handelsregister Online-Anmeldung
+# Plugin Plan: Commercial Register Online Filing
 
 Status: `proposed`
 
-## Kernentscheidung
+## Core Decision
 
-`noc-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
+`noc-handelsregister` is focused on preparing online commercial-register
+filings.
 
-Korrektur der Entwicklungsreihenfolge: Fuer einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist zuerst das Card/SAK-Gate (`noc-cyberjack-rfid`)
-erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
-XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt
-`noc-bnotk-xnp`; `noc-handelsregister` ist dann der fachliche Layer fuer
-Registerspur, HRA-/HRB-Plausibilitaet und Paket-Readiness.
+Correction of the development sequence: for a real notary-side filing or
+completion path, the Card/SAK gate (`noc-cyberjack-rfid`) is required first,
+because XNP login tests are not robust without card, card reader, SAK lite or
+XNP card path and secureFramework. Then `noc-bnotk-xnp` follows.
+`noc-handelsregister` is then the subject-matter layer for register track,
+HRA/HRB plausibility and package readiness.
 
-Nur ein reiner Buerger-/Mandanten-Preflight fuer `online.notar.de` kann ohne
-Notar-/XNP-Authentifizierung starten. Dieser Preflight darf keine Einreichung,
-keine Notariatssoftware-Steuerung und keine notarielle Erklaerung ausloesen.
+Only a pure citizen or client preflight for `online.notar.de` can start without
+notary/XNP authentication. This preflight must not trigger filing, notary
+software control or notarial declarations.
 
-Der Fokus ist HRA-first, weil der Nutzer konkrete HRA-Anmeldungen vorbereiten koennen soll. Das Plugin muss aber jede Eingabe zuerst gegen die Registerspur pruefen:
+The focus is HRA first because the user should be able to prepare concrete HRA
+filings. The plugin must still check every input against the register track
+first:
 
-- HRA: typischerweise e.K., OHG, KG und verwandte Personengesellschaften.
-- HRB: typischerweise GmbH, UG und AG.
+- HRA: typically registered merchant, OHG, KG and related partnerships.
+- HRB: typically GmbH, UG and AG.
 
-Wenn ein Nutzer "HRA" sagt, aber eine GmbH oder UG nennt, muss das Plugin die wahrscheinliche HRB-Spur sichtbar machen und eine Klarstellung verlangen.
+If a user says "HRA" but names a GmbH or UG, the plugin must make the likely
+HRB track visible and ask for clarification.
 
-## Betriebsgrenze
+## Operating Boundary
 
-Das Plugin ist kein Registerabruf- oder Scraping-Plugin.
+The plugin is not a register-retrieval or scraping plugin.
 
-Es darf:
+It may:
 
-- den Online-Anmeldefall strukturieren,
-- HRA/HRB-Track, Rechtsform und fehlende Angaben pruefen,
-- Voraussetzungen fuer das notarielle Online-Verfahren abfragen,
-- bei notariatsseitigem Ziel auf `noc-cyberjack-rfid` und danach `noc-bnotk-xnp` als vorgelagerte Card-/XNP-Gates verweisen,
-- ein Anmeldepaket als Plan Preview vorbereiten,
-- Evidence-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
+- structure the online filing case,
+- check HRA/HRB track, legal form and missing information,
+- ask for prerequisites of the notarial online procedure,
+- for notary-side targets, refer to `noc-cyberjack-rfid` and then
+  `noc-bnotk-xnp` as upstream card/XNP gates,
+- prepare a filing package as plan preview,
+- capture evidence metadata for package version, approval and later filing.
 
-Es darf nicht:
+It must not:
 
-- Registerdaten abrufen,
-- geschuetzte Portale automatisieren,
-- notariell relevante Erklaerungen abgeben,
-- Unterschriften, Identifizierung oder Einreichung ersetzen,
-- echte Ausweis-, PIN-, Zertifikats- oder Mandatsdaten im Repo speichern.
+- retrieve register data,
+- automate protected portals,
+- make notarially relevant declarations,
+- replace signatures, identification or filing,
+- store real ID, PIN, certificate or mandate data in the repository.
 
-## Grundlage
+## Basis
 
-Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet werden; zunaechst Bargruendungen, seit 01.08.2023 auch Sach- oder gemischte Gruendungen. Ebenfalls ist die Beglaubigung von Handelsregister-Anmeldungen aller Rechtsformen mit Ausnahme von Vereinen seit 01.08.2022 online zulaessig. Fuer das Verfahren werden die App der Bundesnotarkammer, ein amtlicher Ausweis mit eID-Funktion und ein gueltiger amtlicher Lichtbildausweis benoetigt.
+According to IHK Munich, GmbHs and UGs can be formed online since
+August 1, 2022: initially cash formations, and since August 1, 2023 also
+contribution-in-kind or mixed formations. Certification of commercial-register
+filings for all legal forms except associations has also been permitted online
+since August 1, 2022. The procedure requires the Bundesnotarkammer app, an
+official ID with eID function and a valid official photo ID.
 
-## Day0
+## Day 0
 
-- Betriebsmodus klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `noc-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
-- Danach `noc-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
-- Registerspur klaeren: HRA, HRB oder anderes Register.
-- Rechtsform klaeren.
-- Firma, Sitz, Registergericht, Beteiligte und Vertretungsbefugnis erfassen.
-- Notarroute klaeren: Online-Verfahren oder Praesenztermin.
-- Bundesnotarkammer-App, eID-Funktion, PIN und Ausweisdokumente als Bereitschaft abfragen, ohne Werte zu speichern.
-- Reviewer und Freigabeinhaber festlegen.
+- Clarify operating mode: citizen/client preflight or notary workstation.
+- For notary workstation, complete `noc-cyberjack-rfid` first: card, reader,
+  PC/SC, SAK lite or XNP card path and secureFramework.
+- Then complete `noc-bnotk-xnp`: local XNP login, official-capacity context,
+  XNotar module and exchange folder.
+- Clarify register track: HRA, HRB or other register.
+- Clarify legal form.
+- Capture company name, seat, register court, participants and power of
+  representation.
+- Clarify notary route: online procedure or in-person appointment.
+- Ask readiness for Bundesnotarkammer app, eID function, PIN and ID documents
+  without storing values.
+- Define reviewers and approval owners.
 
-## Day1
+## Day 1
 
-Das Plugin erzeugt eine Plan Preview mit:
+The plugin creates a plan preview with:
 
-- Betriebsmodus, Card/SAK-Gate-Status und Auth-/XNP-Gate-Status,
-- Registerspur und Plausibilitaetswarnungen,
-- fehlenden Pflichtangaben,
-- Unterlagenliste fuer den Notar,
-- Fragen an Antragsteller oder Rechtsberatung,
-- Approval-Checkpoint vor notarieller Videokommunikation,
-- Evidence-Metadatenmodell fuer Hashes und Paketversionen.
+- operating mode, Card/SAK gate status and auth/XNP gate status,
+- register track and plausibility warnings,
+- missing required information,
+- document list for the notary,
+- questions for applicant or legal advice,
+- approval checkpoint before notarial video communication,
+- evidence metadata model for hashes and package versions.
 
-## Day2
+## Day 2
 
-- Abgelehnte oder zurueckgestellte Anmeldungen nachfassen.
-- Fehlende Anlagen, Identifizierungsfehler, Signaturfehler und Notarhinweise dokumentieren.
-- Paketversion und Evidence-Metadaten aktualisieren.
-- Wiederverwendbare Vorlagen nur ohne Echtdaten im Repo halten.
+- Follow up rejected or postponed filings.
+- Document missing attachments, identification errors, signature errors and
+  notary comments.
+- Update package version and evidence metadata.
+- Keep reusable templates in the repository only without real data.
 
 ## Output Shape
 
-Das Plugin gibt immer diese Abschnitte aus:
+The plugin always returns these sections:
 
 1. `Readiness`
 2. `Application Package`
@@ -90,7 +105,7 @@ Das Plugin gibt immer diese Abschnitte aus:
 4. `Evidence`
 5. `Day2 Follow-up`
 
-## Quellen
+## Sources
 
-- IHK Muenchen: `https://www.ihk-muenchen.de/ratgeber/recht/gesellschaftsrecht/digitalisierung/`
-- Bundesnotarkammer Online-Verfahren: `https://online.notar.de/`
+- IHK Munich: [ihk-muenchen.de](https://www.ihk-muenchen.de/ratgeber/recht/gesellschaftsrecht/digitalisierung/)
+- Bundesnotarkammer online procedure: [online.notar.de](https://online.notar.de/)

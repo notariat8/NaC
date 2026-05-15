@@ -1,57 +1,66 @@
-# Third-Party Betrieb und Exit ohne Lock-in
+# Third-Party Operation And Exit Without Lock-In
 
-## Ziel
+## Goal
 
-Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne Function8 als SaaS-Betreiber sicher weiterfuehren oder zu einem Drittanbieter migrieren koennen.
+This document describes how customers can continue to operate `NoC` and related
+services safely without Function8 as SaaS operator, or migrate them to a third
+party.
 
-## Grundsatz
+## Principle
 
-- Function8 ist ein Angebot, kein technischer Zwang.
-- Alle relevanten Betriebsinformationen muessen in diesem Repo liegen.
-- Jede Leistung muss durch Kundenbetrieb oder Drittbetrieb ersetzbar sein.
+- Function8 is an offer, not a technical lock-in.
+- All relevant operating information must live in this repository.
+- Every service must be replaceable by customer operation or third-party
+  operation.
 
-## Betriebsoptionen
+## Operating Options
 
 1. `function8_managed_service`
-   - Function8 betreibt die Plattform nach den Policies dieses Repos.
+   - Function8 operates the platform according to the policies in this
+     repository.
 2. `customer_self_operated`
-   - Kunde betreibt auf eigener Infrastruktur/Tenant.
+   - Customer operates on own infrastructure or tenant.
 3. `third_party_operated`
-   - ein anderer Dienstleister uebernimmt Betrieb auf Basis derselben Doku.
+   - Another provider takes over operation based on the same documentation.
 
-## Pflichtartefakte fuer Ersetzbarkeit
+## Mandatory Artifacts For Replaceability
 
-- Servicekatalog: `docs/en/service-model/function8-service-catalog.md`
-- Tenant-Modell: `docs/en/service-model/tenant-ownership-and-eventlock-service.md`
-- Revisionssicherheitskonzept: `docs/en/eventstream/revisionssicherheit.md`
-- Cloud-Runbooks: AWS/Azure/GCP/OCI
-- AVV-Checkliste: `docs/en/avv-checkliste-eventlock-saas.md`
+- Service catalog:
+  [docs/en/service-model/function8-service-catalog.md](function8-service-catalog.md)
+- Tenant model:
+  [docs/en/service-model/tenant-ownership-and-eventlock-service.md](tenant-ownership-and-eventlock-service.md)
+- Audit-proof evidence concept:
+  [docs/en/eventstream/revisionssicherheit.md](../eventstream/revisionssicherheit.md)
+- Cloud runbooks: AWS, Azure, GCP, OCI under [docs/en/eventstream/](../eventstream)
+- DPA checklist:
+  [docs/en/avv-checkliste-eventlock-saas.md](../avv-checkliste-eventlock-saas.md)
 
-## Uebergabe an Dritte (Standardablauf)
+## Handover To Third Parties, Standard Flow
 
-1. Scope und Zielmodell (`self` oder `third_party`) festlegen.
-2. Rollen- und Zugriffsmatrix uebergeben.
-3. Event-Schema und Journal-Integritaetsverfahren uebergeben.
-4. Laufende Retention- und Legal-Hold-Zustaende uebergeben.
-5. Betriebsschluessel und Zertifikatsverantwortung geordnet migrieren.
-6. Parallelbetrieb und Abnahmetest durchfuehren.
-7. Altbetrieb geordnet abschalten.
+1. Define scope and target model: `self` or `third_party`.
+2. Transfer role and access matrix.
+3. Transfer event schema and journal integrity procedure.
+4. Transfer current retention and legal-hold states.
+5. Migrate operating keys and certificate responsibility in an orderly way.
+6. Run parallel operation and acceptance test.
+7. Shut down old operation in an orderly way.
 
-## Mindestkriterien fuer risikoarmen Exit
+## Minimum Criteria For Low-Risk Exit
 
-- keine proprietaeren, undokumentierten Datenformate
-- event_schema und hash-chain dokumentiert
-- tenant-spezifische Daten klar isoliert
-- Restore-Test unter neuem Betreiber erfolgreich
-- Audit-Lesepfad unter neuem Betreiber verifiziert
+- no proprietary undocumented data formats,
+- event schema and hash chain documented,
+- tenant-specific data clearly isolated,
+- restore test under new operator successful,
+- audit read path under new operator verified.
 
-## Verbotene Muster
+## Prohibited Patterns
 
-- versteckte Betriebsabhaengigkeiten ohne Repo-Dokumentation
-- ungeklaerte Schluesselhoheit bei Betreiberwechsel
-- fehlende Nachweisfaehigkeit waehrend Migration
+- hidden operating dependencies without repository documentation,
+- unclear key ownership during operator change,
+- missing evidence capability during migration.
 
 ## Governance
 
-- Aenderungen an Exit-/Drittbetriebsregeln nur per PR + Review.
-- Bei SaaS-Leistungen mit personenbezogenen Daten ist AVV-Pflicht zu pruefen und zu dokumentieren.
+- Changes to exit or third-party operation rules only by PR and review.
+- For SaaS services with personal data, DPA obligation must be checked and
+  documented.

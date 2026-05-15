@@ -1,81 +1,90 @@
 # Plugin Plans
 
-## Zweck
+## Purpose
 
-Dieses Verzeichnis beschreibt die lokalen Plugin- und Connector-Plaene fuer NoC.
-Die Plaene sind bewusst als Markdown-Quellen gepflegt, damit sie reviewbar, versioniert und ohne proprietaere Laufzeit lesbar bleiben.
+This directory describes the local plugin and connector plans for NoC. The
+plans are deliberately maintained as Markdown sources so they remain reviewable,
+versioned and readable without a proprietary runtime.
 
-## Grundentscheidung
+## Basic Decision
 
-NoC wird lokal betrieben:
+NoC runs locally:
 
 - Workspace: `~/NoC` in Ubuntu WSL.
-- Git-Quelle: `https://github.com/ofunk/NoC.git`.
-- Codex, OCI CLI, GitHub-CLI und Fachintegrationen werden lokal eingerichtet.
-- Omnistation ist fuer NoC kein Ausfuehrungsort.
-- Remote-Hosts duerfen nur fuer unkritische Recherche genutzt werden.
+- Git source: `https://github.com/ofunk/NoC.git`.
+- Codex, OCI CLI, GitHub CLI and domain integrations are installed locally.
+- Omnistation is not an execution location for NoC.
+- Remote hosts may only be used for non-critical research.
 
-Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Callbacks, OCI-Konfiguration und lokalen Fachintegrationen.
+This decision avoids breaks around GitHub authentication, browser callbacks, OCI
+configuration and local domain integrations.
 
-## Planfamilien
+## Plan Families
 
-| Plan | Zweck | Day0 | Day1 | Day2 |
+| Plan | Purpose | Day 0 | Day 1 | Day 2 |
 | --- | --- | --- | --- | --- |
-| [local-codex-runtime.md](local-codex-runtime.md) | Lokaler Codex-/LLM-Arbeitsplatz | Workspace und Startcheck | lokale Planerzeugung | regelmaessige Tool-/Policy-Pruefung |
-| [github-control-plane.md](github-control-plane.md) | GitHub als GitOps-Steuerung | Auth und Repo-Zugriff | PRs, Checks, Reviews | Branchschutz, Audit, Drift |
+| [local-codex-runtime.md](local-codex-runtime.md) | Local Codex/LLM workstation | Workspace and startup check | Local plan generation | Regular tool and policy checks |
+| [github-control-plane.md](github-control-plane.md) | GitHub as GitOps control plane | Auth and repository access | PRs, checks, reviews | Branch protection, audit, drift |
 | [idaas-plugin-integration.md](idaas-plugin-integration.md) | German eID verification and IAM projection planning | Purpose, tenant, claim set, privacy basis | eID/IAM plan preview and contract check | Assertions, revocations, retention drift, connector recertification |
-| [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Evidence | Drift, Rotation, Kostenkontrolle |
-| [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Plan/Apply/Reconcile | Monitoring, Replays, Exit |
-| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Evidence-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |
-| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzpruefung | Dry-run Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Companion | Card/SAK-Gate, Arbeitsplatz- und Schnittstellenpruefung | lokaler Plan/Apply-Companion | lokale Logs, Evidence, Updatepflege |
-| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security Companion | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Workflow | Stoerungen, Versionen, Evidence |
-| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC Developer- und Local-Companion | Hersteller-/Tooling-Pruefung | Dry-run Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | Card/SAK-Gate vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Card/SAK-Readiness fuer XNP-Test | Firmware, Treiber, Kartenpfad, Evidence |
-| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Workflow- und Evidence-Companion | Zulassung und berechtigtes Interesse | Abrufplan und Evidence-Import | Bundesland-Drift, Protokolle, Gebuehren |
+| [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP and Resource Manager | API key and CLI | Stacks, eventstream, evidence | Drift, rotation, cost control |
+| [domain-connector-runtime.md](domain-connector-runtime.md) | Domain-system connectors | Contract model | Plan/apply/reconcile | Monitoring, replays, exit |
+| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first online commercial-register filing | Register track, legal form, eID/app and notary route | Filing-package plan and evidence checklist | Rejections, signature/identity errors, package versions |
+| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated commercial-register retrieval spike, not the current plugin path | Usage and license check | Dry-run research plan | Rate limits, source switch, audit |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/notary-software local companion | Card/SAK gate, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
+| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA portal and client-security companion | Local beA prerequisites | Send/receive/eEB workflow | Incidents, versions, evidence |
+| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC developer and local companion | Manufacturer/tooling check | Dry-run filing and evidence plans | ERiC versions, evidence, deadlines |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | Card/SAK gate before XNP login | Card, reader, PC/SC, SAK lite, secureFramework | Card/SAK readiness for XNP test | Firmware, driver, card path, evidence |
+| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Land-register portal workflow and evidence companion | Authorization and legitimate interest | Retrieval plan and evidence import | Federal-state drift, logs, fees |
 
-## Reihenfolge bei Handelsregister-/HRA-Workflows
+## Sequence For Commercial Register / HRA Workflows
 
-Der erste technische Baustein haengt vom Betriebsmodus ab:
+The first technical building block depends on the operating mode:
 
-- Buerger-/Mandanten-Preflight: `noc-handelsregister` darf nur Readiness, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
-- Notariatsseitiger Vollzug oder einreichungsnaher Workflow: `noc-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
-- Danach kommt `noc-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `noc-handelsregister` als fachlicher Register-Layer darauf aufbauen.
+- Citizen or client preflight: `noc-handelsregister` may only structure
+  readiness, missing information and notary appointment preparation.
+- Notary-side execution or filing-adjacent workflow: `noc-cyberjack-rfid` comes
+  first, because XNP login cannot be tested without card, reader, SAK lite or
+  XNP card path and secureFramework.
+- Then `noc-bnotk-xnp` follows. Only after local XNP login, official-capacity
+  context, XNotar module and exchange folder are clarified may
+  `noc-handelsregister` build the domain register layer on top.
 
-Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb von Card/SAK-Gate und Notar-/XNP-Gate.
+Therefore HRA is not the first technical integration point. It is the first
+domain layer above the card/SAK gate and the notary/XNP gate.
 
-## Verbindliches Adapter-Muster
+## Binding Adapter Pattern
 
-Jeder Plugin- oder Connector-Plan folgt diesem Ablauf:
+Each plugin or connector plan follows this flow:
 
-1. Intent aufnehmen.
-2. Schema und Policy pruefen.
-3. Plan Preview erzeugen.
-4. Menschliche Freigabe einholen.
-5. Idempotent ausfuehren.
-6. Audit Evidence schreiben.
-7. Drift sichtbar machen.
-8. Exit- und Ersatzpfad dokumentieren.
+1. Capture intent.
+2. Validate schema and policy.
+3. Generate a plan preview.
+4. Obtain human approval.
+5. Execute idempotently.
+6. Write audit evidence.
+7. Make drift visible.
+8. Document exit and replacement path.
 
-## Sicherheitsgrenzen
+## Security Boundaries
 
-- Keine Secrets, Tokens, Private Keys oder personenbezogenen Echtdaten im Repo.
-- Lokale Credentials bleiben in lokalen Stores (`~/.oci`, Git Credential Manager, Browser/OAuth Stores).
-- Adapter duerfen nicht direkt an Policies vorbei schreiben.
-- Sensible Prozesse brauchen Vier-Augen-Freigabe.
-- Jeder dauerhafte manuelle Eingriff muss in Git reconciled werden.
+- No secrets, tokens, private keys or real personal data in the repository.
+- Local credentials stay in local stores (`~/.oci`, Git Credential Manager,
+  browser/OAuth stores).
+- Adapters must not write around policies.
+- Sensitive processes require four-eyes approval.
+- Every durable manual intervention must be reconciled in Git.
 
-## Statusmodell
+## Status Model
 
-Plugin-Plaene nutzen folgende Statuswerte:
+Plugin plans use these status values:
 
-- `draft`: fachlich skizziert, nicht zur Umsetzung freigegeben.
-- `proposed`: umsetzungsnah, aber noch ohne Review.
-- `approved`: fuer Pilotumsetzung freigegeben.
-- `active`: in einem Pilot oder produktiven Ablauf verwendet.
-- `deprecated`: ersetzt, nur noch fuer Rueckverfolgung.
+- `draft`: subject matter sketched, not released for implementation.
+- `proposed`: implementation-adjacent, but not yet reviewed.
+- `approved`: approved for pilot implementation.
+- `active`: used in a pilot or production flow.
+- `deprecated`: replaced, retained only for traceability.
 
-## Lokaler Regenerationsablauf
+## Local Regeneration Flow
 
 ```bash
 cd ~/NoC
@@ -83,17 +92,20 @@ git pull
 python3 scripts/startup_check.py --ide auto --run-tests
 ```
 
-Wenn der Startcheck fehlschlaegt, werden die Fehler dokumentiert und nicht durch Remote-Ausfuehrung umgangen.
-Danach werden die Markdown-Plaene lokal angepasst, geprueft, committed und gepusht.
+If the startup check fails, the errors are documented and not bypassed through
+remote execution. Afterwards the Markdown plans are adjusted locally, checked,
+committed and pushed.
 
-## Offene lokale Voraussetzungen
+## Open Local Prerequisites
 
-Der aktuelle lokale Startcheck erwartet noch:
+The current local startup check still expects:
 
-- `python` als Alias oder Command neben `python3`.
-- `gh` fuer GitHub-Operationen.
-- VS-Code-Extensions `github.copilot` und `github.copilot-chat`, falls VS Code als Ziel-IDE genutzt wird.
-- Paketinstallation oder `PYTHONPATH=src`, damit `business_os` in Tests gefunden wird.
-- Optional `pandoc` fuer PDF-Exporte.
+- `python` as an alias or command in addition to `python3`.
+- `gh` for GitHub operations.
+- VS Code extensions `github.copilot` and `github.copilot-chat` when VS Code is
+  the target IDE.
+- Package installation or `PYTHONPATH=src` so `business_os` can be found in
+  tests.
+- Optional `pandoc` for manual PDF exports only.
 
-Diese Punkte sind lokale Tooling-Aufgaben, keine Omnistation-Aufgaben.
+These items are local tooling tasks, not Omnistation tasks.

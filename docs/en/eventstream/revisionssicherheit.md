@@ -1,18 +1,21 @@
-# Revisionssicherheit mit Eventstreaming (statt Export-only)
+# Audit-Proof Evidence With Eventstreaming, Instead Of Export-Only
 
-## Ausgangspunkt
+## Starting Point
 
-GitHub Issues sind eine starke operative Arbeitsoberflaeche, aber nicht die alleinige revisionssichere Ablage.
-Die revisionssichere Ebene wird als unveraenderbares Event-Journal umgesetzt.
+GitHub Issues are a strong operational work surface, but not the only
+audit-proof storage layer. The audit-proof layer is implemented as an immutable
+event journal.
 
-## Warum Eventstreaming besser passt
+## Why Eventstreaming Fits Better
 
-- Ereignisse werden nah an Echtzeit erfasst (nicht nur periodisch exportiert).
-- Das Journal ist append-only, kryptografisch verknuepft und signiert.
-- Loeschungen/Manipulationen in der operativen Ebene bleiben im Journal nachweisbar.
-- Fachbetrieb (Issues, Projects) und Nachweisebene (Journal) werden sauber getrennt.
+- Events are captured close to real time, not only through periodic export.
+- The journal is append-only, cryptographically linked and signed.
+- Deletions or manipulations in the operational layer remain provable in the
+  journal.
+- Subject operation, such as issues and projects, is cleanly separated from the
+  evidence layer.
 
-## Referenzarchitektur
+## Reference Architecture
 
 ```mermaid
 flowchart LR
@@ -25,11 +28,11 @@ flowchart LR
   dailyAnchor --> auditUse[AuditAndRegulatoryEvidence]
 ```
 
-## Verbindliches Datenmodell je Event
+## Binding Data Model Per Event
 
-Pflichtfelder:
+Required fields:
 
-- `event_id` (global eindeutig)
+- `event_id`, globally unique
 - `event_time_utc`
 - `event_source`
 - `repo`
@@ -41,34 +44,38 @@ Pflichtfelder:
 - `event_hash`
 - `signature_ref`
 
-Damit entsteht eine hash-verkettete, pruefbare Ereigniskette.
+This creates a hash-chained, verifiable event chain.
 
-## Technische Leitplanken
+## Technical Guardrails
 
-1. Webhook-Signaturen pruefen (HMAC).
-2. Broker mit TLS und eindeutiger Producer-Identitaet betreiben.
-3. Dead-Letter-Queue fuer fehlerhafte Events verpflichtend.
-4. Speicherung nur in WORM-faehigem Ziel.
-5. Tagesanker (`daily anchor`) mit Signatur erzeugen.
-6. Regelmaessige Restore- und Integritaetstests durchfuehren.
+1. Check webhook signatures through HMAC.
+2. Operate broker with TLS and clear producer identity.
+3. Dead-letter queue is mandatory for invalid events.
+4. Store only in WORM-capable targets.
+5. Create a daily anchor with signature.
+6. Run regular restore and integrity tests.
 
-## Betriebsmodell
+## Operating Model
 
-- Issues bleiben operative Steuerung.
-- Das Event-Journal ist rechtlich relevante Nachweisschicht.
-- Auditoren arbeiten primaer gegen Journal/Evidence-Index, nicht gegen mutable Issue-Historien.
+- Issues remain the operational control surface.
+- The event journal is the legally relevant evidence layer.
+- Auditors work primarily against journal and evidence index, not mutable issue
+  histories.
 
-## Schritt-fuer-Schritt Implementierung
+## Step-By-Step Implementation
 
-1. Eventquellen festlegen (Org Audit, Issues, Projects, Approvals).
-2. Webhook-Ingest-Endpunkt in geschuetzter Runtime bereitstellen.
-3. Stream-Broker aufsetzen (Kafka/Event Hubs/Kinesis).
-4. Normalizer mit Hash-Chain-Logik implementieren.
-5. WORM-Store mit Aufbewahrungsfrist aktivieren.
-6. Evidence-Index fuer Abfragen aufbauen.
-7. taeglichen Hash-Anker und Signaturprozess aktivieren.
-8. Governance-Prozess und Incident-Playbook finalisieren.
+1. Define event sources: organization audit, issues, projects, approvals.
+2. Provide webhook ingest endpoint in a protected runtime.
+3. Set up stream broker such as Kafka, Event Hubs or Kinesis.
+4. Implement normalizer with hash-chain logic.
+5. Enable WORM store with retention period.
+6. Build evidence index for queries.
+7. Activate daily hash anchor and signature process.
+8. Finalize governance process and incident playbook.
 
-## Hinweis zur heise-Einordnung
+## Note On GRC Assistants
 
-Der Ansatz passt zur Richtung „auditierbare GRC-Assistenten“ (nachvollziehbare Quellen, Guardrails, kontrollierte Betriebsfuehrung), muss in eurem Fall aber um ein unveraenderbares Event-Journal ergaenzt werden, damit die taegliche Revisionssicherheit belastbar ist: [heise-Artikel](https://www.heise.de/news/iX-Workshop-GenAI-fuer-Security-Auditierbare-GRC-Assistenten-und-SOC-Reporting-11211724.html).
+The approach fits the direction of auditable GRC assistants: traceable sources,
+guardrails and controlled operations. For this case it must be complemented by
+an immutable event journal so daily audit-proof evidence becomes robust:
+[heise article](https://www.heise.de/news/iX-Workshop-GenAI-fuer-Security-Auditierbare-GRC-Assistenten-und-SOC-Reporting-11211724.html).

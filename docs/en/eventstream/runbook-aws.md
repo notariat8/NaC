@@ -1,49 +1,49 @@
-# Runbook: AWS Eventstream fuer Revisionssicherheit
+# Runbook: AWS Eventstream For Audit-Proof Evidence
 
-## Zielbild
+## Target State
 
-Diese Zielvariante setzt das revisionssichere Event-Journal auf AWS um:
+This target variant implements the audit-proof event journal on AWS:
 
-- Ingest API (Webhook)
-- Kafka (MSK) als Stream
-- S3 Object Lock (Compliance Mode) als Journal
-- KMS fuer Signaturen
-- Evidence Index (OpenSearch oder SQL)
+- ingest API, webhook,
+- Kafka via MSK as stream,
+- S3 Object Lock in compliance mode as journal,
+- KMS for signatures,
+- evidence index via OpenSearch or SQL.
 
-## Referenzkomponenten
+## Reference Components
 
-- `ingest-api`: ECS/Fargate oder EKS Service
-- `event-broker`: MSK Cluster + Topics
-- `journal-store`: S3 Bucket mit Object Lock Compliance
-- `anchor-job`: taeglicher Signaturjob (Lambda/Batch)
-- `evidence-index`: OpenSearch/SQL
+- `ingest-api`: ECS/Fargate or EKS service.
+- `event-broker`: MSK cluster plus topics.
+- `journal-store`: S3 bucket with Object Lock Compliance.
+- `anchor-job`: daily signature job through Lambda or Batch.
+- `evidence-index`: OpenSearch/SQL.
 
-## Mindestkonfiguration
+## Minimum Configuration
 
 ### MSK/Kafka
 
-- Broker: 3 (Multi-AZ)
-- Replication Factor: 3
-- min.insync.replicas: 2
-- Topic Retention: 7-30 Tage
-- TLS in transit: aktiv
-- Auth: IAM/SASL je Architektur
+- Brokers: 3, multi-AZ.
+- Replication factor: 3.
+- `min.insync.replicas`: 2.
+- Topic retention: 7-30 days.
+- TLS in transit: active.
+- Auth: IAM/SASL depending on architecture.
 
-### S3 Journal (WORM)
+### S3 Journal, WORM
 
-- Bucket: `event-journal-immutable`
-- Object Lock: `Compliance`
-- Default Retention: z. B. 3650 Tage
-- Delete/Overwrite vor Frist: verboten
-- Lifecycle nur fuer zulaessige Langzeitklassen
+- Bucket: `event-journal-immutable`.
+- Object Lock: `Compliance`.
+- Default retention: for example 3650 days.
+- Delete/overwrite before retention end: prohibited.
+- Lifecycle only for allowed long-term storage classes.
 
-### Signaturen
+### Signatures
 
-- KMS Key: `alias/event-anchor-signing`
-- Algorithmus: RSA_PSS_SHA_256 (oder organisationaler Standard)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- KMS key: `alias/event-anchor-signing`.
+- Algorithm: `RSA_PSS_SHA_256` or organizational standard.
+- Anchor frequency: daily at 23:59 UTC.
 
-## Event-Schema (Mussfelder)
+## Event Schema, Required Fields
 
 - `event_id`
 - `event_time_utc`
@@ -59,44 +59,44 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf AWS um:
 - `event_hash`
 - `signature_ref`
 
-## Event-Fluss
+## Event Flow
 
-1. GitHub Webhooks gehen an Ingest API.
-2. Ingest API validiert HMAC-Signaturen.
-3. Validierte Events werden nach Kafka publiziert.
-4. Normalizer konsumiert Topics und erzeugt hash-verkettete Journal-Events.
-5. Journal-Events werden append-only in S3 Object Lock gespeichert.
-6. Evidence Index wird fuer Abfragen aktualisiert.
-7. Daily Anchor schliesst Kette und signiert den Tagesabschluss.
+1. GitHub webhooks go to the ingest API.
+2. The ingest API validates HMAC signatures.
+3. Valid events are published to Kafka.
+4. The normalizer consumes topics and creates hash-chained journal events.
+5. Journal events are stored append-only in S3 Object Lock.
+6. Evidence index is updated for queries.
+7. Daily anchor closes the chain and signs the daily closure.
 
-## Rollen und Verantwortungen
+## Roles And Responsibilities
 
-- `stream_operator`: MSK, Ingest, Consumer Betrieb
-- `journal_custodian`: S3 Object Lock, Retention, Legal Hold
-- `security_operator`: KMS, IAM, Netzwerkzugriffe
-- `audit_reader`: read-only auf Index + Anchors
-- `compliance_owner`: Freigabe bei Aufbewahrungs-/Legal-Hold-Themen
+- `stream_operator`: MSK, ingest and consumer operation.
+- `journal_custodian`: S3 Object Lock, retention, legal hold.
+- `security_operator`: KMS, IAM, network access.
+- `audit_reader`: read-only access to index and anchors.
+- `compliance_owner`: approval for retention or legal-hold topics.
 
-## Betriebsgrenzwerte (Start)
+## Operating Thresholds, Start
 
-- Consumer Lag Warnung: > 60 Sekunden
-- DLQ-Rate Warnung: > 0.5 %
-- HMAC-Signaturfehler: > 0.1 % / Stunde
-- Anchor-Fehler: 0 toleriert (P1 Incident)
+- Consumer lag warning: more than 60 seconds.
+- DLQ rate warning: more than 0.5 percent.
+- HMAC signature errors: more than 0.1 percent per hour.
+- Anchor error: zero tolerated, P1 incident.
 
-## Notfallverfahren
+## Emergency Procedures
 
-1. Ingest stoert: Eingangsqueue aktivieren, Incident eroefnen.
-2. Kafka stoert: Producer-Retry + kontrollierte Pufferung.
-3. Journal-Write stoert: Stream stoppen, kein Eventverlust zulassen.
-4. Anchor fehlgeschlagen: manueller Signaturlauf + Vier-Augen-Freigabe.
+1. Ingest disturbed: enable input queue, open incident.
+2. Kafka disturbed: producer retry plus controlled buffering.
+3. Journal write disturbed: stop stream, allow no event loss.
+4. Anchor failed: manual signature run plus four-eyes approval.
 
-## Go-Live-Checkliste
+## Go-Live Checklist
 
-- [ ] HMAC-Signaturpruefung aktiv
-- [ ] MSK redundante Konfiguration verifiziert
-- [ ] S3 Object Lock Compliance aktiv
-- [ ] KMS-Signaturtest erfolgreich
-- [ ] Daily Anchor Report vorhanden
-- [ ] Restore-Test erfolgreich
-- [ ] Rollenrezertifizierung dokumentiert
+- [ ] HMAC signature check active.
+- [ ] Redundant MSK configuration verified.
+- [ ] S3 Object Lock Compliance active.
+- [ ] KMS signature test successful.
+- [ ] Daily anchor report available.
+- [ ] Restore test successful.
+- [ ] Role recertification documented.

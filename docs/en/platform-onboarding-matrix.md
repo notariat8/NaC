@@ -1,43 +1,49 @@
-# Plattform-Matrix fuer Onboarding und Regeln
+# Platform Matrix For Onboarding And Rules
 
-## Ziel
+## Goal
 
-Sicherstellen, dass Konzept-, Regel- und Onboarding-Aenderungen fuer alle Plattformen synchron gepflegt werden.
+Ensure that concept, rule and onboarding changes are maintained synchronously
+for all supported platforms.
 
-## Pflichtpfade
+## Mandatory Paths
 
-| Plattform | Pflichtdateien |
+| Platform | Mandatory files |
 | --- | --- |
-| Cursor | `AGENTS.md`, `.cursor/rules/`, `docs/en/START_HERE.md`, `docs/en/plugin-plans/README.md` |
-| VS Code + Copilot | `AGENTS.md`, `.github/copilot-instructions.md`, `docs/en/vscode-copilot-start.md`, `docs/en/plugin-plans/README.md` |
+| Cursor | [AGENTS.md](../../AGENTS.md), [.cursor/rules/](../../.cursor/rules), [docs/en/START_HERE.md](START_HERE.md), [docs/en/plugin-plans/README.md](plugin-plans/README.md) |
+| VS Code + Copilot | [AGENTS.md](../../AGENTS.md), [.github/copilot-instructions.md](../../.github/copilot-instructions.md), [docs/en/vscode-copilot-start.md](vscode-copilot-start.md), [docs/en/plugin-plans/README.md](plugin-plans/README.md) |
 
-## Gemeinsamer Kern
+## Shared Core
 
-Die folgenden Inhalte muessen inhaltlich auf beiden Plattformen gleich bleiben:
+The following content must remain equivalent on both platforms:
 
-- Compliance- und Governance-Prinzipien
-- Review- und Freigabelogik
-- Kultur- und Sprachpolicy
-- Onboarding-Reihenfolge fuer Nicht-IT-Nutzer
-- Default-MVP-Module und zugehoerige Onboarding-Prompts
-- lokaler Ausfuehrungsort fuer NoC (`~/NoC` in WSL)
-- Plugin-/Connector-Planungsmodell
+- compliance and governance principles,
+- review and approval logic,
+- culture and language policy,
+- onboarding order for non-IT users,
+- default MVP modules and related onboarding prompts,
+- local execution location for NoC: `~/NoC` in WSL,
+- plugin and connector planning model.
 
-## Aenderungsregel
+## Change Rule
 
-Bei jeder konzeptuellen Aenderung:
+For every conceptual change:
 
-1. Kerninhalt aktualisieren
-2. Cursor-Pfad aktualisieren
-3. VS-Code-Copilot-Pfad aktualisieren
-4. Verlinkungen im `README.md` und `docs/en/START_HERE.md` pruefen
+1. Update core content.
+2. Update Cursor path.
+3. Update VS Code Copilot path.
+4. Check links in [README.md](../../README.md) and
+   [docs/en/START_HERE.md](START_HERE.md).
 
-## Aktueller synchroner MVP-Default
+## Current Synchronous MVP Default
 
-- `software_company` -> `prompts/en/onboarding/software-company-first-setup.md`
-- `notary` -> `prompts/en/onboarding/notary-first-setup.md`
-- `wealth_management` -> `prompts/en/onboarding/wealth-management-first-setup.md`
+- `software_company`:
+  [prompts/en/onboarding/software-company-first-setup.md](../../prompts/en/onboarding/software-company-first-setup.md)
+- `notary`:
+  [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
+- `wealth_management`:
+  [prompts/en/onboarding/wealth-management-first-setup.md](../../prompts/en/onboarding/wealth-management-first-setup.md)
 
-Zusaetzlicher MVP-Use-Case:
+Additional MVP usecase:
 
-- `property_management` -> `prompts/en/onboarding/property-management-first-setup.md`
+- `property_management`:
+  [prompts/en/onboarding/property-management-first-setup.md](../../prompts/en/onboarding/property-management-first-setup.md)

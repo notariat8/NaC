@@ -1,176 +1,189 @@
-# Fachanwender-Guide: Git als Business-OS ohne IT-Spezialwissen
+# Business-User Guide: Git As A Business OS Without IT Specialist Knowledge
 
-## Warum dieses Modell hilfreich ist
+## Why This Model Helps
 
-Ein Unternehmen lebt von wiederholbaren Entscheidungen und nachvollziehbaren Ablaeufen. In vielen Firmen existieren diese Regeln nur in Koepfen, E-Mails oder einzelnen Tools. Das fuehrt zu:
+An organization depends on repeatable decisions and traceable flows. In many
+companies these rules exist only in people's heads, emails or individual tools.
+That leads to:
 
-- unklaren Verantwortlichkeiten,
-- unvollstaendiger Dokumentation,
-- schwerer Pruefbarkeit bei Audit, Steuer oder Qualitaetsnachweisen,
-- hoher Abhaengigkeit von Einzelpersonen.
+- unclear responsibilities,
+- incomplete documentation,
+- difficult auditability for audits, tax or quality evidence,
+- high dependency on individual people.
 
-Git als Business-OS loest dieses Problem, indem jeder relevante Prozessschritt versioniert, freigegeben und dauerhaft nachvollziehbar dokumentiert wird.
+Git as a business OS solves this by versioning, approving and permanently
+documenting every relevant process step.
 
-Kurz gesagt:
+In short:
 
-- Das LLM ist die einfache Spracheingabe fuer Mitarbeitende.
-- Git ist das verlaessliche Protokoll- und Freigabesystem.
-- Python ist die standardisierte Ausfuehrung fuer wiederholbare Prozesse.
+- The LLM is the simple language input for employees.
+- Git is the reliable protocol and approval system.
+- Python is the standardized execution layer for repeatable processes.
 
-## Warum Prozesse zuerst gebaut werden sollten
+## Why Processes Should Be Built First
 
-Bevor ein Prozess in der Organisation ausgerollt wird, sollte er im Muster sauber modelliert sein. Sonst werden Fehler erst im Tagesgeschaeft sichtbar. Das Muster liefert:
+Before a process is rolled out in the organization, it should be modeled cleanly
+in the pattern. Otherwise errors become visible only in day-to-day operations.
+The pattern provides:
 
-- klare Rollen,
-- eindeutige Statusschritte,
-- definierte Freigabepunkte,
-- pruefbare Dokumentationspflichten.
+- clear roles,
+- unambiguous status steps,
+- defined approval points,
+- auditable documentation duties.
 
-Dadurch gilt: Erst Prozessdesign, dann operative Einfuehrung.
+Therefore: process design first, operational rollout second.
 
-## Warum auch bereits implementierte Prozesse dokumentiert werden sollen
+## Why Already Implemented Processes Should Also Be Documented
 
-Auch bestehende Ablaeufe muessen in das System ueberfuehrt werden, damit:
+Existing flows also need to be transferred into the system so that:
 
-- Ist-Prozesse transparent werden,
-- Risiken und Abweichungen sichtbar werden,
-- Verbesserungen versioniert geplant werden koennen,
-- Audits belastbare Nachweise sehen.
+- current-state processes become transparent,
+- risks and deviations become visible,
+- improvements can be planned in a versioned way,
+- audits can rely on robust evidence.
 
-Praktisch bedeutet das: Bestehende Prozesse werden zuerst als "Ist-Version" aufgenommen, dann schrittweise in verbesserte "Soll-Versionen" ueberfuehrt.
+Practically this means that existing processes are first captured as an
+"as-is version" and then gradually transformed into improved "target versions".
 
-## Generische und branchenspezifische Bausteine
+## Generic And Domain-Specific Building Blocks
 
-### Generische Prozesse (fuer fast alle Unternehmen)
+### Generic Processes For Almost All Organizations
 
-- Rollen und Freigaben
-- Rechnungsstellung
-- Buchfuehrung
-- Steuerprozesse
-- Monats- und Jahresabschluss
-- Fristen- und Nachweismanagement
+- roles and approvals,
+- invoicing,
+- bookkeeping,
+- tax processes,
+- monthly and annual closing,
+- deadline and evidence management.
 
-### Branchenspezifisches Wissen (als Wahloptionen)
+### Domain-Specific Knowledge As Options
 
-- Anwaltskanzlei: Mandatsannahme, Fristenkalender, Konfliktpruefung, Aktenabschluss
-- Notariat: Urkundenvorbereitung, Identitaetspruefung, Vollzugsschritte
-- Steuerbuero: Mandanten-Onboarding, Deklarationszyklen, Plausibilitaetspruefung
-- Softwareunternehmen: Release-Freigaben, SLA/Support-Prozesse, Compliance-Nachweise
+- Law firm: mandate acceptance, deadline calendar, conflict check, file closure.
+- Notary office: deed preparation, identity check, completion steps.
+- Tax office: client onboarding, declaration cycles, plausibility checks.
+- Software company: release approvals, SLA/support processes, compliance
+  evidence.
 
-Das Musterunternehmen kombiniert immer beides:
+The pattern organization always combines both:
 
-- Kernprozesse aus dem generischen Standard
-- Fachmodule aus der jeweiligen Branche
+- core processes from the generic standard,
+- domain modules from the respective industry.
 
-## Entscheidungsprinzip bei unterschiedlichen Arbeitsweisen
+## Decision Principle For Different Ways Of Working
 
-Wenn Unternehmen unterschiedlich arbeiten, muss das als konfigurierbare Wahlmoeglichkeit modelliert sein, nicht als Ausnahme.
+When organizations work differently, this must be modeled as a configurable
+choice, not as an exception.
 
-Beispiel:
+Example:
 
-- Variante A: Rechnung wird nach fachlicher Freigabe automatisch versendet.
-- Variante B: Rechnung wird erst nach kaufmaennischer Endfreigabe versendet.
+- Variant A: the invoice is sent automatically after subject-matter approval.
+- Variant B: the invoice is sent only after final commercial approval.
 
-Beide Varianten koennen gueltig sein. Das System dokumentiert, welche Variante fuer welches Unternehmen gilt und seit wann.
+Both variants can be valid. The system documents which variant applies to which
+organization and since when.
 
-## So startet ein Nicht-IT-Entscheider in der eigenen Firma
+## How A Non-IT Decision Maker Starts In Their Own Company
 
-## Schritt 1: Verantwortung und Zielbild festlegen
+## Step 1: Define Responsibility And Target Picture
 
-- Benennen Sie einen fachlichen Prozessverantwortlichen.
-- Definieren Sie 3-5 Kernprozesse fuer den Start.
-- Legen Sie fest, welche Nachweise aus Pruefungs- oder Haftungssicht zwingend sind.
+- Name a subject-matter process owner.
+- Define three to five core processes for the start.
+- Define which evidence is mandatory from audit or liability perspectives.
 
-## Schritt 2: Eigenes Unternehmens-Repository aufsetzen
+## Step 2: Set Up A Company Repository
 
-- Legen Sie ein eigenes Git-Repository fuer Ihr Unternehmen an.
-- Nutzen Sie dieses Muster als Vorlage und uebernehmen Sie nur passende Teile.
-- Definieren Sie Zugriff und Rollen (wer darf vorschlagen, pruefen, freigeben).
+- Create a dedicated Git repository for your organization.
+- Use this pattern as a template and adopt only the suitable parts.
+- Define access and roles: who may propose, review and approve.
 
-## Schritt 3: Muster klonen und erste Firmenvariante erstellen
+## Step 3: Clone The Pattern And Create The First Company Variant
 
-- Klonen Sie das Muster in Ihre Umgebung.
-- Passen Sie Branchenmodule an Ihr konkretes Geschaeft an.
-- Starten Sie mit einer Pilotstrecke, z. B. Rechnungsprozess fuer einen Standort.
+- Clone the pattern into your environment.
+- Adapt domain modules to your concrete business.
+- Start with a pilot path, for example the invoicing process for one location.
 
-## Schritt 4: Freigaberegeln verbindlich machen
+## Step 4: Make Approval Rules Binding
 
-- Prozesse duerfen nur ueber Pull Request geaendert werden.
-- Sensible Schritte erhalten Vier-Augen-Freigabe.
-- Monatsabschluesse werden als versionierte Staende markiert.
+- Processes may be changed only through pull requests.
+- Sensitive steps receive four-eyes approval.
+- Monthly closings are marked as versioned states.
 
-## Schritt 5: Betrieb mit kontinuierlicher Verbesserung
+## Step 5: Operate With Continuous Improvement
 
-- Jede Abweichung wird als Change Request dokumentiert.
-- Jede Aenderung erhaelt eine Versionsnummer mit Begruendung.
-- Jede neue Version wird vor Rollout in einer Teststrecke geprueft.
+- Every deviation is documented as a change request.
+- Every change receives a version number with rationale.
+- Every new version is tested in a pilot path before rollout.
 
-## Kontinuierliches Verbesserungswesen (KVP) in Git
+## Continuous Improvement In Git
 
 ```mermaid
 flowchart TD
-    IstProzess["Ist-Prozess im Betrieb"] --> Beobachtung["Abweichung oder Verbesserung erkannt"]
-    Beobachtung --> ChangeRequest["Change Request im Repository"]
-    ChangeRequest --> Bewertung["Fachliche und regulatorische Bewertung"]
-    Bewertung --> Pilot["Pilot in Testbereich"]
-    Pilot --> Freigabe["Freigabe durch Verantwortliche"]
-    Freigabe --> Rollout["Rollout als neue Prozessversion"]
-    Rollout --> Nachweis["Versionierter Nachweis fuer Audit"]
-    Nachweis --> IstProzess
+    CurrentProcess["Current process in operation"] --> Observation["Deviation or improvement identified"]
+    Observation --> ChangeRequest["Change request in the repository"]
+    ChangeRequest --> Assessment["Subject-matter and regulatory assessment"]
+    Assessment --> Pilot["Pilot in test area"]
+    Pilot --> Approval["Approval by responsible roles"]
+    Approval --> Rollout["Rollout as new process version"]
+    Rollout --> Evidence["Versioned audit evidence"]
+    Evidence --> CurrentProcess
 ```
 
-## Wie alle von Verbesserungen profitieren koennen
+## How Everyone Can Benefit From Improvements
 
-Sinnvoll ist ein Modell aus:
+A useful model consists of:
 
-- zentralem Referenz-Muster (generisch + branche),
-- Unternehmens-Forks fuer lokale Anpassungen,
-- geregeltem Rueckfluss guter Verbesserungen in den Referenzstandard.
+- a central reference pattern, generic plus domain,
+- organization forks for local adjustments,
+- a controlled return path for good improvements into the reference standard.
 
-Damit entstehen:
+This creates:
 
-- lokale Flexibilitaet,
-- gemeinsamer Lerngewinn,
-- stabiler, versionierter Dokumentationsstandard.
+- local flexibility,
+- shared learning,
+- stable, versioned documentation standards.
 
-## Alt- und Neu-Prozess parallel betreiben
+## Running Old And New Processes In Parallel
 
-Wenn waehrend laufender Verfahren ein neues Release kommt, gilt:
+When a new release arrives while matters are running:
 
-- laufende Faelle bleiben auf ihrer Startversion,
-- neue Faelle starten auf der neu freigegebenen Version,
-- beide Linien bleiben im Audit sauber trennbar.
+- running matters remain on their start version,
+- new matters start on the newly approved version,
+- both lines remain cleanly separable in the audit.
 
-Beispiel Notariat:
+Example notary office:
 
-- Akte A startet um 10:15 auf `v1.4.0` und bleibt dort.
-- Akte B startet nach Freigabe um 13:00 auf `v1.5.0`.
+- File A starts at 10:15 on `v1.4.0` and remains there.
+- File B starts after approval at 13:00 on `v1.5.0`.
 
-Details: `docs/en/operations/parallelbetrieb-version-binding.md`
+Details: [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
 
-## Rolle von Verbaenden und Zertifizierung
+## Role Of Associations And Certification
 
-Ihre Idee ist fachlich sehr sinnvoll: Wenn z. B. 1000 Kanzleien denselben Kernprozess nutzen, kann ein Verband eine referenzierte Standardversion fachlich pruefen und empfehlen.
+The idea is sound from a subject-matter perspective: when, for example, 1,000
+law firms use the same core process, an association can review and recommend a
+referenced standard version.
 
-Moegliches Modell:
+Possible model:
 
-- Verbands-Referenzprozess mit klarer Versionshistorie
-- Formale Pruefung gegen Qualitaets- und Compliance-Kriterien
-- Optionales Zertifikat oder Testat fuer eine bestimmte Prozessversion
-- Oeffentliche Nachweise, welche Version geprueft wurde
+- association reference process with clear version history,
+- formal review against quality and compliance criteria,
+- optional certificate or attestation for a specific process version,
+- public evidence of which version was reviewed.
 
-Wichtig:
+Important:
 
-- Das Zertifikat sollte immer auf eine konkrete Version verweisen.
-- Jede Aenderung nach Zertifizierung braucht neue Bewertung.
-- Unternehmen duerfen lokal erweitern, verlieren aber ggf. den Zertifizierungsstatus fuer geaenderte Teile, bis diese neu geprueft sind.
+- A certificate should always refer to a concrete version.
+- Every change after certification requires a new assessment.
+- Organizations may extend locally, but may lose certification status for
+  modified parts until those parts have been reviewed again.
 
-## Praktische Empfehlung fuer den Start in 90 Tagen
+## Practical 90-Day Start Recommendation
 
-- Woche 1-2: Zielbild, Rollen, Pilotprozesse festlegen
-- Woche 3-4: Repository aufsetzen, Muster uebernehmen, Freigaberegeln definieren
-- Woche 5-8: Pilot fuer Rechnung und Buchfuehrung durchfuehren
-- Woche 9-10: Steuer- und Fristenprozess anbinden
-- Woche 11-12: Lessons Learned, Change Requests, Version 1.0 freigeben
+- Weeks 1-2: define target picture, roles and pilot processes.
+- Weeks 3-4: set up repository, adopt pattern, define approval rules.
+- Weeks 5-8: run pilot for invoicing and bookkeeping.
+- Weeks 9-10: connect tax and deadline process.
+- Weeks 11-12: lessons learned, change requests, approve version 1.0.
 
-So erhalten Sie ein belastbares, pruefbares und lernfaehiges Prozessbetriebssystem fuer Ihr Unternehmen.
+This gives the organization a robust, auditable and learnable process operating
+system.

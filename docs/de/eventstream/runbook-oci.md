@@ -10,6 +10,9 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf OCI um:
 - OCI Vault (Signaturen/Schluessel)
 - Evidence Index (OCI OpenSearch oder SQL)
 
+Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+englische Fassung wird synchron als Orientierung gepflegt.
+
 ## Referenzkomponenten
 
 - `ingest-api`: OCI Container Instance/OKE Service

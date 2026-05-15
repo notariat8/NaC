@@ -1,96 +1,100 @@
-# AVV-Checkliste fuer EventLock-SaaS (Function8 als Auftragsverarbeiter)
+# DPA Checklist For EventLock SaaS, Function8 As Processor
 
-## Zweck
+## Purpose
 
-Diese Checkliste hilft, den AVV (Art. 28 DSGVO) fuer das EventLock-as-a-Service-Modell strukturiert und nachweisbar vorzubereiten.
-Sie gilt analog fuer alle weiteren Function8-Leistungen, die als Auftragsverarbeitung eingestuft werden.
+This checklist helps prepare the data processing agreement under Art. 28 GDPR
+for the EventLock-as-a-Service model in a structured and evidence-ready way. It
+applies analogously to all other Function8 services that are classified as
+processor services.
 
-Hinweis: Dies ist ein operativer Leitfaden und ersetzt keine Rechtsberatung.
+Note: this is an operational guide and does not replace legal advice.
 
-## Wann ist ein AVV erforderlich?
+## When Is A DPA Required?
 
-Ein AVV ist in der Regel erforderlich, wenn:
+A DPA is usually required when:
 
-- Function8 Eventstreaming-/Journal-Daten fuer den Kunden verarbeitet,
-- der Kunde Zweck und Mittel der Verarbeitung vorgibt,
-- personenbezogene Daten oder personenbezogene Metadaten betroffen sein koennen.
+- Function8 processes eventstream or journal data for the customer,
+- the customer determines the purposes and means of processing,
+- personal data or personal metadata may be affected.
 
-## Vertragskern (Pflichtinhalte)
+## Core Contract Contents
 
-- Gegenstand und Dauer der Verarbeitung
-- Art und Zweck der Verarbeitung
-- Kategorien personenbezogener Daten
-- Kategorien betroffener Personen
-- Rechte und Pflichten des Verantwortlichen
-- dokumentierte Weisungsgebundenheit
+- Subject and duration of processing.
+- Nature and purpose of processing.
+- Categories of personal data.
+- Categories of data subjects.
+- Rights and obligations of the controller.
+- Documented instruction binding.
 
-## Technische und organisatorische Massnahmen (TOM)
+## Technical And Organizational Measures
 
-- tenant-separierte Subinstanz pro Kunde
-- dedizierter Schluessel pro Kunde
-- immutable Retention (WORM) pro Kunde
-- rollenbasierter Zugriff (Need-to-know)
-- Protokollierung und revisionssichere Ereigniskette
-- Schluesselrotation und Incident-Prozess
-- Vier-Augen-Freigabe fuer kritische Aenderungen (Retention, Legal Hold)
+- Tenant-separated subinstance per customer.
+- Dedicated key per customer.
+- Immutable retention or WORM per customer.
+- Role-based access on a need-to-know basis.
+- Logging and audit-proof event chain.
+- Key rotation and incident process.
+- Four-eyes approval for critical changes such as retention or legal hold.
 
-## Unterauftragsverarbeiter und Cloud-Standorte
+## Subprocessors And Cloud Locations
 
-- eingesetzte Cloud-Plattform(en) benennen (AWS, Azure, GCP, OCI)
-- konkrete Dienste benennen (z. B. Broker, WORM-Store, KMS)
-- Standorte/Regionen dokumentieren
-- Wechselverfahren fuer Subprozessoren vertraglich regeln
+- Name the cloud platforms used, for example AWS, Azure, GCP or OCI.
+- Name concrete services, for example broker, WORM store or KMS.
+- Document locations and regions.
+- Regulate the change procedure for subprocessors contractually.
 
-## Drittlandtransfer
+## Third-Country Transfer
 
-- pruefen, ob Daten ausserhalb EU/EWR verarbeitet werden
-- falls ja: geeignete Garantien dokumentieren (z. B. SCC)
-- Transfer-Impact-Bewertung dokumentieren
+- Check whether data is processed outside the EU/EEA.
+- If yes, document suitable safeguards such as SCCs.
+- Document the transfer impact assessment.
 
-## Betroffenenrechte und Support-Prozesse
+## Data Subject Rights And Support Processes
 
-- Auskunft, Berichtigung, Loeschung, Einschraenkung: Prozess und SLA
-- eindeutiger Ansprechpartner auf Provider- und Kundenseite
-- Nachweis, wie Weisungen umgesetzt werden
+- Access, rectification, erasure and restriction: process and SLA.
+- Clear contact person on provider and customer side.
+- Evidence of how instructions are implemented.
 
-## Incident und Meldepflichten
+## Incident And Notification Duties
 
-- Frist fuer Erstmeldung an Kunden vertraglich fixieren
-- Meldeinhalt standardisieren (Umfang, Wirkung, Gegenmassnahmen)
-- gemeinsame Eskalationskette dokumentieren
+- Contractually define the first-notification deadline to the customer.
+- Standardize notification content: scope, effect, countermeasures.
+- Document the joint escalation chain.
 
-## Audit und Nachweise
+## Audit And Evidence
 
-- Auditrecht des Kunden klar regeln (remote/on-site, Vorankuendigung)
-- Nachweispaket definieren:
-  - Architektur
-  - TOM-Nachweise
-  - Zugriffsprotokolle
-  - Restore-/Integritaetstests
-- Frequenz fuer Regel-Audits festlegen
+- Clearly regulate the customer's audit right: remote/on-site and notice
+  periods.
+- Define the evidence package:
+  - architecture,
+  - TOM evidence,
+  - access logs,
+  - restore and integrity tests.
+- Define the cadence for regular audits.
 
-## Beendigung und Datenrueckgabe
+## Termination And Data Return
 
-- Rueckgabeformat und Fristen definieren
-- Loeschprozess nach Vertragsende definieren
-- Umgang mit gesetzlichen Aufbewahrungspflichten festlegen
-- Legal-Hold-Faelle gesondert behandeln
+- Define return format and deadlines.
+- Define deletion process after contract termination.
+- Define handling of statutory retention obligations.
+- Treat legal-hold cases separately.
 
-## Rollenmodell Function8 vs Kunde
+## Role Model: Function8 vs Customer
 
 - Function8:
-  - Plattformbetrieb, Security-Baseline, SLA-Betrieb
-- Kunde:
-  - Datenklassifikation, Legal-Hold-Entscheidungen, Freigabe des Audit-Scopes
+  - platform operation, security baseline, SLA operation.
+- Customer:
+  - data classification, legal-hold decisions, approval of audit scope.
 
-Referenz: `docs/en/service-model/tenant-ownership-and-eventlock-service.md`
+Reference:
+[docs/en/service-model/tenant-ownership-and-eventlock-service.md](service-model/tenant-ownership-and-eventlock-service.md)
 
-## Operative Freigabe vor Go-Live
+## Operational Approval Before Go-Live
 
-- [ ] AVV unterschrieben
-- [ ] Subprozessorliste vollstaendig und bestaetigt
-- [ ] TOM-Anlage freigegeben
-- [ ] Regionen und Transferregeln freigegeben
-- [ ] Incident-Meldeprozess getestet
-- [ ] Auditprozess und Ansprechpartner dokumentiert
-- [ ] Retention/Legal-Hold-Owner benannt
+- [ ] DPA signed.
+- [ ] Subprocessor list complete and confirmed.
+- [ ] TOM annex approved.
+- [ ] Regions and transfer rules approved.
+- [ ] Incident notification process tested.
+- [ ] Audit process and contacts documented.
+- [ ] Retention/legal-hold owner named.

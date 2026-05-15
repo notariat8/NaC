@@ -2,72 +2,73 @@
 
 Status: `proposed`
 
-## Ziel
+## Goal
 
-GitHub bleibt die verbindliche GitOps-Steuerung fuer NoC:
+GitHub remains the binding GitOps control plane for NoC:
 
-- Branches und Pull Requests bilden fachliche Aenderungsantraege.
-- Reviews und Checks bilden Freigaben.
-- Issues und Projects bilden Arbeit, Risiken und Drift ab.
-- Actions erzeugen reproduzierbare Validierungs- und Artefaktlaeufe.
+- branches and pull requests represent subject-matter change requests,
+- reviews and checks represent approvals,
+- issues and projects represent work, risks and drift,
+- Actions create reproducible validation and artifact runs.
 
-## Day0
+## Day 0
 
-- Lokale GitHub-Authentifizierung einrichten:
+- Set up local GitHub authentication:
 
 ```bash
 gh auth status
 ```
 
-- Repo-Zugriff pruefen:
+- Check repository access:
 
 ```bash
 git remote -v
 git pull
 ```
 
-- Rollen und GitHub-Identitaeten gegen `policies/github-identity-registry.json` pruefen.
+- Check roles and GitHub identities against
+  [policies/github-identity-registry.json](../../../policies/github-identity-registry.json).
 
-## Day1
+## Day 1
 
-- Branchschutz und Review-Regeln fuer `main` aktivieren.
-- Required Checks an bestehende Workflows binden:
+- Activate branch protection and review rules for `main`.
+- Bind required checks to existing workflows:
   - `quality-gate.yml`
   - `validate-process.yml`
   - `privacy-and-secrets.yml`
   - `governance-policy-sync.yml`
-- Issue-Templates fuer Compliance, Features und Bugs nutzen.
-- Plan Preview fuer Connector-Aenderungen als PR-Kommentar oder Artefakt erzeugen.
+- Use issue templates for compliance, features and bugs.
+- Generate plan preview for connector changes as PR comment or artifact.
 
-## Day2
+## Day 2
 
-- Regelmaessige Rechte- und Rollenrezertifizierung.
-- Offene Drift- und Compliance-Issues reviewen.
-- Workflow-Fehler klassifizieren:
-  - Policy-Fehler
-  - Test-/Validierungsfehler
-  - externe Integrationsfehler
-  - manuelle Nacharbeit
-- Releases fuer verbindliche Prozessversionen taggen.
+- Regularly recertify rights and roles.
+- Review open drift and compliance issues.
+- Classify workflow failures:
+  - policy error,
+  - test or validation error,
+  - external integration error,
+  - manual follow-up.
+- Tag releases for binding process versions.
 
-## Connector-Grenzen
+## Connector Boundaries
 
-Der GitHub-Connector darf:
+The GitHub connector may:
 
-- Issues, PRs, Checks und Releases lesen.
-- geplante Aenderungen als Branch/PR vorschlagen.
-- Status und Audit-Evidence schreiben.
+- read issues, PRs, checks and releases,
+- propose planned changes as branch or PR,
+- write status and audit evidence.
 
-Der GitHub-Connector darf nicht:
+The GitHub connector must not:
 
-- Review-Regeln umgehen.
-- direkt an `main` vorbei schreiben.
-- Secrets im Repo speichern.
-- menschliche Freigaben fuer sensible Prozesse ersetzen.
+- bypass review rules,
+- write directly around `main`,
+- store secrets in the repository,
+- replace human approvals for sensitive processes.
 
-## Akzeptanzkriterien
+## Acceptance Criteria
 
-- `gh auth status` ist lokal gruen.
-- Pull Requests erzwingen Review.
-- Governance- und Quality-Gates laufen.
-- Jeder Connector-Apply ist ueber PR, Check oder Audit-Event nachvollziehbar.
+- `gh auth status` is green locally.
+- Pull requests enforce review.
+- Governance and quality gates run.
+- Every connector apply is traceable through PR, check or audit event.

@@ -1,59 +1,59 @@
-# VS Code: Erstnutzer-Pfad
+# VS Code: First-User Path
 
-## Muss ich alles lesen?
+## Do I Need To Read Everything?
 
-Nein. Sie muessen nicht alle Markdown-Dateien lesen.
+No. You do not need to read every Markdown file.
 
-Empfohlener Minimalpfad:
+Recommended minimum path:
 
-1. `docs/en/START_HERE.md`
-2. `docs/en/vscode-copilot-start.md`
-3. Start mit Formular-Wizard statt Volllektuere
+1. [docs/en/START_HERE.md](START_HERE.md)
+2. [docs/en/vscode-copilot-start.md](vscode-copilot-start.md)
+3. Start with the form wizard instead of reading everything.
 
-## Schritt 1: Startfrage klaeren
+## Step 1: Clarify Start Question
 
-Sie klaeren zuerst:
+First clarify:
 
-- Gruendung (`founding`) oder Bestandsunternehmen (`existing`)?
+- formation (`founding`) or existing organization (`existing`)?
 
-Diese Entscheidung steuert den restlichen Fragepfad.
+This decision controls the rest of the question path.
 
-## Schritt 2: Stateful Onboarding starten
+## Step 2: Start Stateful Onboarding
 
-Starten Sie den Wizard:
+Start the wizard:
 
 ```bash
-python scripts/onboarding_wizard.py start --session out/onboarding/session.json --actor-name "Max Beispiel" --actor-role "prozessverantwortung" --github-login "ofunk-nvidia" --mode existing
+python scripts/onboarding_wizard.py start --session out/onboarding/session.json --actor-name "Max Example" --actor-role "prozessverantwortung" --github-login "ofunk-nvidia" --mode existing
 ```
 
-Fortschritt pruefen:
+Check progress:
 
 ```bash
 python scripts/onboarding_wizard.py status --session out/onboarding/session.json
 ```
 
-Plan exportieren:
+Export plan:
 
 ```bash
 python scripts/onboarding_wizard.py export-plan --session out/onboarding/session.json --output out/onboarding/plan.md
 ```
 
-Audit-Bundle finalisieren (immutable Nachweise mit Hash):
+Finalize audit bundle, immutable evidence with hash:
 
 ```bash
 python scripts/onboarding_wizard.py finalize --session out/onboarding/session.json --output-dir out/onboarding/final --export-pdf
 ```
 
-## Schritt 3: Zusammenarbeit ueber mehrere Tage
+## Step 3: Collaborate Across Several Days
 
-- Jeder Beitrag wird mit Rolle, Name und Zeitstempel gespeichert.
-- Mehrere Personen koennen dieselbe Session-Datei fortsetzen.
-- Rollen- und Qualifikationsmodell bleibt verbindlich.
+- Every contribution is stored with role, name and timestamp.
+- Several people can continue the same session file.
+- The role and qualification model remains binding.
 
-## Schritt 4: Von Analyse zu Pilot
+## Step 4: From Analysis To Pilot
 
-Wenn alle Fragen beantwortet sind:
+When all questions are answered:
 
-1. Pilotprozesse festlegen
-2. Rollen/Qualifikationen finalisieren
-3. ersten Pull Request fuer den Pilot anlegen
+1. Define pilot processes.
+2. Finalize roles and qualifications.
+3. Create the first pull request for the pilot.

@@ -2,79 +2,80 @@
 
 Status: `draft`
 
-## Ziel
+## Goal
 
-Fachsystem-Connectoren sollen NoC-Aenderungen kontrolliert in Zielsysteme reconciled:
+Domain-system connectors should reconcile NoC changes into target systems in a
+controlled way:
 
-- IAM
-- GitHub
-- Jira oder vergleichbare Ticket-Systeme
-- Slack oder Teams fuer Benachrichtigungen
-- spaetere Branchen- oder Kundensysteme
+- IAM,
+- GitHub,
+- Jira or comparable ticket systems,
+- Slack or Teams for notifications,
+- later domain or customer systems.
 
-## Leitprinzip
+## Guiding Principle
 
-Connectoren sind Adapter.
-Sie duerfen die fachliche Wahrheit nicht ersetzen.
-Die Wahrheit liegt in Git, Schemas, Policies, Reviews und freigegebenen Prozessversionen.
+Connectors are adapters. They must not replace subject-matter truth. Truth
+resides in Git, schemas, policies, reviews and approved process versions.
 
-## Vertragsmodell
+## Contract Model
 
-Jeder Connector braucht:
+Every connector needs:
 
-- Input-Schema fuer Intent.
-- Plan-Schema fuer Preview.
-- Apply-Protokoll.
-- Idempotenzschluessel.
-- Audit-Event-Schema.
-- Drift-Check.
-- Exit- und Ersatzpfad.
+- input schema for intent,
+- plan schema for preview,
+- apply protocol,
+- idempotency key,
+- audit-event schema,
+- drift check,
+- exit and replacement path.
 
-## Day0
+## Day 0
 
-- Zielsysteme fuer MVP bestaetigen:
-  - GitHub
-  - IAM
-  - Jira
-- Test- oder Sandbox-Zugang je Zielsystem bereitstellen.
-- Keine echten Kundendaten in Beispielen verwenden.
-- Connector-Konfiguration als Dokumentation starten, nicht als Secret-Datei.
+- Confirm target systems for the MVP:
+  - GitHub,
+  - IAM,
+  - Jira.
+- Provide test or sandbox access per target system.
+- Use no real customer data in examples.
+- Start connector configuration as documentation, not as a secret file.
 
-## Day1
+## Day 1
 
-- Ersten Connector nur im Dry-Run bauen.
-- Plan Preview im PR erzeugen.
-- Reviewer-Gates fuer sensible Aenderungen erzwingen.
-- Apply erst nach Merge oder expliziter Freigabe.
-- Audit Evidence schreiben:
-  - geplanter Zielzustand
-  - ausgefuehrte Operation
-  - Zielsystem-Antwort ohne Secrets
-  - Zeitstempel
-  - Actor
+- Build the first connector in dry-run mode only.
+- Generate plan preview in the PR.
+- Enforce reviewer gates for sensitive changes.
+- Apply only after merge or explicit approval.
+- Write audit evidence:
+  - planned target state,
+  - executed operation,
+  - target-system response without secrets,
+  - timestamp,
+  - actor.
 
-## Day2
+## Day 2
 
-- Drift regelmaessig pruefen.
-- Connector-Ausfaelle als Issues erfassen.
-- Replays idempotent ausfuehren.
-- Zielsystem-Berechtigungen rezertifizieren.
-- Exit-Pfad fuer jeden Connector testen.
+- Check drift regularly.
+- Capture connector failures as issues.
+- Execute replays idempotently.
+- Recertify target-system permissions.
+- Test exit path for every connector.
 
-## MVP-Reihenfolge
+## MVP Sequence
 
-1. GitHub-Connector fuer Issues, PRs, Labels, Reviews und Releases.
-2. IAM-Connector fuer Rollen-/Zugriffsaenderungen im Pilot.
-3. Jira-Connector fuer Ticket- und Prozessuebergabe.
-4. Benachrichtigungsconnector fuer Slack oder Teams.
-5. OCI-Evidence-Connector fuer Eventstream und Audit Journal.
-6. Handelsregister-Spike fuer Registerrecherche ohne produktive Automatisierung.
-7. XNP-Companion fuer lokale Notariatssoftware-Integration.
+1. GitHub connector for issues, PRs, labels, reviews and releases.
+2. IAM connector for role and access changes in the pilot.
+3. Jira connector for ticket and process handoff.
+4. Notification connector for Slack or Teams.
+5. OCI evidence connector for eventstream and audit journal.
+6. Commercial-register spike for register research without productive
+   automation.
+7. XNP companion for local notary-software integration.
 
-## Akzeptanzkriterien
+## Acceptance Criteria
 
-- Jeder Connector erzeugt vor Apply einen menschenlesbaren Plan.
-- Jeder Apply ist idempotent.
-- Jeder Apply schreibt Audit Evidence.
-- Drift wird als Issue oder Plan-Diff sichtbar.
-- Secrets bleiben ausserhalb von Git.
+- Every connector creates a human-readable plan before apply.
+- Every apply is idempotent.
+- Every apply writes audit evidence.
+- Drift becomes visible as an issue or plan diff.
+- Secrets stay outside Git.

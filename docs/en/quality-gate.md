@@ -1,19 +1,20 @@
 # NoC Quality Gate
 
-## Zweck
+## Purpose
 
-Der Quality Gate stellt sicher, dass PRs mit einer vorhersagbaren und reproduzierbaren Pruefreihenfolge bewertet werden.
+The quality gate ensures that pull requests are evaluated with a predictable
+and reproducible check sequence.
 
-Prinzip:
+Principle:
 
-- ein Einstiegspunkt,
-- feste Reihenfolge,
-- maschinenlesbares Ergebnis,
-- menschenlesbarer Report.
+- one entry point,
+- fixed order,
+- machine-readable result,
+- human-readable report.
 
-## Einstieg
+## Entry Point
 
-Lokal:
+Local:
 
 ```bash
 python scripts/quality_gate.py --profile strict
@@ -21,41 +22,43 @@ python scripts/quality_gate.py --profile strict
 
 CI:
 
-- Workflow: `.github/workflows/quality-gate.yml`
-- Profil in CI: `strict`
+- Workflow: [.github/workflows/quality-gate.yml](../../.github/workflows/quality-gate.yml)
+- CI profile: `strict`
 
-## Profile
+## Profiles
 
-- `minimal`: Prozessvalidierung + Unit Tests
-- `standard`: `minimal` + Privacy Lint
-- `strict`: `standard` + Governance Policy Sync + Language Parity + Documentation Links + Cloud Runbook Parity + Gantt + AI-SBOM + Knowledge Graph
+- `minimal`: process validation and unit tests
+- `standard`: `minimal` plus privacy lint
+- `strict`: `standard` plus governance policy sync, language parity,
+  documentation links, cloud runbook parity, Gantt, AI-SBOM and knowledge graph
 
-## Feste Reihenfolge
+## Fixed Order
 
 1. `process_validate`
 2. `unit_tests`
 3. `plugin_validate`
-4. `privacy_lint` (ab `standard`)
-5. `governance_sync` (nur `strict`)
-6. `language_parity` (nur `strict`)
-7. `doc_links` (nur `strict`)
-8. `gantt_progress` (nur `strict`)
-9. `cloud_runbook_parity` (nur `strict`)
-10. `ai_sbom` (nur `strict`)
-11. `knowledge_graph` (nur `strict`)
+4. `privacy_lint` from `standard`
+5. `governance_sync` only in `strict`
+6. `language_parity` only in `strict`
+7. `doc_links` only in `strict`
+8. `gantt_progress` only in `strict`
+9. `cloud_runbook_parity` only in `strict`
+10. `ai_sbom` only in `strict`
+11. `knowledge_graph` only in `strict`
 
-## Artefakte
+## Artifacts
 
-Standardausgabe:
+Default output:
 
-- JSON: `out/quality/status.json`
-- Markdown: `out/quality/report.md`
-- PR-Kommentar: `out/quality/comment.md` (fuer Upsert in Pull Requests)
+- JSON: [out/quality/status.json](../../out/quality/status.json)
+- Markdown: [out/quality/report.md](../../out/quality/report.md)
+- PR comment: [out/quality/comment.md](../../out/quality/comment.md) for pull
+  request upsert
 
-Diese Artefakte werden im CI-Lauf hochgeladen.
+These artifacts are uploaded during CI runs.
 
-## Nutzen fuer Vorhersagbarkeit
+## Predictability Benefit
 
-- Gleiche Checks in gleicher Reihenfolge fuer lokale und CI-Laeufe.
-- Keine uneinheitlichen Einzelbefehle pro Teammitglied.
-- Klare Statuslinie (`PASSED`/`FAILED`) mit nachvollziehbarem Report.
+- Same checks in the same order for local and CI runs.
+- No inconsistent one-off commands per team member.
+- Clear `PASSED`/`FAILED` status line with a traceable report.

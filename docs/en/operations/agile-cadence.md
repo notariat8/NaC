@@ -1,72 +1,74 @@
-# Arbeitsmodell im Unternehmen: Agile und Kanban Cadence
+# Working Model In The Organization: Agile And Kanban Cadence
 
-## Ziel
+## Goal
 
-Dieses Dokument legt waehbare Arbeitsmodi fuer den operativen Betrieb im Unternehmens-Fork fest.
-Es enthaelt zwei freigegebene Methoden mit standardisierten Taktoptionen.
+This document defines selectable working modes for operational work in the
+organization fork. It contains two approved methods with standardized cadence
+options.
 
-## Arbeitsmethoden
+## Working Methods
 
-- `agile` ist der Startstandard fuer Einfuehrung und kontinuierliche Verbesserung.
-- `kanban` ist als kontinuierlicher Flussmodus zulaessig.
-- Die konkrete Auspraegung kann je Team variieren, muss aber im Repo dokumentiert sein.
+- `agile` is the starting standard for introduction and continuous improvement.
+- `kanban` is allowed as a continuous-flow mode.
+- The concrete variant can differ by team, but must be documented in the
+  repository.
 
-## Agile: Sprintdauer (Auswahl)
+## Agile: Sprint Duration, Selection
 
-Zulaessige Sprintdauern:
+Allowed sprint durations:
 
-- `1w` (1 Woche)
-- `2w` (2 Wochen)
-- `4w` (4 Wochen)
+- `1w`, one week
+- `2w`, two weeks
+- `4w`, four weeks
 
-## Agile: Daily-Dauer (Auswahl)
+## Agile: Daily Duration, Selection
 
-Zulaessige Daily-Dauern:
+Allowed daily durations:
 
-- `5m` (5 Minuten)
-- `10m` (10 Minuten)
-- `20m` (20 Minuten)
+- `5m`, five minutes
+- `10m`, ten minutes
+- `20m`, twenty minutes
 
-## Entscheidungshilfe
+## Decision Aid
 
-- `1w + 5m`: hohe Dynamik, kleine Teams, schneller Feedbackzyklus.
-- `2w + 10m`: Standard fuer gemischte Fach-/Ops-Teams.
-- `4w + 20m`: hohe regulatorische Pruefanteile, laengere Planungsfenster.
+- `1w + 5m`: high dynamics, small teams, fast feedback cycle.
+- `2w + 10m`: standard for mixed subject/Ops teams.
+- `4w + 20m`: high regulatory review share, longer planning windows.
 
-## Kanban: Review-Cadence (Auswahl)
+## Kanban: Review Cadence, Selection
 
-Zulaessige Review-Cadences:
+Allowed review cadences:
 
-- `1w` (woechentlich)
-- `2w` (zweiwoechentlich)
-- `4w` (monatlicher Review-Zyklus)
+- `1w`, weekly
+- `2w`, biweekly
+- `4w`, monthly review cycle
 
-## Kanban: Sync-Dauer (Auswahl)
+## Kanban: Sync Duration, Selection
 
-Zulaessige Sync-Dauern:
+Allowed sync durations:
 
 - `5m`
 - `10m`
 - `20m`
 
-Empfehlung:
+Recommendation:
 
-- taeglicher Kurzsync in `5m|10m|20m`,
-- Kanban-Review im Takt `1w|2w|4w`,
-- Replenishment zusammen mit dem Review oder als eigener kurzer Termin.
+- daily short sync in `5m|10m|20m`,
+- Kanban review at `1w|2w|4w`,
+- replenishment together with the review or as a separate short meeting.
 
-## Verbindliche Dokumentation pro Team
+## Binding Documentation Per Team
 
-Jedes Team dokumentiert im Unternehmens-Fork:
+Every team documents in the organization fork:
 
-- gewaehlte Arbeitsmethode (`agile` oder `kanban`),
-- bei `agile`: Sprintdauer und Daily-Dauer,
-- bei `kanban`: Review-Cadence und Sync-Dauer,
-- Startdatum der Cadence,
-- verantwortliche Rolle fuer Anpassungen.
+- chosen working method: `agile` or `kanban`,
+- for `agile`: sprint duration and daily duration,
+- for `kanban`: review cadence and sync duration,
+- start date of the cadence,
+- responsible role for adjustments.
 
-## Anpassungsregel
+## Adjustment Rule
 
-- Wechsel der Cadence erfolgt nur ueber Change Request.
-- Wirkung wird nach 1-2 Zyklen bewertet.
-- Nach Freigabe wird die neue Cadence versioniert uebernommen.
+- Cadence changes happen only through change request.
+- Effect is evaluated after one or two cycles.
+- After approval, the new cadence is adopted in a versioned way.

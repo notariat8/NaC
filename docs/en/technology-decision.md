@@ -1,72 +1,87 @@
-# Technologieentscheidung fuer das Musterrepo
+# Technology Decision For The Pattern Repository
 
-## Ergebnis in einem Satz
+## Result In One Sentence
 
-Verbindlicher Standard ist:
+The binding standard is:
 
-- Dokumentation in Markdown (Quelle), PDF-Export automatisiert,
-- Prozessausfuehrung in Python, aber fachlicher Ablauf BPMN-2.0-first,
-- BPMN-2.0 als kanonisches Fachmodell, Mermaid nur fuer Uebersicht.
+- documentation in Markdown as the source, with PDF export only as a generated
+  artifact,
+- process execution in Python, while the subject-matter process remains
+  BPMN 2.0 first,
+- BPMN 2.0 as the canonical subject-matter model, with Mermaid only for
+  overviews.
 
-## Bewertung der aktuellen Fassung
+## Assessment Of The Current State
 
-Die aktuelle Fassung ist gut als Start, aber noch nicht die beste Endform fuer skalierbare Unternehmensdokumentation. Grund:
+The current state is useful as a start, but not yet the best final form for
+scalable enterprise documentation. The reasons are:
 
-- Stark in kollaborativer Markdown-Dokumentation,
-- stark in Python-Referenzlogik,
-- aber BPMN-2.0 war bisher nicht als verbindliche Quellnorm definiert.
+- strong collaborative Markdown documentation,
+- strong Python reference logic,
+- but BPMN 2.0 had not yet been defined as the binding source norm.
 
-Mit der vorliegenden Policy wird das geschlossen.
+This policy closes that gap.
 
-## a) Dokumentation: Markdown vs AsciiDoc vs Superdoc
+## a) Documentation: Markdown vs AsciiDoc vs Superdoc
 
-### Bewertung
+### Assessment
 
-- `Markdown`: beste Lesbarkeit, breiteste Toolunterstuetzung, ideal fuer LLM/Copilot/Cursor-Kollaboration.
-- `AsciiDoc`: staerker fuer komplexe Publikations-Layouts und klassische Handbuchstrukturen.
-- `Superdoc`: kein belastbarer De-facto-Standard fuer langfristige, revisionsfeste Unternehmensdokumentation.
+- `Markdown`: best readability, broadest tool support, ideal for LLM, Copilot
+  and Cursor collaboration.
+- `AsciiDoc`: stronger for complex publication layouts and classic manual
+  structures.
+- `Superdoc`: no resilient de facto standard for long-term, audit-proof
+  enterprise documentation.
 
-### Entscheidung
+### Decision
 
-- Quelle bleibt `Markdown`.
-- PDF wird aus Markdown automatisiert exportiert (Pandoc-Pipeline).
-- AsciiDoc wird nicht als zweite manuelle Quelle gepflegt, um Doppelpflege zu vermeiden.
+- The source remains `Markdown`.
+- PDF is generated from Markdown only as an export artifact.
+- AsciiDoc is not maintained as a second manual source to avoid double
+  maintenance.
 
-Damit werden Kollaboration und PDF-Faehigkeit kombiniert.
+This combines collaboration and export capability.
 
-## b) Python code-first fuer Geschaeftsprozesse unter BPMN-2.0-Vorgabe
+## b) Python Code-First For Business Processes Under BPMN 2.0
 
-### Bewertung
+### Assessment
 
-Reines code-first ist fuer Fachbereiche langfristig nicht optimal, weil:
+Pure code-first is not optimal for business departments in the long run,
+because:
 
-- Fachlogik in Code fuer Nicht-IT schwer pruefbar wird,
-- Abweichungen zwischen Sollprozess und Implementierung spaet sichtbar werden.
+- subject-matter logic in code becomes difficult for non-IT reviewers,
+- deviations between target process and implementation become visible late.
 
-### Entscheidung
+### Decision
 
-- `BPMN-2.0-first` fuer fachliche Prozessmodelle.
-- `Python` als Ausfuehrungs- und Integrationsschicht.
-- Python muss sich am BPMN-Modell orientieren, nicht umgekehrt.
+- `BPMN 2.0 first` for subject-matter process models.
+- `Python` as the execution and integration layer.
+- Python must follow the BPMN model, not the other way around.
 
-Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit fuer IT und Fachbereich.
+This improves readability, auditability and maintainability for both IT and
+business departments.
 
-## c) BPMN-2.0-Visualisierung: Mermaid oder Alternativen
+## c) BPMN 2.0 Visualization: Mermaid Or Alternatives
 
-### Bewertung
+### Assessment
 
-- `Mermaid`: sehr gut fuer einfache Uebersichtsbilder, aber kein vollwertiges BPMN-2.0-Quellformat.
-- `PlantUML`: gut fuer Technikdiagramme, jedoch ebenfalls kein vollwertiger BPMN-2.0-Ersatz.
-- `BPMN-2.0 XML` mit geeigneten BPMN-Werkzeugen: beste Wahl fuer fachlich verbindliche Prozessmodelle und Exporte.
+- `Mermaid`: very good for simple overview diagrams, but not a full BPMN 2.0
+  source format.
+- `PlantUML`: useful for technical diagrams, but also not a full BPMN 2.0
+  replacement.
+- `BPMN 2.0 XML` with suitable BPMN tooling: the best choice for binding
+  subject-matter process models and exports.
 
-### Entscheidung
+### Decision
 
-- Verbindliche Fachquelle: BPMN-2.0 XML.
-- Mermaid nur als Zusatzsicht fuer Management- und Schnelluebersichten.
-- PlantUML optional fuer technische Architektur, nicht fuer die fachliche BPMN-Quelle.
+- Binding subject-matter source: BPMN 2.0 XML.
+- Mermaid only as an additional view for management and quick overviews.
+- PlantUML optional for technical architecture, not for the subject-matter BPMN
+  source.
 
-## Was Fachbereiche davon haben
+## Benefit For Business Departments
 
-- Das Unternehmen kann Prozesse primaer ueber visuelle BPMN-Modelle verstehen.
-- IT und Fachbereich arbeiten auf derselben Prozesswahrheit.
-- Dokumentation ist versioniert, exportierbar und revisionsfaehig.
+- The organization can understand processes primarily through visual BPMN
+  models.
+- IT and business departments work from the same process truth.
+- Documentation is versioned, exportable and audit-ready.

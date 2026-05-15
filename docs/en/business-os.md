@@ -1,53 +1,58 @@
-# Fachkonzept: Notariat as Code mit NoC
+# Subject Concept: Notariat As Code With NoC
 
-## Leitprinzip
+## Guiding Principle
 
-Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Nicht die Benutzeroberflaeche, sondern der nachvollziehbare Zustandswechsel ist die fachliche Wahrheit. Ein Vorgang ist erst dann wirksam, wenn er:
+Git is treated as a versioned operating system for business processes. The
+subject-matter truth is not the user interface, but the traceable state change.
+A matter becomes effective only when it:
 
-1. als strukturierter Antrag vorliegt,
-2. die fachliche Validierung besteht,
-3. die erforderlichen Freigaben durchlaufen hat,
-4. in den verbindlichen Hauptstand uebernommen wurde.
+1. exists as a structured request,
+2. passes subject-matter validation,
+3. has completed the required approvals,
+4. has been merged into the binding main state.
 
-## Positionierung
+## Positioning
 
-- `Notariat as Code` beschreibt das uebergeordnete Zielmodell.
-- `Enterprise GitOps` beschreibt den operativen Aenderungsfluss.
-- `NoC` ist die konkrete Betriebsumsetzung in diesem Repository.
+- `Notariat as Code` describes the overarching target model.
+- `Enterprise GitOps` describes the operational change flow.
+- `NoC` is the concrete operating implementation in this repository.
 
-Referenz: `docs/en/organization-as-code-positioning.md`
+Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
-## Rollenmodell
+## Role Model
 
-- `requester`: startet einen Vorgang per Prompt.
-- `operator`: pflegt Vorlagen, Schemas und Regelwerke.
-- `reviewer`: gibt sensible Vorgange fachlich frei.
-- `approver`: entscheidet ueber Zahlung, Rechnungsausgang oder Steuerabgabe.
-- `auditor`: prueft Historie, Nachweise, Status und Abschluesse.
-- `automation`: GitHub Actions und Python-Engine fuehren deterministische Schritte aus.
+- `requester`: starts a matter through a prompt.
+- `operator`: maintains templates, schemas and rule sets.
+- `reviewer`: performs subject-matter review for sensitive matters.
+- `approver`: decides on payment, outgoing invoices or tax filing.
+- `auditor`: checks history, evidence, status and closures.
+- `automation`: GitHub Actions and the Python engine execute deterministic
+  steps.
 
-Erweiterung fuer den operativen Betrieb:
+Extension for operational use:
 
-- Ticket erstellen darf jede Rolle (`everyone_can_open_ticket=true`).
-- Selbst loesen ist nur innerhalb der freigegebenen Kompetenz erlaubt.
-- Fachkritische Schritte laufen ueber Review/Approval je Impact und Compliance.
-- Fachliche Spezialfaelle koennen Qualifikationspflichten erzwingen (z. B. RVG-Rechnung).
+- Every role may create tickets (`everyone_can_open_ticket=true`).
+- Self-resolution is allowed only within the approved competence.
+- Subject-critical steps go through review or approval depending on impact and
+  compliance.
+- Domain-specific cases can require qualifications, for example RVG billing.
 
-Details: `docs/en/role-model.md` und `policies/role-model-policy.yaml`
+Details: [docs/en/role-model.md](role-model.md) and
+[policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)
 
-## Prozessdomänen
+## Process Domains
 
-### Gruendung
+### Formation
 
-Die Gruendung wird als Folge von kontrollierten Checkpoints gefuehrt:
+Formation is handled as a sequence of controlled checkpoints:
 
-- Gesellschaftsform festlegen
-- Gruendungsdokumente erstellen
-- Register- und Steueranmeldung vorbereiten
-- Bankkonto, Rollen und Bevollmaechtigungen einrichten
-- Laufende Compliance-Fristen anlegen
+- define legal form,
+- create formation documents,
+- prepare register and tax filing,
+- set up bank account, roles and powers of attorney,
+- create ongoing compliance deadlines.
 
-Typische Zustaende:
+Typical states:
 
 - `draft`
 - `validated`
@@ -56,11 +61,13 @@ Typische Zustaende:
 - `executed`
 - `archived`
 
-### Rechnungsstellung
+### Invoicing
 
-Rechnungen werden als versionierte Vorgangsobjekte modelliert. Die Engine vergibt oder validiert Nummernkreise, prueft Pflichtfelder und erzeugt exportfaehige Artefakte.
+Invoices are modeled as versioned matter objects. The engine assigns or
+validates number ranges, checks required fields and creates exportable
+artifacts.
 
-Typische Zustaende:
+Typical states:
 
 - `draft`
 - `approved`
@@ -68,22 +75,27 @@ Typische Zustaende:
 - `paid`
 - `cancelled`
 
-### Buchfuehrung
+### Bookkeeping
 
-Buchfuehrung wird als wiederholbarer Transformationsprozess verstanden: Aus Eingangsereignissen wie Rechnung, Zahlung oder Beleg entsteht ein idempotenter Buchungssatz. Git fuehrt Nachweis, Freigabe und Historie; Python fuehrt die Kontierungslogik aus.
+Bookkeeping is treated as a repeatable transformation process: input events
+such as invoice, payment or receipt become an idempotent accounting entry. Git
+records evidence, approval and history; Python executes the account-assignment
+logic.
 
-Typische Zustaende:
+Typical states:
 
 - `draft`
 - `validated`
 - `posted`
 - `closed`
 
-### Steuer
+### Tax
 
-Steuerfaelle aggregieren periodische Daten, dokumentieren Entscheidungen und fuehren zur vorbereiteten Abgabe. Die Abgabe selbst kann je nach rechtlichem Umfeld in ein externes Fachsystem muenden; Git bleibt die kontrollierende Nachweisschicht.
+Tax cases aggregate periodic data, document decisions and lead to prepared
+filings. Depending on the legal environment, the actual filing can happen in an
+external specialist system. Git remains the controlling evidence layer.
 
-Typische Zustaende:
+Typical states:
 
 - `draft`
 - `prepared`
@@ -91,75 +103,79 @@ Typische Zustaende:
 - `submitted`
 - `archived`
 
-## Datenprinzipien
+## Data Principles
 
-- Das LLM darf Eingaben strukturieren, aber keine fachliche Gueltigkeit behaupten.
-- Deterministische Python-Logik entscheidet ueber Statuswechsel.
-- Personenbezogene Daten sollen minimiert oder referenziert werden.
-- Jeder wirksame Geschaeftsvorfall erhaelt einen stabilen `request_id`.
-- Idempotenzschluessel verhindern doppelte Ausfuehrung.
+- The LLM may structure inputs, but must not claim subject-matter validity.
+- Deterministic Python logic decides on state transitions.
+- Personal data should be minimized or referenced.
+- Every effective business transaction receives a stable `request_id`.
+- Idempotency keys prevent duplicate execution.
 
-## Git als Steuerungsschicht
+## Git As Control Layer
 
-- Ein Branch oder Pull Request repraesentiert Arbeit am Vorgang.
-- Reviews repraesentieren Fachfreigaben.
-- Merge nach `main` repraesentiert die verbindliche Uebernahme.
-- Tags repraesentieren Abschluesse wie `close/2026-03`.
-- Releases oder Artefakte repraesentieren exportierte Nachweise.
+- A branch or pull request represents work on a matter.
+- Reviews represent subject-matter approvals.
+- Merge into `main` represents binding adoption.
+- Tags represent closures such as `close/2026-03`.
+- Releases or artifacts represent exported evidence.
 
-## Generisch vs. branchenspezifisch
+## Generic vs Domain-Specific
 
-Die Prozesswelt wird in zwei Schichten organisiert:
+The process world is organized in two layers:
 
-- `generisch`: fuer alle Unternehmen nutzbar
-- `branche`: zusaetzliche Fachlogik je Unternehmensart
+- `generic`: usable by all organizations,
+- `domain`: additional subject logic for each organization type.
 
-Beispielstruktur:
+Example structure:
 
-- generisch: Rollen, Freigaben, Rechnung, Buchfuehrung, Steuer, Fristen
-- branche anwaltskanzlei: Mandat, Fristenkontrolle, Aktenlogik
-- branche notariat: Urkundenprozess, Vollzug, Registerkommunikation
-- branche steuerbuero: Mandantenzyklen, Deklarationsablauf, Rueckfragenmanagement
-- branche softwareunternehmen: Release, Incident, SLA und Lizenznachweise
-- branche schreinerei: Aufmass, Werkstattablauf, Montage und Gewaehrleistung
+- generic: roles, approvals, invoicing, bookkeeping, tax, deadlines,
+- domain law firm: mandate, deadline control, file logic,
+- domain notary office: deed process, completion steps, register
+  communication,
+- domain tax office: client cycles, declaration flow, inquiry management,
+- domain software company: release, incident, SLA and license evidence,
+- domain carpentry: measurement, workshop flow, installation and warranty.
 
-Die Kombination aus generisch + branche bildet die operative Prozesslandkarte des jeweiligen Unternehmens.
+The combination of generic plus domain forms the operational process map of
+the respective organization.
 
-## Variantenfaehigkeit statt Einheitsprozess
+## Variant Capability Instead Of One Standard Process
 
-Unterschiedliche Unternehmen brauchen unterschiedliche Auspraegungen. Deshalb werden Varianten explizit versioniert:
+Different organizations need different variants. Variants are therefore
+explicitly versioned:
 
-- welche Variante gilt,
-- fuer welche Einheit sie gilt,
-- ab wann sie gilt,
-- wer sie freigegeben hat.
+- which variant applies,
+- which unit it applies to,
+- from when it applies,
+- who approved it.
 
-So bleiben Unterschiede erlaubt, aber transparent und pruefbar.
+This keeps differences allowed, but transparent and auditable.
 
-Fuer den Mischbetrieb gilt zusaetzlich:
+For mixed operation, additionally:
 
-- Version wird je Vorgang beim Start gebunden,
-- laufende Vorgaenge bleiben auf ihrer gebundenen Version,
-- neue Releases gelten nur fuer neu gestartete Vorgaenge.
+- the version is bound when each matter starts,
+- running matters remain on their bound version,
+- new releases apply only to newly started matters.
 
-Details: `docs/en/operations/parallelbetrieb-version-binding.md`
+Details: [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
 
-## Change Request und Vererbung
+## Change Request And Inheritance
 
-Empfohlenes Modell:
+Recommended model:
 
-1. Referenzprozess (z. B. Verband oder Musterunternehmen)
-2. Unternehmens-Fork mit lokaler Anpassung
-3. Change Request mit Begruendung und Nachweis
-4. Review und Freigabe
-5. Versionierte Uebernahme in den lokalen Standard
-6. optional Rueckfuehrung in den Referenzprozess
+1. Reference process, for example association or pattern organization.
+2. Organization fork with local adjustment.
+3. Change request with rationale and evidence.
+4. Review and approval.
+5. Versioned adoption into the local standard.
+6. Optional return into the reference process.
 
-Dieses Modell erlaubt gemeinsames Lernen ohne Verlust der lokalen Steuerbarkeit.
+This model enables shared learning without losing local control.
 
-## Grenzen des Modells
+## Model Boundaries
 
-- Git ist kein hochvolumiges Transaktionssystem.
-- Git ist kein Ersatz fuer gesetzlich vorgeschriebene Portale oder Schnittstellen.
-- Geheimnisse und besonders schutzbeduerftige Dokumente gehoeren nicht unverschluesselt ins Repository.
-- Rechtliche Freigaben brauchen klar definierte Verantwortlichkeiten ausserhalb des LLM.
+- Git is not a high-volume transaction system.
+- Git is not a replacement for legally required portals or interfaces.
+- Secrets and especially sensitive documents do not belong in the repository in
+  unencrypted form.
+- Legal approvals require clearly defined responsibilities outside the LLM.

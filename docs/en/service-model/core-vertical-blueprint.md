@@ -1,69 +1,76 @@
-# Blueprint: Core und Vertical Modules fuer Dienstleistungsunternehmen
+# Blueprint: Core And Vertical Modules For Service Organizations
 
-## Ziel
+## Goal
 
-Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `NoC`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
+This blueprint defines a uniform structure for a central `NoC` that can be used
+across several service industries:
 
-- Anwaltskanzlei (`law_firm`)
-- Notariat (`notary`)
-- Steuerberatung (`tax_office`)
-- Hausverwaltung (`property_management`)
-- Softwareunternehmen (`software_company`)
-- Vermoegensverwaltung (`wealth_management`)
-- Schreinerei (`carpentry`)
+- law firm (`law_firm`)
+- notary office (`notary`)
+- tax office (`tax_office`)
+- property management (`property_management`)
+- software company (`software_company`)
+- wealth management (`wealth_management`)
+- carpentry (`carpentry`)
 
-Das Modell setzt auf **einen gemeinsamen Core** plus **Vertical Modules** im selben Repository.
+The model uses **one shared core** plus **vertical modules** in the same
+repository.
 
-## Leitprinzip
+## Guiding Principle
 
-- `core` enthaelt wiederverwendbare Prozessbausteine fuer alle Branchen.
-- `vertical` enthaelt nur branchenspezifische Regeln und Arbeitsschritte.
-- Jede wirksame Prozessaenderung ist versioniert, reviewed und freigegeben.
-- Laufende Vorgaenge bleiben auf der beim Start gebundenen Prozessversion.
+- `core` contains reusable process building blocks for all industries.
+- `vertical` contains only industry-specific rules and work steps.
+- Every effective process change is versioned, reviewed and approved.
+- Running matters remain on the process version bound at their start.
 
-## Gemeinsame Core-Topics
+## Shared Core Topics
 
-Diese Topics sind fuer alle Dienstleistungsunternehmen gleich und gehoeren in den Core:
+These topics are the same for all service organizations and belong in the core:
 
-1. Rollen, Qualifikation und Freigabepfade
-2. Intake und Auftrags-/Mandatsstart
-3. Vorgangsstatus und Freigabegates
-4. Leistungserfassung und Abrechnung
-5. Buchhaltung, Steuerbezug und periodischer Abschluss
-6. Nachweis, Audit und Archivierung
-7. Incident- und Abweichungsbehandlung
+1. roles, qualifications and approval paths,
+2. intake and order or mandate start,
+3. matter status and approval gates,
+4. service recording and billing,
+5. accounting, tax relation and periodic close,
+6. evidence, audit and archiving,
+7. incident and deviation handling.
 
-## Vertical-Topics
+## Vertical Topics
 
-Jedes Vertical erweitert den Core um branchenspezifisches Wissen:
+Each vertical extends the core with industry-specific knowledge:
 
-- `law_firm`: Mandat, Konfliktpruefung, Fristenmanagement, RVG-Bezug
-- `notary`: Aktenanlage, Identitaetspruefung, Urkundenvollzug, Registerkommunikation
-- `tax_office`: Mandantenzyklen, Deklarationsfristen, Plausibilitaetspruefungen
-- `property_management`: Mieteraufnahme, Objektbetrieb, Wartungssteuerung, Nebenkostenkontrollen, Uebergaben
-- `software_company`: Release-Governance, Incident-Management, SLA-/Lizenznachweise
-- `wealth_management`: KYC/Client-Intake, Eignungs- und Risikoprofilpruefung, Rebalancing-Kontrollen, Mandatsreporting
-- `carpentry`: Aufmass, Materialplanung, Werkstatt-/Montagekoordination, Gewaehrleistungsfaelle
+- `law_firm`: mandate, conflict check, deadline management, RVG relation.
+- `notary`: file creation, identity check, deed completion, register
+  communication.
+- `tax_office`: client cycles, declaration deadlines, plausibility checks.
+- `property_management`: tenant intake, property operations, maintenance
+  control, service-charge controls, handovers.
+- `software_company`: release governance, incident management, SLA/license
+  evidence.
+- `wealth_management`: KYC/client intake, suitability and risk-profile checks,
+  rebalancing controls, mandate reporting.
+- `carpentry`: measurement, material planning, workshop/installation
+  coordination, warranty cases.
 
-## Abgrenzungsregel Core vs. Vertical
+## Boundary Rule: Core vs Vertical
 
-Eine Regel gehoert in den Core, wenn sie:
+A rule belongs in the core when it:
 
-- in mindestens drei Verticals gleich gilt,
-- keine branchenspezifische Rechts- oder Fachpflicht enthaelt,
-- ohne Fachjargon branchenneutral formuliert werden kann.
+- applies equally in at least three verticals,
+- contains no industry-specific legal or subject-matter duty,
+- can be phrased industry-neutrally without domain jargon.
 
-Eine Regel gehoert ins Vertical, wenn sie:
+A rule belongs in the vertical when it:
 
-- rechtlich oder fachlich branchenspezifisch ist,
-- eigene Nachweisartefakte oder Fachfreigaben braucht,
-- nur fuer ein oder zwei Verticals relevant ist.
+- is legally or technically industry-specific,
+- needs its own evidence artifacts or specialist approvals,
+- is relevant only for one or two verticals.
 
-## Strukturmodell (fachlich)
+## Structural Model, Subject-Matter View
 
 ```mermaid
 flowchart LR
-  coreTopics[CoreTopicsGemeinsam] --> lawFirmVertical[LawFirmVertical]
+  coreTopics[SharedCoreTopics] --> lawFirmVertical[LawFirmVertical]
   coreTopics --> notaryVertical[NotaryVertical]
   coreTopics --> taxOfficeVertical[TaxOfficeVertical]
   coreTopics --> propertyVertical[PropertyManagementVertical]
@@ -73,21 +80,21 @@ flowchart LR
   coreTopics --> governanceLayer[SharedGovernanceAndRelease]
 ```
 
-## Versionierung und Mischbetrieb
+## Versioning And Mixed Operation
 
-- Core und Vertical werden gemeinsam als Release im Unternehmens-Fork freigegeben.
-- Beim Vorgangsstart wird ein `process_version` gebunden.
-- Neue Releases gelten nur fuer neue Vorgaenge.
-- Laufende Vorgaenge laufen auf gebundener Version zu Ende.
+- Core and vertical are approved together as a release in the organization fork.
+- A `process_version` is bound at matter start.
+- New releases apply only to new matters.
+- Running matters finish on the bound version.
 
-Details: `docs/en/operations/parallelbetrieb-version-binding.md`
+Details: [docs/en/operations/parallelbetrieb-version-binding.md](../operations/parallelbetrieb-version-binding.md)
 
-## Entscheidungslogik fuer Erweiterungen
+## Decision Logic For Extensions
 
-Wenn ein neues Thema aufkommt:
+When a new topic appears:
 
-1. Pruefen, ob Core-Regel erweitert werden kann.
-2. Falls nein, als Vertical-Regel dokumentieren.
-3. Impact-Assessment durchfuehren.
-4. Versionierte Uebernahme ueber PR + Review + Release.
-5. Optional Rueckfluss in den Referenzstandard.
+1. Check whether a core rule can be extended.
+2. If not, document it as a vertical rule.
+3. Perform impact assessment.
+4. Adopt through PR, review and release.
+5. Optionally return the improvement to the reference standard.

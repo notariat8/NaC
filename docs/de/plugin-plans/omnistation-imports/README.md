@@ -1,28 +1,31 @@
-# Omnistation Plugin Plan Imports
+# Omnistation-Pluginplan-Importe
 
-This directory preserves the original NoC plugin integration plans that were generated in the Omnistation agent sandbox.
+Dieses Verzeichnis bewahrt die urspruenglichen NoC-Plugin-Integrationsplaene,
+die in der Omnistation-Agent-Sandbox erzeugt wurden.
 
-The files are kept as imported source artifacts so no planning work is lost while NoC execution moves to the local WSL workspace.
+Die Dateien bleiben als importierte Quellartefakte erhalten, damit keine
+Planungsarbeit verloren geht, waehrend die NoC-Ausfuehrung in den lokalen
+WSL-Workspace verlagert wird.
 
-## Source
+## Quelle
 
-Original source directory:
+Urspruengliches Quellverzeichnis:
 
 ```text
 /home/ofunk/codex/agent-sandbox
 ```
 
-Original source host:
+Urspruenglicher Quellhost:
 
 ```text
 omnistation-omni-lsn-upq77
 ```
 
-## Imported Files
+## Importierte Dateien
 
-See `SHA256SUMS` for byte-level verification hashes.
+Byte-genaue Pruefsummen stehen in [SHA256SUMS](SHA256SUMS).
 
-## Operating Decision
+## Betriebsentscheidung
 
-NoC execution is local in WSL under `~/NoC`.
-Omnistation is not an NoC execution workspace.
+NoC wird lokal in WSL unter `~/NoC` ausgefuehrt. Omnistation ist kein
+NoC-Ausfuehrungsworkspace.

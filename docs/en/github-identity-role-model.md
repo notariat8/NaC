@@ -1,31 +1,33 @@
-# GitHub Identitaet und Rollenreferenz
+# GitHub Identity And Role Reference
 
-## Ist eine Rollen-Definition direkt im GitHub-Profil moeglich?
+## Can A Role Definition Live Directly In A GitHub Profile?
 
-Kurz: nicht als verlaessliche, workflow-taugliche Standardquelle fuer fachliche Berechtigungen.
+Short answer: not as a reliable, workflow-ready standard source for
+subject-matter permissions.
 
-GitHub-Profile sind fuer Darstellung gedacht, nicht als verbindliches Berechtigungsregister fuer Fachrollen.
+GitHub profiles are meant for presentation, not as a binding permission
+registry for domain roles.
 
-## Verbindlicher Ansatz in diesem Repo
+## Binding Approach In This Repository
 
-1. Technische Rollenquelle im Repository:
-   - `policies/github-identity-registry.json`
-2. Rollen- und Qualifikationsregeln:
-   - `policies/role-model-policy.yaml`
-3. Zugriffs- und Sichtbarkeitsregeln:
-   - `policies/access-control-policy.yaml`
-4. Onboarding-Fragen und Berechtigungen:
-   - `policies/onboarding-flow.json`
+1. Technical role source in the repository:
+   [policies/github-identity-registry.json](../../policies/github-identity-registry.json)
+2. Role and qualification rules:
+   [policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)
+3. Access and visibility rules:
+   [policies/access-control-policy.yaml](../../policies/access-control-policy.yaml)
+4. Onboarding questions and permissions:
+   [policies/onboarding-flow.json](../../policies/onboarding-flow.json)
 
-Damit ist klar und auditierbar:
+This makes the following auditable:
 
-- welcher GitHub-Login welche technische Rolle hat,
-- welche Fragen von welcher Rolle beantwortet werden duerfen,
-- welche Qualifikationen fuer kritische Schritte erforderlich sind.
-- welche Repo-/Issue-Sichtbarkeitsregeln fuer Mitarbeitende und Gaeste gelten.
+- which GitHub login has which technical role,
+- which questions may be answered by which role,
+- which qualifications are required for critical steps,
+- which repository and issue visibility rules apply to employees and guests.
 
-## Empfohlene Zusatzabsicherung
+## Recommended Additional Safeguards
 
-- GitHub Teams fuer technische Zugriffssteuerung (Repo-Ebene)
-- optional IdP/SSO-Gruppen als externe Governance-Quelle
-- regelmaessige Synchronpruefung zwischen Team-Struktur und Registry-Datei
+- GitHub Teams for technical access control at repository level.
+- Optional IdP/SSO groups as an external governance source.
+- Regular synchronization checks between team structure and registry file.

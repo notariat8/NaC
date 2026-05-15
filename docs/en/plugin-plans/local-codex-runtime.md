@@ -2,61 +2,64 @@
 
 Status: `proposed`
 
-## Ziel
+## Goal
 
-Codex soll NoC lokal im echten Workspace `~/NoC` bearbeiten.
-Die lokale Sitzung ist der Ausfuehrungsort fuer Planerzeugung, Git-Operationen, Tests und spaetere Fachintegrationen.
+Codex should edit NoC locally in the real workspace `~/NoC`. The local session
+is the execution location for plan generation, Git operations, tests and later
+domain integrations.
 
-## Nicht-Ziele
+## Non-Goals
 
-- Keine NoC-Ausfuehrung aus Omnistation.
-- Keine Kopie lokaler Secrets auf Remote-Hosts.
-- Keine Umgehung von GitHub-/Browser-/OCI-Callbacks ueber SSH-Bruecken.
+- No NoC execution from Omnistation.
+- No copying of local secrets to remote hosts.
+- No bypassing GitHub, browser or OCI callbacks through SSH bridges.
 
-## Day0
+## Day 0
 
-- Codex Desktop mit Workspace `\\wsl$\\Ubuntu\\home\\ofunk\\NoC` starten.
-- Repo aktualisieren:
+- Start Codex Desktop with workspace `\\wsl$\\Ubuntu\\home\\ofunk\\NoC`.
+- Update repository:
 
 ```bash
 cd ~/NoC
 git pull
 ```
 
-- Startcheck ausfuehren:
+- Execute startup check:
 
 ```bash
 python3 scripts/startup_check.py --ide auto --run-tests
 ```
 
-- Fehlende lokale Tools dokumentieren und lokal installieren.
+- Document missing local tools and install them locally.
 
-## Day1
+## Day 1
 
-- Plugin-Plaene lokal in `docs/en/plugin-plans/` regenerieren.
-- Aenderungen nur ueber Branch, Review und Merge nach `main` fuehren.
-- Bei Konzeptaenderungen Cursor- und VS-Code-Copilot-Pfade synchron halten.
-- Plan Preview als Markdown erzeugen, bevor ein Connector echte Zielsysteme veraendert.
+- Regenerate plugin plans locally in [docs/en/plugin-plans/](.).
+- Move changes only through branch, review and merge into `main`.
+- Keep Cursor and VS Code Copilot paths synchronized for concept changes.
+- Create a plan preview as Markdown before a connector changes real target
+  systems.
 
-## Day2
+## Day 2
 
-- Regelmaessig `git pull`, Startcheck und Tests ausfuehren.
-- Lokale Tool-Versionen dokumentieren, wenn sie fuer Reproduzierbarkeit relevant sind.
-- Defekte Integrationen als Issue erfassen, nicht durch Remote-Ausfuehrung kaschieren.
-- Drift zwischen Repo und Zielsystemen in Git sichtbar machen.
+- Regularly run `git pull`, startup check and tests.
+- Document local tool versions when they matter for reproducibility.
+- Capture broken integrations as issues instead of masking them through remote
+  execution.
+- Make drift between repository and target systems visible in Git.
 
-## Lokale Mindesttools
+## Local Minimum Tools
 
 - `git`
 - `python3`
-- `python` Alias oder kompatibler Command, falls Startup-Check ihn verlangt
+- `python` alias or compatible command if the startup check requires it
 - `gh`
 - `code`
 - optional `pandoc`
 
-## Akzeptanzkriterien
+## Acceptance Criteria
 
-- Codex sieht `/home/ofunk/NoC` als Arbeitsverzeichnis.
-- `git status --short --branch` ist lokal ausfuehrbar.
-- Startcheck wird lokal gefahren und seine Ergebnisse sind bekannt.
-- Plugin-Plaene koennen lokal geaendert, committed und gepusht werden.
+- Codex sees `/home/ofunk/NoC` as working directory.
+- `git status --short --branch` runs locally.
+- Startup check is run locally and its result is known.
+- Plugin plans can be edited, committed and pushed locally.

@@ -1,33 +1,34 @@
-# Positioning: Notariat as Code and Enterprise GitOps
+# Positioning: Notariat As Code And Enterprise GitOps
 
 ## Goal
 
 This document defines the project terminology:
 
-- `NoC` is the concrete product and operating implementation in this repository.
-- The overarching architecture model is `Notariat as Code (NoC)`.
+- `NoC` is the concrete product and operating implementation in this
+  repository.
+- The overarching architecture model is `Notariat as Code`.
 - The operational control principle is `Enterprise GitOps`.
 
 ## Terminology
 
-### Notariat as Code (NoC)
+### Notariat As Code
 
 Notarial operations are described declaratively and versioned:
 
-- policies
-- roles and permissions
-- process models
-- control points
-- evidence
+- policies,
+- roles and permissions,
+- process models,
+- control points,
+- evidence.
 
 ### Enterprise GitOps
 
 Changes to organizational and notarial process logic are controlled through:
 
-- branches
-- pull requests
-- review and approval
-- automated policy and compliance checks
+- branches,
+- pull requests,
+- review and approval,
+- automated policy and compliance checks.
 
 ### NoC
 
@@ -44,10 +45,10 @@ in this repository.
 
 ## Architecture Mapping
 
-- `Intent Layer`: policies, roles, process definitions
-- `Control Layer`: pull requests, reviews, approvals, rulesets
-- `Execution Layer`: runtime, automation, process execution
-- `Evidence Layer`: audit-proof event journal
+- `Intent Layer`: policies, roles, process definitions.
+- `Control Layer`: pull requests, reviews, approvals, rulesets.
+- `Execution Layer`: runtime, automation, process execution.
+- `Evidence Layer`: audit-proof event journal.
 
 ## Project Decision
 
@@ -67,7 +68,8 @@ First product promise:
 - "Notarial case types, plugins, workflows, roles, approvals and evidence run
   declaratively, auditable and automated through Git."
 
-The current development status is maintained in `roadmap/BUILD_NOW.md`.
+The current development status is maintained in
+[roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md).
 
 ## One-Sentence Pitch
 

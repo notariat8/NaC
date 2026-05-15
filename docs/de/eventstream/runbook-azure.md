@@ -10,6 +10,9 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf Azure um:
 - Key Vault (Signaturen)
 - Evidence Index (Azure Data Explorer oder SQL)
 
+Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+englische Fassung wird synchron als Orientierung gepflegt.
+
 ## Referenzkomponenten
 
 - `ingest-api`: App Service oder Container App

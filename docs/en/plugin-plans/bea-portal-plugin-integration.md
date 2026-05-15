@@ -1,365 +1,193 @@
 # beA Portal Plugin Integration Plan
 
-Stand: 2026-05-11
+Status: `draft`
 
-## Ziel
+## Goal
 
-Dieses Dokument plant die Integration des beA-Portals und der beA-nahen Arbeitsablaeufe als lokales bzw. mandantenfaehiges NoC-Plugin. Ziel ist nicht, das besondere elektronische Anwaltspostfach technisch zu ersetzen oder unkontrolliert zu automatisieren. Ziel ist ein sicherer, auditierbarer Arbeitsrahmen, in dem NoC:
+This plan defines how NoC can support workflows around the German special
+electronic attorney mailbox, `beA`, without bypassing the official client
+security, mailbox ownership or professional responsibility model.
 
-- beA-Voraussetzungen prueft,
-- lokale beA-Client-Security-Ablaeufe kontrolliert begleitet,
-- Versand-, Empfangs-, Signatur- und eEB-Vorgaenge als NoC-Prozesse dokumentiert,
-- Nachweise minimiert speichert,
-- Kanzlei- und Mandanten-Onboarding reproduzierbar macht.
+The target is a local companion that checks readiness, prepares send/receive
+workflows, records evidence metadata and supports later integration decisions.
+It is not a portal-scraping or autonomous filing tool.
 
-beA bleibt das fuehrende System fuer Postfachzugang, Versand, Empfang, Signatur, Entschluesselung und beA-spezifische Rechte. NoC fuehrt Governance, Prozessstatus, Evidence, Freigabe und Audit.
+## Source And Integration Anchors
 
-## Quellenlage und Integrationsanker
+- beA is the regulated electronic mailbox for lawyers in Germany.
+- The beA Client Security boundary and mailbox access model remain binding.
+- Any direct integration path must be checked against the official beA and
+  professional-software terms.
+- eEB, export, receipt and dispatch evidence must be handled with clear
+  retention and responsibility.
 
-Aus den offiziellen beA-/BRAK-Unterlagen ergeben sich folgende belastbare Integrationspunkte:
+## Leading Decision
 
-- Das beA-Portal ist die einheitliche Startseite fuer Anwendungen rund um den elektronischen Rechtsverkehr. Es soll perspektivisch mehrere Anwendungen mit einer beA-Authentifizierung erschliessen.
-- Jeder in Deutschland zugelassene Rechtsanwalt verfuegt ueber ein beA fuer sichere elektronische Kommunikation im ERV.
-- Seit 2018 besteht passive Nutzungspflicht; seit 2022 besteht eine allgemeine aktive Nutzungspflicht fuer elektronische Uebermittlung an Gerichte.
-- Die beA Client Security ist lokal auf dem Nutzerrechner oder in einer Terminalserverumgebung installiert.
-- Die beA Client Security fuehrt sicherheitsrelevante Funktionen aus, die nicht im Internet stattfinden duerfen, darunter Anmeldung, Signieren, Signaturpruefung, Ver- und Entschluesselung sowie Export.
-- Browser und beA Client Security kommunizieren lokal. Dafuer wird ein individuelles Schluessel-/Zertifikatspaar erzeugt; das zugehoerige Zertifikat muss im Browser hinterlegt werden.
-- Fuer den Zugriff mit Hardware-Token gilt Zwei-Faktor-Authentifizierung aus Besitz der Karte und Wissen der PIN.
-- Hardware-Token werden fuer Registrierung, Anmeldung und Signatur genutzt.
-- Fuer qualifizierte elektronische Signaturen werden unterstuetzte Signaturkarten bzw. Fernsignaturverfahren genutzt. Signaturdateien werden typischerweise als `.p7s` neben dem Originaldokument erzeugt.
-- Aktuelle beA-/KSW-Stoerungen und Versionshinweise koennen sich auf Kanzleisoftware-Schnittstellen auswirken; das Plugin muss daher versions- und stoerungsbewusst geplant werden.
+The first implementation path is a **local companion**:
 
-## Leitentscheidung
+- it checks local workstation prerequisites,
+- it structures the workflow and evidence package,
+- it keeps user actions in the official beA/client-security path,
+- it records only metadata, hashes and attestations by default.
 
-Die erste NoC-Integration erfolgt nicht als verdeckte Browser-Automation und nicht als direkter Zugriff auf beA-interne Schnittstellen. Der sichere Start ist ein lokaler Companion, der beA-Status, Client-Security-Bereitschaft, lokale Preconditions und NoC-Evidence abbildet.
+Direct mailbox automation or dispatch automation is out of scope until legal,
+technical and professional responsibility have been approved in writing.
 
-```text
-Kanzlei-Arbeitsplatz oder Terminalserver
-  Browser
-  beA Portal / beA Webanwendung
-  beA Client Security
-  Karte / Software-Token / Fernsignatur
-  noc-bea-local-plugin
-        |
-        | signierte Evidence / Workflow-Status
-        v
-NoC SaaS / OCI
-  beA workflow service
-  tenant evidence store
-  audit journal
-  NoC process requests
-```
+## Plugin Boundaries
 
-## Plugin-Grenzen
+The plugin may:
 
-### Das Plugin darf
+- check local prerequisites for beA and Client Security,
+- create plan previews for send, receive, export and eEB workflows,
+- prepare checklists and approval gates,
+- record evidence metadata such as timestamp, case ID, hash and user
+  attestation,
+- make missing prerequisites visible.
 
-- lokale Voraussetzungen pruefen,
-- beA-Portal und Hilfeseiten oeffnen,
-- Vorbereitungs-Checklisten fuer Registrierung, Anmeldung, Versand, Signatur und eEB fuehren,
-- Dokumentpakete vor dem beA-Upload lokal pruefen,
-- Dateinamen, Groessen, Hashes und Strukturmetadaten erfassen,
-- NoC-Evidence zu Nutzerbestaetigungen und beA-Aktionen erzeugen,
-- Exportpakete aus beA in eine NoC-Akte uebernehmen, wenn der Nutzer den Export bewusst bereitstellt,
-- Stoerungs- und Versionshinweise als Risikoindikator in Prozesse einbringen.
+The plugin must not:
 
-### Das Plugin darf nicht
+- store mailbox credentials, cards, PINs or private keys,
+- send, receive or acknowledge beA messages without explicit approved adapter
+  scope,
+- bypass beA Client Security,
+- scrape protected portal content,
+- store real mandate content in the repository,
+- replace professional responsibility or human approval.
 
-- PINs abfragen, speichern oder an NoC senden,
-- beA-Zugangsmittel in der SaaS speichern,
-- beA-Sessions heimlich fernsteuern,
-- Nachrichten ohne lokale Nutzerbestaetigung versenden,
-- qualifizierte elektronische Signaturen automatisiert anbringen,
-- beA-interne oder nicht freigegebene Schnittstellen reverse engineeren,
-- Anwaltsgeheimnisse oder Mandatsdaten ungefiltert in LLM-Kontexte geben,
-- die Berufstraegerverantwortung ersetzen.
+## Integration Paths
 
-## Integrationspfade
+### Path A: Local Companion For The beA Web Application
 
-### Pfad A: Lokaler Companion fuer beA-Webanwendung
+This is the MVP path. The user works in the official beA environment while NoC
+tracks readiness, workflow state, approvals and evidence.
 
-Dieser Pfad ist fuer den MVP empfohlen.
+### Path B: Law-Firm Software Interface Or KSW Toolkit
 
-- Nutzer arbeitet weiterhin in der beA-Webanwendung.
-- Plugin prueft lokale Readiness und fuehrt NoC-Checklisten.
-- Plugin erzeugt Evidence aus expliziten Nutzerbestaetigungen, Dateihashes, Exportnachweisen und Audit-Zeitpunkten.
-- Kein direkter Versand ueber NoC.
+This path is evaluated only after vendor/interface terms are known. It may be
+appropriate where the law-firm software already exposes a supported interface.
 
-Vorteile:
+### Path C: Export/Import Bridge
 
-- geringes rechtliches und technisches Risiko,
-- kompatibel mit aktueller beA-Webanwendung,
-- keine Abhaengigkeit von nicht oeffentlich dokumentierten beA-Schnittstellen,
-- gut fuer Kanzlei-Onboarding und Compliance.
+This path imports exported evidence, hashes documents and links metadata to a
+NoC matter. It remains metadata-first and avoids uncontrolled content storage.
 
-### Pfad B: Kanzleisoftware-Schnittstelle / KSW-Toolkit
+## Proposed Plugin API
 
-Dieser Pfad ist spaeter zu pruefen.
+### Readiness And Diagnosis
 
-- BRAK/beA stellt bzw. stellte Kanzleisoftware-Schnittstellen bereit, die von Kanzleisoftwareherstellern genutzt werden.
-- Zugang, Lizenz, Supportmodell und aktuelle technische Version muessen separat mit BRAK/beA-Support geklaert werden.
-- NoC darf diesen Pfad erst nach expliziter Freigabe und Vertrag/Schnittstellendokumentation produktiv nutzen.
+- `bea.readiness`
+- `bea.client_security_status`
+- `bea.mailbox_prerequisites`
+- `bea.export_path_check`
 
-Vorteile:
+### Process Preparation
 
-- tiefer integrierter Empfang/Versand moeglich,
-- bessere Workflow-Automation,
-- potenziell weniger manuelle Schritte.
+- `bea.send_plan`
+- `bea.receive_plan`
+- `bea.eeb_plan`
+- `bea.export_evidence_plan`
 
-Risiken:
+### Evidence And Audit
 
-- Versions- und Stoerungsabhaengigkeit,
-- Haftungs- und Supportfragen,
-- hoehere Geheimnis- und Compliance-Anforderungen,
-- nicht als erster NoC-MVP geeignet.
+- `bea.evidence_record`
+- `bea.hash_document`
+- `bea.attestation`
+- `bea.day2_followup`
 
-### Pfad C: Export-/Import-Bridge
+Later optional functions require a separate reviewed connector scope.
 
-Dieser Pfad kann als Zwischenstufe dienen.
+## Evidence Data Model
 
-- NoC erzeugt lokale Entwurfs- und Pruefpakete.
-- Der Nutzer uebernimmt sie bewusst in beA oder eine autorisierte Kanzleisoftware.
-- beA-Exportpakete werden lokal gehasht und als Evidence referenziert.
+Default evidence is metadata-only:
 
-Vorteile:
+- `case_id`
+- `workflow_type`
+- `mailbox_role`
+- `actor_role`
+- `action_time_utc`
+- `document_hash`
+- `source_system`
+- `attestation_text`
+- `approval_ref`
+- `retention_class`
+- `legal_hold`
 
-- keine beA-Sitzungsautomatisierung,
-- klare Trennung von Vorbereitung und rechtswirksamer Handlung,
-- auditierbar.
+Message content is stored only when a customer policy explicitly allows it and
+defines purpose, retention, access control and export path.
 
-## Vorgeschlagene Plugin-API
+## NoC Process Model
 
-Das Plugin kann als lokaler MCP-Server oder lokaler HTTP-Service umgesetzt werden. MCP ist fuer Codex/NoC-Prozesse naheliegend; HTTP erleichtert Desktop- und Browser-Integrationen.
-
-### Readiness und Diagnose
-
-- `bea.health`
-  - prueft Plugin-Version, Betriebssystem, User-Kontext, Terminalserver-Hinweise.
-- `bea.open_portal`
-  - oeffnet das beA-Portal bzw. gibt eine oeffentliche Start-URL aus.
-- `bea.check_client_security`
-  - prueft, ob beA Client Security laeuft oder vom Nutzer gestartet werden muss.
-- `bea.check_browser_certificate`
-  - dokumentiert, ob die lokale Browser-Kommunikation eingerichtet ist; keine Zertifikatsextraktion in NoC.
-- `bea.check_token_readiness`
-  - fuehrt eine Checkliste fuer Karte, Software-Token oder Fernsignatur.
-
-### Prozessvorbereitung
-
-- `bea.prepare_outgoing_message`
-  - erstellt eine lokale Versand-Checkliste mit Empfaenger, Aktenzeichen, Anlagenliste, Hashes, Suchbarkeit, Signaturbedarf.
-- `bea.prepare_eeb`
-  - fuehrt Pruefung fuer elektronisches Empfangsbekenntnis.
-- `bea.prepare_signature`
-  - prueft, ob Signaturpflicht, Signaturkarte/Fernsignatur und Verantwortlicher dokumentiert sind.
-- `bea.record_user_attestation`
-  - speichert eine ausdrueckliche Nutzerbestaetigung als Evidence.
-
-### Evidence und Audit
-
-- `bea.record_export`
-  - nimmt ein vom Nutzer bereitgestelltes beA-Exportpaket lokal entgegen, hasht es und erzeugt Evidence.
-- `bea.record_send_confirmation`
-  - speichert Versandnachweis-Metadaten, wenn der Nutzer diese aus beA bereitstellt.
-- `bea.record_inbox_check`
-  - protokolliert, dass ein Posteingangscheck durchgefuehrt wurde, ohne Inhalte an NoC zu uebertragen.
-- `bea.get_evidence`
-  - gibt minimierte Evidence zurueck.
-
-### Spaeter optional
-
-- `bea.ksw.connect`
-  - nur nach vertraglich und technisch freigegebenem KSW-Pfad.
-- `bea.ksw.fetch_messages`
-  - nur mit dedizierter Policy, Protokollierung und Geheimnisschutz.
-- `bea.ksw.send_message`
-  - nur nach expliziter menschlicher Freigabe und Supportklaerung.
-
-## Evidence-Datenmodell
-
-```json
-{
-  "evidence_id": "BEA-2026-000001",
-  "tenant_id": "tenant-law-example",
-  "process_ref": "REQ-2026-0001",
-  "matter_ref": "AKTE-2026-001",
-  "workflow_kind": "outgoing_message_preparation",
-  "bea_channel": "web_companion",
-  "local_actor_role": "rechtsanwalt",
-  "requires_signature": true,
-  "signature_kind": "qes_or_remote_signature",
-  "documents": [
-    {
-      "name": "schriftsatz.pdf",
-      "sha256": "sha256:...",
-      "classification": "mandate_confidential"
-    }
-  ],
-  "user_attestation": {
-    "confirmed_at": "2026-05-11T00:00:00Z",
-    "statement_id": "bea-send-prepared-local-user-confirmation"
-  },
-  "bea_artifact_ref": "local-export-or-user-provided-reference",
-  "audit_event_ref": "audit://...",
-  "retention_policy": "tenant-legal-default"
-}
-```
-
-Grundsatz: Evidence enthaelt bevorzugt Hashes, Referenzen und Status, nicht Mandatsinhalte. Inhaltsuebernahme ist nur nach expliziter Tenant-Policy erlaubt.
-
-## NoC-Prozessmodell
-
-Fuer beA sollte ein eigener Prozess-Typ vorbereitet werden:
-
-- `bea_message_preparation`
-- `bea_inbox_check`
-- `bea_eeb_response`
-- `bea_signature_preparation`
-- `bea_export_archival`
-
-Gemeinsame Statuswerte:
+Typical states:
 
 - `draft`
-- `prepared`
-- `needs_review`
-- `approved`
-- `executed_in_bea`
+- `readiness_checked`
+- `approval_needed`
+- `ready_for_bea_action`
+- `user_action_completed`
 - `evidence_recorded`
-- `archived`
-- `cancelled`
+- `day2_followup`
 
-Wichtig: `executed_in_bea` bedeutet nicht, dass NoC die Aktion selbst ausgefuehrt hat. Es bedeutet, dass der Nutzer die Aktion in beA bestaetigt und ein minimierter Nachweis in NoC abgelegt wurde.
+## MVP Scope
 
-## MVP-Scope
+- Local readiness check.
+- Send/receive/eEB plan preview.
+- Evidence metadata and hash model.
+- Human approval gates.
+- Support runbook for missing Client Security, mailbox access and export path.
 
-Der erste MVP sollte Pfad A abdecken:
+## Not In The MVP
 
-1. `bea.health`
-2. `bea.open_portal`
-3. `bea.check_client_security`
-4. `bea.prepare_outgoing_message`
-5. `bea.prepare_signature`
-6. `bea.record_user_attestation`
-7. `bea.record_export`
-8. Evidence-Schema fuer beA
-9. Beispielprozess fuer Versandvorbereitung
-10. Tenant-Onboarding-Runbook fuer Kanzlei
+- Direct sending or receiving.
+- PIN, card or credential handling.
+- Full mailbox synchronization.
+- Scraping protected beA portal content.
+- Autonomous legal or professional decisions.
 
-## Nicht im MVP
+## Security Requirements
 
-- Direktes Abrufen von beA-Nachrichten.
-- Direktes Senden von beA-Nachrichten.
-- Direkte Nutzung der KSW-Schnittstelle.
-- Browser-Scraping oder RPA gegen die beA-Webanwendung.
-- Automatische PIN-Eingabe.
-- Automatische qualifizierte elektronische Signatur.
-- Mandatsinhaltsanalyse durch LLM ohne ausdrueckliche Tenant-Policy.
+- No secrets in Git.
+- Redaction by default in logs.
+- Hash-first evidence for documents.
+- Tenant and case separation.
+- Four-eyes approval for sensitive dispatch or acknowledgement workflows.
 
-## Sicherheitsanforderungen
+## Provider Runbook
 
-- PIN, Karten- und Token-Geheimnisse bleiben lokal und ausserhalb von NoC.
-- beA Client Security bleibt fuehrend fuer lokale Sicherheitsfunktionen.
-- NoC speichert standardmaessig nur Hashes, Prozessstatus, Attestierungen und Audit-Referenzen.
-- Jede rechtswirksame Handlung braucht menschliche Bestaetigung durch berechtigte Rolle.
-- Berufsgeheimnis und Mandatsvertraulichkeit werden als Default-Classification behandelt.
-- Plugin-Logs sind redaction-by-default.
-- Kein Screenshot- oder DOM-Scraping von Mandatsinhalten im MVP.
-- Evidence ist tenantgebunden und darf nicht zwischen Mandanten wiederverwendet werden.
-- KSW-Pfad braucht separate Zulassung, Vertragsanbindung und Supportmodell.
+1. Confirm customer usecase and professional responsibility boundary.
+2. Confirm local workstation prerequisites.
+3. Confirm evidence storage and retention policy.
+4. Confirm support channel for Client Security issues.
+5. Enable the companion only after approval gates are documented.
 
-## SaaS-Provider-Runbook
+## Tenant Onboarding Runbook
 
-1. beA-Use-Case festlegen:
-   - Versandvorbereitung,
-   - Posteingangscheck-Nachweis,
-   - eEB-Prozess,
-   - Signaturvorbereitung,
-   - Exportarchivierung.
-2. Tenant-Datenschutz- und Geheimnisschutzpolicy definieren.
-3. Evidence-Retention je Kanzlei festlegen.
-4. Rollenmodell definieren:
-   - `lawyer_owner`,
-   - `legal_staff`,
-   - `bea_operator`,
-   - `tenant_auditor`,
-   - `compliance_reviewer`.
-5. Lokales Plugin bereitstellen und signieren.
-6. Installations- und Updatepfad dokumentieren.
-7. beA Client Security als externe Pflichtkomponente dokumentieren.
-8. Testfall mit Musterakte und Dummy-Dokumenten durchfuehren.
-9. Audit- und Exportpfad pruefen.
-10. Produktivfreigabe nur ueber NoC-Review.
+1. Identify mailbox owners and authorized users.
+2. Confirm local Client Security installation.
+3. Define eEB/export/dispatch workflows.
+4. Define retention and DMS target.
+5. Run the readiness check.
+6. Execute first workflow manually in official beA and record evidence.
 
-## Tenant-Onboarding-Runbook
+## Implementation Phases
 
-1. Kanzlei-Tenant anlegen.
-2. beA-Nutzungspflichten und Rollenverantwortung dokumentieren.
-3. Lokale beA Client Security Installation pruefen.
-4. Browser-Zertifikat fuer Client-Security-Kommunikation pruefen.
-5. Karten/Token/Fernsignatur je Nutzer dokumentieren, ohne Geheimnisse zu speichern.
-6. Rechte- und Rollenmodell im Tenant einrichten.
-7. Pilotprozess `bea_message_preparation` starten.
-8. Testdokument hashen und Versand-Checkliste erzeugen.
-9. Nutzer fuehrt beA-Aktion lokal aus.
-10. Export- oder Versandnachweis als Evidence aufnehmen.
-11. Review und Go/No-Go fuer Produktivbetrieb dokumentieren.
+1. Legal and technical discovery.
+2. Companion MVP with readiness and plan preview.
+3. Evidence and archive import.
+4. Law-firm software or KSW interface assessment.
+5. Productive integration path after separate approval.
 
-## Implementierungsphasen
+## Open Decisions
 
-### Phase 0: Legal/Technical Discovery
+- Which beA operating mode is used first: web, law-firm software, or export
+  bridge?
+- Which DMS or evidence store is authoritative?
+- Which message content, if any, may be stored outside the official system?
+- Which role can approve eEB or dispatch workflows?
 
-- Klaeren, ob NoC nur Companion oder auch KSW-Integrationspartner werden soll.
-- beA-Support-/BRAK-Anforderungen fuer KSW pruefen.
-- Datenschutz- und Berufsgeheimnisschutzmodell dokumentieren.
+## Acceptance Criteria For The First PR
 
-### Phase 1: Companion MVP
-
-- Lokales Plugin mit Readiness-Checks.
-- Evidence-Schema.
-- Beispielprozess.
-- Kein Versand und kein Abruf.
-
-### Phase 2: Evidence und Archiv
-
-- Hashing und lokale Exportaufnahme.
-- Tenant Evidence Store.
-- Audit-Events und Retention.
-
-### Phase 3: Kanzleisoftware-/KSW-Pruefung
-
-- Offizielle Schnittstellenunterlagen beschaffen.
-- Support- und Haftungsmodell klaeren.
-- Proof of Concept mit Testpostfach, nicht produktiv.
-
-### Phase 4: Produktiver Integrationspfad
-
-- Nur nach Freigabe von Security, Legal, Support und Tenant-Policies.
-- Rollout je Kanzlei/Tenant.
-
-## Offene Entscheidungen
-
-- Soll NoC beA nur begleiten oder perspektivisch KSW-Integrationspartner werden?
-- Erstes Produktversprechen: Versandvorbereitung, eEB, Posteingangscheck oder Archivnachweis?
-- Zielplattform zuerst: Windows-Einzelplatz, Windows-Terminalserver oder macOS/Linux?
-- Wie lange werden beA-Evidence-Objekte je Tenant aufbewahrt?
-- Duerfen Dokumentinhalte in NoC gespeichert werden oder nur Hashes/Referenzen?
-- Wie wird mit beA-Stoerungen und KSW-Versionen im Prozessstatus umgegangen?
-
-## Akzeptanzkriterien fuer den ersten PR
-
-- Architektur- und Scope-Dokument vorhanden.
-- Offizielle Quellen sind verlinkt.
-- MVP ist Companion-only und respektiert beA Client Security.
-- Keine Geheimnisse, PINs, Token oder Mandatsinhalte im Repo.
-- Tenant-Onboarding ist beschrieben.
-- KSW-Pfad ist als spaetere, separate Freigabe markiert.
-
-## Quellen
-
-- beA-Portal: https://www.bea-brak.de/beaportal/
-- beA Anwenderhandbuch: https://handbuch.bea-brak.de/
-- beA Client Security: https://handbuch.bea-brak.de/einrichtung-von-bea/bea-client-security
-- Kommunikation Browser und Client Security: https://handbuch.bea-brak.de/einrichtung-von-bea/organisatorische-und-technische-voraussetzungen/einstellungen-fuer-die-kommunikation-der-bea-client-security-mit-dem-browser/
-- Unterstuetzte Signaturkarten und Chipkartenleser: https://handbuch.bea-brak.de/einrichtung-von-bea/organisatorische-und-technische-voraussetzungen/unterstuetzte-signaturkarten-und-chipkartenleser-1
-- Signaturverfahren: https://handbuch.bea-brak.de/arbeiten-mit-ihrem-bea/signaturverfahren
-- BRAK beA und ERV: https://www.brak.de/anwaltschaft/bea-erv/
+- Plugin plan and manifest exist.
+- Readiness output is metadata-only.
+- No credentials, PINs, mailbox IDs or mandate content are stored.
+- Evidence model contains hash, case, actor, time and approval reference.
+- The first workflow remains a local companion workflow.

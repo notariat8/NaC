@@ -1,28 +1,36 @@
-# Public Readiness Bewertung
+# Public Readiness Assessment
 
-## Kurzfazit
+## Short Conclusion
 
-Das Repository ist **funktional stark** und als fachliches Muster bereits hilfreich.  
-Die vorherigen Public-Blocker sind jetzt umgesetzt; aus Sicht dieser Checkliste ist ein Public-Go-Live moeglich.
+The repository is functionally strong and already useful as a subject-matter
+pattern. The previous public-release blockers have been implemented; from the
+perspective of this checklist, a public go-live is possible.
 
-## Ampelstatus
+## Traffic-Light Status
 
-- Gruen: Fachkonzept, Governance, Policies, Onboarding fuer Cursor und Copilot
-- Gruen: lauffaehige Python-Referenz, Tests und Beispielprozesse
-- Gruen: Community- und Open-Source-Standards vorhanden (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`)
-- Gruen: BPMN-2.0 Referenzmodelle vorhanden (`bpmn/invoice-process.bpmn`, `bpmn/bookkeeping-process.bpmn`)
-- Gruen: PDF-Exportworkflow vorhanden (`.github/workflows/docs-pdf-export.yml`)
+- Green: subject concept, governance, policies, onboarding for Cursor and
+  Copilot.
+- Green: runnable Python reference, tests and example processes.
+- Green: community and open-source standards are present
+  ([CONTRIBUTING.md](../../CONTRIBUTING.md), [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md),
+  [SECURITY.md](../../SECURITY.md)).
+- Green: BPMN 2.0 reference models are present
+  ([bpmn/invoice-process.bpmn](../../bpmn/invoice-process.bpmn),
+  [bpmn/bookkeeping-process.bpmn](../../bpmn/bookkeeping-process.bpmn)).
+- Green: PDF export is available as a manual/generated artifact path, not as a
+  development prerequisite.
 
-## Empfehlung
+## Recommendation
 
-`GO` fuer Public.
+`GO` for public release.
 
-## Blocker (vor Public)
+## Blockers Before Public Release
 
-Alle frueheren Blocker wurden umgesetzt.
+All previous blockers have been implemented.
 
-## Verbesserungen (nach Public, aber empfohlen)
+## Improvements After Public Release, Recommended
 
-1. Architektur- und Policy-Checks in CI ausbauen.
-2. Release-Checkliste fuer versionierte Prozesspakete ergaenzen.
-3. Erste oeffentliche Referenz-Releases mit changelog-basiertem Testatprozess erstellen.
+1. Expand architecture and policy checks in CI.
+2. Add a release checklist for versioned process packages.
+3. Create the first public reference releases with a changelog-based attestation
+   process.

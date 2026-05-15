@@ -1,47 +1,47 @@
-# Runbook: Azure Eventstream fuer Revisionssicherheit
+# Runbook: Azure Eventstream For Audit-Proof Evidence
 
-## Zielbild
+## Target State
 
-Diese Zielvariante setzt das revisionssichere Event-Journal auf Azure um:
+This target variant implements the audit-proof event journal on Azure:
 
-- Ingest API (Webhook)
-- Azure Event Hubs (Stream)
-- Azure Blob mit Immutable Policy (Journal)
-- Key Vault (Signaturen)
-- Evidence Index (Azure Data Explorer oder SQL)
+- ingest API, webhook,
+- Azure Event Hubs as stream,
+- Azure Blob with immutable policy as journal,
+- Key Vault for signatures,
+- evidence index via Azure Data Explorer or SQL.
 
-## Referenzkomponenten
+## Reference Components
 
-- `ingest-api`: App Service oder Container App
-- `event-broker`: Azure Event Hubs Namespace + Event Hub
-- `journal-store`: Storage Account mit immutable Blob Container
-- `anchor-job`: taeglicher Signaturjob
-- `evidence-index`: ADX/SQL fuer Auditabfragen
+- `ingest-api`: App Service or Container App.
+- `event-broker`: Azure Event Hubs namespace plus event hub.
+- `journal-store`: Storage account with immutable Blob container.
+- `anchor-job`: daily signature job.
+- `evidence-index`: ADX/SQL for audit queries.
 
-## Mindestkonfiguration
+## Minimum Configuration
 
 ### Event Hubs
 
-- Partitionen: 4 (Startwert, bei Last anpassen)
-- Retention: 7 Tage (Broker nur Transportebene)
-- Capture: optional, empfohlen fuer Rohdatenablage
-- Private Endpoint: aktiv
-- TLS: aktiv
+- Partitions: 4 as starting value, adjust under load.
+- Retention: 7 days; broker is transport layer only.
+- Capture: optional, recommended for raw-data storage.
+- Private Endpoint: active.
+- TLS: active.
 
-### Blob Journal (WORM)
+### Blob Journal, WORM
 
-- Container: `event-journal`
-- Immutable Policy: Time-based retention (z. B. 3650 Tage)
-- Delete/Overwrite waehrend Retention: deaktiviert
-- Legal Hold Prozess: dokumentiert und getestet
+- Container: `event-journal`.
+- Immutable policy: time-based retention, for example 3650 days.
+- Delete/overwrite during retention: disabled.
+- Legal-hold process: documented and tested.
 
-### Signaturen
+### Signatures
 
-- Key Vault Key: `event-anchor-signing-key`
-- Algorithmus: RSA-PSS (z. B. PS256)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Key Vault key: `event-anchor-signing-key`.
+- Algorithm: RSA-PSS, for example PS256.
+- Anchor frequency: daily at 23:59 UTC.
 
-## Event-Schema (Mussfelder)
+## Event Schema, Required Fields
 
 - `event_id`
 - `event_time_utc`
@@ -57,44 +57,44 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf Azure um:
 - `event_hash`
 - `signature_ref`
 
-## Event-Fluss
+## Event Flow
 
-1. GitHub sendet Event an Ingest API.
-2. Ingest API prueft Webhook-Signatur.
-3. Gueltige Events gehen in Event Hubs.
-4. Normalizer liest aus Event Hubs und erzeugt hash-verkettete Envelopes.
-5. Envelope wird append-only im immutable Blob gespeichert.
-6. Evidence Index aktualisiert Suchfelder fuer Audits.
-7. Daily Anchor bildet Kettenabschluss und signiert.
+1. GitHub sends the event to the ingest API.
+2. The ingest API checks the webhook signature.
+3. Valid events go to Event Hubs.
+4. The normalizer reads from Event Hubs and creates hash-chained envelopes.
+5. The envelope is stored append-only in immutable Blob storage.
+6. Evidence index updates search fields for audits.
+7. Daily anchor forms the chain closure and signs it.
 
-## Rollen und Verantwortungen
+## Roles And Responsibilities
 
-- `platform_operator`: Event Hubs, Ingest, Deployments
-- `storage_custodian`: immutable Storage, Retention, Legal Hold
-- `security_operator`: Key Vault, Secrets, Zertifikate
-- `audit_reader`: read-only auf Evidence Index + Anchor Reports
-- `compliance_owner`: Freigabe bei Retention-/Policy-Aenderungen
+- `platform_operator`: Event Hubs, ingest, deployments.
+- `storage_custodian`: immutable storage, retention, legal hold.
+- `security_operator`: Key Vault, secrets, certificates.
+- `audit_reader`: read-only access to evidence index and anchor reports.
+- `compliance_owner`: approval for retention or policy changes.
 
-## Betriebsgrenzwerte (Start)
+## Operating Thresholds, Start
 
-- Event-Lag Warnung: > 60 Sekunden
-- DLQ-Rate Warnung: > 0.5 %
-- Ingest Signaturfehler: > 0.1 % / Stunde
-- Anchor-Fehler: 0 toleriert (P1 Incident)
+- Event lag warning: more than 60 seconds.
+- DLQ rate warning: more than 0.5 percent.
+- Ingest signature errors: more than 0.1 percent per hour.
+- Anchor error: zero tolerated, P1 incident.
 
-## Notfallverfahren
+## Emergency Procedures
 
-1. Ingest stoert: Events puffern (Retry Queue), Incident eroefnen.
-2. Broker stoert: Ingest auf Notpuffer schalten.
-3. Journal-Write stoert: Stream anhalten, keine Daten verwerfen.
-4. Anchor fehlgeschlagen: manueller Anchor-Run + Freigabe durch Security.
+1. Ingest disturbed: buffer events through retry queue, open incident.
+2. Broker disturbed: switch ingest to emergency buffer.
+3. Journal write disturbed: pause stream, discard no data.
+4. Anchor failed: manual anchor run plus security approval.
 
-## Go-Live-Checkliste
+## Go-Live Checklist
 
-- [ ] Webhook-Signaturpruefung aktiv
-- [ ] Event Hubs private erreichbar
-- [ ] Immutable Policy aktiv und verifiziert
-- [ ] Key Vault Signatur erfolgreich getestet
-- [ ] Daily Anchor Report vorhanden
-- [ ] Restore-Test erfolgreich
-- [ ] Rollenrezertifizierung dokumentiert
+- [ ] Webhook signature check active.
+- [ ] Event Hubs privately reachable.
+- [ ] Immutable policy active and verified.
+- [ ] Key Vault signature tested successfully.
+- [ ] Daily anchor report available.
+- [ ] Restore test successful.
+- [ ] Role recertification documented.
