@@ -105,6 +105,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "AI SBOM Baseline",
                     [sys.executable, "scripts/validate_ai_sbom.py"],
                 ),
+                (
+                    "knowledge_graph",
+                    "Knowledge Graph Baseline",
+                    [sys.executable, "scripts/validate_knowledge_graph.py"],
+                ),
             ]
         )
     return checks

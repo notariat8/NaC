@@ -1,6 +1,12 @@
 # Real-estate Purchase Contract
 
-Status: starter
+Status: legacy starter alias
+
+Canonical Top-10 usecase: `usecases/immobilienkaufvertrag/`  
+KG node: `case.immobilienkaufvertrag`
+
+This folder is kept as a compatibility starter. New work should use
+`usecases/immobilienkaufvertrag/`.
 
 ## Goal
 

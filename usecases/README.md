@@ -1,7 +1,8 @@
 # Notary Usecases
 
 This directory contains concrete notarial usecases. Usecases are separate from
-installable plugins and from reusable workflow execution logic.
+installable plugins, reusable workflow execution logic and static knowledge
+graph state.
 
 ## Boundary
 
@@ -9,16 +10,41 @@ installable plugins and from reusable workflow execution logic.
 - `workflows/` provides reusable skills and deterministic Python workflow logic.
 - `usecases/` describes concrete notarial business scenarios and their required
   plugin/workflow bindings.
+- `knowledge-graph/` stores the static KG/DB for open questions, documents,
+  decisions, gates and evidence references.
 
-## Current Catalog
+## Canonical Top-10 Catalog
 
 | Usecase | Folder | Status | Primary plugin dependencies |
 | --- | --- | --- | --- |
-| Online GmbH formation | `online-gmbh-gruendung/` | Active intake | `noc-regulated-core`, `noc-cyberjack-rfid`, `noc-bnotk-xnp`, `noc-handelsregister` |
+| Immobilienkaufvertrag | `immobilienkaufvertrag/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| Grundschuld / Hypothekenbestellung | `grundschuld-hypothekenbestellung/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| GmbH-/UG-Gruendung | `online-gmbh-gruendung/` | KG baseline, active intake | `noc-regulated-core`, `noc-cyberjack-rfid`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
+| Handelsregisteranmeldung | `handelsregisteranmeldung/` | KG baseline | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
+| Beglaubigung von Unterschriften | `unterschriftsbeglaubigung/` | KG baseline | `noc-regulated-core`, `noc-idaas`, `noc-bnotk-xnp` |
+| Testament / Erbvertrag | `testament-erbvertrag/` | KG baseline | `noc-regulated-core` |
+| Erbscheinsantrag / Nachlassangelegenheiten | `erbscheinsantrag-nachlass/` | KG baseline | `noc-regulated-core` |
+| Vorsorgevollmacht und Patientenverfuegung | `vorsorgevollmacht-patientenverfuegung/` | KG baseline | `noc-regulated-core`, `noc-idaas` |
+| Schenkungsvertrag / Uebertragungsvertrag | `schenkungsvertrag-uebertragungsvertrag/` | KG baseline | `noc-regulated-core`, `noc-grundbuch-portal` |
+| Ehevertrag / Scheidungsfolgenvereinbarung | `ehevertrag-scheidungsfolgenvereinbarung/` | KG baseline | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal` |
+
+## Additional Active Intake Sources
+
+| Usecase | Folder | Status | Primary plugin dependencies |
+| --- | --- | --- | --- |
 | AO52 nonprofit software company | `ao52aas-gemeinnuetzigkeit/` | Active intake | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-elster-eric` |
 | Steuer-aaS tax readiness | `steuer-aas/` | Active intake | `noc-regulated-core`, `noc-elster-eric` |
-| Real-estate purchase contract | `grundstueckskaufvertrag/` | Starter | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Testament | `testament/` | Starter | `noc-regulated-core` |
+
+## Knowledge Graph Binding
+
+The static KG is maintained in:
+
+- `knowledge-graph/notarial-top10.graph.json`
+- `knowledge-graph/notarial-top10.md`
+
+Each canonical Top-10 usecase has a matching KG case node. Workflows should
+read KG nodes as open-question state and write updates through reviewed Git
+changes. Real mandate values must stay outside the repository.
 
 ## Intake Rule
 
@@ -27,3 +53,9 @@ canonicalized here. If an external repository is empty, only the canonical
 folder and source reference are created here; no empty history is imported.
 
 See `usecases/github-repo-intake.md` for the latest GitHub scan.
+
+## Legacy Starter Aliases
+
+`grundstueckskaufvertrag/` and `testament/` remain as older starter folders.
+The canonical Top-10 entries are now `immobilienkaufvertrag/` and
+`testament-erbvertrag/`.

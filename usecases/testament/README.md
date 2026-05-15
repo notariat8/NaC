@@ -1,6 +1,12 @@
 # Testament
 
-Status: starter
+Status: legacy starter alias
+
+Canonical Top-10 usecase: `usecases/testament-erbvertrag/`  
+KG node: `case.testament_erbvertrag`
+
+This folder is kept as a compatibility starter. New work should use
+`usecases/testament-erbvertrag/`.
 
 ## Goal
 

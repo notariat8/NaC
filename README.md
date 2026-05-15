@@ -27,6 +27,8 @@ The binding rule is defined in `policies/language-policy.yaml` and checked by
 - Plugin roadmap: `plugins/GANTT.md`
 - Workflow roadmap: `workflows/GANTT.md`
 - Usecase roadmap: `usecases/GANTT.md`
+- Static knowledge graph: `knowledge-graph/notarial-top10.graph.json`,
+  `knowledge-graph/notarial-top10.md`
 
 ## Product Structure
 
@@ -39,6 +41,9 @@ This repository now separates three product layers:
 - `usecases/`: concrete notarial scenarios such as online GmbH formation,
   AO52 nonprofit software-company formation, real-estate purchase contracts,
   and testaments.
+- `knowledge-graph/`: static KG/DB state for open questions, documents,
+  decisions, gates and evidence references for the canonical Top-10 notarial
+  case types.
 
 Every push must update `roadmap/GANTT.md`. Changes below `plugins/`,
 `workflows/`, or `usecases/` must also update the matching area Gantt.
@@ -67,4 +72,5 @@ python scripts/quality_gate.py --profile strict
 ```
 
 The strict quality gate validates process files, tests, privacy rules,
-governance sync, language parity, cloud runbook parity, and plugin manifests.
+governance sync, language parity, cloud runbook parity, plugin manifests,
+AI-SBOM state, Gantt updates and the static knowledge graph.

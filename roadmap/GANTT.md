@@ -33,11 +33,12 @@ gantt
 
     section C: Notary usecases
     GitHub usecase intake                        :done,    c1, 2026-05-14, 1d
-    GmbH formation canonicalization              :active,  c2, 2026-05-14, 21d
-    AO52 nonprofit formation intake              :active,  c3, 2026-05-14, 21d
-    Steuer-aaS tax usecase intake                :active,  c4, 2026-05-14, 21d
-    Purchase contract and testament starters     :         c5, after c4, 28d
-    Pilot-ready usecase packages                 :         c6, after c5, 35d
+    Top-10 notarial KG baseline                  :done,    c2, 2026-05-15, 1d
+    GmbH formation canonicalization              :active,  c3, 2026-05-14, 21d
+    AO52 nonprofit formation intake              :active,  c4, 2026-05-14, 21d
+    Steuer-aaS tax usecase intake                :active,  c5, 2026-05-14, 21d
+    Static KG-fed workflow state model           :active,  c6, 2026-05-15, 28d
+    Pilot-ready usecase packages                 :         c7, after c6, 35d
 ```
 
 ## Progress Snapshot
@@ -46,7 +47,7 @@ gantt
 | --- | --- | --- | --- | --- |
 | A | Installable plugins for notary offices | Active | 64% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, draft artifact and strict validator. |
 | B | Installable skills and deterministic Python workflows | Active | 10% | Workflow root and execution boundaries are now explicit. |
-| C | Notarial usecases such as GmbH formation, AO52 nonprofit formation, tax readiness, purchase contract, testament | Active | 22% | GitHub intake identified `ofunk/Online-GmbH-Gruendung`, `ofunk/AO52aaS`, and `ofunk/Steuer-aaS` as canonical usecase sources. |
+| C | Notarial usecases such as GmbH formation, property purchase, land charge, register filings, signatures, succession, precautionary powers, gifts and family agreements | Active | 38% | The canonical Top-10 usecase catalog now exists with static KG nodes, detailed usecase folders and a strict KG validator. |
 
 ## Rule
 
