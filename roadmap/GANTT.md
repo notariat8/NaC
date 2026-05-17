@@ -2,9 +2,10 @@
 
 Letzte Aktualisierung: 2026-05-17
 
-Jeder Push muss diesen globalen Gantt aktualisieren. Aenderungen unter
-`plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich den passenden
-Bereichs-Gantt aktualisieren:
+Jedes Change-Set mit repo-relevanten Dateien muss diesen globalen Gantt
+mitpflegen. Repo-relevant sind alle Aenderungen ausser generierten Artefakten
+unter `out/` und Git-Interna. Aenderungen unter `plugins/`, `workflows/` oder
+`usecases/` muessen zusaetzlich den passenden Themen-Gantt mitpflegen:
 
 - `plugins/GANTT.md`
 - `workflows/GANTT.md`
@@ -67,6 +68,7 @@ gantt
     Zielgruppenpfade und Owner-Sichtbarkeit      :done,    d1, 2026-05-17, 1d
     Reifegrad Glossar und Beispielpfad           :done,    d1a, 2026-05-17, 1d
     CLI-first Ausfuehrungsmodell erklaeren       :done,    d1b, 2026-05-17, 1d
+    Gantt-Regel praezisieren                     :done,    d1c, 2026-05-17, 1d
     Notariats-Startseite weiter schaerfen        :active,  d2, 2026-05-17, 14d
 ```
 
@@ -77,11 +79,17 @@ gantt
 | A | Installierbare Plugins fuer Notariate | Aktiv | 69% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung und deutsch gefuehrte Skill-Anweisungen mit englischer Summary. |
 | B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 42% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel und prueft SKILL.md-Sprachmarker; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
 | C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
-| D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 30% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
+| D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 31% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell, praezisierte Gantt-Regel und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 
 ## Regel
 
-Das strikte Quality Gate umfasst `scripts/validate_gantt_progress.py`. Ein
-Change-Set ohne Aktualisierung von `roadmap/GANTT.md` ist nicht push-bereit.
-Ein Change-Set mit Aenderungen unter `plugins/`, `workflows/` oder `usecases/`
-muss zusaetzlich den passenden Bereichs-Gantt aktualisieren.
+Das strikte Quality Gate umfasst `scripts/validate_gantt_progress.py` und setzt
+diese Regel technisch durch:
+
+1. Sobald ein Change-Set repo-relevante Dateien aendert, muss
+   `roadmap/GANTT.md` Teil desselben Change-Sets sein.
+2. Aenderungen unter `plugins/`, `workflows/` oder `usecases/` muessen
+   zusaetzlich das jeweilige `GANTT.md` im selben Root mitpflegen.
+3. Reine Aenderungen am jeweiligen Themen-Gantt zaehlen bereits als
+   Themen-Gantt-Pflege.
+4. Generierte Quality-Artefakte unter `out/` und Git-Interna werden ignoriert.
