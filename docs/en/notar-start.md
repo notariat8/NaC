@@ -53,6 +53,7 @@ whether the repository passes its own gates.
 ## Next Documents
 
 - [docs/en/reifegrad.md](reifegrad.md)
+- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/en/glossar.md](glossar.md)
 - [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)
 - [usecases/README.md](../../usecases/README.md)

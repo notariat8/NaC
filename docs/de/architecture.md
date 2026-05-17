@@ -7,6 +7,9 @@ Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` al
 
 Referenz: `docs/de/organization-as-code-positioning.md`
 
+Das operative CLI-first-Ausfuehrungsmodell steht in
+[docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
+
 ## Schichten
 
 1. `Prompt Frontend`

@@ -38,6 +38,8 @@ python scripts/notary_kg.py --repo-root . --format json editor-view immobilienka
 This is not the final web editor yet, but it is an implemented contract for a
 GitHub-backed sidecar editor or a later ChatGPT App. The workflow contract lives
 in [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
+Why this CLI-first layer is deliberate is explained in
+[docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Tabs
 

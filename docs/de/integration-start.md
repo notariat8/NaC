@@ -37,6 +37,7 @@ Nachweisschichten. Das oeffentliche Repository modelliert:
 - [plugins/README.md](../../plugins/README.md)
 - [workflows/README.md](../../workflows/README.md)
 - [workflows/contracts/README.md](../../workflows/contracts/README.md)
+- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/plugin-plans/README.md](plugin-plans/README.md)
 - [docs/de/plugin-operations/README.md](plugin-operations/README.md)
 - [docs/de/sbom-for-ai.md](sbom-for-ai.md)

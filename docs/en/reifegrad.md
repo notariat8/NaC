@@ -8,6 +8,7 @@ blocked automation. It helps decision makers assess NoC realistically.
 | Area | State | What it means |
 | --- | --- | --- |
 | Clone and read the repository | Usable today | Structure, policies, usecases and start paths are publicly inspectable. |
+| Run the CLI/Python core | Usable today | Stable logic runs locally and can later be operated by plugins, CI or UI layers. |
 | Run the local quality gate | Usable today | Tests, language rules, privacy lint, plugin validation, KG validation and Gantt rules run locally. |
 | Review usecase KGs | Usable today | Each usecase has a machine-readable KG and a human review view. |
 | Show KG editor view | Usable today | Subject-matter staff can inspect open nodes as safe form/checklist views without editing `value` fields. |
@@ -27,6 +28,7 @@ with local systems, roles, privacy review and human approvals.
 ## Next Documents
 
 - [docs/en/notar-start.md](notar-start.md)
+- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/en/betriebsstart.md](betriebsstart.md)
 - [docs/en/integration-start.md](integration-start.md)
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md)

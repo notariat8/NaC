@@ -7,6 +7,9 @@ as the control principle. `NoC` is the concrete implementation of this frame.
 
 Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
+The operational CLI-first execution model is described in
+[docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
+
 ## Layers
 
 1. `Prompt Frontend`

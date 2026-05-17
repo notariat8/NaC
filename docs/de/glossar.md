@@ -7,6 +7,7 @@ relevant sind.
 | --- | --- |
 | Git | Das versionierte Protokoll. Es zeigt, wer wann welche Regel, Vorlage oder Entscheidung geaendert hat. |
 | Repository | Der gemeinsame Arbeitsordner mit Regeln, Usecases, Workflows, Tests und Nachweisen. |
+| CLI | Eine Kommandozeilen-Schnittstelle: ein eindeutig benannter Arbeitsauftrag an den Computer. In NoC ist sie die lokale, pruefbare Ausfuehrungsschicht, die spaeter auch von UI, Plugins oder CI gestartet werden kann. |
 | Privater Fork | Die eigene, nicht oeffentliche Kopie fuer ein konkretes Buero oder Pilotprojekt. Dort werden lokale Rollen und Betriebsregeln gepflegt. |
 | Pull Request | Ein gepruefter Aenderungsvorschlag. Er ersetzt ungepruefte Direktbearbeitung an wichtigen Regeln. |
 | Review | Die fachliche oder technische Pruefung, bevor eine Aenderung verbindlich wird. |

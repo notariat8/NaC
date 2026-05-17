@@ -7,6 +7,7 @@ operations.
 | --- | --- |
 | Git | The versioned protocol. It shows who changed which rule, template or decision and when. |
 | Repository | The shared working folder with rules, usecases, workflows, tests and evidence. |
+| CLI | Command Line Interface: a clearly named work order for the computer. In NoC, it is the local, checkable execution layer that can later be started by UI, plugins or CI. |
 | Private fork | The office's own non-public copy for a real office or pilot. Local roles and operating rules live there. |
 | Pull request | A reviewed change proposal. It replaces unreviewed direct edits to important rules. |
 | Review | Subject-matter or technical checking before a change becomes binding. |

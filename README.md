@@ -31,6 +31,7 @@ geprueft.
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart fuer Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
 Schnelle Orientierung fuer Nicht-Technik:
+[Ausfuehrungsmodell](docs/de/ausfuehrungsmodell.md),
 [Reifegrad](docs/de/reifegrad.md), [Glossar](docs/de/glossar.md) und
 [Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
 
@@ -80,6 +81,7 @@ Weitere Dokumentation:
 - Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
 - Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
+- Ausfuehrungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
 - Reifegrad: [docs/de/reifegrad.md](docs/de/reifegrad.md)
 - Glossar: [docs/de/glossar.md](docs/de/glossar.md)
 - Beispiel Immobilienkaufvertrag: [docs/de/beispiel-immobilienkaufvertrag.md](docs/de/beispiel-immobilienkaufvertrag.md)

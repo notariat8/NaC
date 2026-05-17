@@ -47,6 +47,7 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 ## Naechste Dokumente
 
 - [docs/de/minimum-requirements.md](minimum-requirements.md)
+- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/startup-verification.md](startup-verification.md)
 - [docs/de/plugin-operations/install-local-plugins.md](plugin-operations/install-local-plugins.md)
 - [docs/de/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)

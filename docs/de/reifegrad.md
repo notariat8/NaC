@@ -9,6 +9,7 @@ NoC realistisch einzuordnen.
 | Bereich | Stand | Was das bedeutet |
 | --- | --- | --- |
 | Repository klonen und lesen | Heute nutzbar | Die Struktur, Policies, Usecases und Startpfade sind oeffentlich nachvollziehbar. |
+| CLI-/Python-Kern ausfuehren | Heute nutzbar | Die stabile Logik laeuft lokal und kann spaeter von Plugins, CI oder UI-Schichten bedient werden. |
 | Quality Gate lokal ausfuehren | Heute nutzbar | Tests, Sprachregeln, Datenschutzlint, Plugin-Validierung, KG-Validierung und Gantt-Regel laufen lokal. |
 | Usecase-KGs pruefen | Heute nutzbar | Jeder Usecase hat eine maschinenlesbare KG und eine menschliche Review-Sicht. |
 | KG-Editor-View anzeigen | Heute nutzbar | Fachpersonal kann offene Knoten als sichere Formular-/Checklisten-Sicht ansehen, ohne `value`-Felder zu bearbeiten. |
@@ -29,6 +30,7 @@ menschlichen Freigaben.
 ## Naechste Dokumente
 
 - [docs/de/notar-start.md](notar-start.md)
+- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/betriebsstart.md](betriebsstart.md)
 - [docs/de/integration-start.md](integration-start.md)
 - [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md)

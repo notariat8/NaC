@@ -39,6 +39,8 @@ Die Ausgabe ist kein finaler Web-Editor, aber sie ist ein implementierter
 Vertrag fuer einen GitHub-backed Sidecar-Editor oder eine spaetere ChatGPT App.
 Der Workflow-Vertrag steht in
 [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
+Warum diese CLI-first-Schicht bewusst gewaehlt ist, beschreibt
+[docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Tabs
 

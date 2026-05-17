@@ -64,6 +64,7 @@ gantt
     section D: Produktkommunikation und Adoption
     Zielgruppenpfade und Owner-Sichtbarkeit      :done,    d1, 2026-05-17, 1d
     Reifegrad Glossar und Beispielpfad           :done,    d1a, 2026-05-17, 1d
+    CLI-first Ausfuehrungsmodell erklaeren       :done,    d1b, 2026-05-17, 1d
     Notariats-Startseite weiter schaerfen        :active,  d2, 2026-05-17, 14d
 ```
 
@@ -74,7 +75,7 @@ gantt
 | A | Installierbare Plugins fuer Notariate | Aktiv | 68% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator und deutsche Plugin-MD-Fuehrung. |
 | B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 41% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
 | C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
-| D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 25% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
+| D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 30% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 
 ## Regel
 

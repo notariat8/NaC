@@ -42,8 +42,8 @@ and moved into verifiable execution through an Enterprise Control Plane.
 | Review and standardization | [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Development and maintainers | [docs/en/START_HERE.md](START_HERE.md) |
 
-Quick orientation: [docs/en/reifegrad.md](reifegrad.md),
-[docs/en/glossar.md](glossar.md) and
+Quick orientation: [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md),
+[docs/en/reifegrad.md](reifegrad.md), [docs/en/glossar.md](glossar.md) and
 [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
 
 ## Multilingual Maintenance
@@ -65,6 +65,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
 - [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
+- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains why NoC
+  is CLI-first today and still UI-ready later.
 - [docs/en/reifegrad.md](reifegrad.md) separates usable today, pilot-ready, planned and deliberately blocked surfaces.
 - [docs/en/glossar.md](glossar.md) explains terms for non-technical readers.
 - [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md) shows one full case without real mandate data.

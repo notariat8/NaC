@@ -48,8 +48,8 @@ ueberfuehrt werden.
 | Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](START_HERE.md) |
 
-Schnelle Orientierung: [docs/de/reifegrad.md](reifegrad.md),
-[docs/de/glossar.md](glossar.md) und
+Schnelle Orientierung: [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md),
+[docs/de/reifegrad.md](reifegrad.md), [docs/de/glossar.md](glossar.md) und
 [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
 
 ## Prozessklassen
@@ -78,6 +78,8 @@ Schnelle Orientierung: [docs/de/reifegrad.md](reifegrad.md),
 - [docs/de/betriebsstart.md](betriebsstart.md): privater Fork, lokale Checks und Betriebsgrenzen.
 - [docs/de/integration-start.md](integration-start.md): Fachsystem-, Plugin- und Connector-Pfad.
 - [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit fuer Pruefung und Standardisierung.
+- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NoC heute
+  CLI-first ist und spaeter trotzdem UI-faehig bleibt.
 - [docs/de/reifegrad.md](reifegrad.md): Matrix fuer heute nutzbar, pilotfaehig, geplant und bewusst gesperrt.
 - [docs/de/glossar.md](glossar.md): Begriffe fuer Nicht-Technik-Leser.
 - [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md): ein durchgehender Vorgang ohne echte Mandatsdaten.
