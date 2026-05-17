@@ -30,6 +30,10 @@ geprueft.
 | Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart fuer Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
+Schnelle Orientierung fuer Nicht-Technik:
+[Reifegrad](docs/de/reifegrad.md), [Glossar](docs/de/glossar.md) und
+[Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
+
 Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
 [docs/en/betriebsstart.md](docs/en/betriebsstart.md),
 [docs/en/integration-start.md](docs/en/integration-start.md),
@@ -76,6 +80,9 @@ Weitere Dokumentation:
 - Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
 - Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
+- Reifegrad: [docs/de/reifegrad.md](docs/de/reifegrad.md)
+- Glossar: [docs/de/glossar.md](docs/de/glossar.md)
+- Beispiel Immobilienkaufvertrag: [docs/de/beispiel-immobilienkaufvertrag.md](docs/de/beispiel-immobilienkaufvertrag.md)
 - Datenschutz und AVV/DPA: [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md)
 - AI-SBOM: [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md)
 - KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)

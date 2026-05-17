@@ -9,6 +9,17 @@ Usecases sind getrennt von installierbaren Plugins und wiederverwendbarer
 Workflow-Ausfuehrungslogik. Der statische Knowledge Graph ist usecase-lokal und
 liegt im jeweils passenden Usecase-Ordner.
 
+Jeder Usecase-Ordner hat jetzt zwei Leseebenen:
+
+- `README.md` als kurze fachliche Vorderseite fuer Menschen.
+- `knowledge-graph.md` und `knowledge-graph.graph.json` als Review- und
+  Maschinenstand fuer offene Knoten, Dokumente, Entscheidungen und Gates.
+
+Fuer Nicht-Technik-Leser helfen zusaetzlich
+[docs/de/reifegrad.md](../docs/de/reifegrad.md),
+[docs/de/glossar.md](../docs/de/glossar.md) und
+[docs/de/beispiel-immobilienkaufvertrag.md](../docs/de/beispiel-immobilienkaufvertrag.md).
+
 ## Abgrenzung
 
 - [plugins/](../plugins) stellt installierbare Begleitfaehigkeiten bereit.

@@ -74,6 +74,30 @@ PLUGIN_WORKFLOW_MD_FORBIDDEN_MARKERS = (
     "## Scope",
     "## MVP-Scope",
 )
+USECASE_README_REQUIRED_MARKERS = (
+    "## Worum Es Geht",
+    "## Was Heute Im Muster Enthalten Ist",
+    "## Grenzen Fuer Den Betrieb",
+    "## Plugin- Und Workflow-Bindung",
+    "## Wie Man Diesen Usecase Prueft",
+)
+USECASE_README_FORBIDDEN_MARKERS = (
+    "## Goal",
+    "## Scope",
+    "## Out of Scope",
+    "## Required Information Nodes",
+    "## Documents and Evidence",
+    "## Decisions",
+    "## Gates",
+    "## Plugin Dependencies",
+    "## Workflow Dependencies",
+    "## Delivery Tasks",
+    "## Acceptance Criteria",
+    "Source repository checked",
+    "The source repository",
+    "No real ",
+    "No automated",
+)
 
 
 def collect_files(surface: str, language: str) -> set[str]:
@@ -229,6 +253,20 @@ def validate_plugin_workflow_language_rules() -> list[str]:
     return errors
 
 
+def validate_usecase_readme_language_rules() -> list[str]:
+    errors: list[str] = []
+    for readme_file in sorted((REPO_ROOT / "usecases").glob("*/README.md")):
+        rel_path = readme_file.relative_to(REPO_ROOT).as_posix()
+        text = readme_file.read_text(encoding="utf-8")
+        for marker in USECASE_README_REQUIRED_MARKERS:
+            if marker not in text:
+                errors.append(f"{rel_path} muss deutschen Usecase-README-Marker enthalten: {marker}")
+        for marker in USECASE_README_FORBIDDEN_MARKERS:
+            if marker in text:
+                errors.append(f"{rel_path} enthaelt englischen Usecase-README-Altmarker: {marker}")
+    return errors
+
+
 def _validate_kg_text_fields(value: object, rel_path: str) -> list[str]:
     errors: list[str] = []
     if isinstance(value, dict):
@@ -251,6 +289,7 @@ def main() -> int:
     errors.extend(validate_localized_text_is_not_copied())
     errors.extend(validate_domain_language_rules())
     errors.extend(validate_usecase_kg_language_rules())
+    errors.extend(validate_usecase_readme_language_rules())
     errors.extend(validate_plugin_workflow_language_rules())
 
     if errors:

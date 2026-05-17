@@ -1,57 +1,74 @@
-# AO52 Nonprofit Software Company
+# AO52 gemeinnuetziges Softwareunternehmen
 
-Status: active intake
+Status: aktive Aufnahme  
+Reifegrad: aktive Aufnahmequelle, P1  
+KG-Knoten: `case.ao52aas_gemeinnuetzigkeit`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
-Source repository checked on 2026-05-14: `ofunk/AO52aaS`
+## Worum Es Geht
 
-The source repository contained only `docs/gemeinnuetzigkeit/` documents. Those
-documents are now migrated here as the canonical usecase package for forming or
-restructuring a nonprofit software organization with AO52 relevance.
+Gruendungs- und Readiness-Paket fuer ein gemeinnuetzig ausgerichtetes Softwareunternehmen mit Zweckbild, Governance, Finanzierung sowie Register- und Steuer-Readiness.
 
-## Goal
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-Prepare a notary-office usecase package for a nonprofit or hybrid software
-company. The usecase covers purpose definition, revenue classification,
-structure choice, statute preparation, nonprofit pre-check, formation workflow,
-and evidence metadata.
+## Was Heute Im Muster Enthalten Ist
 
-## Boundaries
-
-- This usecase does not replace tax advice, legal advice, notarial review, or
-  Finanzamt pre-clearance.
-- The LLM is an intake and structuring interface, not the legal or tax truth.
-- No real personal data, business secrets, tax IDs, certificates, or bank data
-  may be stored in Git.
-- Formation, statute wording, nonprofit qualification, and registration steps
-  require human expert review.
-
-## Initial Dependencies
-
-| Layer | Dependency | Purpose |
+| Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Plugin | `noc-regulated-core` | Shared regulated workflow guardrails. |
-| Plugin | `noc-bnotk-xnp` | Notary workstation readiness when required. |
-| Plugin | `noc-handelsregister` | Register filing readiness for gGmbH/gUG or hybrid entities. |
-| Plugin | `noc-elster-eric` | Tax registration and nonprofit-adjacent tax workflow planning. |
-| Workflow | `workflows/contracts/` | Intake, approval, data-class, and evidence contract. |
-| Workflow | `workflows/python/` | Deterministic checks for completeness, gates, and plan preview. |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 1 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-## Delivery Plan
+## Offene Angaben
 
-1. Define intake contract for purpose, target groups, product, revenue streams,
-   legal form, stakeholders, funding, and review owners.
-2. Bind AO52 purpose and statute pre-checks to a human tax/legal review gate.
-3. Create a formation plan preview for pure nonprofit, nonprofit with economic
-   business operation, and hybrid structure.
-4. Bind register-readiness and tax-readiness plugin outputs.
-5. Define evidence metadata for purpose decision, structure decision, statute
-   review, notarial formation, tax pre-check, and Day2 compliance review.
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
+| --- | --- | --- | --- |
+| `purpose.model` | Zweck Modell | Gruenderkreis | drafting, tax_readiness |
+| `entity.form` | Rechtstraeger Form | Notariatsfachkraft | drafting, register_package |
+| `funding.model` | Finanzierung Modell | Gruenderkreis | tax_readiness, governance_review |
+| `governance.rules` | Governance Regeln | Notariat | drafting, legal_review |
+| `tax.precheck` | Steuer Vorpruefung | Steuerfachkraft | tax_readiness |
+| `software.scope` | Software Umfang | Gruenderkreis | drafting, risk_review |
 
-## Migrated Source Documents
+## Grenzen Fuer Den Betrieb
 
-- `docs/gemeinnuetzigkeit/README.md`
-- `docs/gemeinnuetzigkeit/01-zweckbild.md`
-- `docs/gemeinnuetzigkeit/02-finanzierungsmodell.md`
-- `docs/gemeinnuetzigkeit/03-strukturmodell.md`
-- `docs/gemeinnuetzigkeit/04-vorabpruefung-checkliste.md`
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
+
+## Plugin- Und Workflow-Bindung
+
+Primaere Plugins:
+
+- `noc-regulated-core`
+- `noc-bnotk-xnp`
+- `noc-handelsregister`
+- `noc-elster-eric`
+
+Workflow-Bezug:
+
+- `workflow.company_formation_intake`
+- `workflow.tax_readiness_intake`
+
+Fachliche Anker im KG-Modell:
+
+- `src.beurkg`
+- `src.gmbhg`
+- `src.hgb.12`
+
+## Wie Man Diesen Usecase Prueft
+
+```bash
+python scripts/notary_kg.py --repo-root . case ao52aas-gemeinnuetzigkeit
+python scripts/notary_kg.py --repo-root . editor-view ao52aas-gemeinnuetzigkeit
+python scripts/validate_knowledge_graph.py
+```
+
+## Naechster Lesepfad
+
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

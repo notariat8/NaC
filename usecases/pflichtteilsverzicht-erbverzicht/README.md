@@ -1,84 +1,71 @@
 # Pflichtteilsverzicht / Erbverzicht
 
-Status: KG baseline  
-KG node: `case.pflichtteilsverzicht_erbverzicht`  
+Status: offen  
+Reifegrad: Naechste-10-Usecase, P1  
+KG-Knoten: `case.pflichtteilsverzicht_erbverzicht`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Sections 2346 and 2348
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for inheritance waiver and
-compulsory-share waiver contracts. The workflow must capture parties, waiver
-scope, descendant effects, compensation, approval issues and fairness flags.
+Vertraglicher Erb- oder Pflichtteilsverzicht, haeufig in der Familiennachfolge, mit Beteiligten, Umfang, Abfindung, Erstreckung auf Abkoemmlinge und Fairness-Pruefung.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for future decedent, waiving party, family context and scope.
-- Contract drafting support for inheritance or compulsory-share waiver.
-- Compensation and tax/family metadata.
-- Personal participation, fairness and approval review gates.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automated succession-planning advice as final truth.
-- No real family, wealth or compensation data in Git.
-- No execution without notarial fairness review.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `future_decedent.identity` | Who contracts with the waiving party? | Notary | Personal data |
-| `waiver_party.identity` | Who waives and are approvals required? | Notary | Family data |
-| `waiver.scope` | Is waiver full, compulsory-share only or limited? | Notary | Sensitive legal data |
-| `descendant.effect` | Does the waiver extend to descendants? | Notary | Family data |
-| `compensation.model` | Is compensation paid or transferred? | Client | Financial data |
-| `family.fairness_flags` | Are dependency, pressure or imbalance flags present? | Notary | Sensitive family data |
+| `future_decedent.identity` | Kuenftiger Erblasser Identitaet | Notariat | identity_gate, legal_review |
+| `waiver_party.identity` | Verzicht Beteiligter Identitaet | Notariat | identity_gate, approval_review |
+| `waiver.scope` | Verzicht Umfang | Notariat | drafting |
+| `descendant.effect` | Abkoemmlinge Wirkung | Notariat | legal_review |
+| `compensation.model` | Abfindung Modell | Mandantschaft | drafting, tax_flags |
+| `family.fairness_flags` | Familie Fairness Pruefflaggen | Notariat | fairness_review |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Waiver contract draft | Human-reviewed deed. | Synthetic or metadata only. |
-| Compensation evidence | Supports settlement route. | Evidence reference only. |
-| Fairness review notes | Captures sensitive review gate. | Evidence reference only. |
-| Execution and copy trace | Tracks closing. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Erbverzicht, Pflichtteilsverzicht or limited waiver.
-- Compensation: none, cash, asset transfer or mixed.
-- Descendant extension included or excluded.
-- Whether family-law, guardianship or tax review is needed.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-idaas`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Personal participation reviewed | Notary | Appointment |
-| Fairness and family flags reviewed | Notary | Draft release |
-| Compensation route reviewed | Notary | Execution |
-| Copies and storage handled | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Sensitive family/succession workflow guardrails. |
-| `noc-idaas` | Identity support where permitted. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.2346_2348`
 
-1. Define waiver-intake schema.
-2. Add descendant-effect decision model.
-3. Add compensation and fairness checklist.
-4. Add execution/copy evidence model.
-5. Validate with synthetic family fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case pflichtteilsverzicht-erbverzicht
+python scripts/notary_kg.py --repo-root . editor-view pflichtteilsverzicht-erbverzicht
+python scripts/validate_knowledge_graph.py
+```
 
-- Waiver scope is explicit before drafting.
-- Fairness flags block release until reviewed.
-- Compensation route is captured.
-- No real family or financial data is committed.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

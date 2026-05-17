@@ -1,56 +1,69 @@
-# Steuer-aaS Tax Readiness
+# Steuer-aaS Steuer-Readiness
 
-Status: active intake
+Status: aktive Aufnahme  
+Reifegrad: aktive Aufnahmequelle, P1  
+KG-Knoten: `case.steuer_aas`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
-Source repository checked on 2026-05-14: `ofunk/Steuer-aaS`
+## Worum Es Geht
 
-The source repository is empty. This folder is now the canonical location for
-the Steuer-aaS tax-readiness usecase in this repository.
+Steuer-Readiness-Usecase fuer deterministische Aufnahme, ELSTER-nahe Vorbereitung und pruefbare Nachweise ohne echte Steuerdaten in Git.
 
-## Goal
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-Prepare a usecase package for tax-readiness workflows that are adjacent to
-notarial formation and regulated entity setup. The usecase focuses on intake,
-classification, tax-registration preparation, nonprofit or business tax
-handoffs, review gates, and evidence metadata.
+## Was Heute Im Muster Enthalten Ist
 
-## Boundaries
-
-- This usecase does not replace tax advice, legal advice, notarial review, or
-  official filings.
-- The LLM is an intake and structuring interface, not the tax authority or final
-  professional judgment.
-- No real tax IDs, personal data, bank data, certificates, ERiC credentials, or
-  secrets may be stored in Git.
-- External filing, submission, or portal automation requires a separately
-  reviewed connector and explicit human approval.
-
-## Initial Dependencies
-
-| Layer | Dependency | Purpose |
+| Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Plugin | `noc-regulated-core` | Shared regulated workflow guardrails. |
-| Plugin | `noc-elster-eric` | ELSTER/ERiC readiness, dry-run filing plans, and evidence companion. |
-| Workflow | `workflows/contracts/` | Intake, data-class, approval, and evidence contract. |
-| Workflow | `workflows/python/` | Deterministic validation, plan-preview, and completeness checks. |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 1 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-## Candidate Workflow Scope
+## Offene Angaben
 
-| Area | Example questions |
-| --- | --- |
-| Formation tax readiness | Which tax-registration data is needed after a notarial formation workflow? |
-| Nonprofit handoff | Which AO52 or nonprofit pre-check outputs must be handed to tax advisors or the Finanzamt? |
-| VAT and payroll readiness | Which flags, roles, and deadlines are relevant before operational start? |
-| Evidence | Which decisions, versions, approvals, and handoff timestamps must be recorded? |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
+| --- | --- | --- | --- |
+| `tax.subject` | Steuer Subjekt | Steuerfachkraft | intake, routing |
+| `tax.type` | Steuer Art | Steuerfachkraft | routing, drafting |
+| `period.scope` | Zeitraum Umfang | Steuerfachkraft | deadline_control |
+| `elster.identity` | ELSTER Identitaet | Systembetreuung | technical_readiness |
+| `documents.package` | Dokumente Paket | Steuerfachkraft | evidence, review |
+| `audit.evidence` | Pruefung Nachweis | Compliance | evidence, audit |
 
-## Delivery Plan
+## Grenzen Fuer Den Betrieb
 
-1. Define intake contract for entity, activity, tax-advisor role, expected
-   revenue classes, nonprofit flags, VAT flags, payroll flags, and deadlines.
-2. Bind `noc-elster-eric` readiness outputs without storing credentials or
-   submission secrets.
-3. Create a dry-run tax-readiness plan preview.
-4. Define evidence metadata for intake, review, handoff, filing-readiness, and
-   Day2 follow-up.
-5. Validate with synthetic, non-personal test data.
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
+
+## Plugin- Und Workflow-Bindung
+
+Primaere Plugins:
+
+- `noc-regulated-core`
+- `noc-elster-eric`
+
+Workflow-Bezug:
+
+- `workflow.tax_readiness_intake`
+
+Fachliche Anker im KG-Modell:
+
+- `src.beurkg`
+
+## Wie Man Diesen Usecase Prueft
+
+```bash
+python scripts/notary_kg.py --repo-root . case steuer-aas
+python scripts/notary_kg.py --repo-root . editor-view steuer-aas
+python scripts/validate_knowledge_graph.py
+```
+
+## Naechster Lesepfad
+
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

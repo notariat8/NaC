@@ -35,6 +35,9 @@ NoC macht nicht nur Prompts sichtbar, sondern auch:
 
 ## Relevante Dateien
 
+- [docs/de/reifegrad.md](reifegrad.md)
+- [docs/de/glossar.md](glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)
 - [policies/language-policy.yaml](../../policies/language-policy.yaml)
 - [policies/data-protection-policy.yaml](../../policies/data-protection-policy.yaml)
 - [policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)

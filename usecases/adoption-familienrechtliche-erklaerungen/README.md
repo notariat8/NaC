@@ -1,85 +1,71 @@
 # Adoption / familienrechtliche Erklaerungen
 
-Status: KG baseline  
-KG node: `case.adoption_familienrechtliche_erklaerungen`  
+Status: offen  
+Reifegrad: Naechste-10-Usecase, P1  
+KG-Knoten: `case.adoption_familienrechtliche_erklaerungen`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Section 1750
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for adoption consent and related
-family-law declarations where notarial recording or certification is required.
-The workflow must treat the matter as highly sensitive and track court route,
-capacity, warnings, approvals and delivery evidence.
+Notarielle Adoptionszustimmungen und familienrechtliche Erklaerungen mit Identitaet, Zustimmungspersonen, Gerichtsziel, Geschaeftsfaehigkeit, Unwiderruflichkeit und Schutz sensibler Daten.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for declaration type, child/adoptee context, consenting party, court
-  destination, warning notes and additional approvals.
-- Draft/declaration package for notarial recording.
-- Family-court delivery and response tracking.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No family-court decision prediction.
-- No real child, adoption or family-sensitive data in Git.
-- No declaration without notarial warning and capacity review.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `case.type` | Which adoption or family-law declaration is needed? | Notary | Sensitive family data |
-| `child.identity_context` | Which child/adoptee context is relevant? | Client | Sensitive personal data |
-| `consenting_party.identity` | Who consents and is capacity reviewed? | Notary | Sensitive personal data |
-| `court.destination` | Which family court receives the declaration? | Notary clerk | Mandate metadata |
-| `irrevocability.warning` | Which warnings must be documented? | Notary | Sensitive process data |
-| `additional.approvals` | Are further consents or approvals required? | Notary | Sensitive family data |
+| `case.type` | Fall Art | Notariat | legal_review |
+| `child.identity_context` | Kind Identitaet Kontext | Mandantschaft | drafting |
+| `consenting_party.identity` | Zustimmende Beteiligter Identitaet | Notariat | identity_gate, capacity_review |
+| `court.destination` | Gericht Zielgericht | Notariatsfachkraft | submission |
+| `irrevocability.warning` | Unwiderruflichkeit Belehrung | Notariat | legal_review, appointment |
+| `additional.approvals` | Weitere Genehmigungen | Notariat | approval_review |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Consent declaration | Core notarial declaration. | Metadata or synthetic only. |
-| Court reference | Identifies delivery target. | Evidence reference only. |
-| Approval evidence | Supports consent chain. | Evidence reference only. |
-| Warning notes | Documents notarial warning gate. | Evidence reference only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Adoption consent, revocation/withdrawal path or other family declaration.
-- Additional approval required, available, blocked or unknown.
-- Court delivery route.
-- Whether capacity/support flags require special handling.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-idaas`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Identity and capacity reviewed | Notary | Declaration |
-| Irrevocability and condition warning reviewed | Notary | Execution |
-| Additional approval status reviewed | Notary | Court delivery |
-| Court delivery package ready | Notary clerk | Submission |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | High-sensitivity family workflow guardrails. |
-| `noc-idaas` | Identity support where permitted. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.1750`
 
-1. Define family declaration intake schema.
-2. Add high-sensitivity privacy labels and red-flag checks.
-3. Add warning and approval review gates.
-4. Add family-court delivery state model.
-5. Validate with synthetic non-personal fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case adoption-familienrechtliche-erklaerungen
+python scripts/notary_kg.py --repo-root . editor-view adoption-familienrechtliche-erklaerungen
+python scripts/validate_knowledge_graph.py
+```
 
-- Warnings and capacity review block execution.
-- Court destination is explicit.
-- Approval status is visible.
-- No real child or adoption data is committed.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

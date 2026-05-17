@@ -1,89 +1,74 @@
 # Grundschuld / Hypothekenbestellung
 
-Status: KG baseline  
-KG node: `case.grundschuld_hypothek`  
+Status: offen  
+Reifegrad: Top-10-Usecase, P0  
+KG-Knoten: `case.grundschuld_hypothek`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, GBO, BGB land-charge rules
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for creation, amendment or refinancing
-of a land charge or mortgage. The workflow must capture bank instructions,
-owner and debtor data, charge amount, rank, prior rights and enforcement-clause
-scope, then produce a reviewed filing package.
+Bestellung, Aenderung oder Refinanzierung einer Grundschuld oder Hypothek mit Eigentuemer, Darlehensnehmer, Glaeubiger, Rang und Vollstreckungsunterwerfung.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for property, owner, borrower/debtor, bank, amount and rank.
-- Bank instruction review and deviation tracking.
-- Land-register filing readiness and evidence metadata.
-- Consumer and enforcement-clause review flags where applicable.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automatic acceptance of bank order text.
-- No real bank instructions or land-register excerpts in Git.
-- No filing without notarial review and connector approval.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Which property or unit is to be charged? | Notary clerk | Property register data |
-| `owner.identity` | Who grants the charge and with which authority? | Notary clerk | Personal or company data |
-| `debtor.identity` | Who is the borrower or personal debtor? | Notary | Financial data |
-| `lender.identity` | Which creditor bank and channel apply? | Notary clerk | Mandate metadata |
-| `charge.amount` | Which amount, interest and ancillary charges are requested? | Notary clerk | Financial data |
-| `security.purpose` | Which financing context is secured? | Notary | Financial data |
-| `ranking.requirement` | Which rank is needed and which rights precede it? | Notary clerk | Property register data |
-| `enforcement.clause` | Which immediate-enforcement scope is requested? | Notary | Financial data |
+| `property.identity` | Grundstueck Identitaet | Notariatsfachkraft | land_register_review, filing |
+| `owner.identity` | Eigentuemer Identitaet | Notariatsfachkraft | identity_gate, drafting |
+| `debtor.identity` | Schuldner Identitaet | Notariat | drafting, consumer_review |
+| `lender.identity` | Darlehensgeber Identitaet | Notariatsfachkraft | bank_instruction_review, filing |
+| `charge.amount` | Grundschuld amount | Notariatsfachkraft | drafting, bank_instruction_review |
+| `security.purpose` | Sicherung Zweck | Notariat | legal_review, consumer_review |
+| `ranking.requirement` | Rang Anforderung | Notariatsfachkraft | land_register_review, filing |
+| `enforcement.clause` | Vollstreckung Klausel | Notariat | drafting, legal_review |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Bank land-charge order | Source for amount, creditor, wording and filing request. | Evidence reference only. |
-| Land-register excerpt | Confirms ownership and rank situation. | Evidence reference only. |
-| Draft deed | Human-reviewed land-charge or mortgage deed. | Synthetic or metadata only. |
-| Filing response | Tracks land-register application and completion. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Instrument: land charge, mortgage, amendment or refinancing.
-- Enforcement clause: property only, personal assets, both or not requested.
-- Rank handling: first rank, subordinate rank, deletion of prior rights or
-  consent required.
-- Bank instruction deviations: accepted, corrected, blocked or pending.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-grundbuch-portal`
+- `noc-bnotk-xnp`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Bank instruction matched to draft | Notary clerk | Draft release |
-| Rank and prior-rights review | Notary | Filing |
-| Owner/debtor identity and representation | Notary | Appointment |
-| Enforcement-clause review | Notary | Execution |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Shared guardrails and evidence model. |
-| `noc-grundbuch-portal` | Property and rank review support. |
-| `noc-bnotk-xnp` | XNP route readiness for filing. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.gbo`
 
-1. Define bank-instruction intake contract.
-2. Add deterministic comparison between bank order and deed metadata.
-3. Bind land-register rank state to filing readiness.
-4. Add enforcement-clause review marker.
-5. Validate with synthetic bank and property fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case grundschuld-hypothekenbestellung
+python scripts/notary_kg.py --repo-root . editor-view grundschuld-hypothekenbestellung
+python scripts/validate_knowledge_graph.py
+```
 
-- Amount, creditor, debtor, property and rank must be complete before filing.
-- Deviations from bank instruction are explicit and reviewed.
-- Missing rank review blocks execution.
-- No real financial or property data is committed.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

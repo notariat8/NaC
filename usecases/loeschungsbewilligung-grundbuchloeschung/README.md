@@ -1,86 +1,73 @@
 # Loeschungsbewilligung / Grundbuchloeschung
 
-Status: KG baseline  
-KG node: `case.loeschungsbewilligung_grundbuchloeschung`  
+Status: offen  
+Reifegrad: Naechste-10-Usecase, P0  
+KG-Knoten: `case.loeschungsbewilligung_grundbuchloeschung`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, GBO Sections 19/29/46, BGB Section 875
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for deletion of registered land rights,
-especially old land charges after loan repayment. The package must verify the
-right, beneficiary authority, owner consent where required, letter handling and
-land-register filing evidence.
+Loeschung eingetragener Rechte im Grundbuch, haeufig alter Grundschulden nach Darlehensrueckzahlung, mit Bewilligung, Eigentuemerzustimmung, Urkundenform und Einreichungsnachweis.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for property, affected right, beneficiary, owner and filing route.
-- Review of deletion authorization, public form and evidence package.
-- Handling of book rights, letter rights and replacement evidence.
-- Filing and completion trace after land-register deletion.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No deletion without authority and land-register review.
-- No real land-register excerpts, bank consents or letters in Git.
-- No assumption that every old right is deletable without further evidence.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Which land register district, sheet, section and entry are affected? | Notary clerk | Property register data |
-| `right.identity` | Which right should be deleted? | Notary clerk | Property register data |
-| `creditor.authorization` | Who may consent to deletion and how is authority proven? | Notary | Company or financial data |
-| `owner.consent` | Is owner consent or representation needed? | Notary clerk | Personal or company data |
-| `brief.status` | Is this a book right or is a land-charge/mortgage letter involved? | Notary clerk | Financial metadata |
-| `filing.route` | Which XNP/land-register filing route and completion notice apply? | Notary clerk | Technical metadata |
+| `property.identity` | Grundstueck Identitaet | Notariatsfachkraft | land_register_review, filing |
+| `right.identity` | Recht Identitaet | Notariatsfachkraft | drafting, filing |
+| `creditor.authorization` | Glaeubiger Berechtigung | Notariat | authority_review |
+| `owner.consent` | Eigentuemer Zustimmung | Notariatsfachkraft | identity_gate, filing |
+| `brief.status` | Brief Status | Notariatsfachkraft | evidence_package |
+| `filing.route` | Einreichung Route | Notariatsfachkraft | submission, closing |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Deletion authorization | Proves beneficiary consent. | Evidence reference only. |
-| Land-register excerpt | Confirms affected right and current owner. | Evidence reference only. |
-| Letter or replacement evidence | Supports deletion of letter rights. | External reviewed evidence store. |
-| Filing response | Confirms application and completion. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Full deletion, partial deletion or correction.
-- Book right, letter present, replacement evidence or blocked.
-- Whether owner consent is necessary.
-- Whether creditor identity changed by merger, assignment or succession.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-grundbuch-portal`
+- `noc-bnotk-xnp`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Beneficiary authorization reviewed | Notary | Filing |
-| Letter/evidence handling complete | Notary clerk | Filing |
-| Land-register entry matched | Notary | Draft/application release |
-| Completion notice reviewed | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Guardrails and evidence model. |
-| `noc-grundbuch-portal` | Land-register state review. |
-| `noc-bnotk-xnp` | Notary filing route readiness. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.gbo.19_29_46`
+- `src.bgb.875`
 
-1. Convert KG nodes into a deletion intake schema.
-2. Add evidence checklist for book and letter rights.
-3. Bind land-register review to affected-right matching.
-4. Add filing/completion state machine.
-5. Validate with synthetic bank and property fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case loeschungsbewilligung-grundbuchloeschung
+python scripts/notary_kg.py --repo-root . editor-view loeschungsbewilligung-grundbuchloeschung
+python scripts/validate_knowledge_graph.py
+```
 
-- Missing beneficiary authority blocks filing.
-- Missing letter/replacement evidence blocks letter-right deletion.
-- The affected right is matched against current land-register metadata.
-- No real bank or property data is committed.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

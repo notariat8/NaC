@@ -1,99 +1,75 @@
 # Immobilienkaufvertrag
 
-Status: KG baseline  
-KG node: `case.immobilienkaufvertrag`  
+Status: offen  
+Reifegrad: Top-10-Usecase, P0  
+KG-Knoten: `case.immobilienkaufvertrag`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Section 311b, GBO
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for purchase or sale of land, a house,
-apartment ownership, partial ownership or comparable real-estate assets. The
-package must collect open information, bind land-register and XNP readiness,
-support draft preparation and track execution evidence without storing real
-mandate data in Git.
+Kauf oder Verkauf von Grundstueck, Wohnungseigentum, Haus oder Teileigentum mit Grundbuch, Kaufpreisfaelligkeit, Finanzierung und Vollzugsgates.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for seller, buyer, property, purchase price, possession transfer,
-  encumbrances, approvals and financing.
-- Draft package preparation for human notarial review.
-- Land-register, approval, tax and payment-maturity evidence references.
-- Filing and Day2 follow-up metadata after execution.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automated legal advice as final truth.
-- No portal scraping or filing without a reviewed connector.
-- No real land-register excerpts, IDs, addresses, prices or mandate documents
-  in the repository.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Which land register district, sheet, parcel, unit and designation identify the object? | Notary clerk | Property register data |
-| `seller.identity` | Who sells and how are identity, capacity and authority verified? | Notary clerk | Personal data |
-| `buyer.identity` | Who buys, in which shares and through which representation? | Notary clerk | Personal data |
-| `purchase.price` | Which price, payment route and maturity conditions apply? | Notary | Financial data |
-| `encumbrances.current` | Which rights remain, are deleted or are assumed? | Notary clerk | Property register data |
-| `financing.required` | Is a new financing land charge needed? | Notary clerk | Financial data |
-| `possession.transfer` | When do possession, benefits, burdens and risks transfer? | Notary | Mandate metadata |
-| `public.approvals` | Which approvals, pre-emption waivers and tax clearances are needed? | Notary clerk | Mandate metadata |
+| `property.identity` | Grundstueck Identitaet | Notariatsfachkraft | land_register_review, drafting, execution |
+| `seller.identity` | Verkaeufer Identitaet | Notariatsfachkraft | identity_gate, drafting, appointment |
+| `buyer.identity` | Kaeufer Identitaet | Notariatsfachkraft | identity_gate, drafting, tax_notifications |
+| `purchase.price` | Kaufpreis und Faelligkeitsmodell | Notariat | drafting, maturity_tracking, execution |
+| `encumbrances.current` | Belastungen aktueller Stand | Notariatsfachkraft | land_register_review, bank_coordination, drafting |
+| `financing.required` | Finanzierung erforderlich | Notariatsfachkraft | bank_coordination, appointment_planning |
+| `possession.transfer` | Besitz Uebertragung | Notariat | drafting, closing |
+| `public.approvals` | Oeffentlich Genehmigungen | Notariatsfachkraft | execution, land_register_filing |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Current land register excerpt | Confirms ownership, property and rights. | Evidence reference only in Git. |
-| Draft purchase contract | Human-reviewed draft and release trace. | Synthetic or metadata only in Git. |
-| Approval and tax-clearance evidence | Tracks municipal, court, administrator, spouse, bank or tax steps. | External reviewed evidence store. |
-| Filing trace | Tracks land-register application, notices and completion. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Financing route: separate appointment, combined appointment, not required or
-  unknown.
-- Encumbrance handling: delete, assume, preserve, mixed or unknown.
-- Consumer draft period applicability and proof.
-- Whether additional approvals are blockers before filing.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-grundbuch-portal`
+- `noc-bnotk-xnp`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Identity, capacity and representation review | Notary | Appointment and execution |
-| Land-register review | Notary | Draft release |
-| Consumer draft period check where applicable | Notary | Beurkundung |
-| Payment maturity and filing package ready | Notary clerk | Closing execution |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Regulated workflow guardrails and evidence model. |
-| `noc-grundbuch-portal` | Land-register access/readiness companion. |
-| `noc-bnotk-xnp` | Notary workstation and filing route readiness where needed. |
+Fachliche Anker im KG-Modell:
 
-## Workflow Dependencies
+- `src.beurkg`
+- `src.bgb.311b`
+- `src.gbo`
 
-- `workflows/contracts/`: intake schema, approval contract and evidence fields.
-- `workflows/python/`: deterministic completeness checks and plan preview.
+## Wie Man Diesen Usecase Prueft
 
-## Delivery Tasks
+```bash
+python scripts/notary_kg.py --repo-root . case immobilienkaufvertrag
+python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/validate_knowledge_graph.py
+```
 
-1. Convert KG nodes into a typed intake contract.
-2. Bind land-register plugin output to `property.identity` and
-   `encumbrances.current`.
-3. Add draft-generation prompt contract with explicit human review gate.
-4. Add maturity, approval and filing state machine.
-5. Validate with a synthetic property and synthetic parties.
+## Naechster Lesepfad
 
-## Acceptance Criteria
-
-- All required KG nodes can be marked open or in progress without real values.
-- Missing land-register evidence blocks draft release.
-- Missing identity or representation evidence blocks appointment readiness.
-- Financing and encumbrance decisions are explicit before execution.
-- `scripts/validate_knowledge_graph.py` passes.
-
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

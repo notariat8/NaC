@@ -48,6 +48,10 @@ ueberfuehrt werden.
 | Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](START_HERE.md) |
 
+Schnelle Orientierung: [docs/de/reifegrad.md](reifegrad.md),
+[docs/de/glossar.md](glossar.md) und
+[docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
+
 ## Prozessklassen
 
 - `formation`: Gruendung, Rollen, Register- und Fristenschritte
@@ -74,6 +78,9 @@ ueberfuehrt werden.
 - [docs/de/betriebsstart.md](betriebsstart.md): privater Fork, lokale Checks und Betriebsgrenzen.
 - [docs/de/integration-start.md](integration-start.md): Fachsystem-, Plugin- und Connector-Pfad.
 - [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit fuer Pruefung und Standardisierung.
+- [docs/de/reifegrad.md](reifegrad.md): Matrix fuer heute nutzbar, pilotfaehig, geplant und bewusst gesperrt.
+- [docs/de/glossar.md](glossar.md): Begriffe fuer Nicht-Technik-Leser.
+- [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md): ein durchgehender Vorgang ohne echte Mandatsdaten.
 - [docs/de/START_HERE.md](START_HERE.md): verbindlicher operativer Einstieg.
 - [docs/de/fachanwender-guide.md](fachanwender-guide.md): fachliche Einfuehrung ohne IT-Vorkenntnisse.
 - [docs/de/minimum-requirements.md](minimum-requirements.md): Mindestvoraussetzungen fuer Base,

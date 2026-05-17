@@ -14,10 +14,13 @@ rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 - [README.md](../../README.md) ist die deutsch gefuehrte GitHub-Startseite und
   fuehrt Startpfade in einer Deutsch/English-Tabelle.
 - [usecases/](../../usecases) wird als deutsche fachliche Usecase-Flaeche
-  gefuehrt.
+  gefuehrt; die unmittelbaren Usecase-READMEs sind kurze deutsche
+  Vorderseiten, die auf die jeweilige KG verweisen.
 - [docs/en/README.md](../en/README.md) und
   [docs/en/START_HERE.md](../en/START_HERE.md) sind englische
   Einstiegsfassungen.
+- Zielgruppenpfade, Reifegrad, Glossar und Beispielpfad werden in `de` und `en`
+  gepflegt.
 - Die wichtigsten englischen Einstiegs-, Governance-, Betriebs-, Eventstream-,
   Service- und aktiven Pluginplan-Dokumente sind nicht mehr nur Dateispiegel.
 - Alte Omnistation-Importe unter
@@ -35,6 +38,7 @@ prueft:
 - Pflicht-Sprachordner fuer `de` und `en`,
 - Dateiparitaet fuer lokalisierte Flaechen,
 - Root-README- und Usecase-Sprachregeln,
+- deutsche KG- und Usecase-README-Marker fuer unmittelbare Usecase-Ordner,
 - keine identischen Markdown-/Textspiegel zwischen `docs/de` und `docs/en`.
 
 ## Naechster sinnvoller Schritt

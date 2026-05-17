@@ -14,6 +14,22 @@ Dieses Repository ist gleichzeitig:
 - Vorlage fuer private Betriebs-Forks,
 - Nachweisflaeche fuer Qualitaets-, Datenschutz-, SBOM- und Freigaberegeln.
 
+## Warum Dieses Repo Oeffentlich Ist
+
+AI-first-Betrieb in regulierten Umgebungen braucht Vertrauen. Vertrauen entsteht
+nicht durch geschlossene Folien, sondern durch lesbare Regeln, pruefbare Tests,
+klare Grenzen und sichtbare Verantwortlichkeit. NoC zeigt deshalb oeffentlich,
+wie notarielle Vorgangsarten, Freigaben, technische Readiness und Nachweise
+modelliert werden koennen, ohne echte Mandatsdaten offenzulegen.
+
+## Was Mir Wichtig Ist
+
+- Fachliche Verantwortung bleibt beim Menschen.
+- KI darf Arbeit strukturieren, aber keine finale rechtliche Wahrheit ersetzen.
+- Produktive Nutzung braucht private Betriebsraeume, lokale Rollen und
+  nachvollziehbare Freigaben.
+- Das oeffentliche Repo muss auch fuer Nicht-AI-Leser verstaendlich bleiben.
+
 ## Kommerzielle Einordnung
 
 Das oeffentliche Repository zeigt den pruefbaren Kern. Produktive Einfuehrung,

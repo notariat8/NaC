@@ -21,6 +21,7 @@ gantt
     Deutsch fuehrende Usecase-Indexregel       :done,   u6b, 2026-05-15, 1d
     No-code-KG-Editor-Bindung                  :done,   u6c, 2026-05-15, 1d
     Deutsch gefuehrtes KG-Inhaltsgate          :done,   u6d, 2026-05-17, 1d
+    Deutsche fachliche Usecase-Vorderseiten     :done,   u6e, 2026-05-17, 1d
     Online-GmbH-Gruendung                      :active, u7, 2026-05-14, 28d
     AO52-gemeinnuetzige Softwaregesellschaft   :active, u8, 2026-05-14, 28d
     Steuer-aaS-Steuer-Readiness                :active, u9, 2026-05-14, 28d
@@ -44,6 +45,7 @@ gantt
 | Deutsch fuehrende Usecase-Sprache | `usecases/README.md` | Fertig | Deutsch ist jetzt explizit als fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases festgelegt. |
 | No-code-KG-Editor-Bindung | `usecases/README.md` plus `src/notary_kg/editor.py` | Fertig | Fachpersonal bearbeitet Usecase-KGs ueber eine Formular-/Checklisten-Editor-View; rohes JSON und `value`-Felder bleiben gesperrt. |
 | Deutsch gefuehrtes KG-Inhaltsgate | `usecases/*/knowledge-graph.*` plus `scripts/validate_language_parity.py` | Fertig | KG-Markdown-Review-Sichten und fachliche JSON-Textfelder sind deutsch gefuehrt; alte englische KG-Geruesttexte werden vom Sprachvalidator abgelehnt. |
+| Deutsche fachliche Usecase-Vorderseiten | `usecases/*/README.md` plus `scripts/validate_language_parity.py` | Fertig | Jeder Usecase hat eine kurze deutsche Vorderseite fuer Nicht-Technik-Leser; alte englische Usecase-README-Geruesttexte werden vom Sprachvalidator abgelehnt. |
 | Online-GmbH-/UG-Gruendung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
 | AO52-gemeinnuetzige Softwaregesellschaft | `usecases/ao52aas-gemeinnuetzigkeit/` | Aktiv | Aus `ofunk/AO52aaS` migriert. |
 | Steuer-aaS-Steuer-Readiness | `usecases/steuer-aas/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Steuer-aaS` kanonisiert. |

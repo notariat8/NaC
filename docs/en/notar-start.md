@@ -52,6 +52,9 @@ whether the repository passes its own gates.
 
 ## Next Documents
 
+- [docs/en/reifegrad.md](reifegrad.md)
+- [docs/en/glossar.md](glossar.md)
+- [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)
 - [usecases/README.md](../../usecases/README.md)
 - [docs/en/minimum-requirements.md](minimum-requirements.md)
 - [docs/en/security-and-dsgvo.md](security-and-dsgvo.md)

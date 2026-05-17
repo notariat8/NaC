@@ -42,6 +42,10 @@ and moved into verifiable execution through an Enterprise Control Plane.
 | Review and standardization | [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Development and maintainers | [docs/en/START_HERE.md](START_HERE.md) |
 
+Quick orientation: [docs/en/reifegrad.md](reifegrad.md),
+[docs/en/glossar.md](glossar.md) and
+[docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
+
 ## Multilingual Maintenance
 
 Language-specific content is maintained under ISO-639 folder codes:
@@ -61,6 +65,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
 - [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
+- [docs/en/reifegrad.md](reifegrad.md) separates usable today, pilot-ready, planned and deliberately blocked surfaces.
+- [docs/en/glossar.md](glossar.md) explains terms for non-technical readers.
+- [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md) shows one full case without real mandate data.
 - [prompts/en/](../../prompts/en) contains English prompt templates.
 - [prompts/de/](../../prompts/de) contains German prompt templates.
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) tracks global progress for plugins, workflows, and usecases.

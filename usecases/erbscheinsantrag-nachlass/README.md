@@ -1,88 +1,73 @@
 # Erbscheinsantrag / Nachlassangelegenheiten
 
-Status: KG baseline  
-KG node: `case.erbscheinsantrag_nachlass`  
+Status: offen  
+Reifegrad: Top-10-Usecase, P0  
+KG-Knoten: `case.erbscheinsantrag_nachlass`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Section 2353, GBO inheritance evidence
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for certificate of inheritance
-applications, estate declarations, renunciations, oaths and related estate court
-processes. The package must separate sensitive family facts from workflow state
-and use evidence references instead of raw personal data.
+Antrag und Erklaerungen fuer Erbschein, Nachlassgericht, Ausschlagung, eidesstattliche Versicherung und erbrechtliche Nachweisfuehrung.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for decedent, jurisdiction, applicants, heirship basis, family
-  evidence, dispositions, renunciations and oath statement.
-- Application draft and evidence package preparation.
-- Estate court submission and response tracking.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automated final heirship determination.
-- No real civil-status certificates, wills or estate facts in Git.
-- No hidden storage of family disputes or sensitive declarations.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `decedent.identity` | Who died, when and where, and which evidence confirms this? | Applicant | Personal data |
-| `residence.jurisdiction` | Which estate court has jurisdiction? | Notary clerk | Mandate metadata |
-| `applicants.identity` | Who applies and in which legal position? | Notary clerk | Personal data |
-| `heirship.basis` | Is heirship statutory, testamentary, contractual or European? | Notary | Sensitive family data |
-| `family.evidence` | Which civil-status evidence is required? | Applicant | Family data |
-| `dispositions.evidence` | Which wills, contracts and opening records exist? | Notary clerk | Sensitive legal data |
-| `renunciations.disclaimers` | Are there renunciations, contests or disclaimers? | Notary | Sensitive legal data |
-| `oath.statement` | Which facts must be declared under oath and by whom? | Notary | Sensitive process data |
+| `decedent.identity` | Erblasser Identitaet | Antragstellende Person | application, court_route |
+| `residence.jurisdiction` | Wohnsitz Zustaendigkeit | Notariatsfachkraft | court_route |
+| `applicants.identity` | Antragsteller Identitaet | Notariatsfachkraft | identity_gate, application |
+| `heirship.basis` | Erbenstellung Grundlage | Notariat | legal_review, application |
+| `family.evidence` | Familie Nachweis | Antragstellende Person | evidence_package |
+| `dispositions.evidence` | Verfuegungen Nachweis | Notariatsfachkraft | legal_review, evidence_package |
+| `renunciations.disclaimers` | Ausschlagungen Ausschlagungen | Notariat | legal_review |
+| `oath.statement` | Eidesstattliche Versicherung Erklaerung | Notariat | application, appointment |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Death evidence reference | Establishes death fact. | Evidence reference only. |
-| Civil-status evidence package | Supports statutory succession. | External reviewed evidence store. |
-| Disposition and opening record reference | Supports testamentary succession. | Evidence reference only. |
-| Erbschein application draft | Human-reviewed application. | Synthetic or metadata only. |
-| Court submission trace | Tracks filing and response. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Certificate type: national Erbschein, European certificate, renunciation or
-  other estate declaration.
-- Oath route: notary, court, not required or unknown.
-- Whether statutory or testamentary evidence is sufficient.
-- Whether disputes, disclaimers or contests block application readiness.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Heirship and evidence reviewed | Notary | Application release |
-| Oath statement readiness | Notary | Appointment |
-| Evidence package complete | Notary clerk | Court submission |
-| Court response reviewed | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Sensitive estate workflow guardrails. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.2353`
+- `src.gbo`
 
-1. Define estate-intake schema with strict privacy classes.
-2. Add civil-status and disposition evidence checklist.
-3. Add oath declaration route logic.
-4. Add court submission state model.
-5. Validate with synthetic succession fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case erbscheinsantrag-nachlass
+python scripts/notary_kg.py --repo-root . editor-view erbscheinsantrag-nachlass
+python scripts/validate_knowledge_graph.py
+```
 
-- Application cannot be marked ready without heirship and evidence review.
-- Oath route must be explicit.
-- No real decedent, family or estate evidence is committed.
-- Court response is tracked as metadata only.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

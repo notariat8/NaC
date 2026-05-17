@@ -1,88 +1,76 @@
 # Handelsregisteranmeldung
 
-Status: KG baseline  
-KG node: `case.handelsregisteranmeldung`  
+Status: offen  
+Reifegrad: Top-10-Usecase, P0  
+KG-Knoten: `case.handelsregisteranmeldung`  
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, HGB Section 12, GmbHG
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for commercial-register applications:
-managing director changes, seat relocation, company name changes, capital
-measures, object changes, procuration, branch data and similar register events.
+Registeranmeldung fuer Aenderungen wie Geschaeftsfuehrerwechsel, Sitzverlegung, Kapitalmassnahmen, Firma, Unternehmensgegenstand oder Prokura.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for entity, register number, event type, signers, authority evidence,
-  effective date, required attachments and XNP route.
-- Public certification and electronic filing readiness.
-- Machine-readable package checks and register response evidence.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automatic filing without notarial approval.
-- No real register packages, IDs or company documents in Git.
-- No hidden substitution of missing corporate resolutions.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `entity.identity` | Which entity, register court and register number are affected? | Notary clerk | Company register data |
-| `event.type` | Which register event is being filed? | Notary | Company data |
-| `signers.identity` | Who must sign and how is authority proven? | Notary clerk | Personal or company data |
-| `corporate.resolution` | Which resolution or legal basis authorizes the filing? | Notary | Company data |
-| `attachments.required` | Which electronic attachments are required? | Notary clerk | Company data |
-| `effective.date` | Is the change effective, conditional or register-effective only? | Notary | Mandate metadata |
-| `xnp.route` | Which notary card, XNP workspace and EGVP/beN route applies? | Notary clerk | Technical metadata |
-| `fees.costs` | Which value or fee metadata is needed? | Notary clerk | Financial metadata |
+| `entity.identity` | Rechtstraeger Identitaet | Notariatsfachkraft | register_review, application_draft |
+| `event.type` | Vorgang Art | Notariat | application_draft, legal_review |
+| `signers.identity` | Unterzeichner Identitaet | Notariatsfachkraft | identity_gate, public_certification |
+| `corporate.resolution` | Gesellschaftsrecht Beschluss | Notariat | legal_review, attachments |
+| `attachments.required` | Anlagen erforderlich | Notariatsfachkraft | filing_package |
+| `effective.date` | Wirksamkeit Datum | Notariat | application_draft, legal_review |
+| `xnp.route` | XNP Route | Notariatsfachkraft | technical_readiness, submission |
+| `fees.costs` | Gebuehren Kosten | Notariatsfachkraft | closing |
 
-## Documents and Evidence
+## Grenzen Fuer Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Register application | Publicly certified filing instrument. | Metadata only in Git. |
-| Corporate evidence | Resolution, appointment, articles or authority proof. | Evidence reference only. |
-| Electronic attachments | Machine-readable filing package. | Hash/reference only after review. |
-| Register response | Confirms submission, correction or completion. | Trace metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Standard event route or special legal review.
-- Signature method: in-office, video route, existing certified power or blocked.
-- Whether attachments are complete and machine-readable.
-- Whether correction or resubmission is needed after register response.
+Primaere Plugins:
 
-## Gates
+- `noc-regulated-core`
+- `noc-bnotk-xnp`
+- `noc-handelsregister`
+- `noc-cyberjack-rfid`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Public certification requirements met | Notary | Filing |
-| Authority and signer identity reviewed | Notary | Signature |
-| Electronic package format checked | Notary clerk | Submission |
-| Register response reviewed | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Guardrails and evidence model. |
-| `noc-bnotk-xnp` | XNP and notary signature route. |
-| `noc-handelsregister` | Register filing readiness and response handling. |
-| `noc-cyberjack-rfid` | Card and reader readiness for notary signature. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.hgb.12`
+- `src.gmbhg`
 
-1. Build event-type taxonomy and required-attachment matrix.
-2. Bind signer identity and authority evidence to public certification gate.
-3. Add XNP and register-package dry-run.
-4. Add response-state model for submitted, corrected, completed or blocked.
-5. Validate with synthetic HRB/HRA fixtures.
+## Wie Man Diesen Usecase Prueft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case handelsregisteranmeldung
+python scripts/notary_kg.py --repo-root . editor-view handelsregisteranmeldung
+python scripts/validate_knowledge_graph.py
+```
 
-- Event type determines required attachments.
-- Signer authority must be reviewed before public certification.
-- XNP route must be ready before submission.
-- Register response is captured as evidence metadata.
+## Naechster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

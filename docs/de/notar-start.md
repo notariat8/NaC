@@ -54,6 +54,9 @@ besteht.
 
 ## Naechste Dokumente
 
+- [docs/de/reifegrad.md](reifegrad.md)
+- [docs/de/glossar.md](glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)
 - [usecases/README.md](../../usecases/README.md)
 - [docs/de/minimum-requirements.md](minimum-requirements.md)
 - [docs/de/security-and-dsgvo.md](security-and-dsgvo.md)
