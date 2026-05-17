@@ -50,7 +50,6 @@ Fuer Nicht-Technik-Leser helfen zusaetzlich
 
 | Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
 | --- | --- | --- | --- |
-| AO52 gemeinnuetziges Softwareunternehmen | [ao52aas-gemeinnuetzigkeit/](ao52aas-gemeinnuetzigkeit) | Aktive Aufnahme | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-elster-eric` |
 | Steuer-aaS Steuer-Readiness | [steuer-aas/](steuer-aas) | Aktive Aufnahme | `noc-regulated-core`, `noc-elster-eric` |
 
 ## Kanonischer Next-10-Katalog
@@ -75,7 +74,6 @@ Der statische KG wird im jeweiligen Usecase-Ordner gepflegt:
 - [immobilienkaufvertrag/knowledge-graph.graph.json](immobilienkaufvertrag/knowledge-graph.graph.json)
 - [online-gmbh-gruendung/knowledge-graph.graph.json](online-gmbh-gruendung/knowledge-graph.graph.json)
 - [bautraegervertrag/knowledge-graph.graph.json](bautraegervertrag/knowledge-graph.graph.json)
-- [ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json](ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json)
 - [steuer-aas/knowledge-graph.graph.json](steuer-aas/knowledge-graph.graph.json)
 
 Jeder Usecase-Ordner muss genau einen lokalen KG-Graph und eine Markdown-

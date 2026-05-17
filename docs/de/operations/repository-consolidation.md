@@ -20,13 +20,12 @@ uebernommen wurde. Dafuer ist ein separater Stilllegungsschritt noetig.
 | --- | --- | --- | --- | --- |
 | `ofunk/NaC` | Zielrepo | Zielsystem | offen | PR #6 mergen. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | kanonisiert in PR #6 | altes Repo sichtbar, leer | Nach Merge Redirect-README setzen oder archivieren. |
-| `ofunk/AO52aaS` | `usecases/ao52aas-gemeinnuetzigkeit/` | migriert in PR #6 | altes Repo sichtbar | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/Steuer-aaS` | `usecases/steuer-aas/` | kanonisiert in PR #6 | altes Repo sichtbar, leer | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/IDaaS` | `plugins/noc-idaas/` | migriert in PR #6 | altes Repo sichtbar | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/NaaS` | `usecases/` und `workflows/` | noch nicht migriert | altes Repo sichtbar | Zerlegen statt 1:1 verschieben: Usecases, Workflow-Kontrakte und ggf. Backlog getrennt uebernehmen. |
 | `ofunk/oci-landing-zone` | `plugins/noc-oci-evidence/` und Cloud-/Evidence-Doku | teilweise fachlich abgedeckt | altes Repo sichtbar | Pruefen, ob Runbooks/Infra-Vertraege in NoC fehlen; dann migrieren oder als externe Infrastrukturquelle belassen. |
 | `ofunk/PaaS` | ggf. `workflows/` oder Editor-/Workspace-Doku | nicht migriert | altes Repo sichtbar | Pruefen, ob Inhalte zu NoC gehoeren oder als separates VS-Code-Orchestrator-Repo bleiben. |
-| `ofunk/1gem8` | ggf. `usecases/ao52aas-gemeinnuetzigkeit/` oder Startup-Doku | nicht migriert | altes Repo sichtbar | Pruefen, ob Restinhalte die AO52-/Gemeinnuetzigkeits-Usecase-Sicht ergaenzen. |
+| `ofunk/1gem8` | ggf. Startup-Doku | nicht migriert | altes Repo sichtbar | Pruefen, ob Inhalte zu NoC gehoeren oder extern bleiben. |
 | `ofunk/machine-setup` | keine fachliche NoC-Domaene | extern | altes Repo sichtbar | Nicht in NoC verschieben, ausser es wird bewusst als Tooling-Runbook uebernommen. |
 
 ## Stilllegungsregel

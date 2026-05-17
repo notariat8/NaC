@@ -56,7 +56,7 @@ gantt
     Deutscher KG-Inhalt und Sprachgate           :done,    c3d, 2026-05-17, 1d
     Deutsche Usecase-Vorderseiten                :done,    c3e, 2026-05-17, 1d
     GmbH-Gruendung kanonisieren                  :active,  c4, 2026-05-14, 21d
-    AO52-Gemeinnuetzigkeitsaufnahme              :active,  c5, 2026-05-14, 21d
+    Usecase-Katalog bereinigen                 :done,    c5, 2026-05-17, 1d
     Steuer-aaS-Usecase-Aufnahme                  :active,  c6, 2026-05-14, 21d
     Statisches KG-gestuetztes Workflow-Modell    :active,  c7, 2026-05-15, 28d
     Pilotfaehige Usecase-Pakete                  :         c8, after c7, 35d
@@ -73,7 +73,7 @@ gantt
 | --- | --- | --- | --- | --- |
 | A | Installierbare Plugins fuer Notariate | Aktiv | 68% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator und deutsche Plugin-MD-Fuehrung. |
 | B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 41% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
-| C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 61% | Jeder Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; Fachpersonal bearbeitet diese KGs ueber den No-code-Editor-View statt ueber rohes JSON. |
+| C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
 | D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 25% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 
 ## Regel

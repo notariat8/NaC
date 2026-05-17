@@ -20,13 +20,12 @@ Retirement is a separate step.
 | --- | --- | --- | --- | --- |
 | `ofunk/NaC` | Target repository | Target system | open | Merge PR #6. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | canonicalized in PR #6 | old repo visible, empty | After merge, add redirect README or archive. |
-| `ofunk/AO52aaS` | `usecases/ao52aas-gemeinnuetzigkeit/` | migrated in PR #6 | old repo visible | After merge, add redirect README or archive. |
 | `ofunk/Steuer-aaS` | `usecases/steuer-aas/` | canonicalized in PR #6 | old repo visible, empty | After merge, add redirect README or archive. |
 | `ofunk/IDaaS` | `plugins/noc-idaas/` | migrated in PR #6 | old repo visible | After merge, add redirect README or archive. |
 | `ofunk/NaaS` | `usecases/` and `workflows/` | not migrated yet | old repo visible | Decompose instead of moving wholesale: usecases, workflow contracts, and backlog separately. |
 | `ofunk/oci-landing-zone` | `plugins/noc-oci-evidence/` and cloud/evidence docs | partly covered conceptually | old repo visible | Check whether runbooks or infra contracts are missing in NoC; migrate or keep as external infrastructure source. |
 | `ofunk/PaaS` | possibly `workflows/` or editor/workspace docs | not migrated | old repo visible | Check whether content belongs in NoC or should remain a separate VS Code orchestrator repository. |
-| `ofunk/1gem8` | possibly `usecases/ao52aas-gemeinnuetzigkeit/` or startup docs | not migrated | old repo visible | Check whether remaining content extends the AO52/nonprofit usecase. |
+| `ofunk/1gem8` | possibly startup docs | not migrated | old repo visible | Check whether content belongs in NoC or should remain external. |
 | `ofunk/machine-setup` | no business NoC domain | external | old repo visible | Do not move into NoC unless intentionally adopted as tooling runbook. |
 
 ## Retirement Rule

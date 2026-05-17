@@ -23,7 +23,6 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(len(catalogs), expected_count)
         self.assertEqual(len(cases), expected_count)
         self.assertIn("usecase.bautraegervertrag", {catalog.graph_id for catalog in catalogs})
-        self.assertIn("usecase.ao52aas-gemeinnuetzigkeit", {catalog.graph_id for catalog in catalogs})
 
     def test_all_required_information_values_stay_empty(self) -> None:
         catalogs = load_catalogs(REPO_ROOT)
@@ -115,4 +114,3 @@ def _contains_key(value, key: str) -> bool:
     if isinstance(value, list):
         return any(_contains_key(item, key) for item in value)
     return False
-

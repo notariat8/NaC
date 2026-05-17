@@ -71,7 +71,7 @@ Dieses Repository trennt drei Produktbereiche:
   installierbaren Skills, Workflow-Vertraegen und deterministischer
   Python-Ausfuehrung.
 - [usecases/](usecases): konkrete notarielle Vorgangsarten wie
-  Online-GmbH-Gruendung, AO52-Gemeinnuetzigkeit, Immobilienkaufvertrag oder
+  Online-GmbH-Gruendung, Immobilienkaufvertrag, Handelsregisteranmeldung oder
   Testament. Jeder Usecase besitzt seine eigene statische KG/DB fuer offene
   Fragen, Dokumente, Entscheidungen, Gates und Nachweisreferenzen.
 
