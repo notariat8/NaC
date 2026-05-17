@@ -11,25 +11,59 @@ Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 ```bash
 cd ~/NoC
 python3 scripts/validate_plugins.py
+python3 scripts/install_local_plugins.py --mode link
 PYTHONPATH=src python3 scripts/quality_gate.py --profile standard
 ```
+
+Nach dem Installationsschritt Codex beenden und mit dem Workspace `~/NoC` neu
+oeffnen. Die laufende Session liest aktive Tools und Plugins beim Start ein;
+repo-lokale Plugins werden nicht nachtraeglich in eine bereits gestartete
+Session injiziert.
+
+## Warum Eine Session Keine Plugins Zeigt
+
+Wenn die Plugin-Ordner lokal vorhanden sind, diese Session aber keine Plugins
+zeigt, sind zwei Dinge auseinandergefallen:
+
+1. Das Repository enthaelt die Quelle der Wahrheit:
+   [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json)
+   und [plugins/](../../../plugins).
+2. Die lokale Codex-Umgebung braucht zusaetzlich eine Discovery-Spiegelung im
+   home-lokalen Plugin-Root. Ohne diese Spiegelung, oder ohne Neustart nach
+   der Spiegelung, sieht eine neue Session die repo-lokalen Plugins nicht.
+
+`scripts/install_local_plugins.py --mode link` spiegelt deshalb den Marketplace
+nach `~/.agents/plugins/marketplace.json`. Die Plugin-Ordner werden unter
+`~/plugins/<plugin>` verlinkt. Mit `NOC_PLUGIN_HOME=/anderer/root` kann ein
+abweichender Home-Root gesetzt werden; dann liegen Marketplace und Plugins
+unter diesem Root. Der Link-Modus ist der Standard fuer Entwicklung, weil das
+Repository die einzige Quelle der Wahrheit bleibt. Falls Symlinks in einer
+Umgebung nicht erlaubt sind, ist `--mode copy` der Fallback.
+
+Wenn `~/.agents` in einer verwalteten Codex-Session read-only gemountet ist,
+den Installationsschritt im Host-Workspace beziehungsweise auf dem eigentlichen
+Arbeitsplatz ausfuehren. Fuer reine Integrationspruefungen kann ein schreibbarer
+Test-Root mit `--target-root /tmp/noc-plugin-home` genutzt werden; fuer echte
+Codex-Discovery bleibt der home-lokale Root massgeblich.
 
 ## Lokales Installationsmuster
 
 1. Codex mit Workspace `~/NoC` oeffnen.
 2. Pruefen, dass [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json)
    die gewuenschten Plugins listet.
-3. Fuer notariatsseitige Online-HRA-Arbeit zuerst `noc-cyberjack-rfid`,
+3. `python3 scripts/install_local_plugins.py --mode link` ausfuehren.
+4. Codex neu starten oder eine neue Session mit Workspace `~/NoC` oeffnen.
+5. Fuer notariatsseitige Online-HRA-Arbeit zuerst `noc-cyberjack-rfid`,
    danach `noc-bnotk-xnp` und danach `noc-handelsregister` installieren.
-4. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marketplace
+6. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marketplace
    installieren.
-5. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
+7. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
    `NoC Card SAK Gate` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
-6. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
+8. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
    `NoC Notary XNP Gate` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
-7. Falls die Umgebung nur home-lokale Marketplaces unterstuetzt, die geprueften
-   Plugin-Ordner und Marketplace-Eintraege erst nach Freigabe kopieren; die
-   Quelle der Wahrheit bleibt dieses Repository.
+9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
+   `python3 scripts/install_local_plugins.py --mode copy --force` nach
+   Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.
 
 ## Operative Grenze
 

@@ -53,8 +53,14 @@ Fuer Plugin- und Integrationsentwicklung kommt zum Base-Workspace hinzu:
 Pflichtcheck fuer Plugin-Arbeit:
 
 ```bash
+python scripts/validate_plugins.py
+python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
+
+Danach Codex neu starten oder eine neue Session mit Workspace `~/NoC` oeffnen,
+weil aktive Plugins beim Session-Start geladen werden. Wenn Symlinks auf einem
+Arbeitsplatz nicht erlaubt sind, nach Freigabe `--mode copy --force` verwenden.
 
 ## Notariatsarbeitsplatz Fuer Karten- Und XNP-Pfade
 

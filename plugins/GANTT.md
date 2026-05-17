@@ -14,6 +14,7 @@ gantt
     Marketplace-Paketierungsregel              :active, p3, 2026-05-14, 14d
     Deutsche Plugin-MD-Sprachfuehrung          :done,   p3a, 2026-05-17, 1d
     Deutsche Skill-Anweisungen mit EN-Summary   :done,   p3b, 2026-05-17, 1d
+    Lokaler Plugin-Discovery-Bootstrap          :done,   p3c, 2026-05-17, 1d
     IDaaS eID/IAM-Begleiter                    :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsgates
@@ -47,6 +48,12 @@ gantt
 Plugin-Skills werden fachlich deutsch gefuehrt und enthalten eine kurze
 englische Summary; technische Namen, Ordner, Commands, IDs und stabile
 Output-Labels bleiben englisch/ASCII.
+
+Repo-lokale Plugins werden ueber `scripts/install_local_plugins.py` in einen
+home-lokalen Plugin-Root gespiegelt: `~/.agents/plugins/marketplace.json` plus
+`~/plugins/<plugin>`. Danach muss Codex neu gestartet beziehungsweise eine neue
+Session geoeffnet werden, weil aktive Plugins beim Session-Start geladen
+werden.
 
 ## Paketierungshinweis
 

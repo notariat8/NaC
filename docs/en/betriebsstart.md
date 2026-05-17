@@ -28,9 +28,14 @@ python scripts/quality_gate.py --profile strict
 For plugin or workstation work:
 
 ```bash
+python scripts/validate_plugins.py
+python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
+
+After `install_local_plugins.py`, reopen Codex so the local plugin discovery can
+see the repo-local plugins in the new session.
 
 ## Operating Boundaries
 

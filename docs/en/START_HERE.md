@@ -64,9 +64,15 @@ Use this document:
 For plugin or notary-workstation work, also run the matching profile:
 
 ```bash
+python scripts/validate_plugins.py
+python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
+
+After `install_local_plugins.py`, reopen Codex. The running session reads
+plugins at startup and sees repo-local plugins only after the local mirror and a
+restart.
 
 ## Working Mode
 
@@ -104,6 +110,7 @@ at least one matching implementation surface:
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/validate_knowledge_graph.py
+python scripts/validate_plugins.py
 python scripts/startup_check.py --profile base --ide auto --run-tests
 python scripts/quality_gate.py --profile strict
 ```

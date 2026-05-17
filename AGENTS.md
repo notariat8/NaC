@@ -59,7 +59,11 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 2. [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) oder [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) lesen.
 3. [policies/culture-policy.yaml](policies/culture-policy.yaml), [policies/process-policy.yaml](policies/process-policy.yaml), [policies/technology-policy.yaml](policies/technology-policy.yaml), [policies/data-protection-policy.yaml](policies/data-protection-policy.yaml), [policies/role-model-policy.yaml](policies/role-model-policy.yaml) und [policies/language-policy.yaml](policies/language-policy.yaml) bestaetigen.
 4. `python scripts/startup_check.py --profile base --ide auto --run-tests` erfolgreich ausfuehren.
-   Fuer Plugin-Arbeit zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide auto`.
+   Fuer Plugin-Arbeit zusaetzlich `python scripts/validate_plugins.py`,
+   `python scripts/install_local_plugins.py --mode link` und
+   `python scripts/startup_check.py --profile plugin-dev --ide auto`.
+   Danach Codex neu starten oder eine neue Session oeffnen, weil Plugins beim
+   Session-Start geladen werden.
    Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide auto`.
 5. Passendes Onboarding-Prompt unter [prompts/de/onboarding/](prompts/de/onboarding) oder [prompts/en/onboarding/](prompts/en/onboarding) starten.
    Standard-MVP-Set im Referenzrepo: `software_company`, `notary`, `wealth_management`.

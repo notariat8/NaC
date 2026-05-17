@@ -37,6 +37,9 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
 - Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
 - NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
+- Repo-lokale Plugins werden fuer neue Rechner mit `python scripts/install_local_plugins.py --mode link`
+  in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
+  neue Session oeffnen.
 
 ## Pflichtquellen im Repository
 
@@ -110,7 +113,10 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 
 1. Lies [docs/de/vscode-copilot-start.md](../docs/de/vscode-copilot-start.md) oder [docs/en/vscode-copilot-start.md](../docs/en/vscode-copilot-start.md).
 2. Fuehre `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
-   Fuer Plugin-Entwicklung zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   Fuer Plugin-Entwicklung zusaetzlich `python scripts/validate_plugins.py`,
+   `python scripts/install_local_plugins.py --mode link` und
+   `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   Danach Codex neu starten oder eine neue Session oeffnen.
    Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
 3. Waehle das passende Branchen-Onboarding unter [prompts/de/onboarding/](../prompts/de/onboarding) oder [prompts/en/onboarding/](../prompts/en/onboarding).
    Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.

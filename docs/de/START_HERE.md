@@ -66,9 +66,15 @@ Bei Plugin- oder Notariatsarbeitsplatz-Arbeit zusaetzlich das passende Profil
 ausfuehren:
 
 ```bash
+python scripts/validate_plugins.py
+python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
+
+Nach `install_local_plugins.py` Codex neu oeffnen. Die laufende Session liest
+Plugins beim Start ein und sieht repo-lokale Plugins erst nach der lokalen
+Spiegelung und einem Neustart.
 
 ## Arbeitsmodus
 
@@ -106,6 +112,7 @@ sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/validate_knowledge_graph.py
+python scripts/validate_plugins.py
 python scripts/startup_check.py --profile base --ide auto --run-tests
 python scripts/quality_gate.py --profile strict
 ```

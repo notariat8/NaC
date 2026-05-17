@@ -9,18 +9,48 @@ The plugin suite is repo-local and versioned with NoC. Marketplace metadata live
 ```bash
 cd ~/NoC
 python3 scripts/validate_plugins.py
+python3 scripts/install_local_plugins.py --mode link
 PYTHONPATH=src python3 scripts/quality_gate.py --profile standard
 ```
+
+After the install step, quit Codex and reopen it with workspace `~/NoC`. A
+running session reads active tools and plugins at startup; repo-local plugins
+are not injected into an already running session.
+
+## Why A Session Shows No Plugins
+
+If the plugin folders exist locally but the current session shows no plugins,
+two layers are out of sync:
+
+1. The repository contains the source of truth:
+   `.agents/plugins/marketplace.json` and `plugins/`.
+2. The local Codex environment also needs a discovery mirror inside the
+   home-local plugin root. Without that mirror, or without restarting after the
+   mirror is written, a new session will not see the repo-local plugins.
+
+`scripts/install_local_plugins.py --mode link` mirrors the marketplace to
+`~/.agents/plugins/marketplace.json`. Plugin folders are linked under
+`~/plugins/<plugin>`. Set `NOC_PLUGIN_HOME=/other/root` to use a different home
+root; marketplace and plugins then live below that root. Link mode is the
+development default because the repository remains the only source of truth. If
+an environment does not allow symlinks, use `--mode copy` as the fallback.
+
+If `~/.agents` is mounted read-only in a managed Codex session, run the install
+step in the host workspace or on the actual workstation. For integration checks
+only, use a writable test root with `--target-root /tmp/noc-plugin-home`; for
+real Codex discovery, the home-local root remains authoritative.
 
 ## Local Install Pattern
 
 1. Open Codex with workspace `~/NoC`.
 2. Confirm `.agents/plugins/marketplace.json` lists the desired plugins.
-3. For notary-side Online HRA work, install `noc-cyberjack-rfid` before `noc-bnotk-xnp`, then install `noc-handelsregister`.
-4. Install from the repo-local marketplace if supported by the Codex environment.
-5. Confirm the installed card plugin display name is `NoC Card SAK Gate` and the source path is `./plugins/noc-cyberjack-rfid`.
-6. Confirm the installed XNP plugin display name is `NoC Notary XNP Gate` and the source path is `./plugins/noc-bnotk-xnp`.
-7. If the environment only supports home-local marketplaces, copy the reviewed plugin folders and marketplace entry after approval; keep the source of truth in this repository.
+3. Run `python3 scripts/install_local_plugins.py --mode link`.
+4. Restart Codex or open a new session with workspace `~/NoC`.
+5. For notary-side Online HRA work, install `noc-cyberjack-rfid` before `noc-bnotk-xnp`, then install `noc-handelsregister`.
+6. Install from the repo-local marketplace if supported by the Codex environment.
+7. Confirm the installed card plugin display name is `NoC Card SAK Gate` and the source path is `./plugins/noc-cyberjack-rfid`.
+8. Confirm the installed XNP plugin display name is `NoC Notary XNP Gate` and the source path is `./plugins/noc-bnotk-xnp`.
+9. If an environment accepts copies but not symlinks, run `python3 scripts/install_local_plugins.py --mode copy --force` after approval; keep the source of truth in this repository.
 
 ## Operational Boundary
 
