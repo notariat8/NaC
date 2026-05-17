@@ -13,6 +13,7 @@ gantt
     Plugin-Validierung im Quality Gate         :done,   p2, 2026-04-15, 2026-05-14
     Marketplace-Paketierungsregel              :active, p3, 2026-05-14, 14d
     Deutsche Plugin-MD-Sprachfuehrung          :done,   p3a, 2026-05-17, 1d
+    Deutsche Skill-Anweisungen mit EN-Summary   :done,   p3b, 2026-05-17, 1d
     IDaaS eID/IAM-Begleiter                    :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsgates
@@ -42,6 +43,10 @@ gantt
 | `noc-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benoetigt. |
 | `noc-grundbuch-portal` | Grundbuch-Begleiter | Geplant | An Immobilienkaufvertrags-Starter binden. |
 | `noc-oci-evidence` | OCI-Nachweisbetrieb | Geplant | Als Infrastruktur-/Nachweisplugin fuehren, nicht als Usecase. |
+
+Plugin-Skills werden fachlich deutsch gefuehrt und enthalten eine kurze
+englische Summary; technische Namen, Ordner, Commands, IDs und stabile
+Output-Labels bleiben englisch/ASCII.
 
 ## Paketierungshinweis
 

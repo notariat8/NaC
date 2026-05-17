@@ -5,28 +5,53 @@ description: Inspect local PKCS#7/P7B/P7C certificate bundles as metadata-only e
 
 # NoC PKCS7 CertBundle Gate
 
-Use this skill when the user asks for local PKCS#7, P7B or P7C certificate-bundle inspection and explicitly does not want signing or software-token handling.
+Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
+Commands und IDs bleiben englisch/ASCII.
 
-## Operating Boundary
+## Englische Kurzfassung
 
-- Treat PKCS#7/P7B/P7C files as certificate-bundle evidence only.
-- Do not request, import or inspect PFX/PKCS#12 software-token files.
-- Do not request PINs, passwords, private keys, certificate values or client content.
-- Do not create or verify signatures.
-- Do not send certificate material to external services.
+English summary: Inspect local PKCS#7, P7B or P7C certificate bundles as
+metadata-only evidence. Do not request PFX/PKCS#12 files, PINs, passwords,
+private keys, signing operations or external calls.
 
-## Runnable Check
+## Einsatzgrenze
 
-From the repository root:
+Dieser Skill wird genutzt, wenn der Nutzer lokale PKCS#7-, P7B- oder
+P7C-Zertifikatsbuendel pruefen will und ausdruecklich keine Signatur- oder
+Software-Token-Behandlung wuenscht.
+
+- PKCS#7-/P7B-/P7C-Dateien nur als Zertifikatsbuendel-Evidence behandeln.
+- Keine PFX-/PKCS#12-Software-Token-Dateien anfordern, importieren oder
+  inspizieren.
+- Keine PINs, Passwoerter, privaten Schluessel, Zertifikatswerte oder
+  Client-Inhalte anfordern.
+- Keine Signaturen erstellen oder pruefen.
+- Kein Zertifikatsmaterial an externe Dienste senden.
+
+## Ausfuehrbare Pruefung
+
+Vom Repository-Root:
 
 ```powershell
 python plugins\noc-pkcs7-certbundle\scripts\inspect_certbundle.py --json
 ```
 
-With a local bundle:
+Mit lokalem Buendel:
 
 ```powershell
 python plugins\noc-pkcs7-certbundle\scripts\inspect_certbundle.py --input C:\path\to\bundle.p7b --json
 ```
 
-The output is metadata-only evidence. If the user asks for private-key, PFX, signing or qualified-signature behavior, route that to a separate approved workstream.
+Die Ausgabe ist metadatenbasierte Evidence. Wenn der Nutzer Private-Key-, PFX-,
+Signatur- oder qualifizierte-Signatur-Faehigkeiten verlangt, muss das in einen
+separat freigegebenen Workstream geroutet werden.
+
+## Rueckgabeformat
+
+Nutze knappe Abschnitte mit stabilen Labels: `Readiness`, `Evidence`,
+`Approval Needed` und `Day2 Follow-up`.
+
+## Quellplan
+
+- [docs/de/plugin-plans/local-codex-runtime.md](../../../../docs/de/plugin-plans/local-codex-runtime.md)
+- [docs/en/plugin-plans/local-codex-runtime.md](../../../../docs/en/plugin-plans/local-codex-runtime.md)

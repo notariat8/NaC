@@ -16,6 +16,9 @@ language. English is translation or orientation only.
 - [usecases/](../../usecases) is maintained as the German subject-matter
   usecase surface; immediate usecase READMEs are short German front pages that
   link to the matching KG.
+- `SKILL.md` files are maintained with German subject-matter instructions and a
+  short English summary; technical names, folders, commands and IDs remain
+  English/ASCII.
 - [docs/en/README.md](README.md) and [docs/en/START_HERE.md](START_HERE.md) are
   maintained as English entry documents.
 - Audience paths, maturity, glossary and example path are maintained in `de` and
@@ -37,6 +40,8 @@ checks:
 - file parity for localized surfaces,
 - root README and usecase language rules,
 - German KG and usecase README markers for immediate usecase folders,
+- skill language markers for German-led `SKILL.md` files with an English
+  summary,
 - no identical Markdown/text mirrors between `docs/de` and `docs/en`.
 
 ## Next Useful Step

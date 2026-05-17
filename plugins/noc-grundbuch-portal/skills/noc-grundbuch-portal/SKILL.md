@@ -5,38 +5,63 @@ description: Use when planning Grundbuchportal access, legitimate-interest check
 
 # NoC Grundbuchportal
 
-## Operating Boundary
+Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
+Commands und IDs bleiben englisch/ASCII.
 
-Runtime mode: `local-portal-evidence-companion`.
+## Englische Kurzfassung
 
-This plugin is for regulated-industry work. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+English summary: Plan land-register portal access, legitimate-interest checks,
+retrieval readiness and evidence shells as local, approval-bound workflows. Do
+not automate protected portals or store uncontrolled document content.
 
-## Allowed Work
+## Einsatzgrenze
 
-- Prepare authorization and legitimate-interest checklists.
-- Create retrieval plan previews and evidence shells.
-- Track state-specific portal differences and fee/cost ownership.
+Laufzeitmodus: `local-portal-evidence-companion`.
 
-## Prohibited Work
+Dieser Skill begleitet Grundbuchportal- und Nachweisarbeit. Standard ist
+Planvorschau, lokale Ausfuehrung, ausdrueckliche menschliche Freigabe und
+Evidence-Metadaten. Externe Schreib- oder Abrufaktionen sind verboten, solange
+kein separat gepruefter Connector diese Aktion implementiert.
 
-- Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.
-- Bypass human review for regulated filing, register, mailbox, or notarial actions.
-- Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.
-- Scrape protected portals or exceed published usage limits.
+## Erlaubte Arbeit
 
-## Workflow
+- Berechtigungs- und berechtigtes-Interesse-Checklisten vorbereiten.
+- Abruf-Planvorschauen und Evidence-Huellen erstellen.
+- Landesspezifische Portalunterschiede sowie Gebuehren- und Kostentraeger
+  dokumentieren.
 
-1. Classify the matter, actor role, reviewer role, data class and target system.
-2. Check Day0 prerequisites and list missing accounts or approvals.
-3. Produce a human-readable Day1 plan preview before any local or external action.
-4. Ask for explicit human approval for regulated submissions, register retrievals, mailbox actions, notarial actions or cloud applies.
-5. Capture evidence metadata only: timestamp, actor role, source, hash, decision, result and follow-up owner.
-6. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
+## Verbotene Arbeit
 
-## Output Shape
+- Passwoerter, PINs, private Schluessel, Zertifikatsmaterial, Session-Cookies
+  oder Einmalcodes in Git speichern.
+- Menschliches Review fuer regulierte Einreichungen, Register-, Postfach- oder
+  notarielle Aktionen umgehen.
+- Mandats- oder Client-Inhalte an ein LLM senden, solange keine ausdruecklich
+  freigegebene Datenverarbeitungsgrundlage besteht.
+- Geschuetzte Portale scrapen oder veroeffentlichte Nutzungslimits umgehen.
 
-Return concise sections named `Readiness`, `Plan`, `Approval Needed`, `Evidence`, and `Day2 Follow-up`. If something cannot proceed, put it under `Approval Needed` and reference `docs/plugin-operations/account-and-approval-requests.md`.
+## Ablauf
 
-## Source Plan
+1. Vorgang, Akteursrolle, Reviewer-Rolle, Datenklasse und Zielsystem einordnen.
+2. Day0-Voraussetzungen pruefen und fehlende Accounts oder Freigaben nennen.
+3. Vor jeder lokalen oder externen Aktion eine lesbare Day1-Planvorschau erstellen.
+4. Fuer regulierte Einreichungen, Registerabrufe, Postfachaktionen, notarielle
+   Aktionen oder Cloud-Aenderungen ausdrueckliche menschliche Freigabe einholen.
+5. Nur Evidence-Metadaten erfassen: Zeitstempel, Akteursrolle, Quelle, Hash,
+   Entscheidung, Ergebnis und Follow-up-Owner.
+6. Fuer Day2 Drift, abgelaufene Zugriffe, fehlgeschlagene Checks,
+   Versionsaenderungen und Rezertifizierungsaufgaben melden.
 
-- `docs/plugin-plans/grundbuch-portal-plugin-integration.md`
+## Rueckgabeformat
+
+Nutze knappe Abschnitte mit stabilen Labels: `Readiness`, `Plan`, `Approval
+Needed`, `Evidence` und `Day2 Follow-up`. Wenn etwas nicht fortgesetzt werden
+kann, gehoert es unter `Approval Needed` mit Verweis auf
+[docs/de/plugin-operations/account-and-approval-requests.md](../../../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../../../docs/en/plugin-operations/account-and-approval-requests.md).
+
+## Quellplan
+
+- [docs/de/plugin-plans/grundbuch-portal-plugin-integration.md](../../../../docs/de/plugin-plans/grundbuch-portal-plugin-integration.md)
+- [docs/en/plugin-plans/grundbuch-portal-plugin-integration.md](../../../../docs/en/plugin-plans/grundbuch-portal-plugin-integration.md)

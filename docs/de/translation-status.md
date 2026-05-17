@@ -16,6 +16,9 @@ rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 - [usecases/](../../usecases) wird als deutsche fachliche Usecase-Flaeche
   gefuehrt; die unmittelbaren Usecase-READMEs sind kurze deutsche
   Vorderseiten, die auf die jeweilige KG verweisen.
+- `SKILL.md`-Dateien werden fachlich deutsch gefuehrt und enthalten eine kurze
+  englische Summary; technische Namen, Ordner, Commands und IDs bleiben
+  englisch/ASCII.
 - [docs/en/README.md](../en/README.md) und
   [docs/en/START_HERE.md](../en/START_HERE.md) sind englische
   Einstiegsfassungen.
@@ -39,6 +42,8 @@ prueft:
 - Dateiparitaet fuer lokalisierte Flaechen,
 - Root-README- und Usecase-Sprachregeln,
 - deutsche KG- und Usecase-README-Marker fuer unmittelbare Usecase-Ordner,
+- Skill-Sprachmarker fuer deutsch gefuehrte `SKILL.md`-Dateien mit englischer
+  Summary,
 - keine identischen Markdown-/Textspiegel zwischen `docs/de` und `docs/en`.
 
 ## Naechster sinnvoller Schritt

@@ -28,7 +28,9 @@ CI:
 
 - `minimal`: Prozessvalidierung + Unit Tests
 - `standard`: `minimal` + Privacy Lint
-- `strict`: `standard` + Governance Policy Sync + Language Parity + Documentation Links + Cloud Runbook Parity + Gantt + AI-SBOM + Knowledge Graph
+- `strict`: `standard` + Governance Policy Sync + Language Parity inklusive
+  Skill-Sprachmarkern + Documentation Links + Cloud Runbook Parity + Gantt +
+  AI-SBOM + Knowledge Graph
 
 ## Feste Reihenfolge
 

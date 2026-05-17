@@ -29,8 +29,9 @@ CI:
 
 - `minimal`: process validation and unit tests
 - `standard`: `minimal` plus privacy lint
-- `strict`: `standard` plus governance policy sync, language parity,
-  documentation links, cloud runbook parity, Gantt, AI-SBOM and knowledge graph
+- `strict`: `standard` plus governance policy sync, language parity including
+  skill language markers, documentation links, cloud runbook parity, Gantt,
+  AI-SBOM and knowledge graph
 
 ## Fixed Order
 

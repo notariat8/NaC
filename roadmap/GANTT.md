@@ -25,6 +25,7 @@ gantt
     SBOM fuer AI-Governance-Basis                :active,  a4b, 2026-05-15, 21d
     Runtime-/HW-Mindestanforderungs-SBOM         :active,  a4c, 2026-05-15, 14d
     Deutsche Plugin-MD-Sprachfuehrung            :done,    a4d, 2026-05-17, 1d
+    Deutsch gefuehrte Plugin-Skills              :done,    a4e, 2026-05-17, 1d
     Notariats-Pilot-Plugin-Readiness             :         a5, after a4, 35d
     Veroeffentlichung und Supportbetrieb         :         a6, after a5, 28d
 
@@ -42,6 +43,7 @@ gantt
     Lokalisierte Doku-Uebersetzung bereinigen    :done,    b1j, 2026-05-15, 1d
     No-code-KG-Editor-Vertrag-MVP                :done,    b1k, 2026-05-15, 1d
     Deutsche Workflow-MD-Sprachfuehrung          :done,    b1l, 2026-05-17, 1d
+    Skill-Sprachregel und EN-Summary             :done,    b1m, 2026-05-17, 1d
     Skill- und Python-Workflow-Vertraege         :active,  b2, 2026-05-15, 28d
     Deterministischer Workflow-Runner-MVP        :active,  b3, 2026-05-15, 35d
     Day2-Nachweis- und Driftbetrieb              :         b4, after b3, 28d
@@ -72,8 +74,8 @@ gantt
 
 | Track | Umfang | Status | Fortschritt | Aktuelles Gate |
 | --- | --- | --- | --- | --- |
-| A | Installierbare Plugins fuer Notariate | Aktiv | 68% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator und deutsche Plugin-MD-Fuehrung. |
-| B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 41% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
+| A | Installierbare Plugins fuer Notariate | Aktiv | 69% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung und deutsch gefuehrte Skill-Anweisungen mit englischer Summary. |
+| B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 42% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel und prueft SKILL.md-Sprachmarker; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
 | C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
 | D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 30% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 

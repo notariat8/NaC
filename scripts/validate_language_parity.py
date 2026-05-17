@@ -74,6 +74,24 @@ PLUGIN_WORKFLOW_MD_FORBIDDEN_MARKERS = (
     "## Scope",
     "## MVP-Scope",
 )
+SKILL_MD_REQUIRED_MARKERS = (
+    "Deutsch ist die fuehrende fachliche Skill-Sprache.",
+    "Commands und IDs bleiben englisch/ASCII.",
+    "## Englische Kurzfassung",
+    "## Einsatzgrenze",
+)
+SKILL_MD_FORBIDDEN_MARKERS = (
+    "## Operating Boundary",
+    "## Allowed Work",
+    "## Prohibited Work",
+    "## Workflow",
+    "## Output Shape",
+    "## Source Plan",
+    "Use this skill",
+    "This plugin",
+    "This installable",
+    "Return concise sections named",
+)
 USECASE_README_REQUIRED_MARKERS = (
     "## Worum Es Geht",
     "## Was Heute Im Muster Enthalten Ist",
@@ -253,6 +271,21 @@ def validate_plugin_workflow_language_rules() -> list[str]:
     return errors
 
 
+def validate_skill_language_rules() -> list[str]:
+    errors: list[str] = []
+    for root_name in ("plugins", "workflows"):
+        for skill_file in sorted((REPO_ROOT / root_name).rglob("SKILL.md")):
+            rel_path = skill_file.relative_to(REPO_ROOT).as_posix()
+            text = skill_file.read_text(encoding="utf-8")
+            for marker in SKILL_MD_REQUIRED_MARKERS:
+                if marker not in text:
+                    errors.append(f"{rel_path} muss Skill-Sprachmarker enthalten: {marker}")
+            for marker in SKILL_MD_FORBIDDEN_MARKERS:
+                if marker in text:
+                    errors.append(f"{rel_path} enthaelt englischen Skill-Altmarker: {marker}")
+    return errors
+
+
 def validate_usecase_readme_language_rules() -> list[str]:
     errors: list[str] = []
     for readme_file in sorted((REPO_ROOT / "usecases").glob("*/README.md")):
@@ -291,6 +324,7 @@ def main() -> int:
     errors.extend(validate_usecase_kg_language_rules())
     errors.extend(validate_usecase_readme_language_rules())
     errors.extend(validate_plugin_workflow_language_rules())
+    errors.extend(validate_skill_language_rules())
 
     if errors:
         print("STATUS: FAILED")

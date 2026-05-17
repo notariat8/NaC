@@ -5,44 +5,84 @@ description: Use first when notary-side XNP login or Online HRA testing needs BN
 
 # NoC Card SAK Gate
 
-## Operating Boundary
+Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
+Commands und IDs bleiben englisch/ASCII.
 
-Runtime mode: `local-card-sak-gate`.
+## Englische Kurzfassung
 
-This installable local Codex plugin is the first gate before XNP login testing for notary-side Online HRA. Default to plan-preview, local execution, explicit human approval, and evidence metadata. Do not perform external writes unless a separate reviewed connector explicitly implements that action.
+English summary: Use first for notary-side card, cyberJack reader, RFID-off,
+SAK-lite, secureFramework, XNP local-interface and PC/SC readiness checks. The
+skill creates metadata-only evidence and never captures PINs, API keys or card
+data.
 
-## Allowed Work
+## Einsatzgrenze
 
-- Prepare local card, compatible security-class-3 reader, RFID-off, SAK-lite/XNP-card-path, secureFramework and XNP local-interface readiness checks.
-- Run `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json` from the repository root to create a local readiness evidence preview.
-- Run `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api` when the operator explicitly wants the local morris localhost API and PC/SC list-readers path tested without reading card data.
-- Record anonymized reader fingerprints and driver version metadata.
-- Record morris SID/auth values only as hashes and never expose raw authorization data in evidence.
-- Route PIN/card issues to the human operator without requesting values.
-- Record only non-secret XNP local-interface metadata such as active state and localhost port range.
+Laufzeitmodus: `local-card-sak-gate`.
 
-## Prohibited Work
+Dieser installierbare lokale Codex-Skill ist das erste Gate vor XNP-Login-Tests
+fuer notarielle Online-HRA-Arbeit. Standard ist Planvorschau, lokale
+Ausfuehrung, ausdrueckliche menschliche Freigabe und Evidence-Metadaten.
+Externe Schreibaktionen sind verboten, solange kein separat gepruefter Connector
+diese Aktion implementiert.
 
-- Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.
-- Store XNP local-interface API keys, login credentials, certificate material, card values or encrypted key blobs in Git.
-- Bypass human review for regulated filing, register, mailbox, or notarial actions.
-- Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.
-- Scrape protected portals or exceed published usage limits.
+## Erlaubte Arbeit
 
-## Workflow
+- Lokale Karten-, kompatible Sicherheitsklasse-3-Leser-, RFID-aus-,
+  SAK-lite-/XNP-Kartenpfad-, secureFramework- und XNP-Local-Interface-Readiness
+  vorbereiten.
+- Vom Repository-Root aus `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json`
+  ausfuehren, um eine lokale Readiness-Evidence-Vorschau zu erzeugen.
+- `python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api`
+  ausfuehren, wenn der Betreiber ausdruecklich die lokale morris-Localhost-API
+  und den PC/SC-List-Readers-Pfad ohne Kartendaten pruefen will.
+- Anonymisierte Leser-Fingerprints und Treiberversion-Metadaten erfassen.
+- morris-SID-/Auth-Werte nur als Hashes erfassen und nie rohe
+  Autorisierungsdaten in Evidence offenlegen.
+- PIN- oder Kartenprobleme an den menschlichen Betreiber routen, ohne Werte zu
+  erfragen.
+- Nur nicht geheime XNP-Local-Interface-Metadaten wie Aktivstatus und
+  Localhost-Portbereich erfassen.
 
-1. Classify the target: XNP login test, Online HRA gate, beA/BNotK precheck or other card workflow.
-2. Check Day0 prerequisites with the local readiness script where possible: BNotK chip/signature card, compatible security-class-3 reader, RFID disabled where present, PC/SC, driver, BNotK SAK lite or XNP card path, secureFramework and XNP local-interface configuration.
-3. Produce a human-readable Day1 plan preview before any local or external action.
-4. Ask for explicit human approval for any PIN prompt, certificate selection, XNP login test or notarial action.
-5. Capture evidence metadata only: timestamp, actor role, non-secret reader fingerprint hash, RFID-off status, component readiness, XNP local-interface active/port metadata, decision, result and follow-up owner.
-6. For Day2, report drift, expired access, failed checks, version changes and recertification tasks.
+## Verbotene Arbeit
 
-## Output Shape
+- Passwoerter, PINs, private Schluessel, Zertifikatsmaterial, Session-Cookies
+  oder Einmalcodes in Git speichern.
+- XNP-Local-Interface-API-Keys, Login-Daten, Zertifikatsmaterial, Kartenwerte
+  oder verschluesselte Key-Blobs in Git speichern.
+- Menschliches Review fuer regulierte Einreichungen, Register-, Postfach- oder
+  notarielle Aktionen umgehen.
+- Mandats- oder Client-Inhalte an ein LLM senden, solange keine ausdruecklich
+  freigegebene Datenverarbeitungsgrundlage besteht.
+- Geschuetzte Portale scrapen oder veroeffentlichte Nutzungslimits umgehen.
 
-Return concise sections named `Readiness`, `Plan`, `Approval Needed`, `Evidence`, and `Day2 Follow-up`. If something cannot proceed, put it under `Approval Needed` and reference `docs/de/plugin-operations/account-and-approval-requests.md` and `docs/en/plugin-operations/account-and-approval-requests.md`.
+## Ablauf
 
-## Source Plan
+1. Ziel einordnen: XNP-Login-Test, Online-HRA-Gate, beA-/BNotK-Precheck oder
+   anderer Karten-Workflow.
+2. Day0-Voraussetzungen soweit moeglich mit dem lokalen Readiness-Skript
+   pruefen: BNotK-Chip-/Signaturkarte, kompatibler Sicherheitsklasse-3-Leser,
+   RFID deaktiviert, PC/SC, Treiber, BNotK SAK lite oder XNP-Kartenpfad,
+   secureFramework und XNP-Local-Interface-Konfiguration.
+3. Vor jeder lokalen oder externen Aktion eine lesbare Day1-Planvorschau erstellen.
+4. Fuer PIN-Prompt, Zertifikatsauswahl, XNP-Login-Test oder notarielle Aktion
+   ausdrueckliche menschliche Freigabe einholen.
+5. Nur Evidence-Metadaten erfassen: Zeitstempel, Akteursrolle, nicht geheimer
+   Leser-Fingerprint-Hash, RFID-aus-Status, Komponenten-Readiness,
+   XNP-Local-Interface-Aktiv-/Port-Metadaten, Entscheidung, Ergebnis und
+   Follow-up-Owner.
+6. Fuer Day2 Drift, abgelaufene Zugriffe, fehlgeschlagene Checks,
+   Versionsaenderungen und Rezertifizierungsaufgaben melden.
 
-- `docs/de/plugin-plans/cyberjack-rfid-plugin-integration.md`
-- `docs/en/plugin-plans/cyberjack-rfid-plugin-integration.md`
+## Rueckgabeformat
+
+Nutze knappe Abschnitte mit stabilen Labels: `Readiness`, `Plan`, `Approval
+Needed`, `Evidence` und `Day2 Follow-up`. Wenn etwas nicht fortgesetzt werden
+kann, gehoert es unter `Approval Needed` mit Verweis auf
+[docs/de/plugin-operations/account-and-approval-requests.md](../../../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../../../docs/en/plugin-operations/account-and-approval-requests.md).
+
+## Quellplan
+
+- [docs/de/plugin-plans/cyberjack-rfid-plugin-integration.md](../../../../docs/de/plugin-plans/cyberjack-rfid-plugin-integration.md)
+- [docs/en/plugin-plans/cyberjack-rfid-plugin-integration.md](../../../../docs/en/plugin-plans/cyberjack-rfid-plugin-integration.md)

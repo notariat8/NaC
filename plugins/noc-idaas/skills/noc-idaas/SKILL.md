@@ -5,62 +5,79 @@ description: Use when planning German eID verification readiness, AusweisApp-ori
 
 # NoC IDaaS
 
-## Operating Boundary
+Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
+Commands und IDs bleiben englisch/ASCII.
 
-Runtime mode: `local-eid-iam-readiness-companion`.
+## Englische Kurzfassung
 
-This plugin plans eID and IAM projection workflows. It does not execute
-production eID transactions, store identity documents, write to IAM systems, or
-submit external API calls unless a separate reviewed connector explicitly
-implements that action. Default to plan-preview, metadata-only evidence, and
-human approval before any external or personal-data processing step.
+English summary: Plan German eID readiness, AusweisApp-oriented checks,
+verified-claim minimization, consent/audit evidence and IAM projection readiness
+for Entra ID, Oracle IAM and SCIM targets. Do not execute production eID or IAM
+writes without reviewed connector code and approval.
 
-## Allowed Work
+## Einsatzgrenze
 
-- Classify the verification purpose, actor role, tenant, target application,
-  data class, and review owner.
-- Define minimal claim sets such as `fullName`, `dateOfBirth` or `ageOverX`,
-  `verificationLevel`, `verificationSource`, `verifiedAt`, and
+Laufzeitmodus: `local-eid-iam-readiness-companion`.
+
+Dieser Skill plant eID- und IAM-Projektionsworkflows. Er fuehrt keine
+produktiven eID-Transaktionen aus, speichert keine Ausweisdokumente, schreibt
+nicht in IAM-Systeme und startet keine externen API-Aufrufe, solange kein
+separat gepruefter Connector diese Aktion implementiert. Standard ist
+Planvorschau, metadatenbasierte Evidence und menschliche Freigabe vor jeder
+externen oder personenbezogenen Verarbeitung.
+
+## Erlaubte Arbeit
+
+- Verifikationszweck, Akteursrolle, Tenant, Zielanwendung, Datenklasse und
+  Review-Owner einordnen.
+- Minimale Claim-Sets definieren, zum Beispiel `fullName`, `dateOfBirth` oder
+  `ageOverX`, `verificationLevel`, `verificationSource`, `verifiedAt` und
   `consentPurpose`.
-- Prepare German eID and AusweisApp readiness checklists.
-- Prepare IAM projection readiness for Entra ID, Oracle IAM, and SCIM targets.
-- Review API and event contracts in dry-run form.
-- Create metadata-only evidence templates for consent, verification, projection,
-  revocation, and Day2 follow-up.
+- Deutsche eID- und AusweisApp-Readiness-Checklisten vorbereiten.
+- IAM-Projektions-Readiness fuer Entra ID, Oracle IAM und SCIM-Ziele
+  vorbereiten.
+- API- und Event-Vertraege in Trockenlauf-Form pruefen.
+- Metadatenbasierte Evidence-Vorlagen fuer Consent, Verifikation, Projektion,
+  Widerruf und Day2-Follow-up erstellen.
 
-## Prohibited Work
+## Verbotene Arbeit
 
-- Store eID raw data, full identity-document dumps, tax IDs, secrets, private
-  keys, certificate material, access tokens, one-time codes, or session cookies
-  in Git.
-- Upload real identity data or client personal data to an LLM without an
-  explicit approved data-processing basis.
-- Start production eID transactions, write to IAM systems, or call protected
-  identity APIs without reviewed connector code and human approval.
-- Reuse verified claims beyond the documented purpose.
+- eID-Rohdaten, vollstaendige Ausweisdokument-Dumps, Steuer-IDs, Secrets,
+  private Schluessel, Zertifikatsmaterial, Access Tokens, Einmalcodes oder
+  Session-Cookies in Git speichern.
+- Echte Identitaetsdaten oder personenbezogene Client-Daten an ein LLM senden,
+  solange keine ausdruecklich freigegebene Datenverarbeitungsgrundlage besteht.
+- Produktive eID-Transaktionen starten, in IAM-Systeme schreiben oder
+  geschuetzte Identity-APIs aufrufen, solange kein gepruefter Connector und
+  keine menschliche Freigabe vorliegen.
+- Verifizierte Claims ueber den dokumentierten Zweck hinaus wiederverwenden.
 
-## Workflow
+## Ablauf
 
-1. Classify the business context, purpose, tenant, target system, actor role,
-   reviewer role, and data class.
-2. Define the minimum claim set and retention expectation for the concrete
-   purpose.
-3. Check readiness for AusweisApp, client application redirects, webhook or
-   polling mode, consent text, audit storage, and tenant isolation.
-4. If IAM projection is requested, classify target type: `entra`, `oracle`, or
-   `scim`.
-5. Produce a plan preview before any external or personal-data processing.
-6. Ask for explicit human approval before production eID, IAM, or API actions.
-7. Capture evidence metadata only: timestamp, actor role, purpose, claim-set
-   version, tenant, target system, decision, result, and follow-up owner.
-8. For Day2, report expired assertions, revocations, failed projections,
-   retention drift, and connector recertification tasks.
+1. Geschaeftskontext, Zweck, Tenant, Zielsystem, Akteursrolle, Reviewer-Rolle
+   und Datenklasse einordnen.
+2. Minimales Claim-Set und erwartete Aufbewahrung fuer den konkreten Zweck
+   definieren.
+3. Readiness fuer AusweisApp, Client-App-Redirects, Webhook- oder Polling-Modus,
+   Consent-Text, Audit-Speicher und Tenant-Isolation pruefen.
+4. Wenn IAM-Projektion gewuenscht ist, Zieltyp einordnen: `entra`, `oracle`
+   oder `scim`.
+5. Vor jeder externen oder personenbezogenen Verarbeitung eine Planvorschau
+   erstellen.
+6. Vor produktiven eID-, IAM- oder API-Aktionen ausdrueckliche menschliche
+   Freigabe einholen.
+7. Nur Evidence-Metadaten erfassen: Zeitstempel, Akteursrolle, Zweck,
+   Claim-Set-Version, Tenant, Zielsystem, Entscheidung, Ergebnis und
+   Follow-up-Owner.
+8. Fuer Day2 abgelaufene Assertions, Widerrufe, fehlgeschlagene Projektionen,
+   Retention-Drift und Connector-Rezertifizierungsaufgaben melden.
 
-## Output Shape
+## Rueckgabeformat
 
-Return concise sections named `Readiness`, `Claim Set`, `Projection`, `Approval
-Needed`, `Evidence`, and `Day2 Follow-up`.
+Nutze knappe Abschnitte mit stabilen Labels: `Readiness`, `Claim Set`,
+`Projection`, `Approval Needed`, `Evidence` und `Day2 Follow-up`.
 
-## Source Plan
+## Quellplan
 
-- `docs/plugin-plans/idaas-plugin-integration.md`
+- [docs/de/plugin-plans/idaas-plugin-integration.md](../../../../docs/de/plugin-plans/idaas-plugin-integration.md)
+- [docs/en/plugin-plans/idaas-plugin-integration.md](../../../../docs/en/plugin-plans/idaas-plugin-integration.md)
