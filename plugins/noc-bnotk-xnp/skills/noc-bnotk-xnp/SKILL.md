@@ -1,9 +1,9 @@
 ---
 name: noc-bnotk-xnp
-description: Use after noc-cyberjack-rfid when a notary-side Online HRA, Handelsregister, XNotar or notarial software workflow needs an installable local Codex plugin for XNP authentication readiness, Amtstaetigkeitskontext checks, API-key presence documentation without values, or evidence plans.
+description: Nach noc-cyberjack-rfid nutzen, wenn Online-HRA, Handelsregister, XNotar oder Notariatssoftware XNP-Authentifizierungsbereitschaft, Amtstaetigkeitskontext, API-Key-Vorhandensein ohne Werte oder Nachweisplaene braucht.
 ---
 
-# NoC BNotK XNP
+# NoC XNP-Notariatspruefung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

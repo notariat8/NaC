@@ -17,9 +17,9 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
 
-    section A: Plugins und Marketplace-Readiness
-    Plugin-Inventar und Installierbarkeitsgate   :done,    a1, 2026-04-01, 2026-05-14
-    GPT-Store-/Workspace-Paketierung trennen     :active,  a2, 2026-05-14, 21d
+    section A: Plugins und Marktplatz-Bereitschaft
+    Plugin-Inventar und Installierbarkeitspruefung :done, a1, 2026-04-01, 2026-05-14
+    GPT-Store-/Arbeitsbereich-Paketierung trennen :active, a2, 2026-05-14, 21d
     IDaaS-Plugin-Migration                       :active,  a3, 2026-05-14, 14d
     Repository-Konsolidierungsledger             :active,  a4, 2026-05-14, 7d
     Lokaler PKCS7-Zertifikatsbuendel-Nachweis    :active,  a4a, 2026-05-15, 14d
@@ -27,12 +27,13 @@ gantt
     Runtime-/HW-Mindestanforderungs-SBOM         :active,  a4c, 2026-05-15, 14d
     Deutsche Plugin-MD-Sprachfuehrung            :done,    a4d, 2026-05-17, 1d
     Deutsch gefuehrte Plugin-Skills              :done,    a4e, 2026-05-17, 1d
-    Lokaler Plugin-Discovery-Bootstrap           :done,    a4f, 2026-05-17, 1d
-    Notariats-Pilot-Plugin-Readiness             :         a5, after a4, 35d
+    Lokaler Plugin-Erkennungsbootstrap           :done,    a4f, 2026-05-17, 1d
+    Deutsche Plugin-UX dauerhaft erzwingen       :done,    a4g, 2026-05-17, 1d
+    Notariats-Pilot-Plugin-Bereitschaft          :         a5, after a4, 35d
     Veroeffentlichung und Supportbetrieb         :         a6, after a5, 28d
 
-    section B: Notarielle Workflows
-    Workflow-Schichten trennen                   :active,  b1, 2026-05-14, 14d
+    section B: Notarielle Arbeitsablaeufe
+    Arbeitsablauf-Schichten trennen              :active,  b1, 2026-05-14, 14d
     KG-Runtime-Status-CLI-MVP                    :done,    b1a, 2026-05-15, 1d
     Projektstimme und Aktivbau-Doku bereinigen   :done,    b1b, 2026-05-15, 1d
     START_HERE-Betriebseinstieg bereinigen       :done,    b1c, 2026-05-15, 1d
@@ -44,10 +45,10 @@ gantt
     Root-README-Sprachpaar-Links bereinigen      :done,    b1i, 2026-05-15, 1d
     Lokalisierte Doku-Uebersetzung bereinigen    :done,    b1j, 2026-05-15, 1d
     No-code-KG-Editor-Vertrag-MVP                :done,    b1k, 2026-05-15, 1d
-    Deutsche Workflow-MD-Sprachfuehrung          :done,    b1l, 2026-05-17, 1d
-    Skill-Sprachregel und EN-Summary             :done,    b1m, 2026-05-17, 1d
-    Skill- und Python-Workflow-Vertraege         :active,  b2, 2026-05-15, 28d
-    Deterministischer Workflow-Runner-MVP        :active,  b3, 2026-05-15, 35d
+    Deutsche Arbeitsablauf-MD-Sprachfuehrung     :done,    b1l, 2026-05-17, 1d
+    Skill-Sprachregel und EN-Kurzfassung         :done,    b1m, 2026-05-17, 1d
+    Skill- und Python-Arbeitsablauf-Vertraege    :active,  b2, 2026-05-15, 28d
+    Deterministischer Arbeitsablauf-Runner-MVP   :active,  b3, 2026-05-15, 35d
     Day2-Nachweis- und Driftbetrieb              :         b4, after b3, 28d
 
     section C: Notarielle Usecases
@@ -62,7 +63,7 @@ gantt
     GmbH-Gruendung kanonisieren                  :active,  c4, 2026-05-14, 21d
     Usecase-Katalog bereinigen                 :done,    c5, 2026-05-17, 1d
     Steuer-aaS-Usecase-Aufnahme                  :active,  c6, 2026-05-14, 21d
-    Statisches KG-gestuetztes Workflow-Modell    :active,  c7, 2026-05-15, 28d
+    Statisches KG-gestuetztes Arbeitsablauf-Modell :active, c7, 2026-05-15, 28d
     Pilotfaehige Usecase-Pakete                  :         c8, after c7, 35d
 
     section D: Produktkommunikation und Adoption
@@ -75,16 +76,16 @@ gantt
 
 ## Fortschrittsbild
 
-| Track | Umfang | Status | Fortschritt | Aktuelles Gate |
+| Arbeitsstrang | Umfang | Status | Fortschritt | Aktueller Pruefpunkt |
 | --- | --- | --- | --- | --- |
-| A | Installierbare Plugins fuer Notariate | Aktiv | 71% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung, deutsch gefuehrte Skill-Anweisungen mit englischer Summary und einen lokalen Codex-Discovery-Bootstrap fuer neue Rechner. |
-| B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 42% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel und prueft SKILL.md-Sprachmarker; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
+| A | Installierbare Plugins fuer Notariate | Aktiv | 73% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung, deutsch gefuehrte Skill-Anweisungen mit englischer Kurzfassung, deutschen Plugin-Anzeigenamen/Beschreibungen/Starter-Prompts und einen lokalen Codex-Erkennungsbootstrap fuer neue Rechner. |
+| B | Installierbare Skills und deterministische Python-Arbeitsablaeufe | Aktiv | 42% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Arbeitsplatz-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel und prueft SKILL.md-Sprachmarker; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Arbeitsablauf-MD ist jetzt deutsch gefuehrt. |
 | C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
 | D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 31% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell, praezisierte Gantt-Regel und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 
 ## Regel
 
-Das strikte Quality Gate umfasst `scripts/validate_gantt_progress.py` und setzt
+Die strikte Qualitaetspruefung umfasst `scripts/validate_gantt_progress.py` und setzt
 diese Regel technisch durch:
 
 1. Sobald ein Change-Set repo-relevante Dateien aendert, muss

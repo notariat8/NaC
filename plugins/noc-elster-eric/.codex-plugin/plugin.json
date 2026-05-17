@@ -1,7 +1,7 @@
 {
   "name": "noc-elster-eric",
   "version": "0.1.0",
-  "description": "ELSTER and ERiC workflow companion.",
+  "description": "ELSTER- und ERiC-Arbeitsablaufbegleiter.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,11 +19,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC ELSTER ERiC",
-    "shortDescription": "ELSTER and ERiC workflow companion.",
-    "longDescription": "Local ELSTER/ERiC workflow companion for filing readiness, local credential boundary, evidence import and manufacturer/onboarding checks without central tax credential storage.",
+    "displayName": "NoC ELSTER-ERiC-Begleiter",
+    "shortDescription": "Begleitet ELSTER- und ERiC-Bereitschaft mit Nachweisen.",
+    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne zentrale Speicherung von Steuerzugangsmitteln.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "Readiness",
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run NoC ELSTER ERiC readiness.",
-      "Create a Day1 plan for NoC ELSTER ERiC.",
-      "Review Day2 drift for NoC ELSTER ERiC."
+      "Pruefe die NoC ELSTER-ERiC-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan fuer ELSTER und ERiC.",
+      "Pruefe Betriebsdrift fuer den ELSTER-ERiC-Pfad."
     ],
     "brandColor": "#4D6A2F",
     "composerIcon": "./assets/icon.png",

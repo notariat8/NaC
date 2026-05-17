@@ -7,14 +7,15 @@ Status: `proposed`
 `noc-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
 
 Korrektur der Entwicklungsreihenfolge: Fuer einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist zuerst das Card/SAK-Gate (`noc-cyberjack-rfid`)
+Anmelde- oder Vollzugspfad ist zuerst die `NoC Karten- und SAK-Pruefung`
+(`noc-cyberjack-rfid`)
 erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
 XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt
 `noc-bnotk-xnp`; `noc-handelsregister` ist dann der fachliche Layer fuer
-Registerspur, HRA-/HRB-Plausibilitaet und Paket-Readiness.
+Registerspur, HRA-/HRB-Plausibilitaet und Paketbereitschaft.
 
-Nur ein reiner Buerger-/Mandanten-Preflight fuer `online.notar.de` kann ohne
-Notar-/XNP-Authentifizierung starten. Dieser Preflight darf keine Einreichung,
+Nur eine reine Buerger-/Mandanten-Vorpruefung fuer `online.notar.de` kann ohne
+Notar-/XNP-Authentifizierung starten. Diese Vorpruefung darf keine Einreichung,
 keine Notariatssoftware-Steuerung und keine notarielle Erklaerung ausloesen.
 
 Der Fokus ist HRA-first, weil der Nutzer konkrete HRA-Anmeldungen vorbereiten koennen soll. Das Plugin muss aber jede Eingabe zuerst gegen die Registerspur pruefen:
@@ -33,9 +34,9 @@ Es darf:
 - den Online-Anmeldefall strukturieren,
 - HRA/HRB-Track, Rechtsform und fehlende Angaben pruefen,
 - Voraussetzungen fuer das notarielle Online-Verfahren abfragen,
-- bei notariatsseitigem Ziel auf `noc-cyberjack-rfid` und danach `noc-bnotk-xnp` als vorgelagerte Card-/XNP-Gates verweisen,
-- ein Anmeldepaket als Plan Preview vorbereiten,
-- Evidence-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
+- bei notariatsseitigem Ziel auf `noc-cyberjack-rfid` und danach `noc-bnotk-xnp` als vorgelagerte Karten-/XNP-Pruefungen verweisen,
+- ein Anmeldepaket als Planvorschau vorbereiten,
+- Nachweis-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
 
 Es darf nicht:
 
@@ -51,7 +52,7 @@ Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet we
 
 ## Day0
 
-- Betriebsmodus klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
+- Betriebsmodus klaeren: Buerger-/Mandanten-Vorpruefung oder Notariatsarbeitsplatz.
 - Bei Notariatsarbeitsplatz zuerst `noc-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
 - Danach `noc-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
 - Registerspur klaeren: HRA, HRB oder anderes Register.
@@ -63,32 +64,32 @@ Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet we
 
 ## Day1
 
-Das Plugin erzeugt eine Plan Preview mit:
+Das Plugin erzeugt eine Planvorschau mit:
 
-- Betriebsmodus, Card/SAK-Gate-Status und Auth-/XNP-Gate-Status,
+- Betriebsmodus, Karten-/SAK-Pruefstatus und Auth-/XNP-Pruefstatus,
 - Registerspur und Plausibilitaetswarnungen,
 - fehlenden Pflichtangaben,
 - Unterlagenliste fuer den Notar,
 - Fragen an Antragsteller oder Rechtsberatung,
-- Approval-Checkpoint vor notarieller Videokommunikation,
-- Evidence-Metadatenmodell fuer Hashes und Paketversionen.
+- Freigabepunkt vor notarieller Videokommunikation,
+- Nachweis-Metadatenmodell fuer Hashes und Paketversionen.
 
 ## Day2
 
 - Abgelehnte oder zurueckgestellte Anmeldungen nachfassen.
 - Fehlende Anlagen, Identifizierungsfehler, Signaturfehler und Notarhinweise dokumentieren.
-- Paketversion und Evidence-Metadaten aktualisieren.
+- Paketversion und Nachweis-Metadaten aktualisieren.
 - Wiederverwendbare Vorlagen nur ohne Echtdaten im Repo halten.
 
-## Output Shape
+## Ausgabeform
 
 Das Plugin gibt immer diese Abschnitte aus:
 
-1. `Readiness`
-2. `Application Package`
-3. `Approval Needed`
-4. `Evidence`
-5. `Day2 Follow-up`
+1. `Bereitschaft`
+2. `Anmeldepaket`
+3. `Freigabe Erforderlich`
+4. `Nachweis`
+5. `Day2-Nachfassen`
 
 ## Quellen
 

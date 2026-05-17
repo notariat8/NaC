@@ -12,8 +12,9 @@ alwaysApply: true
 - `de` und `en` sind immer zu pflegen, unabhaengig von der Prompt-Sprache.
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 - Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt; stabile technische Identifier duerfen englisch bleiben.
-- `SKILL.md`-Dateien werden fachlich deutsch gefuehrt; Skill-Namen, Ordner, Commands, IDs und technische Output-Labels duerfen englisch/ASCII bleiben.
-- Jeder Skill braucht eine kurze englische Summary fuer technische Anschlussfaehigkeit; bei Konflikten gilt die deutsche fachliche Anweisung.
+- Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt.
+- Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels duerfen englisch/ASCII bleiben.
+- Jeder Skill braucht im Body eine kurze englische Summary fuer technische Anschlussfaehigkeit; bei Konflikten gilt die deutsche fachliche Anweisung.
 - Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.
 - Wenn die Policy fehlt, verwende neutrale Formulierungen und frage einmal nach.
 - Rechtstexte und Originalzitate werden unveraendert zitiert.

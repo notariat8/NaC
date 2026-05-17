@@ -1,9 +1,9 @@
 ---
 name: noc-elster-eric
-description: Use when preparing ELSTER, ERiC, Mein Unternehmenskonto or tax-filing evidence workflows, especially before any regulated transmission or vendor onboarding.
+description: Nutzen, wenn ELSTER, ERiC, Mein Unternehmenskonto oder Steuer-Einreichungsnachweise vorbereitet werden, besonders vor regulierter Uebermittlung oder Hersteller-Onboarding.
 ---
 
-# NoC ELSTER ERiC
+# NoC ELSTER-ERiC-Begleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

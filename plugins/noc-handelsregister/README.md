@@ -1,24 +1,24 @@
-# NoC Handelsregister
+# NoC Handelsregister-Begleiter
 
-Lokaler HRA-first-Handelsregister-Begleiter fuer die Vorbereitung von Online-
-Registeranmeldungspaketen, notarielle Online-Verfahrens-Readiness, eID-/App-
+Lokaler HRA-zuerst-Handelsregister-Begleiter fuer die Vorbereitung von Online-
+Registeranmeldungspaketen, notarielle Online-Verfahrensbereitschaft, eID-/App-
 Voraussetzungen, Freigabepunkte und metadatenbasierte Nachweise. Fuer
-notarielle Einreichungsworkflows zuerst mit `noc-bnotk-xnp` beginnen. Dieses
+notarielle Einreichungsablaeufe zuerst mit `noc-bnotk-xnp` beginnen. Dieses
 Plugin ruft keine Registerdaten ab und automatisiert keine geschuetzten Portale.
 
 ## Status
 
 Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 fuer die Vorbereitung von Online-Registeranmeldungen bereit. Externe
 Einreichungsadapter sind in dieser ersten Version bewusst nicht aktiviert.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Trennt Buerger-Preflight von notariatsseitigen Workstation-Workflows.
-- Erfordert das `noc-bnotk-xnp`-Gate vor XNotar-/Registeruebergabe-Arbeit.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Trennt Buerger-Vorpruefung von notariatsseitigen Workstation-Arbeitsablaeufen.
+- Erfordert die `noc-bnotk-xnp`-Pruefung vor XNotar-/Registeruebergabe-Arbeit.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder notariellen oder
   einreichungsbezogenen Aktion.
 - Verlangt Antragstellerfreigabe, rechtliche Pruefung und notarielle Pruefung
@@ -26,15 +26,15 @@ Einreichungsadapter sind in dieser ersten Version bewusst nicht aktiviert.
 
 ## Day0
 
-- Modus bestaetigen: Buerger-Preflight oder notariatsseitiger Workstation-Workflow.
-- Fuer notariatsseitigen Workflow zuerst `noc-bnotk-xnp`-Readiness bestaetigen.
+- Modus bestaetigen: Buerger-Vorpruefung oder notariatsseitiger Arbeitsplatz-Arbeitsablauf.
+- Fuer notariatsseitigen Arbeitsablauf zuerst `noc-bnotk-xnp`-Bereitschaft bestaetigen.
 - Rechtsform, Registerspur und HRA-/HRB-Zuordnung bestaetigen.
-- Antragstellerberechtigung, Notarroute, Bundesnotarkammer-App-Readiness und
-  eID-Readiness bestaetigen.
+- Antragstellerberechtigung, Notarroute, Bundesnotarkammer-App-Bereitschaft und
+  eID-Bereitschaft bestaetigen.
 
 ## Day1
 
-- Online-Anmeldungs-Readiness-Plan, Liste fehlender Angaben und notarielle
+- Online-Anmeldungs-Bereitschaft-Plan, Liste fehlender Angaben und notarielle
   Nachweischeckliste erzeugen.
 
 ## Day2
@@ -44,8 +44,8 @@ Einreichungsadapter sind in dieser ersten Version bewusst nicht aktiviert.
 
 ## Erforderliche Konten und Freigaben
 
-- Notartermin oder Notariatsworkflow
-- abgeschlossene `noc-bnotk-xnp`-Readiness fuer notarielle Workflows
+- Notartermin oder Notariatsarbeitsablauf
+- abgeschlossene `noc-bnotk-xnp`-Bereitschaft fuer notarielle Arbeitsablaeufe
 - Online-Verfahrens-App der Bundesnotarkammer
 - eID-faehiger amtlicher Ausweis und PIN
 - Antragsteller- und Reviewer-Freigabe fuer das Registeranmeldungspaket

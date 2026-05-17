@@ -35,12 +35,25 @@ skill_language:
   scope: codex_skill_files
   leading_subject_matter_language: de
   required_english_summary: true
-  english_role: technical_orientation_and_marketplace_bridge
+  english_role: technical_orientation_only
   conflict_resolution: german_instruction_prevails
   technical_names_commands_ids_may_remain_english_ascii: true
   applies_to:
     - plugins/*/skills/*/SKILL.md
     - workflows/skills/*/SKILL.md
+
+plugin_manifest_language:
+  scope: codex_plugin_marketplace_and_manifest_text
+  leading_human_language: de
+  require_german_display_names: true
+  require_german_descriptions: true
+  require_german_default_prompts: true
+  require_german_plugin_readme_headings: true
+  require_german_skill_frontmatter_descriptions: true
+  english_role: none_for_human_facing_plugin_ux
+  allow_stable_technical_identifiers: true
+  allow_technical_acronyms_and_product_names: true
+  enforced_by: scripts/validate_plugins.py
 
 localized_surfaces:
   - docs
@@ -61,8 +74,16 @@ domain_surfaces:
     require_german_instruction_body: true
     require_english_summary: true
     allow_stable_english_identifiers: true
-    allow_english_frontmatter_description: true
+    allow_english_frontmatter_description: false
     allow_english_commands_and_output_labels: true
+  plugins:
+    default_human_language: de
+    require_german_manifest_descriptions: true
+    require_german_display_names: true
+    require_german_default_prompts: true
+    require_german_readme_headings: true
+    allow_stable_english_identifiers: true
+    allow_technical_acronyms_and_product_names: true
 
 folder_rules:
   docs:
@@ -86,8 +107,9 @@ notes:
   - "Deutsch (de) und Englisch (en) sind die verpflichtenden Standardsprachen."
   - "Die Policy gilt repo-weit fuer alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
   - "Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung."
-  - "Skills werden fachlich deutsch gefuehrt; technische Namen, Ordner, Commands und IDs duerfen englisch/ASCII bleiben."
-  - "Jeder SKILL.md braucht eine kurze englische Summary fuer technische Anschlussfaehigkeit."
+  - "Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt."
+  - "Technische Plugin-IDs, Ordner, Commands, Output-Labels, Akronyme und Produktnamen duerfen englisch/ASCII bleiben."
+  - "Jeder SKILL.md braucht im Body eine kurze englische Summary fuer technische Anschlussfaehigkeit; sie ersetzt keine deutsche Frontmatter- oder UX-Sprache."
   - "Sprachabhaengige Inhalte liegen unter ISO-639-Sprachordnern."
   - "Unabhaengig von der Sprache des Prompts muessen alle Standardsprachen gepflegt werden."
   - "Neue Sprachen duerfen ergaenzt werden, aber de und en bleiben immer Pflicht."

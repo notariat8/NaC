@@ -1,9 +1,9 @@
 ---
 name: noc-cyberjack-rfid
-description: Use first when notary-side XNP login or Online HRA testing needs BNotK chip/signature card readiness, REINER SCT cyberJack reader checks, RFID-off verification, security-class-3 reader checks, BNotK SAK lite/XNP card path, secureFramework, XNP local-interface readiness, PC/SC state, driver versions, firmware notes or evidence metadata.
+description: Zuerst nutzen, wenn XNP-Login oder Online-HRA BNotK-Kartenbereitschaft, cyberJack-Leserpruefung, RFID-aus-Bestaetigung, Sicherheitsklasse-3-Leser, SAK-lite-/XNP-Kartenpfad, secureFramework, lokale XNP-Schnittstelle, PC/SC, Treiberversionen, Firmware-Hinweise oder Nachweismetadaten braucht.
 ---
 
-# NoC Card SAK Gate
+# NoC Karten- und SAK-Pruefung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

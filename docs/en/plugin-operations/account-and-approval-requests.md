@@ -29,11 +29,11 @@ This file is the Day0 request register for productive regulated-industry plugin 
 Do not implement or enable direct external write adapters until these are approved in writing:
 
 - beA send/receive/eEB automation path and Client Security boundary.
-- Card/SAK gate for BNotK chip/signature card or local Schneider/SCP-card availability, security-class-3 reader, secureFramework and no PIN capture.
-- XNP/notarial software official interface contract, completed Card/SAK gate, local authentication gate, Amtstaetigkeitskontext and credential boundary.
+- `NoC Karten- und SAK-Pruefung` for BNotK chip/signature card or local Schneider/SCP-card availability, security-class-3 reader, secureFramework and no PIN capture.
+- XNP/notarial software official interface contract, completed `NoC Karten- und SAK-Pruefung`, local `NoC XNP-Notariatspruefung`, Amtstaetigkeitskontext and credential boundary.
 - ELSTER/ERiC manufacturer or portal-operator onboarding, if server-side integration is pursued.
 - Grundbuchportal authorized direct adapter, state-specific terms and legitimate-interest evidence.
-- Handelsregister online application route, mode decision, completed Card/SAK and XNP gates for notary-side workflows, applicant authority and eID/app readiness.
+- Handelsregister online application route, mode decision, completed `NoC Karten- und SAK-Pruefung` and `NoC XNP-Notariatspruefung` for notary-side workflows, applicant authority and eID/app readiness.
 - OCI Resource Manager apply permissions, Vault policy and audit retention.
 
 ## Day2 Recertification

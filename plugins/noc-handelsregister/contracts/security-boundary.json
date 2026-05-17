@@ -21,7 +21,7 @@
   "allowed_work": [
     "Prepare HRA-first online Handelsregister application packages.",
     "Check eID, Bundesnotarkammer app, notary appointment and signature readiness.",
-    "For notary-side workflows, require the NoC BNotK XNP gate before XNotar or filing handoff work.",
+    "For notary-side workflows, require the NoC XNP-Notariatspruefung before XNotar or filing handoff work.",
     "Prepare metadata-only evidence for human-approved register application workflows."
   ],
   "prohibited_work": [
@@ -32,7 +32,7 @@
   ],
   "day0": [
     "Confirm mode: citizen preflight or notary-side workstation workflow.",
-    "For notary-side workflow, confirm NoC BNotK XNP readiness first.",
+    "For notary-side workflow, confirm NoC XNP-Notariatspruefung first.",
     "Confirm legal form, register track and whether the case is HRA or HRB.",
     "Confirm applicant role, notary route, eID readiness and Bundesnotarkammer app readiness."
   ],
@@ -44,7 +44,7 @@
   ],
   "required_accounts_or_approvals": [
     "Notary appointment or notary office workflow",
-    "Completed NoC BNotK XNP readiness for notary-side workflows",
+    "Completed NoC XNP-Notariatspruefung for notary-side workflows",
     "Bundesnotarkammer online procedure app",
     "eID-capable official ID and PIN",
     "Applicant and reviewer approval for the register application package"

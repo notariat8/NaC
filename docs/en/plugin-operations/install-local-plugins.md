@@ -48,12 +48,12 @@ real Codex discovery, the home-local root remains authoritative.
 4. Restart Codex or open a new session with workspace `~/NoC`.
 5. For notary-side Online HRA work, install `noc-cyberjack-rfid` before `noc-bnotk-xnp`, then install `noc-handelsregister`.
 6. Install from the repo-local marketplace if supported by the Codex environment.
-7. Confirm the installed card plugin display name is `NoC Card SAK Gate` and the source path is `./plugins/noc-cyberjack-rfid`.
-8. Confirm the installed XNP plugin display name is `NoC Notary XNP Gate` and the source path is `./plugins/noc-bnotk-xnp`.
+7. Confirm the installed card plugin display name is `NoC Karten- und SAK-Pruefung` and the source path is `./plugins/noc-cyberjack-rfid`.
+8. Confirm the installed XNP plugin display name is `NoC XNP-Notariatspruefung` and the source path is `./plugins/noc-bnotk-xnp`.
 9. If an environment accepts copies but not symlinks, run `python3 scripts/install_local_plugins.py --mode copy --force` after approval; keep the source of truth in this repository.
 
 ## Operational Boundary
 
 The current plugins are installable skill plugins. They do not contain direct external write adapters, portal automation, card access, certificate handling or secret storage. Those require a separate reviewed connector PR.
 
-For Online HRA, `noc-cyberjack-rfid` is the installable Card/SAK gate and `noc-bnotk-xnp` is the installable XNP readiness and authentication-gate companion. They do not authenticate as a notary by themselves, store PINs or notary credentials, trigger XNotar imports or submit filings.
+For Online HRA, `noc-cyberjack-rfid` is the installable `NoC Karten- und SAK-Pruefung`, and `noc-bnotk-xnp` is the installable `NoC XNP-Notariatspruefung`. They do not authenticate as a notary by themselves, store PINs or notary credentials, trigger XNotar imports or submit filings.

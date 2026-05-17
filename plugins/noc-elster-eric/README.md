@@ -1,20 +1,20 @@
-# NoC ELSTER ERiC
+# NoC ELSTER-ERiC-Begleiter
 
-Lokaler ELSTER-/ERiC-Workflowbegleiter fuer Abgabe-Readiness, lokale
-Credential-Grenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne
+Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Abgabe-Bereitschaft, lokale
+Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne
 zentrale Speicherung von Steuer-Zugangsdaten.
 
 ## Status
 
 Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.

@@ -8,6 +8,47 @@ MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 REQUIRED_PLUGIN_FIELDS = ["name", "version", "description", "author", "homepage", "repository", "license", "skills", "interface"]
 REQUIRED_INTERFACE_FIELDS = ["displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt", "brandColor"]
 REQUIRED_MARKETPLACE_ORDER = ["noc-cyberjack-rfid", "noc-bnotk-xnp", "noc-handelsregister"]
+GERMAN_UX_MARKERS = (
+    " fuer ",
+    " und ",
+    " ohne ",
+    " mit ",
+    "lokal",
+    "erstelle",
+    "plane",
+    "erzeuge",
+    "pruef",
+    "begleit",
+    "bereit",
+    "nachweis",
+    "betriebsdrift",
+    "arbeitsablauf",
+    "schutzplanken",
+    "regulier",
+    "notar",
+    "handelsregister",
+    "grundbuch",
+    "zertifikat",
+    "karten",
+)
+ENGLISH_UX_MARKERS = (
+    " gate",
+    " evidence",
+    " readiness",
+    " workflow",
+    " companion",
+    " guardrail",
+    " regulated-industry",
+    " local ",
+    " shared ",
+    " create ",
+    " prepare ",
+    " review ",
+    " inspect ",
+    " check ",
+    " run ",
+)
+PLUGIN_UX_FIELDS = ("description", "displayName", "shortDescription", "longDescription", "category")
 
 
 def load_json(path: Path) -> dict:
@@ -24,6 +65,38 @@ def contains_todo(value: object) -> bool:
     return False
 
 
+def normalized_text(value: str) -> str:
+    return f" {value.lower().replace('-', ' ')} "
+
+
+def looks_german(value: str) -> bool:
+    text = normalized_text(value)
+    return any(marker in text for marker in GERMAN_UX_MARKERS)
+
+
+def contains_english_ux_marker(value: str) -> str | None:
+    text = normalized_text(value)
+    for marker in ENGLISH_UX_MARKERS:
+        if marker in text:
+            return marker.strip()
+    return None
+
+
+def validate_german_plugin_ux(name: str, label: str, value: object) -> list[str]:
+    errors: list[str] = []
+    values = value if isinstance(value, list) else [value]
+    for item in values:
+        if not isinstance(item, str):
+            errors.append(f"{name}: {label} must be a string or list of strings")
+            continue
+        if not looks_german(item):
+            errors.append(f"{name}: {label} must be German-led human-facing text")
+        marker = contains_english_ux_marker(item)
+        if marker:
+            errors.append(f"{name}: {label} contains English UX marker: {marker}")
+    return errors
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     if not MARKETPLACE.exists():
@@ -34,6 +107,14 @@ def validate() -> list[str]:
         errors.append("Marketplace contains TODO placeholders")
     if marketplace.get("name") != "noc-regulated-industry":
         errors.append("Marketplace name must be noc-regulated-industry")
+    marketplace_display = marketplace.get("interface", {}).get("displayName")
+    errors.extend(
+        validate_german_plugin_ux(
+            "marketplace",
+            "interface.displayName",
+            marketplace_display,
+        )
+    )
 
     plugins = marketplace.get("plugins")
     if not isinstance(plugins, list) or not plugins:
@@ -63,6 +144,7 @@ def validate() -> list[str]:
             errors.append(f"{name}: installation policy must be AVAILABLE")
         if policy.get("authentication") != "ON_INSTALL":
             errors.append(f"{name}: authentication policy must be ON_INSTALL")
+        errors.extend(validate_german_plugin_ux(name, "marketplace.category", entry.get("category")))
 
         plugin_root = REPO_ROOT / "plugins" / name
         manifest_path = plugin_root / ".codex-plugin" / "plugin.json"
@@ -81,12 +163,25 @@ def validate() -> list[str]:
         for field in REQUIRED_INTERFACE_FIELDS:
             if field not in interface:
                 errors.append(f"{name}: missing interface field {field}")
+        errors.extend(validate_german_plugin_ux(name, "description", manifest.get("description")))
+        for field in PLUGIN_UX_FIELDS[1:]:
+            errors.extend(validate_german_plugin_ux(name, f"interface.{field}", interface.get(field)))
+        display_name = interface.get("displayName")
+        readme_path = plugin_root / "README.md"
+        if not readme_path.exists():
+            errors.append(f"{name}: missing README.md")
+        elif isinstance(display_name, str):
+            expected_heading = f"# {display_name}"
+            first_line = readme_path.read_text(encoding="utf-8").splitlines()[0:1]
+            if first_line != [expected_heading]:
+                errors.append(f"{name}: README.md must start with {expected_heading}")
         prompts = interface.get("defaultPrompt", [])
         if not isinstance(prompts, list) or len(prompts) > 3:
             errors.append(f"{name}: defaultPrompt must contain at most three entries")
         for prompt in prompts:
             if not isinstance(prompt, str) or len(prompt) > 128:
                 errors.append(f"{name}: defaultPrompt entries must be strings <= 128 chars")
+        errors.extend(validate_german_plugin_ux(name, "interface.defaultPrompt", prompts))
 
         skills_dir = plugin_root / "skills"
         if not any(skills_dir.glob("*/SKILL.md")):

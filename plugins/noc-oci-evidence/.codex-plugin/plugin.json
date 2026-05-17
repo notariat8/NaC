@@ -1,7 +1,7 @@
 {
   "name": "noc-oci-evidence",
   "version": "0.1.0",
-  "description": "OCI landing-zone evidence and audit companion.",
+  "description": "OCI-Landing-Zone-, Audit- und Nachweisbegleiter.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,11 +19,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC OCI Evidence",
-    "shortDescription": "OCI landing-zone evidence and audit companion.",
-    "longDescription": "OCI evidence companion for landing-zone Day0 checks, Resource Manager plan review, eventstream/audit journal design, Vault boundary and Day2 drift/cost controls.",
+    "displayName": "NoC OCI-Nachweisbegleiter",
+    "shortDescription": "Begleitet OCI-Landing-Zone, Audit und Drift-Nachweise.",
+    "longDescription": "Lokaler OCI-Nachweisbegleiter fuer Landing-Zone-Day0-Pruefungen, Resource-Manager-Planreview, Eventstream-/Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "CloudReadiness",
       "DryRun",
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run NoC OCI Evidence readiness.",
-      "Create a Day1 plan for NoC OCI Evidence.",
-      "Review Day2 drift for NoC OCI Evidence."
+      "Pruefe die NoC OCI-Nachweisbereitschaft.",
+      "Erstelle einen Einrichtungsplan fuer OCI-Nachweise.",
+      "Pruefe Betriebsdrift fuer den OCI-Nachweisbetrieb."
     ],
     "brandColor": "#7A3E34",
     "composerIcon": "./assets/icon.png",

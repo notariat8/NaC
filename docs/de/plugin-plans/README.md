@@ -21,49 +21,49 @@ Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Call
 
 | Plan | Zweck | Day0 | Day1 | Day2 |
 | --- | --- | --- | --- | --- |
-| [local-codex-runtime.md](local-codex-runtime.md) | Lokaler Codex-/LLM-Arbeitsplatz | Workspace und Startcheck | lokale Planerzeugung | regelmaessige Tool-/Policy-Pruefung |
+| [local-codex-runtime.md](local-codex-runtime.md) | Lokaler Codex-/LLM-Arbeitsplatz | Arbeitsbereich und Startcheck | lokale Planerzeugung | regelmaessige Tool-/Policy-Pruefung |
 | [github-control-plane.md](github-control-plane.md) | GitHub als GitOps-Steuerung | Auth und Repo-Zugriff | PRs, Checks, Reviews | Branchschutz, Audit, Drift |
-| [idaas-plugin-integration.md](idaas-plugin-integration.md) | Deutsche eID-Verifikation und IAM-Projektionsplanung | Zweck, Tenant, Claim-Set, Datenschutzgrundlage | eID-/IAM-Plan Preview und Vertragscheck | Assertions, Widerrufe, Retention-Drift, Connector-Rezertifizierung |
-| [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Evidence | Drift, Rotation, Kostenkontrolle |
-| [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Plan/Apply/Reconcile | Monitoring, Replays, Exit |
-| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Evidence-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |
-| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzpruefung | Dry-run Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Companion | Card/SAK-Gate, Arbeitsplatz- und Schnittstellenpruefung | lokaler Plan/Apply-Companion | lokale Logs, Evidence, Updatepflege |
-| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security Companion | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Workflow | Stoerungen, Versionen, Evidence |
-| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC Developer- und Local-Companion | Hersteller-/Tooling-Pruefung | Dry-run Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | Card/SAK-Gate vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Card/SAK-Readiness fuer XNP-Test | Firmware, Treiber, Kartenpfad, Evidence |
-| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Workflow- und Evidence-Companion | Zulassung und berechtigtes Interesse | Abrufplan und Evidence-Import | Bundesland-Drift, Protokolle, Gebuehren |
+| [idaas-plugin-integration.md](idaas-plugin-integration.md) | Deutsche eID-Verifikation und IAM-Projektionsplanung | Zweck, Tenant, Claim-Set, Datenschutzgrundlage | eID-/IAM-Planvorschau und Vertragscheck | Assertions, Widerrufe, Retention-Drift, Connector-Rezertifizierung |
+| [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Nachweise | Drift, Rotation, Kostenkontrolle |
+| [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Planen, ausfuehren, abgleichen | Beobachtung, Wiederholung, Ersatzpfad |
+| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |
+| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzpruefung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `NoC Karten- und SAK-Pruefung`, Arbeitsplatz- und Schnittstellenpruefung | lokale Plan-/Ausfuehrungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
+| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security-Begleiter | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Arbeitsablauf | Stoerungen, Versionen, Nachweise |
+| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC-Entwickler- und lokaler Begleiter | Hersteller-/Tooling-Pruefung | Trockenlauf-Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `NoC Karten- und SAK-Pruefung` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft fuer XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
+| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Arbeitsablauf- und Nachweisbegleiter | Zulassung und berechtigtes Interesse | Abrufplan und Nachweisimport | Bundesland-Drift, Protokolle, Gebuehren |
 
-## Reihenfolge bei Handelsregister-/HRA-Workflows
+## Reihenfolge bei Handelsregister-/HRA-Arbeitsablaeufen
 
 Der erste technische Baustein haengt vom Betriebsmodus ab:
 
-- Buerger-/Mandanten-Preflight: `noc-handelsregister` darf nur Readiness, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
-- Notariatsseitiger Vollzug oder einreichungsnaher Workflow: `noc-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
+- Buerger-/Mandanten-Vorpruefung: `noc-handelsregister` darf nur Bereitschaft, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
+- Notariatsseitiger Vollzug oder einreichungsnaher Arbeitsablauf: `noc-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
 - Danach kommt `noc-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `noc-handelsregister` als fachlicher Register-Layer darauf aufbauen.
 
-Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb von Card/SAK-Gate und Notar-/XNP-Gate.
+Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb der `NoC Karten- und SAK-Pruefung` und der `NoC XNP-Notariatspruefung`.
 
 ## Verbindliches Adapter-Muster
 
 Jeder Plugin- oder Connector-Plan folgt diesem Ablauf:
 
-1. Intent aufnehmen.
+1. Ziel aufnehmen.
 2. Schema und Policy pruefen.
-3. Plan Preview erzeugen.
+3. Planvorschau erzeugen.
 4. Menschliche Freigabe einholen.
 5. Idempotent ausfuehren.
-6. Audit Evidence schreiben.
+6. Audit-Nachweis schreiben.
 7. Drift sichtbar machen.
 8. Exit- und Ersatzpfad dokumentieren.
 
 ## Sicherheitsgrenzen
 
-- Keine Secrets, Tokens, Private Keys oder personenbezogenen Echtdaten im Repo.
-- Lokale Credentials bleiben in lokalen Stores (`~/.oci`, Git Credential Manager, Browser/OAuth Stores).
+- Keine Geheimnisse, Tokens, privaten Schluessel oder personenbezogenen Echtdaten im Repo.
+- Lokale Zugangsdaten bleiben in lokalen Speichern (`~/.oci`, Git Credential Manager, Browser/OAuth Stores).
 - Adapter duerfen nicht direkt an Policies vorbei schreiben.
 - Sensible Prozesse brauchen Vier-Augen-Freigabe.
-- Jeder dauerhafte manuelle Eingriff muss in Git reconciled werden.
+- Jeder dauerhafte manuelle Eingriff muss in Git abgeglichen werden.
 
 ## Statusmodell
 

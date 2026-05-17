@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Die Plugin-Suite ist repo-lokal und mit NoC versioniert. Marketplace-Metadaten
+Die Plugin-Suite ist repo-lokal und mit NoC versioniert. Marktplatz-Metadaten
 liegen in [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json);
 Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 
@@ -32,10 +32,10 @@ zeigt, sind zwei Dinge auseinandergefallen:
    home-lokalen Plugin-Root. Ohne diese Spiegelung, oder ohne Neustart nach
    der Spiegelung, sieht eine neue Session die repo-lokalen Plugins nicht.
 
-`scripts/install_local_plugins.py --mode link` spiegelt deshalb den Marketplace
+`scripts/install_local_plugins.py --mode link` spiegelt deshalb den Marktplatz
 nach `~/.agents/plugins/marketplace.json`. Die Plugin-Ordner werden unter
 `~/plugins/<plugin>` verlinkt. Mit `NOC_PLUGIN_HOME=/anderer/root` kann ein
-abweichender Home-Root gesetzt werden; dann liegen Marketplace und Plugins
+abweichender Home-Root gesetzt werden; dann liegen Marktplatz und Plugins
 unter diesem Root. Der Link-Modus ist der Standard fuer Entwicklung, weil das
 Repository die einzige Quelle der Wahrheit bleibt. Falls Symlinks in einer
 Umgebung nicht erlaubt sind, ist `--mode copy` der Fallback.
@@ -55,12 +55,12 @@ Codex-Discovery bleibt der home-lokale Root massgeblich.
 4. Codex neu starten oder eine neue Session mit Workspace `~/NoC` oeffnen.
 5. Fuer notariatsseitige Online-HRA-Arbeit zuerst `noc-cyberjack-rfid`,
    danach `noc-bnotk-xnp` und danach `noc-handelsregister` installieren.
-6. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marketplace
+6. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marktplatz
    installieren.
 7. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
-   `NoC Card SAK Gate` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
+   `NoC Karten- und SAK-Pruefung` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
 8. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
-   `NoC Notary XNP Gate` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
+   `NoC XNP-Notariatspruefung` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
 9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
    `python3 scripts/install_local_plugins.py --mode copy --force` nach
    Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.
@@ -69,11 +69,11 @@ Codex-Discovery bleibt der home-lokale Root massgeblich.
 
 Die aktuellen Plugins sind installierbare Skill-Plugins. Sie enthalten keine
 direkten externen Schreibadapter, Portalautomatisierung, Karten-Zugriffe,
-Zertifikatshandling oder Secret-Speicherung. Das erfordert jeweils einen
+Zertifikatsverarbeitung oder Geheimnis-Speicherung. Das erfordert jeweils einen
 separat geprueften Connector-PR.
 
-Fuer Online-HRA ist `noc-cyberjack-rfid` das installierbare Card/SAK-Gate und
-`noc-bnotk-xnp` der installierbare XNP-Readiness- und Authentifizierungsgate-
-Companion. Sie authentifizieren nicht eigenstaendig als Notar, speichern keine
-PINs oder Notar-Credentials, loesen keine XNotar-Importe aus und reichen keine
-Anmeldungen ein.
+Fuer Online-HRA ist `noc-cyberjack-rfid` die installierbare Karten- und
+SAK-Pruefung und `noc-bnotk-xnp` die installierbare XNP-Bereitschafts- und
+Authentifizierungspruefung. Sie authentifizieren nicht eigenstaendig als Notar,
+speichern keine PINs oder Zugangsdaten, loesen keine XNotar-Importe aus und
+reichen keine Anmeldungen ein.

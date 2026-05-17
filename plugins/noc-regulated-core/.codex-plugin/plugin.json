@@ -1,7 +1,7 @@
 {
   "name": "noc-regulated-core",
   "version": "0.1.0",
-  "description": "Shared regulated-industry workflow guardrails.",
+  "description": "Gemeinsame Schutzplanken fuer regulierte NoC-Arbeitsablaeufe.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,11 +19,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Regulated Core",
-    "shortDescription": "Shared regulated-industry workflow guardrails.",
-    "longDescription": "Shared local workflow, safety boundary, plan-preview, approval and evidence guidance for NoC plugins used by law firms, notaries and adjacent regulated operations.",
+    "displayName": "NoC Schutzplanken fuer Regulierung",
+    "shortDescription": "Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe.",
+    "longDescription": "Lokaler Begleiter fuer Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisfuehrung in regulierten NoC-Arbeitsablaeufen. Er fuehrt keine Fachdatenverarbeitung aus, sondern hilft, Verantwortlichkeit, Pruefung und Nachweise sauber vorzubereiten.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "Governance",
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run NoC Regulated Core readiness.",
-      "Create a Day1 plan for NoC Regulated Core.",
-      "Review Day2 drift for NoC Regulated Core."
+      "Pruefe die NoC-Schutzplanken fuer diesen regulierten Ablauf.",
+      "Erstelle einen Einrichtungsplan mit Freigabe- und Nachweispunkten.",
+      "Pruefe Betriebsdrift fuer diesen regulierten NoC-Ablauf."
     ],
     "brandColor": "#245C4F",
     "composerIcon": "./assets/icon.png",

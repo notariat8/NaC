@@ -1,9 +1,9 @@
 ---
 name: noc-grundbuch-portal
-description: Use when planning Grundbuchportal access, legitimate-interest checks, state-specific portal readiness, retrieval evidence or notarial land-register workflows.
+description: Nutzen, wenn Grundbuchportalzugang, berechtigtes Interesse, landesspezifische Portalbereitschaft, Abrufnachweise oder notarielle Grundbuchablaeufe geplant werden.
 ---
 
-# NoC Grundbuchportal
+# NoC Grundbuchportal-Begleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

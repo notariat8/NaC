@@ -1,10 +1,10 @@
-# NoC Card SAK Gate
+# NoC Karten- und SAK-Pruefung
 
-Installierbares lokales Codex-Plugin fuer notarielle Karten-Readiness vor
+Installierbares lokales Codex-Plugin fuer notarielle Kartenbereitschaft vor
 XNP-Login und Online-HRA-Arbeit. Es prueft Verfuegbarkeit der
-BNotK-Chip-/Signaturkarte, REINER-SCT-cyberJack-Leser-Readiness,
+BNotK-Chip-/Signaturkarte, REINER-SCT-cyberJack-Leserbereitschaft,
 Sicherheitsklasse-3-Leseranforderungen, PC/SC-Status, BNotK-SAK-lite- oder
-XNP-Kartenpfad, secureFramework-Readiness, XNP-Local-Interface-Voraussetzungen
+XNP-Kartenpfad, secureFramework-Bereitschaft, XNP-Local-Interface-Voraussetzungen
 und Nachweis-Metadaten ohne PIN-Erfassung, API-Key-Erfassung oder
 Kartendatenextraktion.
 
@@ -17,7 +17,7 @@ bewusst nicht aktiviert.
 
 ## Lauffaehiges MVP
 
-Lokale Readiness-Pruefung aus dem Repository-Root starten:
+Lokale Bereitschaftspruefung aus dem Repository-Root starten:
 
 ```powershell
 python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json
@@ -26,7 +26,7 @@ python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json
 Fuer eine durch Bedienpersonal bestaetigte lokale Workstation-Pruefung:
 
 ```powershell
-python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --manual-card-present yes --manual-rfid-off yes --output out\cyberjack-readiness.json
+python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --manual-card-present yes --manual-rfid-off yes --output out\cyberjack-bereitschaft.json
 ```
 
 `--strict` in Automatisierung nutzen, wenn jeder nicht-bereite Zustand einen
@@ -46,8 +46,8 @@ Das nutzt ausschliesslich `http://127.0.0.1:8800`, fuehrt `system::check`, einen
 lokalen `system::auth`-Handshake, `system::list_provider`,
 `pcsc::establishcontext` und `pcsc::listreaders` aus und speichert nur redigierte
 Metadaten. Eine morris-Antwort wie `NoReader` oder `NoCard` gilt als erfolgreiche
-Middleware-Bindung; physische cyberJack-Readiness bleibt ein separates
-Lesererkennungs-Gate.
+Middleware-Bindung; physische cyberJack-Bereitschaft bleibt eine separate
+Lesererkennungspruefung.
 
 Die Pruefung liest keine PINs, Kartenwerte, Zertifikate, XNP-API-Keys,
 Portalsitzungen oder Mandatsinhalte. RFID-aus wird als manuelle Bestaetigung
@@ -56,7 +56,7 @@ deterministisch bestaetigen kann.
 
 ## Windows-DriverPackage-Erkennung
 
-Unter Windows erkennt die Readiness-Pruefung den lokalen REINER-SCT-Stack am
+Unter Windows erkennt die Bereitschaftspruefung den lokalen REINER-SCT-Stack am
 Standardpfad:
 
 ```text
@@ -73,7 +73,7 @@ aktuell ein cyberJack-Leser angeschlossen ist.
 
 REINER SCT beschreibt morris als Middleware, mit der Browseranwendungen vom
 lokalen Kunden-PC auf den Chipkartenleser zugreifen koennen. Wo morris
-installiert ist, prueft die Readiness-Pruefung die lokale Middleware ohne
+installiert ist, prueft die Bereitschaftspruefung die lokale Middleware ohne
 Kartenoperation:
 
 - `C:\Program Files (x86)\REINER SCT\morris`
@@ -86,7 +86,7 @@ sein, bleibt in NoC aber lokal und metadatenbasiert. Das Plugin darf morris
 nicht nutzen, um PINs, Kartendaten, Zertifikate oder produktive Portalaktionen
 anzufordern.
 
-Mit `--probe-morris-api` prueft das Readiness-Skript zusaetzlich die echte
+Mit `--probe-morris-api` prueft das Bereitschaftsskript zusaetzlich die echte
 morris-Localhost-API. Auf der aktuellen Workstation liefert die API `status=0`
 fuer morris, Autorisierung, lizenzierte Provider und PC/SC-List-Readers; aktuell
 wird kein REINER-SCT-/cyberJack-Leser von morris zurueckgegeben.
@@ -95,8 +95,8 @@ wird kein REINER-SCT-/cyberJack-Leser von morris zurueckgegeben.
 
 REINER SCT dokumentiert Linux-Unterstuetzung fuer cyberJack-Leser und weist
 darauf hin, dass viele Linux-Distributionen cyberJack-Treiber bereits in ihren
-Standardpaketquellen bereitstellen. Unter Linux prueft der Readiness-Check auch
-den lokalen Treiberstack:
+Standardpaketquellen bereitstellen. Unter Linux prueft die
+Bereitschaftspruefung auch den lokalen Treiberstack:
 
 - `cyberjack`-Paket, sofern Debian/Ubuntu- oder RPM-Paketdatenbanken verfuegbar sind
 - Signale fuer `pcscd`, `pcsc-tools` und `libccid`/PCSC-Pakete, sofern verfuegbar
@@ -120,16 +120,16 @@ Treiberinstallation eine dokumentierte Policy-Ausnahme oder ein Policy-Update.
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
 - Ist ueber `.agents/plugins/marketplace.json` vor `noc-bnotk-xnp` installierbar.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Behandelt BNotK-Chip-/Signaturkartenverfuegbarkeit, kompatiblen
   Sicherheitsklasse-3-Leser, SAK-lite/XNP, secureFramework und
-  XNP-Local-Interface-Readiness als Gate vor XNP-Login-Tests.
-- Behandelt RFID als Leserfaehigkeit, nicht als notariellen Kartenworkflow. Hat
+  XNP-Local-Interface-Bereitschaft als Pruefung vor XNP-Login-Tests.
+- Behandelt RFID als Leserfaehigkeit, nicht als notariellen Kartenarbeitsablauf. Hat
   der Leser eine RFID-Funktion, lautet die BNotK-Leitlinie, sie fuer
-  Chipkartenworkflows deaktiviert zu lassen, sofern kein konkreter kontaktloser
+  Chipkartenablaeufe deaktiviert zu lassen, sofern kein konkreter kontaktloser
   Einsatz explizit benoetigt wird.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
-- Erzeugt lokales Readiness-Evidence-JSON ueber `scripts/check_readiness.py`.
+- Erzeugt lokales Bereitschafts-Nachweis-JSON ueber `scripts/check_readiness.py`.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.
 
@@ -145,8 +145,8 @@ Treiberinstallation eine dokumentierte Policy-Ausnahme oder ein Policy-Update.
 - Unter Linux cyberJack-Treiberpaket-Verfuegbarkeit oder Installation,
   PC/SC-Daemon-Status und USB-/PCSC-Lesersichtbarkeit bestaetigen.
 - Klaeren, ob der Leser eine RFID-Funktion hat und ob sie fuer den
-  BNotK-Chipkarten-Workflow deaktiviert ist.
-- BNotK-SAK-lite- oder XNP-Kartenpfad und secureFramework-Readiness bestaetigen.
+  BNotK-Chipkarten-Arbeitsablauf deaktiviert ist.
+- BNotK-SAK-lite- oder XNP-Kartenpfad und secureFramework-Bereitschaft bestaetigen.
 - XNP-Local-Webservice-Interface nur als Metadaten bestaetigen: aktiv/inaktiv,
   localhost-only-Bindung, konfigurierte Portspanne und ob API-Key-Setup
   erforderlich ist. API-Key nicht speichern.
@@ -154,13 +154,13 @@ Treiberinstallation eine dokumentierte Policy-Ausnahme oder ein Policy-Update.
 ## Day1
 
 - `scripts/check_readiness.py` fuer Kartenleser, RFID-aus, SAK-lite-/XNP-
-  Kartenpfad, secureFramework und XNP-Local-Interface-Readiness vor
+  Kartenpfad, secureFramework und XNP-Local-Interface-Bereitschaft vor
   XNP-Login-Tests ausfuehren.
 
 ## Day2
 
 - Kartenleser, Treiber, Firmware, PC/SC-Dienst, SAK-lite-/XNP-Kartenpfad und
-  secureFramework-Readiness erneut zertifizieren.
+  secureFramework-Bereitschaft erneut zertifizieren.
 
 ## Erforderliche Konten und Freigaben
 

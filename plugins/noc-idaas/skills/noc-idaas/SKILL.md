@@ -1,9 +1,9 @@
 ---
 name: noc-idaas
-description: Use when planning German eID verification readiness, AusweisApp-oriented identity checks, verified-claim minimization, consent/audit evidence, or IAM projection readiness for Entra ID, Oracle IAM, or SCIM targets in regulated NoC workflows.
+description: Nutzen, wenn deutsche eID-Pruefungsbereitschaft, AusweisApp-orientierte Identitaetspruefung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft fuer Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NoC-Ablaufen geplant werden.
 ---
 
-# NoC IDaaS
+# NoC eID- und IAM-Begleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

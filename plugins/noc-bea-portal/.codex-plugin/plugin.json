@@ -1,7 +1,7 @@
 {
   "name": "noc-bea-portal",
   "version": "0.1.0",
-  "description": "beA workflow and evidence companion.",
+  "description": "beA-Arbeitsablauf- und Nachweisbegleiter.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,11 +19,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC beA Portal",
-    "shortDescription": "beA workflow and evidence companion.",
-    "longDescription": "Local beA workflow companion for readiness, mailbox/eEB task planning, Client Security checks and evidence capture without storing PINs, card data, mailbox secrets or mandate content in Git.",
+    "displayName": "NoC beA-Portal-Begleiter",
+    "shortDescription": "Begleitet beA-Bereitschaft, Aufgabenplanung und Nachweise.",
+    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten, Postfachgeheimnisse oder Mandatsinhalte in Git zu speichern.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "Readiness",
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run NoC beA Portal readiness.",
-      "Create a Day1 plan for NoC beA Portal.",
-      "Review Day2 drift for NoC beA Portal."
+      "Pruefe die NoC beA-Portal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan fuer das beA-Portal.",
+      "Pruefe Betriebsdrift fuer den beA-Portal-Pfad."
     ],
     "brandColor": "#6B3F5F",
     "composerIcon": "./assets/icon.png",

@@ -1,9 +1,9 @@
 ---
 name: noc-oci-evidence
-description: Use when preparing OCI landing-zone, Resource Manager, Vault, eventstream, audit or drift evidence work for NoC regulated operations.
+description: Nutzen, wenn OCI-Landing-Zone, Resource Manager, Vault, Eventstream, Audit oder Drift-Nachweise fuer regulierten NoC-Betrieb vorbereitet werden.
 ---
 
-# NoC OCI Evidence
+# NoC OCI-Nachweisbegleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

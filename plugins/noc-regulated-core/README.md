@@ -1,20 +1,20 @@
-# NoC Regulated Core
+# NoC Schutzplanken fuer Regulierung
 
-Gemeinsame lokale Workflow-, Sicherheitsgrenzen-, Planvorschau-, Freigabe- und
-Nachweisfuehrung fuer NoC-Plugins in Anwaltskanzleien, Notariaten und
-angrenzenden regulierten Betriebsablaeufen.
+Gemeinsame lokale Arbeitsablauf-, Sicherheitsgrenzen-, Planvorschau-,
+Freigabe- und Nachweisfuehrung fuer NoC-Plugins in Anwaltskanzleien,
+Notariaten und angrenzenden regulierten Betriebsablaeufen.
 
 ## Status
 
 Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.

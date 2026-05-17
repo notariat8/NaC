@@ -1,27 +1,27 @@
-# NoC beA Portal
+# NoC beA-Portal-Begleiter
 
-Lokaler beA-Workflowbegleiter fuer Readiness, Postfach-/eEB-Aufgabenplanung,
+Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach-/eEB-Aufgabenplanung,
 Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten,
-Postfach-Secrets oder Mandatsinhalte in Git zu speichern.
+Postfachgeheimnisse oder Mandatsinhalte in Git zu speichern.
 
 ## Status
 
 Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Postfachinhaber, Nutzerrolle, Karten-/Token-Readiness und Verfuegbarkeit von
+- Postfachinhaber, Nutzerrolle, Karten-/Token-Bereitschaft und Verfuegbarkeit von
   beA Client Security bestaetigen.
 
 ## Day1

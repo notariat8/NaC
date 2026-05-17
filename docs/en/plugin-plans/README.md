@@ -30,10 +30,10 @@ configuration and local domain integrations.
 | [domain-connector-runtime.md](domain-connector-runtime.md) | Domain-system connectors | Contract model | Plan/apply/reconcile | Monitoring, replays, exit |
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first online commercial-register filing | Register track, legal form, eID/app and notary route | Filing-package plan and evidence checklist | Rejections, signature/identity errors, package versions |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated commercial-register retrieval spike, not the current plugin path | Usage and license check | Dry-run research plan | Rate limits, source switch, audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/notary-software local companion | Card/SAK gate, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | `NoC XNP-Notariatspruefung` local companion | `NoC Karten- und SAK-Pruefung`, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
 | [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA portal and client-security companion | Local beA prerequisites | Send/receive/eEB workflow | Incidents, versions, evidence |
 | [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC developer and local companion | Manufacturer/tooling check | Dry-run filing and evidence plans | ERiC versions, evidence, deadlines |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | Card/SAK gate before XNP login | Card, reader, PC/SC, SAK lite, secureFramework | Card/SAK readiness for XNP test | Firmware, driver, card path, evidence |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `NoC Karten- und SAK-Pruefung` before XNP login | Card, reader, PC/SC, SAK lite, secureFramework | Card/SAK readiness for XNP test | Firmware, driver, card path, evidence |
 | [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Land-register portal workflow and evidence companion | Authorization and legitimate interest | Retrieval plan and evidence import | Federal-state drift, logs, fees |
 
 ## Sequence For Commercial Register / HRA Workflows

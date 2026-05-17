@@ -1,19 +1,20 @@
 # NoC Plugins fuer regulierte Branchen
 
 Dieser Ordner enthaelt installierbare repo-lokale Codex-Plugins fuer NoC-
-Workflows in regulierten Branchen. Die erste Suite fokussiert Anwaltskanzleien,
-Notariate, Steuer-Workflows und Cloud-Nachweisbetrieb.
+Arbeitsablaeufe in regulierten Branchen. Die erste Suite fokussiert
+Anwaltskanzleien, Notariate, Steuer-Arbeitsablaeufe und
+Cloud-Nachweisbetrieb.
 
 ## Installierbare Plugins
 
-- `noc-regulated-core`: gemeinsame Schutzplanken fuer regulierte Workflows.
-- `noc-idaas`: Begleiter fuer deutsche eID-Pruefung und IAM-Projektions-Readiness.
-- `noc-cyberjack-rfid`: lokales Karten- und SAK-lite-Gate vor dem XNP-Login.
-- `noc-bnotk-xnp`: lokales XNP-Authentifizierungsgate nach Karten-Readiness.
+- `noc-regulated-core`: gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe.
+- `noc-idaas`: Begleiter fuer deutsche eID-Pruefung und IAM-Projektionsbereitschaft.
+- `noc-cyberjack-rfid`: lokale Karten- und SAK-lite-Pruefung vor dem XNP-Login.
+- `noc-bnotk-xnp`: lokale XNP-Authentifizierungspruefung nach Kartenbereitschaft.
 - `noc-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur.
-- `noc-handelsregister`: HRA-first-Readiness fuer Online-Registeranmeldungen nach Modusentscheidung.
-- `noc-bea-portal`: beA-Workflow- und Nachweisbegleiter.
-- `noc-elster-eric`: ELSTER- und ERiC-Workflowbegleiter.
+- `noc-handelsregister`: HRA-zuerst-Bereitschaft fuer Online-Registeranmeldungen nach Modusentscheidung.
+- `noc-bea-portal`: beA-Arbeitsablauf- und Nachweisbegleiter.
+- `noc-elster-eric`: ELSTER- und ERiC-Arbeitsablaufbegleiter.
 - `noc-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
 - `noc-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
 
@@ -36,9 +37,9 @@ Der Plugin-Fortschritt wird in [plugins/GANTT.md](GANTT.md) gepflegt und in
 [roadmap/GANTT.md](../roadmap/GANTT.md) zusammengefuehrt. Jede Plugin-Aenderung
 muss beide Dateien aktualisieren, bevor sie push-ready ist.
 
-## Marketplace-Grenze
+## Marktplatz-Grenze
 
-Oeffentliche GPT-Store-Pakete und workspace-interne App-Installationen sind
-verschiedene Release-Ziele. Jedes Plugin muss vor oeffentlicher Veroeffentlichung
+Oeffentliche GPT-Store-Pakete und arbeitsbereichsinterne App-Installationen sind
+verschiedene Veroeffentlichungsziele. Jedes Plugin muss vor oeffentlicher Veroeffentlichung
 gegen die jeweils aktuellen OpenAI-Veroeffentlichungsregeln geprueft werden;
-Actions brauchen weiterhin gueltige Datenschutz- und Nutzungsbedingungen-URLs.
+Aktionen brauchen weiterhin gueltige Datenschutz- und Nutzungsbedingungen-URLs.

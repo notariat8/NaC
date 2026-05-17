@@ -1,9 +1,9 @@
 ---
 name: noc-handelsregister
-description: Use when preparing HRA-first online Handelsregister applications after deciding citizen-preflight versus notary-side mode, checking notary online-procedure readiness, documenting eID/app prerequisites, or creating non-secret evidence metadata for register filing workflows.
+description: Nutzen, wenn HRA-zuerst Online-Handelsregisteranmeldungen vorbereitet, Buerger-Vorpruefung und Notariatsmodus getrennt, notarielle Online-Verfahrensbereitschaft geprueft, eID-/App-Voraussetzungen dokumentiert oder nicht geheime Nachweismetadaten fuer Registerablaeufe erstellt werden.
 ---
 
-# NoC Handelsregister
+# NoC Handelsregister-Begleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

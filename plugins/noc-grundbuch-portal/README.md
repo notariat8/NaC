@@ -1,20 +1,20 @@
-# NoC Grundbuchportal
+# NoC Grundbuchportal-Begleiter
 
-Grundbuchportal-Workflowbegleiter fuer Berechtigung, berechtigtes Interesse,
+Grundbuchportal-Arbeitsablaufbegleiter fuer Berechtigung, berechtigtes Interesse,
 Abrufplanung und Nachweisimport ohne unbefugte Portalautomatisierung oder
 unkontrollierte Dokumentenspeicherung.
 
 ## Status
 
 Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.

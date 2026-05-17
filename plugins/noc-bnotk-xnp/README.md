@@ -1,25 +1,25 @@
-# NoC BNotK XNP
+# NoC XNP-Notariatspruefung
 
 Installierbares lokales Codex-Plugin fuer Notariate und Notariatsarbeitsplaetze.
-Es schaltet Online-HRA und andere notarielle Registerworkflows erst frei,
+Es schaltet Online-HRA und andere notarielle Registerablaeufe erst frei,
 nachdem `noc-cyberjack-rfid` lokalen Kartenleser, BNotK-SAK-lite- oder
 XNP-Kartenpfad sowie secureFramework-Voraussetzungen bestaetigt hat. Das Plugin
-kann einen lokalen XNP-Reader-Prompt-Preflight fuer den cyberJack-RFID-Leser
-erzeugen und prueft danach lokale XNP-Readiness, lokale Authentifizierung,
+kann eine lokale XNP-Leser-Vorpruefung fuer den cyberJack-RFID-Leser erzeugen
+und prueft danach lokale XNP-Bereitschaft, lokale Authentifizierung,
 Amtstaetigkeitskontext-Bestaetigung, XNotar-/Registerpaket-Uebergabe,
 API-Key-Vorhandensein als Bestaetigung und Nachweisfluss, ohne XNP-Zugangsdaten
 in SaaS oder Git zu speichern.
 
 ## Status
 
-Lauffaehiges lokales MVP. Fuer notarielle Handelsregister- oder HRA-Workflows
-steht dieses Plugin im repo-lokalen Codex-Marketplace nach `noc-cyberjack-rfid`
+Lauffaehiges lokales MVP. Fuer notarielle Handelsregister- oder HRA-Ablaeufe
+steht dieses Plugin im repo-lokalen Codex-Marktplatz nach `noc-cyberjack-rfid`
 und vor `noc-handelsregister`. Externe Schreibadapter sind in dieser ersten
 Version bewusst nicht aktiviert.
 
-## Lauffaehiges Reader-Prompt-MVP
+## Lauffaehige Leser-Vorpruefung
 
-Lokalen XNP-Reader-Prompt-Preflight aus dem Repository-Root starten:
+Lokale XNP-Leser-Vorpruefung aus dem Repository-Root starten:
 
 ```powershell
 python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json
@@ -33,33 +33,33 @@ python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --manual-card-present yes 
 
 Das fuehrt keinen XNP-Login aus und ruft keinen produktiven XNP-Schreibendpunkt
 auf. Es erzeugt einen lokalen Trockenlauf-Prompt fuer die freigegebene cyberJack-
-Leserroute, ruft die `noc-cyberjack-rfid`-Readiness-Pruefung auf, prueft nur die
+Leserroute, ruft die `noc-cyberjack-rfid`-Bereitschaft-Pruefung auf, prueft nur die
 XNP-Localhost-Ports `12774` bis `12784` und schreibt Nachweise gemaess
 `contracts/reader-prompt-evidence.schema.json`.
 
 Um die aktive morris-Browser-Middleware- und PC/SC-List-Readers-Pruefung aus dem
-cyberJack-Gate einzubeziehen:
+cyberJack-Pruefung einzubeziehen:
 
 ```powershell
 python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
 ```
 
 Der Prompt dient der Pruefung lokaler Leserreaktion, nicht der Aktivierung
-kontaktlosen RFID in einem BNotK-Chipkarten-Workflow. Keine PINs, Kartenwerte,
+kontaktlosen RFID in einem BNotK-Chipkarten-Arbeitsablauf. Keine PINs, Kartenwerte,
 Zertifikate, Passwoerter oder XNP-API-Keys in Codex eingeben.
 
 ## Installationsgrenze
 
 - Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Ist ueber `.agents/plugins/marketplace.json` fuer den Notariats-/XNP-Gate-
+- Ist ueber `.agents/plugins/marketplace.json` fuer den Notariats-/XNP-Pruefung-
   Usecase installierbar.
-- Erfordert abgeschlossene `noc-cyberjack-rfid`-Karten-/SAK-Readiness vor
+- Erfordert abgeschlossene `noc-cyberjack-rfid`-Karten-/SAK-Bereitschaft vor
   XNP-Login-Tests.
 - Erzeugt ueber `scripts/reader_prompt.py` einen lokalen Trockenlauf-
-  Reader-Prompt zur Pruefung des cyberJack-Leserpfads vor XNP-Login-Tests.
-- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
-- Behandelt lokalen XNP-Login und Amtstaetigkeitskontext als Gate vor
-  Registerworkflow-Automatisierung.
+Leser-Prompt zur Pruefung des cyberJack-Leserpfads vor XNP-Login-Tests.
+- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Behandelt lokalen XNP-Login und Amtstaetigkeitskontext als Pruefung vor
+  Registerablauf-Automatisierung.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
 - Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.
@@ -67,18 +67,19 @@ Zertifikate, Passwoerter oder XNP-API-Keys in Codex eingeben.
 ## Day0
 
 - XNP-Installation im selben Workstation-/Nutzerkontext bestaetigen.
-- `noc-cyberjack-rfid`-Readiness fuer Karte, Sicherheitsklasse-3-Leser,
+- `noc-cyberjack-rfid`-Bereitschaft fuer Karte, Sicherheitsklasse-3-Leser,
   SAK-lite-/XNP-Kartenpfad und secureFramework bestaetigen.
 - Lokalen XNP-Login, Nutzerrolle und Amtstaetigkeitskontext bestaetigen, ohne
   Werte zu speichern.
-- XNotar-Modul oder Austauschordner-Route fuer Registerworkflows bestaetigen.
+- XNotar-Modul oder Austauschordner-Route fuer Registerablaeufe bestaetigen.
 - Herstellersupport der Notariatssoftware und lokale Admin-Zustaendigkeit
   bestaetigen.
 
 ## Day1
 
-- Lokalen Reader-Prompt-Nachweis, Authentifizierungsgate, XNotar-Uebergabe-
-  Readiness-Plan und Nachweisgeruest ohne Credential-Werte erstellen.
+- Lokalen Leser-Prompt-Nachweis, Authentifizierungspruefung,
+  XNotar-Uebergabe-Bereitschaftsplan und Nachweisgeruest ohne Zugangswerte
+  erstellen.
 
 ## Day2
 
@@ -88,7 +89,7 @@ Zertifikate, Passwoerter oder XNP-API-Keys in Codex eingeben.
 ## Erforderliche Konten und Freigaben
 
 - BNotK-/XNP-Zugang fuer das Notariat
-- abgeschlossene `noc-cyberjack-rfid`-Karten-/SAK-Readiness
+- abgeschlossene `noc-cyberjack-rfid`-Karten-/SAK-Bereitschaft
 - lokaler XNP-Login und aktiver Amtstaetigkeitskontext
 - XNotar-/Registermodul oder Austauschordner-Route
 - Freigabe der Herstellerschnittstelle der Notariatssoftware

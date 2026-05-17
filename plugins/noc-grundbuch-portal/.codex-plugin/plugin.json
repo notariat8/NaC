@@ -1,7 +1,7 @@
 {
   "name": "noc-grundbuch-portal",
   "version": "0.1.0",
-  "description": "Land register access and evidence companion.",
+  "description": "Grundbuchportal- und Nachweisbegleiter.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,11 +19,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Grundbuchportal",
-    "shortDescription": "Land register access and evidence companion.",
-    "longDescription": "Grundbuchportal workflow companion for authorization, legitimate-interest checks, retrieval planning and evidence import without unauthorized portal automation or uncontrolled document storage.",
+    "displayName": "NoC Grundbuchportal-Begleiter",
+    "shortDescription": "Begleitet Berechtigung, Abrufplanung und Grundbuch-Nachweise.",
+    "longDescription": "Lokaler Grundbuchportal-Begleiter fuer Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport, ohne unzulaessige Portalautomatisierung oder unkontrollierte Dokumentablage.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "Authorization",
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Run NoC Grundbuchportal readiness.",
-      "Create a Day1 plan for NoC Grundbuchportal.",
-      "Review Day2 drift for NoC Grundbuchportal."
+      "Pruefe die NoC Grundbuchportal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan fuer den Grundbuchportal-Pfad.",
+      "Pruefe Betriebsdrift fuer Grundbuchportal-Nachweise."
     ],
     "brandColor": "#395C73",
     "composerIcon": "./assets/icon.png",

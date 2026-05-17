@@ -1,7 +1,7 @@
 {
   "name": "noc-idaas",
   "version": "0.1.0",
-  "description": "German eID and IAM projection readiness companion for regulated NoC workflows.",
+  "description": "Begleiter fuer deutsche eID-Pruefung und IAM-Projektion in regulierten NoC-Arbeitsablaeufen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -22,11 +22,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC IDaaS",
-    "shortDescription": "Prepare German eID verification and IAM projection workflows with NoC guardrails.",
-    "longDescription": "Local IDaaS companion for planning German eID verification through AusweisApp, verified-claim minimization, consent and audit evidence, and IAM projection readiness for Entra ID, Oracle IAM, and SCIM targets. It creates plan previews and metadata-only evidence; it does not run production eID or IAM writes without a reviewed connector and human approval.",
+    "displayName": "NoC eID- und IAM-Begleiter",
+    "shortDescription": "Plant eID-Pruefung und IAM-Projektion mit NoC-Schutzplanken.",
+    "longDescription": "Lokaler Begleiter fuer deutsche eID-Pruefung ueber AusweisApp, Datenminimierung bei verifizierten Angaben, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft fuer Entra ID, Oracle IAM und SCIM-Ziele. Er erstellt Planvorschauen und metadatenbasierte Nachweise; produktive eID- oder IAM-Schreibaktionen brauchen einen geprueften Connector und menschliche Freigabe.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "EIDReadiness",
@@ -39,9 +39,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Prepare an eID verification readiness plan.",
-      "Review IAM projection readiness for a tenant.",
-      "Create metadata-only evidence for an IDaaS flow."
+      "Erstelle einen Bereitschaftsplan fuer eine eID-Pruefung.",
+      "Pruefe die IAM-Projektion fuer diesen Mandanten.",
+      "Erzeuge metadatenbasierten Nachweis fuer einen IDaaS-Ablauf."
     ],
     "brandColor": "#315A8A",
     "composerIcon": "./assets/icon.png",

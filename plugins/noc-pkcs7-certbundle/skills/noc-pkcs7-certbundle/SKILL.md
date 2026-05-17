@@ -1,9 +1,9 @@
 ---
 name: noc-pkcs7-certbundle
-description: Inspect local PKCS#7/P7B/P7C certificate bundles as metadata-only evidence without signing, private-key access, PIN capture or external calls.
+description: Lokale PKCS7-/P7B-/P7C-Zertifikatsbuendel als metadatenbasierten Nachweis pruefen, ohne Signatur, Private-Key-Zugriff, PIN-Erfassung oder externe Aufrufe.
 ---
 
-# NoC PKCS7 CertBundle Gate
+# NoC PKCS7-Zertifikatsnachweis
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

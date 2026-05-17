@@ -30,7 +30,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Sprachabhaengige Inhalte liegen in ISO-639-Ordnern; `de` und `en` sind immer zu pflegen.
 - Die Sprache des Prompts begrenzt die Aenderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt.
-- `SKILL.md`-Dateien werden fachlich deutsch gefuehrt; Skill-Namen, Ordner, Commands, IDs und technische Output-Labels duerfen englisch/ASCII bleiben. Jeder Skill braucht eine kurze englische Summary.
+- Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels duerfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
 - Plugin- und Connector-Plaene liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
@@ -91,7 +91,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Folge immer [policies/culture-policy.yaml](../policies/culture-policy.yaml).
 - Folge immer [policies/language-policy.yaml](../policies/language-policy.yaml).
 - Lokal gepflegte Inhalte muessen immer in `de` und `en` aktualisiert werden.
-- Skills: deutsche fachliche Anweisung fuehrt; englische Summary dient nur technischer Orientierung.
+- Plugins und Skills: deutsche UX- und fachliche Anweisung fuehrt; englische Summary dient nur technischer Orientierung.
 - Bei Genderfragen gilt die konfigurierte Policy.
 - Wenn keine Policy gesetzt ist, nutze neutrale Sprache und bitte einmal um Entscheidung.
 

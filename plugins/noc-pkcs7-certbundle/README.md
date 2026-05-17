@@ -1,7 +1,7 @@
-# NoC PKCS7 CertBundle Gate
+# NoC PKCS7-Zertifikatsnachweis
 
 Installierbares lokales Codex-Plugin fuer metadatenbasierte PKCS#7/P7B/P7C-
-Zertifikatsbuendel-Nachweise. Dieser Workstream ist bewusst kein
+Zertifikatsbuendel-Nachweise. Dieser Arbeitsstrang ist bewusst kein
 Signaturprovider. Er laedt keine privaten Schluessel, importiert keine
 PFX-/PKCS#12-Softwaretokens, fragt keine PINs ab, erzeugt keine Signaturen,
 prueft keine Signaturen und ruft keine externen Dienste auf.
@@ -42,7 +42,7 @@ Zertifikatsanzahl-Signale, sofern der lokale Parser diese bereitstellt.
 - Keine Speicherung von Zertifikatsmaterial in Git.
 - Keine Signaturerzeugung und keine Signaturpruefung.
 - Keine externen Netzwerkaufrufe.
-- Kein Ersatz fuer BNotK-Karte, XNP, SAK-lite oder qualifizierte Signaturworkflows.
+- Kein Ersatz fuer BNotK-Karte, XNP, SAK-lite oder qualifizierte Signaturablaeufe.
 
 ## Day0
 
@@ -58,7 +58,7 @@ Zertifikatsanzahl-Signale, sofern der lokale Parser diese bereitstellt.
 - `scripts/inspect_certbundle.py` gegen das lokale Zertifikatsbuendel ausfuehren.
 - Nur die fuer Review benoetigten Metadaten-Nachweise speichern.
 - Softwaretoken-, PFX-, Private-Key- oder Signaturanforderungen in einen
-  separaten freigegebenen Workstream verweisen.
+  separaten freigegebenen Arbeitsstrang verweisen.
 
 ## Day2
 

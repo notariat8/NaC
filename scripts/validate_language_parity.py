@@ -81,6 +81,8 @@ SKILL_MD_REQUIRED_MARKERS = (
     "## Einsatzgrenze",
 )
 SKILL_MD_FORBIDDEN_MARKERS = (
+    "description: Use ",
+    "description: Inspect ",
     "## Operating Boundary",
     "## Allowed Work",
     "## Prohibited Work",
@@ -91,6 +93,12 @@ SKILL_MD_FORBIDDEN_MARKERS = (
     "This plugin",
     "This installable",
     "Return concise sections named",
+)
+SKILL_FRONTMATTER_GERMAN_MARKERS = (
+    "Nutzen,",
+    "Nach ",
+    "Zuerst nutzen",
+    "Lokale ",
 )
 USECASE_README_REQUIRED_MARKERS = (
     "## Worum Es Geht",
@@ -277,6 +285,14 @@ def validate_skill_language_rules() -> list[str]:
         for skill_file in sorted((REPO_ROOT / root_name).rglob("SKILL.md")):
             rel_path = skill_file.relative_to(REPO_ROOT).as_posix()
             text = skill_file.read_text(encoding="utf-8")
+            description_line = next(
+                (line for line in text.splitlines() if line.startswith("description: ")),
+                "",
+            )
+            if description_line and not any(
+                marker in description_line for marker in SKILL_FRONTMATTER_GERMAN_MARKERS
+            ):
+                errors.append(f"{rel_path} braucht deutsche Skill-Frontmatter-Beschreibung.")
             for marker in SKILL_MD_REQUIRED_MARKERS:
                 if marker not in text:
                     errors.append(f"{rel_path} muss Skill-Sprachmarker enthalten: {marker}")

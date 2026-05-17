@@ -1,9 +1,9 @@
 ---
 name: noc-bea-portal
-description: Use when planning beA mailbox, outgoing filing, incoming message, eEB, Client Security or export/import evidence work for a law firm.
+description: Nutzen, wenn beA-Postfach, Versand, Eingang, eEB, Client Security oder Export-/Importnachweise fuer eine Kanzlei geplant werden.
 ---
 
-# NoC beA Portal
+# NoC beA-Portal-Begleiter
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

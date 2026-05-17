@@ -1,7 +1,7 @@
 {
   "name": "noc-handelsregister",
   "version": "0.1.0",
-  "description": "HRA-first online Handelsregister application readiness.",
+  "description": "HRA-zuerst-Bereitschaft fuer Online-Handelsregisteranmeldungen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -21,11 +21,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Handelsregister",
-    "shortDescription": "Prepare HRA online register applications with notary readiness guardrails.",
-    "longDescription": "Local HRA-first Handelsregister companion for preparing online register application packages, notary video-procedure readiness, eID/app prerequisites, approval checkpoints and metadata-only evidence. For notary-side filing workflows it depends on the NoC BNotK XNP authentication gate first. It does not retrieve register data or automate protected portals.",
+    "displayName": "NoC Handelsregister-Begleiter",
+    "shortDescription": "Bereitet Online-Registeranmeldungen mit notariellen Schutzplanken vor.",
+    "longDescription": "Lokaler Handelsregister-Begleiter fuer HRA-zuerst Online-Registeranmeldungen, notarielle Videoverfahrensbereitschaft, eID-/App-Voraussetzungen, Freigabepunkte und metadatenbasierte Nachweise. Fuer notarielle Einreichungsablaeufe setzt er zuerst die NoC XNP-Notariatspruefung voraus. Er ruft keine Registerdaten ab und automatisiert keine geschuetzten Portale.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "NotaryReadiness",
@@ -38,9 +38,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Prepare an HRA online register application after the XNP gate.",
-      "Check notary online-procedure readiness.",
-      "Create evidence metadata for an HRA filing."
+      "Bereite eine HRA-Onlineanmeldung nach der XNP-Pruefung vor.",
+      "Pruefe die notarielle Online-Verfahrensbereitschaft.",
+      "Erzeuge Nachweismetadaten fuer eine HRA-Anmeldung."
     ],
     "brandColor": "#2F5C8A",
     "composerIcon": "./assets/icon.png",

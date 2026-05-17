@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ofunk/NoC/plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json",
-  "title": "NoC BNotK XNP reader prompt evidence",
+  "title": "NoC XNP-Notariatspruefung Leser-Prompt-Nachweis",
   "type": "object",
   "required": [
     "schema_version",

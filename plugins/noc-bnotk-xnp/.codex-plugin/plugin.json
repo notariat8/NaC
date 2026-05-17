@@ -1,7 +1,7 @@
 {
   "name": "noc-bnotk-xnp",
   "version": "0.1.0",
-  "description": "Runnable notary-side XNP gate with local reader-prompt preflight.",
+  "description": "Ausfuehrbare XNP-Pruefung fuer notarielle Arbeitsplaetze mit lokaler Leser-Vorpruefung.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -26,11 +26,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Notary XNP Gate",
-    "shortDescription": "Installable notary-side prerequisite for Online HRA.",
-    "longDescription": "Installable local Codex plugin for notaries and notary-office workstations. It gates Online HRA and other notary-side register workflows after the NoC Card SAK Gate has confirmed card-reader, BNotK SAK lite or XNP-card-path and secureFramework readiness. It now provides a runnable local reader-prompt preflight for the cyberJack reader path, then checks local XNP readiness, current local authentication and Amtstaetigkeitskontext attestation, XNotar/register-package handoff readiness, API-key presence attestation and evidence flow while keeping XNP credentials out of SaaS and Git.",
+    "displayName": "NoC XNP-Notariatspruefung",
+    "shortDescription": "Installierbare XNP-Voraussetzungspruefung fuer Online-HRA.",
+    "longDescription": "Installierbares lokales Codex-Plugin fuer Notarinnen, Notare und Notariatsarbeitsplaetze. Es prueft Online-HRA und weitere registerbezogene Notariatsablaeufe erst nach der NoC Karten- und SAK-Pruefung, fuehrt eine lokale Leser-Vorpruefung fuer den cyberJack-Pfad aus und dokumentiert XNP-Bereitschaft, lokale Authentifizierung, Amtstaetigkeitskontext, XNotar-/Registerpaket-Uebergabe, API-Key-Vorhandensein ohne Werte und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "Readiness",
@@ -47,9 +47,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NoC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NoC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Create a local XNP reader-prompt preflight for the cyberJack reader.",
-      "Create a local XNP authentication gate plan.",
-      "Validate XNotar handoff readiness without credential values."
+      "Erstelle eine lokale XNP-Leser-Vorpruefung.",
+      "Plane die lokale XNP-Authentifizierungspruefung.",
+      "Pruefe die XNotar-Uebergabe ohne Zugangsdatenwerte."
     ],
     "brandColor": "#62513D",
     "composerIcon": "./assets/icon.png",

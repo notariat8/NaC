@@ -1,7 +1,7 @@
 {
   "name": "noc-pkcs7-certbundle",
   "version": "0.1.0",
-  "description": "Local PKCS#7 certificate-bundle evidence without signature or private-key operations.",
+  "description": "Lokaler PKCS7-Zertifikatsbuendel-Nachweis ohne Signatur- oder Private-Key-Zugriff.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -25,11 +25,11 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC PKCS7 CertBundle Gate",
-    "shortDescription": "Local PKCS#7/P7B certificate-bundle evidence without signing.",
-    "longDescription": "Installable local Codex plugin for inspecting PKCS#7/P7B/P7C certificate bundles as metadata-only evidence. It verifies local parser availability and records safe bundle metadata without loading private keys, importing PFX/PKCS#12 files, creating signatures, verifying signatures, requesting PINs or sending certificate material to external services.",
+    "displayName": "NoC PKCS7-Zertifikatsnachweis",
+    "shortDescription": "Metadatenbasierter PKCS7/P7B-Nachweis ohne Signatur.",
+    "longDescription": "Installierbares lokales Codex-Plugin fuer die Pruefung von PKCS7-, P7B- und P7C-Zertifikatsbuendeln als metadatenbasierter Nachweis. Es prueft lokale Parser-Verfuegbarkeit und sichere Buendelmetadaten, ohne private Schluessel zu laden, PFX/PKCS12 zu importieren, Signaturen zu erzeugen oder zu pruefen, PINs abzufragen oder Zertifikatsmaterial an externe Dienste zu senden.",
     "developerName": "NoC Maintainers",
-    "category": "Compliance",
+    "category": "Regulierung",
     "capabilities": [
       "Local",
       "CertificateEvidence",
@@ -44,9 +44,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Inspect a local PKCS#7 certificate bundle without signing.",
-      "Create metadata-only evidence for a P7B certificate chain.",
-      "Check whether local PKCS#7 tooling is available."
+      "Pruefe ein lokales PKCS7-Zertifikatsbuendel ohne Signatur.",
+      "Erzeuge metadatenbasierten Nachweis fuer eine P7B-Kette.",
+      "Pruefe die lokale PKCS7-Werkzeugverfuegbarkeit."
     ],
     "brandColor": "#355E3B",
     "composerIcon": "./assets/icon.png",

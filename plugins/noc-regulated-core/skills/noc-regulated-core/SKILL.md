@@ -1,9 +1,9 @@
 ---
 name: noc-regulated-core
-description: Use when an NoC regulated-industry workflow needs intake, policy checks, plan preview, human approval, evidence capture, drift handling, or a safe fallback path.
+description: Nutzen, wenn ein regulierter NoC-Arbeitsablauf Aufnahme, Regelpruefung, Planvorschau, menschliche Freigabe, Nachweiserfassung, Drift-Behandlung oder sicheren Rueckfallpfad braucht.
 ---
 
-# NoC Regulated Core
+# NoC Schutzplanken fuer Regulierung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.
