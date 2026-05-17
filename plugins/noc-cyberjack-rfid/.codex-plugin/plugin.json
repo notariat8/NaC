@@ -1,7 +1,7 @@
 {
   "name": "noc-cyberjack-rfid",
   "version": "0.1.0",
-  "description": "Ausfuehrbare Karten- und SAK-Bereitschaft vor XNP-Login.",
+  "description": "Kartenleser- und SAK-Pruefung vor XNP-Login.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -25,9 +25,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Karten- und SAK-Pruefung",
-    "shortDescription": "Installierbare Kartenleser-Pruefung vor XNP-Login.",
-    "longDescription": "Installierbares lokales Codex-Plugin fuer notarielle Kartenbereitschaft vor XNP-Login und Online-HRA. Es prueft BNotK-Chip-/Signaturkarte, kompatiblen REINER-SCT-cyberJack-Leser, RFID-aus-Bestaetigung, PC/SC, BNotK-SAK-lite- oder XNP-Kartenpfad, secureFramework, lokale XNP-Schnittstellenmetadaten und Nachweiserzeugung ohne PIN-, API-Key- oder Kartendatenerfassung.",
+    "displayName": "NoC Karte/SAK",
+    "shortDescription": "Karte und Leser vor XNP pruefen.",
+    "longDescription": "Installierbares lokales Codex-Plugin fuer notarielle Kartenbereitschaft vor XNP-Login und Online-HRA ohne PIN-, API-Key- oder Kartendatenerfassung.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

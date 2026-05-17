@@ -1,4 +1,4 @@
-# NoC PKCS7-Zertifikatsnachweis
+# NoC PKCS7-Nachweis
 
 Installierbares lokales Codex-Plugin fuer metadatenbasierte PKCS#7/P7B/P7C-
 Zertifikatsbuendel-Nachweise. Dieser Arbeitsstrang ist bewusst kein

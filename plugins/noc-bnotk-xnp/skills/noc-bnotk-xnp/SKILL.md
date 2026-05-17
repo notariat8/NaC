@@ -3,7 +3,7 @@ name: noc-bnotk-xnp
 description: Nach noc-cyberjack-rfid nutzen, wenn Online-HRA, Handelsregister, XNotar oder Notariatssoftware XNP-Authentifizierungsbereitschaft, Amtstaetigkeitskontext, API-Key-Vorhandensein ohne Werte oder Nachweisplaene braucht.
 ---
 
-# NoC XNP-Notariatspruefung
+# NoC XNP-Pruefung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

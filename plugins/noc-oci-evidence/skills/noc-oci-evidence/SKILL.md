@@ -3,7 +3,7 @@ name: noc-oci-evidence
 description: Nutzen, wenn OCI-Landing-Zone, Resource Manager, Vault, Eventstream, Audit oder Drift-Nachweise fuer regulierten NoC-Betrieb vorbereitet werden.
 ---
 
-# NoC OCI-Nachweisbegleiter
+# NoC OCI-Nachweis
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

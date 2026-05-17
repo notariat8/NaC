@@ -17,7 +17,7 @@ NoC SaaS oder Remote-Ausfuehrung bekommen nur:
 
 Direkte API-Aufrufe bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
 
-Der erste lauffaehige MVP liegt unter `plugins/noc-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt fuer den cyberJack-Reader-Pfad, ruft die `NoC Karten- und SAK-Pruefung` auf, prueft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Pruefung aus der Kartenpruefung durchreichen. Er fuehrt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
+Der erste lauffaehige MVP liegt unter `plugins/noc-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt fuer den cyberJack-Reader-Pfad, ruft die `NoC Karte/SAK` auf, prueft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/noc-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Pruefung aus der Kartenpruefung durchreichen. Er fuehrt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
 
 ## Reihenfolge fuer Handelsregister-Online-Anmeldungen
 
@@ -25,8 +25,8 @@ Dieser Plan ist der zweite technische Baustein, wenn NoC einen echten notariatss
 Handelsregister- oder HRA-Arbeitsablauf vorbereiten soll.
 
 Korrektur nach Karten-/Login-Abhaengigkeit: XNP selbst ist erst testbar, wenn der
-lokale Kartenpfad steht. Daher ist `noc-cyberjack-rfid` als `NoC Karten- und SAK-Pruefung` dem
-der `NoC XNP-Notariatspruefung` vorgelagert.
+lokale Kartenpfad steht. Daher ist `noc-cyberjack-rfid` als `NoC Karte/SAK`
+der `NoC XNP-Pruefung` vorgelagert.
 
 `noc-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
 Registerspur und Paketbereitschaft strukturieren. Der Startpunkt ist vorher:
@@ -69,7 +69,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 ## Day0
 
 - Zielrolle klaeren: Buerger-/Mandanten-Vorpruefung oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `NoC Karten- und SAK-Pruefung` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- Bei Notariatsarbeitsplatz zuerst `NoC Karte/SAK` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
 - XNP-Installationskontext lokal pruefen.
 - Lokale XNP-Anmeldung, Nutzerrolle und Amtstaetigkeitskontext als Voraussetzung behandeln.
 - Klaeren, ob die Notariatssoftware-Schnittstelle aktiv ist.

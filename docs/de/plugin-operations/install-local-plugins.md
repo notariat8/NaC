@@ -58,9 +58,9 @@ Codex-Discovery bleibt der home-lokale Root massgeblich.
 6. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marktplatz
    installieren.
 7. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
-   `NoC Karten- und SAK-Pruefung` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
+   `NoC Karte/SAK` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
 8. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
-   `NoC XNP-Notariatspruefung` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
+   `NoC XNP-Pruefung` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
 9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
    `python3 scripts/install_local_plugins.py --mode copy --force` nach
    Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.

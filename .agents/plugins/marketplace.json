@@ -1,7 +1,7 @@
 {
-  "name": "noc-regulated-industry",
+  "name": "noc-regulierung",
   "interface": {
-    "displayName": "NoC Plugins fuer regulierte Arbeit"
+    "displayName": "NoC Regulierung"
   },
   "plugins": [
     {

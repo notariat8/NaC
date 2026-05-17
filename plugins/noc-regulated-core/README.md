@@ -1,4 +1,4 @@
-# NoC Schutzplanken fuer Regulierung
+# NoC Regulierung
 
 Gemeinsame lokale Arbeitsablauf-, Sicherheitsgrenzen-, Planvorschau-,
 Freigabe- und Nachweisfuehrung fuer NoC-Plugins in Anwaltskanzleien,

@@ -3,7 +3,7 @@ name: noc-regulated-core
 description: Nutzen, wenn ein regulierter NoC-Arbeitsablauf Aufnahme, Regelpruefung, Planvorschau, menschliche Freigabe, Nachweiserfassung, Drift-Behandlung oder sicheren Rueckfallpfad braucht.
 ---
 
-# NoC Schutzplanken fuer Regulierung
+# NoC Regulierung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

@@ -1,4 +1,4 @@
-# NoC Grundbuchportal-Begleiter
+# NoC Grundbuch
 
 Grundbuchportal-Arbeitsablaufbegleiter fuer Berechtigung, berechtigtes Interesse,
 Abrufplanung und Nachweisimport ohne unbefugte Portalautomatisierung oder

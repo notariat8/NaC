@@ -1,4 +1,4 @@
-# NoC ELSTER-ERiC-Begleiter
+# NoC ELSTER/ERiC
 
 Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Abgabe-Bereitschaft, lokale
 Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne

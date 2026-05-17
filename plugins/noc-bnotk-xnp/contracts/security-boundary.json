@@ -19,9 +19,9 @@
   ],
   "allowed_work": [
     "Document local XNP Bereitschaft, current local authentication and interface status.",
-    "Create a local dry-run reader prompt that routes to the NoC Karten- und SAK-Pruefung without performing XNP login or productive XNP writes.",
-    "Optionally pass through the NoC Karten- und SAK-Pruefung morris localhost API and PC/SC list-readers probe without XNP login or productive XNP writes.",
-    "Require completed NoC Karten- und SAK-Pruefung Bereitschaft before XNP login testing.",
+    "Create a local dry-run reader prompt that routes to the NoC Karte/SAK without performing XNP login or productive XNP writes.",
+    "Optionally pass through the NoC Karte/SAK morris localhost API and PC/SC list-readers probe without XNP login or productive XNP writes.",
+    "Require completed NoC Karte/SAK Bereitschaft before XNP login testing.",
     "Record boolean presence of local configuration without values.",
     "Prepare local-only XNotar/register handoff steps for notarial software."
   ],
@@ -33,7 +33,7 @@
   ],
   "day0": [
     "Confirm target mode: citizen preflight or notary-side workstation workflow.",
-    "Confirm completed NoC Karten- und SAK-Pruefung Bereitschaft for card, security-class-3 reader, SAK lite/XNP card path and secureFramework.",
+    "Confirm completed NoC Karte/SAK Bereitschaft for card, security-class-3 reader, SAK lite/XNP card path and secureFramework.",
     "Confirm XNP installed on the same workstation/user context.",
     "Confirm local XNP login, user role and Amtstaetigkeitskontext are available without storing values.",
     "Confirm XNotar/register module or exchange-folder route.",
@@ -47,7 +47,7 @@
   ],
   "required_accounts_or_approvals": [
     "BNotK/XNP access for the notary office",
-    "Completed NoC Karten- und SAK-Pruefung Bereitschaft",
+    "Completed NoC Karte/SAK Bereitschaft",
     "Local XNP login and active Amtstaetigkeitskontext",
     "XNotar/register module or exchange-folder route",
     "Notarial software vendor interface approval",

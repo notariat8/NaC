@@ -1,7 +1,7 @@
 {
   "name": "noc-grundbuch-portal",
   "version": "0.1.0",
-  "description": "Grundbuchportal- und Nachweisbegleiter.",
+  "description": "Grundbuch-Berechtigung und Abrufplanung pruefen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,9 +19,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Grundbuchportal-Begleiter",
-    "shortDescription": "Begleitet Berechtigung, Abrufplanung und Grundbuch-Nachweise.",
-    "longDescription": "Lokaler Grundbuchportal-Begleiter fuer Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport, ohne unzulaessige Portalautomatisierung oder unkontrollierte Dokumentablage.",
+    "displayName": "NoC Grundbuch",
+    "shortDescription": "Berechtigung und Abrufplanung pruefen.",
+    "longDescription": "Lokaler Grundbuchportal-Begleiter fuer Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

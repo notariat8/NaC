@@ -3,7 +3,7 @@ name: noc-idaas
 description: Nutzen, wenn deutsche eID-Pruefungsbereitschaft, AusweisApp-orientierte Identitaetspruefung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft fuer Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NoC-Ablaufen geplant werden.
 ---
 
-# NoC eID- und IAM-Begleiter
+# NoC eID-Pruefung
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

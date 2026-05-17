@@ -1,4 +1,4 @@
-# NoC Handelsregister-Begleiter
+# NoC Register
 
 Lokaler HRA-zuerst-Handelsregister-Begleiter fuer die Vorbereitung von Online-
 Registeranmeldungspaketen, notarielle Online-Verfahrensbereitschaft, eID-/App-

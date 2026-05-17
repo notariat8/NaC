@@ -1,7 +1,7 @@
 {
   "name": "noc-regulated-core",
   "version": "0.1.0",
-  "description": "Gemeinsame Schutzplanken fuer regulierte NoC-Arbeitsablaeufe.",
+  "description": "Schutzplanken und Freigaben fuer regulierte NoC-Arbeit.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,9 +19,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Schutzplanken fuer Regulierung",
-    "shortDescription": "Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe.",
-    "longDescription": "Lokaler Begleiter fuer Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisfuehrung in regulierten NoC-Arbeitsablaeufen. Er fuehrt keine Fachdatenverarbeitung aus, sondern hilft, Verantwortlichkeit, Pruefung und Nachweise sauber vorzubereiten.",
+    "displayName": "NoC Regulierung",
+    "shortDescription": "Schutzplanken, Freigaben und Nachweise.",
+    "longDescription": "Lokaler Begleiter fuer Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisfuehrung in regulierten NoC-Arbeitsablaeufen.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

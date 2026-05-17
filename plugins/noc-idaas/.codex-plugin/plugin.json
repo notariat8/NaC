@@ -1,7 +1,7 @@
 {
   "name": "noc-idaas",
   "version": "0.1.0",
-  "description": "Begleiter fuer deutsche eID-Pruefung und IAM-Projektion in regulierten NoC-Arbeitsablaeufen.",
+  "description": "eID-Pruefung und IAM-Projektion mit NoC-Schutzplanken.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -22,9 +22,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC eID- und IAM-Begleiter",
-    "shortDescription": "Plant eID-Pruefung und IAM-Projektion mit NoC-Schutzplanken.",
-    "longDescription": "Lokaler Begleiter fuer deutsche eID-Pruefung ueber AusweisApp, Datenminimierung bei verifizierten Angaben, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft fuer Entra ID, Oracle IAM und SCIM-Ziele. Er erstellt Planvorschauen und metadatenbasierte Nachweise; produktive eID- oder IAM-Schreibaktionen brauchen einen geprueften Connector und menschliche Freigabe.",
+    "displayName": "NoC eID-Pruefung",
+    "shortDescription": "eID pruefen, IAM-Projektion planen.",
+    "longDescription": "Lokaler Begleiter fuer deutsche eID-Pruefung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

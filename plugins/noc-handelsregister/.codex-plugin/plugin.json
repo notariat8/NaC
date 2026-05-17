@@ -1,7 +1,7 @@
 {
   "name": "noc-handelsregister",
   "version": "0.1.0",
-  "description": "HRA-zuerst-Bereitschaft fuer Online-Handelsregisteranmeldungen.",
+  "description": "Handelsregister-Anmeldungen mit Schutzplanken vorbereiten.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -21,9 +21,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC Handelsregister-Begleiter",
-    "shortDescription": "Bereitet Online-Registeranmeldungen mit notariellen Schutzplanken vor.",
-    "longDescription": "Lokaler Handelsregister-Begleiter fuer HRA-zuerst Online-Registeranmeldungen, notarielle Videoverfahrensbereitschaft, eID-/App-Voraussetzungen, Freigabepunkte und metadatenbasierte Nachweise. Fuer notarielle Einreichungsablaeufe setzt er zuerst die NoC XNP-Notariatspruefung voraus. Er ruft keine Registerdaten ab und automatisiert keine geschuetzten Portale.",
+    "displayName": "NoC Register",
+    "shortDescription": "Registeranmeldungen vorbereiten.",
+    "longDescription": "Lokaler Handelsregister-Begleiter fuer HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

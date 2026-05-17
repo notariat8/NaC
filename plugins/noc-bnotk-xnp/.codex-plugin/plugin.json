@@ -1,7 +1,7 @@
 {
   "name": "noc-bnotk-xnp",
   "version": "0.1.0",
-  "description": "Ausfuehrbare XNP-Pruefung fuer notarielle Arbeitsplaetze mit lokaler Leser-Vorpruefung.",
+  "description": "XNP-Pruefung fuer notarielle Arbeitsplaetze.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -26,9 +26,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC XNP-Notariatspruefung",
-    "shortDescription": "Installierbare XNP-Voraussetzungspruefung fuer Online-HRA.",
-    "longDescription": "Installierbares lokales Codex-Plugin fuer Notarinnen, Notare und Notariatsarbeitsplaetze. Es prueft Online-HRA und weitere registerbezogene Notariatsablaeufe erst nach der NoC Karten- und SAK-Pruefung, fuehrt eine lokale Leser-Vorpruefung fuer den cyberJack-Pfad aus und dokumentiert XNP-Bereitschaft, lokale Authentifizierung, Amtstaetigkeitskontext, XNotar-/Registerpaket-Uebergabe, API-Key-Vorhandensein ohne Werte und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
+    "displayName": "NoC XNP-Pruefung",
+    "shortDescription": "XNP lokal und ohne Zugangsdaten pruefen.",
+    "longDescription": "Installierbares lokales Codex-Plugin fuer Notariatsarbeitsplaetze. Es prueft XNP-Bereitschaft, Amtstaetigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

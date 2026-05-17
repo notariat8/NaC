@@ -3,7 +3,7 @@ name: noc-bea-portal
 description: Nutzen, wenn beA-Postfach, Versand, Eingang, eEB, Client Security oder Export-/Importnachweise fuer eine Kanzlei geplant werden.
 ---
 
-# NoC beA-Portal-Begleiter
+# NoC beA-Postfach
 
 Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

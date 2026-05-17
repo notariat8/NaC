@@ -31,6 +31,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Die Sprache des Prompts begrenzt die Aenderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt.
 - Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels duerfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
+- Plugin-Karten muessen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulaessig.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
 - Zusaetzlicher MVP-Use-Case: `property_management`.
 - Plugin- und Connector-Plaene liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und

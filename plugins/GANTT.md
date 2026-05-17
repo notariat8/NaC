@@ -16,7 +16,8 @@ gantt
     Deutsche Skill-Anweisungen mit EN-Kurzfassung :done, p3b, 2026-05-17, 1d
     Lokaler Plugin-Erkennungsbootstrap          :done,   p3c, 2026-05-17, 1d
     Deutsche Plugin-UX dauerhaft erzwingen      :done,   p3d, 2026-05-17, 1d
-    IDaaS eID/IAM-Begleiter                    :active, p4, 2026-05-14, 14d
+    Plugin-Karten und Icons lesbar machen       :done,   p3e, 2026-05-17, 1d
+    NoC eID-Pruefung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegspruefungen
     CyberJack-RFID-Bereitschaftsplugin         :active, p5, 2026-05-01, 21d
@@ -35,7 +36,7 @@ gantt
 
 | Plugin | Zweck | Status | Naechster Pruefpunkt |
 | --- | --- | --- | --- |
-| `noc-regulated-core` | Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe | Basis bereit | GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut pruefen. |
+| `noc-regulated-core` | Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe | Basis bereit | Kurzer Anzeigename und echtes Icon sind validiert; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut pruefen. |
 | `noc-idaas` | Deutsche eID-Pruefung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestaetigen. |
 | `noc-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Pruefung und Linux-Treiber-Vorpruefung sind implementiert; die lokale Pruefung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestaetigung. |
 | `noc-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorpruefung an die cyberJack-Pruefung und kann die optionale morris-API-Pruefung durchreichen; naechste Pruefung ist Workstation-Validierung mit installiertem XNP. |
@@ -49,6 +50,10 @@ gantt
 Plugin-Skills werden fachlich deutsch gefuehrt und enthalten eine kurze
 englische Kurzfassung; technische Namen, Ordner, Befehle, IDs und stabile
 Output-Labels bleiben englisch/ASCII.
+
+Plugin-Karten muessen kurze Anzeigenamen, knappe Kurzbeschreibungen und echte
+PNG-Icons/-Logos haben. `scripts/validate_plugins.py` blockiert leere
+Platzhalterbilder und zu lange Kartenanzeigen.
 
 Repo-lokale Plugins werden ueber `scripts/install_local_plugins.py` in einen
 home-lokalen Plugin-Root gespiegelt: `~/.agents/plugins/marketplace.json` plus

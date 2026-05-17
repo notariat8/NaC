@@ -46,9 +46,11 @@ plugin_manifest_language:
   scope: codex_plugin_marketplace_and_manifest_text
   leading_human_language: de
   require_german_display_names: true
+  require_short_card_display_names: true
   require_german_descriptions: true
   require_german_default_prompts: true
   require_german_plugin_readme_headings: true
+  require_non_placeholder_icons: true
   require_german_skill_frontmatter_descriptions: true
   english_role: none_for_human_facing_plugin_ux
   allow_stable_technical_identifiers: true
@@ -80,8 +82,10 @@ domain_surfaces:
     default_human_language: de
     require_german_manifest_descriptions: true
     require_german_display_names: true
+    require_short_card_display_names: true
     require_german_default_prompts: true
     require_german_readme_headings: true
+    require_non_placeholder_icons: true
     allow_stable_english_identifiers: true
     allow_technical_acronyms_and_product_names: true
 
@@ -108,6 +112,7 @@ notes:
   - "Die Policy gilt repo-weit fuer alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
   - "Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung."
   - "Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt."
+  - "Plugin-Karten muessen lesbare kurze Anzeigenamen und echte Icon-/Logo-Assets statt Platzhalterbildern haben."
   - "Technische Plugin-IDs, Ordner, Commands, Output-Labels, Akronyme und Produktnamen duerfen englisch/ASCII bleiben."
   - "Jeder SKILL.md braucht im Body eine kurze englische Summary fuer technische Anschlussfaehigkeit; sie ersetzt keine deutsche Frontmatter- oder UX-Sprache."
   - "Sprachabhaengige Inhalte liegen unter ISO-639-Sprachordnern."

@@ -1,4 +1,4 @@
-# NoC beA-Portal-Begleiter
+# NoC beA-Postfach
 
 Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach-/eEB-Aufgabenplanung,
 Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten,

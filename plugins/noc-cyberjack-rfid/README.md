@@ -1,4 +1,4 @@
-# NoC Karten- und SAK-Pruefung
+# NoC Karte/SAK
 
 Installierbares lokales Codex-Plugin fuer notarielle Kartenbereitschaft vor
 XNP-Login und Online-HRA-Arbeit. Es prueft Verfuegbarkeit der

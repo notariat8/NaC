@@ -1,7 +1,7 @@
 {
   "name": "noc-oci-evidence",
   "version": "0.1.0",
-  "description": "OCI-Landing-Zone-, Audit- und Nachweisbegleiter.",
+  "description": "OCI-Landing-Zone, Audit und Drift nachweisen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,9 +19,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC OCI-Nachweisbegleiter",
-    "shortDescription": "Begleitet OCI-Landing-Zone, Audit und Drift-Nachweise.",
-    "longDescription": "Lokaler OCI-Nachweisbegleiter fuer Landing-Zone-Day0-Pruefungen, Resource-Manager-Planreview, Eventstream-/Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
+    "displayName": "NoC OCI-Nachweis",
+    "shortDescription": "Cloud-Audit und Drift nachweisen.",
+    "longDescription": "Lokaler OCI-Nachweisbegleiter fuer Landing-Zone-Pruefungen, Planreview, Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

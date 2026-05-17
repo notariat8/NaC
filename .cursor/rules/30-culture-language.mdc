@@ -13,6 +13,7 @@ alwaysApply: true
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 - Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt; stabile technische Identifier duerfen englisch bleiben.
 - Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Ueberschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch gefuehrt.
+- Plugin-Karten muessen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulaessig.
 - Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels duerfen englisch/ASCII bleiben.
 - Jeder Skill braucht im Body eine kurze englische Summary fuer technische Anschlussfaehigkeit; bei Konflikten gilt die deutsche fachliche Anweisung.
 - Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.

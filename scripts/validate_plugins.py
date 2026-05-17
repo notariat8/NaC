@@ -5,9 +5,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
+MARKETPLACE_NAME = "noc-regulierung"
 REQUIRED_PLUGIN_FIELDS = ["name", "version", "description", "author", "homepage", "repository", "license", "skills", "interface"]
 REQUIRED_INTERFACE_FIELDS = ["displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt", "brandColor"]
 REQUIRED_MARKETPLACE_ORDER = ["noc-cyberjack-rfid", "noc-bnotk-xnp", "noc-handelsregister"]
+MAX_DISPLAY_NAME_CHARS = 22
+MAX_SHORT_DESCRIPTION_CHARS = 64
+MIN_PLUGIN_ASSET_PX = 64
 GERMAN_UX_MARKERS = (
     " fuer ",
     " und ",
@@ -27,9 +31,14 @@ GERMAN_UX_MARKERS = (
     "regulier",
     "notar",
     "handelsregister",
+    "register",
     "grundbuch",
     "zertifikat",
+    "karte",
     "karten",
+    "postfach",
+    "elster",
+    "oci",
 )
 ENGLISH_UX_MARKERS = (
     " gate",
@@ -97,6 +106,28 @@ def validate_german_plugin_ux(name: str, label: str, value: object) -> list[str]
     return errors
 
 
+def png_dimensions(path: Path) -> tuple[int, int] | None:
+    header = path.read_bytes()[:24]
+    if not header.startswith(b"\x89PNG\r\n\x1a\n") or len(header) < 24:
+        return None
+    return int.from_bytes(header[16:20], "big"), int.from_bytes(header[20:24], "big")
+
+
+def validate_plugin_asset(name: str, asset_path: Path) -> list[str]:
+    errors: list[str] = []
+    if not asset_path.exists():
+        return [f"{name}: missing {asset_path.relative_to(REPO_ROOT).as_posix()}"]
+    dimensions = png_dimensions(asset_path)
+    rel_path = asset_path.relative_to(REPO_ROOT).as_posix()
+    if dimensions is None:
+        errors.append(f"{name}: {rel_path} must be a PNG image")
+    elif min(dimensions) < MIN_PLUGIN_ASSET_PX:
+        errors.append(f"{name}: {rel_path} must be at least {MIN_PLUGIN_ASSET_PX}px on each side")
+    if asset_path.stat().st_size < 256:
+        errors.append(f"{name}: {rel_path} must not be a blank placeholder asset")
+    return errors
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     if not MARKETPLACE.exists():
@@ -105,8 +136,8 @@ def validate() -> list[str]:
     marketplace = load_json(MARKETPLACE)
     if contains_todo(marketplace):
         errors.append("Marketplace contains TODO placeholders")
-    if marketplace.get("name") != "noc-regulated-industry":
-        errors.append("Marketplace name must be noc-regulated-industry")
+    if marketplace.get("name") != MARKETPLACE_NAME:
+        errors.append(f"Marketplace name must be {MARKETPLACE_NAME}")
     marketplace_display = marketplace.get("interface", {}).get("displayName")
     errors.extend(
         validate_german_plugin_ux(
@@ -167,6 +198,13 @@ def validate() -> list[str]:
         for field in PLUGIN_UX_FIELDS[1:]:
             errors.extend(validate_german_plugin_ux(name, f"interface.{field}", interface.get(field)))
         display_name = interface.get("displayName")
+        if isinstance(display_name, str) and len(display_name) > MAX_DISPLAY_NAME_CHARS:
+            errors.append(f"{name}: interface.displayName must be <= {MAX_DISPLAY_NAME_CHARS} chars for card readability")
+        short_description = interface.get("shortDescription")
+        if isinstance(short_description, str) and len(short_description) > MAX_SHORT_DESCRIPTION_CHARS:
+            errors.append(
+                f"{name}: interface.shortDescription must be <= {MAX_SHORT_DESCRIPTION_CHARS} chars for card readability"
+            )
         readme_path = plugin_root / "README.md"
         if not readme_path.exists():
             errors.append(f"{name}: missing README.md")
@@ -189,8 +227,7 @@ def validate() -> list[str]:
         if not (plugin_root / "contracts" / "security-boundary.json").exists():
             errors.append(f"{name}: missing contracts/security-boundary.json")
         for asset in ["assets/icon.png", "assets/logo.png"]:
-            if not (plugin_root / asset).exists():
-                errors.append(f"{name}: missing {asset}")
+            errors.extend(validate_plugin_asset(name, plugin_root / asset))
 
     for before, after in zip(REQUIRED_MARKETPLACE_ORDER, REQUIRED_MARKETPLACE_ORDER[1:]):
         if before in plugin_names and after in plugin_names and plugin_names.index(before) > plugin_names.index(after):

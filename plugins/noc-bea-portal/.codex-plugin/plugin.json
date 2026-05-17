@@ -1,7 +1,7 @@
 {
   "name": "noc-bea-portal",
   "version": "0.1.0",
-  "description": "beA-Arbeitsablauf- und Nachweisbegleiter.",
+  "description": "beA-Postfachaufgaben und Nachweise planen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,9 +19,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC beA-Portal-Begleiter",
-    "shortDescription": "Begleitet beA-Bereitschaft, Aufgabenplanung und Nachweise.",
-    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten, Postfachgeheimnisse oder Mandatsinhalte in Git zu speichern.",
+    "displayName": "NoC beA-Postfach",
+    "shortDescription": "beA-Aufgaben und Nachweise planen.",
+    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Pruefungen und Nachweiserfassung.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [

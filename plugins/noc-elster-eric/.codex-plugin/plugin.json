@@ -1,7 +1,7 @@
 {
   "name": "noc-elster-eric",
   "version": "0.1.0",
-  "description": "ELSTER- und ERiC-Arbeitsablaufbegleiter.",
+  "description": "ELSTER- und ERiC-Bereitschaft mit Nachweisen planen.",
   "author": {
     "name": "NoC Maintainers",
     "email": "security@example.com",
@@ -19,9 +19,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NoC ELSTER-ERiC-Begleiter",
-    "shortDescription": "Begleitet ELSTER- und ERiC-Bereitschaft mit Nachweisen.",
-    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne zentrale Speicherung von Steuerzugangsmitteln.",
+    "displayName": "NoC ELSTER/ERiC",
+    "shortDescription": "ELSTER/ERiC mit Nachweisen planen.",
+    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-Pruefungen.",
     "developerName": "NoC Maintainers",
     "category": "Regulierung",
     "capabilities": [
