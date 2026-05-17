@@ -68,7 +68,7 @@ gantt
     Zielgruppenpfade und Owner-Sichtbarkeit      :done,    d1, 2026-05-17, 1d
     Reifegrad Glossar und Beispielpfad           :done,    d1a, 2026-05-17, 1d
     CLI-first Ausfuehrungsmodell erklaeren       :done,    d1b, 2026-05-17, 1d
-    Gantt-Regel praezisieren                     :done,    d1c, 2026-05-17, 1d
+    Regel zur Gantt-Pflege praezisieren         :done,    d1c, 2026-05-17, 1d
     Notariats-Startseite weiter schaerfen        :active,  d2, 2026-05-17, 14d
 ```
 

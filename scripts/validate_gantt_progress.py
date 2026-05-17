@@ -18,6 +18,19 @@ IGNORED_PREFIXES = (
     "out/",
     ".git/",
 )
+MERMAID_GANTT_RESERVED_TASK_STARTS = (
+    "gantt",
+    "section",
+    "dateformat",
+    "axisformat",
+    "tickinterval",
+    "excludes",
+    "includes",
+    "todaymarker",
+    "title",
+    "acc_title",
+    "acc_descr",
+)
 
 
 def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -128,10 +141,48 @@ def validate_changed_files(files: set[str]) -> list[str]:
     return errors
 
 
+def validate_mermaid_render_safety() -> list[str]:
+    errors: list[str] = []
+    for rel_path in [GLOBAL_GANTT, *AREA_GANTTS.values()]:
+        path = REPO_ROOT / rel_path
+        if not path.exists():
+            continue
+
+        in_mermaid = False
+        in_gantt = False
+        for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            line = raw_line.strip()
+            if line.startswith("```mermaid"):
+                in_mermaid = True
+                in_gantt = False
+                continue
+            if in_mermaid and line.startswith("```"):
+                in_mermaid = False
+                in_gantt = False
+                continue
+            if not in_mermaid:
+                continue
+            if line == "gantt":
+                in_gantt = True
+                continue
+            if line.startswith("section "):
+                continue
+            if not in_gantt or ":" not in line:
+                continue
+
+            task_label = line.split(":", maxsplit=1)[0].strip().lower()
+            if task_label.startswith(MERMAID_GANTT_RESERVED_TASK_STARTS):
+                errors.append(
+                    f"{rel_path}:{line_number}: Mermaid-Gantt-Task beginnt mit reserviertem Keyword: {task_label}"
+                )
+    return errors
+
+
 def main() -> int:
     errors = validate_required_files()
     files = relevant(changed_files())
     errors.extend(validate_changed_files(files))
+    errors.extend(validate_mermaid_render_safety())
 
     if errors:
         print("STATUS: FAILED")
