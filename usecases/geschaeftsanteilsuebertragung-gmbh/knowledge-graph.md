@@ -1,47 +1,56 @@
-# Geschaeftsanteilsuebertragung GmbH Knowledge Graph
+# Geschaeftsanteilsuebertragung GmbH Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `next10`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `next10`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.geschaeftsanteilsuebertragung_gmbh`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.geschaeftsanteilsuebertragung_gmbh`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `company.identity` | Company and register identity | `open` | `notary_clerk` | Which GmbH and register data define the target company? |
-| `share.identity` | Shares and chain of title | `open` | `notary` | Which business shares, nominal amounts and chain of title are transferred? |
-| `seller.identity` | Transferor identity and authority | `open` | `notary_clerk` | Who transfers and how is authority verified? |
-| `buyer.identity` | Acquirer identity and beneficial-owner flags | `open` | `notary` | Who acquires and which beneficial-owner or AML flags must be reviewed? |
-| `consents.restrictions` | Consent restrictions and pre-emption rights | `open` | `notary` | Do articles, side agreements or shareholder resolutions require consent? |
-| `consideration.tax` | Purchase price, gift and tax flags | `open` | `notary` | Is this a sale, gift, mixed transfer or other transaction with tax flags? |
+| `company.identity` | Gesellschaft Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gesellschaft Identitaet benoetigt? |
+| `share.identity` | Geschaeftsanteil Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Geschaeftsanteil Identitaet benoetigt? |
+| `seller.identity` | Verkaeufer Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verkaeufer Identitaet benoetigt? |
+| `buyer.identity` | Kaeufer Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kaeufer Identitaet benoetigt? |
+| `consents.restrictions` | Zustimmungen Beschraenkungen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zustimmungen Beschraenkungen benoetigt? |
+| `consideration.tax` | Gegenleistung Steuer | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gegenleistung Steuer benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.transfer_agreement` | Dokument: Uebertragung Vereinbarung | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
+| `doc.shareholder_list` | Dokument: Gesellschafterliste | `offen` | per Workflow erzeugt und geprueft |
+| `doc.consent_evidence` | Dokument: Zustimmung Nachweis | `offen` | freigegebener Nachweisspeicher |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.transfer_agreement` | Notarial share transfer agreement | `open` |
-| `doc.shareholder_list` | Updated shareholder list | `open` |
-| `doc.consent_evidence` | Consent, waiver or resolution evidence | `open` |
+| `decision.transfer_type` | Entscheidung: Uebertragung Art | `offen` |
+| `decision.consent_needed` | Entscheidung: Zustimmung erforderlich | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.chain_of_title_review` | Share chain and restrictions reviewed | `open` |
-| `gate.shareholder_list_ready` | Updated shareholder list ready | `open` |
+| `gate.chain_of_title_review` | Pruefgate: Kette von Titel Pruefung | `offen` |
+| `gate.shareholder_list_ready` | Pruefgate: Gesellschafter Liste bereit | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.transfer_review` | Nachweis: Uebertragung Pruefung | `offen` |
+| `evidence.shareholder_list_submission` | Nachweis: Gesellschafter Liste Einreichung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

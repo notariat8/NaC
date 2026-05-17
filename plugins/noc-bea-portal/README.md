@@ -1,35 +1,47 @@
 # NoC beA Portal
 
-Local beA workflow companion for readiness, mailbox/eEB task planning, Client Security checks and evidence capture without storing PINs, card data, mailbox secrets or mandate content in Git.
+Lokaler beA-Workflowbegleiter fuer Readiness, Postfach-/eEB-Aufgabenplanung,
+Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten,
+Postfach-Secrets oder Mandatsinhalte in Git zu speichern.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata. External write adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
+aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any sensitive action.
-- Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
+- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+  notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Confirm mailbox owner, user role, card/token readiness and Client Security availability.
+- Postfachinhaber, Nutzerrolle, Karten-/Token-Readiness und Verfuegbarkeit von
+  beA Client Security bestaetigen.
 
 ## Day1
 
-- Create human-approved send/receive/eEB plan and evidence checklist.
+- Menschlich freigegebenen Sende-/Empfangs-/eEB-Plan und Nachweischeckliste
+  erstellen.
 
 ## Day2
 
-- Track Client Security versions, failed sends, eEB deadlines and export integrity.
+- Client-Security-Versionen, fehlgeschlagene Sendungen, eEB-Fristen und
+  Exportintegritaet verfolgen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- beA mailbox access
-- beA card or approved authentication method
-- beA Client Security on local workstation
-- Firm policy for eEB and exports
+- beA-Postfachzugriff
+- beA-Karte oder freigegebene Authentifizierungsmethode
+- beA Client Security auf der lokalen Workstation
+- Kanzleirichtlinie fuer eEB und Exporte
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

@@ -1,36 +1,46 @@
 # NoC OCI Evidence
 
-OCI evidence companion for landing-zone Day0 checks, Resource Manager plan review, eventstream/audit journal design, Vault boundary and Day2 drift/cost controls.
+OCI-Nachweisbegleiter fuer Landing-Zone-Day0-Pruefungen, Resource-Manager-
+Planreview, Eventstream-/Audit-Journal-Design, Vault-Grenze sowie Day2-Drift-
+und Kostenkontrollen.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata. External write adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
+aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any sensitive action.
-- Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
+- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+  notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Confirm tenancy, compartment, region, local OCI CLI profile and least-privilege policy.
+- Tenancy, Compartment, Region, lokales OCI-CLI-Profil und Least-Privilege-
+  Policy bestaetigen.
 
 ## Day1
 
-- Create plan preview and evidence wiring before any apply.
+- Planvorschau und Nachweisverdrahtung vor jedem Apply erstellen.
 
 ## Day2
 
-- Run drift, cost, audit, rotation and break-glass reviews.
+- Drift-, Kosten-, Audit-, Rotations- und Break-Glass-Pruefungen ausfuehren.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- OCI tenancy access
-- Compartment admin or delegated policy
-- Vault/key-management approval
-- Budget owner
-- Audit retention owner
+- OCI-Tenancy-Zugriff
+- Compartment-Admin oder delegierte Policy
+- Vault-/Key-Management-Freigabe
+- Budgetverantwortlicher
+- Verantwortlicher fuer Audit-Aufbewahrung
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

@@ -1,35 +1,46 @@
 # NoC Grundbuchportal
 
-Grundbuchportal workflow companion for authorization, legitimate-interest checks, retrieval planning and evidence import without unauthorized portal automation or uncontrolled document storage.
+Grundbuchportal-Workflowbegleiter fuer Berechtigung, berechtigtes Interesse,
+Abrufplanung und Nachweisimport ohne unbefugte Portalautomatisierung oder
+unkontrollierte Dokumentenspeicherung.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata. External write adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
+aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any sensitive action.
-- Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
+- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+  notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Confirm authorized user, state portal scope, cost center and legitimate-interest basis.
+- Berechtigten Nutzer, Landesportal-Scope, Kostenstelle und Grundlage des
+  berechtigten Interesses bestaetigen.
 
 ## Day1
 
-- Create human-approved retrieval plan and evidence import checklist.
+- Menschlich freigegebenen Abrufplan und Checkliste fuer Nachweisimport erstellen.
 
 ## Day2
 
-- Review access recertification, state drift, fees, failed retrievals and retention.
+- Zugriffsrezertifizierung, Laenderdrift, Gebuehren, fehlgeschlagene Abrufe und
+  Aufbewahrung pruefen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- State-specific Grundbuchportal access
-- Authorized professional role confirmation
-- Cost-center approval
-- Retention/DMS decision
+- landesspezifischer Grundbuchportalzugang
+- Bestaetigung der berechtigten Berufsrolle
+- Kostenstellenfreigabe
+- Aufbewahrungs-/DMS-Entscheidung
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

@@ -1,23 +1,27 @@
 # NoC Workflows
 
-This directory is the execution layer for notary-office business processes. It
-is separate from `plugins/` and from `usecases/`.
+Dieser Ordner ist die Ausfuehrungsschicht fuer Geschaeftsprozesse im
+Notariatsbetrieb. Er ist von [plugins/](../plugins) und
+[usecases/](../usecases) getrennt.
 
-## Boundary
+## Grenze
 
-- `plugins/` contains installable Marketplace or workspace companion packages.
-- `workflows/` contains reusable workflow logic for notary-office operations.
-- `usecases/` contains concrete notarial business scenarios that bind plugins
-  and workflows together.
+- [plugins/](../plugins) enthaelt installierbare Marketplace- oder
+  Workspace-Begleitpakete.
+- [workflows/](.) enthaelt wiederverwendbare Workflow-Logik fuer
+  Notariatsablaeufe.
+- [usecases/](../usecases) enthaelt konkrete notarielle Geschaeftsszenarien,
+  die Plugins und Workflows miteinander verbinden.
 
-## Planned Layout
+## Geplante Struktur
 
-- `skills/`: installable or repo-local skills that guide LLM-facing operation.
-- `python/`: deterministic Python workflow modules for validation, idempotency,
-  execution planning, and evidence metadata.
-- `contracts/`: workflow input/output contracts, approvals, data classes, and
-  plugin dependencies.
+- `skills/`: installierbare oder repo-lokale Skills fuer LLM-seitige
+  Bedienfuehrung.
+- `python/`: deterministische Python-Workflowmodule fuer Validierung,
+  Idempotenz, Ausfuehrungsplanung und Nachweis-Metadaten.
+- `contracts/`: Workflow-Eingabe-/Ausgabevertraege, Freigaben, Datenklassen
+  und Plugin-Abhaengigkeiten.
 
-No workflow may store real secrets or real personal data. Workflow execution
-must remain reviewable through Git, pull requests, approvals, and evidence
-metadata.
+Kein Workflow darf echte Secrets oder echte personenbezogene Daten speichern.
+Workflow-Ausfuehrung muss ueber Git, Pull Requests, Freigaben und
+Nachweis-Metadaten reviewfaehig bleiben.

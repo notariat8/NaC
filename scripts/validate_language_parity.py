@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -12,6 +13,67 @@ LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}$")
 GERMAN_USECASE_MARKER = "Deutsch ist fuer diese Usecases die fuehrende und rechtlich bindende Sprache"
 GERMAN_ROOT_MARKER = "Deutsch ist repo-weit die fuehrende Sprache"
 TEXT_FILE_SUFFIXES = {".md", ".mdc", ".txt"}
+KG_MD_REQUIRED_MARKERS = (
+    "Wissensgraph",
+    "## Betriebsmodell",
+    "## Offene Angabenknoten",
+    "## Datenschutzregel",
+)
+KG_MD_FORBIDDEN_MARKERS = (
+    "Knowledge Graph",
+    "case-local static KG baseline",
+    "Last update:",
+    "Catalog group:",
+    "Machine-readable KG:",
+    "## Operating Model",
+    "## Open Information Nodes",
+    "## Review Gates",
+    "## Privacy Rule",
+    "This file is the human review view",
+    "All `value` fields remain empty",
+)
+KG_JSON_FORBIDDEN_MARKERS = (
+    "NoC usecase knowledge graph:",
+    "Track open information",
+    "All value fields are intentionally empty",
+    "Real personal, property, health, estate, family or company data",
+)
+KG_JSON_TEXT_FIELDS = {"title", "summary", "purpose", "privacy_rule", "label", "question", "source"}
+ENGLISH_QUESTION_STARTS = (
+    "Which ",
+    "Who ",
+    "What ",
+    "When ",
+    "Where ",
+    "How ",
+    "Are ",
+    "Is ",
+    "Should ",
+    "Does ",
+    "Do ",
+    "Can ",
+)
+PLUGIN_WORKFLOW_MD_FORBIDDEN_MARKERS = (
+    "This directory",
+    "This folder",
+    "This plugin",
+    "This workstream",
+    "Install Boundary",
+    "Required Accounts And Approvals",
+    "Planned Layout",
+    "Product Thesis",
+    "Target Systems",
+    "Runnable MVP",
+    "Run the local",
+    "Inspect a local",
+    "Last update:",
+    "Next gate",
+    "Packaging Note",
+    "Workflow Contracts",
+    "Python Workflows",
+    "## Scope",
+    "## MVP-Scope",
+)
 
 
 def collect_files(surface: str, language: str) -> set[str]:
@@ -125,11 +187,71 @@ def validate_domain_language_rules() -> list[str]:
     return errors
 
 
+def validate_usecase_kg_language_rules() -> list[str]:
+    errors: list[str] = []
+    for review_file in sorted((REPO_ROOT / "usecases").glob("*/knowledge-graph.md")):
+        rel_path = review_file.relative_to(REPO_ROOT).as_posix()
+        text = review_file.read_text(encoding="utf-8")
+        for marker in KG_MD_REQUIRED_MARKERS:
+            if marker not in text:
+                errors.append(f"{rel_path} muss deutschen KG-Marker enthalten: {marker}")
+        for marker in KG_MD_FORBIDDEN_MARKERS:
+            if marker in text:
+                errors.append(f"{rel_path} enthaelt englischen KG-Altmarker: {marker}")
+
+    for graph_file in sorted((REPO_ROOT / "usecases").glob("*/knowledge-graph.graph.json")):
+        rel_path = graph_file.relative_to(REPO_ROOT).as_posix()
+        payload = graph_file.read_text(encoding="utf-8")
+        for marker in KG_JSON_FORBIDDEN_MARKERS:
+            if marker in payload:
+                errors.append(f"{rel_path} enthaelt englischen KG-Altmarker: {marker}")
+        try:
+            graph = json.loads(payload)
+        except ValueError:
+            continue
+        errors.extend(_validate_kg_text_fields(graph, rel_path))
+    return errors
+
+
+def validate_plugin_workflow_language_rules() -> list[str]:
+    errors: list[str] = []
+    for root_name in ("plugins", "workflows"):
+        for md_file in sorted((REPO_ROOT / root_name).rglob("*.md")):
+            rel_path = md_file.relative_to(REPO_ROOT)
+            if "skills" in rel_path.parts:
+                continue
+            text = md_file.read_text(encoding="utf-8")
+            for marker in PLUGIN_WORKFLOW_MD_FORBIDDEN_MARKERS:
+                if marker in text:
+                    errors.append(
+                        f"{rel_path.as_posix()} enthaelt englischen Plugin-/Workflow-Altmarker: {marker}"
+                    )
+    return errors
+
+
+def _validate_kg_text_fields(value: object, rel_path: str) -> list[str]:
+    errors: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in KG_JSON_TEXT_FIELDS and isinstance(child, str):
+                if child.startswith(ENGLISH_QUESTION_STARTS):
+                    errors.append(
+                        f"{rel_path}: Feld {key} beginnt mit englischer Frageformulierung"
+                    )
+            errors.extend(_validate_kg_text_fields(child, rel_path))
+    elif isinstance(value, list):
+        for item in value:
+            errors.extend(_validate_kg_text_fields(item, rel_path))
+    return errors
+
+
 def main() -> int:
     errors = validate_language_roots()
     errors.extend(validate_file_parity())
     errors.extend(validate_localized_text_is_not_copied())
     errors.extend(validate_domain_language_rules())
+    errors.extend(validate_usecase_kg_language_rules())
+    errors.extend(validate_plugin_workflow_language_rules())
 
     if errors:
         print("STATUS: FAILED")

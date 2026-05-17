@@ -1,45 +1,52 @@
-# AO52 Nonprofit Software Company Knowledge Graph
+# AO52 gemeinnuetziges Softwareunternehmen Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `active-intake`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `active-intake`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.ao52aas_gemeinnuetzigkeit`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.ao52aas_gemeinnuetzigkeit`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `purpose.model` | Charitable purpose model | `open` | `founder` | Which charitable purpose, beneficiaries and activities define the organization? |
-| `entity.form` | Entity and formation route | `open` | `notary_clerk` | Which legal form, founders and register route are intended? |
-| `funding.model` | Funding and revenue model | `open` | `founder` | Which grants, donations, services or commercial activities finance the organization? |
-| `governance.rules` | Governance and asset-lock rules | `open` | `notary` | Which governance restrictions, asset-lock clauses and conflict rules are required? |
-| `tax.precheck` | Tax precheck route | `open` | `tax_specialist` | Which nonprofit/tax precheck route and evidence package are needed? |
-| `software.scope` | Software-company operating scope | `open` | `founder` | Which software activities, IP ownership and service boundaries must be reflected? |
+| `purpose.model` | Zweck Modell | `offen` | Gruenderkreis | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zweck Modell benoetigt? |
+| `entity.form` | Rechtstraeger Form | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Rechtstraeger Form benoetigt? |
+| `funding.model` | Finanzierung Modell | `offen` | Gruenderkreis | Welche Angaben, Nachweise und Pruefpunkte werden fuer Finanzierung Modell benoetigt? |
+| `governance.rules` | Governance Regeln | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Governance Regeln benoetigt? |
+| `tax.precheck` | Steuer Vorpruefung | `offen` | Steuerfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Steuer Vorpruefung benoetigt? |
+| `software.scope` | Software Umfang | `offen` | Gruenderkreis | Welche Angaben, Nachweise und Pruefpunkte werden fuer Software Umfang benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.intake_package` | Dokument: Intake Paket | `offen` |  |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.intake_package` | Reviewed intake package | `open` |
+| `decision.workflow_route` | Entscheidung: Workflow Route | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.identity` | Identity, authority and data minimization reviewed | `open` |
-| `gate.notarial_review` | Human notarial review completed | `open` |
+| `gate.identity` | Pruefgate: Identitaet | `offen` |
+| `gate.notarial_review` | Pruefgate: Notariell Pruefung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.git_review` | Nachweis: Git Pruefung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

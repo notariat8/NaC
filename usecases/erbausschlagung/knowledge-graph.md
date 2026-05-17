@@ -1,47 +1,56 @@
-# Erbausschlagung Knowledge Graph
+# Erbausschlagung Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `next10`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `next10`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.erbausschlagung`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.erbausschlagung`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `decedent.identity` | Decedent and estate court | `open` | `applicant` | Who died and which estate court receives the declaration? |
-| `renouncer.identity` | Renouncer identity and capacity | `open` | `notary` | Who renounces and how are identity and capacity verified? |
-| `deadline.status` | Deadline and knowledge date | `open` | `notary` | When did the renouncer learn of the inheritance and is the deadline still open? |
-| `heirship.basis` | Inheritance basis and relationship | `open` | `applicant` | Why is the renouncer called as heir or substitute heir? |
-| `representation.minors` | Minor, guardian or representative flags | `open` | `notary` | Are minors, guardians, parental representation or approvals involved? |
-| `delivery.route` | Estate-court delivery route | `open` | `notary_clerk` | How and when will the declaration reach the competent court? |
+| `decedent.identity` | Erblasser Identitaet | `offen` | Antragsteller | Welche Angaben, Nachweise und Pruefpunkte werden fuer Erblasser Identitaet benoetigt? |
+| `renouncer.identity` | Ausschlagende Person Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Ausschlagende Person Identitaet benoetigt? |
+| `deadline.status` | Frist Status | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Frist Status benoetigt? |
+| `heirship.basis` | Erbenstellung Grundlage | `offen` | Antragsteller | Welche Angaben, Nachweise und Pruefpunkte werden fuer Erbenstellung Grundlage benoetigt? |
+| `representation.minors` | Representation Minderjaehrige | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Representation Minderjaehrige benoetigt? |
+| `delivery.route` | Zustellung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zustellung Route benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.renunciation_declaration` | Dokument: Ausschlagung Erklaerung | `offen` | notarielles Erklaerungspaket |
+| `doc.death_or_court_reference` | Dokument: Sterbefall oder Gericht Referenz | `offen` | freigegebener Nachweisspeicher |
+| `doc.approval_evidence` | Dokument: Genehmigung Nachweis | `offen` | freigegebener Nachweisspeicher |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.renunciation_declaration` | Inheritance renunciation declaration | `open` |
-| `doc.death_or_court_reference` | Death or estate court reference | `open` |
-| `doc.approval_evidence` | Family or guardianship approval evidence if required | `open` |
+| `decision.deadline_risk` | Entscheidung: Frist Risiko | `offen` |
+| `decision.approval_needed` | Entscheidung: Genehmigung erforderlich | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.deadline_review` | Deadline reviewed | `open` |
-| `gate.court_delivery` | Court delivery completed | `open` |
+| `gate.deadline_review` | Pruefgate: Frist Pruefung | `offen` |
+| `gate.court_delivery` | Pruefgate: Gericht Zustellung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.deadline_review` | Nachweis: Frist Pruefung | `offen` |
+| `evidence.delivery_trace` | Nachweis: Zustellung Nachverfolgung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

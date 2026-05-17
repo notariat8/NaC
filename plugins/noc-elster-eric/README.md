@@ -1,36 +1,46 @@
 # NoC ELSTER ERiC
 
-Local ELSTER/ERiC workflow companion for filing readiness, local credential boundary, evidence import and manufacturer/onboarding checks without central tax credential storage.
+Lokaler ELSTER-/ERiC-Workflowbegleiter fuer Abgabe-Readiness, lokale
+Credential-Grenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne
+zentrale Speicherung von Steuer-Zugangsdaten.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata. External write adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
+aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any sensitive action.
-- Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
+- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+  notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Confirm tax actor authorization and local ELSTER credential boundary.
-- Decide whether ERiC manufacturer onboarding is in scope.
+- Berechtigung des Steuerakteurs und lokale ELSTER-Credential-Grenze bestaetigen.
+- Entscheiden, ob ERiC-Hersteller-Onboarding im Scope liegt.
 
 ## Day1
 
-- Create dry-run filing plan and human approval checkpoint.
+- Trockenlauf-Abgabeplan und menschlichen Freigabepunkt erstellen.
 
 ## Day2
 
-- Track ERiC version, certificates, deadlines, failed transfers and proof retention.
+- ERiC-Version, Zertifikate, Fristen, fehlgeschlagene Uebertragungen und
+  Nachweisaufbewahrung verfolgen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- ELSTER organization or user access
-- Local certificate or approved auth method
-- ERiC manufacturer registration if server-side integration is pursued
-- Tax representation approval
+- ELSTER-Organisations- oder Nutzerzugang
+- lokales Zertifikat oder freigegebene Authentifizierungsmethode
+- ERiC-Herstellerregistrierung, falls serverseitige Integration verfolgt wird
+- Freigabe der steuerlichen Vertretung
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

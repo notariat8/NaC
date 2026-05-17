@@ -1,23 +1,23 @@
-# Workflow Contracts
+# Workflow-Vertraege
 
-This folder is reserved for workflow contracts. A contract describes the
-boundary between a notarial usecase, one or more plugins, and deterministic
-workflow execution.
+Dieser Ordner ist fuer Workflow-Vertraege reserviert. Ein Vertrag beschreibt
+die Grenze zwischen einem notariellen Usecase, einem oder mehreren Plugins und
+deterministischer Workflow-Ausfuehrung.
 
-Each contract should define:
+Jeder Vertrag soll definieren:
 
-- input schema
-- output schema
-- required roles
-- required approvals
-- required plugin gates
-- data class
-- evidence record shape
+- Eingabeschema
+- Ausgabeschema
+- erforderliche Rollen
+- erforderliche Freigaben
+- erforderliche Plugin-Gates
+- Datenklasse
+- Form des Nachweisdatensatzes
 
-## Implemented Contracts
+## Implementierte Vertraege
 
-- [workflows/contracts/kg-editor.contract.json](kg-editor.contract.json): KG
-  editor contract for rendering usecase-local
+- [workflows/contracts/kg-editor.contract.json](kg-editor.contract.json):
+  KG-Editor-Vertrag zum Rendern usecase-lokaler
   [knowledge-graph.graph.json](../../usecases/immobilienkaufvertrag/knowledge-graph.graph.json)
-  files as safe forms, checklists and patch proposals without exposing `value`
-  fields to Fachpersonal.
+  Dateien als sichere Formulare, Checklisten und Patch-Vorschlaege, ohne
+  `value`-Felder fuer Fachpersonal offenzulegen.

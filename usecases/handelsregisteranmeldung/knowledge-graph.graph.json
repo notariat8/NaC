@@ -2,129 +2,129 @@
   "schema_version": "noc.knowledge-graph/v0.1",
   "graph_id": "usecase.handelsregisteranmeldung",
   "catalog_group": "top10",
-  "title": "NoC usecase knowledge graph: Handelsregisteranmeldung",
+  "title": "NoC Usecase-Wissensgraph: Handelsregisteranmeldung",
   "status": "draft",
-  "last_update": "2026-05-15",
-  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
-  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "last_update": "2026-05-17",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehoeren in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "label": "AbschlagsV fuer Abschlagszahlungsregelungen in Bautraegervertraegen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identitaet, Geschaeftsfaehigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Section 1410 for form of marriage contracts",
+      "label": "BGB Paragraph 1410 zur Form von Ehevertraegen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und oeffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Section 1750 for adoption consent declarations",
+      "label": "BGB Paragraph 1750 fuer Einwilligungserklaerungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
       "id": "src.bgb.1945",
-      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "label": "BGB Paragraph 1945 zur Form der Erbausschlagung",
       "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
     },
     {
       "id": "src.bgb.2346_2348",
-      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "label": "BGB Paragraphen 2346 und 2348 zu Erb- und Pflichtteilsverzicht",
       "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
     },
     {
       "id": "src.bgb.2353",
-      "label": "BGB Section 2353 for certificate of inheritance application",
+      "label": "BGB Paragraph 2353 zum Erbscheinsantrag",
       "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "label": "BGB Paragraph 311b fuer Vertraege ueber Grundstuecke, Vermoegen und Nachlaesse",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
       "id": "src.bgb.518",
-      "label": "BGB Section 518 for form of gift promise",
+      "label": "BGB Paragraph 518 zur Form des Schenkungsversprechens",
       "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Section 650u for developer contracts",
+      "label": "BGB Paragraph 650u fuer Bautraegervertraege",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Section 77 for association-register applications",
+      "label": "BGB Paragraph 77 fuer Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Section 875 for cancellation of rights in land",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstuecken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "label": "Grundbuchordnung fuer Grundbuchantraege, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Loeschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "label": "GmbHG fuer GmbH-Gruendung, Anmeldung und Geschaeftsfuehrerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "label": "GmbHG Paragraph 15 zur Uebertragung von GmbH-Geschaeftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Section 53 for form of articles amendments",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsaenderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "label": "HGB Paragraph 12 fuer elektronische Handelsregisteranmeldungen in oeffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentuemer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identity, capacity and representation reviewed"
+      "label": "Identitaet, Geschaeftsfaehigkeit und Vertretung geprueft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarial legal review completed"
+      "label": "Notarielle Rechtspruefung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
-      "label": "No real mandate data committed to Git"
+      "label": "Keine echten Mandatsdaten in Git gespeichert"
     },
     {
       "id": "gate.evidence",
-      "label": "Evidence metadata linked to approved storage"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknuepft"
     }
   ],
   "cases": [
@@ -135,7 +135,7 @@
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/handelsregisteranmeldung",
-      "summary": "Register application for changes such as managing director changes, seat relocation, capital measures, company name changes or procuration.",
+      "summary": "Registeranmeldung fuer Aenderungen wie Geschaeftsfuehrerwechsel, Sitzverlegung, Kapitalmassnahmen, Firma, Unternehmensgegenstand oder Prokura.",
       "legal_anchors": [
         "src.beurkg",
         "src.hgb.12",
@@ -144,10 +144,10 @@
       "required_information": [
         {
           "id": "entity.identity",
-          "label": "Entity, register court and register number",
+          "label": "Rechtstraeger Identitaet",
           "status": "open",
           "value": null,
-          "question": "Which entity and register sheet are affected?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Rechtstraeger Identitaet benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "company_register_data",
           "required_for": [
@@ -157,10 +157,10 @@
         },
         {
           "id": "event.type",
-          "label": "Register event type",
+          "label": "Vorgang Art",
           "status": "open",
           "value": null,
-          "question": "Which event is being registered: management, seat, capital, company name, object, prokura or other?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Vorgang Art benoetigt?",
           "owner_role": "notary",
           "privacy_class": "company_data",
           "required_for": [
@@ -170,10 +170,10 @@
         },
         {
           "id": "signers.identity",
-          "label": "Signing persons and signing authority",
+          "label": "Unterzeichner Identitaet",
           "status": "open",
           "value": null,
-          "question": "Who must sign and how is authority proven?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Unterzeichner Identitaet benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_or_company_data",
           "required_for": [
@@ -183,10 +183,10 @@
         },
         {
           "id": "corporate.resolution",
-          "label": "Corporate resolution or legal basis",
+          "label": "Gesellschaftsrecht Beschluss",
           "status": "open",
           "value": null,
-          "question": "Which resolution, articles clause or external fact authorizes the application?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Gesellschaftsrecht Beschluss benoetigt?",
           "owner_role": "notary",
           "privacy_class": "company_data",
           "required_for": [
@@ -196,10 +196,10 @@
         },
         {
           "id": "attachments.required",
-          "label": "Required attachments",
+          "label": "Anlagen erforderlich",
           "status": "open",
           "value": null,
-          "question": "Which documents must be filed in machine-readable electronic form?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Anlagen erforderlich benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "company_data",
           "required_for": [
@@ -208,10 +208,10 @@
         },
         {
           "id": "effective.date",
-          "label": "Effective date and wording",
+          "label": "Wirksamkeit Datum",
           "status": "open",
           "value": null,
-          "question": "Is the change already effective, conditional, future-dated or register-effective only?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Wirksamkeit Datum benoetigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -221,10 +221,10 @@
         },
         {
           "id": "xnp.route",
-          "label": "XNP and signature route",
+          "label": "XNP Route",
           "status": "open",
           "value": null,
-          "question": "Which notary card, XNP workspace and EGVP/beN route will be used?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer XNP Route benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "technical_metadata",
           "required_for": [
@@ -234,10 +234,10 @@
         },
         {
           "id": "fees.costs",
-          "label": "Cost and invoice metadata",
+          "label": "Gebuehren Kosten",
           "status": "open",
           "value": null,
-          "question": "Which value or cost metadata is required for GNotKG and office billing?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Gebuehren Kosten benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "financial_metadata",
           "required_for": [
@@ -248,23 +248,23 @@
       "documents": [
         {
           "id": "doc.register_application",
-          "label": "Publicly certified electronic register application",
+          "label": "Dokument: Register Antrag",
           "status": "open",
-          "source": "noc-bnotk-xnp and noc-handelsregister",
+          "source": "noc-bnotk-xnp und noc-handelsregister",
           "contains_personal_data": true
         },
         {
           "id": "doc.corporate_evidence",
-          "label": "Resolution, appointment, articles or related evidence",
+          "label": "Dokument: Gesellschaftsrecht Nachweis",
           "status": "open",
-          "source": "manual reviewed upload or generated draft",
+          "source": "manuell gepruefter Upload oder erzeugter Entwurf",
           "contains_personal_data": true
         }
       ],
       "decisions": [
         {
           "id": "decision.event_route",
-          "label": "Standard or special register route",
+          "label": "Entscheidung: Vorgang Route",
           "status": "open",
           "options": [
             "standard",
@@ -275,7 +275,7 @@
         },
         {
           "id": "decision.signature_method",
-          "label": "Signature and certification method",
+          "label": "Entscheidung: Unterschrift Methode",
           "status": "open",
           "options": [
             "in_office",
@@ -288,13 +288,13 @@
       "gates": [
         {
           "id": "gate.public_certification",
-          "label": "Public certification requirements met",
+          "label": "Pruefgate: Oeffentlich Beglaubigung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.electronic_format",
-          "label": "Electronic machine-readable package checked",
+          "label": "Pruefgate: Elektronisch Format",
           "status": "open",
           "owner_role": "notary_clerk"
         }
@@ -312,12 +312,12 @@
       "evidence": [
         {
           "id": "evidence.certification_trace",
-          "label": "Certification and signature evidence",
+          "label": "Nachweis: Beglaubigung Nachverfolgung",
           "status": "open"
         },
         {
           "id": "evidence.register_response",
-          "label": "Register portal submission and response trace",
+          "label": "Nachweis: Register Rueckmeldung",
           "status": "open"
         }
       ],

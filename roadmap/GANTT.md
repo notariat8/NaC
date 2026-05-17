@@ -1,9 +1,10 @@
-# NoC Global Gantt
+# NoC Globaler Gantt
 
-Last update: 2026-05-15
+Letzte Aktualisierung: 2026-05-17
 
-Every push must update this global Gantt. Changes under `plugins/`,
-`workflows/`, or `usecases/` must also update the matching area Gantt:
+Jeder Push muss diesen globalen Gantt aktualisieren. Aenderungen unter
+`plugins/`, `workflows/` oder `usecases/` muessen zusaetzlich den passenden
+Bereichs-Gantt aktualisieren:
 
 - `plugins/GANTT.md`
 - `workflows/GANTT.md`
@@ -11,63 +12,66 @@ Every push must update this global Gantt. Changes under `plugins/`,
 
 ```mermaid
 gantt
-    title NoC global delivery plan
+    title NoC globaler Lieferplan
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
 
-    section A: Plugins and marketplace readiness
-    Plugin inventory and installability gate     :done,    a1, 2026-04-01, 2026-05-14
-    GPT Store and workspace packaging split      :active,  a2, 2026-05-14, 21d
-    IDaaS plugin migration                       :active,  a3, 2026-05-14, 14d
-    Repository consolidation ledger              :active,  a4, 2026-05-14, 7d
-    PKCS7 local certificate-bundle evidence      :active,  a4a, 2026-05-15, 14d
-    SBOM for AI governance baseline              :active,  a4b, 2026-05-15, 21d
-    Runtime and HW minimum requirements SBOM     :active,  a4c, 2026-05-15, 14d
-    Notary pilot plugin readiness                :         a5, after a4, 35d
-    Publication and support operations           :         a6, after a5, 28d
+    section A: Plugins und Marketplace-Readiness
+    Plugin-Inventar und Installierbarkeitsgate   :done,    a1, 2026-04-01, 2026-05-14
+    GPT-Store-/Workspace-Paketierung trennen     :active,  a2, 2026-05-14, 21d
+    IDaaS-Plugin-Migration                       :active,  a3, 2026-05-14, 14d
+    Repository-Konsolidierungsledger             :active,  a4, 2026-05-14, 7d
+    Lokaler PKCS7-Zertifikatsbuendel-Nachweis    :active,  a4a, 2026-05-15, 14d
+    SBOM fuer AI-Governance-Basis                :active,  a4b, 2026-05-15, 21d
+    Runtime-/HW-Mindestanforderungs-SBOM         :active,  a4c, 2026-05-15, 14d
+    Deutsche Plugin-MD-Sprachfuehrung            :done,    a4d, 2026-05-17, 1d
+    Notariats-Pilot-Plugin-Readiness             :         a5, after a4, 35d
+    Veroeffentlichung und Supportbetrieb         :         a6, after a5, 28d
 
-    section B: Notary workflows
-    Workflow layer separation                    :active,  b1, 2026-05-14, 14d
-    KG runtime status CLI MVP                    :done,    b1a, 2026-05-15, 1d
-    Project voice and active-build docs cleanup  :done,    b1b, 2026-05-15, 1d
-    START_HERE operational entry cleanup         :done,    b1c, 2026-05-15, 1d
-    Documentation folder taxonomy cleanup        :done,    b1d, 2026-05-15, 1d
-    Clickable documentation links rule           :done,    b1e, 2026-05-15, 1d
-    Manual-only PDF export during development    :done,    b1f, 2026-05-15, 1d
-    Main-merge completion reporting rule         :done,    b1g, 2026-05-15, 1d
-    Repo-wide German-leading language rule       :done,    b1h, 2026-05-15, 1d
-    Root README language-pair link cleanup       :done,    b1i, 2026-05-15, 1d
-    Localized docs translation cleanup           :done,    b1j, 2026-05-15, 1d
-    No-code KG editor contract MVP              :done,    b1k, 2026-05-15, 1d
-    Skill plus Python workflow contracts         :active,  b2, 2026-05-15, 28d
-    Deterministic workflow runner MVP            :active,  b3, 2026-05-15, 35d
-    Day2 evidence and drift operations           :         b4, after b3, 28d
+    section B: Notarielle Workflows
+    Workflow-Schichten trennen                   :active,  b1, 2026-05-14, 14d
+    KG-Runtime-Status-CLI-MVP                    :done,    b1a, 2026-05-15, 1d
+    Projektstimme und Aktivbau-Doku bereinigen   :done,    b1b, 2026-05-15, 1d
+    START_HERE-Betriebseinstieg bereinigen       :done,    b1c, 2026-05-15, 1d
+    Dokumentationsordner-Taxonomie bereinigen    :done,    b1d, 2026-05-15, 1d
+    Regel fuer klickbare Dokumentationslinks     :done,    b1e, 2026-05-15, 1d
+    PDF-Export im Aufbau nur manuell             :done,    b1f, 2026-05-15, 1d
+    Fertigmeldung nach Main-Merge                :done,    b1g, 2026-05-15, 1d
+    Repo-weite deutsch fuehrende Sprachregel     :done,    b1h, 2026-05-15, 1d
+    Root-README-Sprachpaar-Links bereinigen      :done,    b1i, 2026-05-15, 1d
+    Lokalisierte Doku-Uebersetzung bereinigen    :done,    b1j, 2026-05-15, 1d
+    No-code-KG-Editor-Vertrag-MVP                :done,    b1k, 2026-05-15, 1d
+    Deutsche Workflow-MD-Sprachfuehrung          :done,    b1l, 2026-05-17, 1d
+    Skill- und Python-Workflow-Vertraege         :active,  b2, 2026-05-15, 28d
+    Deterministischer Workflow-Runner-MVP        :active,  b3, 2026-05-15, 35d
+    Day2-Nachweis- und Driftbetrieb              :         b4, after b3, 28d
 
-    section C: Notary usecases
-    GitHub usecase intake                        :done,    c1, 2026-05-14, 1d
-    Top-10 notarial KG baseline                  :done,    c2, 2026-05-15, 1d
-    Next-10 notarial KG baseline                 :done,    c3, 2026-05-15, 1d
-    Case-local KG folder migration               :done,    c3a, 2026-05-15, 1d
-    German-leading usecase language rule         :done,    c3b, 2026-05-15, 1d
-    KG editor binding for usecase KGs            :done,    c3c, 2026-05-15, 1d
-    GmbH formation canonicalization              :active,  c4, 2026-05-14, 21d
-    AO52 nonprofit formation intake              :active,  c5, 2026-05-14, 21d
-    Steuer-aaS tax usecase intake                :active,  c6, 2026-05-14, 21d
-    Static KG-fed workflow state model           :active,  c7, 2026-05-15, 28d
-    Pilot-ready usecase packages                 :         c8, after c7, 35d
+    section C: Notarielle Usecases
+    GitHub-Usecase-Aufnahme                      :done,    c1, 2026-05-14, 1d
+    Top-10 notarielle KG-Basis                   :done,    c2, 2026-05-15, 1d
+    Naechste-10 notarielle KG-Basis              :done,    c3, 2026-05-15, 1d
+    Usecase-lokale KG-Ordner-Migration           :done,    c3a, 2026-05-15, 1d
+    Deutsch fuehrende Usecase-Sprachregel        :done,    c3b, 2026-05-15, 1d
+    KG-Editor-Bindung fuer Usecase-KGs           :done,    c3c, 2026-05-15, 1d
+    Deutscher KG-Inhalt und Sprachgate           :done,    c3d, 2026-05-17, 1d
+    GmbH-Gruendung kanonisieren                  :active,  c4, 2026-05-14, 21d
+    AO52-Gemeinnuetzigkeitsaufnahme              :active,  c5, 2026-05-14, 21d
+    Steuer-aaS-Usecase-Aufnahme                  :active,  c6, 2026-05-14, 21d
+    Statisches KG-gestuetztes Workflow-Modell    :active,  c7, 2026-05-15, 28d
+    Pilotfaehige Usecase-Pakete                  :         c8, after c7, 35d
 ```
 
-## Progress Snapshot
+## Fortschrittsbild
 
-| Track | Scope | Status | Progress | Current gate |
+| Track | Umfang | Status | Fortschritt | Aktuelles Gate |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 67% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, minimum-requirements inventory and strict validator. |
-| B | Installable skills and deterministic Python workflows | Active | 40% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, PDF export is manual-only during active development, `fertig` means merged to `main` plus clean local `main`, the GitHub root README uses a Deutsch/English start table, language parity now blocks copied identical localized Markdown/text mirrors, and the KG editor exposes a safe no-code form/checklist view plus patch contract. |
-| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 56% | Every usecase now owns a case-local static KG; German is explicit as the leading and legally binding language for German-law notarial usecases; Fachpersonal edits those KGs through the no-code editor view instead of raw JSON. |
+| A | Installierbare Plugins fuer Notariate | Aktiv | 68% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator und deutsche Plugin-MD-Fuehrung. |
+| B | Installierbare Skills und deterministische Python-Workflows | Aktiv | 41% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Workstation-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Workflow-MD ist jetzt deutsch gefuehrt. |
+| C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 58% | Jeder Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte und Markdown-Review-Sichten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; Fachpersonal bearbeitet diese KGs ueber den No-code-Editor-View statt ueber rohes JSON. |
 
-## Rule
+## Regel
 
-The strict quality gate includes `scripts/validate_gantt_progress.py`. A change
-set that does not update `roadmap/GANTT.md` is not push-ready. A change set that
-touches `plugins/`, `workflows/`, or `usecases/` must update the matching area
-Gantt as well.
+Das strikte Quality Gate umfasst `scripts/validate_gantt_progress.py`. Ein
+Change-Set ohne Aktualisierung von `roadmap/GANTT.md` ist nicht push-bereit.
+Ein Change-Set mit Aenderungen unter `plugins/`, `workflows/` oder `usecases/`
+muss zusaetzlich den passenden Bereichs-Gantt aktualisieren.

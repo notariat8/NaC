@@ -1,36 +1,37 @@
 # NoC IDaaS
 
-Source repository checked on 2026-05-14: `ofunk/IDaaS`
+Quellrepository geprueft am 2026-05-14: `ofunk/IDaaS`
 
-This plugin canonicalizes the former IDaaS repository into the NoC plugin layer.
-It is a local regulated companion for German eID verification readiness and IAM
-projection planning.
+Dieses Plugin kanonisiert das fruehere IDaaS-Repository in die NoC-Plugin-
+Schicht. Es ist ein lokaler regulierter Begleiter fuer deutsche
+eID-Pruefungs-Readiness und IAM-Projektionsplanung.
 
-## Scope
+## Umfang
 
-- German eID readiness through AusweisApp-oriented flows
-- verified-claim minimization
-- consent and purpose-binding evidence
-- IAM projection planning for Entra ID, Oracle IAM, and SCIM targets
-- dry-run API and event contract review
+- deutsche eID-Readiness ueber AusweisApp-orientierte Ablaeufe
+- Minimierung verifizierter Claims
+- Einwilligungs- und Zweckbindungsnachweise
+- IAM-Projektionsplanung fuer Entra ID, Oracle IAM und SCIM-Ziele
+- Trockenlauf-Pruefung von API- und Eventvertraegen
 
-## Boundary
+## Grenze
 
-This plugin does not perform production eID transactions, store identity
-documents, write to IAM systems, or submit data to external services by
-default. Any production connector must be separately reviewed, approved, and
-bound to a data-processing agreement where personal data is involved.
+Dieses Plugin fuehrt standardmaessig keine produktiven eID-Transaktionen aus,
+speichert keine Identitaetsdokumente, schreibt nicht in IAM-Systeme und reicht
+keine Daten bei externen Diensten ein. Jeder produktive Connector muss separat
+geprueft, freigegeben und bei Verarbeitung personenbezogener Daten an einen AVV
+gebunden werden.
 
-## Migrated Source
+## Migrierte Quelle
 
-The source repository contained:
+Das Quellrepository enthielt:
 
-- product and architecture documentation
-- OpenAPI verification contract sketch
-- assertion-issued event schema
-- service placeholder folders for verification orchestration and IAM projection
+- Produkt- und Architekturdokumentation
+- OpenAPI-Skizze fuer den Verification-Vertrag
+- `assertion-issued`-Eventschema
+- Platzhalterordner fuer Verification-Orchestrierung und IAM-Projektion
 
-The canonical NoC plugin material now lives here:
+Das kanonische NoC-Plugin-Material liegt jetzt hier:
 
 - `.codex-plugin/plugin.json`
 - `skills/noc-idaas/SKILL.md`
@@ -39,9 +40,11 @@ The canonical NoC plugin material now lives here:
 - `contracts/assertion-issued.schema.json`
 - `docs/source-summary.md`
 
-## Release Channel
+## Release-Kanal
 
-This plugin is not automatically public-GPT-Store-ready. It must first be
-classified as public GPT Store, GPT with Actions, workspace app, or local Codex
-plugin according to `docs/de/gpt-marketplace-operating-model.md` and
-`docs/en/gpt-marketplace-operating-model.md`.
+Dieses Plugin ist nicht automatisch public-GPT-Store-ready. Es muss zuerst nach
+[docs/de/gpt-marketplace-operating-model.md](../../docs/de/gpt-marketplace-operating-model.md)
+und
+[docs/en/gpt-marketplace-operating-model.md](../../docs/en/gpt-marketplace-operating-model.md)
+als oeffentlicher GPT Store, GPT mit Actions, Workspace-App oder lokales
+Codex-Plugin klassifiziert werden.

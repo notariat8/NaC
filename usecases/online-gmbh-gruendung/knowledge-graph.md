@@ -1,49 +1,58 @@
-# GmbH-Gruendung / UG-Gruendung Knowledge Graph
+# GmbH-Gruendung / UG-Gruendung Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `top10`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `top10`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.online_gmbh_gruendung`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.online_gmbh_gruendung`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `company.name` | Company name and legal form | `open` | `notary_clerk` | Which company name and legal form are intended and are name risks known? |
-| `company.seat` | Registered seat and domestic business address | `open` | `founder` | Where are seat and business address located? |
-| `company.object` | Business object | `open` | `founder` | What business object should be registered and are permits relevant? |
-| `founders.identity` | Founder identities and share allocation | `open` | `notary_clerk` | Who are the founders and which nominal shares do they take? |
-| `capital.structure` | Share capital, nominal shares and contribution type | `open` | `notary` | What capital is subscribed and are cash or in-kind contributions planned? |
-| `management.appointment` | Managing directors and representation | `open` | `notary_clerk` | Who is appointed managing director and what representation rule applies? |
-| `register.route` | Online or in-office register filing route | `open` | `notary_clerk` | Which XNP, card, signature and Handelsregister route is used? |
-| `beneficial.owner.flags` | Beneficial-owner and AML flags | `open` | `notary` | Which beneficial-owner, sanctions, PEP or AML clarification flags must be reviewed? |
+| `company.name` | Gesellschaft Name | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gesellschaft Name benoetigt? |
+| `company.seat` | Gesellschaft Sitz | `offen` | Gruenderkreis | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gesellschaft Sitz benoetigt? |
+| `company.object` | Gesellschaft Objekt | `offen` | Gruenderkreis | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gesellschaft Objekt benoetigt? |
+| `founders.identity` | Gruender Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gruender Identitaet benoetigt? |
+| `capital.structure` | Kapital Struktur | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kapital Struktur benoetigt? |
+| `management.appointment` | Bestellung und Vertretung der Geschaeftsfuehrung | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Bestellung und Vertretung der Geschaeftsfuehrung benoetigt? |
+| `register.route` | Register Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Register Route benoetigt? |
+| `beneficial.owner.flags` | Wirtschaftlich Berechtigte und GwG-Pruefflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Wirtschaftlich Berechtigte und GwG-Pruefflaggen benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.articles` | Dokument: Satzung | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
+| `doc.shareholder_list` | Dokument: Gesellschafterliste | `offen` | per Workflow erzeugt und geprueft |
+| `doc.register_application` | Dokument: Register Antrag | `offen` | Route ueber noc-bnotk-xnp und noc-handelsregister |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.articles` | Articles or model protocol draft | `open` |
-| `doc.shareholder_list` | Initial shareholder list | `open` |
-| `doc.register_application` | Commercial register application | `open` |
+| `decision.model_protocol` | Entscheidung: Musterprotokoll oder individuelle Satzung | `offen` |
+| `decision.online_route` | Entscheidung: Online-Beurkundungsroute | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.card_xnp_readiness` | Card, XNP and signature route checked | `open` |
-| `gate.register_filing_ready` | Register application reviewed and ready | `open` |
+| `gate.card_xnp_readiness` | Pruefgate: Karten-, XNP- und Signaturbereitschaft | `offen` |
+| `gate.register_filing_ready` | Pruefgate: Register Einreichung bereit | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.technical_readiness` | Nachweis: Technische Bereitschaftsnachweise | `offen` |
+| `evidence.register_submission` | Nachweis: Registereinreichungsnachverfolgung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

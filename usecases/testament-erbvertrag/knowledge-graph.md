@@ -1,48 +1,57 @@
-# Testament / Erbvertrag Knowledge Graph
+# Testament / Erbvertrag Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `top10`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `top10`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.testament_erbvertrag`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.testament_erbvertrag`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `testator.identity` | Testator identities | `open` | `notary` | Who makes the disposition and how are identity and capacity reviewed? |
-| `capacity.flags` | Capacity and communication flags | `open` | `notary` | Are there capacity, language, hearing, sight, illness or support flags? |
-| `family.structure` | Family and heirship situation | `open` | `testator` | Which spouse, children, relatives, prior marriages or relevant dependents exist? |
-| `assets.categories` | Estate asset categories | `open` | `testator` | Which relevant asset categories exist without storing detailed values in Git? |
-| `dispositions.wishes` | Desired dispositions | `open` | `testator` | Who should inherit, receive legacies, be executor or be subject to conditions? |
-| `prior.dispositions` | Prior wills, inheritance contracts and revocation needs | `open` | `notary` | Do earlier dispositions exist and are they revocable or binding? |
-| `executor.choice` | Executor and substitute arrangements | `open` | `testator` | Should an executor, substitute heirs, guardianship wishes or administration rules be included? |
-| `custody.register` | Custody and central register route | `open` | `notary_clerk` | Which custody and registration steps are required after execution? |
+| `testator.identity` | Testierende Person Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Testierende Person Identitaet benoetigt? |
+| `capacity.flags` | Geschaeftsfaehigkeit Pruefflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Geschaeftsfaehigkeit Pruefflaggen benoetigt? |
+| `family.structure` | Familie Struktur | `offen` | Testierende Person | Welche Angaben, Nachweise und Pruefpunkte werden fuer Familie Struktur benoetigt? |
+| `assets.categories` | Vermoegen Kategorien | `offen` | Testierende Person | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Kategorien benoetigt? |
+| `dispositions.wishes` | Verfuegungen Wuensche | `offen` | Testierende Person | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verfuegungen Wuensche benoetigt? |
+| `prior.dispositions` | Vorverfuegungen Verfuegungen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vorverfuegungen Verfuegungen benoetigt? |
+| `executor.choice` | Testamentsvollstrecker Auswahl | `offen` | Testierende Person | Welche Angaben, Nachweise und Pruefpunkte werden fuer Testamentsvollstrecker Auswahl benoetigt? |
+| `custody.register` | Verwahrung Register | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verwahrung Register benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.disposition_draft` | Dokument: Disposition Entwurf | `offen` | nach notarieller Pruefung erzeugter Workflow-Entwurf |
+| `doc.prior_dispositions` | Dokument: Vorverfuegungen Verfuegungen | `offen` | manuell gepruefter Upload oder vorgelegtes Original |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.disposition_draft` | Draft testament or inheritance contract | `open` |
-| `doc.prior_dispositions` | Prior dispositions evidence reference | `open` |
+| `decision.instrument_type` | Entscheidung: Instrument Art | `offen` |
+| `decision.executor` | Entscheidung: Testamentsvollstrecker | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.capacity_review` | Capacity and free will reviewed by notary | `open` |
-| `gate.binding_effect_review` | Binding effects and revocations reviewed | `open` |
+| `gate.capacity_review` | Pruefgate: Geschaeftsfaehigkeit Pruefung | `offen` |
+| `gate.binding_effect_review` | Pruefgate: Bindungswirkung Wirkung Pruefung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.capacity_notes` | Nachweis: Geschaeftsfaehigkeit Vermerke | `offen` |
+| `evidence.custody_registration` | Nachweis: Verwahrung Registrierung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

@@ -1,58 +1,75 @@
 # NoC PKCS7 CertBundle Gate
 
-Installable local Codex plugin for metadata-only PKCS#7/P7B/P7C certificate-bundle evidence. This workstream is intentionally not a signature provider. It does not load private keys, import PFX/PKCS#12 software tokens, request PINs, create signatures, verify signatures or call external services.
+Installierbares lokales Codex-Plugin fuer metadatenbasierte PKCS#7/P7B/P7C-
+Zertifikatsbuendel-Nachweise. Dieser Workstream ist bewusst kein
+Signaturprovider. Er laedt keine privaten Schluessel, importiert keine
+PFX-/PKCS#12-Softwaretokens, fragt keine PINs ab, erzeugt keine Signaturen,
+prueft keine Signaturen und ruft keine externen Dienste auf.
 
 ## Status
 
-Runnable local MVP. The plugin can prove that a local workstation has a supported parser path and can inspect a local PKCS#7 certificate bundle as evidence metadata only.
+Lauffaehiges lokales MVP. Das Plugin kann nachweisen, dass eine lokale
+Workstation einen unterstuetzten Parserpfad besitzt und ein lokales
+PKCS#7-Zertifikatsbuendel ausschliesslich als Nachweis-Metadaten inspizieren
+kann.
 
-## Runnable MVP
+## Lauffaehiges MVP
 
-Run the local check from the repository root:
+Lokale Pruefung aus dem Repository-Root starten:
 
 ```powershell
 python plugins\noc-pkcs7-certbundle\scripts\inspect_certbundle.py --json
 ```
 
-Inspect a local bundle:
+Lokales Buendel inspizieren:
 
 ```powershell
 python plugins\noc-pkcs7-certbundle\scripts\inspect_certbundle.py --input C:\path\to\bundle.p7b --json
 ```
 
-Use `--strict` in automation when a missing or unparsable bundle should return a non-zero exit code. The generated JSON follows `contracts/certbundle-evidence.schema.json` and records only metadata such as file size, extension, hashes, parser availability and certificate-count signals where the local parser exposes them.
+`--strict` in Automatisierung nutzen, wenn ein fehlendes oder nicht parsbares
+Buendel einen Exit-Code ungleich null liefern soll. Das erzeugte JSON folgt
+`contracts/certbundle-evidence.schema.json` und speichert nur Metadaten wie
+Dateigroesse, Erweiterung, Hashes, Parserverfuegbarkeit und
+Zertifikatsanzahl-Signale, sofern der lokale Parser diese bereitstellt.
 
-## Boundary
+## Grenze
 
-- Local-only PKCS#7/P7B/P7C certificate-bundle evidence.
-- No PFX/PKCS#12 import.
-- No private-key access.
-- No PIN capture.
-- No certificate material storage in Git.
-- No signature creation or signature verification.
-- No external network calls.
-- No replacement for BNotK card, XNP, SAK-lite or qualified-signature workflows.
+- Nur lokaler PKCS#7/P7B/P7C-Zertifikatsbuendel-Nachweis.
+- Kein PFX-/PKCS#12-Import.
+- Kein Private-Key-Zugriff.
+- Keine PIN-Erfassung.
+- Keine Speicherung von Zertifikatsmaterial in Git.
+- Keine Signaturerzeugung und keine Signaturpruefung.
+- Keine externen Netzwerkaufrufe.
+- Kein Ersatz fuer BNotK-Karte, XNP, SAK-lite oder qualifizierte Signaturworkflows.
 
 ## Day0
 
-- Confirm whether the source artifact is a PKCS#7/P7B/P7C certificate bundle, not a software token.
-- Confirm local parser availability through Windows `certutil.exe` or OpenSSL.
-- Confirm the evidence output path is outside client-data folders unless explicitly approved.
+- Bestaetigen, ob das Quellartefakt ein PKCS#7/P7B/P7C-Zertifikatsbuendel und
+  kein Softwaretoken ist.
+- Lokale Parserverfuegbarkeit ueber Windows `certutil.exe` oder OpenSSL
+  bestaetigen.
+- Bestaetigen, dass der Nachweis-Ausgabepfad ausserhalb von Mandatsdatenordnern
+  liegt, sofern nicht explizit freigegeben.
 
 ## Day1
 
-- Run `scripts/inspect_certbundle.py` against the local certificate bundle.
-- Store only the metadata evidence needed for review.
-- Route any software-token, PFX, private-key or signing requirement to a separate approved workstream.
+- `scripts/inspect_certbundle.py` gegen das lokale Zertifikatsbuendel ausfuehren.
+- Nur die fuer Review benoetigten Metadaten-Nachweise speichern.
+- Softwaretoken-, PFX-, Private-Key- oder Signaturanforderungen in einen
+  separaten freigegebenen Workstream verweisen.
 
 ## Day2
 
-- Re-run the evidence check after certificate-chain changes, workstation changes or parser updates.
-- Compare bundle fingerprints and parser status as drift evidence.
+- Nachweispruefung nach Zertifikatsketten-, Workstation- oder Parseraenderungen
+  erneut ausfuehren.
+- Buendel-Fingerprints und Parserstatus als Drift-Nachweis vergleichen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- Local workstation approval.
-- Certificate-bundle source approval.
-- Security review before any expansion beyond metadata-only inspection.
-- Separate approval for any future software-token, private-key, remote-signature or qualified-signature integration.
+- lokale Workstation-Freigabe
+- Freigabe der Zertifikatsbuendel-Quelle
+- Sicherheitsreview vor jeder Erweiterung ueber reine Metadateninspektion hinaus
+- separate Freigabe fuer jede kuenftige Softwaretoken-, Private-Key-,
+  Remote-Signatur- oder qualifizierte-Signatur-Integration

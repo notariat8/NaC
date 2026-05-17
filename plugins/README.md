@@ -1,36 +1,44 @@
-# NoC Regulated Industry Plugins
+# NoC Plugins fuer regulierte Branchen
 
-This directory contains installable repo-local Codex plugins for NoC regulated-industry workflows. The first suite focuses on lawyers, notaries, tax workflows and cloud evidence operations.
+Dieser Ordner enthaelt installierbare repo-lokale Codex-Plugins fuer NoC-
+Workflows in regulierten Branchen. Die erste Suite fokussiert Anwaltskanzleien,
+Notariate, Steuer-Workflows und Cloud-Nachweisbetrieb.
 
-## Installable Plugins
+## Installierbare Plugins
 
-- `noc-regulated-core`: Shared regulated-industry workflow guardrails.
-- `noc-idaas`: German eID verification and IAM projection readiness companion.
-- `noc-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
-- `noc-bnotk-xnp`: Local XNP authentication gate after card readiness.
-- `noc-pkcs7-certbundle`: Local PKCS#7/P7B certificate-bundle evidence without signing.
-- `noc-handelsregister`: HRA-first online register application readiness after mode decision.
-- `noc-bea-portal`: beA workflow and evidence companion.
-- `noc-elster-eric`: ELSTER and ERiC workflow companion.
-- `noc-grundbuch-portal`: Land register access and evidence companion.
-- `noc-oci-evidence`: OCI landing-zone evidence and audit companion.
+- `noc-regulated-core`: gemeinsame Schutzplanken fuer regulierte Workflows.
+- `noc-idaas`: Begleiter fuer deutsche eID-Pruefung und IAM-Projektions-Readiness.
+- `noc-cyberjack-rfid`: lokales Karten- und SAK-lite-Gate vor dem XNP-Login.
+- `noc-bnotk-xnp`: lokales XNP-Authentifizierungsgate nach Karten-Readiness.
+- `noc-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur.
+- `noc-handelsregister`: HRA-first-Readiness fuer Online-Registeranmeldungen nach Modusentscheidung.
+- `noc-bea-portal`: beA-Workflow- und Nachweisbegleiter.
+- `noc-elster-eric`: ELSTER- und ERiC-Workflowbegleiter.
+- `noc-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
+- `noc-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
 
-## Safety Model
+## Sicherheitsmodell
 
-- Plugins default to local companion, dry-run, plan-preview and metadata-only evidence.
-- External write adapters are not enabled in this MVP.
-- Missing accounts or approvals are tracked in `docs/de/plugin-operations/account-and-approval-requests.md` and `docs/en/plugin-operations/account-and-approval-requests.md`.
-- Validate with `python3 scripts/validate_plugins.py` before publishing or installing.
+- Plugins arbeiten standardmaessig lokal, trockenlaufbasiert, mit Planvorschau
+  und ausschliesslich Metadaten-Nachweisen.
+- Externe Schreibadapter sind im MVP nicht aktiviert.
+- Fehlende Konten oder Freigaben werden in
+  [docs/de/plugin-operations/account-and-approval-requests.md](../docs/de/plugin-operations/account-and-approval-requests.md)
+  und
+  [docs/en/plugin-operations/account-and-approval-requests.md](../docs/en/plugin-operations/account-and-approval-requests.md)
+  verfolgt.
+- Vor Veroeffentlichung oder Installation mit `python3 scripts/validate_plugins.py`
+  validieren.
 
-## Progress Tracking
+## Fortschritt
 
-Plugin progress is tracked in `plugins/GANTT.md` and rolled up into
-`roadmap/GANTT.md`. Every plugin change must update both files before it is
-push-ready.
+Der Plugin-Fortschritt wird in [plugins/GANTT.md](GANTT.md) gepflegt und in
+[roadmap/GANTT.md](../roadmap/GANTT.md) zusammengefuehrt. Jede Plugin-Aenderung
+muss beide Dateien aktualisieren, bevor sie push-ready ist.
 
-## Marketplace Boundary
+## Marketplace-Grenze
 
-Public GPT Store packages and workspace-only app installations are separate
-release targets. Each plugin must be checked against the current OpenAI
-publishing rules before public release, and actions must retain valid privacy
-and terms URLs.
+Oeffentliche GPT-Store-Pakete und workspace-interne App-Installationen sind
+verschiedene Release-Ziele. Jedes Plugin muss vor oeffentlicher Veroeffentlichung
+gegen die jeweils aktuellen OpenAI-Veroeffentlichungsregeln geprueft werden;
+Actions brauchen weiterhin gueltige Datenschutz- und Nutzungsbedingungen-URLs.

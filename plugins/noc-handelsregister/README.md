@@ -1,41 +1,56 @@
 # NoC Handelsregister
 
-Local HRA-first Handelsregister companion for preparing online register application packages, notary online-procedure readiness, eID/app prerequisites, approval checkpoints and metadata-only evidence. For notary-side filing workflows, start with `noc-bnotk-xnp` first. This plugin does not retrieve register data or automate protected portals.
+Lokaler HRA-first-Handelsregister-Begleiter fuer die Vorbereitung von Online-
+Registeranmeldungspaketen, notarielle Online-Verfahrens-Readiness, eID-/App-
+Voraussetzungen, Freigabepunkte und metadatenbasierte Nachweise. Fuer
+notarielle Einreichungsworkflows zuerst mit `noc-bnotk-xnp` beginnen. Dieses
+Plugin ruft keine Registerdaten ab und automatisiert keine geschuetzten Portale.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata for online register application preparation. External submission adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+fuer die Vorbereitung von Online-Registeranmeldungen bereit. Externe
+Einreichungsadapter sind in dieser ersten Version bewusst nicht aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Splits citizen preflight from notary-side workstation workflows.
-- Requires the `noc-bnotk-xnp` gate before XNotar/register handoff work.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any notarial or submission action.
-- Requires applicant approval, legal review and notarial review for online Handelsregister applications.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Trennt Buerger-Preflight von notariatsseitigen Workstation-Workflows.
+- Erfordert das `noc-bnotk-xnp`-Gate vor XNotar-/Registeruebergabe-Arbeit.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder notariellen oder
+  einreichungsbezogenen Aktion.
+- Verlangt Antragstellerfreigabe, rechtliche Pruefung und notarielle Pruefung
+  fuer Online-Handelsregisteranmeldungen.
 
 ## Day0
 
-- Confirm mode: citizen preflight or notary-side workstation workflow.
-- For notary-side workflow, confirm `noc-bnotk-xnp` readiness first.
-- Confirm legal form, register track and whether the case is HRA or HRB.
-- Confirm applicant authority, notary route, Bundesnotarkammer app readiness and eID readiness.
+- Modus bestaetigen: Buerger-Preflight oder notariatsseitiger Workstation-Workflow.
+- Fuer notariatsseitigen Workflow zuerst `noc-bnotk-xnp`-Readiness bestaetigen.
+- Rechtsform, Registerspur und HRA-/HRB-Zuordnung bestaetigen.
+- Antragstellerberechtigung, Notarroute, Bundesnotarkammer-App-Readiness und
+  eID-Readiness bestaetigen.
 
 ## Day1
 
-- Generate online application readiness plan, missing-information list and notary evidence checklist.
+- Online-Anmeldungs-Readiness-Plan, Liste fehlender Angaben und notarielle
+  Nachweischeckliste erzeugen.
 
 ## Day2
 
-- Review rejected applications, missing attachments, identity/signature failures and evidence completeness.
+- Zurueckgewiesene Anmeldungen, fehlende Anlagen, Identitaets-/Signaturfehler
+  und Nachweisvollstaendigkeit pruefen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- Notary appointment or notary office workflow
-- Completed `noc-bnotk-xnp` readiness for notary-side workflows
-- Bundesnotarkammer online procedure app
-- eID-capable official ID and PIN
-- Applicant and reviewer approval for the register application package
+- Notartermin oder Notariatsworkflow
+- abgeschlossene `noc-bnotk-xnp`-Readiness fuer notarielle Workflows
+- Online-Verfahrens-App der Bundesnotarkammer
+- eID-faehiger amtlicher Ausweis und PIN
+- Antragsteller- und Reviewer-Freigabe fuer das Registeranmeldungspaket
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

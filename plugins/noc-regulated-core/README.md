@@ -1,35 +1,45 @@
 # NoC Regulated Core
 
-Shared local workflow, safety boundary, plan-preview, approval and evidence guidance for NoC plugins used by law firms, notaries and adjacent regulated operations.
+Gemeinsame lokale Workflow-, Sicherheitsgrenzen-, Planvorschau-, Freigabe- und
+Nachweisfuehrung fuer NoC-Plugins in Anwaltskanzleien, Notariaten und
+angrenzenden regulierten Betriebsablaeufen.
 
 ## Status
 
-Installable MVP plugin scaffold. The plugin provides local Codex skill guidance, a machine-readable security contract and marketplace metadata. External write adapters are intentionally not enabled in this first version.
+Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
+Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marketplace-Metadaten
+bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
+aktiviert.
 
-## Install Boundary
+## Installationsgrenze
 
-- Runs as a local Codex plugin from this repository.
-- Keeps secrets, PINs, certificates, portal sessions and mandate content outside Git.
-- Produces plan previews and evidence metadata before any sensitive action.
-- Requires human approval for regulated submissions, portal actions, notarial actions and cloud applies.
+- Laeuft als lokales Codex-Plugin aus diesem Repository.
+- Haelt Secrets, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
+- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+  notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Confirm matter type, actor role, reviewer role and data boundary.
-- Confirm local workspace and Git remote are clean.
+- Vorgangsart, Akteursrolle, Reviewer-Rolle und Datengrenze bestaetigen.
+- Lokalen Workspace und Git-Remote auf sauberen Zustand pruefen.
 
 ## Day1
 
-- Produce plan preview and evidence template before any external action.
+- Planvorschau und Nachweisvorlage vor jeder externen Aktion erzeugen.
 
 ## Day2
 
-- Review drift, expired approvals, failed controls and account recertification.
+- Drift, abgelaufene Freigaben, fehlgeschlagene Kontrollen und
+  Konto-Rezertifizierung pruefen.
 
-## Required Accounts And Approvals
+## Erforderliche Konten und Freigaben
 
-- GitHub repository write access
-- Approved reviewer roster
-- Evidence storage decision
+- GitHub-Schreibzugriff auf das Repository
+- freigegebene Reviewer-Liste
+- Entscheidung zum Nachweisspeicher
 
-See `docs/plugin-operations/account-and-approval-requests.md` for the consolidated request list.
+Die konsolidierte Anforderungsliste steht in
+[docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)
+und
+[docs/en/plugin-operations/account-and-approval-requests.md](../../docs/en/plugin-operations/account-and-approval-requests.md).

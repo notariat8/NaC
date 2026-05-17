@@ -2,129 +2,129 @@
   "schema_version": "noc.knowledge-graph/v0.1",
   "graph_id": "usecase.ehevertrag-scheidungsfolgenvereinbarung",
   "catalog_group": "top10",
-  "title": "NoC usecase knowledge graph: Ehevertrag / Scheidungsfolgenvereinbarung",
+  "title": "NoC Usecase-Wissensgraph: Ehevertrag / Scheidungsfolgenvereinbarung",
   "status": "draft",
-  "last_update": "2026-05-15",
-  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
-  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "last_update": "2026-05-17",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehoeren in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "label": "AbschlagsV fuer Abschlagszahlungsregelungen in Bautraegervertraegen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identitaet, Geschaeftsfaehigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Section 1410 for form of marriage contracts",
+      "label": "BGB Paragraph 1410 zur Form von Ehevertraegen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und oeffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Section 1750 for adoption consent declarations",
+      "label": "BGB Paragraph 1750 fuer Einwilligungserklaerungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
       "id": "src.bgb.1945",
-      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "label": "BGB Paragraph 1945 zur Form der Erbausschlagung",
       "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
     },
     {
       "id": "src.bgb.2346_2348",
-      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "label": "BGB Paragraphen 2346 und 2348 zu Erb- und Pflichtteilsverzicht",
       "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
     },
     {
       "id": "src.bgb.2353",
-      "label": "BGB Section 2353 for certificate of inheritance application",
+      "label": "BGB Paragraph 2353 zum Erbscheinsantrag",
       "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "label": "BGB Paragraph 311b fuer Vertraege ueber Grundstuecke, Vermoegen und Nachlaesse",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
       "id": "src.bgb.518",
-      "label": "BGB Section 518 for form of gift promise",
+      "label": "BGB Paragraph 518 zur Form des Schenkungsversprechens",
       "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Section 650u for developer contracts",
+      "label": "BGB Paragraph 650u fuer Bautraegervertraege",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Section 77 for association-register applications",
+      "label": "BGB Paragraph 77 fuer Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Section 875 for cancellation of rights in land",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstuecken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "label": "Grundbuchordnung fuer Grundbuchantraege, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Loeschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "label": "GmbHG fuer GmbH-Gruendung, Anmeldung und Geschaeftsfuehrerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "label": "GmbHG Paragraph 15 zur Uebertragung von GmbH-Geschaeftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Section 53 for form of articles amendments",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsaenderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "label": "HGB Paragraph 12 fuer elektronische Handelsregisteranmeldungen in oeffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentuemer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identity, capacity and representation reviewed"
+      "label": "Identitaet, Geschaeftsfaehigkeit und Vertretung geprueft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarial legal review completed"
+      "label": "Notarielle Rechtspruefung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
-      "label": "No real mandate data committed to Git"
+      "label": "Keine echten Mandatsdaten in Git gespeichert"
     },
     {
       "id": "gate.evidence",
-      "label": "Evidence metadata linked to approved storage"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknuepft"
     }
   ],
   "cases": [
@@ -135,7 +135,7 @@
       "status": "open",
       "priority": "P1",
       "usecase_path": "usecases/ehevertrag-scheidungsfolgenvereinbarung",
-      "summary": "Marriage contract or divorce consequences agreement covering property regime, equalization, pension rights, maintenance, asset division and fairness review.",
+      "summary": "Ehevertrag oder Scheidungsfolgenvereinbarung mit Gueterstand, Ausgleich, Versorgungsausgleich, Unterhalt, Vermoegenszuordnung und Fairness-Pruefung.",
       "legal_anchors": [
         "src.beurkg",
         "src.bgb.1410"
@@ -143,10 +143,10 @@
       "required_information": [
         {
           "id": "spouses.identity",
-          "label": "Spouse identities and personal status",
+          "label": "Ehegatten Identitaet",
           "status": "open",
           "value": null,
-          "question": "Who are the spouses or intended spouses and what status applies?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Ehegatten Identitaet benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_data",
           "required_for": [
@@ -156,10 +156,10 @@
         },
         {
           "id": "marriage.context",
-          "label": "Marriage, separation or divorce context",
+          "label": "Ehe Kontext",
           "status": "open",
           "value": null,
-          "question": "Is this pre-marriage, during marriage, separation, divorce pending or post-divorce?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Ehe Kontext benoetigt?",
           "owner_role": "notary",
           "privacy_class": "family_data",
           "required_for": [
@@ -168,10 +168,10 @@
         },
         {
           "id": "property.regime",
-          "label": "Property regime and equalization target",
+          "label": "Grundstueck Regime",
           "status": "open",
           "value": null,
-          "question": "Should statutory property regime be modified, excluded or replaced?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Grundstueck Regime benoetigt?",
           "owner_role": "notary",
           "privacy_class": "financial_data",
           "required_for": [
@@ -181,10 +181,10 @@
         },
         {
           "id": "asset.disclosure",
-          "label": "Asset and debt disclosure categories",
+          "label": "Vermoegen Offenlegung",
           "status": "open",
           "value": null,
-          "question": "Which asset categories, business interests, debts or pensions are relevant without committing real values?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Offenlegung benoetigt?",
           "owner_role": "spouses",
           "privacy_class": "financial_data",
           "required_for": [
@@ -194,10 +194,10 @@
         },
         {
           "id": "maintenance.rules",
-          "label": "Maintenance provisions",
+          "label": "Unterhalt Regeln",
           "status": "open",
           "value": null,
-          "question": "Which spousal maintenance rules or waivers are intended and are fairness limits triggered?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Unterhalt Regeln benoetigt?",
           "owner_role": "notary",
           "privacy_class": "sensitive_family_financial_data",
           "required_for": [
@@ -207,10 +207,10 @@
         },
         {
           "id": "pension.equalization",
-          "label": "Pension equalization provisions",
+          "label": "Versorgungsausgleich equalization",
           "status": "open",
           "value": null,
-          "question": "Should pension equalization be modified and is court review expected?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Versorgungsausgleich equalization benoetigt?",
           "owner_role": "notary",
           "privacy_class": "financial_data",
           "required_for": [
@@ -220,10 +220,10 @@
         },
         {
           "id": "child.family.flags",
-          "label": "Child and family dependency flags",
+          "label": "Kind Familie Pruefflaggen",
           "status": "open",
           "value": null,
-          "question": "Are child-care, dependency, pregnancy or imbalance flags relevant to fairness review?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Kind Familie Pruefflaggen benoetigt?",
           "owner_role": "notary",
           "privacy_class": "sensitive_family_data",
           "required_for": [
@@ -232,10 +232,10 @@
         },
         {
           "id": "asset.transfer",
-          "label": "Asset transfers and register consequences",
+          "label": "Vermoegen Uebertragung",
           "status": "open",
           "value": null,
-          "question": "Are real estate, company share, account or debt transfers part of the agreement?",
+          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Uebertragung benoetigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "financial_or_property_data",
           "required_for": [
@@ -247,23 +247,23 @@
       "documents": [
         {
           "id": "doc.agreement_draft",
-          "label": "Marriage contract or divorce consequences agreement draft",
+          "label": "Dokument: Vereinbarung Entwurf",
           "status": "open",
-          "source": "workflow generated draft after review",
+          "source": "nach Pruefung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
           "id": "doc.asset_schedule_reference",
-          "label": "Asset schedule evidence reference",
+          "label": "Dokument: Vermoegen Plan Referenz",
           "status": "open",
-          "source": "approved evidence store",
+          "source": "freigegebener Nachweisspeicher",
           "contains_personal_data": true
         }
       ],
       "decisions": [
         {
           "id": "decision.instrument_type",
-          "label": "Pre-marriage, marriage or divorce consequence agreement",
+          "label": "Entscheidung: Instrument Art",
           "status": "open",
           "options": [
             "pre_marriage",
@@ -274,7 +274,7 @@
         },
         {
           "id": "decision.fairness_risk",
-          "label": "Fairness and imbalance risk level",
+          "label": "Entscheidung: Fairness Risiko",
           "status": "open",
           "options": [
             "low",
@@ -288,13 +288,13 @@
       "gates": [
         {
           "id": "gate.fairness_review",
-          "label": "Fairness and imbalance review completed by notary",
+          "label": "Pruefgate: Fairness Pruefung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.simultaneous_presence",
-          "label": "Simultaneous personal presence route checked",
+          "label": "Pruefgate: Gleichzeitig Anwesenheit",
           "status": "open",
           "owner_role": "notary_clerk"
         }
@@ -311,12 +311,12 @@
       "evidence": [
         {
           "id": "evidence.fairness_notes",
-          "label": "Fairness review evidence reference",
+          "label": "Nachweis: Fairness Vermerke",
           "status": "open"
         },
         {
           "id": "evidence.execution_and_followup",
-          "label": "Execution and follow-up trace",
+          "label": "Nachweis: Vollzug and Nachbereitung",
           "status": "open"
         }
       ],

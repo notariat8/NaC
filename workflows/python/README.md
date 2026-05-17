@@ -1,24 +1,25 @@
-# Python Workflows
+# Python-Workflows
 
-Status: active development
+Status: aktive Entwicklung
 
-This folder is the deterministic Python workflow layer. Python is the execution
-and validation layer for repeatable notary-office workflows.
+Dieser Ordner ist die deterministische Python-Workflow-Schicht. Python ist die
+Ausfuehrungs- und Validierungsschicht fuer wiederholbare Notariatsworkflows.
 
-Python workflows must provide:
+Python-Workflows muessen bereitstellen:
 
-- schema-backed inputs and outputs
-- idempotency keys
-- approval gates
-- dry-run or plan-preview mode
-- metadata-only evidence records
-- no storage of real secrets or real personal data
+- schemagestuetzte Eingaben und Ausgaben
+- Idempotenzschluessel
+- Freigabe-Gates
+- Trockenlauf- oder Planvorschau-Modus
+- reine Metadaten-Nachweissaetze
+- keine Speicherung echter Secrets oder echter personenbezogener Daten
 
-## Implemented Runtime Surface
+## Implementierte Runtime-Oberflaeche
 
-The first implemented runtime is [src/notary_kg/](../../src/notary_kg). It reads
-the usecase-local static notarial KG files and exposes executable
-readiness/status views plus the first safe no-code editor view.
+Die erste implementierte Runtime ist [src/notary_kg/](../../src/notary_kg). Sie
+liest die usecase-lokalen statischen notariellen KG-Dateien und stellt
+ausfuehrbare Readiness-/Status-Sichten sowie die erste sichere No-code-
+Editor-View bereit.
 
 ```bash
 python scripts/notary_kg.py --repo-root . status
@@ -26,10 +27,11 @@ python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 ```
 
-## Next Development Step
+## Naechster Entwicklungsschritt
 
-The KG editor workstream now provides an implemented editor-view contract in
-[workflows/contracts/kg-editor.contract.json](../contracts/kg-editor.contract.json).
-The next workflow increment is a contract generator that reads one KG case and
-creates additional workflow contract skeletons under
-[workflows/contracts/](../contracts) without real mandate data.
+Der KG-Editor-Workstream stellt inzwischen einen implementierten Editor-View-
+Vertrag in
+[workflows/contracts/kg-editor.contract.json](../contracts/kg-editor.contract.json)
+bereit. Das naechste Workflow-Inkrement ist ein Vertragsgenerator, der einen
+KG-Case liest und zusaetzliche Workflow-Vertragsgerueste unter
+[workflows/contracts/](../contracts) ohne echte Mandatsdaten erzeugt.

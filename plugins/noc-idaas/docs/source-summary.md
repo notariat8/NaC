@@ -1,31 +1,33 @@
-# IDaaS Source Summary
+# IDaaS Quellenzusammenfassung
 
-Source repository: `ofunk/IDaaS`
+Quellrepository: `ofunk/IDaaS`
 
-## Product Thesis
+## Produktthese
 
-IDaaS is a Germany-centered identity-verification and IAM-projection concept.
-It uses German eID through AusweisApp as the trust anchor and turns verified
-claims into purpose-bound assertions or target IAM projections.
+IDaaS ist ein deutschlandzentriertes Konzept fuer Identitaetspruefung und
+IAM-Projektion. Es nutzt die deutsche eID ueber AusweisApp als Vertrauensanker
+und ueberfuehrt verifizierte Claims in zweckgebundene Assertions oder
+Ziel-IAM-Projektionen.
 
-## MVP Scope
+## MVP-Umfang
 
-- verification start and status API
-- AusweisApp-oriented eID orchestration
-- consent and audit capture
-- signed assertions for customer applications
-- at least one production-near IAM connector
-- claim-to-attribute mapping rules
+- API fuer Verification-Start und Status
+- AusweisApp-orientierte eID-Orchestrierung
+- Einwilligungs- und Audit-Erfassung
+- signierte Assertions fuer Kundenanwendungen
+- mindestens ein produktionsnaher IAM-Connector
+- Mapping-Regeln von Claim zu Attribut
 
-## Target Systems
+## Zielsysteme
 
 - Microsoft Entra ID
 - Oracle IAM
-- SCIM-compatible targets
+- SCIM-kompatible Ziele
 
-## NoC Adaptation
+## NoC-Adaption
 
-The former standalone SaaS concept is now treated as a NoC plugin. The plugin
-does readiness planning, contract review, and metadata-only evidence by default.
-Production eID transactions or IAM writes require a separately reviewed
-connector and explicit human approval.
+Das fruehere eigenstaendige SaaS-Konzept wird jetzt als NoC-Plugin behandelt.
+Das Plugin fuehrt standardmaessig Readiness-Planung, Vertragspruefung und
+metadatenbasierte Nachweisfuehrung aus. Produktive eID-Transaktionen oder
+IAM-Schreibvorgaenge brauchen einen separat geprueften Connector und explizite
+menschliche Freigabe.

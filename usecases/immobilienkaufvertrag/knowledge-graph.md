@@ -1,50 +1,59 @@
-# Immobilienkaufvertrag Knowledge Graph
+# Immobilienkaufvertrag Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `top10`  
+Status: usecase-lokale statische KG-Basis  
+Letzte Aktualisierung: 2026-05-17  
+Kataloggruppe: `top10`  
 Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.immobilienkaufvertrag`
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+KG-Knoten: `case.immobilienkaufvertrag`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `property.identity` | Property identity | `open` | `notary_clerk` | Which land register district, sheet, parcel, unit and current designation identify the object? |
-| `seller.identity` | Seller identity and capacity | `open` | `notary_clerk` | Who sells, how is identity and capacity verified, and is representation involved? |
-| `buyer.identity` | Buyer identity and acquisition structure | `open` | `notary_clerk` | Who buys, in which shares, with which address and with which representation? |
-| `purchase.price` | Purchase price and maturity model | `open` | `notary` | What is the purchase price, payment route, maturity prerequisites and due date mechanism? |
-| `encumbrances.current` | Current encumbrances and deletion plan | `open` | `notary_clerk` | Which rights, liens, easements or restrictions remain, are deleted or are assumed? |
-| `financing.required` | Buyer financing and new land charge need | `open` | `notary_clerk` | Is financing required and must a new land charge appointment be coordinated? |
-| `possession.transfer` | Possession, benefits, burdens and risk transfer | `open` | `notary` | When do possession, utilities, insurance risk, public charges and economic burdens transfer? |
-| `public.approvals` | Pre-emption, tax and approval requirements | `open` | `notary_clerk` | Which municipal, tax, family, court, administrator or public approvals are required? |
+| `property.identity` | Grundstueck Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Grundstueck Identitaet benoetigt? |
+| `seller.identity` | Verkaeufer Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verkaeufer Identitaet benoetigt? |
+| `buyer.identity` | Kaeufer Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kaeufer Identitaet benoetigt? |
+| `purchase.price` | Kaufpreis und Faelligkeitsmodell | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kaufpreis und Faelligkeitsmodell benoetigt? |
+| `encumbrances.current` | Belastungen aktueller Stand | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Belastungen aktueller Stand benoetigt? |
+| `financing.required` | Finanzierung erforderlich | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Finanzierung erforderlich benoetigt? |
+| `possession.transfer` | Besitz Uebertragung | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Besitz Uebertragung benoetigt? |
+| `public.approvals` | Oeffentlich Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Oeffentlich Genehmigungen benoetigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.contract_draft` | Dokument: Vertragsentwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
+| `doc.approvals` | Dokument: Genehmigungen | `offen` | Metadaten der Behoerdenkorrespondenz |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.land_register_excerpt` | Current land register excerpt | `open` |
-| `doc.contract_draft` | Draft purchase contract with attachments | `open` |
-| `doc.approvals` | Approval, pre-emption and tax-clearance evidence | `open` |
+| `decision.financing_route` | Entscheidung: Finanzierung Route | `offen` |
+| `decision.encumbrance_handling` | Entscheidung: Belastung Behandlung | `offen` |
 
-## Review Gates
+## Pruefgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.land_register_review` | Land register reviewed by notary | `open` |
-| `gate.consumer_draft_period` | Consumer draft review period checked where applicable | `open` |
-| `gate.execution_readiness` | Payment maturity and filing package ready | `open` |
+| `gate.land_register_review` | Pruefgate: Grundbuchpruefung | `offen` |
+| `gate.consumer_draft_period` | Pruefgate: Verbraucher-Entwurfsfrist | `offen` |
+| `gate.execution_readiness` | Pruefgate: Vollzugsbereitschaft | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.intake_review` | Nachweis: Aufnahmepruefung und Entwurfsfreigabe | `offen` |
+| `evidence.filing_trace` | Nachweis: Einreichungs- und Vollzugsnachverfolgung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

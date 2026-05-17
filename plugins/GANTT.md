@@ -1,50 +1,51 @@
 # Plugin Gantt
 
-Last update: 2026-05-15
+Letzte Aktualisierung: 2026-05-17
 
 ```mermaid
 gantt
-    title Plugin delivery plan
+    title Plugin-Lieferplan
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
 
-    section Core gates
-    Regulated core manifest and skill baseline :done,   p1, 2026-04-01, 2026-05-14
-    Plugin validation in quality gate          :done,   p2, 2026-04-15, 2026-05-14
-    Marketplace packaging policy               :active, p3, 2026-05-14, 14d
-    IDaaS eID/IAM companion                    :active, p4, 2026-05-14, 14d
+    section Kern-Gates
+    Regulated-Core-Manifest und Skill-Basis    :done,   p1, 2026-04-01, 2026-05-14
+    Plugin-Validierung im Quality Gate         :done,   p2, 2026-04-15, 2026-05-14
+    Marketplace-Paketierungsregel              :active, p3, 2026-05-14, 14d
+    Deutsche Plugin-MD-Sprachfuehrung          :done,   p3a, 2026-05-17, 1d
+    IDaaS eID/IAM-Begleiter                    :active, p4, 2026-05-14, 14d
 
-    section Notary entry gates
-    CyberJack RFID readiness plugin            :active, p5, 2026-05-01, 21d
-    BNotK XNP readiness plugin                 :active, p6, after p5, 21d
-    PKCS7 certificate-bundle evidence plugin   :active, p6a, 2026-05-15, 14d
-    Handelsregister plugin                     :active, p7, after p6, 28d
+    section Notariats-Einstiegsgates
+    CyberJack-RFID-Readiness-Plugin            :active, p5, 2026-05-01, 21d
+    BNotK-XNP-Readiness-Plugin                 :active, p6, after p5, 21d
+    PKCS7-Zertifikatsbuendel-Nachweisplugin    :active, p6a, 2026-05-15, 14d
+    Handelsregister-Plugin                     :active, p7, after p6, 28d
 
-    section Follow-up plugins
-    beA portal companion                       :        p8, 2026-06-15, 28d
-    Grundbuch portal companion                 :        p9, 2026-06-15, 28d
-    ELSTER ERiC companion                      :        p10, 2026-07-01, 28d
-    OCI evidence companion                     :        p11, 2026-07-01, 28d
+    section Folge-Plugins
+    beA-Portal-Begleiter                       :        p8, 2026-06-15, 28d
+    Grundbuchportal-Begleiter                  :        p9, 2026-06-15, 28d
+    ELSTER-ERiC-Begleiter                      :        p10, 2026-07-01, 28d
+    OCI-Nachweisbegleiter                      :        p11, 2026-07-01, 28d
 ```
 
 ## Status
 
-| Plugin | Purpose | Status | Next gate |
+| Plugin | Zweck | Status | Naechstes Gate |
 | --- | --- | --- | --- |
-| `noc-regulated-core` | Shared regulated workflow guardrails | Baseline ready | Recheck GPT Store/workspace packaging assumptions. |
-| `noc-idaas` | German eID verification and IAM projection readiness | Active | Confirm connector boundary and data-processing basis before any production pilot. |
-| `noc-cyberjack-rfid` | Local card, RFID-off, SAK and XNP local-interface readiness | Active | Windows DriverPackage, morris middleware, optional morris loopback API/PCSC probe and Linux driver preflight are implemented; current local gate still needs a connected cyberJack reader or manual attestation. |
-| `noc-bnotk-xnp` | XNP authentication readiness | Active | Runnable local reader-prompt evidence now binds XNP preflight to the CyberJack gate and can pass through the optional morris API probe; next gate is workstation validation with XNP installed. |
-| `noc-pkcs7-certbundle` | Local PKCS#7/P7B certificate-bundle evidence without signing | Active | Installable MVP added with metadata-only local inspection, no PFX/PKCS#12 import, no private-key access and no signature operation; CI hardening removes PEM-shaped test literals from source fixtures. |
-| `noc-handelsregister` | Register filing readiness | Active | Bind to GmbH formation usecase. |
-| `noc-bea-portal` | beA workflow companion | Planned | Confirm notary-office priority. |
-| `noc-elster-eric` | ELSTER/ERiC companion | Planned | Keep separate from notarial core unless needed. |
-| `noc-grundbuch-portal` | Land register companion | Planned | Bind to purchase-contract starter. |
-| `noc-oci-evidence` | OCI evidence operations | Planned | Keep as infrastructure/evidence plugin, not a usecase. |
+| `noc-regulated-core` | Gemeinsame Schutzplanken fuer regulierte Workflows | Basis bereit | GPT-Store-/Workspace-Paketierungsannahmen erneut pruefen. |
+| `noc-idaas` | Deutsche eID-Pruefung und IAM-Projektions-Readiness | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestaetigen. |
+| `noc-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Local-Interface-Readiness | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Pruefung und Linux-Treiber-Preflight sind implementiert; das lokale Gate braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestaetigung. |
+| `noc-bnotk-xnp` | XNP-Authentifizierungs-Readiness | Aktiv | Der lokale Reader-Prompt-Nachweis bindet XNP-Preflight an das CyberJack-Gate und kann die optionale morris-API-Pruefung durchreichen; naechstes Gate ist Workstation-Validierung mit installiertem XNP. |
+| `noc-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Pruefung, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Haertung entfernt PEM-aehnliche Testliterale aus Quellfixtures. |
+| `noc-handelsregister` | Registeranmeldungs-Readiness | Aktiv | An GmbH-Gruendungs-Usecase binden. |
+| `noc-bea-portal` | beA-Workflow-Begleiter | Geplant | Prioritaet fuer Notariats-/Kanzleibetrieb bestaetigen. |
+| `noc-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benoetigt. |
+| `noc-grundbuch-portal` | Grundbuch-Begleiter | Geplant | An Immobilienkaufvertrags-Starter binden. |
+| `noc-oci-evidence` | OCI-Nachweisbetrieb | Geplant | Als Infrastruktur-/Nachweisplugin fuehren, nicht als Usecase. |
 
-## Packaging Note
+## Paketierungshinweis
 
-OpenAI GPT Store publication and workspace app installation are different
-channels. Public GPT Store packages must be checked against current OpenAI
-publishing rules before release; workspace-only apps and internal notary pilots
-remain a separate track.
+OpenAI-GPT-Store-Veroeffentlichung und Workspace-App-Installation sind
+verschiedene Kanaele. Oeffentliche GPT-Store-Pakete muessen vor Release gegen
+die aktuellen OpenAI-Veroeffentlichungsregeln geprueft werden; workspace-interne
+Apps und interne Notariatspiloten bleiben ein separater Track.
