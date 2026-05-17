@@ -1,51 +1,61 @@
 # NoC: Notariat as Code
 
-Dieses Repository wird als mehrsprachige Referenz fuer `Notariat as Code`
-gepflegt. Deutsch ist repo-weit die fuehrende Sprache fuer menschlich lesbare
-Inhalte. Englisch ist Pflichtsprache fuer lokalisierte Spiegel, aber nur
-Uebersetzung oder Orientierung. Fuer deutsches Recht und notarielle Usecases ist
-Deutsch fuehrend und rechtlich bindend.
+NoC ist ein oeffentliches Referenz- und Produktkern-Repository fuer den
+AI-first-Betrieb notarieller Vorgangsarten. Ein Notariat soll dieses Repository
+klonen, pruefen und als Vorlage fuer einen privaten, eigenen Betriebs-Fork nutzen
+koennen.
 
-Die verbindliche Sprachregel steht in
+Der Kern ist einfach: KI hilft beim Strukturieren, Menschen entscheiden, Git
+dokumentiert, Python prueft, und echte Mandatsdaten bleiben ausserhalb dieses
+oeffentlichen Repositories.
+
+Herausgeber und Maintainer: [ofunk](https://github.com/ofunk). Weitere
+Einordnung steht in [HERAUSGEBER.md](HERAUSGEBER.md).
+
+Deutsch ist repo-weit die fuehrende Sprache fuer menschlich lesbare Inhalte.
+Englisch ist Pflichtsprache fuer lokalisierte Spiegel, aber nur Uebersetzung
+oder Orientierung. Fuer deutsches Recht und notarielle Usecases ist Deutsch
+fuehrend und rechtlich bindend. Die verbindliche Sprachregel steht in
 [policies/language-policy.yaml](policies/language-policy.yaml) und wird mit
 [scripts/validate_language_parity.py](scripts/validate_language_parity.py)
 geprueft.
 
-## Sprachen
+## Fuer Wen
 
-- Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
-- Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
-
-`de` und `en` sind verpflichtende Standardsprachen. Aenderungen an lokalisierten
-Inhalten muessen beide Sprachpfade pflegen, unabhaengig von der Prompt-Sprache.
-Nicht lokalisierte menschlich lesbare Inhalte, insbesondere diese GitHub-
-Startseite, werden deutsch gefuehrt.
-
-## Start
-
-| Bereich / area | Deutsch | English |
+| Zielgruppe | Einstieg | Worum es geht |
 | --- | --- | --- |
-| Startpfad / start path | [docs/de/START_HERE.md](docs/de/START_HERE.md) | [docs/en/START_HERE.md](docs/en/START_HERE.md) |
-| Projekt-README / project README | [docs/de/README.md](docs/de/README.md) | [docs/en/README.md](docs/en/README.md) |
-| Mindestvoraussetzungen / minimum requirements | [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) | [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) |
-| AVV/DPA-Bereich / DPA area | [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md) | [docs/en/datenschutz-avv-dpa.md](docs/en/datenschutz-avv-dpa.md) |
-| SBOM fuer AI / SBOM for AI | [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md) | [docs/en/sbom-for-ai.md](docs/en/sbom-for-ai.md) |
-| KG-Editor-Workstream / KG editor workstream | [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md) | [docs/en/kg-editor-workstream.md](docs/en/kg-editor-workstream.md) |
-| Plugin-Plaene / plugin plans | [docs/de/plugin-plans/README.md](docs/de/plugin-plans/README.md) | [docs/en/plugin-plans/README.md](docs/en/plugin-plans/README.md) |
-| Eventstream-Runbooks / eventstream runbooks | [docs/de/eventstream/README.md](docs/de/eventstream/README.md) | [docs/en/eventstream/README.md](docs/en/eventstream/README.md) |
-| Issue-Betrieb / issue operations | [docs/de/issues/README.md](docs/de/issues/README.md) | [docs/en/issues/README.md](docs/en/issues/README.md) |
-| Betriebsmodell / operating model | [docs/de/operations/README.md](docs/de/operations/README.md) | [docs/en/operations/README.md](docs/en/operations/README.md) |
-| Service-Modell / service model | [docs/de/service-model/README.md](docs/de/service-model/README.md) | [docs/en/service-model/README.md](docs/en/service-model/README.md) |
-| Aktives Entwicklungsboard / active build board | [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md) | [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md) |
-| Globale Roadmap / global roadmap | [roadmap/GANTT.md](roadmap/GANTT.md) | [roadmap/GANTT.md](roadmap/GANTT.md) |
-| Plugin-Roadmap / plugin roadmap | [plugins/GANTT.md](plugins/GANTT.md) | [plugins/GANTT.md](plugins/GANTT.md) |
-| Workflow-Roadmap / workflow roadmap | [workflows/GANTT.md](workflows/GANTT.md) | [workflows/GANTT.md](workflows/GANTT.md) |
-| Usecase-Roadmap / usecase roadmap | [usecases/GANTT.md](usecases/GANTT.md) | [usecases/GANTT.md](usecases/GANTT.md) |
-| Usecase-lokale Knowledge Graphs / case-local knowledge graphs | [usecases/README.md](usecases/README.md) | [usecases/README.md](usecases/README.md) |
+| Notariat und fachliche Entscheidung | [docs/de/notar-start.md](docs/de/notar-start.md) | Nutzen, Grenzen, Datenschutz, erster Prueflauf und Entscheidung, ob ein privater Fork sinnvoll ist. |
+| Office-Admin und IT-Betrieb | [docs/de/betriebsstart.md](docs/de/betriebsstart.md) | Klonen, lokale Checks, private Betriebsumgebung, Rollen, Arbeitsplatz- und Plugin-Voraussetzungen. |
+| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NoC angebunden werden koennen. |
+| Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
+| Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart fuer Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
-Jeder Usecase fuehrt eigene Dateien `knowledge-graph.graph.json` und
-`knowledge-graph.md`, zum Beispiel
-[usecases/immobilienkaufvertrag/knowledge-graph.graph.json](usecases/immobilienkaufvertrag/knowledge-graph.graph.json).
+Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
+[docs/en/betriebsstart.md](docs/en/betriebsstart.md),
+[docs/en/integration-start.md](docs/en/integration-start.md),
+[docs/en/pruefung-standardisierung-start.md](docs/en/pruefung-standardisierung-start.md).
+
+## Was Dieses Repo Leistet
+
+- Es beschreibt notarielle Vorgangsarten als versionierte, pruefbare Usecases.
+- Es trennt oeffentliche Muster, private Kanzlei-/Notariatsdaten und lokale
+  Fachsysteme.
+- Es stellt Plugins, Workflow-Vertraege und deterministische Python-Pruefungen
+  fuer AI-first-Betrieb bereit.
+- Es macht Freigaben, offene Fragen, technische Readiness, Datenschutzgrenzen und
+  Nachweise nachvollziehbar.
+- Es verhindert im Musterrepo echte personenbezogene Daten, Secrets, PINs,
+  Registerauszuege oder Mandatsdokumente.
+
+## Was Es Bewusst Nicht Leistet
+
+- NoC ersetzt kein vorgeschriebenes Fachsystem und keine berufsrechtliche
+  Verantwortung.
+- NoC ist keine automatische Rechtsberatung und keine autonome Beurkundung.
+- Oeffentliche Repository-Dateien sind keine Ablage fuer echte Akten,
+  Ausweisdaten, Registerauszuege, Zahlungsdaten oder Signaturgeheimnisse.
+- Produktive Nutzung braucht einen privaten Fork, lokale Rollen, Freigaben,
+  Datenschutzklaerung und einen geprueften Arbeitsplatz.
 
 ## Produktstruktur
 
@@ -54,19 +64,35 @@ Dieses Repository trennt drei Produktbereiche:
 - [plugins/](plugins): installierbare Plugin-Artefakte fuer GPT-Store-Pruefung,
   Workspace-Installation oder lokale Integration.
 - [workflows/](workflows): wiederverwendbare Notariats-Workflows, getrennt nach
-  installierbaren Skills und deterministischer Python-Ausfuehrung.
-- [usecases/](usecases): konkrete notarielle Vorgangsarten wie Online-GmbH-
-  Gruendung, AO52-Gemeinnuetzigkeit, Immobilienkaufvertrag oder Testament. Jeder
-  Usecase besitzt seine eigene statische KG/DB fuer offene Fragen, Dokumente,
-  Entscheidungen, Gates und Nachweisreferenzen.
+  installierbaren Skills, Workflow-Vertraegen und deterministischer
+  Python-Ausfuehrung.
+- [usecases/](usecases): konkrete notarielle Vorgangsarten wie
+  Online-GmbH-Gruendung, AO52-Gemeinnuetzigkeit, Immobilienkaufvertrag oder
+  Testament. Jeder Usecase besitzt seine eigene statische KG/DB fuer offene
+  Fragen, Dokumente, Entscheidungen, Gates und Nachweisreferenzen.
 
-Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren. Aenderungen
-unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases)
-muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
+Weitere Dokumentation:
 
-OpenAI-Veroeffentlichungskanaele werden vor Release separat geprueft. Oeffentlich
-installierbare GPT-Store-Pakete und workspace-interne Apps sind nicht derselbe
-Zielkanal, insbesondere wenn Apps oder Actions beteiligt sind.
+- Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
+- Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
+- Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
+- Datenschutz und AVV/DPA: [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md)
+- AI-SBOM: [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md)
+- KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)
+- Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
+
+## Erster Prueflauf
+
+Nach dem Klonen:
+
+```bash
+python scripts/notary_kg.py --repo-root . status
+python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/quality_gate.py --profile strict
+```
+
+Wenn Python noch nicht eingerichtet ist, zuerst
+[docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) lesen.
 
 ## Aktueller Entwicklungsmodus
 
@@ -82,24 +108,11 @@ python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.
 
-## Aktuelle Workflow-Prioritaeten
+## Push- Und Qualitaetsregel
 
-Der Online-HRA-Pfad ist eine notarielle Gate-Kette. XNP wird erst nach lokal
-stabilem Kartenpfad getestet.
-
-| Prioritaet | Workflow | Blockiert | Sichtbares Ergebnis |
-| --- | --- | --- | --- |
-| P0 | `noc-cyberjack-rfid` Karten-/SAK-Gate | XNP-Login-Test | Karte, Reader, PC/SC, SAK lite/XNP-Kartenpfad und secureFramework werden lokal readiness-geprueft. |
-| P0 | `noc-bnotk-xnp` XNP-Gate | HRA-/XNotar-Workflow | XNP, lokaler Login, offizieller Kontext, XNotar-Modul und Austauschordner werden readiness-geprueft. |
-| P0 | `noc-handelsregister` Online-HRA-Schicht | produktionsnahes HRA-Paket | HRA-/HRB-Pfad, Pflichtdaten, Notarroute, Freigaben und Evidence-Metadaten sind vorbereitet. |
-| P1 | Installierbarkeit und Validierung | Pilotbetrieb | Codex-Marketplace-Reihenfolge, Plugin-Manifeste und Validator sind stabil. |
-| P2 | Folgeadapter beA, Grundbuch, ELSTER | Querschnittsausbau | zurueckgestellt, bis Karten-/SAK-, XNP- und HRA-Gates stabil sind. |
-
-## Schnellpruefung
-
-```bash
-python scripts/quality_gate.py --profile strict
-```
+Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren. Aenderungen
+unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases)
+muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
 
 Das strikte Quality Gate prueft Prozessdateien, Tests, Datenschutzregeln,
 Governance-Sync, Sprachregeln, Cloud-Runbook-Paritaet, Plugin-Manifeste,

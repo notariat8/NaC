@@ -38,6 +38,16 @@ Plugins, Workflows, Policies und operative Aenderungen deklarativ in Git
 beschrieben und ueber eine Enterprise Control Plane in pruefbare Ausfuehrung
 ueberfuehrt werden.
 
+## Zielgruppen-Einstieg
+
+| Zielgruppe | Startpfad |
+| --- | --- |
+| Notariat und fachliche Entscheidung | [docs/de/notar-start.md](notar-start.md) |
+| Office-Admin und IT-Betrieb | [docs/de/betriebsstart.md](betriebsstart.md) |
+| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](integration-start.md) |
+| Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
+| Entwicklung und Maintainer | [docs/de/START_HERE.md](START_HERE.md) |
+
 ## Prozessklassen
 
 - `formation`: Gruendung, Rollen, Register- und Fristenschritte
@@ -60,6 +70,10 @@ ueberfuehrt werden.
 
 ### Dokumentation
 
+- [docs/de/notar-start.md](notar-start.md): fachlicher Einstieg fuer Notariate und Entscheider.
+- [docs/de/betriebsstart.md](betriebsstart.md): privater Fork, lokale Checks und Betriebsgrenzen.
+- [docs/de/integration-start.md](integration-start.md): Fachsystem-, Plugin- und Connector-Pfad.
+- [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit fuer Pruefung und Standardisierung.
 - [docs/de/START_HERE.md](START_HERE.md): verbindlicher operativer Einstieg.
 - [docs/de/fachanwender-guide.md](fachanwender-guide.md): fachliche Einfuehrung ohne IT-Vorkenntnisse.
 - [docs/de/minimum-requirements.md](minimum-requirements.md): Mindestvoraussetzungen fuer Base,

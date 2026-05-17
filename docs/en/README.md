@@ -32,6 +32,16 @@ Notariat as Code is an operating model in which notarial case types, plugins,
 workflows, policies and operational changes are described declaratively in Git
 and moved into verifiable execution through an Enterprise Control Plane.
 
+## Audience Entry Paths
+
+| Audience | Start path |
+| --- | --- |
+| Notary office and business decision | [docs/en/notar-start.md](notar-start.md) |
+| Office admin and IT operations | [docs/en/betriebsstart.md](betriebsstart.md) |
+| System and integration side | [docs/en/integration-start.md](integration-start.md) |
+| Review and standardization | [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
+| Development and maintainers | [docs/en/START_HERE.md](START_HERE.md) |
+
 ## Multilingual Maintenance
 
 Language-specific content is maintained under ISO-639 folder codes:
@@ -47,6 +57,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 
 - [docs/en/](.) contains English documentation.
 - [docs/de/](../de) contains German documentation.
+- [docs/en/notar-start.md](notar-start.md) is the business entry path for notary offices and decision makers.
+- [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
+- [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
+- [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
 - [prompts/en/](../../prompts/en) contains English prompt templates.
 - [prompts/de/](../../prompts/de) contains German prompt templates.
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) tracks global progress for plugins, workflows, and usecases.
