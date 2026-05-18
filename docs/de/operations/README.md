@@ -1,6 +1,6 @@
 # Operations
 
-Dieser Ordner buendelt Betriebsmodell, Upstream-Sync, Version-Binding,
+Dieser Ordner bündelt Betriebsmodell, Upstream-Sync, Version-Binding,
 Arbeitsmodell und Repo-Konsolidierung.
 
 ## Dokumente

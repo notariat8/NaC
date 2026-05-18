@@ -5,32 +5,32 @@
   "title": "NaC Usecase-Wissensgraph: Vereinsregisteranmeldung",
   "status": "draft",
   "last_update": "2026-05-17",
-  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
-  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehoeren in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV fuer Abschlagszahlungsregelungen in Bautraegervertraegen",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identitaet, Geschaeftsfaehigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Paragraph 1410 zur Form von Ehevertraegen",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und oeffentlicher Beglaubigung",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Paragraph 1750 fuer Einwilligungserklaerungen bei Adoption",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Paragraph 311b fuer Vertraege ueber Grundstuecke, Vermoegen und Nachlaesse",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
@@ -60,63 +60,63 @@
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Paragraph 650u fuer Bautraegervertraege",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Paragraph 77 fuer Vereinsregisteranmeldungen",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstuecken",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung fuer Grundbuchantraege, Bewilligungsnachweise und Erbnachweise",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Loeschungsvermerk",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG fuer GmbH-Gruendung, Anmeldung und Geschaeftsfuehrerdaten",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Paragraph 15 zur Uebertragung von GmbH-Geschaeftsanteilen",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Paragraph 53 zur Form von Satzungsaenderungen",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Paragraph 12 fuer elektronische Handelsregisteranmeldungen in oeffentlich beglaubigter Form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Paragraph 8 zur Teilung durch den Eigentuemer in Wohnungs- oder Teileigentum",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identitaet, Geschaeftsfaehigkeit und Vertretung geprueft"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarielle Rechtspruefung abgeschlossen"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
@@ -124,7 +124,7 @@
     },
     {
       "id": "gate.evidence",
-      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknuepft"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
@@ -135,7 +135,7 @@
       "status": "open",
       "priority": "P1",
       "usecase_path": "usecases/vereinsregisteranmeldung",
-      "summary": "Vereinsregisteranmeldungen fuer Vorstandswechsel, Satzungsaenderungen, Gruendung oder Aufloesung mit oeffentlicher Beglaubigung, Beschluessen und Anlagen.",
+      "summary": "Vereinsregisteranmeldungen für Vorstandswechsel, Satzungsänderungen, Gründung oder Aufloesung mit öffentlicher Beglaubigung, Beschlüssen und Anlagen.",
       "legal_anchors": [
         "src.beurkg",
         "src.bgb.77"
@@ -143,10 +143,10 @@
       "required_information": [
         {
           "id": "association.identity",
-          "label": "Verein Identitaet",
+          "label": "Verein Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Verein Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Verein Identität benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "association_register_data",
           "required_for": [
@@ -158,7 +158,7 @@
           "label": "Einreichung Art",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Einreichung Art benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Art benötigt?",
           "owner_role": "notary",
           "privacy_class": "association_data",
           "required_for": [
@@ -167,10 +167,10 @@
         },
         {
           "id": "board.identity",
-          "label": "Vorstand Identitaet",
+          "label": "Vorstand Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Vorstand Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Vorstand Identität benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_data",
           "required_for": [
@@ -183,7 +183,7 @@
           "label": "Beschluss Nachweis",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Beschluss Nachweis benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Beschluss Nachweis benötigt?",
           "owner_role": "association",
           "privacy_class": "association_data",
           "required_for": [
@@ -195,7 +195,7 @@
           "label": "Satzung aktueller Stand",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Satzung aktueller Stand benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Satzung aktueller Stand benötigt?",
           "owner_role": "association",
           "privacy_class": "association_data",
           "required_for": [
@@ -207,7 +207,7 @@
           "label": "Einreichung Route",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Einreichung Route benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Route benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "technical_metadata",
           "required_for": [
@@ -252,7 +252,7 @@
         },
         {
           "id": "decision.attachment_complete",
-          "label": "Entscheidung: Anlage Vollstaendigkeit",
+          "label": "Entscheidung: Anlage Vollständigkeit",
           "status": "open",
           "options": [
             "complete",
@@ -265,13 +265,13 @@
       "gates": [
         {
           "id": "gate.signer_authority",
-          "label": "Pruefgate: Unterzeichner Berechtigung",
+          "label": "Prüfgate: Unterzeichner Berechtigung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.register_package_ready",
-          "label": "Pruefgate: Register Paket bereit",
+          "label": "Prüfgate: Register Paket bereit",
           "status": "open",
           "owner_role": "notary_clerk"
         }

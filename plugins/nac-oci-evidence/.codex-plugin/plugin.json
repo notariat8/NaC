@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "NaC OCI-Nachweis",
     "shortDescription": "Cloud-Audit und Drift nachweisen.",
-    "longDescription": "Lokaler OCI-Nachweisbegleiter fuer Landing-Zone-Pruefungen, Planreview, Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
+    "longDescription": "Lokaler OCI-Nachweisbegleiter für Landing-Zone-Prüfungen, Planreview, Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe die NaC OCI-Nachweisbereitschaft.",
-      "Erstelle einen Einrichtungsplan fuer OCI-Nachweise.",
-      "Pruefe Betriebsdrift fuer den OCI-Nachweisbetrieb."
+      "Prüfe die NaC OCI-Nachweisbereitschaft.",
+      "Erstelle einen Einrichtungsplan für OCI-Nachweise.",
+      "Prüfe Betriebsdrift für den OCI-Nachweisbetrieb."
     ],
     "brandColor": "#7A3E34",
     "composerIcon": "./assets/icon.png",

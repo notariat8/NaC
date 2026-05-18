@@ -1,38 +1,38 @@
 # Notar-Start: NaC In 15 Minuten Einschaetzen
 
-Dieses Dokument richtet sich an fachliche Entscheider im Notariat. Es erklaert,
-was NaC ist, was es nicht ist und wie ein erster lokaler Prueflauf ohne echte
+Dieses Dokument richtet sich an fachliche Entscheider im Notariat. Es erklärt,
+was NaC ist, was es nicht ist und wie ein erster lokaler Prüflauf ohne echte
 Mandatsdaten aussieht.
 
 ## Kurzbild
 
-NaC ist ein Muster fuer AI-first-Betrieb im Notariat:
+NaC ist ein Muster für AI-first-Betrieb im Notariat:
 
 - KI strukturiert Eingaben und offene Fragen.
 - Fachpersonal und Notar entscheiden.
 - Git dokumentiert Versionen, Reviews und Freigaben.
-- Python prueft Regeln und Vollstaendigkeit.
-- Echte Mandatsdaten bleiben ausserhalb dieses oeffentlichen Repositories.
+- Python prüft Regeln und Vollständigkeit.
+- Echte Mandatsdaten bleiben außerhalb dieses öffentlichen Repositories.
 
-## Was Sie Damit Pruefen Koennen
+## Was Sie Damit Prüfen Können
 
 1. Welche notariellen Vorgangsarten bereits modelliert sind.
 2. Welche Informationen, Dokumente, Freigaben und technischen Gates je Vorgang
-   benoetigt werden.
-3. Welche Plugin- und Arbeitsplatzvoraussetzungen fuer Karten-, Register-,
-   Portal- oder Identitaetspfade entstehen.
-4. Ob das Modell zu Ihrem Buerobetrieb passt.
-5. Welche Teile in einen privaten Fork uebernommen werden sollen.
+   benötigt werden.
+3. Welche Plugin- und Arbeitsplatzvoraussetzungen für Karten-, Register-,
+   Portal- oder Identitätspfade entstehen.
+4. Ob das Modell zu Ihrem Bürobetrieb passt.
+5. Welche Teile in einen privaten Fork übernommen werden sollen.
 
 ## Was Sie Nicht Tun Sollten
 
 - keine echten Mandatsdaten in dieses Repository eintragen,
-- keine Ausweisdaten, Registerauszuege, Preise, PINs oder Zertifikate committen,
+- keine Ausweisdaten, Registerauszüge, Preise, PINs oder Zertifikate committen,
 - keine KI-Ausgabe als finale rechtliche Entscheidung behandeln,
-- keinen Produktivbetrieb ohne privaten Fork, Rollenmodell, Datenschutzpruefung
+- keinen Produktivbetrieb ohne privaten Fork, Rollenmodell, Datenschutzprüfung
   und lokale Freigaben starten.
 
-## Erster Prueflauf
+## Erster Prüflauf
 
 ```bash
 python scripts/notary_kg.py --repo-root . status
@@ -40,22 +40,22 @@ python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 python scripts/quality_gate.py --profile strict
 ```
 
-Wenn diese Befehle laufen, koennen Sie sehen, welche Usecases vorhanden sind,
+Wenn diese Befehle laufen, können Sie sehen, welche Usecases vorhanden sind,
 welche offenen Knoten ein Vorgang hat und ob das Repository seine eigenen Gates
 besteht.
 
 ## Entscheidungsfragen
 
 - Welche drei Vorgangsarten sollen zuerst pilotiert werden?
-- Wer ist fachlich verantwortlich fuer Freigaben?
+- Wer ist fachlich verantwortlich für Freigaben?
 - Wer betreibt den privaten Fork?
-- Welche lokalen Fachsysteme und Arbeitsplaetze muessen angebunden werden?
-- Wo werden echte Mandatsdokumente und Nachweise ausserhalb von Git gespeichert?
+- Welche lokalen Fachsysteme und Arbeitsplätze müssen angebunden werden?
+- Wo werden echte Mandatsdokumente und Nachweise außerhalb von Git gespeichert?
 
-## Naechste Dokumente
+## Nächste Dokumente
 
 - [docs/de/reifegrad.md](reifegrad.md)
-- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
+- [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/glossar.md](glossar.md)
 - [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)
 - [usecases/README.md](../../usecases/README.md)

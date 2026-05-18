@@ -1,7 +1,7 @@
 {
   "name": "nac-idaas",
   "version": "0.1.0",
-  "description": "eID-Pruefung und IAM-Projektion mit NaC-Schutzplanken.",
+  "description": "eID-Prüfung und IAM-Projektion mit NaC-Schutzplanken.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -22,9 +22,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC eID-Pruefung",
-    "shortDescription": "eID pruefen, IAM-Projektion planen.",
-    "longDescription": "Lokaler Begleiter fuer deutsche eID-Pruefung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
+    "displayName": "NaC eID-Prüfung",
+    "shortDescription": "eID prüfen, IAM-Projektion planen.",
+    "longDescription": "Lokaler Begleiter für deutsche eID-Prüfung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -39,9 +39,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Erstelle einen Bereitschaftsplan fuer eine eID-Pruefung.",
-      "Pruefe die IAM-Projektion fuer diesen Mandanten.",
-      "Erzeuge metadatenbasierten Nachweis fuer einen IDaaS-Ablauf."
+      "Erstelle einen Bereitschaftsplan für eine eID-Prüfung.",
+      "Prüfe die IAM-Projektion für diesen Mandanten.",
+      "Erzeuge metadatenbasierten Nachweis für einen IDaaS-Ablauf."
     ],
     "brandColor": "#315A8A",
     "composerIcon": "./assets/icon.png",

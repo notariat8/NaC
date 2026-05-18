@@ -1,27 +1,27 @@
 # NaC ELSTER/ERiC
 
-Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Abgabe-Bereitschaft, lokale
-Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Pruefungen ohne
+Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter für Abgabe-Bereitschaft, lokale
+Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Prüfungen ohne
 zentrale Speicherung von Steuer-Zugangsdaten.
 
 ## Status
 
-Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
+Installierbares MVP-Plugin-Gerüst. Das Plugin stellt lokale Codex-Skill-
+Führung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
-- Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Läuft als lokales Codex-Plugin aus diesem Repository.
+- Hält Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte außerhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
-- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+- Verlangt menschliche Freigabe für regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Berechtigung des Steuerakteurs und lokale ELSTER-Credential-Grenze bestaetigen.
+- Berechtigung des Steuerakteurs und lokale ELSTER-Credential-Grenze bestätigen.
 - Entscheiden, ob ERiC-Hersteller-Onboarding im Scope liegt.
 
 ## Day1
@@ -30,7 +30,7 @@ aktiviert.
 
 ## Day2
 
-- ERiC-Version, Zertifikate, Fristen, fehlgeschlagene Uebertragungen und
+- ERiC-Version, Zertifikate, Fristen, fehlgeschlagene Übertragungen und
   Nachweisaufbewahrung verfolgen.
 
 ## Erforderliche Konten und Freigaben

@@ -1,36 +1,36 @@
 # Erbscheinsantrag / Nachlassangelegenheiten Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `top10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `top10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.erbscheinsantrag_nachlass`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `decedent.identity` | Erblasser Identitaet | `offen` | Antragsteller | Welche Angaben, Nachweise und Pruefpunkte werden fuer Erblasser Identitaet benoetigt? |
-| `residence.jurisdiction` | Wohnsitz Zustaendigkeit | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Wohnsitz Zustaendigkeit benoetigt? |
-| `applicants.identity` | Antragsteller Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Antragsteller Identitaet benoetigt? |
-| `heirship.basis` | Erbenstellung Grundlage | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Erbenstellung Grundlage benoetigt? |
-| `family.evidence` | Familie Nachweis | `offen` | Antragsteller | Welche Angaben, Nachweise und Pruefpunkte werden fuer Familie Nachweis benoetigt? |
-| `dispositions.evidence` | Verfuegungen Nachweis | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verfuegungen Nachweis benoetigt? |
-| `renunciations.disclaimers` | Ausschlagungen Ausschlagungen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Ausschlagungen Ausschlagungen benoetigt? |
-| `oath.statement` | Eidesstattliche Versicherung Erklaerung | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Eidesstattliche Versicherung Erklaerung benoetigt? |
+| `decedent.identity` | Erblasser Identität | `offen` | Antragsteller | Welche Angaben, Nachweise und Prüfpunkte werden für Erblasser Identität benötigt? |
+| `residence.jurisdiction` | Wohnsitz Zuständigkeit | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Wohnsitz Zuständigkeit benötigt? |
+| `applicants.identity` | Antragsteller Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Antragsteller Identität benötigt? |
+| `heirship.basis` | Erbenstellung Grundlage | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Erbenstellung Grundlage benötigt? |
+| `family.evidence` | Familie Nachweis | `offen` | Antragsteller | Welche Angaben, Nachweise und Prüfpunkte werden für Familie Nachweis benötigt? |
+| `dispositions.evidence` | Verfügungen Nachweis | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verfügungen Nachweis benötigt? |
+| `renunciations.disclaimers` | Ausschlagungen Ausschlagungen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Ausschlagungen Ausschlagungen benötigt? |
+| `oath.statement` | Eidesstattliche Versicherung Erklärung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Eidesstattliche Versicherung Erklärung benötigt? |
 
 ## Dokumente
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.death_certificate_reference` | Dokument: Sterbefall Bescheinigung Referenz | `offen` | manuell gepruefter Nachweisspeicher |
-| `doc.application_draft` | Dokument: Antrag Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
-| `doc.family_evidence` | Dokument: Familie Nachweis | `offen` | manuell gepruefter Nachweisspeicher |
+| `doc.death_certificate_reference` | Dokument: Sterbefall Bescheinigung Referenz | `offen` | manuell geprüfter Nachweisspeicher |
+| `doc.application_draft` | Dokument: Antrag Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.family_evidence` | Dokument: Familie Nachweis | `offen` | manuell geprüfter Nachweisspeicher |
 
 ## Entscheidungen
 
@@ -39,12 +39,12 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | `decision.certificate_type` | Entscheidung: Bescheinigung Art | `offen` |
 | `decision.oath_required` | Entscheidung: Eidesstattliche Versicherung erforderlich | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.heirship_review` | Pruefgate: Erbenstellung Pruefung | `offen` |
-| `gate.oath_readiness` | Pruefgate: Eidesstattliche Versicherung Bereitschaft | `offen` |
+| `gate.heirship_review` | Prüfgate: Erbenstellung Prüfung | `offen` |
+| `gate.oath_readiness` | Prüfgate: Eidesstattliche Versicherung Bereitschaft | `offen` |
 
 ## Nachweise
 

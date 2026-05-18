@@ -3,7 +3,7 @@
   "questions": {
     "q_mode": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#mode-gateway",
-      "mermaid": "flowchart TD\n    Start[Start] --> Mode{Gruendung oder Bestand}\n    Mode -->|Gruendung| Founding[Pfad Gruendung]\n    Mode -->|Bestand| Existing[Pfad Bestandsunternehmen]"
+      "mermaid": "flowchart TD\n    Start[Start] --> Mode{Gründung oder Bestand}\n    Mode -->|Gründung| Founding[Pfad Gründung]\n    Mode -->|Bestand| Existing[Pfad Bestandsunternehmen]"
     },
     "q_company_scope": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#scope-definition",

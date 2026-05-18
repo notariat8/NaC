@@ -1,7 +1,7 @@
 {
   "name": "nac-cyberjack-rfid",
   "version": "0.1.0",
-  "description": "Kartenleser- und SAK-Pruefung vor XNP-Login.",
+  "description": "Kartenleser- und SAK-Prüfung vor XNP-Login.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -26,8 +26,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "NaC Karte/SAK",
-    "shortDescription": "Karte und Leser vor XNP pruefen.",
-    "longDescription": "Installierbares lokales Codex-Plugin fuer notarielle Kartenbereitschaft vor XNP-Login und Online-HRA ohne PIN-, API-Key- oder Kartendatenerfassung.",
+    "shortDescription": "Karte und Leser vor XNP prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für notarielle Kartenbereitschaft vor XNP-Login und Online-HRA ohne PIN-, API-Key- oder Kartendatenerfassung.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -45,8 +45,8 @@
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
       "Erzeuge lokale cyberJack-Bereitschaft vor dem XNP-Login.",
-      "Erstelle einen Kartenpruefplan fuer Online-HRA.",
-      "Pruefe Kartenleser-Drift vor dem XNP-Test."
+      "Erstelle einen Kartenprüfplan für Online-HRA.",
+      "Prüfe Kartenleser-Drift vor dem XNP-Test."
     ],
     "brandColor": "#7A4D2D",
     "composerIcon": "./assets/icon.png",

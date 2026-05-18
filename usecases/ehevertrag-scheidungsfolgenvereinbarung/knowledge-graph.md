@@ -1,35 +1,35 @@
 # Ehevertrag / Scheidungsfolgenvereinbarung Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `top10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `top10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.ehevertrag_scheidungsfolgen`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `spouses.identity` | Ehegatten Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Ehegatten Identitaet benoetigt? |
-| `marriage.context` | Ehe Kontext | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Ehe Kontext benoetigt? |
-| `property.regime` | Grundstueck Regime | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Grundstueck Regime benoetigt? |
-| `asset.disclosure` | Vermoegen Offenlegung | `offen` | Ehegatten | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Offenlegung benoetigt? |
-| `maintenance.rules` | Unterhalt Regeln | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Unterhalt Regeln benoetigt? |
-| `pension.equalization` | Versorgungsausgleich equalization | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Versorgungsausgleich equalization benoetigt? |
-| `child.family.flags` | Kind Familie Pruefflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kind Familie Pruefflaggen benoetigt? |
-| `asset.transfer` | Vermoegen Uebertragung | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Uebertragung benoetigt? |
+| `spouses.identity` | Ehegatten Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Ehegatten Identität benötigt? |
+| `marriage.context` | Ehe Kontext | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Ehe Kontext benötigt? |
+| `property.regime` | Grundstück Regime | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Regime benötigt? |
+| `asset.disclosure` | Vermögen Offenlegung | `offen` | Ehegatten | Welche Angaben, Nachweise und Prüfpunkte werden für Vermögen Offenlegung benötigt? |
+| `maintenance.rules` | Unterhalt Regeln | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Unterhalt Regeln benötigt? |
+| `pension.equalization` | Versorgungsausgleich equalization | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Versorgungsausgleich equalization benötigt? |
+| `child.family.flags` | Kind Familie Prüfflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Kind Familie Prüfflaggen benötigt? |
+| `asset.transfer` | Vermögen Übertragung | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Vermögen Übertragung benötigt? |
 
 ## Dokumente
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.agreement_draft` | Dokument: Vereinbarung Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
-| `doc.asset_schedule_reference` | Dokument: Vermoegen Plan Referenz | `offen` | freigegebener Nachweisspeicher |
+| `doc.agreement_draft` | Dokument: Vereinbarung Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.asset_schedule_reference` | Dokument: Vermögen Plan Referenz | `offen` | freigegebener Nachweisspeicher |
 
 ## Entscheidungen
 
@@ -38,12 +38,12 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | `decision.instrument_type` | Entscheidung: Instrument Art | `offen` |
 | `decision.fairness_risk` | Entscheidung: Fairness Risiko | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.fairness_review` | Pruefgate: Fairness Pruefung | `offen` |
-| `gate.simultaneous_presence` | Pruefgate: Gleichzeitig Anwesenheit | `offen` |
+| `gate.fairness_review` | Prüfgate: Fairness Prüfung | `offen` |
+| `gate.simultaneous_presence` | Prüfgate: Gleichzeitig Anwesenheit | `offen` |
 
 ## Nachweise
 

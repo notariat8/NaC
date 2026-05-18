@@ -2,11 +2,11 @@
 
 ## Ziel
 
-Dieses Dokument beschreibt ein umsetzbares Modell fuer:
+Dieses Dokument beschreibt ein umsetzbares Modell für:
 
-- gemeinsame Task-Uebersicht ueber mehrere Repos,
+- gemeinsame Task-Übersicht über mehrere Repos,
 - strikte Sichtbarkeit je Akte/Repo,
-- Rollen- und Rechtepflege fuer Mitarbeitende, Mandanten und Auditoren.
+- Rollen- und Rechtepflege für Mitarbeitende, Mandanten und Auditoren.
 
 ## Grundregel
 
@@ -15,12 +15,12 @@ In GitHub werden Rechte auf **Repository-Ebene** vergeben, nicht auf Issue-Ebene
 Folge:
 
 - Wer ein Repo nicht sehen darf, sieht auch dessen Issues nicht.
-- Eine gemeinsame Uebersicht ueber viele Repos erfolgt ueber ein Organization-Project.
+- Eine gemeinsame Übersicht über viele Repos erfolgt über ein Organization-Project.
 
-Ergaenzung fuer Compliance:
+Ergänzung für Compliance:
 
 - Issues sind die **operative Ebene**.
-- Revisionssichere Ablage erfolgt ueber ein separates, unveraenderbares Event-Journal.
+- Revisionssichere Ablage erfolgt über ein separates, unveränderbares Event-Journal.
 - Details: `docs/de/eventstream/revisionssicherheit.md`
 
 ## Repo-Typen im Unternehmen
@@ -28,13 +28,13 @@ Ergaenzung fuer Compliance:
 1. `core-repo`
    - zentrale Regeln, Standards, gemeinsame Workflows
 2. `domain-repo`
-   - fachlicher Domaenenkontext (z. B. Notariat)
+   - fachlicher Domänenkontext (z. B. Notariat)
 3. `case-repo`
    - einzelne Akte/Verfahren, z. B. `case-notary-2026-0042`
 
 ## Rollen und technische Zuordnung
 
-Fachliche Rollen werden in `policies/role-model-policy.yaml` gepflegt.  
+Fachliche Rollen werden in `policies/role-model-policy.yaml` gepflegt.
 GitHub-Logins werden in `policies/github-identity-registry.json` den technischen Rollen zugeordnet.
 Repo-/Issue-Sichtbarkeit und Gastzugriffe sind in `policies/access-control-policy.yaml` verbindlich festgelegt.
 
@@ -66,7 +66,7 @@ Hinweis:
 - Notare mit Gesamtverantwortung erhalten Teamzugriff auf alle Notariats-`case-repo`.
 - Mitarbeitende ohne Repo-Aufgabe erhalten keinen Zugriff auf dieses Repo und sehen dessen Issues nicht.
 
-## Gemeinsame Issue-Uebersicht ueber Repos
+## Gemeinsame Issue-Übersicht über Repos
 
 Nutzen Sie ein GitHub Organization Project als zentrale Aufgabenansicht.
 
@@ -89,15 +89,15 @@ Empfohlene Views:
 Wichtig:
 
 - Das Project zeigt nur Issues aus Repos, auf die der Nutzer bereits Zugriff hat.
-- So entsteht eine zentrale Uebersicht ohne Rechtebruch.
+- So entsteht eine zentrale Übersicht ohne Rechtebruch.
 
 ## Standardablauf: Neue Akte anlegen
 
 1. `case-repo` nach Namensstandard anlegen (z. B. `case-notary-2026-0042`).
-2. Repo-Template fuer Akten nutzen (Issue-Templates, Labels, Schutzregeln).
+2. Repo-Template für Akten nutzen (Issue-Templates, Labels, Schutzregeln).
 3. Teamrechte setzen:
    - `team-notaries-all` mindestens `maintain`
-   - zustaendige Sachbearbeitung `write`
+   - zuständige Sachbearbeitung `write`
 4. Mandant als Gastnutzer hinzufuegen (`read` oder `triage` je Policy).
 5. Auditor (falls erforderlich) als Gastnutzer mit `read` zuweisen.
 6. Start-Issues aus Vorlage erstellen:
@@ -107,9 +107,9 @@ Wichtig:
    - `approval_gate`
    - `execution_tracking`
 7. Issues dem Organization-Project zuordnen und Pflichtfelder befuellen.
-8. `process_version` fuer den Vorgang dokumentieren (Version-Binding).
+8. `process_version` für den Vorgang dokumentieren (Version-Binding).
 
-## Pflegeprozess fuer Rollen und Rechte
+## Pflegeprozess für Rollen und Rechte
 
 Pflegeorte:
 
@@ -121,13 +121,13 @@ Pflegeorte:
 Pflegezyklus:
 
 1. Monatsweise Rollenreview mit Prozessverantwortung.
-2. Quartalsweise Rezertifizierung fuer Gastzugriffe.
+2. Quartalsweise Rezertifizierung für Gastzugriffe.
 3. Sofortige Anpassung bei Rollenwechsel, Offboarding oder Incident.
 
 ## Mindestkontrollen
 
-- keine direkten Aenderungen auf `main`
-- PR + Review fuer alle Prozessaenderungen
+- keine direkten Änderungen auf `main`
+- PR + Review für alle Prozessänderungen
 - CODEOWNERS pro Domain/Case
 - Environment-Gates bei approval-pflichtigen Schritten
-- Audit-Log regelmaessig pruefen (Gastzugriffe, Repo-Berechtigungen, Freigaben)
+- Audit-Log regelmäßig prüfen (Gastzugriffe, Repo-Berechtigungen, Freigaben)

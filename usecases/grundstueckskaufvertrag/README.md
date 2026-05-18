@@ -1,15 +1,15 @@
-# Grundstueckskaufvertrag
+# Grundstückskaufvertrag
 
-Status: legacy_alias  
-Reifegrad: Legacy-Starteralias, P2  
-KG-Knoten: `case.grundstueckskaufvertrag`  
+Status: legacy_alias
+Reifegrad: Legacy-Starteralias, P2
+KG-Knoten: `case.grundstueckskaufvertrag`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
 ## Worum Es Geht
 
-Legacy-Starter-Alias fuer usecases/immobilienkaufvertrag; bleibt aus Kompatibilitaetsgruenden bestehen, waehrend neue Workflow-Arbeit den kanonischen Usecase nutzt.
+Legacy-Starter-Alias für usecases/immobilienkaufvertrag; bleibt aus Kompatibilitätsgründen bestehen, während neue Workflow-Arbeit den kanonischen Usecase nutzt.
 
-Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
 ## Was Heute Im Muster Enthalten Ist
 
@@ -18,31 +18,31 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 | Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
 | Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
 | Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
-| Pruefgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
 
 ## Offene Angaben
 
 | Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Grundstueck Identitaet | Notariatsfachkraft | land_register_review, drafting, execution |
-| `seller.identity` | Verkaeufer Identitaet | Notariatsfachkraft | identity_gate, drafting, appointment |
-| `buyer.identity` | Kaeufer Identitaet | Notariatsfachkraft | identity_gate, drafting, tax_notifications |
+| `property.identity` | Grundstück Identität | Notariatsfachkraft | land_register_review, drafting, execution |
+| `seller.identity` | Verkäufer Identität | Notariatsfachkraft | identity_gate, drafting, appointment |
+| `buyer.identity` | Käufer Identität | Notariatsfachkraft | identity_gate, drafting, tax_notifications |
 | `purchase.price` | Kaufpreis und Faelligkeitsmodell | Notariat | drafting, maturity_tracking, execution |
 | `encumbrances.current` | Belastungen aktueller Stand | Notariatsfachkraft | land_register_review, bank_coordination, drafting |
 | `financing.required` | Finanzierung erforderlich | Notariatsfachkraft | bank_coordination, appointment_planning |
-| `possession.transfer` | Besitz Uebertragung | Notariat | drafting, closing |
-| `public.approvals` | Oeffentlich Genehmigungen | Notariatsfachkraft | execution, land_register_filing |
+| `possession.transfer` | Besitz Übertragung | Notariat | drafting, closing |
+| `public.approvals` | Öffentlich Genehmigungen | Notariatsfachkraft | execution, land_register_filing |
 
-## Grenzen Fuer Den Betrieb
+## Grenzen Für Den Betrieb
 
 - Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
 - KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
-- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
 - Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
 ## Plugin- Und Workflow-Bindung
 
-Primaere Plugins:
+Primäre Plugins:
 
 - `nac-regulated-core`
 - `nac-grundbuch-portal`
@@ -59,7 +59,7 @@ Fachliche Anker im KG-Modell:
 - `src.bgb.311b`
 - `src.gbo`
 
-## Wie Man Diesen Usecase Prueft
+## Wie Man Diesen Usecase Prüft
 
 ```bash
 python scripts/notary_kg.py --repo-root . case grundstueckskaufvertrag
@@ -67,7 +67,7 @@ python scripts/notary_kg.py --repo-root . editor-view grundstueckskaufvertrag
 python scripts/validate_knowledge_graph.py
 ```
 
-## Naechster Lesepfad
+## Nächster Lesepfad
 
 - [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
 - [docs/de/glossar.md](../../docs/de/glossar.md)

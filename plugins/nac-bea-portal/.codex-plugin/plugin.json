@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "NaC beA-Postfach",
     "shortDescription": "beA-Aufgaben und Nachweise planen.",
-    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Pruefungen und Nachweiserfassung.",
+    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter für Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Prüfungen und Nachweiserfassung.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe die NaC beA-Portal-Bereitschaft.",
-      "Erstelle einen Einrichtungsplan fuer das beA-Portal.",
-      "Pruefe Betriebsdrift fuer den beA-Portal-Pfad."
+      "Prüfe die NaC beA-Portal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für das beA-Portal.",
+      "Prüfe Betriebsdrift für den beA-Portal-Pfad."
     ],
     "brandColor": "#6B3F5F",
     "composerIcon": "./assets/icon.png",

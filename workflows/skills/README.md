@@ -1,12 +1,12 @@
 # Workflow-Skills
 
-Dieser Ordner ist fuer installierbare oder repo-lokale Skills reserviert, die
-Notariats-Workflows bedienen. Skills duerfen Intake, Checks, Freigaben und
-Uebergaben fuehren, aber sie sind keine finale rechtliche Autoritaet.
+Dieser Ordner ist für installierbare oder repo-lokale Skills reserviert, die
+Notariats-Workflows bedienen. Skills dürfen Intake, Checks, Freigaben und
+Übergaben führen, aber sie sind keine finale rechtliche Autorität.
 
-Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
-Commands und IDs bleiben englisch/ASCII. Jeder Skill enthaelt zusaetzlich eine
-kurze englische Summary fuer technische Anschlussfaehigkeit.
+Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
+Commands und IDs bleiben englisch/ASCII. Jeder Skill enthält zusätzlich eine
+kurze englische Summary für technische Anschlussfähigkeit.
 
 ## Englische Kurzfassung
 
@@ -17,8 +17,8 @@ English/ASCII where needed.
 Jeder Workflow-Skill muss dokumentieren:
 
 - ausloesende Usecases,
-- benoetigte Plugins,
-- benoetigte menschliche Freigaben,
+- benötigte Plugins,
+- benötigte menschliche Freigaben,
 - Datenklassen,
 - verbotene Aktionen,
 - Evidence-Metadaten.

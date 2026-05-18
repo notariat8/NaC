@@ -1,25 +1,25 @@
-# NaC eID-Pruefung
+# NaC eID-Prüfung
 
-Quellrepository geprueft am 2026-05-14: `ofunk/IDaaS`
+Quellrepository geprüft am 2026-05-14: `ofunk/IDaaS`
 
 Dieses Plugin kanonisiert das fruehere IDaaS-Repository in die NaC-Plugin-
-Schicht. Es ist ein lokaler regulierter Begleiter fuer deutsche
-eID-Pruefungs-Bereitschaft und IAM-Projektionsplanung.
+Schicht. Es ist ein lokaler regulierter Begleiter für deutsche
+eID-Prüfungs-Bereitschaft und IAM-Projektionsplanung.
 
 ## Umfang
 
-- deutsche eID-Bereitschaft ueber AusweisApp-orientierte Ablaeufe
+- deutsche eID-Bereitschaft über AusweisApp-orientierte Abläufe
 - Minimierung verifizierter Claims
 - Einwilligungs- und Zweckbindungsnachweise
-- IAM-Projektionsplanung fuer Entra ID, Oracle IAM und SCIM-Ziele
-- Trockenlauf-Pruefung von API- und Eventvertraegen
+- IAM-Projektionsplanung für Entra ID, Oracle IAM und SCIM-Ziele
+- Trockenlauf-Prüfung von API- und Eventverträgen
 
 ## Grenze
 
-Dieses Plugin fuehrt standardmaessig keine produktiven eID-Transaktionen aus,
-speichert keine Identitaetsdokumente, schreibt nicht in IAM-Systeme und reicht
+Dieses Plugin führt standardmäßig keine produktiven eID-Transaktionen aus,
+speichert keine Identitätsdokumente, schreibt nicht in IAM-Systeme und reicht
 keine Daten bei externen Diensten ein. Jeder produktive Connector muss separat
-geprueft, freigegeben und bei Verarbeitung personenbezogener Daten an einen AVV
+geprüft, freigegeben und bei Verarbeitung personenbezogener Daten an einen AVV
 gebunden werden.
 
 ## Migrierte Quelle
@@ -27,9 +27,9 @@ gebunden werden.
 Das Quellrepository enthielt:
 
 - Produkt- und Architekturdokumentation
-- OpenAPI-Skizze fuer den Verification-Vertrag
+- OpenAPI-Skizze für den Verification-Vertrag
 - `assertion-issued`-Eventschema
-- Platzhalterordner fuer Verification-Orchestrierung und IAM-Projektion
+- Platzhalterordner für Verification-Orchestrierung und IAM-Projektion
 
 Das kanonische NaC-Plugin-Material liegt jetzt hier:
 
@@ -40,11 +40,11 @@ Das kanonische NaC-Plugin-Material liegt jetzt hier:
 - `contracts/assertion-issued.schema.json`
 - `docs/source-summary.md`
 
-## Veroeffentlichungskanal
+## Veröffentlichungskanal
 
-Dieses Plugin ist nicht automatisch fuer den oeffentlichen GPT Store bereit. Es muss zuerst nach
+Dieses Plugin ist nicht automatisch für den öffentlichen GPT Store bereit. Es muss zuerst nach
 [docs/de/gpt-marketplace-operating-model.md](../../docs/de/gpt-marketplace-operating-model.md)
 und
 [docs/en/gpt-marketplace-operating-model.md](../../docs/en/gpt-marketplace-operating-model.md)
-als oeffentlicher GPT Store, GPT mit Aktionen, Arbeitsbereich-App oder lokales
+als öffentlicher GPT Store, GPT mit Aktionen, Arbeitsbereich-App oder lokales
 Codex-Plugin klassifiziert werden.

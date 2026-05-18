@@ -1,26 +1,26 @@
 # Steuer-aaS Steuer-Readiness Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `active-intake`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `active-intake`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.steuer_aas`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `tax.subject` | Steuer Subjekt | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Pruefpunkte werden fuer Steuer Subjekt benoetigt? |
-| `tax.type` | Steuer Art | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Pruefpunkte werden fuer Steuer Art benoetigt? |
-| `period.scope` | Zeitraum Umfang | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zeitraum Umfang benoetigt? |
-| `elster.identity` | ELSTER Identitaet | `offen` | Systembetreuung | Welche Angaben, Nachweise und Pruefpunkte werden fuer ELSTER Identitaet benoetigt? |
-| `documents.package` | Dokumente Paket | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Pruefpunkte werden fuer Dokumente Paket benoetigt? |
-| `audit.evidence` | Pruefung Nachweis | `offen` | Compliance | Welche Angaben, Nachweise und Pruefpunkte werden fuer Pruefung Nachweis benoetigt? |
+| `tax.subject` | Steuer Subjekt | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Prüfpunkte werden für Steuer Subjekt benötigt? |
+| `tax.type` | Steuer Art | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Prüfpunkte werden für Steuer Art benötigt? |
+| `period.scope` | Zeitraum Umfang | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Prüfpunkte werden für Zeitraum Umfang benötigt? |
+| `elster.identity` | ELSTER Identität | `offen` | Systembetreuung | Welche Angaben, Nachweise und Prüfpunkte werden für ELSTER Identität benötigt? |
+| `documents.package` | Dokumente Paket | `offen` | Steuer-Sachbearbeitung | Welche Angaben, Nachweise und Prüfpunkte werden für Dokumente Paket benötigt? |
+| `audit.evidence` | Prüfung Nachweis | `offen` | Compliance | Welche Angaben, Nachweise und Prüfpunkte werden für Prüfung Nachweis benötigt? |
 
 ## Dokumente
 
@@ -34,18 +34,18 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.workflow_route` | Entscheidung: Workflow Route | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.identity` | Pruefgate: Identitaet | `offen` |
-| `gate.notarial_review` | Pruefgate: Notariell Pruefung | `offen` |
+| `gate.identity` | Prüfgate: Identität | `offen` |
+| `gate.notarial_review` | Prüfgate: Notariell Prüfung | `offen` |
 
 ## Nachweise
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `evidence.git_review` | Nachweis: Git Pruefung | `offen` |
+| `evidence.git_review` | Nachweis: Git Prüfung | `offen` |
 
 ## Datenschutzregel
 

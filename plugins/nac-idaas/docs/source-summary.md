@@ -4,17 +4,17 @@ Quellrepository: `ofunk/IDaaS`
 
 ## Produktthese
 
-IDaaS ist ein deutschlandzentriertes Konzept fuer Identitaetspruefung und
-IAM-Projektion. Es nutzt die deutsche eID ueber AusweisApp als Vertrauensanker
-und ueberfuehrt verifizierte Claims in zweckgebundene Assertions oder
+IDaaS ist ein deutschlandzentriertes Konzept für Identitätsprüfung und
+IAM-Projektion. Es nutzt die deutsche eID über AusweisApp als Vertrauensanker
+und überführt verifizierte Claims in zweckgebundene Assertions oder
 Ziel-IAM-Projektionen.
 
 ## MVP-Umfang
 
-- API fuer Verification-Start und Status
+- API für Verification-Start und Status
 - AusweisApp-orientierte eID-Orchestrierung
 - Einwilligungs- und Audit-Erfassung
-- signierte Assertions fuer Kundenanwendungen
+- signierte Assertions für Kundenanwendungen
 - mindestens ein produktionsnaher IAM-Connector
 - Mapping-Regeln von Claim zu Attribut
 
@@ -26,8 +26,8 @@ Ziel-IAM-Projektionen.
 
 ## NaC-Adaption
 
-Das fruehere eigenstaendige SaaS-Konzept wird jetzt als NaC-Plugin behandelt.
-Das Plugin fuehrt standardmaessig Readiness-Planung, Vertragspruefung und
-metadatenbasierte Nachweisfuehrung aus. Produktive eID-Transaktionen oder
-IAM-Schreibvorgaenge brauchen einen separat geprueften Connector und explizite
+Das fruehere eigenständige SaaS-Konzept wird jetzt als NaC-Plugin behandelt.
+Das Plugin führt standardmäßig Readiness-Planung, Vertragsprüfung und
+metadatenbasierte Nachweisführung aus. Produktive eID-Transaktionen oder
+IAM-Schreibvorgänge brauchen einen separat geprüften Connector und explizite
 menschliche Freigabe.

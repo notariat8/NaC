@@ -1,7 +1,7 @@
 {
   "name": "nac-grundbuch-portal",
   "version": "0.1.0",
-  "description": "Grundbuch-Berechtigung und Abrufplanung pruefen.",
+  "description": "Grundbuch-Berechtigung und Abrufplanung prüfen.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -20,8 +20,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "NaC Grundbuch",
-    "shortDescription": "Berechtigung und Abrufplanung pruefen.",
-    "longDescription": "Lokaler Grundbuchportal-Begleiter fuer Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
+    "shortDescription": "Berechtigung und Abrufplanung prüfen.",
+    "longDescription": "Lokaler Grundbuchportal-Begleiter für Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe die NaC Grundbuchportal-Bereitschaft.",
-      "Erstelle einen Einrichtungsplan fuer den Grundbuchportal-Pfad.",
-      "Pruefe Betriebsdrift fuer Grundbuchportal-Nachweise."
+      "Prüfe die NaC Grundbuchportal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für den Grundbuchportal-Pfad.",
+      "Prüfe Betriebsdrift für Grundbuchportal-Nachweise."
     ],
     "brandColor": "#395C73",
     "composerIcon": "./assets/icon.png",

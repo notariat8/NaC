@@ -1,18 +1,18 @@
 ---
-description: Konzeptaenderungen immer IDE-uebergreifend synchron halten
+description: Konzeptänderungen immer IDE-übergreifend synchron halten
 alwaysApply: true
 ---
 
 # Cross-IDE Sync (MUSS)
 
-- Jede Konzeptaenderung gilt fuer alle unterstuetzten IDE-Pfade.
-- Bei Aenderungen an Regeln, Onboarding oder Governance immer auch Cursor- und VS-Code-Copilot-Dokumente pruefen.
-- Keine einseitige Pflege nur fuer eine Plattform.
-- Wenn eine Plattform noch keinen gleichwertigen Abschnitt hat, muss dieser in derselben Aenderung angelegt werden.
-- Sprachabhaengige Inhalte muessen immer fuer alle Standardsprachen nach [policies/language-policy.yaml](../../policies/language-policy.yaml) gepflegt werden.
-- `de` und `en` sind verpflichtend, unabhaengig von der Sprache des Prompts.
+- Jede Konzeptänderung gilt für alle unterstützten IDE-Pfade.
+- Bei Änderungen an Regeln, Onboarding oder Governance immer auch Cursor- und VS-Code-Copilot-Dokumente prüfen.
+- Keine einseitige Pflege nur für eine Plattform.
+- Wenn eine Plattform noch keinen gleichwertigen Abschnitt hat, muss dieser in derselben Änderung angelegt werden.
+- Sprachabhängige Inhalte müssen immer für alle Standardsprachen nach [policies/language-policy.yaml](../../policies/language-policy.yaml) gepflegt werden.
+- `de` und `en` sind verpflichtend, unabhängig von der Sprache des Prompts.
 
-Minimum fuer jede konzeptuelle Aenderung:
+Minimum für jede konzeptuelle Änderung:
 
 1. [AGENTS.md](../../AGENTS.md)
 2. [.cursor/rules/](.) relevante Regeln

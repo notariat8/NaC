@@ -29,7 +29,7 @@ platform_features:
     required: optional
     subscription_required: true
     notes:
-      - "Bietet zusaetzliche Security-Funktionen, ist aber fuer SBOM-Erzeugung nicht zwingend."
+      - "Bietet zusätzliche Security-Funktionen, ist aber für SBOM-Erzeugung nicht zwingend."
 
 governance:
   required_on_release: true

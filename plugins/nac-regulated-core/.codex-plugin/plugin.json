@@ -1,7 +1,7 @@
 {
   "name": "nac-regulated-core",
   "version": "0.1.0",
-  "description": "Schutzplanken und Freigaben fuer regulierte NaC-Arbeit.",
+  "description": "Schutzplanken und Freigaben für regulierte NaC-Arbeit.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "NaC Regulierung",
     "shortDescription": "Schutzplanken, Freigaben und Nachweise.",
-    "longDescription": "Lokaler Begleiter fuer Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisfuehrung in regulierten NaC-Arbeitsablaeufen.",
+    "longDescription": "Lokaler Begleiter für Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisführung in regulierten NaC-Arbeitsabläufen.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe die NaC-Schutzplanken fuer diesen regulierten Ablauf.",
+      "Prüfe die NaC-Schutzplanken für diesen regulierten Ablauf.",
       "Erstelle einen Einrichtungsplan mit Freigabe- und Nachweispunkten.",
-      "Pruefe Betriebsdrift fuer diesen regulierten NaC-Ablauf."
+      "Prüfe Betriebsdrift für diesen regulierten NaC-Ablauf."
     ],
     "brandColor": "#245C4F",
     "composerIcon": "./assets/icon.png",

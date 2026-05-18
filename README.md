@@ -1,37 +1,37 @@
 # NaC: Notariat as Code
 
-NaC ist ein oeffentliches Referenz- und Produktkern-Repository fuer den
+NaC ist ein öffentliches Referenz- und Produktkern-Repository für den
 AI-first-Betrieb notarieller Vorgangsarten. Ein Notariat soll dieses Repository
-klonen, pruefen und als Vorlage fuer einen privaten, eigenen Betriebs-Fork nutzen
-koennen.
+klonen, prüfen und als Vorlage für einen privaten, eigenen Betriebs-Fork nutzen
+können.
 
 Der Kern ist einfach: KI hilft beim Strukturieren, Menschen entscheiden, Git
-dokumentiert, Python prueft, und echte Mandatsdaten bleiben ausserhalb dieses
-oeffentlichen Repositories.
+dokumentiert, Python prüft, und echte Mandatsdaten bleiben außerhalb dieses
+öffentlichen Repositories.
 
 Herausgeber und Maintainer: [ofunk](https://github.com/ofunk). Weitere
 Einordnung steht in [HERAUSGEBER.md](HERAUSGEBER.md).
 
-Deutsch ist repo-weit die fuehrende Sprache fuer menschlich lesbare Inhalte.
-Englisch ist Pflichtsprache fuer lokalisierte Spiegel, aber nur Uebersetzung
-oder Orientierung. Fuer deutsches Recht und notarielle Usecases ist Deutsch
-fuehrend und rechtlich bindend. Die verbindliche Sprachregel steht in
+Deutsch ist repo-weit die führende Sprache für menschlich lesbare Inhalte.
+Englisch ist Pflichtsprache für lokalisierte Spiegel, aber nur Übersetzung
+oder Orientierung. Für deutsches Recht und notarielle Usecases ist Deutsch
+führend und rechtlich bindend. Die verbindliche Sprachregel steht in
 [policies/language-policy.yaml](policies/language-policy.yaml) und wird mit
 [scripts/validate_language_parity.py](scripts/validate_language_parity.py)
-geprueft.
+geprüft.
 
-## Fuer Wen
+## Für Wen
 
 | Zielgruppe | Einstieg | Worum es geht |
 | --- | --- | --- |
-| Notariat und fachliche Entscheidung | [docs/de/notar-start.md](docs/de/notar-start.md) | Nutzen, Grenzen, Datenschutz, erster Prueflauf und Entscheidung, ob ein privater Fork sinnvoll ist. |
+| Notariat und fachliche Entscheidung | [docs/de/notar-start.md](docs/de/notar-start.md) | Nutzen, Grenzen, Datenschutz, erster Prüflauf und Entscheidung, ob ein privater Fork sinnvoll ist. |
 | Office-Admin und IT-Betrieb | [docs/de/betriebsstart.md](docs/de/betriebsstart.md) | Klonen, lokale Checks, private Betriebsumgebung, Rollen, Arbeitsplatz- und Plugin-Voraussetzungen. |
-| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NaC angebunden werden koennen. |
-| Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
-| Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart fuer Code, Policies, Plugins, Workflows, Usecases und Agenten. |
+| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NaC angebunden werden können. |
+| Prüfung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
+| Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart für Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
-Schnelle Orientierung fuer Nicht-Technik:
-[Ausfuehrungsmodell](docs/de/ausfuehrungsmodell.md),
+Schnelle Orientierung für Nicht-Technik:
+[Ausführungsmodell](docs/de/ausfuehrungsmodell.md),
 [Reifegrad](docs/de/reifegrad.md), [Glossar](docs/de/glossar.md) und
 [Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
 
@@ -42,38 +42,38 @@ Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
 
 ## Was Dieses Repo Leistet
 
-- Es beschreibt notarielle Vorgangsarten als versionierte, pruefbare Usecases.
-- Es trennt oeffentliche Muster, private Kanzlei-/Notariatsdaten und lokale
+- Es beschreibt notarielle Vorgangsarten als versionierte, prüfbare Usecases.
+- Es trennt öffentliche Muster, private Kanzlei-/Notariatsdaten und lokale
   Fachsysteme.
-- Es stellt Plugins, Workflow-Vertraege und deterministische Python-Pruefungen
-  fuer AI-first-Betrieb bereit.
+- Es stellt Plugins, Workflow-Verträge und deterministische Python-Prüfungen
+  für AI-first-Betrieb bereit.
 - Es macht Freigaben, offene Fragen, technische Readiness, Datenschutzgrenzen und
   Nachweise nachvollziehbar.
 - Es verhindert im Musterrepo echte personenbezogene Daten, Secrets, PINs,
-  Registerauszuege oder Mandatsdokumente.
+  Registerauszüge oder Mandatsdokumente.
 
 ## Was Es Bewusst Nicht Leistet
 
 - NaC ersetzt kein vorgeschriebenes Fachsystem und keine berufsrechtliche
   Verantwortung.
 - NaC ist keine automatische Rechtsberatung und keine autonome Beurkundung.
-- Oeffentliche Repository-Dateien sind keine Ablage fuer echte Akten,
-  Ausweisdaten, Registerauszuege, Zahlungsdaten oder Signaturgeheimnisse.
+- Öffentliche Repository-Dateien sind keine Ablage für echte Akten,
+  Ausweisdaten, Registerauszüge, Zahlungsdaten oder Signaturgeheimnisse.
 - Produktive Nutzung braucht einen privaten Fork, lokale Rollen, Freigaben,
-  Datenschutzklaerung und einen geprueften Arbeitsplatz.
+  Datenschutzklärung und einen geprüften Arbeitsplatz.
 
 ## Produktstruktur
 
 Dieses Repository trennt drei Produktbereiche:
 
-- [plugins/](plugins): installierbare Plugin-Artefakte fuer GPT-Store-Pruefung,
+- [plugins/](plugins): installierbare Plugin-Artefakte für GPT-Store-Prüfung,
   Workspace-Installation oder lokale Integration.
 - [workflows/](workflows): wiederverwendbare Notariats-Workflows, getrennt nach
-  installierbaren Skills, Workflow-Vertraegen und deterministischer
-  Python-Ausfuehrung.
+  installierbaren Skills, Workflow-Verträgen und deterministischer
+  Python-Ausführung.
 - [usecases/](usecases): konkrete notarielle Vorgangsarten wie
-  Online-GmbH-Gruendung, Immobilienkaufvertrag, Handelsregisteranmeldung oder
-  Testament. Jeder Usecase besitzt seine eigene statische KG/DB fuer offene
+  Online-GmbH-Gründung, Immobilienkaufvertrag, Handelsregisteranmeldung oder
+  Testament. Jeder Usecase besitzt seine eigene statische KG/DB für offene
   Fragen, Dokumente, Entscheidungen, Gates und Nachweisreferenzen.
 
 Weitere Dokumentation:
@@ -81,7 +81,7 @@ Weitere Dokumentation:
 - Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
 - Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
-- Ausfuehrungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
+- Ausführungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
 - Reifegrad: [docs/de/reifegrad.md](docs/de/reifegrad.md)
 - Glossar: [docs/de/glossar.md](docs/de/glossar.md)
 - Beispiel Immobilienkaufvertrag: [docs/de/beispiel-immobilienkaufvertrag.md](docs/de/beispiel-immobilienkaufvertrag.md)
@@ -90,7 +90,7 @@ Weitere Dokumentation:
 - KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)
 - Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
 
-## Erster Prueflauf
+## Erster Prüflauf
 
 Nach dem Klonen:
 
@@ -105,8 +105,8 @@ Wenn Python noch nicht eingerichtet ist, zuerst
 
 ## Aktueller Entwicklungsmodus
 
-NaC wird als ausfuehrbare Software entwickelt, nicht nur als Dokumentation. Die
-aktuell implementierte Runtime-Oberflaeche ist die notarielle KG-CLI:
+NaC wird als ausführbare Software entwickelt, nicht nur als Dokumentation. Die
+aktuell implementierte Runtime-Oberfläche ist die notarielle KG-CLI:
 
 ```bash
 python scripts/notary_kg.py --repo-root . status
@@ -117,13 +117,13 @@ python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.
 
-## Push- Und Qualitaetsregel
+## Push- Und Qualitätsregel
 
-Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren. Aenderungen
+Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren. Änderungen
 unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases)
-muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
+müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
 
-Das strikte Quality Gate prueft Prozessdateien, Tests, Datenschutzregeln,
-Governance-Sync, Sprachregeln, Cloud-Runbook-Paritaet, Plugin-Manifeste,
+Das strikte Quality Gate prüft Prozessdateien, Tests, Datenschutzregeln,
+Governance-Sync, Sprachregeln, Cloud-Runbook-Parität, Plugin-Manifeste,
 AI-SBOM-Stand, Gantt-Pflege, die usecase-lokalen statischen Knowledge Graphs
 und den KG-Editor-Vertrag.

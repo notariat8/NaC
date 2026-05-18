@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "NaC Register",
     "shortDescription": "Registeranmeldungen vorbereiten.",
-    "longDescription": "Lokaler Handelsregister-Begleiter fuer HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
+    "longDescription": "Lokaler Handelsregister-Begleiter für HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -38,9 +38,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Bereite eine HRA-Onlineanmeldung nach der XNP-Pruefung vor.",
-      "Pruefe die notarielle Online-Verfahrensbereitschaft.",
-      "Erzeuge Nachweismetadaten fuer eine HRA-Anmeldung."
+      "Bereite eine HRA-Onlineanmeldung nach der XNP-Prüfung vor.",
+      "Prüfe die notarielle Online-Verfahrensbereitschaft.",
+      "Erzeuge Nachweismetadaten für eine HRA-Anmeldung."
     ],
     "brandColor": "#2F5C8A",
     "composerIcon": "./assets/icon.png",

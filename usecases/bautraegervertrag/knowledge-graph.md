@@ -1,34 +1,34 @@
-# Bautraegervertrag Wissensgraph
+# Bauträgervertrag Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `next10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.bautraegervertrag`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `developer.identity` | Bautraeger Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Bautraeger Identitaet benoetigt? |
-| `buyer.identity` | Kaeufer Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kaeufer Identitaet benoetigt? |
-| `object.identity` | Objekt Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Objekt Identitaet benoetigt? |
-| `construction.specification` | Bauleistung Spezifikation | `offen` | Bautraeger | Welche Angaben, Nachweise und Pruefpunkte werden fuer Bauleistung Spezifikation benoetigt? |
-| `installment.plan` | Ratenplan Plan | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Ratenplan Plan benoetigt? |
-| `defects.acceptance` | Maengel acceptance | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Maengel acceptance benoetigt? |
+| `developer.identity` | Bauträger Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Bauträger Identität benötigt? |
+| `buyer.identity` | Käufer Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt? |
+| `object.identity` | Objekt Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Objekt Identität benötigt? |
+| `construction.specification` | Bauleistung Spezifikation | `offen` | Bauträger | Welche Angaben, Nachweise und Prüfpunkte werden für Bauleistung Spezifikation benötigt? |
+| `installment.plan` | Ratenplan Plan | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Ratenplan Plan benötigt? |
+| `defects.acceptance` | Mängel acceptance | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Mängel acceptance benötigt? |
 
 ## Dokumente
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.developer_contract_draft` | Dokument: Bautraeger Vertrag Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
+| `doc.developer_contract_draft` | Dokument: Bauträger Vertrag Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
 | `doc.specification_package` | Dokument: Spezifikation Paket | `offen` | freigegebener Nachweisspeicher |
-| `doc.land_register_state` | Dokument: Grundbuch Register Stand | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_state` | Dokument: Grundbuch Register Stand | `offen` | nac-grundbuch-portal oder manuell geprüfter Upload |
 
 ## Entscheidungen
 
@@ -37,12 +37,12 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | `decision.payment_model` | Entscheidung: Zahlung Modell | `offen` |
 | `decision.object_state` | Entscheidung: Objekt Stand | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.consumer_draft_period` | Pruefgate: Verbraucher-Entwurfsfrist | `offen` |
-| `gate.installment_review` | Pruefgate: Ratenplan Pruefung | `offen` |
+| `gate.consumer_draft_period` | Prüfgate: Verbraucher-Entwurfsfrist | `offen` |
+| `gate.installment_review` | Prüfgate: Ratenplan Prüfung | `offen` |
 
 ## Nachweise
 

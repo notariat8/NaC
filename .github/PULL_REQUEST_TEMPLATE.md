@@ -1,9 +1,9 @@
-## Geschaeftsvorgang
+## Geschäftsvorgang
 
 - Prozessklasse:
 - Request-ID:
 - Fachlicher Zweck:
-- Ausfuehrende Rolle:
+- Ausführende Rolle:
 - Entscheidungstyp (`self_resolve|requires_review|requires_approval`):
 - Qualifikation erforderlich (falls ja, welche):
 
@@ -11,8 +11,8 @@
 
 - [ ] Prozessdatei liegt unter `processes/`
 - [ ] Python-Validierung war erfolgreich
-- [ ] Idempotenz wurde geprueft
-- [ ] Keine unnoetigen vertraulichen Daten im Diff
+- [ ] Idempotenz wurde geprüft
+- [ ] Keine unnötigen vertraulichen Daten im Diff
 - [ ] Keine echten personenbezogenen Daten im Diff
 - [ ] Keine Secrets oder Zugangsdaten im Diff
 

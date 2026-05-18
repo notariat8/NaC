@@ -2,35 +2,35 @@
   "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.vollmacht-immobilien-gesellschaftsgeschaefte",
   "catalog_group": "next10",
-  "title": "NaC Usecase-Wissensgraph: Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte",
+  "title": "NaC Usecase-Wissensgraph: Vollmacht für Immobilien- oder Gesellschaftsgeschäfte",
   "status": "draft",
   "last_update": "2026-05-17",
-  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
-  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehoeren in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV fuer Abschlagszahlungsregelungen in Bautraegervertraegen",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identitaet, Geschaeftsfaehigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Paragraph 1410 zur Form von Ehevertraegen",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und oeffentlicher Beglaubigung",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Paragraph 1750 fuer Einwilligungserklaerungen bei Adoption",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Paragraph 311b fuer Vertraege ueber Grundstuecke, Vermoegen und Nachlaesse",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
@@ -60,63 +60,63 @@
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Paragraph 650u fuer Bautraegervertraege",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Paragraph 77 fuer Vereinsregisteranmeldungen",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstuecken",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung fuer Grundbuchantraege, Bewilligungsnachweise und Erbnachweise",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Loeschungsvermerk",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG fuer GmbH-Gruendung, Anmeldung und Geschaeftsfuehrerdaten",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Paragraph 15 zur Uebertragung von GmbH-Geschaeftsanteilen",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Paragraph 53 zur Form von Satzungsaenderungen",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Paragraph 12 fuer elektronische Handelsregisteranmeldungen in oeffentlich beglaubigter Form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Paragraph 8 zur Teilung durch den Eigentuemer in Wohnungs- oder Teileigentum",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identitaet, Geschaeftsfaehigkeit und Vertretung geprueft"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarielle Rechtspruefung abgeschlossen"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
@@ -124,18 +124,18 @@
     },
     {
       "id": "gate.evidence",
-      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknuepft"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
     {
       "id": "case.vollmacht_immobilien_gesellschaft",
       "slug": "vollmacht-immobilien-gesellschaftsgeschaefte",
-      "title": "Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte",
+      "title": "Vollmacht für Immobilien- oder Gesellschaftsgeschäfte",
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/vollmacht-immobilien-gesellschaftsgeschaefte",
-      "summary": "Notarielle oder oeffentlich beglaubigte Vollmachten fuer Immobilienvertraege, Registeranmeldungen, Gesellschafterversammlungen oder Anteilsuebertragungen mit Umfang, Form und Nachweisen.",
+      "summary": "Notarielle oder öffentlich beglaubigte Vollmachten für Immobilienverträge, Registeranmeldungen, Gesellschafterversammlungen oder Anteilsübertragungen mit Umfang, Form und Nachweisen.",
       "legal_anchors": [
         "src.beurkg",
         "src.bgb.167_129",
@@ -145,10 +145,10 @@
       "required_information": [
         {
           "id": "principal.identity",
-          "label": "Vollmachtgeber Identitaet",
+          "label": "Vollmachtgeber Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Vollmachtgeber Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Vollmachtgeber Identität benötigt?",
           "owner_role": "notary",
           "privacy_class": "personal_or_company_data",
           "required_for": [
@@ -157,10 +157,10 @@
         },
         {
           "id": "agent.identity",
-          "label": "Bevollmaechtigter Identitaet",
+          "label": "Bevollmaechtigter Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Bevollmaechtigter Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Bevollmaechtigter Identität benötigt?",
           "owner_role": "principal",
           "privacy_class": "personal_data",
           "required_for": [
@@ -169,10 +169,10 @@
         },
         {
           "id": "transaction.scope",
-          "label": "Geschaeft Umfang",
+          "label": "Geschäft Umfang",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Geschaeft Umfang benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Geschäft Umfang benötigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -185,7 +185,7 @@
           "label": "Form Anforderung",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Form Anforderung benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Form Anforderung benötigt?",
           "owner_role": "notary",
           "privacy_class": "legal_metadata",
           "required_for": [
@@ -197,7 +197,7 @@
           "label": "Beschraenkungen Ablauf",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Beschraenkungen Ablauf benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Beschraenkungen Ablauf benötigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -209,7 +209,7 @@
           "label": "Zustellung Nachweis",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Zustellung Nachweis benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Zustellung Nachweis benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -222,7 +222,7 @@
           "id": "doc.power_of_attorney",
           "label": "Dokument: Vollmacht von Vollmacht",
           "status": "open",
-          "source": "nach Pruefung erzeugter Workflow-Entwurf",
+          "source": "nach Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
@@ -263,13 +263,13 @@
       "gates": [
         {
           "id": "gate.form_review",
-          "label": "Pruefgate: Form Pruefung",
+          "label": "Prüfgate: Form Prüfung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.delivery_control",
-          "label": "Pruefgate: Zustellung Kontrolle",
+          "label": "Prüfgate: Zustellung Kontrolle",
           "status": "open",
           "owner_role": "notary_clerk"
         }
@@ -287,7 +287,7 @@
       "evidence": [
         {
           "id": "evidence.form_review",
-          "label": "Nachweis: Form Pruefung",
+          "label": "Nachweis: Form Prüfung",
           "status": "open"
         },
         {

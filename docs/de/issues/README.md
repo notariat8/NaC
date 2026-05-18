@@ -1,15 +1,15 @@
 # Issues
 
-Dieser Ordner buendelt Issue-Fuehrung, Sichtbarkeit und den oeffentlichen
+Dieser Ordner bündelt Issue-Führung, Sichtbarkeit und den öffentlichen
 Backlog.
 
 ## Dokumente
 
-- [operations.md](operations.md): Rollen, Zugriffe und repo-uebergreifende Issue-Uebersicht.
-- [taxonomy.md](taxonomy.md): Issue-Fuehrung ueber mehrere Repositories.
+- [operations.md](operations.md): Rollen, Zugriffe und repo-übergreifende Issue-Übersicht.
+- [taxonomy.md](taxonomy.md): Issue-Führung über mehrere Repositories.
 - [public-backlog.md](public-backlog.md): priorisierte Public-Issues.
 
 ## Pflegehinweis
 
 Issue-Regeln bleiben operative Steuerung. Fachliche Wahrheit entsteht weiter
-durch versionierte Aenderung, Review und Merge.
+durch versionierte Änderung, Review und Merge.

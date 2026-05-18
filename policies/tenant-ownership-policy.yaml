@@ -16,16 +16,16 @@ tenant_models:
     compliance_strength: medium_to_high
     admin_effort_for_customer: low
   provider_managed_dedicated_subtenant:
-    description: Anbieter betreibt Service, Kunde erhaelt logisch/operativ isolierte Subinstanz mit separaten Schluesseln.
+    description: Anbieter betreibt Service, Kunde erhält logisch/operativ isolierte Subinstanz mit separaten Schlüsseln.
     compliance_strength: high
     admin_effort_for_customer: low_to_medium
 
 default_recommendation:
   model: provider_managed_dedicated_subtenant
   rationale:
-    - reduziert Betriebsaufwand fuer Fachkanzleien
-    - erhaelt Mandantentrennung und tenant-spezifische Nachweise
-    - unterstuetzt zentrale Governance bei lokaler Datenisolation
+    - reduziert Betriebsaufwand für Fachkanzleien
+    - erhält Mandantentrennung und tenant-spezifische Nachweise
+    - unterstützt zentrale Governance bei lokaler Datenisolation
 
 required_controls:
   - dedicated_namespace_or_account_per_customer

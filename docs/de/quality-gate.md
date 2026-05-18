@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Der Quality Gate stellt sicher, dass PRs mit einer vorhersagbaren und reproduzierbaren Pruefreihenfolge bewertet werden.
+Der Quality Gate stellt sicher, dass PRs mit einer vorhersagbaren und reproduzierbaren Prüfreihenfolge bewertet werden.
 
 Prinzip:
 
@@ -52,12 +52,12 @@ Standardausgabe:
 
 - JSON: `out/quality/status.json`
 - Markdown: `out/quality/report.md`
-- PR-Kommentar: `out/quality/comment.md` (fuer Upsert in Pull Requests)
+- PR-Kommentar: `out/quality/comment.md` (für Upsert in Pull Requests)
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 
-## Nutzen fuer Vorhersagbarkeit
+## Nutzen für Vorhersagbarkeit
 
-- Gleiche Checks in gleicher Reihenfolge fuer lokale und CI-Laeufe.
+- Gleiche Checks in gleicher Reihenfolge für lokale und CI-Läufe.
 - Keine uneinheitlichen Einzelbefehle pro Teammitglied.
 - Klare Statuslinie (`PASSED`/`FAILED`) mit nachvollziehbarem Report.

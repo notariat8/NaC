@@ -1,47 +1,47 @@
-# Adoption / familienrechtliche Erklaerungen Wissensgraph
+# Adoption / familienrechtliche Erklärungen Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `next10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.adoption_familienrechtliche_erklaerungen`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `case.type` | Fall Art | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Fall Art benoetigt? |
-| `child.identity_context` | Kind Identitaet Kontext | `offen` | Mandantschaft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Kind Identitaet Kontext benoetigt? |
-| `consenting_party.identity` | Zustimmende Beteiligter Identitaet | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zustimmende Beteiligter Identitaet benoetigt? |
-| `court.destination` | Gericht Zielgericht | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gericht Zielgericht benoetigt? |
-| `irrevocability.warning` | Unwiderruflichkeit Belehrung | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Unwiderruflichkeit Belehrung benoetigt? |
-| `additional.approvals` | Weitere Genehmigungen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Weitere Genehmigungen benoetigt? |
+| `case.type` | Fall Art | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Fall Art benötigt? |
+| `child.identity_context` | Kind Identität Kontext | `offen` | Mandantschaft | Welche Angaben, Nachweise und Prüfpunkte werden für Kind Identität Kontext benötigt? |
+| `consenting_party.identity` | Zustimmende Beteiligter Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Zustimmende Beteiligter Identität benötigt? |
+| `court.destination` | Gericht Zielgericht | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Gericht Zielgericht benötigt? |
+| `irrevocability.warning` | Unwiderruflichkeit Belehrung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Unwiderruflichkeit Belehrung benötigt? |
+| `additional.approvals` | Weitere Genehmigungen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Weitere Genehmigungen benötigt? |
 
 ## Dokumente
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.consent_declaration` | Dokument: Zustimmung Erklaerung | `offen` | notarielles Erklaerungspaket |
+| `doc.consent_declaration` | Dokument: Zustimmung Erklärung | `offen` | notarielles Erklärungspaket |
 | `doc.court_reference` | Dokument: Gericht Referenz | `offen` | freigegebener Nachweisspeicher |
 
 ## Entscheidungen
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `decision.declaration_route` | Entscheidung: Erklaerung Route | `offen` |
+| `decision.declaration_route` | Entscheidung: Erklärung Route | `offen` |
 | `decision.approval_status` | Entscheidung: Genehmigung Status | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.capacity_and_warning` | Pruefgate: Geschaeftsfaehigkeit and Belehrung | `offen` |
-| `gate.court_delivery` | Pruefgate: Gericht Zustellung | `offen` |
+| `gate.capacity_and_warning` | Prüfgate: Geschäftsfähigkeit and Belehrung | `offen` |
+| `gate.court_delivery` | Prüfgate: Gericht Zustellung | `offen` |
 
 ## Nachweise
 

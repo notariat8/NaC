@@ -1,26 +1,26 @@
 # Vereinsregisteranmeldung Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `next10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.vereinsregisteranmeldung`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `association.identity` | Verein Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Verein Identitaet benoetigt? |
-| `filing.type` | Einreichung Art | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Einreichung Art benoetigt? |
-| `board.identity` | Vorstand Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vorstand Identitaet benoetigt? |
-| `resolution.evidence` | Beschluss Nachweis | `offen` | Verein | Welche Angaben, Nachweise und Pruefpunkte werden fuer Beschluss Nachweis benoetigt? |
-| `articles.current` | Satzung aktueller Stand | `offen` | Verein | Welche Angaben, Nachweise und Pruefpunkte werden fuer Satzung aktueller Stand benoetigt? |
-| `filing.route` | Einreichung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Einreichung Route benoetigt? |
+| `association.identity` | Verein Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verein Identität benötigt? |
+| `filing.type` | Einreichung Art | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Art benötigt? |
+| `board.identity` | Vorstand Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Vorstand Identität benötigt? |
+| `resolution.evidence` | Beschluss Nachweis | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Beschluss Nachweis benötigt? |
+| `articles.current` | Satzung aktueller Stand | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Satzung aktueller Stand benötigt? |
+| `filing.route` | Einreichung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Route benötigt? |
 
 ## Dokumente
 
@@ -35,14 +35,14 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
 | `decision.certification_route` | Entscheidung: Beglaubigung Route | `offen` |
-| `decision.attachment_complete` | Entscheidung: Anlage Vollstaendigkeit | `offen` |
+| `decision.attachment_complete` | Entscheidung: Anlage Vollständigkeit | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.signer_authority` | Pruefgate: Unterzeichner Berechtigung | `offen` |
-| `gate.register_package_ready` | Pruefgate: Register Paket bereit | `offen` |
+| `gate.signer_authority` | Prüfgate: Unterzeichner Berechtigung | `offen` |
+| `gate.register_package_ready` | Prüfgate: Register Paket bereit | `offen` |
 
 ## Nachweise
 

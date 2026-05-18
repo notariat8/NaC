@@ -10,9 +10,162 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STANDARD_LANGUAGES = ("de", "en")
 LOCALIZED_SURFACES = ("docs", "prompts")
 LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}$")
-GERMAN_USECASE_MARKER = "Deutsch ist fuer diese Usecases die fuehrende und rechtlich bindende Sprache"
-GERMAN_ROOT_MARKER = "Deutsch ist repo-weit die fuehrende Sprache"
+GERMAN_USECASE_MARKER = "Deutsch ist für diese Usecases die führende und rechtlich bindende Sprache"
+GERMAN_ROOT_MARKER = "Deutsch ist repo-weit die führende Sprache"
 TEXT_FILE_SUFFIXES = {".md", ".mdc", ".txt"}
+GERMAN_TEXT_SUFFIXES = {".md", ".mdc", ".yaml", ".yml"}
+GERMAN_TEXT_SCAN_FILES = (
+    "README.md",
+    "HERAUSGEBER.md",
+    "AGENTS.md",
+    ".github/copilot-instructions.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/compliance_change.md",
+)
+GERMAN_TEXT_SCAN_ROOTS = (
+    ".cursor/rules",
+    "docs/de",
+    "plugins",
+    "workflows",
+    "usecases",
+    "roadmap",
+    "policies",
+)
+JSON_HUMAN_TEXT_FIELDS = {
+    "about",
+    "category",
+    "description",
+    "displayName",
+    "shortDescription",
+    "longDescription",
+    "defaultPrompt",
+    "title",
+    "summary",
+    "purpose",
+    "privacy_rule",
+    "label",
+    "question",
+    "source",
+    "text",
+    "prompt",
+    "message",
+    "warning",
+}
+GERMAN_ASCII_TRANSLITERATION_HINTS = (
+    ("fuer", "für"),
+    ("Fuer", "Für"),
+    ("fuehr", "führ"),
+    ("Fuehr", "Führ"),
+    ("ueber", "über"),
+    ("Ueber", "Über"),
+    ("pruef", "prüf"),
+    ("Pruef", "Prüf"),
+    ("aender", "änder"),
+    ("Aender", "Änder"),
+    ("oeffent", "öffent"),
+    ("Oeffent", "Öffent"),
+    ("koenn", "könn"),
+    ("Koenn", "Könn"),
+    ("muess", "müss"),
+    ("Muess", "Müss"),
+    ("duerf", "dürf"),
+    ("Duerf", "Dürf"),
+    ("faeh", "fäh"),
+    ("Faeh", "Fäh"),
+    ("zulaess", "zuläss"),
+    ("Zulaess", "Zuläss"),
+    ("bestaet", "bestät"),
+    ("Bestaet", "Bestät"),
+    ("verstaend", "verständ"),
+    ("Verstaend", "Verständ"),
+    ("staend", "ständ"),
+    ("Staend", "Ständ"),
+    ("noet", "nöt"),
+    ("Noet", "Nöt"),
+    ("verfueg", "verfüg"),
+    ("Verfueg", "Verfüg"),
+    ("ergaenz", "ergänz"),
+    ("Ergaenz", "Ergänz"),
+    ("zurueck", "zurück"),
+    ("Zurueck", "Zurück"),
+    ("ausser", "außer"),
+    ("Ausser", "Außer"),
+    ("ausschliess", "ausschließ"),
+    ("Ausschliess", "Ausschließ"),
+    ("heisst", "heißt"),
+    ("Heisst", "Heißt"),
+    ("Geschaeft", "Geschäft"),
+    ("geschaeft", "geschäft"),
+    ("Erklaer", "Erklär"),
+    ("erklaer", "erklär"),
+    ("Loesch", "Lösch"),
+    ("loesch", "lösch"),
+    ("Gruend", "Gründ"),
+    ("gruend", "gründ"),
+    ("Uebersetz", "Übersetz"),
+    ("uebersetz", "übersetz"),
+    ("Qualitaet", "Qualität"),
+    ("qualitaet", "qualität"),
+    ("Identitaet", "Identität"),
+    ("identitaet", "identität"),
+    ("enthaelt", "enthält"),
+    ("Enthaelt", "Enthält"),
+    ("erhaelt", "erhält"),
+    ("Erhaelt", "Erhält"),
+    ("unterstuetz", "unterstütz"),
+    ("Unterstuetz", "Unterstütz"),
+    ("spaeter", "später"),
+    ("Spaeter", "Später"),
+    ("maessig", "mäßig"),
+    ("Maessig", "Mäßig"),
+    ("taeglich", "täglich"),
+    ("Taeglich", "Täglich"),
+    ("Buero", "Büro"),
+    ("buero", "büro"),
+    ("Buerger", "Bürger"),
+    ("buerger", "bürger"),
+    ("Kaeufer", "Käufer"),
+    ("kaeufer", "käufer"),
+    ("Verkaeufer", "Verkäufer"),
+    ("verkaeufer", "verkäufer"),
+    ("Maengel", "Mängel"),
+    ("maengel", "mängel"),
+    ("Nachlaesse", "Nachlässe"),
+    ("nachlaesse", "nachlässe"),
+    ("verknuepf", "verknüpf"),
+    ("Verknuepf", "Verknüpf"),
+    ("buendel", "bündel"),
+    ("Buendel", "Bündel"),
+    ("praezis", "präzis"),
+    ("Praezis", "Präzis"),
+    ("schaerf", "schärf"),
+    ("Schaerf", "Schärf"),
+    ("ursprueng", "ursprüng"),
+    ("Ursprueng", "Ursprüng"),
+    ("gueltig", "gültig"),
+    ("Gueltig", "Gültig"),
+    ("gewuensch", "gewünsch"),
+    ("Gewuensch", "Gewünsch"),
+    ("erfuell", "erfüll"),
+    ("Erfuell", "Erfüll"),
+    ("zugehoer", "zugehör"),
+    ("Zugehoer", "Zugehör"),
+    ("Vorschlaeg", "Vorschläg"),
+    ("vorschlaeg", "vorschläg"),
+    ("Geruest", "Gerüst"),
+    ("geruest", "gerüst"),
+    ("geoeffnet", "geöffnet"),
+    ("spaet", "spät"),
+    ("Spaet", "Spät"),
+    ("zaehl", "zähl"),
+    ("Zaehl", "Zähl"),
+    ("Haert", "Härt"),
+    ("haert", "härt"),
+    ("aehn", "ähn"),
+    ("Aehn", "Ähn"),
+    ("plaetz", "plätz"),
+    ("Plaetz", "Plätz"),
+)
 KG_MD_REQUIRED_MARKERS = (
     "Wissensgraph",
     "## Betriebsmodell",
@@ -75,7 +228,7 @@ PLUGIN_WORKFLOW_MD_FORBIDDEN_MARKERS = (
     "## MVP-Scope",
 )
 SKILL_MD_REQUIRED_MARKERS = (
-    "Deutsch ist die fuehrende fachliche Skill-Sprache.",
+    "Deutsch ist die führende fachliche Skill-Sprache.",
     "Commands und IDs bleiben englisch/ASCII.",
     "## Englische Kurzfassung",
     "## Einsatzgrenze",
@@ -103,9 +256,9 @@ SKILL_FRONTMATTER_GERMAN_MARKERS = (
 USECASE_README_REQUIRED_MARKERS = (
     "## Worum Es Geht",
     "## Was Heute Im Muster Enthalten Ist",
-    "## Grenzen Fuer Den Betrieb",
+    "## Grenzen Für Den Betrieb",
     "## Plugin- Und Workflow-Bindung",
-    "## Wie Man Diesen Usecase Prueft",
+    "## Wie Man Diesen Usecase Prüft",
 )
 USECASE_README_FORBIDDEN_MARKERS = (
     "## Goal",
@@ -193,6 +346,99 @@ def validate_localized_text_is_not_copied() -> list[str]:
     return errors
 
 
+def _strip_markdown_technical_surfaces(text: str) -> str:
+    text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+    text = re.sub(r"`[^`]*`", " ", text)
+    text = re.sub(r"https?://\S+", " ", text)
+
+    def keep_human_link_label(match: re.Match[str]) -> str:
+        label = match.group(1)
+        if "/" in label or "." in label or re.fullmatch(r"[a-z0-9_.-]+", label):
+            return " "
+        return label
+
+    return re.sub(r"!?\[([^\]]*)\]\([^)]+\)", keep_human_link_label, text)
+
+
+def _find_ascii_transliteration(text: str) -> tuple[str, str] | None:
+    for bad, good in GERMAN_ASCII_TRANSLITERATION_HINTS:
+        if bad in text:
+            return bad, good
+    return None
+
+
+def _scan_text_file_for_umlauts(path: Path) -> list[str]:
+    errors: list[str] = []
+    text = path.read_text(encoding="utf-8")
+    if path.suffix.lower() in {".md", ".mdc"}:
+        text = _strip_markdown_technical_surfaces(text)
+    else:
+        text = re.sub(r"https?://\S+", " ", text)
+
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        match = _find_ascii_transliteration(line)
+        if match is None:
+            continue
+        bad, good = match
+        rel_path = path.relative_to(REPO_ROOT).as_posix()
+        errors.append(
+            f"{rel_path}:{line_number}: deutscher Menschentext nutzt {bad!r}; "
+            f"bitte {good!r} nutzen oder als technischen Identifier in Code/Backticks führen."
+        )
+    return errors
+
+
+def _scan_json_value_for_umlauts(value: object, rel_path: str, key: str | None = None) -> list[str]:
+    errors: list[str] = []
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            errors.extend(_scan_json_value_for_umlauts(child, rel_path, child_key))
+    elif isinstance(value, list):
+        for child in value:
+            errors.extend(_scan_json_value_for_umlauts(child, rel_path, key))
+    elif isinstance(value, str) and key in JSON_HUMAN_TEXT_FIELDS:
+        match = _find_ascii_transliteration(value)
+        if match is not None:
+            bad, good = match
+            errors.append(
+                f"{rel_path}: JSON-Feld {key} nutzt {bad!r}; bitte {good!r} nutzen."
+            )
+    return errors
+
+
+def validate_german_umlaut_usage() -> list[str]:
+    errors: list[str] = []
+    files: set[Path] = set()
+    for rel_path in GERMAN_TEXT_SCAN_FILES:
+        path = REPO_ROOT / rel_path
+        if path.exists():
+            files.add(path)
+
+    for root_name in GERMAN_TEXT_SCAN_ROOTS:
+        root = REPO_ROOT / root_name
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file() and path.suffix.lower() in GERMAN_TEXT_SUFFIXES:
+                files.add(path)
+
+    for path in sorted(files):
+        errors.extend(_scan_text_file_for_umlauts(path))
+
+    for root_name in (".agents", "plugins", "workflows", "usecases", "policies", "schemas", "sbom/ai"):
+        root = REPO_ROOT / root_name
+        if not root.exists():
+            continue
+        for json_file in sorted(root.rglob("*.json")):
+            rel_path = json_file.relative_to(REPO_ROOT).as_posix()
+            try:
+                payload = json.loads(json_file.read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+            errors.extend(_scan_json_value_for_umlauts(payload, rel_path))
+    return errors
+
+
 def validate_domain_language_rules() -> list[str]:
     errors: list[str] = []
     policy_text = (REPO_ROOT / "policies" / "language-policy.yaml").read_text(encoding="utf-8")
@@ -219,7 +465,7 @@ def validate_domain_language_rules() -> list[str]:
         if not text.startswith("# NaC: Notariat as Code"):
             errors.append("README.md muss als deutscher GitHub-Root-README beginnen: # NaC: Notariat as Code")
         if GERMAN_ROOT_MARKER not in text:
-            errors.append("README.md muss Deutsch als repo-weit fuehrende Sprache nennen.")
+            errors.append("README.md muss Deutsch als repo-weit führende Sprache nennen.")
         if "This repository is maintained" in text:
             errors.append("README.md ist noch englisch formuliert.")
 
@@ -231,7 +477,7 @@ def validate_domain_language_rules() -> list[str]:
         if not text.startswith("# Notarielle Usecases"):
             errors.append("usecases/README.md muss als deutscher Usecase-Index beginnen: # Notarielle Usecases")
         if GERMAN_USECASE_MARKER not in text:
-            errors.append("usecases/README.md muss Deutsch als fuehrende und rechtlich bindende Usecase-Sprache nennen.")
+            errors.append("usecases/README.md muss Deutsch als führende und rechtlich bindende Usecase-Sprache nennen.")
         if "This directory contains concrete notarial usecases" in text:
             errors.append("usecases/README.md ist noch englisch formuliert.")
     return errors
@@ -337,6 +583,7 @@ def main() -> int:
     errors.extend(validate_file_parity())
     errors.extend(validate_localized_text_is_not_copied())
     errors.extend(validate_domain_language_rules())
+    errors.extend(validate_german_umlaut_usage())
     errors.extend(validate_usecase_kg_language_rules())
     errors.extend(validate_usecase_readme_language_rules())
     errors.extend(validate_plugin_workflow_language_rules())

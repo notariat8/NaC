@@ -1,7 +1,7 @@
 # NaC Build Now
 
-Status: active development  
-Last update: 2026-05-15  
+Status: active development
+Last update: 2026-05-15
 Branch: `main`
 
 ## What Is Being Built

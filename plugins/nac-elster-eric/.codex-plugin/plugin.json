@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "NaC ELSTER/ERiC",
     "shortDescription": "ELSTER/ERiC mit Nachweisen planen.",
-    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter fuer Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-Pruefungen.",
+    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter für Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-Prüfungen.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -34,9 +34,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe die NaC ELSTER-ERiC-Bereitschaft.",
-      "Erstelle einen Einrichtungsplan fuer ELSTER und ERiC.",
-      "Pruefe Betriebsdrift fuer den ELSTER-ERiC-Pfad."
+      "Prüfe die NaC ELSTER-ERiC-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für ELSTER und ERiC.",
+      "Prüfe Betriebsdrift für den ELSTER-ERiC-Pfad."
     ],
     "brandColor": "#4D6A2F",
     "composerIcon": "./assets/icon.png",

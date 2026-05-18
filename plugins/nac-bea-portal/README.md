@@ -1,28 +1,28 @@
 # NaC beA-Postfach
 
-Lokaler beA-Arbeitsablaufbegleiter fuer Bereitschaft, Postfach-/eEB-Aufgabenplanung,
-Client-Security-Pruefungen und Nachweiserfassung, ohne PINs, Kartendaten,
+Lokaler beA-Arbeitsablaufbegleiter für Bereitschaft, Postfach-/eEB-Aufgabenplanung,
+Client-Security-Prüfungen und Nachweiserfassung, ohne PINs, Kartendaten,
 Postfachgeheimnisse oder Mandatsinhalte in Git zu speichern.
 
 ## Status
 
-Installierbares MVP-Plugin-Geruest. Das Plugin stellt lokale Codex-Skill-
-Fuehrung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
+Installierbares MVP-Plugin-Gerüst. Das Plugin stellt lokale Codex-Skill-
+Führung, einen maschinenlesbaren Sicherheitsvertrag und Marktplatz-Metadaten
 bereit. Externe Schreibadapter sind in dieser ersten Version bewusst nicht
 aktiviert.
 
 ## Installationsgrenze
 
-- Laeuft als lokales Codex-Plugin aus diesem Repository.
-- Haelt Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte ausserhalb von Git.
+- Läuft als lokales Codex-Plugin aus diesem Repository.
+- Hält Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte außerhalb von Git.
 - Erzeugt Planvorschauen und Nachweis-Metadaten vor jeder sensiblen Aktion.
-- Verlangt menschliche Freigabe fuer regulierte Einreichungen, Portalaktionen,
+- Verlangt menschliche Freigabe für regulierte Einreichungen, Portalaktionen,
   notarielle Aktionen und Cloud-Anwendungen.
 
 ## Day0
 
-- Postfachinhaber, Nutzerrolle, Karten-/Token-Bereitschaft und Verfuegbarkeit von
-  beA Client Security bestaetigen.
+- Postfachinhaber, Nutzerrolle, Karten-/Token-Bereitschaft und Verfügbarkeit von
+  beA Client Security bestätigen.
 
 ## Day1
 
@@ -39,7 +39,7 @@ aktiviert.
 - beA-Postfachzugriff
 - beA-Karte oder freigegebene Authentifizierungsmethode
 - beA Client Security auf der lokalen Workstation
-- Kanzleirichtlinie fuer eEB und Exporte
+- Kanzleirichtlinie für eEB und Exporte
 
 Die konsolidierte Anforderungsliste steht in
 [docs/de/plugin-operations/account-and-approval-requests.md](../../docs/de/plugin-operations/account-and-approval-requests.md)

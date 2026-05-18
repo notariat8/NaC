@@ -1,15 +1,15 @@
 ---
-description: Branchenspezifische Regeln fuer Anwaltskanzleien
+description: Branchenspezifische Regeln für Anwaltskanzleien
 globs: "**/law-firm/**"
 alwaysApply: false
 ---
 
 # Kanzlei-Regeln (wahlweise aktivierbar)
 
-- Mandatsannahme nur nach Konfliktpruefung.
+- Mandatsannahme nur nach Konfliktprüfung.
 - Fristen werden mit Verantwortlichem und Eskalation dokumentiert.
-- Aktenvorgaenge enthalten Freigabespuren fuer relevante Entscheidungen.
+- Aktenvorgänge enthalten Freigabespuren für relevante Entscheidungen.
 - Externe Einreichungen erhalten Nachweis auf Vorgangsebene.
-- Abweichungen vom Standard werden als Change Request begruendet.
+- Abweichungen vom Standard werden als Change Request begründet.
 
 Diese Regel ist ein Modul und wird nur aktiviert, wenn Kanzlei-Prozesse verwendet werden.

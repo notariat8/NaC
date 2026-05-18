@@ -1,4 +1,4 @@
-# Runbook: GCP Eventstream fuer Revisionssicherheit
+# Runbook: GCP Eventstream für Revisionssicherheit
 
 ## Zielbild
 
@@ -10,7 +10,7 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf GCP um:
 - Cloud KMS (Signaturen)
 - Evidence Index (BigQuery oder Search)
 
-Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+Diese deutsche Fassung ist die führende fachliche Runbook-Fassung; die
 englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Referenzkomponenten
@@ -18,7 +18,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `ingest-api`: Cloud Run oder GKE Service
 - `event-broker`: Pub/Sub Topic + Subscription
 - `journal-store`: GCS Bucket mit Retention Policy + Bucket Lock
-- `anchor-job`: taeglicher Signaturjob (Cloud Run Job/Cloud Functions)
+- `anchor-job`: täglicher Signaturjob (Cloud Run Job/Cloud Functions)
 - `evidence-index`: BigQuery (oder vergleichbarer Suchindex)
 
 ## Mindestkonfiguration
@@ -42,7 +42,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 - KMS Key: `event-anchor-signing-key`
 - Algorithmus: RSA-PSS (z. B. PS256)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Anchor-Frequenz: täglich 23:59 UTC
 
 ## Event-Schema (Mussfelder)
 
@@ -63,12 +63,12 @@ englische Fassung wird synchron als Orientierung gepflegt.
 ## Event-Fluss
 
 1. GitHub Events treffen in der Ingest API ein.
-2. Ingest API prueft HMAC-Signatur.
-3. Gueltige Events werden in Pub/Sub publiziert.
+2. Ingest API prüft HMAC-Signatur.
+3. Gültige Events werden in Pub/Sub publiziert.
 4. Normalizer liest aus Subscription und bildet hash-verkettete Envelopes.
 5. Envelopes werden append-only in GCS (Retention Lock) geschrieben.
-6. Evidence Index wird fuer Audit-Abfragen aktualisiert.
-7. Daily Anchor schliesst den Tag kryptografisch ab.
+6. Evidence Index wird für Audit-Abfragen aktualisiert.
+7. Daily Anchor schließt den Tag kryptografisch ab.
 
 ## Rollen und Verantwortungen
 
@@ -76,18 +76,18 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `storage_custodian`: GCS Retention/Bucket Lock
 - `security_operator`: KMS, IAM, Secret Management
 - `audit_reader`: read-only auf Evidence Index + Anchor Reports
-- `compliance_owner`: Freigaben fuer Retention/Legal-Hold-Prozesse
+- `compliance_owner`: Freigaben für Retention/Legal-Hold-Prozesse
 
 ## Betriebsgrenzwerte (Start)
 
 - Subscriber Lag Warnung: > 60 Sekunden
 - DLQ-Rate Warnung: > 0.5 %
-- Signaturprueffehler Ingest: > 0.1 % / Stunde
+- Signaturprüffehler Ingest: > 0.1 % / Stunde
 - Anchor-Fehler: 0 toleriert (P1 Incident)
 
 ## Go-Live-Checkliste
 
-- [ ] HMAC-Signaturpruefung aktiv
+- [ ] HMAC-Signaturprüfung aktiv
 - [ ] Pub/Sub DLQ getestet
 - [ ] GCS Retention + Bucket Lock aktiv
 - [ ] KMS-Signaturtest erfolgreich

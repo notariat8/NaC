@@ -2,8 +2,8 @@
 
 ## Zweck
 
-Dieses Verzeichnis beschreibt die lokalen Plugin- und Connector-Plaene fuer NaC.
-Die Plaene sind bewusst als Markdown-Quellen gepflegt, damit sie reviewbar, versioniert und ohne proprietaere Laufzeit lesbar bleiben.
+Dieses Verzeichnis beschreibt die lokalen Plugin- und Connector-Pläne für NaC.
+Die Pläne sind bewusst als Markdown-Quellen gepflegt, damit sie reviewbar, versioniert und ohne proprietäre Laufzeit lesbar bleiben.
 
 ## Grundentscheidung
 
@@ -12,68 +12,68 @@ NaC wird lokal betrieben:
 - Workspace: `~/NaC` in Ubuntu WSL.
 - Git-Quelle: `https://github.com/ofunk/NaC.git`.
 - Codex, OCI CLI, GitHub-CLI und Fachintegrationen werden lokal eingerichtet.
-- Omnistation ist fuer NaC kein Ausfuehrungsort.
-- Remote-Hosts duerfen nur fuer unkritische Recherche genutzt werden.
+- Omnistation ist für NaC kein Ausführungsort.
+- Remote-Hosts dürfen nur für unkritische Recherche genutzt werden.
 
-Diese Entscheidung verhindert Brueche bei GitHub-Authentifizierung, Browser-Callbacks, OCI-Konfiguration und lokalen Fachintegrationen.
+Diese Entscheidung verhindert Brüche bei GitHub-Authentifizierung, Browser-Callbacks, OCI-Konfiguration und lokalen Fachintegrationen.
 
 ## Planfamilien
 
 | Plan | Zweck | Day0 | Day1 | Day2 |
 | --- | --- | --- | --- | --- |
-| [local-codex-runtime.md](local-codex-runtime.md) | Lokaler Codex-/LLM-Arbeitsplatz | Arbeitsbereich und Startcheck | lokale Planerzeugung | regelmaessige Tool-/Policy-Pruefung |
+| [local-codex-runtime.md](local-codex-runtime.md) | Lokaler Codex-/LLM-Arbeitsplatz | Arbeitsbereich und Startcheck | lokale Planerzeugung | regelmäßige Tool-/Policy-Prüfung |
 | [github-control-plane.md](github-control-plane.md) | GitHub als GitOps-Steuerung | Auth und Repo-Zugriff | PRs, Checks, Reviews | Branchschutz, Audit, Drift |
 | [idaas-plugin-integration.md](idaas-plugin-integration.md) | Deutsche eID-Verifikation und IAM-Projektionsplanung | Zweck, Tenant, Claim-Set, Datenschutzgrundlage | eID-/IAM-Planvorschau und Vertragscheck | Assertions, Widerrufe, Retention-Drift, Connector-Rezertifizierung |
 | [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Nachweise | Drift, Rotation, Kostenkontrolle |
-| [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Planen, ausfuehren, abgleichen | Beobachtung, Wiederholung, Ersatzpfad |
-| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurueckweisungen, Signatur-/Identfehler, Paketversionen |
-| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzpruefung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `NaC Karte/SAK`, Arbeitsplatz- und Schnittstellenpruefung | lokale Plan-/Ausfuehrungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
-| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security-Begleiter | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Arbeitsablauf | Stoerungen, Versionen, Nachweise |
-| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC-Entwickler- und lokaler Begleiter | Hersteller-/Tooling-Pruefung | Trockenlauf-Abgabe- und Nachweisplaene | ERiC-Versionen, Nachweise, Fristen |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `NaC Karte/SAK` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft fuer XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
-| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Arbeitsablauf- und Nachweisbegleiter | Zulassung und berechtigtes Interesse | Abrufplan und Nachweisimport | Bundesland-Drift, Protokolle, Gebuehren |
+| [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Planen, ausführen, abgleichen | Beobachtung, Wiederholung, Ersatzpfad |
+| [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurückweisungen, Signatur-/Identfehler, Paketversionen |
+| [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzprüfung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `NaC Karte/SAK`, Arbeitsplatz- und Schnittstellenprüfung | lokale Plan-/Ausführungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
+| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security-Begleiter | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Arbeitsablauf | Störungen, Versionen, Nachweise |
+| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC-Entwickler- und lokaler Begleiter | Hersteller-/Tooling-Prüfung | Trockenlauf-Abgabe- und Nachweispläne | ERiC-Versionen, Nachweise, Fristen |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `NaC Karte/SAK` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft für XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
+| [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Arbeitsablauf- und Nachweisbegleiter | Zulassung und berechtigtes Interesse | Abrufplan und Nachweisimport | Bundesland-Drift, Protokolle, Gebühren |
 
-## Reihenfolge bei Handelsregister-/HRA-Arbeitsablaeufen
+## Reihenfolge bei Handelsregister-/HRA-Arbeitsabläufen
 
-Der erste technische Baustein haengt vom Betriebsmodus ab:
+Der erste technische Baustein hängt vom Betriebsmodus ab:
 
-- Buerger-/Mandanten-Vorpruefung: `nac-handelsregister` darf nur Bereitschaft, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
+- Bürger-/Mandanten-Vorprüfung: `nac-handelsregister` darf nur Bereitschaft, fehlende Angaben und Notartermin-Vorbereitung strukturieren.
 - Notariatsseitiger Vollzug oder einreichungsnaher Arbeitsablauf: `nac-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
-- Danach kommt `nac-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner geklaert sind, darf `nac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
+- Danach kommt `nac-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstätigkeitskontext, XNotar-Modul und Austauschordner geklärt sind, darf `nac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
 
-Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomaene oberhalb der `NaC Karte/SAK` und der `NaC XNP-Pruefung`.
+Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomäne oberhalb der `NaC Karte/SAK` und der `NaC XNP-Prüfung`.
 
 ## Verbindliches Adapter-Muster
 
 Jeder Plugin- oder Connector-Plan folgt diesem Ablauf:
 
 1. Ziel aufnehmen.
-2. Schema und Policy pruefen.
+2. Schema und Policy prüfen.
 3. Planvorschau erzeugen.
 4. Menschliche Freigabe einholen.
-5. Idempotent ausfuehren.
+5. Idempotent ausführen.
 6. Audit-Nachweis schreiben.
 7. Drift sichtbar machen.
 8. Exit- und Ersatzpfad dokumentieren.
 
 ## Sicherheitsgrenzen
 
-- Keine Geheimnisse, Tokens, privaten Schluessel oder personenbezogenen Echtdaten im Repo.
+- Keine Geheimnisse, Tokens, privaten Schlüssel oder personenbezogenen Echtdaten im Repo.
 - Lokale Zugangsdaten bleiben in lokalen Speichern (`~/.oci`, Git Credential Manager, Browser/OAuth Stores).
-- Adapter duerfen nicht direkt an Policies vorbei schreiben.
+- Adapter dürfen nicht direkt an Policies vorbei schreiben.
 - Sensible Prozesse brauchen Vier-Augen-Freigabe.
 - Jeder dauerhafte manuelle Eingriff muss in Git abgeglichen werden.
 
 ## Statusmodell
 
-Plugin-Plaene nutzen folgende Statuswerte:
+Plugin-Pläne nutzen folgende Statuswerte:
 
 - `draft`: fachlich skizziert, nicht zur Umsetzung freigegeben.
 - `proposed`: umsetzungsnah, aber noch ohne Review.
-- `approved`: fuer Pilotumsetzung freigegeben.
+- `approved`: für Pilotumsetzung freigegeben.
 - `active`: in einem Pilot oder produktiven Ablauf verwendet.
-- `deprecated`: ersetzt, nur noch fuer Rueckverfolgung.
+- `deprecated`: ersetzt, nur noch für Rückverfolgung.
 
 ## Lokaler Regenerationsablauf
 
@@ -83,17 +83,17 @@ git pull
 python3 scripts/startup_check.py --ide auto --run-tests
 ```
 
-Wenn der Startcheck fehlschlaegt, werden die Fehler dokumentiert und nicht durch Remote-Ausfuehrung umgangen.
-Danach werden die Markdown-Plaene lokal angepasst, geprueft, committed und gepusht.
+Wenn der Startcheck fehlschlägt, werden die Fehler dokumentiert und nicht durch Remote-Ausführung umgangen.
+Danach werden die Markdown-Pläne lokal angepasst, geprüft, committed und gepusht.
 
 ## Offene lokale Voraussetzungen
 
 Der aktuelle lokale Startcheck erwartet noch:
 
 - `python` als Alias oder Command neben `python3`.
-- `gh` fuer GitHub-Operationen.
+- `gh` für GitHub-Operationen.
 - VS-Code-Extensions `github.copilot` und `github.copilot-chat`, falls VS Code als Ziel-IDE genutzt wird.
 - Paketinstallation oder `PYTHONPATH=src`, damit `business_os` in Tests gefunden wird.
-- Optional `pandoc` fuer PDF-Exporte.
+- Optional `pandoc` für PDF-Exporte.
 
 Diese Punkte sind lokale Tooling-Aufgaben, keine Omnistation-Aufgaben.

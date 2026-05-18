@@ -1,4 +1,4 @@
-# Runbook: AWS Eventstream fuer Revisionssicherheit
+# Runbook: AWS Eventstream für Revisionssicherheit
 
 ## Zielbild
 
@@ -7,10 +7,10 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf AWS um:
 - Ingest API (Webhook)
 - Kafka (MSK) als Stream
 - S3 Object Lock (Compliance Mode) als Journal
-- KMS fuer Signaturen
+- KMS für Signaturen
 - Evidence Index (OpenSearch oder SQL)
 
-Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+Diese deutsche Fassung ist die führende fachliche Runbook-Fassung; die
 englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Referenzkomponenten
@@ -18,7 +18,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `ingest-api`: ECS/Fargate oder EKS Service
 - `event-broker`: MSK Cluster + Topics
 - `journal-store`: S3 Bucket mit Object Lock Compliance
-- `anchor-job`: taeglicher Signaturjob (Lambda/Batch)
+- `anchor-job`: täglicher Signaturjob (Lambda/Batch)
 - `evidence-index`: OpenSearch/SQL
 
 ## Mindestkonfiguration
@@ -38,13 +38,13 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - Object Lock: `Compliance`
 - Default Retention: z. B. 3650 Tage
 - Delete/Overwrite vor Frist: verboten
-- Lifecycle nur fuer zulaessige Langzeitklassen
+- Lifecycle nur für zulässige Langzeitklassen
 
 ### Signaturen
 
 - KMS Key: `alias/event-anchor-signing`
 - Algorithmus: RSA_PSS_SHA_256 (oder organisationaler Standard)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Anchor-Frequenz: täglich 23:59 UTC
 
 ## Event-Schema (Mussfelder)
 
@@ -69,8 +69,8 @@ englische Fassung wird synchron als Orientierung gepflegt.
 3. Validierte Events werden nach Kafka publiziert.
 4. Normalizer konsumiert Topics und erzeugt hash-verkettete Journal-Events.
 5. Journal-Events werden append-only in S3 Object Lock gespeichert.
-6. Evidence Index wird fuer Abfragen aktualisiert.
-7. Daily Anchor schliesst Kette und signiert den Tagesabschluss.
+6. Evidence Index wird für Abfragen aktualisiert.
+7. Daily Anchor schließt Kette und signiert den Tagesabschluss.
 
 ## Rollen und Verantwortungen
 
@@ -96,7 +96,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Go-Live-Checkliste
 
-- [ ] HMAC-Signaturpruefung aktiv
+- [ ] HMAC-Signaturprüfung aktiv
 - [ ] MSK redundante Konfiguration verifiziert
 - [ ] S3 Object Lock Compliance aktiv
 - [ ] KMS-Signaturtest erfolgreich

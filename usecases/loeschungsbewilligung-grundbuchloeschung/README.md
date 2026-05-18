@@ -1,15 +1,15 @@
-# Loeschungsbewilligung / Grundbuchloeschung
+# Löschungsbewilligung / Grundbuchlöschung
 
-Status: offen  
-Reifegrad: Naechste-10-Usecase, P0  
-KG-Knoten: `case.loeschungsbewilligung_grundbuchloeschung`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P0
+KG-Knoten: `case.loeschungsbewilligung_grundbuchloeschung`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
 ## Worum Es Geht
 
-Loeschung eingetragener Rechte im Grundbuch, haeufig alter Grundschulden nach Darlehensrueckzahlung, mit Bewilligung, Eigentuemerzustimmung, Urkundenform und Einreichungsnachweis.
+Löschung eingetragener Rechte im Grundbuch, häufig alter Grundschulden nach Darlehensrückzahlung, mit Bewilligung, Eigentümerzustimmung, Urkundenform und Einreichungsnachweis.
 
-Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht fuer offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
 ## Was Heute Im Muster Enthalten Ist
 
@@ -18,29 +18,29 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 | Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
 | Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
 | Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
-| Pruefgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
 ## Offene Angaben
 
 | Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Grundstueck Identitaet | Notariatsfachkraft | land_register_review, filing |
-| `right.identity` | Recht Identitaet | Notariatsfachkraft | drafting, filing |
+| `property.identity` | Grundstück Identität | Notariatsfachkraft | land_register_review, filing |
+| `right.identity` | Recht Identität | Notariatsfachkraft | drafting, filing |
 | `creditor.authorization` | Glaeubiger Berechtigung | Notariat | authority_review |
-| `owner.consent` | Eigentuemer Zustimmung | Notariatsfachkraft | identity_gate, filing |
+| `owner.consent` | Eigentümer Zustimmung | Notariatsfachkraft | identity_gate, filing |
 | `brief.status` | Brief Status | Notariatsfachkraft | evidence_package |
 | `filing.route` | Einreichung Route | Notariatsfachkraft | submission, closing |
 
-## Grenzen Fuer Den Betrieb
+## Grenzen Für Den Betrieb
 
 - Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
 - KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
-- Produktiver Betrieb gehoert in einen privaten Fork mit Rollen, Freigaben und geprueftem Arbeitsplatz.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
 - Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
 ## Plugin- Und Workflow-Bindung
 
-Primaere Plugins:
+Primäre Plugins:
 
 - `nac-regulated-core`
 - `nac-grundbuch-portal`
@@ -57,7 +57,7 @@ Fachliche Anker im KG-Modell:
 - `src.gbo.19_29_46`
 - `src.bgb.875`
 
-## Wie Man Diesen Usecase Prueft
+## Wie Man Diesen Usecase Prüft
 
 ```bash
 python scripts/notary_kg.py --repo-root . case loeschungsbewilligung-grundbuchloeschung
@@ -65,7 +65,7 @@ python scripts/notary_kg.py --repo-root . editor-view loeschungsbewilligung-grun
 python scripts/validate_knowledge_graph.py
 ```
 
-## Naechster Lesepfad
+## Nächster Lesepfad
 
 - [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
 - [docs/de/glossar.md](../../docs/de/glossar.md)

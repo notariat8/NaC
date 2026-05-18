@@ -1,7 +1,7 @@
 {
   "name": "nac-pkcs7-certbundle",
   "version": "0.1.0",
-  "description": "PKCS7-Zertifikatsbuendel als lokaler Nachweis.",
+  "description": "PKCS7-Zertifikatsbündel als lokaler Nachweis.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -26,8 +26,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "NaC PKCS7-Nachweis",
-    "shortDescription": "Zertifikatsbuendel ohne Signatur pruefen.",
-    "longDescription": "Installierbares lokales Codex-Plugin fuer die Pruefung von PKCS7-, P7B- und P7C-Zertifikatsbuendeln als metadatenbasierter Nachweis ohne Signatur- oder Private-Key-Zugriff.",
+    "shortDescription": "Zertifikatsbündel ohne Signatur prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für die Prüfung von PKCS7-, P7B- und P7C-Zertifikatsbündeln als metadatenbasierter Nachweis ohne Signatur- oder Private-Key-Zugriff.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -44,9 +44,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Pruefe ein lokales PKCS7-Zertifikatsbuendel ohne Signatur.",
-      "Erzeuge metadatenbasierten Nachweis fuer eine P7B-Kette.",
-      "Pruefe die lokale PKCS7-Werkzeugverfuegbarkeit."
+      "Prüfe ein lokales PKCS7-Zertifikatsbündel ohne Signatur.",
+      "Erzeuge metadatenbasierten Nachweis für eine P7B-Kette.",
+      "Prüfe die lokale PKCS7-Werkzeugverfügbarkeit."
     ],
     "brandColor": "#355E3B",
     "composerIcon": "./assets/icon.png",

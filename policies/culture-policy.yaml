@@ -10,8 +10,8 @@ gender:
     - paarform
     - mirror_user
   notes:
-    - "Empfehlung fuer Musterunternehmen: neutral."
-    - "Originalzitate aus Gesetzen, Urteilen oder Vertraegen unveraendert lassen."
+    - "Empfehlung für Musterunternehmen: neutral."
+    - "Originalzitate aus Gesetzen, Urteilen oder Verträgen unverändert lassen."
 role_naming:
   technical_role_ids_are_neutral: true
   visible_text_follows_gender_mode: true

@@ -5,9 +5,9 @@ Status: `proposed`
 ## Kernentscheidung
 
 XNP darf nicht aus der Cloud gesteuert werden.
-Ein NaC-Plugin fuer XNP wird als lokaler Begleiter geplant, der im selben Arbeitsplatz- und Benutzerkontext laeuft wie XNP.
+Ein NaC-Plugin für XNP wird als lokaler Begleiter geplant, der im selben Arbeitsplatz- und Benutzerkontext läuft wie XNP.
 
-NaC SaaS oder Remote-Ausfuehrung bekommen nur:
+NaC SaaS oder Remote-Ausführung bekommen nur:
 
 - Arbeitsablauf-Status,
 - Policy-Entscheidungen,
@@ -17,81 +17,81 @@ NaC SaaS oder Remote-Ausfuehrung bekommen nur:
 
 Direkte API-Aufrufe bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
 
-Der erste lauffaehige MVP liegt unter `plugins/nac-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt fuer den cyberJack-Reader-Pfad, ruft die `NaC Karte/SAK` auf, prueft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/nac-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Pruefung aus der Kartenpruefung durchreichen. Er fuehrt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
+Der erste lauffähige MVP liegt unter `plugins/nac-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt für den cyberJack-Reader-Pfad, ruft die `NaC Karte/SAK` auf, prüft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/nac-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Prüfung aus der Kartenprüfung durchreichen. Er führt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
 
-## Reihenfolge fuer Handelsregister-Online-Anmeldungen
+## Reihenfolge für Handelsregister-Online-Anmeldungen
 
 Dieser Plan ist der zweite technische Baustein, wenn NaC einen echten notariatsseitigen
 Handelsregister- oder HRA-Arbeitsablauf vorbereiten soll.
 
-Korrektur nach Karten-/Login-Abhaengigkeit: XNP selbst ist erst testbar, wenn der
+Korrektur nach Karten-/Login-Abhängigkeit: XNP selbst ist erst testbar, wenn der
 lokale Kartenpfad steht. Daher ist `nac-cyberjack-rfid` als `NaC Karte/SAK`
-der `NaC XNP-Pruefung` vorgelagert.
+der `NaC XNP-Prüfung` vorgelagert.
 
 `nac-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
 Registerspur und Paketbereitschaft strukturieren. Der Startpunkt ist vorher:
 
-1. BNotK Chip-/Signaturkarte klaeren.
-2. Kartenleser Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad und secureFramework pruefen.
-3. Ueber `nac-bnotk-xnp` einen lokalen Leser-Prompt fuer den cyberJack-Reader-Pfad als Trockenlauf-Nachweis erzeugen.
-4. Notar-/Notariatsrolle klaeren.
-5. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestaetigen.
-6. Amtstaetigkeitskontext lokal bestaetigen.
-7. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klaeren.
+1. BNotK Chip-/Signaturkarte klären.
+2. Kartenleser Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad und secureFramework prüfen.
+3. Über `nac-bnotk-xnp` einen lokalen Leser-Prompt für den cyberJack-Reader-Pfad als Trockenlauf-Nachweis erzeugen.
+4. Notar-/Notariatsrolle klären.
+5. Lokalen XNP-Arbeitsplatz und aktuelle Anmeldung bestätigen.
+6. Amtstätigkeitskontext lokal bestätigen.
+7. XNotar-Handelsregistermodul bzw. Austauschordner-Pfad klären.
 8. Nur danach HRA-/HRB-spezifische Paketlogik aktivieren.
 
-Wenn NaC nur eine Buerger-/Mandanten-Vorpruefung fuer `online.notar.de` anbietet, kann
+Wenn NaC nur eine Bürger-/Mandanten-Vorprüfung für `online.notar.de` anbietet, kann
 `nac-handelsregister` ohne XNP starten. Sobald aber ein Notariatsarbeitsplatz,
 XNotar, Registervollzug oder Einreichungsnahe betroffen ist, blockiert dieser
 XNP-/Notariats-Bereitschaftsschritt die weitere Entwicklung.
 
 ## Ziel
 
-Der Begleiter soll NaC-Prozesse fuer notarielle Arbeitsablaeufe vorbereiten und lokal kontrolliert an XNP-nahe Funktionen anbinden.
+Der Begleiter soll NaC-Prozesse für notarielle Arbeitsabläufe vorbereiten und lokal kontrolliert an XNP-nahe Funktionen anbinden.
 
-Moegliche Zielbereiche laut BNotK-Onlinehilfe:
+Mögliche Zielbereiche laut BNotK-Onlinehilfe:
 
 - Login-Anstoss mit Karte oder Nutzername in XNP.
 - UVZ-Suche und UVZ-Eintragsabfrage.
-- Ermittlung der naechsten freien UVZ-Nummer.
-- Erstellen von UVZ-Eintraegen.
-- Hinzufuegen von Dokumenten zu bestehenden UVZ-Eintraegen.
+- Ermittlung der nächsten freien UVZ-Nummer.
+- Erstellen von UVZ-Einträgen.
+- Hinzufuegen von Dokumenten zu bestehenden UVZ-Einträgen.
 - VVZ-Suche, VVZ-Abfrage und Erstellen von Verwahrungsmassen.
 
 ## Nicht-Ziele
 
 - Keine Cloud-Steuerung von XNP.
-- Keine Uebertragung von XNP-API-Keys in NaC SaaS oder Git.
-- Kein Zugriff ohne lokale XNP-Anmeldung und passende Amtstaetigkeit.
+- Keine Übertragung von XNP-API-Keys in NaC SaaS oder Git.
+- Kein Zugriff ohne lokale XNP-Anmeldung und passende Amtstätigkeit.
 - Keine Umgehung der BNotK-Schnittstellendefinition.
-- Keine produktiven API-Aufrufe ohne ausdrueckliche lokale Freigabe.
+- Keine produktiven API-Aufrufe ohne ausdrückliche lokale Freigabe.
 
 ## Day0
 
-- Zielrolle klaeren: Buerger-/Mandanten-Vorpruefung oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `NaC Karte/SAK` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
-- XNP-Installationskontext lokal pruefen.
-- Lokale XNP-Anmeldung, Nutzerrolle und Amtstaetigkeitskontext als Voraussetzung behandeln.
-- Klaeren, ob die Notariatssoftware-Schnittstelle aktiv ist.
-- Fuer Handelsregister-/HRA-Faelle XNotar-Modul und Datenaustauschverzeichnis klaeren.
+- Zielrolle klären: Bürger-/Mandanten-Vorprüfung oder Notariatsarbeitsplatz.
+- Bei Notariatsarbeitsplatz zuerst `NaC Karte/SAK` abschließen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- XNP-Installationskontext lokal prüfen.
+- Lokale XNP-Anmeldung, Nutzerrolle und Amtstätigkeitskontext als Voraussetzung behandeln.
+- Klären, ob die Notariatssoftware-Schnittstelle aktiv ist.
+- Für Handelsregister-/HRA-Fälle XNotar-Modul und Datenaustauschverzeichnis klären.
 - Lokale Port-Konfiguration dokumentieren, ohne Geheimnisse zu speichern.
 - Offizielle Schnittstellendefinition beschaffen.
-- Datenschutz-, Rollen- und AVV-Relevanz pruefen.
+- Datenschutz-, Rollen- und AVV-Relevanz prüfen.
 - NaC-Begleiter als lokale Komponente planen, nicht als Cloud-Service.
 
 ## Day1
 
 - Lokalen Trockenlauf-Begleiter bauen:
-  - lokalen Reader-Prompt fuer den cyberJack-Reader-Pfad erzeugen.
+  - lokalen Reader-Prompt für den cyberJack-Reader-Pfad erzeugen.
   - `nac-cyberjack-rfid`-Nachweis referenzieren.
-  - XNP-Verfuegbarkeit pruefen.
-  - lokale Anmeldung und Amtstaetigkeitskontext nur attestieren, nicht uebertragen.
+  - XNP-Verfügbarkeit prüfen.
+  - lokale Anmeldung und Amtstätigkeitskontext nur attestieren, nicht übertragen.
   - lokalen Port aus Konfiguration lesen oder per erlaubtem Discovery-Verfahren finden.
   - keine Login- oder API-Key-Daten speichern.
-  - NaC-Intent in menschenlesbaren XNP-Plan uebersetzen.
-  - fuer Registerfaelle XNotar-Austauschordner und XJustiz-Paketstruktur validieren.
-  - Nutzer bestaetigt lokal vor jedem echten Schritt.
-- API-Aufrufe bleiben standardmaessig deaktiviert.
+  - NaC-Intent in menschenlesbaren XNP-Plan übersetzen.
+  - für Registerfälle XNotar-Austauschordner und XJustiz-Paketstruktur validieren.
+  - Nutzer bestätigt lokal vor jedem echten Schritt.
+- API-Aufrufe bleiben standardmäßig deaktiviert.
 - Erst nach Freigabe:
   - einzelne UVZ/VVZ-Funktion im Testkontext.
   - Nachweis nur als Hash und Status.
@@ -99,7 +99,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 
 ## Day2
 
-- BNotK-Versionshinweise und XNP-Updates pruefen.
+- BNotK-Versionshinweise und XNP-Updates prüfen.
 - Schnittstellenverhalten nach Wartungsupdates neu validieren.
 - API-Key- und Port-Konfiguration lokal rezertifizieren.
 - Begleiter-Protokolle lokal rotieren und minimieren.
@@ -114,7 +114,7 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 - Keine Remote-Portweiterleitung.
 - Keine Geheimnisse in Git.
 - Keine zentrale Speicherung von API-Keys.
-- Nutzer- und Amtstaetigkeitskontext wird lokal durch XNP validiert.
+- Nutzer- und Amtstätigkeitskontext wird lokal durch XNP validiert.
 - NaC speichert nur nicht-sensitive Nachweise.
 
 ## Quellenbewertung
@@ -123,19 +123,19 @@ Moegliche Zielbereiche laut BNotK-Onlinehilfe:
 | --- | --- | --- |
 | BNotK Onlinehilfe XNP-Integration | XNP bietet einen lokalen REST-Endpunkt auf `localhost` an | Begleiter muss lokal laufen |
 | BNotK Onlinehilfe XNP-Integration | Standard-Portsuche beginnt bei 12774 und endet bei 12784 | Port nicht hart codieren |
-| BNotK Onlinehilfe XNP-Integration | Login-Token und aktuelle Amtstaetigkeit werden fuer NSW-Aufrufe benoetigt | keine Cloud-Ausfuehrung |
-| BNotK Onlinehilfe XNP-Integration | API-Key fuer Login-Funktion ist lokal konfiguriert und verschluesselt nicht installationsuebertragbar | keine Geheimnis-Synchronisierung |
+| BNotK Onlinehilfe XNP-Integration | Login-Token und aktuelle Amtstätigkeit werden für NSW-Aufrufe benötigt | keine Cloud-Ausführung |
+| BNotK Onlinehilfe XNP-Integration | API-Key für Login-Funktion ist lokal konfiguriert und verschlüsselt nicht installationsübertragbar | keine Geheimnis-Synchronisierung |
 
-## Akzeptanzkriterien fuer Pilot
+## Akzeptanzkriterien für Pilot
 
 - Begleiter startet nur lokal.
 - Trockenlauf ist Standard.
 - Leser-Prompt erzeugt Nachweise ohne PIN-, Karten-, API-Key- oder Login-Werte.
 - XNP-Schnittstellendefinition ist dokumentiert.
-- Jeder echte Aufruf erfordert lokale Nutzerbestaetigung.
+- Jeder echte Aufruf erfordert lokale Nutzerbestätigung.
 - Keine Urkunden-, UVZ-, VVZ- oder API-Key-Inhalte im Repo.
-- Nachweis enthaelt Hash, Zeitstempel, Vorgangs-ID und lokalen Status.
-- Manuelle XNP-Bedienung bleibt vollstaendig moeglich.
+- Nachweis enthält Hash, Zeitstempel, Vorgangs-ID und lokalen Status.
+- Manuelle XNP-Bedienung bleibt vollständig möglich.
 
 ## Quellen
 

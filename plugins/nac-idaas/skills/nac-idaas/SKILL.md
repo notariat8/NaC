@@ -1,11 +1,11 @@
 ---
 name: nac-idaas
-description: Nutzen, wenn deutsche eID-Pruefungsbereitschaft, AusweisApp-orientierte Identitaetspruefung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft fuer Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NaC-Ablaufen geplant werden.
+description: Nutzen, wenn deutsche eID-Prüfungsbereitschaft, AusweisApp-orientierte Identitätsprüfung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft für Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NaC-Ablaufen geplant werden.
 ---
 
-# NaC eID-Pruefung
+# NaC eID-Prüfung
 
-Deutsch ist die fuehrende fachliche Skill-Sprache. Technische Namen, Ordner,
+Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.
 
 ## Englische Kurzfassung
@@ -19,10 +19,10 @@ writes without reviewed connector code and approval.
 
 Laufzeitmodus: `local-eid-iam-readiness-companion`.
 
-Dieser Skill plant eID- und IAM-Projektionsworkflows. Er fuehrt keine
+Dieser Skill plant eID- und IAM-Projektionsworkflows. Er führt keine
 produktiven eID-Transaktionen aus, speichert keine Ausweisdokumente, schreibt
 nicht in IAM-Systeme und startet keine externen API-Aufrufe, solange kein
-separat gepruefter Connector diese Aktion implementiert. Standard ist
+separat geprüfter Connector diese Aktion implementiert. Standard ist
 Planvorschau, metadatenbasierte Evidence und menschliche Freigabe vor jeder
 externen oder personenbezogenen Verarbeitung.
 
@@ -34,45 +34,45 @@ externen oder personenbezogenen Verarbeitung.
   `ageOverX`, `verificationLevel`, `verificationSource`, `verifiedAt` und
   `consentPurpose`.
 - Deutsche eID- und AusweisApp-Readiness-Checklisten vorbereiten.
-- IAM-Projektions-Readiness fuer Entra ID, Oracle IAM und SCIM-Ziele
+- IAM-Projektions-Readiness für Entra ID, Oracle IAM und SCIM-Ziele
   vorbereiten.
-- API- und Event-Vertraege in Trockenlauf-Form pruefen.
-- Metadatenbasierte Evidence-Vorlagen fuer Consent, Verifikation, Projektion,
+- API- und Event-Verträge in Trockenlauf-Form prüfen.
+- Metadatenbasierte Evidence-Vorlagen für Consent, Verifikation, Projektion,
   Widerruf und Day2-Follow-up erstellen.
 
 ## Verbotene Arbeit
 
-- eID-Rohdaten, vollstaendige Ausweisdokument-Dumps, Steuer-IDs, Secrets,
-  private Schluessel, Zertifikatsmaterial, Access Tokens, Einmalcodes oder
+- eID-Rohdaten, vollständige Ausweisdokument-Dumps, Steuer-IDs, Secrets,
+  private Schlüssel, Zertifikatsmaterial, Access Tokens, Einmalcodes oder
   Session-Cookies in Git speichern.
-- Echte Identitaetsdaten oder personenbezogene Client-Daten an ein LLM senden,
-  solange keine ausdruecklich freigegebene Datenverarbeitungsgrundlage besteht.
+- Echte Identitätsdaten oder personenbezogene Client-Daten an ein LLM senden,
+  solange keine ausdrücklich freigegebene Datenverarbeitungsgrundlage besteht.
 - Produktive eID-Transaktionen starten, in IAM-Systeme schreiben oder
-  geschuetzte Identity-APIs aufrufen, solange kein gepruefter Connector und
+  geschützte Identity-APIs aufrufen, solange kein geprüfter Connector und
   keine menschliche Freigabe vorliegen.
-- Verifizierte Claims ueber den dokumentierten Zweck hinaus wiederverwenden.
+- Verifizierte Claims über den dokumentierten Zweck hinaus wiederverwenden.
 
 ## Ablauf
 
-1. Geschaeftskontext, Zweck, Tenant, Zielsystem, Akteursrolle, Reviewer-Rolle
+1. Geschäftskontext, Zweck, Tenant, Zielsystem, Akteursrolle, Reviewer-Rolle
    und Datenklasse einordnen.
-2. Minimales Claim-Set und erwartete Aufbewahrung fuer den konkreten Zweck
+2. Minimales Claim-Set und erwartete Aufbewahrung für den konkreten Zweck
    definieren.
-3. Readiness fuer AusweisApp, Client-App-Redirects, Webhook- oder Polling-Modus,
-   Consent-Text, Audit-Speicher und Tenant-Isolation pruefen.
-4. Wenn IAM-Projektion gewuenscht ist, Zieltyp einordnen: `entra`, `oracle`
+3. Readiness für AusweisApp, Client-App-Redirects, Webhook- oder Polling-Modus,
+   Consent-Text, Audit-Speicher und Tenant-Isolation prüfen.
+4. Wenn IAM-Projektion gewünscht ist, Zieltyp einordnen: `entra`, `oracle`
    oder `scim`.
 5. Vor jeder externen oder personenbezogenen Verarbeitung eine Planvorschau
    erstellen.
-6. Vor produktiven eID-, IAM- oder API-Aktionen ausdrueckliche menschliche
+6. Vor produktiven eID-, IAM- oder API-Aktionen ausdrückliche menschliche
    Freigabe einholen.
 7. Nur Evidence-Metadaten erfassen: Zeitstempel, Akteursrolle, Zweck,
    Claim-Set-Version, Tenant, Zielsystem, Entscheidung, Ergebnis und
    Follow-up-Owner.
-8. Fuer Day2 abgelaufene Assertions, Widerrufe, fehlgeschlagene Projektionen,
+8. Für Day2 abgelaufene Assertions, Widerrufe, fehlgeschlagene Projektionen,
    Retention-Drift und Connector-Rezertifizierungsaufgaben melden.
 
-## Rueckgabeformat
+## Rückgabeformat
 
 Nutze knappe Abschnitte mit stabilen Labels: `Readiness`, `Claim Set`,
 `Projection`, `Approval Needed`, `Evidence` und `Day2 Follow-up`.

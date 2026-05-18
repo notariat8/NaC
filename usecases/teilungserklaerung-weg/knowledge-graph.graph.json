@@ -2,35 +2,35 @@
   "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.teilungserklaerung-weg",
   "catalog_group": "next10",
-  "title": "NaC Usecase-Wissensgraph: Teilungserklaerung nach WEG",
+  "title": "NaC Usecase-Wissensgraph: Teilungserklärung nach WEG",
   "status": "draft",
   "last_update": "2026-05-17",
-  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
-  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehoeren in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV fuer Abschlagszahlungsregelungen in Bautraegervertraegen",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identitaet, Geschaeftsfaehigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Paragraph 1410 zur Form von Ehevertraegen",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und oeffentlicher Beglaubigung",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Paragraph 1750 fuer Einwilligungserklaerungen bei Adoption",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Paragraph 311b fuer Vertraege ueber Grundstuecke, Vermoegen und Nachlaesse",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
@@ -60,63 +60,63 @@
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Paragraph 650u fuer Bautraegervertraege",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Paragraph 77 fuer Vereinsregisteranmeldungen",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstuecken",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung fuer Grundbuchantraege, Bewilligungsnachweise und Erbnachweise",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Loeschungsvermerk",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG fuer GmbH-Gruendung, Anmeldung und Geschaeftsfuehrerdaten",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Paragraph 15 zur Uebertragung von GmbH-Geschaeftsanteilen",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Paragraph 53 zur Form von Satzungsaenderungen",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Paragraph 12 fuer elektronische Handelsregisteranmeldungen in oeffentlich beglaubigter Form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Paragraph 8 zur Teilung durch den Eigentuemer in Wohnungs- oder Teileigentum",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identitaet, Geschaeftsfaehigkeit und Vertretung geprueft"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarielle Rechtspruefung abgeschlossen"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
@@ -124,18 +124,18 @@
     },
     {
       "id": "gate.evidence",
-      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknuepft"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
     {
       "id": "case.teilungserklaerung_weg",
       "slug": "teilungserklaerung-weg",
-      "title": "Teilungserklaerung nach WEG",
+      "title": "Teilungserklärung nach WEG",
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/teilungserklaerung-weg",
-      "summary": "Aufteilung eines Gebaeudes in Wohnungs- oder Teileigentum mit Teilungserklaerung, Gemeinschaftsordnung, Plaenen, Bescheinigungen und Grundbuchumsetzung.",
+      "summary": "Aufteilung eines Gebaeudes in Wohnungs- oder Teileigentum mit Teilungserklärung, Gemeinschaftsordnung, Plänen, Bescheinigungen und Grundbuchumsetzung.",
       "legal_anchors": [
         "src.beurkg",
         "src.gbo.19_29_46",
@@ -144,10 +144,10 @@
       "required_information": [
         {
           "id": "property.identity",
-          "label": "Grundstueck Identitaet",
+          "label": "Grundstück Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Grundstueck Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Identität benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -156,10 +156,10 @@
         },
         {
           "id": "owner.identity",
-          "label": "Eigentuemer Identitaet",
+          "label": "Eigentümer Identität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Eigentuemer Identitaet benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Eigentümer Identität benötigt?",
           "owner_role": "notary",
           "privacy_class": "personal_or_company_data",
           "required_for": [
@@ -172,7 +172,7 @@
           "label": "Einheit Struktur",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Einheit Struktur benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Einheit Struktur benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -185,7 +185,7 @@
           "label": "Eigentum Anteile",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Eigentum Anteile benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Eigentum Anteile benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -194,10 +194,10 @@
         },
         {
           "id": "plans.certificates",
-          "label": "Plaene Bescheinigungen",
+          "label": "Pläne Bescheinigungen",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Plaene Bescheinigungen benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Pläne Bescheinigungen benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -210,7 +210,7 @@
           "label": "Belastung Behandlung",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Pruefpunkte werden fuer Belastung Behandlung benoetigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Belastung Behandlung benötigt?",
           "owner_role": "notary",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -222,14 +222,14 @@
       "documents": [
         {
           "id": "doc.division_declaration",
-          "label": "Dokument: Teilung Erklaerung",
+          "label": "Dokument: Teilung Erklärung",
           "status": "open",
-          "source": "nach Pruefung erzeugter Workflow-Entwurf",
+          "source": "nach Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
           "id": "doc.plans_certificate",
-          "label": "Dokument: Plaene Bescheinigung",
+          "label": "Dokument: Pläne Bescheinigung",
           "status": "open",
           "source": "freigegebener Nachweisspeicher",
           "contains_personal_data": false
@@ -238,7 +238,7 @@
           "id": "doc.land_register_excerpt",
           "label": "Dokument: aktueller Grundbuchauszug",
           "status": "open",
-          "source": "nac-grundbuch-portal oder manuell gepruefter Upload",
+          "source": "nac-grundbuch-portal oder manuell geprüfter Upload",
           "contains_personal_data": true
         }
       ],
@@ -269,13 +269,13 @@
       "gates": [
         {
           "id": "gate.plan_certificate_review",
-          "label": "Pruefgate: Plan Bescheinigung Pruefung",
+          "label": "Prüfgate: Plan Bescheinigung Prüfung",
           "status": "open",
           "owner_role": "notary_clerk"
         },
         {
           "id": "gate.land_register_implementation",
-          "label": "Pruefgate: Grundbuch Register Umsetzung",
+          "label": "Prüfgate: Grundbuch Register Umsetzung",
           "status": "open",
           "owner_role": "notary"
         }

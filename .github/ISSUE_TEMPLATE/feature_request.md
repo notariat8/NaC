@@ -12,7 +12,7 @@ assignees: ""
 
 ## Vorschlag
 
-<!-- Beschreiben Sie die gewuenschte Loesung -->
+<!-- Beschreiben Sie die gewünschte Loesung -->
 
 ## Fachlicher Nutzen
 

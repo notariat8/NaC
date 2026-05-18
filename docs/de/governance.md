@@ -2,23 +2,23 @@
 
 ## Repository-Regeln
 
-Empfohlenes Zielbild fuer `main`:
+Empfohlenes Zielbild für `main`:
 
 - Pushes direkt auf `main` verbieten
 - Pull Requests verpflichtend machen
 - Status-Checks aus `Validate Business Processes` verlangen
 - Review durch mindestens eine fachlich verantwortliche Person verlangen
-- Signierte Tags fuer Abschluesse wie `close/2026-03` verwenden
+- Signierte Tags für Abschlüsse wie `close/2026-03` verwenden
 
-Empfehlung fuer Unternehmens-Forks:
+Empfehlung für Unternehmens-Forks:
 
 - technische Prozessreleases als `v*` markieren
-- Upstream-Uebernahme nur ueber dokumentierte Sync-PRs
-- laufende Vorgaenge auf Startversion belassen (Version-Binding)
+- Upstream-Übernahme nur über dokumentierte Sync-PRs
+- laufende Vorgänge auf Startversion belassen (Version-Binding)
 
 ## Environment-Mapping
 
-- `business-operations`: sensible manuelle Ausfuehrung einzelner Prozesse
+- `business-operations`: sensible manuelle Ausführung einzelner Prozesse
 - `month-close`: Monatsabschluss und periodische Aggregation
 - optional `tax-submission`: letzte Freigabestufe vor externer Steuerabgabe
 
@@ -26,36 +26,36 @@ Empfehlung fuer Unternehmens-Forks:
 
 | Git/GitHub-Mechanismus | Fachliche Bedeutung |
 | --- | --- |
-| Branch | in Arbeit befindlicher Geschaeftsvorgang |
+| Branch | in Arbeit befindlicher Geschäftsvorgang |
 | Pull Request | formaler Antrag mit Freigabebedarf |
 | Review | fachliche Freigabe |
-| Action Run | dokumentierte maschinelle Ausfuehrung |
+| Action Run | dokumentierte maschinelle Ausführung |
 | Artifact | exportierter Nachweis oder Bericht |
 | Tag | Abschlussstand |
 | Release | publizierter, versionierter Nachweis |
 
 ## Praktische Regeln pro Domäne
 
-### Gruendung
+### Gründung
 
-- Schritte koennen in einem Sammelvorgang oder als einzelne Prozessdateien gefuehrt werden.
+- Schritte können in einem Sammelvorgang oder als einzelne Prozessdateien geführt werden.
 - Status `needs_review` sollte mit manuellem Review gekoppelt werden.
 
 ### Rechnungsstellung
 
-- `draft -> approved` nur ueber Pull Request.
+- `draft -> approved` nur über Pull Request.
 - `approved -> issued` nur in einer gesicherten Runtime oder nach dokumentierter Freigabe.
 - RVG-bezogene Rechnungen nur mit dokumentierter Qualifikation und Freigabe.
 
-### Buchfuehrung
+### Buchführung
 
-- Buchungssaetze muessen ausgeglichen sein.
-- Idempotenzschluessel und Belegreferenzen verhindern Doppelbuchungen.
+- Buchungssätze müssen ausgeglichen sein.
+- Idempotenzschlüssel und Belegreferenzen verhindern Doppelbuchungen.
 
 ### Steuer
 
 - `prepared -> approved` immer mit Vier-Augen-Prinzip.
-- `submitted` sollte nur nach manueller Freigabe und moeglichem externen Filing gesetzt werden.
+- `submitted` sollte nur nach manueller Freigabe und möglichem externen Filing gesetzt werden.
 
 ## Rollenbasierte Entscheidungslogik
 
@@ -66,14 +66,14 @@ Empfehlung fuer Unternehmens-Forks:
 
 Referenz: `policies/role-model-policy.yaml`
 
-## Weiterfuehrende Betriebsstandards
+## Weiterführende Betriebsstandards
 
 - Fork-Modell und Verantwortungen: `docs/de/operations/fork-and-release-operating-model.md`
 - Sync-Zyklus und PR-Gates: `docs/de/operations/release-sync-playbook.md`
 - Mischbetrieb und Audit-Nachweis: `docs/de/operations/parallelbetrieb-version-binding.md`
-- Repo-uebergreifende Issue-Fuehrung: `docs/de/issues/taxonomy.md`
-- Rollen, Zugriffe und zentrale Task-Uebersicht: `docs/de/issues/operations.md`
-- Revisionssicherheit ueber Event-Journal: `docs/de/eventstream/revisionssicherheit.md`
+- Repo-übergreifende Issue-Führung: `docs/de/issues/taxonomy.md`
+- Rollen, Zugriffe und zentrale Task-Übersicht: `docs/de/issues/operations.md`
+- Revisionssicherheit über Event-Journal: `docs/de/eventstream/revisionssicherheit.md`
 - Konkrete Plattformvorlagen: `docs/de/eventstream/implementation-templates.md`
 - Azure Runbook: `docs/de/eventstream/runbook-azure.md`
 - AWS Runbook: `docs/de/eventstream/runbook-aws.md`

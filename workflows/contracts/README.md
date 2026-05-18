@@ -1,8 +1,8 @@
-# Workflow-Vertraege
+# Workflow-Verträge
 
-Dieser Ordner ist fuer Workflow-Vertraege reserviert. Ein Vertrag beschreibt
+Dieser Ordner ist für Workflow-Verträge reserviert. Ein Vertrag beschreibt
 die Grenze zwischen einem notariellen Usecase, einem oder mehreren Plugins und
-deterministischer Workflow-Ausfuehrung.
+deterministischer Workflow-Ausführung.
 
 Jeder Vertrag soll definieren:
 
@@ -14,10 +14,10 @@ Jeder Vertrag soll definieren:
 - Datenklasse
 - Form des Nachweisdatensatzes
 
-## Implementierte Vertraege
+## Implementierte Verträge
 
 - [workflows/contracts/kg-editor.contract.json](kg-editor.contract.json):
   KG-Editor-Vertrag zum Rendern usecase-lokaler
   [knowledge-graph.graph.json](../../usecases/immobilienkaufvertrag/knowledge-graph.graph.json)
-  Dateien als sichere Formulare, Checklisten und Patch-Vorschlaege, ohne
-  `value`-Felder fuer Fachpersonal offenzulegen.
+  Dateien als sichere Formulare, Checklisten und Patch-Vorschläge, ohne
+  `value`-Felder für Fachpersonal offenzulegen.

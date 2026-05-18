@@ -13,7 +13,7 @@ MAX_DISPLAY_NAME_CHARS = 22
 MAX_SHORT_DESCRIPTION_CHARS = 64
 MIN_PLUGIN_ASSET_PX = 64
 GERMAN_UX_MARKERS = (
-    " fuer ",
+    " für ",
     " und ",
     " ohne ",
     " mit ",
@@ -21,7 +21,7 @@ GERMAN_UX_MARKERS = (
     "erstelle",
     "plane",
     "erzeuge",
-    "pruef",
+    "prüf",
     "begleit",
     "bereit",
     "nachweis",

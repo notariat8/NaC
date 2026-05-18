@@ -1,9 +1,9 @@
-# AVV-Checkliste fuer EventLock-SaaS (Function8 als Auftragsverarbeiter)
+# AVV-Checkliste für EventLock-SaaS (Function8 als Auftragsverarbeiter)
 
 ## Zweck
 
-Diese Checkliste hilft, den AVV (Art. 28 DSGVO) fuer das EventLock-as-a-Service-Modell strukturiert und nachweisbar vorzubereiten.
-Sie gilt analog fuer alle weiteren Function8-Leistungen, die als Auftragsverarbeitung eingestuft werden.
+Diese Checkliste hilft, den AVV (Art. 28 DSGVO) für das EventLock-as-a-Service-Modell strukturiert und nachweisbar vorzubereiten.
+Sie gilt analog für alle weiteren Function8-Leistungen, die als Auftragsverarbeitung eingestuft werden.
 
 Hinweis: Dies ist ein operativer Leitfaden und ersetzt keine Rechtsberatung.
 
@@ -11,9 +11,9 @@ Hinweis: Dies ist ein operativer Leitfaden und ersetzt keine Rechtsberatung.
 
 Ein AVV ist in der Regel erforderlich, wenn:
 
-- Function8 Eventstreaming-/Journal-Daten fuer den Kunden verarbeitet,
+- Function8 Eventstreaming-/Journal-Daten für den Kunden verarbeitet,
 - der Kunde Zweck und Mittel der Verarbeitung vorgibt,
-- personenbezogene Daten oder personenbezogene Metadaten betroffen sein koennen.
+- personenbezogene Daten oder personenbezogene Metadaten betroffen sein können.
 
 ## Vertragskern (Pflichtinhalte)
 
@@ -24,39 +24,39 @@ Ein AVV ist in der Regel erforderlich, wenn:
 - Rechte und Pflichten des Verantwortlichen
 - dokumentierte Weisungsgebundenheit
 
-## Technische und organisatorische Massnahmen (TOM)
+## Technische und organisatorische Maßnahmen (TOM)
 
 - tenant-separierte Subinstanz pro Kunde
-- dedizierter Schluessel pro Kunde
+- dedizierter Schlüssel pro Kunde
 - immutable Retention (WORM) pro Kunde
 - rollenbasierter Zugriff (Need-to-know)
 - Protokollierung und revisionssichere Ereigniskette
-- Schluesselrotation und Incident-Prozess
-- Vier-Augen-Freigabe fuer kritische Aenderungen (Retention, Legal Hold)
+- Schlüsselrotation und Incident-Prozess
+- Vier-Augen-Freigabe für kritische Änderungen (Retention, Legal Hold)
 
 ## Unterauftragsverarbeiter und Cloud-Standorte
 
 - eingesetzte Cloud-Plattform(en) benennen (AWS, Azure, GCP, OCI)
 - konkrete Dienste benennen (z. B. Broker, WORM-Store, KMS)
 - Standorte/Regionen dokumentieren
-- Wechselverfahren fuer Subprozessoren vertraglich regeln
+- Wechselverfahren für Subprozessoren vertraglich regeln
 
 ## Drittlandtransfer
 
-- pruefen, ob Daten ausserhalb EU/EWR verarbeitet werden
+- prüfen, ob Daten außerhalb EU/EWR verarbeitet werden
 - falls ja: geeignete Garantien dokumentieren (z. B. SCC)
 - Transfer-Impact-Bewertung dokumentieren
 
 ## Betroffenenrechte und Support-Prozesse
 
-- Auskunft, Berichtigung, Loeschung, Einschraenkung: Prozess und SLA
+- Auskunft, Berichtigung, Löschung, Einschraenkung: Prozess und SLA
 - eindeutiger Ansprechpartner auf Provider- und Kundenseite
 - Nachweis, wie Weisungen umgesetzt werden
 
 ## Incident und Meldepflichten
 
-- Frist fuer Erstmeldung an Kunden vertraglich fixieren
-- Meldeinhalt standardisieren (Umfang, Wirkung, Gegenmassnahmen)
+- Frist für Erstmeldung an Kunden vertraglich fixieren
+- Meldeinhalt standardisieren (Umfang, Wirkung, Gegenmaßnahmen)
 - gemeinsame Eskalationskette dokumentieren
 
 ## Audit und Nachweise
@@ -67,14 +67,14 @@ Ein AVV ist in der Regel erforderlich, wenn:
   - TOM-Nachweise
   - Zugriffsprotokolle
   - Restore-/Integritaetstests
-- Frequenz fuer Regel-Audits festlegen
+- Frequenz für Regel-Audits festlegen
 
-## Beendigung und Datenrueckgabe
+## Beendigung und Datenrückgabe
 
-- Rueckgabeformat und Fristen definieren
-- Loeschprozess nach Vertragsende definieren
+- Rückgabeformat und Fristen definieren
+- Löschprozess nach Vertragsende definieren
 - Umgang mit gesetzlichen Aufbewahrungspflichten festlegen
-- Legal-Hold-Faelle gesondert behandeln
+- Legal-Hold-Fälle gesondert behandeln
 
 ## Rollenmodell Function8 vs Kunde
 
@@ -88,7 +88,7 @@ Referenz: `docs/de/service-model/tenant-ownership-and-eventlock-service.md`
 ## Operative Freigabe vor Go-Live
 
 - [ ] AVV unterschrieben
-- [ ] Subprozessorliste vollstaendig und bestaetigt
+- [ ] Subprozessorliste vollständig und bestätigt
 - [ ] TOM-Anlage freigegeben
 - [ ] Regionen und Transferregeln freigegeben
 - [ ] Incident-Meldeprozess getestet

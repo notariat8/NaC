@@ -27,7 +27,7 @@
   ],
   "prohibited_work": [
     "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
-    "Bypass local XNP authentication, Amtstaetigkeitskontext validation, human review, register, mailbox, or notarial action controls.",
+    "Bypass local XNP authentication, Amtstätigkeitskontext validation, human review, register, mailbox, or notarial action controls.",
     "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
     "Scrape protected portals or exceed published usage limits."
   ],
@@ -35,7 +35,7 @@
     "Confirm target mode: citizen preflight or notary-side workstation workflow.",
     "Confirm completed NaC Karte/SAK Bereitschaft for card, security-class-3 reader, SAK lite/XNP card path and secureFramework.",
     "Confirm XNP installed on the same workstation/user context.",
-    "Confirm local XNP login, user role and Amtstaetigkeitskontext are available without storing values.",
+    "Confirm local XNP login, user role and Amtstätigkeitskontext are available without storing values.",
     "Confirm XNotar/register module or exchange-folder route.",
     "Confirm notarial software vendor support and local admin ownership."
   ],
@@ -48,7 +48,7 @@
   "required_accounts_or_approvals": [
     "BNotK/XNP access for the notary office",
     "Completed NaC Karte/SAK Bereitschaft",
-    "Local XNP login and active Amtstaetigkeitskontext",
+    "Local XNP login and active Amtstätigkeitskontext",
     "XNotar/register module or exchange-folder route",
     "Notarial software vendor interface approval",
     "Local workstation admin approval"

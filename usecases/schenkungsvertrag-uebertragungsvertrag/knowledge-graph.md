@@ -1,56 +1,56 @@
-# Schenkungsvertrag / Uebertragungsvertrag Wissensgraph
+# Schenkungsvertrag / Übertragungsvertrag Wissensgraph
 
-Status: usecase-lokale statische KG-Basis  
-Letzte Aktualisierung: 2026-05-17  
-Kataloggruppe: `top10`  
-Usecase: [README.md](README.md)  
-Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `top10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
 KG-Knoten: `case.schenkungsvertrag_uebertragung`
 
 ## Betriebsmodell
 
-Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows duerfen Status und Nachweisreferenzen nur ueber gepruefte Git-Aenderungen aktualisieren; echte Mandatswerte bleiben ausserhalb des Repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
 ## Offene Angabenknoten
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `transferor.identity` | Uebertragender Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Uebertragender Identitaet benoetigt? |
-| `transferee.identity` | Erwerber Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Erwerber Identitaet benoetigt? |
-| `asset.identity` | Vermoegen Identitaet | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vermoegen Identitaet benoetigt? |
-| `reserved.rights` | Vorbehaltsrechte Rechte | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Vorbehaltsrechte Rechte benoetigt? |
-| `reversion.rights` | Rueckforderungsrechte Rechte | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Rueckforderungsrechte Rechte benoetigt? |
-| `consideration.obligations` | Gegenleistung Pflichten | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Gegenleistung Pflichten benoetigt? |
-| `consents.approvals` | Zustimmungen Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Pruefpunkte werden fuer Zustimmungen Genehmigungen benoetigt? |
-| `tax.family.flags` | Steuer Familie Pruefflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Pruefpunkte werden fuer Steuer Familie Pruefflaggen benoetigt? |
+| `transferor.identity` | Übertragender Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Übertragender Identität benötigt? |
+| `transferee.identity` | Erwerber Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Erwerber Identität benötigt? |
+| `asset.identity` | Vermögen Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Vermögen Identität benötigt? |
+| `reserved.rights` | Vorbehaltsrechte Rechte | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Vorbehaltsrechte Rechte benötigt? |
+| `reversion.rights` | Rückforderungsrechte Rechte | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Rückforderungsrechte Rechte benötigt? |
+| `consideration.obligations` | Gegenleistung Pflichten | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Gegenleistung Pflichten benötigt? |
+| `consents.approvals` | Zustimmungen Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Zustimmungen Genehmigungen benötigt? |
+| `tax.family.flags` | Steuer Familie Prüfflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Steuer Familie Prüfflaggen benötigt? |
 
 ## Dokumente
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.transfer_draft` | Dokument: Uebertragung Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
-| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
-| `doc.approvals` | Dokument: Genehmigungen | `offen` | manuell gepruefter Nachweisspeicher |
+| `doc.transfer_draft` | Dokument: Übertragung Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell geprüfter Upload |
+| `doc.approvals` | Dokument: Genehmigungen | `offen` | manuell geprüfter Nachweisspeicher |
 
 ## Entscheidungen
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `decision.transfer_type` | Entscheidung: Uebertragung Art | `offen` |
+| `decision.transfer_type` | Entscheidung: Übertragung Art | `offen` |
 | `decision.reserved_rights` | Entscheidung: Vorbehaltsrechte Rechte | `offen` |
 
-## Pruefgates
+## Prüfgates
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.asset_review` | Pruefgate: Vermoegen Pruefung | `offen` |
-| `gate.family_tax_review` | Pruefgate: Familie Steuer Pruefung | `offen` |
+| `gate.asset_review` | Prüfgate: Vermögen Prüfung | `offen` |
+| `gate.family_tax_review` | Prüfgate: Familie Steuer Prüfung | `offen` |
 
 ## Nachweise
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `evidence.review_trace` | Nachweis: Pruefung Nachverfolgung | `offen` |
+| `evidence.review_trace` | Nachweis: Prüfung Nachverfolgung | `offen` |
 | `evidence.execution_trace` | Nachweis: Vollzug Nachverfolgung | `offen` |
 
 ## Datenschutzregel

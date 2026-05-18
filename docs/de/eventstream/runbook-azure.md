@@ -1,4 +1,4 @@
-# Runbook: Azure Eventstream fuer Revisionssicherheit
+# Runbook: Azure Eventstream für Revisionssicherheit
 
 ## Zielbild
 
@@ -10,7 +10,7 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf Azure um:
 - Key Vault (Signaturen)
 - Evidence Index (Azure Data Explorer oder SQL)
 
-Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+Diese deutsche Fassung ist die führende fachliche Runbook-Fassung; die
 englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Referenzkomponenten
@@ -18,8 +18,8 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `ingest-api`: App Service oder Container App
 - `event-broker`: Azure Event Hubs Namespace + Event Hub
 - `journal-store`: Storage Account mit immutable Blob Container
-- `anchor-job`: taeglicher Signaturjob
-- `evidence-index`: ADX/SQL fuer Auditabfragen
+- `anchor-job`: täglicher Signaturjob
+- `evidence-index`: ADX/SQL für Auditabfragen
 
 ## Mindestkonfiguration
 
@@ -27,7 +27,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 - Partitionen: 4 (Startwert, bei Last anpassen)
 - Retention: 7 Tage (Broker nur Transportebene)
-- Capture: optional, empfohlen fuer Rohdatenablage
+- Capture: optional, empfohlen für Rohdatenablage
 - Private Endpoint: aktiv
 - TLS: aktiv
 
@@ -35,14 +35,14 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 - Container: `event-journal`
 - Immutable Policy: Time-based retention (z. B. 3650 Tage)
-- Delete/Overwrite waehrend Retention: deaktiviert
+- Delete/Overwrite während Retention: deaktiviert
 - Legal Hold Prozess: dokumentiert und getestet
 
 ### Signaturen
 
 - Key Vault Key: `event-anchor-signing-key`
 - Algorithmus: RSA-PSS (z. B. PS256)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Anchor-Frequenz: täglich 23:59 UTC
 
 ## Event-Schema (Mussfelder)
 
@@ -63,11 +63,11 @@ englische Fassung wird synchron als Orientierung gepflegt.
 ## Event-Fluss
 
 1. GitHub sendet Event an Ingest API.
-2. Ingest API prueft Webhook-Signatur.
-3. Gueltige Events gehen in Event Hubs.
+2. Ingest API prüft Webhook-Signatur.
+3. Gültige Events gehen in Event Hubs.
 4. Normalizer liest aus Event Hubs und erzeugt hash-verkettete Envelopes.
 5. Envelope wird append-only im immutable Blob gespeichert.
-6. Evidence Index aktualisiert Suchfelder fuer Audits.
+6. Evidence Index aktualisiert Suchfelder für Audits.
 7. Daily Anchor bildet Kettenabschluss und signiert.
 
 ## Rollen und Verantwortungen
@@ -76,7 +76,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `storage_custodian`: immutable Storage, Retention, Legal Hold
 - `security_operator`: Key Vault, Secrets, Zertifikate
 - `audit_reader`: read-only auf Evidence Index + Anchor Reports
-- `compliance_owner`: Freigabe bei Retention-/Policy-Aenderungen
+- `compliance_owner`: Freigabe bei Retention-/Policy-Änderungen
 
 ## Betriebsgrenzwerte (Start)
 
@@ -94,7 +94,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Go-Live-Checkliste
 
-- [ ] Webhook-Signaturpruefung aktiv
+- [ ] Webhook-Signaturprüfung aktiv
 - [ ] Event Hubs private erreichbar
 - [ ] Immutable Policy aktiv und verifiziert
 - [ ] Key Vault Signatur erfolgreich getestet

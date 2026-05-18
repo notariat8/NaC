@@ -1,22 +1,22 @@
-# Uebersetzungsstatus
+# Übersetzungsstatus
 
 ## Verbindliche Regel
 
 `de` und `en` sind verpflichtende Standardsprachen nach
 [policies/language-policy.yaml](../../policies/language-policy.yaml). Jede
-Aenderung an lokalisierten Inhalten muss beide Sprachen pflegen.
-Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und
-rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
+Änderung an lokalisierten Inhalten muss beide Sprachen pflegen.
+Für deutsches Recht und notarielle Usecases ist Deutsch die führende und
+rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung.
 
 ## Aktueller Stand
 
-- [docs/de/](.) enthaelt die deutsche Ausgangsfassung.
-- [README.md](../../README.md) ist die deutsch gefuehrte GitHub-Startseite und
-  fuehrt Startpfade in einer Deutsch/English-Tabelle.
-- [usecases/](../../usecases) wird als deutsche fachliche Usecase-Flaeche
-  gefuehrt; die unmittelbaren Usecase-READMEs sind kurze deutsche
+- [docs/de/](.) enthält die deutsche Ausgangsfassung.
+- [README.md](../../README.md) ist die deutsch geführte GitHub-Startseite und
+  führt Startpfade in einer Deutsch/English-Tabelle.
+- [usecases/](../../usecases) wird als deutsche fachliche Usecase-Fläche
+  geführt; die unmittelbaren Usecase-READMEs sind kurze deutsche
   Vorderseiten, die auf die jeweilige KG verweisen.
-- `SKILL.md`-Dateien werden fachlich deutsch gefuehrt und enthalten eine kurze
+- `SKILL.md`-Dateien werden fachlich deutsch geführt und enthalten eine kurze
   englische Summary; technische Namen, Ordner, Commands und IDs bleiben
   englisch/ASCII.
 - [docs/en/README.md](../en/README.md) und
@@ -28,7 +28,7 @@ rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
   Service- und aktiven Pluginplan-Dokumente sind nicht mehr nur Dateispiegel.
 - Alte Omnistation-Importe unter
   [docs/en/plugin-plans/omnistation-imports/](../en/plugin-plans/omnistation-imports/)
-  sind als englische Importnotizen gefuehrt; die deutschen Originalartefakte
+  sind als englische Importnotizen geführt; die deutschen Originalartefakte
   bleiben unter
   [docs/de/plugin-plans/omnistation-imports/](plugin-plans/omnistation-imports/)
   nachvollziehbar.
@@ -36,17 +36,17 @@ rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
 ## Technische Kontrolle
 
 [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py)
-prueft:
+prüft:
 
-- Pflicht-Sprachordner fuer `de` und `en`,
-- Dateiparitaet fuer lokalisierte Flaechen,
+- Pflicht-Sprachordner für `de` und `en`,
+- Dateiparität für lokalisierte Flächen,
 - Root-README- und Usecase-Sprachregeln,
-- deutsche KG- und Usecase-README-Marker fuer unmittelbare Usecase-Ordner,
-- Skill-Sprachmarker fuer deutsch gefuehrte `SKILL.md`-Dateien mit englischer
+- deutsche KG- und Usecase-README-Marker für unmittelbare Usecase-Ordner,
+- Skill-Sprachmarker für deutsch geführte `SKILL.md`-Dateien mit englischer
   Summary,
 - keine identischen Markdown-/Textspiegel zwischen `docs/de` und `docs/en`.
 
-## Naechster sinnvoller Schritt
+## Nächster sinnvoller Schritt
 
-Tiefere Fachtexte koennen weiter stilistisch geschaerft werden. Neue fachliche
-Aenderungen muessen aber ab jetzt wieder beide Sprachpfade direkt mitziehen.
+Tiefere Fachtexte können weiter stilistisch geschärft werden. Neue fachliche
+Änderungen müssen aber ab jetzt wieder beide Sprachpfade direkt mitziehen.

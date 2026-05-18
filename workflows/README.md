@@ -1,27 +1,27 @@
 # NaC Workflows
 
-Dieser Ordner ist die Ausfuehrungsschicht fuer Geschaeftsprozesse im
+Dieser Ordner ist die Ausführungsschicht für Geschäftsprozesse im
 Notariatsbetrieb. Er ist von [plugins/](../plugins) und
 [usecases/](../usecases) getrennt.
 
 ## Grenze
 
-- [plugins/](../plugins) enthaelt installierbare Marketplace- oder
+- [plugins/](../plugins) enthält installierbare Marketplace- oder
   Workspace-Begleitpakete.
-- [workflows/](.) enthaelt wiederverwendbare Workflow-Logik fuer
-  Notariatsablaeufe.
-- [usecases/](../usecases) enthaelt konkrete notarielle Geschaeftsszenarien,
+- [workflows/](.) enthält wiederverwendbare Workflow-Logik für
+  Notariatsabläufe.
+- [usecases/](../usecases) enthält konkrete notarielle Geschäftsszenarien,
   die Plugins und Workflows miteinander verbinden.
 
 ## Geplante Struktur
 
-- `skills/`: installierbare oder repo-lokale Skills fuer LLM-seitige
-  Bedienfuehrung.
-- `python/`: deterministische Python-Workflowmodule fuer Validierung,
-  Idempotenz, Ausfuehrungsplanung und Nachweis-Metadaten.
-- `contracts/`: Workflow-Eingabe-/Ausgabevertraege, Freigaben, Datenklassen
-  und Plugin-Abhaengigkeiten.
+- `skills/`: installierbare oder repo-lokale Skills für LLM-seitige
+  Bedienführung.
+- `python/`: deterministische Python-Workflowmodule für Validierung,
+  Idempotenz, Ausführungsplanung und Nachweis-Metadaten.
+- `contracts/`: Workflow-Eingabe-/Ausgabeverträge, Freigaben, Datenklassen
+  und Plugin-Abhängigkeiten.
 
 Kein Workflow darf echte Secrets oder echte personenbezogene Daten speichern.
-Workflow-Ausfuehrung muss ueber Git, Pull Requests, Freigaben und
-Nachweis-Metadaten reviewfaehig bleiben.
+Workflow-Ausführung muss über Git, Pull Requests, Freigaben und
+Nachweis-Metadaten reviewfähig bleiben.

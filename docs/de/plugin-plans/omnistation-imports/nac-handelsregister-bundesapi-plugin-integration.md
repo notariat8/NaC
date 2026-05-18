@@ -2,32 +2,32 @@
 
 Stand: 2026-05-11
 
-Dieser Plan beschreibt, wie NaC Handelsregister-Recherchen und Register-Evidence als Plugin integrieren kann. Ausgangspunkt ist das GitHub-Projekt `bundesAPI/handelsregister`. Das Projekt kann als technischer Spike dienen, sollte aber nicht ungeprueft als produktiver SaaS-Connector uebernommen werden. Massgeblich bleiben die Nutzungsordnung des gemeinsamen Registerportals der Laender, HGB/HRV, Datenschutz, Zweckbindung und die betrieblichen Grenzen des Portals.
+Dieser Plan beschreibt, wie NaC Handelsregister-Recherchen und Register-Evidence als Plugin integrieren kann. Ausgangspunkt ist das GitHub-Projekt `bundesAPI/handelsregister`. Das Projekt kann als technischer Spike dienen, sollte aber nicht ungeprüft als produktiver SaaS-Connector übernommen werden. Maßgeblich bleiben die Nutzungsordnung des gemeinsamen Registerportals der Länder, HGB/HRV, Datenschutz, Zweckbindung und die betrieblichen Grenzen des Portals.
 
 ## Zielbild
 
-NaC soll Handelsregister-bezogene Workflows fuer SaaS-Kunden abbilden:
+NaC soll Handelsregister-bezogene Workflows für SaaS-Kunden abbilden:
 
-- gezielte Einzelrecherche zu Unternehmen und Rechtstraegern
+- gezielte Einzelrecherche zu Unternehmen und Rechtsträgern
 - strukturierte Erfassung von Registergericht, Registerart, Registernummer, Firma, Status und Sitz
-- Nachweis, wann welche Registerinformation fuer welchen Geschaeftsvorgang abgerufen wurde
-- Hash- und Evidence-Erfassung fuer Registerauszuege, Dokumente und SI/XML-Inhalte
+- Nachweis, wann welche Registerinformation für welchen Geschäftsvorgang abgerufen wurde
+- Hash- und Evidence-Erfassung für Registerauszüge, Dokumente und SI/XML-Inhalte
 - klare Rate Limits und Schutz gegen Massenabrufe
 - optionaler technischer Adapter auf Basis von `bundesAPI/handelsregister` oder einer eigenen, freigegebenen Implementierung
 - optionaler Whitelist-IP-/Sonderzugang nur nach Antrag und Nachweis eines berechtigten Erfordernisses
 
 ## Offizielle Faktenbasis
 
-- Das gemeinsame Registerportal der Laender ist das elektronische Informations- und Kommunikationssystem, ueber das Daten aus den Rechtstraegerregistern der Justiz abrufbar sind.
+- Das gemeinsame Registerportal der Länder ist das elektronische Informations- und Kommunikationssystem, über das Daten aus den Rechtsträgerregistern der Justiz abrufbar sind.
 - Das Portal umfasst u.a. Handelsregister A und B, Genossenschaftsregister, Partnerschaftsregister, Gesellschaftsregister und Vereinsregister.
-- Bereitgestellt werden u.a. Indexdaten, Dokumente, Unternehmenstraegerdaten, sonstige Veroeffentlichungen, aktueller Abdruck, chronologischer Abdruck, historischer Abdruck und strukturierter Registerinhalt als XML-Datei.
+- Bereitgestellt werden u.a. Indexdaten, Dokumente, Unternehmensträgerdaten, sonstige Veröffentlichungen, aktueller Abdruck, chronologischer Abdruck, historischer Abdruck und strukturierter Registerinhalt als XML-Datei.
 - Nach der Nutzungsordnung ist die Einsichtnahme zu Informationszwecken durch einzelne Abrufe gestattet.
-- Systematische Abrufe zum Aufbau, Ausbau oder zur Aktualisierung eigener Voll- oder Teilregister sind unzulaessig.
-- Normale Nutzung darf nicht mehr als 60 Suchen oder Rechtstraegeraufrufe pro Stunde im Registerportal vornehmen.
-- Fuer hoehere Abruffrequenz kann bei der Servicestelle Registerportal beim Amtsgericht Hagen ein Zugang mit registrierter IP-Adresse beantragt werden; Umfang und Zweck der Abrufe muessen angegeben werden.
+- Systematische Abrufe zum Aufbau, Ausbau oder zur Aktualisierung eigener Voll- oder Teilregister sind unzulässig.
+- Normale Nutzung darf nicht mehr als 60 Suchen oder Rechtsträgeraufrufe pro Stunde im Registerportal vornehmen.
+- Für höhere Abruffrequenz kann bei der Servicestelle Registerportal beim Amtsgericht Hagen ein Zugang mit registrierter IP-Adresse beantragt werden; Umfang und Zweck der Abrufe müssen angegeben werden.
 - Das Registerportal kann IP-Adressen sperren und Sessions beenden, wenn ein Verstoss gegen gesetzliche Vorgaben oder Nutzungsordnung vermutet wird.
-- Das Portal weist darauf hin, dass es regelmaessig Ziel automatisierter Massenabfragen ist; bei sehr hoher Frequenz koennen strafrechtliche Risiken im Raum stehen.
-- Statushinweise des Portals zeigen, dass Suche, Dokumentenabruf und strukturierter Registerinhalt phasenweise eingeschraenkt sein koennen.
+- Das Portal weist darauf hin, dass es regelmäßig Ziel automatisierter Massenabfragen ist; bei sehr hoher Frequenz können strafrechtliche Risiken im Raum stehen.
+- Statushinweise des Portals zeigen, dass Suche, Dokumentenabruf und strukturierter Registerinhalt phasenweise eingeschraenkt sein können.
 
 ## Fakten zum GitHub-Projekt
 
@@ -36,22 +36,22 @@ NaC soll Handelsregister-bezogene Workflows fuer SaaS-Kunden abbilden:
 - README beschreibt eine "Handelsregister API" und die POST-Parameter der erweiterten Suche.
 - Die CLI ist im README als "work in progress" gekennzeichnet.
 - `pyproject.toml` nennt Python `>3.6.2,<4` und nutzt u.a. `mechanize` und `mechanicalsoup`.
-- `handelsregister.py` steuert das Webportal programmatisch ueber `mechanize`, setzt Browser-Header und parst HTML mit BeautifulSoup.
+- `handelsregister.py` steuert das Webportal programmatisch über `mechanize`, setzt Browser-Header und parst HTML mit BeautifulSoup.
 - Im Code ist Rate-Limiting als TODO markiert; ein produktionsreifer Token-Bucket ist nicht implementiert.
-- Im Repo-Listing ist kein LICENSE-File sichtbar. Vor Codeuebernahme ist daher zwingend zu klaeren, ob und unter welchen Bedingungen der Code genutzt, veraendert oder verteilt werden darf.
+- Im Repo-Listing ist kein LICENSE-File sichtbar. Vor Codeübernahme ist daher zwingend zu klären, ob und unter welchen Bedingungen der Code genutzt, verändert oder verteilt werden darf.
 
 ## Leitentscheidung
 
 NaC sollte in drei Stufen vorgehen:
 
 1. **Register-Evidence-Companion**
-   - NaC fuehrt den Businessprozess, die Recherche erfolgt manuell oder kontrolliert.
+   - NaC führt den Businessprozess, die Recherche erfolgt manuell oder kontrolliert.
    - Kein Aufbau eigener Registerdatenbank.
    - Kein Massenabruf.
-   - Standardmaessig werden nur Suchauftrag, Treffer-Metadaten, Hashes, Attestationen und Quellenlinks gespeichert.
+   - Standardmäßig werden nur Suchauftrag, Treffer-Metadaten, Hashes, Attestationen und Quellenlinks gespeichert.
 
 2. **Kontrollierter Einzelabruf-Adapter**
-   - technischer Adapter fuer gezielte Einzelrecherche
+   - technischer Adapter für gezielte Einzelrecherche
    - harte Rate Limits unterhalb der Portalgrenze
    - Zweckbindung je Request
    - Cache nur fallbezogen und mit Retention
@@ -98,13 +98,13 @@ NaC SaaS
 ## Was das Plugin tun darf
 
 - offizielle Registerportal-Seiten oeffnen
-- gezielte Suchauftraege fuer einzelne Unternehmen anlegen
+- gezielte Suchaufträge für einzelne Unternehmen anlegen
 - Suchparameter dokumentieren: Firma, Registerart, Registernummer, Registergericht, Bundesland, Sitz, PLZ
 - Treffer-Metadaten strukturiert speichern
-- Registerauszuege, Dokumente oder SI/XML nur fallbezogen hashen und referenzieren
-- Benutzerattestationen erfassen, z.B. "Registerauszug wurde im Registerportal geprueft"
+- Registerauszüge, Dokumente oder SI/XML nur fallbezogen hashen und referenzieren
+- Benutzerattestationen erfassen, z.B. "Registerauszug wurde im Registerportal geprüft"
 - Abrufzeitpunkt, Zweck, Nutzer, Tenant und Case-ID protokollieren
-- Statushinweise des Registerportals als Betriebsrisiko beruecksichtigen
+- Statushinweise des Registerportals als Betriebsrisiko berücksichtigen
 - Rate Limits hart erzwingen und pro Kunde quotieren
 - bei Bedarf Whitelist-IP-Antrag und Sonderfreigaben als NaC-Objekte dokumentieren
 
@@ -113,9 +113,9 @@ NaC SaaS
 - keine systematischen Voll- oder Teilregister aufbauen
 - keine Massenabfragen
 - keine Umgehung von Portalgrenzen, IP-Sperren oder Session-Schutz
-- keine parallele Hochlast-Suche ueber mehrere Tenants zur Umgehung der 60/h-Grenze
+- keine parallele Hochlast-Suche über mehrere Tenants zur Umgehung der 60/h-Grenze
 - keine gezielte Suche nach natuerlichen Personen
-- keine ungepruefte produktive Nutzung von `bundesAPI/handelsregister`
+- keine ungeprüfte produktive Nutzung von `bundesAPI/handelsregister`
 - keine Speicherung personenbezogener Registerdokumente ohne Mandantenpolicy
 - keine Weiterverwendung unter der Bezeichnung "Handelsregister", soweit dadurch gesetzliche Vorgaben verletzt werden
 - keine LLM-Verarbeitung von Registerdokumenten ohne explizite Freigabe und Datenklassifikation
@@ -138,28 +138,28 @@ Empfehlung: Dieser Pfad ist der erste Schritt.
 
 Dieser Pfad dient der technischen Bewertung, nicht sofort der Produktion.
 
-Pruefpunkte:
+Prüfpunkte:
 
-- Lizenzstatus des Repositories klaeren.
-- Abhaengigkeiten und Wartungsstand bewerten.
-- HTML-/JSF-Abhaengigkeit und Bruchrisiko des Parsers testen.
+- Lizenzstatus des Repositories klären.
+- Abhängigkeiten und Wartungsstand bewerten.
+- HTML-/JSF-Abhängigkeit und Bruchrisiko des Parsers testen.
 - Rate-Limit-Mechanismus nachruesten.
 - Cache-Semantik auf Zweckbindung und Retention umbauen.
-- Unit- und Integrationstests gegen kontrollierte Testfaelle bauen.
-- Robots-/Nutzungsordnungsfragen rechtlich pruefen.
+- Unit- und Integrationstests gegen kontrollierte Testfälle bauen.
+- Robots-/Nutzungsordnungsfragen rechtlich prüfen.
 
 Produktionsentscheidung erst nach Review.
 
 ### Pfad C: Eigener kontrollierter Registerportal-Adapter
 
-Falls ein Adapter erlaubt und benoetigt ist, sollte NaC eine eigene kleine Komponente bauen:
+Falls ein Adapter erlaubt und benötigt ist, sollte NaC eine eigene kleine Komponente bauen:
 
 - Request-Queue statt direkter Abrufe
 - Token Bucket pro NaC-Installation, pro IP, pro Tenant und pro User
 - harte globale Obergrenze unterhalb 60/h, solange keine Whitelist-IP genehmigt ist
-- deduplizierte Suchauftraege
+- deduplizierte Suchaufträge
 - Backoff bei Portalproblemen
-- keine parallelen Abfragen fuer Bulk-Listen
+- keine parallelen Abfragen für Bulk-Listen
 - beweissicheres Audit Journal
 
 ### Pfad D: Registrierte IP / Sonderzugang
@@ -188,10 +188,10 @@ Vorgeschlagene Commands:
 - `handelsregister.get_evidence`
 - `handelsregister.export_audit_package`
 - `handelsregister.adapter.status`
-- `handelsregister.adapter.search_single_entity` (spaeter)
-- `handelsregister.adapter.fetch_register_printout` (spaeter)
-- `handelsregister.adapter.fetch_si_xml` (spaeter)
-- `handelsregister.whitelist_ip.prepare_application` (spaeter)
+- `handelsregister.adapter.search_single_entity` (später)
+- `handelsregister.adapter.fetch_register_printout` (später)
+- `handelsregister.adapter.fetch_si_xml` (später)
+- `handelsregister.whitelist_ip.prepare_application` (später)
 
 ## Evidence-Modell
 
@@ -275,7 +275,7 @@ Statusmodell:
 
 ## Mandanten- und Compartment-Konzept
 
-Fuer SaaS gilt weiter: ein Compartment pro Kunde.
+Für SaaS gilt weiter: ein Compartment pro Kunde.
 
 Empfohlen:
 
@@ -289,16 +289,16 @@ Empfohlen:
   - tenantisolierte Retention
   - kundenspezifische Quoten
 
-Fuer Handelsregister besonders wichtig:
+Für Handelsregister besonders wichtig:
 
-- Eine globale Rate-Limit-Instanz verhindert, dass mehrere Kunden gemeinsam Portalgrenzen ueberschreiten.
-- OCI-Egress muss kontrollierbar sein, falls spaeter eine registrierte IP beantragt wird.
-- Caches duerfen nicht zu einem parallelen Register anwachsen.
-- Retention fuer Registerdokumente muss je Zweck und Kunde festgelegt werden.
+- Eine globale Rate-Limit-Instanz verhindert, dass mehrere Kunden gemeinsam Portalgrenzen überschreiten.
+- OCI-Egress muss kontrollierbar sein, falls später eine registrierte IP beantragt wird.
+- Caches dürfen nicht zu einem parallelen Register anwachsen.
+- Retention für Registerdokumente muss je Zweck und Kunde festgelegt werden.
 
 ## MVP
 
-Umsetzung fuer die erste Iteration:
+Umsetzung für die erste Iteration:
 
 - Markdown-Dokumentation und Plugin-Spezifikation
 - `handelsregister.health`
@@ -310,7 +310,7 @@ Umsetzung fuer die erste Iteration:
 - `handelsregister.record_document_hash`
 - Evidence-JSON-Schema
 - Rate-Limit-Policy als NaC-Konfiguration
-- Beispielworkflow fuer KYB/Vendor-Onboarding
+- Beispielworkflow für KYB/Vendor-Onboarding
 - technische Spike-Notiz zu `bundesAPI/handelsregister`
 
 Nicht im MVP:
@@ -321,7 +321,7 @@ Nicht im MVP:
 - Dokumentdownload per Adapter
 - SI/XML-Abruf per Adapter
 - Whitelist-IP-Sonderzugang
-- produktive Nutzung des GitHub-Codes ohne Lizenz- und Rechtspruefung
+- produktive Nutzung des GitHub-Codes ohne Lizenz- und Rechtsprüfung
 
 ## Sicherheitsanforderungen
 
@@ -333,31 +333,31 @@ Nicht im MVP:
 - Keine gezielte Personensuche.
 - Keine Speicherung von Registerdokumenten ohne Mandantenpolicy.
 - Evidence append-only und revisionsfest.
-- Hash-first-Design fuer Dokumente.
+- Hash-first-Design für Dokumente.
 - Keine Prompt-/Telemetry-Erfassung von Registerdokumenten.
-- Datenschutzpruefung fuer Unternehmenstraegerdaten und Dokumente mit Personenbezug.
+- Datenschutzprüfung für Unternehmensträgerdaten und Dokumente mit Personenbezug.
 - CIS-/C5-orientierte OCI-Baseline: IAM least privilege, MFA, Vault, KMS, Logging, Budgets, Security Zones wo sinnvoll.
 
 ## SaaS-Anbieter-Runbook
 
-1. Rolle klaeren: NaC als Prozessbegleiter, technischer Rechercheadapter oder registrierter IP-Nutzer.
-2. Nutzungsordnung und HGB/HRV-Anforderungen in Policies uebersetzen.
-3. Code-Lizenz von `bundesAPI/handelsregister` pruefen.
+1. Rolle klären: NaC als Prozessbegleiter, technischer Rechercheadapter oder registrierter IP-Nutzer.
+2. Nutzungsordnung und HGB/HRV-Anforderungen in Policies übersetzen.
+3. Code-Lizenz von `bundesAPI/handelsregister` prüfen.
 4. MVP ohne automatisierte Abrufe bauen.
 5. Evidence-Schema und Retention je Kunde festlegen.
 6. Globale und tenantbezogene Rate-Limits definieren.
 7. Kundenspezifisches OCI-Compartment anlegen.
-8. Pilot mit manueller Recherche und Evidence-Erfassung durchfuehren.
+8. Pilot mit manueller Recherche und Evidence-Erfassung durchführen.
 9. Adapter-Spike isoliert testen.
-10. Erst nach Rechts-, Lizenz- und Lastpruefung automatisierte Einzelabrufe freischalten.
-11. Bei hoeherem Bedarf Whitelist-IP-Antrag vorbereiten.
+10. Erst nach Rechts-, Lizenz- und Lastprüfung automatisierte Einzelabrufe freischalten.
+11. Bei höherem Bedarf Whitelist-IP-Antrag vorbereiten.
 
 ## Kunden-Onboarding-Runbook
 
-1. Kunde benennt Use Cases: KYB, Lieferanten-Onboarding, Vertragspruefung, Compliance, Litigation.
-2. Kunde bestaetigt, dass keine systematische Registerkopie aufgebaut werden soll.
+1. Kunde benennt Use Cases: KYB, Lieferanten-Onboarding, Vertragsprüfung, Compliance, Litigation.
+2. Kunde bestätigt, dass keine systematische Registerkopie aufgebaut werden soll.
 3. NaC legt Tenant, Quoten und Evidence Store an.
-4. NaC aktiviert Prozessvorlagen fuer Registerrecherche.
+4. NaC aktiviert Prozessvorlagen für Registerrecherche.
 5. Erste Recherche erfolgt manuell im offiziellen Registerportal.
 6. NaC erfasst Suchzweck, Treffer-Metadaten, Attestation und Dokument-Hash.
 7. Review: Sollen Inhalte gespeichert werden oder nur Hashes?
@@ -365,21 +365,21 @@ Nicht im MVP:
 
 ## Offene Entscheidungen
 
-- Darf der Code von `bundesAPI/handelsregister` aufgrund fehlender sichtbarer Lizenz ueberhaupt uebernommen werden?
+- Darf der Code von `bundesAPI/handelsregister` aufgrund fehlender sichtbarer Lizenz überhaupt übernommen werden?
 - Soll NaC nur Recherche-Evidence dokumentieren oder selbst Abrufe ausloesen?
 - Welche Use Cases brauchen automatisierte Einzelabrufe?
 - Welche Rate Limits gelten pro Kunde und global?
 - Ist eine registrierte IP notwendig?
 - Wie wird verhindert, dass Kunden zusammen faktisch ein Teilregister aufbauen?
-- Welche Registerdokumente duerfen gespeichert werden?
+- Welche Registerdokumente dürfen gespeichert werden?
 - Wie lange werden Treffer-Metadaten und Dokument-Hashes aufbewahrt?
 
-## Akzeptanzkriterien fuer die erste Umsetzung
+## Akzeptanzkriterien für die erste Umsetzung
 
-- Plugin fuehrt im MVP keine automatisierten Abrufe durch.
-- Jeder Vorgang enthaelt Zweck, Case-ID, Suchparameter, Nutzer und Zeitstempel.
+- Plugin führt im MVP keine automatisierten Abrufe durch.
+- Jeder Vorgang enthält Zweck, Case-ID, Suchparameter, Nutzer und Zeitstempel.
 - Kein Massenabruf und kein Voll-/Teilregister.
-- Dokumente werden standardmaessig nicht in NaC gespeichert.
+- Dokumente werden standardmäßig nicht in NaC gespeichert.
 - Jeder importierte Nachweis wird gehasht.
 - Rate-Limit-Policy ist dokumentiert.
 - `bundesAPI/handelsregister` wird nur als Spike referenziert, nicht produktiv eingebunden.
@@ -390,7 +390,7 @@ Nicht im MVP:
 - GitHub `bundesAPI/handelsregister`: https://github.com/bundesAPI/handelsregister
 - Raw README `bundesAPI/handelsregister`: https://raw.githubusercontent.com/bundesAPI/handelsregister/main/README.md
 - Raw `handelsregister.py`: https://raw.githubusercontent.com/bundesAPI/handelsregister/main/handelsregister.py
-- Registerportal der Laender, Informationen und Nutzungsordnung: https://www.handelsregister.de/rp_web/information/welcome.xhtml
+- Registerportal der Länder, Informationen und Nutzungsordnung: https://www.handelsregister.de/rp_web/information/welcome.xhtml
 - Registerportal Statushinweise: https://www.handelsregister.de/rp_web/aktuelleStatusHinweise/welcome.xhtml
 - HGB § 9: https://www.gesetze-im-internet.de/hgb/__9.html
 - HRV § 52: https://www.gesetze-im-internet.de/hdlregvfg/__52.html

@@ -2,28 +2,28 @@
 
 ## Zweck
 
-Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem zentralen Upstream uebernimmt, prueft und freigibt.
+Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem zentralen Upstream übernimmt, prüft und freigibt.
 
-## Uebernahmezyklus
+## Übernahmezyklus
 
 - Standardzyklus: monatlich oder quartalsweise.
-- Ausserplanmaessig nur bei sicherheits- oder compliance-kritischen Aenderungen.
-- Uebernommen werden nur freigegebene Upstream-Releases, keine ungeprueften Zwischenstaende.
+- Außerplanmäßig nur bei sicherheits- oder compliance-kritischen Änderungen.
+- Übernommen werden nur freigegebene Upstream-Releases, keine ungeprüften Zwischenstände.
 
-## Rollen im Uebernahmeprozess
+## Rollen im Übernahmeprozess
 
-- `sync_owner`: steuert den gesamten Uebernahmezyklus.
-- `reviewer_fachlich`: prueft fachliche Auswirkungen.
-- `reviewer_compliance`: prueft regulatorische Risiken.
-- `approver`: finales Go fuer produktive Nutzung.
+- `sync_owner`: steuert den gesamten Übernahmezyklus.
+- `reviewer_fachlich`: prüft fachliche Auswirkungen.
+- `reviewer_compliance`: prüft regulatorische Risiken.
+- `approver`: finales Go für produktive Nutzung.
 
 ## Standardablauf je Release
 
 1. Upstream-Release identifizieren (`v*` + Changelog).
 2. Sync-Branch erstellen: `sync/upstream-YYYY-MM`.
-3. Upstream-Stand uebernehmen.
+3. Upstream-Stand übernehmen.
 4. Impact-Assessment erfassen (fachlich, technisch, regulatorisch).
-5. Tests und Validierung ausfuehren.
+5. Tests und Validierung ausführen.
 6. Sync-PR mit Nachweisen eroefnen.
 7. Review und Freigabe nach Rollenmodell.
 8. Merge in Unternehmens-`main`.
@@ -32,38 +32,38 @@ Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem
 ## Pflichtinhalte eines Sync-PR
 
 - Referenz auf Upstream-Release-ID.
-- Zusammenfassung der relevanten Aenderungen.
+- Zusammenfassung der relevanten Änderungen.
 - Impact-Einstufung (`low`, `medium`, `high`).
 - Testnachweise (Validierung, relevante Regressionen, Pilotfall).
 - Rollout-Entscheidung:
-  - sofort fuer neue Vorgaenge aktiv,
+  - sofort für neue Vorgänge aktiv,
   - erst nach Pilot,
-  - zurueckgestellt.
+  - zurückgestellt.
 
 ## PR-Gates (Minimum)
 
 - kein direkter Push nach `main`,
 - mindestens ein fachlicher Review,
-- zusaetzlicher Compliance-Review bei `medium/high impact`,
+- zusätzlicher Compliance-Review bei `medium/high impact`,
 - erfolgreiche Validierung der betroffenen Prozessdateien,
-- dokumentierter Verantwortlicher fuer Rollout-Entscheidung.
+- dokumentierter Verantwortlicher für Rollout-Entscheidung.
 
 ## Rollback-Regel
 
-Wenn ein neues Release im Pilot oder Betrieb unzulaessige Risiken erzeugt:
+Wenn ein neues Release im Pilot oder Betrieb unzulässige Risiken erzeugt:
 
-1. Rollout fuer neue Vorgaenge sofort stoppen.
-2. Rueckkehr auf zuletzt freigegebenes Release fuer neue Vorgaenge.
+1. Rollout für neue Vorgänge sofort stoppen.
+2. Rückkehr auf zuletzt freigegebenes Release für neue Vorgänge.
 3. Incident und Entscheidungspfad als Issue dokumentieren.
-4. Korrektur als Hotfix oder naechster Sync-PR.
+4. Korrektur als Hotfix oder nächster Sync-PR.
 
-Laufende Vorgaenge bleiben auf ihrer Startversion und werden nicht rueckwirkend umgebogen.
+Laufende Vorgänge bleiben auf ihrer Startversion und werden nicht rückwirkend umgebogen.
 
 ## Artefakte und Nachweise
 
-Jede Uebernahme erzeugt mindestens:
+Jede Übernahme erzeugt mindestens:
 
 - Sync-PR mit Freigabehistorie,
 - Release-Tag im Unternehmens-Fork,
 - ggf. SBOM-Artefakt gemaess Policy,
-- Entscheidungseintrag fuer Rollout und Geltungsbeginn.
+- Entscheidungseintrag für Rollout und Geltungsbeginn.

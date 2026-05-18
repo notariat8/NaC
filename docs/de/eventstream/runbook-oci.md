@@ -1,4 +1,4 @@
-# Runbook: OCI Eventstream fuer Revisionssicherheit
+# Runbook: OCI Eventstream für Revisionssicherheit
 
 ## Zielbild
 
@@ -7,10 +7,10 @@ Diese Zielvariante setzt das revisionssichere Event-Journal auf OCI um:
 - Ingest API (Webhook)
 - OCI Streaming (Stream)
 - OCI Object Storage mit Retention/Immutability (WORM)
-- OCI Vault (Signaturen/Schluessel)
+- OCI Vault (Signaturen/Schlüssel)
 - Evidence Index (OCI OpenSearch oder SQL)
 
-Diese deutsche Fassung ist die fuehrende fachliche Runbook-Fassung; die
+Diese deutsche Fassung ist die führende fachliche Runbook-Fassung; die
 englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Referenzkomponenten
@@ -18,8 +18,8 @@ englische Fassung wird synchron als Orientierung gepflegt.
 - `ingest-api`: OCI Container Instance/OKE Service
 - `event-broker`: OCI Streaming Stream + Consumer Group
 - `journal-store`: OCI Object Storage Bucket mit Retention Rule
-- `anchor-job`: taeglicher Signaturjob (Functions/Container Job)
-- `evidence-index`: OpenSearch/SQL fuer Auditabfragen
+- `anchor-job`: täglicher Signaturjob (Functions/Container Job)
+- `evidence-index`: OpenSearch/SQL für Auditabfragen
 
 ## Mindestkonfiguration
 
@@ -27,7 +27,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 - Partitions: 3 (Startwert)
 - Retention: 24-168h (Transportebene)
-- Consumer Group: dediziert fuer Normalizer
+- Consumer Group: dediziert für Normalizer
 - Private Endpoints/VCN Controls: aktiv
 - TLS: aktiv
 
@@ -35,14 +35,14 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 - Bucket: `event-journal-immutable`
 - Retention Rule: z. B. 3650 Tage
-- Loeschung/Mutation vor Frist: verboten
-- Governance-Prozess fuer Retention-Aenderungen dokumentiert
+- Löschung/Mutation vor Frist: verboten
+- Governance-Prozess für Retention-Änderungen dokumentiert
 
 ### Signaturen
 
 - Vault Key: `event-anchor-signing-key`
 - Algorithmus: RSA-PSS (organisationaler Standard)
-- Anchor-Frequenz: taeglich 23:59 UTC
+- Anchor-Frequenz: täglich 23:59 UTC
 
 ## Event-Schema (Mussfelder)
 
@@ -64,7 +64,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 1. GitHub Events gehen an Ingest API.
 2. Ingest API validiert HMAC-Signatur.
-3. Gueltige Events werden in OCI Streaming geschrieben.
+3. Gültige Events werden in OCI Streaming geschrieben.
 4. Normalizer konsumiert Stream und erstellt hash-verkettete Journal-Events.
 5. Journal-Events werden append-only in Object Storage geschrieben.
 6. Evidence Index wird aktualisiert.
@@ -87,7 +87,7 @@ englische Fassung wird synchron als Orientierung gepflegt.
 
 ## Go-Live-Checkliste
 
-- [ ] HMAC-Signaturpruefung aktiv
+- [ ] HMAC-Signaturprüfung aktiv
 - [ ] OCI Streaming Ausfallszenarien getestet
 - [ ] Object Storage Retention aktiv
 - [ ] Vault-Signaturtest erfolgreich

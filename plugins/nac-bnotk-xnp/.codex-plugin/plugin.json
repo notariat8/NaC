@@ -1,7 +1,7 @@
 {
   "name": "nac-bnotk-xnp",
   "version": "0.1.0",
-  "description": "XNP-Pruefung fuer notarielle Arbeitsplaetze.",
+  "description": "XNP-Prüfung für notarielle Arbeitsplätze.",
   "author": {
     "name": "NaC Maintainers",
     "email": "security@example.com",
@@ -26,9 +26,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC XNP-Pruefung",
-    "shortDescription": "XNP lokal und ohne Zugangsdaten pruefen.",
-    "longDescription": "Installierbares lokales Codex-Plugin fuer Notariatsarbeitsplaetze. Es prueft XNP-Bereitschaft, Amtstaetigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
+    "displayName": "NaC XNP-Prüfung",
+    "shortDescription": "XNP lokal und ohne Zugangsdaten prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für Notariatsarbeitsplätze. Es prüft XNP-Bereitschaft, Amtstätigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
     "developerName": "NaC Maintainers",
     "category": "Regulierung",
     "capabilities": [
@@ -47,9 +47,9 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Erstelle eine lokale XNP-Leser-Vorpruefung.",
-      "Plane die lokale XNP-Authentifizierungspruefung.",
-      "Pruefe die XNotar-Uebergabe ohne Zugangsdatenwerte."
+      "Erstelle eine lokale XNP-Leser-Vorprüfung.",
+      "Plane die lokale XNP-Authentifizierungsprüfung.",
+      "Prüfe die XNotar-Übergabe ohne Zugangsdatenwerte."
     ],
     "brandColor": "#62513D",
     "composerIcon": "./assets/icon.png",
