@@ -1,6 +1,6 @@
 # Herausgeber Und Maintainer
 
-NoC wird als oeffentliches Referenz- und Produktkern-Repository unter dem
+NaC wird als oeffentliches Referenz- und Produktkern-Repository unter dem
 GitHub-Profil [ofunk](https://github.com/ofunk) gefuehrt.
 
 ## Rolle
@@ -18,7 +18,7 @@ Dieses Repository ist gleichzeitig:
 
 AI-first-Betrieb in regulierten Umgebungen braucht Vertrauen. Vertrauen entsteht
 nicht durch geschlossene Folien, sondern durch lesbare Regeln, pruefbare Tests,
-klare Grenzen und sichtbare Verantwortlichkeit. NoC zeigt deshalb oeffentlich,
+klare Grenzen und sichtbare Verantwortlichkeit. NaC zeigt deshalb oeffentlich,
 wie notarielle Vorgangsarten, Freigaben, technische Readiness und Nachweise
 modelliert werden koennen, ohne echte Mandatsdaten offenzulegen.
 

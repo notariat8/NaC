@@ -27,7 +27,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
 | `doc.deletion_consent` | Dokument: Loeschung Zustimmung | `offen` | Dokument von Glaeubiger, Berechtigtem oder Eigentuemer |
-| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
 | `doc.right_letter` | Dokument: Recht Brief | `offen` | freigegebener Nachweisspeicher |
 
 ## Entscheidungen

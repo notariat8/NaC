@@ -1,21 +1,21 @@
-# Lokale NoC-Plugins installieren
+# Lokale NaC-Plugins installieren
 
 ## Zweck
 
-Die Plugin-Suite ist repo-lokal und mit NoC versioniert. Marktplatz-Metadaten
+Die Plugin-Suite ist repo-lokal und mit NaC versioniert. Marktplatz-Metadaten
 liegen in [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json);
 Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 
 ## Day0-Validierung
 
 ```bash
-cd ~/NoC
+cd ~/NaC
 python3 scripts/validate_plugins.py
 python3 scripts/install_local_plugins.py --mode link
 PYTHONPATH=src python3 scripts/quality_gate.py --profile standard
 ```
 
-Nach dem Installationsschritt Codex beenden und mit dem Workspace `~/NoC` neu
+Nach dem Installationsschritt Codex beenden und mit dem Workspace `~/NaC` neu
 oeffnen. Die laufende Session liest aktive Tools und Plugins beim Start ein;
 repo-lokale Plugins werden nicht nachtraeglich in eine bereits gestartete
 Session injiziert.
@@ -34,7 +34,7 @@ zeigt, sind zwei Dinge auseinandergefallen:
 
 `scripts/install_local_plugins.py --mode link` spiegelt deshalb den Marktplatz
 nach `~/.agents/plugins/marketplace.json`. Die Plugin-Ordner werden unter
-`~/plugins/<plugin>` verlinkt. Mit `NOC_PLUGIN_HOME=/anderer/root` kann ein
+`~/plugins/<plugin>` verlinkt. Mit `NAC_PLUGIN_HOME=/anderer/root` kann ein
 abweichender Home-Root gesetzt werden; dann liegen Marktplatz und Plugins
 unter diesem Root. Der Link-Modus ist der Standard fuer Entwicklung, weil das
 Repository die einzige Quelle der Wahrheit bleibt. Falls Symlinks in einer
@@ -43,24 +43,24 @@ Umgebung nicht erlaubt sind, ist `--mode copy` der Fallback.
 Wenn `~/.agents` in einer verwalteten Codex-Session read-only gemountet ist,
 den Installationsschritt im Host-Workspace beziehungsweise auf dem eigentlichen
 Arbeitsplatz ausfuehren. Fuer reine Integrationspruefungen kann ein schreibbarer
-Test-Root mit `--target-root /tmp/noc-plugin-home` genutzt werden; fuer echte
+Test-Root mit `--target-root /tmp/nac-plugin-home` genutzt werden; fuer echte
 Codex-Discovery bleibt der home-lokale Root massgeblich.
 
 ## Lokales Installationsmuster
 
-1. Codex mit Workspace `~/NoC` oeffnen.
+1. Codex mit Workspace `~/NaC` oeffnen.
 2. Pruefen, dass [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json)
    die gewuenschten Plugins listet.
 3. `python3 scripts/install_local_plugins.py --mode link` ausfuehren.
-4. Codex neu starten oder eine neue Session mit Workspace `~/NoC` oeffnen.
-5. Fuer notariatsseitige Online-HRA-Arbeit zuerst `noc-cyberjack-rfid`,
-   danach `noc-bnotk-xnp` und danach `noc-handelsregister` installieren.
+4. Codex neu starten oder eine neue Session mit Workspace `~/NaC` oeffnen.
+5. Fuer notariatsseitige Online-HRA-Arbeit zuerst `nac-cyberjack-rfid`,
+   danach `nac-bnotk-xnp` und danach `nac-handelsregister` installieren.
 6. Falls die Codex-Umgebung es unterstuetzt, aus dem repo-lokalen Marktplatz
    installieren.
 7. Pruefen, dass das installierte Card-Plugin den Anzeigenamen
-   `NoC Karte/SAK` und den Quellpfad `./plugins/noc-cyberjack-rfid` hat.
+   `NaC Karte/SAK` und den Quellpfad `./plugins/nac-cyberjack-rfid` hat.
 8. Pruefen, dass das installierte XNP-Plugin den Anzeigenamen
-   `NoC XNP-Pruefung` und den Quellpfad `./plugins/noc-bnotk-xnp` hat.
+   `NaC XNP-Pruefung` und den Quellpfad `./plugins/nac-bnotk-xnp` hat.
 9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
    `python3 scripts/install_local_plugins.py --mode copy --force` nach
    Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.
@@ -72,8 +72,8 @@ direkten externen Schreibadapter, Portalautomatisierung, Karten-Zugriffe,
 Zertifikatsverarbeitung oder Geheimnis-Speicherung. Das erfordert jeweils einen
 separat geprueften Connector-PR.
 
-Fuer Online-HRA ist `noc-cyberjack-rfid` die installierbare Karten- und
-SAK-Pruefung und `noc-bnotk-xnp` die installierbare XNP-Bereitschafts- und
+Fuer Online-HRA ist `nac-cyberjack-rfid` die installierbare Karten- und
+SAK-Pruefung und `nac-bnotk-xnp` die installierbare XNP-Bereitschafts- und
 Authentifizierungspruefung. Sie authentifizieren nicht eigenstaendig als Notar,
 speichern keine PINs oder Zugangsdaten, loesen keine XNotar-Importe aus und
 reichen keine Anmeldungen ein.

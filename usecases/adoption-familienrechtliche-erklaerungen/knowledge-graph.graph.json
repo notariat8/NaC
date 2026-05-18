@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.adoption-familienrechtliche-erklaerungen",
   "catalog_group": "next10",
-  "title": "NoC Usecase-Wissensgraph: Adoption / familienrechtliche Erklaerungen",
+  "title": "NaC Usecase-Wissensgraph: Adoption / familienrechtliche Erklaerungen",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -272,8 +272,8 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-idaas"
+        "nac-regulated-core",
+        "nac-idaas"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

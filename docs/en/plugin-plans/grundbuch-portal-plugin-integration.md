@@ -4,7 +4,7 @@ Status: `draft`
 
 ## Target Picture
 
-This plan defines how NoC can support processes around the German joint land
+This plan defines how NaC can support processes around the German joint land
 register portal and online land-register inspection. The goal is not to scrape
 land-register portals or automate retrieval without authorization. The goal is
 a secure, tenant-capable workflow and evidence approach that can later become a
@@ -41,7 +41,7 @@ flowchart LR
     Readiness --> Approval[Approval gate]
     Approval --> Official[Official state portal or customer system]
     Official --> Evidence[Metadata and document hash]
-    Evidence --> Audit[NoC evidence state]
+    Evidence --> Audit[NaC evidence state]
 ```
 
 ## What The Plugin May Do
@@ -67,14 +67,14 @@ flowchart LR
 
 ### Path A: Authorization And Evidence Companion, MVP
 
-This path is immediately plannable. NoC checks authorization documentation and
+This path is immediately plannable. NaC checks authorization documentation and
 purpose, creates the workflow plan, and records evidence after the authorized
 user completes the official portal step.
 
 ### Path B: Controlled Document And Evidence Import
 
-If a customer stores documents in a DMS, NoC can import hashes, references and
-attestations. Content storage in NoC remains disabled by default.
+If a customer stores documents in a DMS, NaC can import hashes, references and
+attestations. Content storage in NaC remains disabled by default.
 
 ### Path C: Authorized Direct Adapter
 
@@ -112,7 +112,7 @@ Default evidence:
 Land-register content is excluded by default. If content must be stored, it must
 be tenant-isolated, encrypted, retained according to policy and exportable.
 
-## NoC Process Types
+## NaC Process Types
 
 - `land_register_readiness`
 - `land_register_retrieval_plan`
@@ -168,7 +168,7 @@ The first iteration implements:
 ## Open Decisions
 
 - Which federal states are relevant for the first customers?
-- Should land-register excerpts ever be stored in NoC, or only in the customer
+- Should land-register excerpts ever be stored in NaC, or only in the customer
   system?
 - Which retention applies to evidence and imported documents?
 - Are there state-specific technical interfaces officially approved for
@@ -180,5 +180,5 @@ The first iteration implements:
 - Every matter contains federal state, authorization status, retrieval purpose,
   file reference and responsible person.
 - Every imported document is hashed.
-- Land-register content is not stored in NoC by default.
+- Land-register content is not stored in NaC by default.
 - Four-eyes approval can be configured for sensitive retrievals.

@@ -1,4 +1,4 @@
-# NoC: Notariat as Code with Enterprise Control Plane
+# NaC: Notariat as Code with Enterprise Control Plane
 
 This repository shows how an organization can be operated as a declarative,
 versioned system. Users express business intent through an LLM frontend, while
@@ -14,7 +14,7 @@ provide the binding process control.
 
 ## Project Positioning
 
-This repository is the active project state for `Notariat as Code` with `NoC`
+This repository is the active project state for `Notariat as Code` with `NaC`
 as the concrete Enterprise Control Plane.
 
 Binding positioning:
@@ -65,7 +65,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
 - [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
-- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains why NoC
+- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains why NaC
   is CLI-first today and still UI-ready later.
 - [docs/en/reifegrad.md](reifegrad.md) separates usable today, pilot-ready, planned and deliberately blocked surfaces.
 - [docs/en/glossar.md](glossar.md) explains terms for non-technical readers.

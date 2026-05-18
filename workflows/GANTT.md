@@ -1,6 +1,6 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-18
 
 ```mermaid
 gantt
@@ -16,6 +16,7 @@ gantt
     No-code-KG-Editor-View-Vertrag             :done,   w4a, 2026-05-15, 1d
     Deutsche Workflow-MD-Sprachfuehrung        :done,   w4b, 2026-05-17, 1d
     Skill-Sprachregel und EN-Summary            :done,   w4c, 2026-05-17, 1d
+    NaC-Namenskonvention in Workflows           :done,   w4d, 2026-05-18, 1d
     Workflow-Vertragsformat ergaenzen          :active, w4, 2026-05-15, 21d
 
     section Ausfuehrung
@@ -35,3 +36,7 @@ gantt
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung fuehrt; englische Summary dient technischer Anschlussfaehigkeit, keine finale rechtliche Wahrheit. |
 | Python-Workflows | `workflows/python/` plus `src/notary_kg/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und stellt die sichere No-code-Editor-View bereit. |
 | Workflow-Vertraege | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhaengigkeiten und der implementierte KG-Editor-Vertrag. |
+
+Der repo-weite Marken- und ID-Standard heisst `NaC` fuer `Notariat as Code`;
+alte Schreibweisen sind in Workflow-Dokumenten nicht mehr
+zulaessig.

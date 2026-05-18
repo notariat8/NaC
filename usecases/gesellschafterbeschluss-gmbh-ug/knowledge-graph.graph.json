@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.gesellschafterbeschluss-gmbh-ug",
   "catalog_group": "next10",
-  "title": "NoC Usecase-Wissensgraph: Gesellschafterbeschluss bei GmbH/UG",
+  "title": "NaC Usecase-Wissensgraph: Gesellschafterbeschluss bei GmbH/UG",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -237,7 +237,7 @@
           "id": "doc.register_application",
           "label": "Dokument: Register Antrag",
           "status": "open",
-          "source": "noc-bnotk-xnp und noc-handelsregister",
+          "source": "nac-bnotk-xnp und nac-handelsregister",
           "contains_personal_data": true
         }
       ],
@@ -280,10 +280,10 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-bnotk-xnp",
-        "noc-handelsregister",
-        "noc-cyberjack-rfid"
+        "nac-regulated-core",
+        "nac-bnotk-xnp",
+        "nac-handelsregister",
+        "nac-cyberjack-rfid"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

@@ -1,4 +1,4 @@
-# START_HERE: Operativer Einstieg in NoC
+# START_HERE: Operativer Einstieg in NaC
 
 Status: verbindlicher Startpfad
 Letzte inhaltliche Anpassung: 2026-05-15
@@ -6,7 +6,7 @@ Letzte inhaltliche Anpassung: 2026-05-15
 ## Warum dieses Dokument neben dem README existiert
 
 [README.md](../../README.md) und [docs/de/README.md](README.md) sind Projektuebersicht und Index. Dieses
-Dokument ist die operative Startsequenz fuer Arbeit im laufenden NoC-Projekt.
+Dokument ist die operative Startsequenz fuer Arbeit im laufenden NaC-Projekt.
 
 [START_HERE.md](START_HERE.md) bleibt deshalb notwendig, hat aber eine andere Aufgabe als das
 README:
@@ -18,7 +18,7 @@ README:
 | [docs/de/START_HERE.md](START_HERE.md) | Verbindlicher Arbeitsstart fuer neue Sitzungen, neue Mitwirkende und Agenten. |
 
 Dieses Repo ist kein externer Vorschlag mehr. Es ist der aktive Projektstand fuer
-`Notariat as Code` mit `NoC` als konkreter Enterprise Control Plane.
+`Notariat as Code` mit `NaC` als konkreter Enterprise Control Plane.
 
 ## Wann START_HERE zu verwenden ist
 
@@ -78,7 +78,7 @@ Spiegelung und einem Neustart.
 
 ## Arbeitsmodus
 
-NoC wird als Software entwickelt. Konzeptarbeit ist nur dann vollstaendig, wenn
+NaC wird als Software entwickelt. Konzeptarbeit ist nur dann vollstaendig, wenn
 sie mindestens eine passende Umsetzungsflaeche mitpflegt:
 
 - Runtime-Code unter [src/](../../src)

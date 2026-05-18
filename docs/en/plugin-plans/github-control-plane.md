@@ -4,7 +4,7 @@ Status: `proposed`
 
 ## Goal
 
-GitHub remains the binding GitOps control plane for NoC:
+GitHub remains the binding GitOps control plane for NaC:
 
 - branches and pull requests represent subject-matter change requests,
 - reviews and checks represent approvals,

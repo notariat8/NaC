@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "plugins" / "noc-pkcs7-certbundle" / "scripts" / "inspect_certbundle.py"
+SCRIPT_PATH = REPO_ROOT / "plugins" / "nac-pkcs7-certbundle" / "scripts" / "inspect_certbundle.py"
 
 
 def load_certbundle_module():
@@ -36,7 +36,7 @@ class Pkcs7CertBundleTests(unittest.TestCase):
         args = argparse.Namespace(input=None, max_bytes=certbundle.MAX_INPUT_BYTES)
         evidence = certbundle.build_evidence(args)
 
-        self.assertEqual(evidence["plugin"], "noc-pkcs7-certbundle")
+        self.assertEqual(evidence["plugin"], "nac-pkcs7-certbundle")
         self.assertEqual(evidence["overall_status"], "manual_review")
         self.assertFalse(evidence["policy"]["private_key_loaded"])
         self.assertFalse(evidence["policy"]["pkcs12_pfx_imported"])

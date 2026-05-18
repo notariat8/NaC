@@ -26,7 +26,7 @@ class CheckResult:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Deterministischer Quality Gate Runner fuer NoC."
+        description="Deterministischer Quality Gate Runner fuer NaC."
     )
     parser.add_argument(
         "--profile",
@@ -169,7 +169,7 @@ def write_markdown(path: Path, payload: dict) -> None:
     absolute.parent.mkdir(parents=True, exist_ok=True)
 
     lines: list[str] = []
-    lines.append("# NoC Quality Gate Report")
+    lines.append("# NaC Quality Gate Report")
     lines.append("")
     lines.append(f"- Timestamp: `{payload['timestamp_utc']}`")
     lines.append(f"- Profile: `{payload['profile']}`")
@@ -212,7 +212,7 @@ def main() -> int:
     write_json(args.json_output, status_payload)
     write_markdown(args.md_output, status_payload)
 
-    print("=== NoC Quality Gate ===")
+    print("=== NaC Quality Gate ===")
     print(f"PROFILE: {args.profile}")
     print(f"STATUS: {status_payload['overall_status']}")
     for item in results:

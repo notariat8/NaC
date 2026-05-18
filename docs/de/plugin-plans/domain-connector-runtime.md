@@ -4,7 +4,7 @@ Status: `draft`
 
 ## Ziel
 
-Fachsystem-Connectoren sollen NoC-Aenderungen kontrolliert in Zielsysteme reconciled:
+Fachsystem-Connectoren sollen NaC-Aenderungen kontrolliert in Zielsysteme reconciled:
 
 - IAM
 - GitHub

@@ -1,8 +1,8 @@
-# NoC Enterprise Control Plane MVP (6 Monate)
+# NaC Enterprise Control Plane MVP (6 Monate)
 
 ## Ziel und Rahmen
 
-Dieses Dokument konkretisiert ein realistisches MVP fuer `Notariat as Code` im bestehenden Modell `NoC + Enterprise GitOps + NoC`.
+Dieses Dokument konkretisiert ein realistisches MVP fuer `Notariat as Code` im bestehenden Modell `NaC + Enterprise GitOps + NaC`.
 
 Das MVP schliesst einen kleinen, aber vollstaendigen End-to-End-Kreis:
 

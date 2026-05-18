@@ -1,6 +1,6 @@
 # Example: Real-Estate Purchase Contract Without Real Mandate Data
 
-This example shows the NoC flow for a real-estate purchase contract. It uses no
+This example shows the NaC flow for a real-estate purchase contract. It uses no
 real names, no address, no purchase price and no land-register excerpt.
 
 ## 1. Select The Case Type
@@ -16,7 +16,7 @@ business-facing front page is
 python scripts/notary_kg.py --repo-root . case immobilienkaufvertrag
 ```
 
-NoC shows open nodes for property, seller, buyer, purchase price, encumbrances,
+NaC shows open nodes for property, seller, buyer, purchase price, encumbrances,
 financing, possession transfer and approvals.
 
 ## 3. Do Not Store Real Input In Git

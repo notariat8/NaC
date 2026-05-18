@@ -1,6 +1,6 @@
-# NoC: Notariat as Code mit Enterprise Control Plane
+# NaC: Notariat as Code mit Enterprise Control Plane
 
-Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `NoC` ist dabei die konkrete Auspraegung als Enterprise Control Plane.
+Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten ueber ein LLM-Frontend in natuerlicher Sprache, waehrend Git, Pull Requests, Reviews, Actions und signierte Abschluesse die verbindliche Prozessfuehrung uebernehmen. `NaC` ist dabei die konkrete Auspraegung als Enterprise Control Plane.
 
 ## Kernidee
 
@@ -13,13 +13,13 @@ Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes 
 
 - Architekturmodell: `Notariat as Code`
 - Betriebsprinzip: `Enterprise GitOps`
-- konkrete Umsetzung in diesem Repo: `NoC`
+- konkrete Umsetzung in diesem Repo: `NaC`
 - Plattformname: `Enterprise Control Plane`
 - Referenz: [docs/de/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
 ## Projektpositionierung
 
-Dieses Repository ist der aktive Projektstand fuer `Notariat as Code` mit `NoC`
+Dieses Repository ist der aktive Projektstand fuer `Notariat as Code` mit `NaC`
 als konkreter Enterprise Control Plane.
 
 Verbindliche Positionierung:
@@ -78,7 +78,7 @@ Schnelle Orientierung: [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 - [docs/de/betriebsstart.md](betriebsstart.md): privater Fork, lokale Checks und Betriebsgrenzen.
 - [docs/de/integration-start.md](integration-start.md): Fachsystem-, Plugin- und Connector-Pfad.
 - [docs/de/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit fuer Pruefung und Standardisierung.
-- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NoC heute
+- [docs/de/ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NaC heute
   CLI-first ist und spaeter trotzdem UI-faehig bleibt.
 - [docs/de/reifegrad.md](reifegrad.md): Matrix fuer heute nutzbar, pilotfaehig, geplant und bewusst gesperrt.
 - [docs/de/glossar.md](glossar.md): Begriffe fuer Nicht-Technik-Leser.

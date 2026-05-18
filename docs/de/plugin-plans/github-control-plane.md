@@ -4,7 +4,7 @@ Status: `proposed`
 
 ## Ziel
 
-GitHub bleibt die verbindliche GitOps-Steuerung fuer NoC:
+GitHub bleibt die verbindliche GitOps-Steuerung fuer NaC:
 
 - Branches und Pull Requests bilden fachliche Aenderungsantraege.
 - Reviews und Checks bilden Freigaben.

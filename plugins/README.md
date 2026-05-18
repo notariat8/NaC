@@ -1,22 +1,22 @@
-# NoC Plugins fuer regulierte Branchen
+# NaC Plugins fuer regulierte Branchen
 
-Dieser Ordner enthaelt installierbare repo-lokale Codex-Plugins fuer NoC-
+Dieser Ordner enthaelt installierbare repo-lokale Codex-Plugins fuer NaC-
 Arbeitsablaeufe in regulierten Branchen. Die erste Suite fokussiert
 Anwaltskanzleien, Notariate, Steuer-Arbeitsablaeufe und
 Cloud-Nachweisbetrieb.
 
 ## Installierbare Plugins
 
-- `noc-regulated-core`: gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe.
-- `noc-idaas`: Begleiter fuer deutsche eID-Pruefung und IAM-Projektionsbereitschaft.
-- `noc-cyberjack-rfid`: lokale Karten- und SAK-lite-Pruefung vor dem XNP-Login.
-- `noc-bnotk-xnp`: lokale XNP-Authentifizierungspruefung nach Kartenbereitschaft.
-- `noc-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur.
-- `noc-handelsregister`: HRA-zuerst-Bereitschaft fuer Online-Registeranmeldungen nach Modusentscheidung.
-- `noc-bea-portal`: beA-Arbeitsablauf- und Nachweisbegleiter.
-- `noc-elster-eric`: ELSTER- und ERiC-Arbeitsablaufbegleiter.
-- `noc-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
-- `noc-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
+- `nac-regulated-core`: gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe.
+- `nac-idaas`: Begleiter fuer deutsche eID-Pruefung und IAM-Projektionsbereitschaft.
+- `nac-cyberjack-rfid`: lokale Karten- und SAK-lite-Pruefung vor dem XNP-Login.
+- `nac-bnotk-xnp`: lokale XNP-Authentifizierungspruefung nach Kartenbereitschaft.
+- `nac-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur.
+- `nac-handelsregister`: HRA-zuerst-Bereitschaft fuer Online-Registeranmeldungen nach Modusentscheidung.
+- `nac-bea-portal`: beA-Arbeitsablauf- und Nachweisbegleiter.
+- `nac-elster-eric`: ELSTER- und ERiC-Arbeitsablaufbegleiter.
+- `nac-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
+- `nac-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
 
 ## Sicherheitsmodell
 

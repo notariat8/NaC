@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.schenkungsvertrag-uebertragungsvertrag",
   "catalog_group": "top10",
-  "title": "NoC Usecase-Wissensgraph: Schenkungsvertrag / Uebertragungsvertrag",
+  "title": "NaC Usecase-Wissensgraph: Schenkungsvertrag / Uebertragungsvertrag",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -258,7 +258,7 @@
           "id": "doc.land_register_excerpt",
           "label": "Dokument: aktueller Grundbuchauszug",
           "status": "open",
-          "source": "noc-grundbuch-portal oder manuell gepruefter Upload",
+          "source": "nac-grundbuch-portal oder manuell gepruefter Upload",
           "contains_personal_data": true
         },
         {
@@ -310,8 +310,8 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-grundbuch-portal"
+        "nac-regulated-core",
+        "nac-grundbuch-portal"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

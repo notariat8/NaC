@@ -2,14 +2,14 @@
 
 ## Zweck
 
-Dieses Dokument trennt die NoC-Plugin-Entwicklung von den moeglichen
+Dieses Dokument trennt die NaC-Plugin-Entwicklung von den moeglichen
 OpenAI-Vertriebskanaelen. Das Repo nutzt weiterhin den Begriff `plugins/` fuer
 installierbare Artefakte, aber ein Release muss vor Veroeffentlichung dem
 konkreten OpenAI-Kanal zugeordnet werden.
 
 ## Vertriebskanaele
 
-| Kanal | Ziel | Konsequenz fuer NoC |
+| Kanal | Ziel | Konsequenz fuer NaC |
 | --- | --- | --- |
 | Public GPT Store | Oeffentlich auffindbarer GPT fuer Notariate | Nur verwenden, wenn die aktuelle OpenAI-Pruefung, Builder-Profil, Policy-Anforderungen und Datenschutz-URLs erfuellt sind. |
 | GPT mit Actions | GPT nutzt externe APIs ueber Actions | Jede Action braucht gueltige Datenschutz-/Nutzungslinks und eine gepruefte Datenverarbeitungsgrenze. |
@@ -33,7 +33,7 @@ Aktuelle Quellen:
 - [Sharing and publishing GPTs](https://help.openai.com/en/articles/8793007-getting-your-gpt-featured)
 - [Building and publishing a GPT](https://help.openai.com/en/articles/8798878-building-and-publishing-a-gpt)
 
-## NoC-Regel
+## NaC-Regel
 
 Jedes Plugin unter `plugins/` muss vor Publikation einem Kanal zugeordnet
 werden. Die Zuordnung wird in `plugins/GANTT.md` und im jeweiligen Plugin-Plan

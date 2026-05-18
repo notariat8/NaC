@@ -19,7 +19,7 @@ REQUIRED_CLUSTERS = {
     "key_performance_indicators",
 }
 REQUIRED_INFRASTRUCTURE_IDS = {
-    "local-noc-workspace",
+    "local-nac-workspace",
     "local-development-toolchain",
     "local-plugin-development-toolchain",
     "local-notary-workstation-xnp-card-path",
@@ -55,8 +55,8 @@ def validate_file(path: Path) -> list[str]:
     except json.JSONDecodeError as exc:
         return [f"{path.relative_to(REPO_ROOT)} ist kein gueltiges JSON: {exc}"]
 
-    if payload.get("schema_version") != "noc.ai-sbom/v0.1":
-        errors.append(f"{path.relative_to(REPO_ROOT)}: schema_version muss noc.ai-sbom/v0.1 sein")
+    if payload.get("schema_version") != "nac.ai-sbom/v0.1":
+        errors.append(f"{path.relative_to(REPO_ROOT)}: schema_version muss nac.ai-sbom/v0.1 sein")
     if payload.get("status") not in {"draft", "active", "release-bound"}:
         errors.append(f"{path.relative_to(REPO_ROOT)}: status ist ungueltig")
 

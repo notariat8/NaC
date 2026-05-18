@@ -29,7 +29,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
 | `doc.transfer_draft` | Dokument: Uebertragung Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
-| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
 | `doc.approvals` | Dokument: Genehmigungen | `offen` | manuell gepruefter Nachweisspeicher |
 
 ## Entscheidungen

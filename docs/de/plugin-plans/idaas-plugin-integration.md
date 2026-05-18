@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dieser Plan migriert `ofunk/IDaaS` in das NoC-Plugin `noc-idaas`.
+Dieser Plan migriert `ofunk/IDaaS` in das NaC-Plugin `nac-idaas`.
 Das Plugin ist ein lokaler Companion fuer deutsche eID-Verifikation,
 datensparsame Claim-Sets, Consent-/Audit-Nachweise und IAM-Projektionsplanung.
 

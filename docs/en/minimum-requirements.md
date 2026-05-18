@@ -57,7 +57,7 @@ python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
 
-Then restart Codex or open a new session with workspace `~/NoC`, because active
+Then restart Codex or open a new session with workspace `~/NaC`, because active
 plugins are loaded at session start. If a workstation does not allow symlinks,
 use `--mode copy --force` after approval.
 
@@ -85,15 +85,15 @@ required.
 | AusweisApp | optional for IDaaS/eID paths | eID function check |
 
 A morris test is successful when the middleware responds. A response such as
-`no card reader attached`, `NoReader` or `NoCard` is sufficient for the
+`no card reader attached`, `NoReader` or `NaCard` is sufficient for the
 technical binding check as long as no real card action is being executed.
 
 Notary-workstation check:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
-python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
-python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
+python plugins\nac-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
+python plugins\nac-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
 ```
 
 ## Privacy And Operating Boundaries
@@ -101,7 +101,7 @@ python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
 - Do not store PINs, card serial numbers, certificate contents, mandate data or
   real personal data in the repository.
 - Card and XNP tests start with readiness status and technical negative
-  responses such as `NoReader` or `NoCard`.
+  responses such as `NoReader` or `NaCard`.
 - External processing with personal data requires documented AVV/DPA status
   before a pilot.
 - Local domain systems remain local dependencies and must appear in the SBOM

@@ -4,13 +4,13 @@
 
 Dieses Dokument schaerft den Begriffsrahmen:
 
-- `NoC` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
-- Das uebergeordnete Architekturmodell ist `Notariat as Code (NoC)`.
+- `NaC` ist die konkrete Produkt- und Betriebsauspraegung in diesem Repository.
+- Das uebergeordnete Architekturmodell ist `Notariat as Code (NaC)`.
 - Das operative Steuerungsprinzip ist `Enterprise GitOps`.
 
 ## Begriffsrahmen
 
-### Notariat as Code (NoC)
+### Notariat as Code (NaC)
 
 Unternehmen wird deklarativ und versioniert beschrieben:
 
@@ -29,9 +29,9 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 - Review/Freigabe
 - automatisierte Policy- und Compliance-Checks
 
-### NoC
+### NaC
 
-`NoC` ist die konkrete Umsetzung von Notariat as Code + Enterprise GitOps in diesem Repo.
+`NaC` ist die konkrete Umsetzung von Notariat as Code + Enterprise GitOps in diesem Repo.
 
 ## Warum diese Trennung wichtig ist
 
@@ -49,7 +49,7 @@ Aenderungen an Organisationslogik laufen kontrolliert ueber:
 ## Projektentscheidung
 
 Dieses Repository fuehrt die Positionierung als aktive Projektentscheidung. Die
-folgenden Begriffe sind der verbindliche Begriffsrahmen fuer NoC.
+folgenden Begriffe sind der verbindliche Begriffsrahmen fuer NaC.
 
 Begriff:
 

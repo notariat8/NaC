@@ -28,7 +28,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
 | `doc.contract_draft` | Dokument: Vertragsentwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
 | `doc.approvals` | Dokument: Genehmigungen | `offen` | Metadaten der Behoerdenkorrespondenz |
 

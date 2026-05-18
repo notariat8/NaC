@@ -5,10 +5,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
-MARKETPLACE_NAME = "noc-regulierung"
+MARKETPLACE_NAME = "nac-regulierung"
 REQUIRED_PLUGIN_FIELDS = ["name", "version", "description", "author", "homepage", "repository", "license", "skills", "interface"]
 REQUIRED_INTERFACE_FIELDS = ["displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt", "brandColor"]
-REQUIRED_MARKETPLACE_ORDER = ["noc-cyberjack-rfid", "noc-bnotk-xnp", "noc-handelsregister"]
+REQUIRED_MARKETPLACE_ORDER = ["nac-cyberjack-rfid", "nac-bnotk-xnp", "nac-handelsregister"]
 MAX_DISPLAY_NAME_CHARS = 22
 MAX_SHORT_DESCRIPTION_CHARS = 64
 MIN_PLUGIN_ASSET_PX = 64
@@ -29,6 +29,7 @@ GERMAN_UX_MARKERS = (
     "arbeitsablauf",
     "schutzplanken",
     "regulier",
+    "funktion8",
     "notar",
     "handelsregister",
     "register",

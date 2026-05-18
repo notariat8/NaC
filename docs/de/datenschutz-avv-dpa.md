@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Diese Sektion beschreibt, wann NoC fuer OpenAI-basierte Funktionen einen
+Diese Sektion beschreibt, wann NaC fuer OpenAI-basierte Funktionen einen
 Auftragsverarbeitungsvertrag (AVV) bzw. ein Data Processing Addendum (DPA)
 braucht und welche Nachweise vor Pilot- oder Produktivbetrieb vorliegen muessen.
 
@@ -35,7 +35,7 @@ dort am Ende verlinkte Schritt "Datenverarbeitungsvereinbarung ausfuehren" ist
 der zu pruefende Abschluss-/AVV-Pfad. Ergebnisdokumente, Organisations-IDs und
 Accountdaten werden nicht in diesem Repository gespeichert.
 
-## NoC Grundsatz
+## NaC Grundsatz
 
 - Lokale Plugins und lokale Workflows sind der Standardpfad, solange kein AVV
   bzw. keine DPA-Freigabe dokumentiert ist.
@@ -51,9 +51,9 @@ Accountdaten werden nicht in diesem Repository gespeichert.
 
 ## Lizenz- und Kanalentscheidung
 
-| Kanal | AVV/DPA-Regel | NoC-Freigabe |
+| Kanal | AVV/DPA-Regel | NaC-Freigabe |
 | --- | --- | --- |
-| Free oder Pro | Nicht fuer personenbezogene NoC-/Notariatsdaten verwenden. | Nicht freigegeben. |
+| Free oder Pro | Nicht fuer personenbezogene NaC-/Notariatsdaten verwenden. | Nicht freigegeben. |
 | Team, Enterprise oder API | DPA/AVV, Konfiguration und Zweckbindung pruefen. | Nur nach documented approval. |
 | Public GPT Store | Datenschutzlink, Terms, Action-Boundary und DPA-Bedarf je Action pruefen. | Separate Release-Freigabe. |
 | Workspace GPT/App | Tenant, Rollen, Retention, Training/Data-Sharing und DPA pruefen. | Pilot-Freigabe erforderlich. |
@@ -75,7 +75,7 @@ Accountdaten werden nicht in diesem Repository gespeichert.
 - Incident-, Betroffenenrechte-, Rueckgabe- und Loeschprozess
 - Review durch Datenschutz, fachlichen Owner und technischen Owner
 
-## NoC PR-Gate
+## NaC PR-Gate
 
 Ein PR, der OpenAI-gestuetzte Verarbeitung personenbezogener Daten ermoeglicht,
 ist erst mergefaehig, wenn:
@@ -103,7 +103,7 @@ personenbezogenen Daten eine kurze Entscheidung enthalten:
 | Welche Datensparsamkeitsmassnahme gilt? | IDs/Platzhalter/Synthetik/Redaktion |
 | Wo liegt der externe Vertragsnachweis? | Verweis, kein Dokument im Repo |
 
-## Beziehung zu bestehenden NoC-Dokumenten
+## Beziehung zu bestehenden NaC-Dokumenten
 
 - `docs/de/security-and-dsgvo.md`: allgemeine Repo-Schutzregeln.
 - `docs/de/avv-checkliste-eventlock-saas.md`: Function8/EventLock-spezifische

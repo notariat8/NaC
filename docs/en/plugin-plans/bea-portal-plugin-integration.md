@@ -4,7 +4,7 @@ Status: `draft`
 
 ## Goal
 
-This plan defines how NoC can support workflows around the German special
+This plan defines how NaC can support workflows around the German special
 electronic attorney mailbox, `beA`, without bypassing the official client
 security, mailbox ownership or professional responsibility model.
 
@@ -58,7 +58,7 @@ The plugin must not:
 
 ### Path A: Local Companion For The beA Web Application
 
-This is the MVP path. The user works in the official beA environment while NoC
+This is the MVP path. The user works in the official beA environment while NaC
 tracks readiness, workflow state, approvals and evidence.
 
 ### Path B: Law-Firm Software Interface Or KSW Toolkit
@@ -69,7 +69,7 @@ appropriate where the law-firm software already exposes a supported interface.
 ### Path C: Export/Import Bridge
 
 This path imports exported evidence, hashes documents and links metadata to a
-NoC matter. It remains metadata-first and avoids uncontrolled content storage.
+NaC matter. It remains metadata-first and avoids uncontrolled content storage.
 
 ## Proposed Plugin API
 
@@ -115,7 +115,7 @@ Default evidence is metadata-only:
 Message content is stored only when a customer policy explicitly allows it and
 defines purpose, retention, access control and export path.
 
-## NoC Process Model
+## NaC Process Model
 
 Typical states:
 

@@ -2,7 +2,7 @@
 
 ## Goal
 
-This document describes how customers can continue to operate `NoC` and related
+This document describes how customers can continue to operate `NaC` and related
 services safely without Function8 as SaaS operator, or migrate them to a third
 party.
 

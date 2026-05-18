@@ -1,4 +1,4 @@
-title = "NoC gitleaks configuration"
+title = "NaC gitleaks configuration"
 
 [extend]
 useDefault = true

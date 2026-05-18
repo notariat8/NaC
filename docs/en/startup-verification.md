@@ -51,6 +51,6 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 - The check only sees locally available information.
 - It does not replace GitHub server settings such as branch protection.
 - It does not replace domain-system approval or a real card action.
-- A morris response such as `NoReader` or `NoCard` is enough for the technical
+- A morris response such as `NoReader` or `NaCard` is enough for the technical
   middleware binding check, but not for a productive card run.
 - Forks must also adopt and actively use the check.

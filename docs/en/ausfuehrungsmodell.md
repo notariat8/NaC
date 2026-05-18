@@ -1,6 +1,6 @@
-# Execution Model: Why NoC Is CLI-First
+# Execution Model: Why NaC Is CLI-First
 
-NoC is deliberately CLI-first today. This means stable execution lives in local,
+NaC is deliberately CLI-first today. This means stable execution lives in local,
 checkable commands. Codex plugins, future apps or a UI may operate those
 commands, but they are not the subject-matter truth.
 
@@ -49,7 +49,7 @@ flowchart TD
 ## Why Not Start With A UI?
 
 A UI may feel simpler at first, but it can freeze the wrong things too early:
-screens, click paths, roles and data flows. NoC first stabilizes the checkable
+screens, click paths, roles and data flows. NaC first stabilizes the checkable
 core:
 
 1. Which case types exist?
@@ -71,7 +71,7 @@ process logic.
 | GitHub Actions | Usable today | Run gates and validations reproducibly. |
 | Sidecar editor | Planned | Graphical operation for KG forms and checklists. |
 | ChatGPT app or workspace app | Planned | Comfortable operating surface for authorized users. |
-| Standalone NoC web app | Not today's core | Possible, but useful only after runtime, roles and gates are stable. |
+| Standalone NaC web app | Not today's core | Possible, but useful only after runtime, roles and gates are stable. |
 
 ## Rule Of Thumb
 

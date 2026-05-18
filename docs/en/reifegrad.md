@@ -1,7 +1,7 @@
 # Maturity: What Is Usable Today
 
 This page separates runnable core, pilot surfaces, planned work and deliberately
-blocked automation. It helps decision makers assess NoC realistically.
+blocked automation. It helps decision makers assess NaC realistically.
 
 ## Maturity Matrix
 
@@ -21,7 +21,7 @@ blocked automation. It helps decision makers assess NoC realistically.
 
 ## Short Form For Decision Makers
 
-NoC is strong today as an inspectable reference, local control framework and
+NaC is strong today as an inspectable reference, local control framework and
 pilot preparation. Productive office operation starts only in a private fork
 with local systems, roles, privacy review and human approvals.
 

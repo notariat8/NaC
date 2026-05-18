@@ -42,8 +42,8 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 
 Primaere Plugins:
 
-- `noc-regulated-core`
-- `noc-elster-eric`
+- `nac-regulated-core`
+- `nac-elster-eric`
 
 Workflow-Bezug:
 

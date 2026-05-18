@@ -51,6 +51,6 @@ python scripts/startup_check.py --profile notary-workstation --ide auto
 - Der Check sieht nur lokal verfuegbare Informationen.
 - Er ersetzt keine GitHub-Servereinstellungen (z. B. Branch Protection).
 - Er ersetzt keine echte Fachsystemfreigabe und keine Kartenaktion.
-- Eine morris-Antwort wie `NoReader` oder `NoCard` reicht fuer die technische
+- Eine morris-Antwort wie `NoReader` oder `NaCard` reicht fuer die technische
   Middleware-Anbindungspruefung, aber nicht fuer einen produktiven Kartenlauf.
 - Fuer Forks muss der Check ebenfalls uebernommen und aktiv genutzt werden.

@@ -24,7 +24,7 @@ class PluginEntry:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Mirror repo-local NoC Codex plugins into a home-local plugin root."
+        description="Mirror repo-local NaC Codex plugins into a home-local plugin root."
     )
     parser.add_argument(
         "--mode",
@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
         "--target-root",
         type=Path,
         default=default_target_root(),
-        help="Home-local plugin root. Defaults to NOC_PLUGIN_HOME or the user home.",
+        help="Home-local plugin root. Defaults to NAC_PLUGIN_HOME or the user home.",
     )
     parser.add_argument(
         "--force",
@@ -47,7 +47,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def default_target_root() -> Path:
-    return Path(os.environ.get("NOC_PLUGIN_HOME", Path.home())).expanduser()
+    return Path(os.environ.get("NAC_PLUGIN_HOME", Path.home())).expanduser()
 
 
 def load_marketplace() -> dict:

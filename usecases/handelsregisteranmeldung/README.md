@@ -44,10 +44,10 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 
 Primaere Plugins:
 
-- `noc-regulated-core`
-- `noc-bnotk-xnp`
-- `noc-handelsregister`
-- `noc-cyberjack-rfid`
+- `nac-regulated-core`
+- `nac-bnotk-xnp`
+- `nac-handelsregister`
+- `nac-cyberjack-rfid`
 
 Workflow-Bezug:
 

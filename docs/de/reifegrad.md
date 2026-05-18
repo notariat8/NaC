@@ -2,7 +2,7 @@
 
 Diese Seite trennt klar zwischen lauffaehigem Kern, Pilotflaechen, Planung und
 bewusst gesperrter Automatisierung. Sie soll fachlichen Entscheidern helfen,
-NoC realistisch einzuordnen.
+NaC realistisch einzuordnen.
 
 ## Reifegrad-Matrix
 
@@ -22,7 +22,7 @@ NoC realistisch einzuordnen.
 
 ## Kurzform Fuer Entscheider
 
-NoC ist heute stark als pruefbares Muster, lokaler Kontrollrahmen und
+NaC ist heute stark als pruefbares Muster, lokaler Kontrollrahmen und
 Pilotvorbereitung. Der produktive Kanzlei- oder Notariatsbetrieb entsteht erst
 in einem privaten Fork mit lokalen Systemen, Rollen, Datenschutzklaerung und
 menschlichen Freigaben.

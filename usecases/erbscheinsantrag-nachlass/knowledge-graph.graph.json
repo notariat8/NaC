@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.erbscheinsantrag-nachlass",
   "catalog_group": "top10",
-  "title": "NoC Usecase-Wissensgraph: Erbscheinsantrag / Nachlassangelegenheiten",
+  "title": "NaC Usecase-Wissensgraph: Erbscheinsantrag / Nachlassangelegenheiten",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -307,7 +307,7 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core"
+        "nac-regulated-core"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

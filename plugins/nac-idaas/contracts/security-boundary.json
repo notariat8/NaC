@@ -1,0 +1,51 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "nac-idaas",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/idaas-plugin-integration.md",
+  "source_repository": "ofunk/IDaaS",
+  "runtime_mode": "local-eid-iam-readiness-companion",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "identity_document_raw_data_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "production_eid_transaction",
+    "iam_projection_write",
+    "personal_data_processing",
+    "connector_activation",
+    "retention_policy_change"
+  ],
+  "allowed_work": [
+    "Prepare German eID and AusweisApp readiness plans.",
+    "Define minimal verified-claim sets and consent evidence.",
+    "Review IAM projection readiness for Entra ID, Oracle IAM and SCIM targets.",
+    "Prepare metadata-only evidence templates and Day2 follow-up plans."
+  ],
+  "prohibited_work": [
+    "Store eID raw data, identity document dumps, secrets, certificates, access tokens, one-time codes or session cookies in Git.",
+    "Upload real identity data or client personal data to an LLM without an explicit approved data-processing basis.",
+    "Execute production eID flows or IAM writes without reviewed connector code and human approval.",
+    "Reuse verified claims outside the documented purpose."
+  ],
+  "day0": [
+    "Confirm tenant, purpose, actor role, reviewer role, target system and data boundary.",
+    "Confirm privacy, consent, retention and evidence requirements."
+  ],
+  "day1": [
+    "Produce plan preview for eID verification and optional IAM projection.",
+    "Check connector readiness without processing real identity data."
+  ],
+  "day2": [
+    "Review expired assertions, revocations, failed projections, retention drift and connector recertification."
+  ],
+  "required_accounts_or_approvals": [
+    "Approved data-processing basis for personal data",
+    "Reviewed eID connector decision",
+    "Reviewed IAM connector decision",
+    "Human approval for production projection"
+  ]
+}

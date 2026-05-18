@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.grundschuld-hypothekenbestellung",
   "catalog_group": "top10",
-  "title": "NoC Usecase-Wissensgraph: Grundschuld / Hypothekenbestellung",
+  "title": "NaC Usecase-Wissensgraph: Grundschuld / Hypothekenbestellung",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -258,7 +258,7 @@
           "id": "doc.land_register_excerpt",
           "label": "Dokument: aktueller Grundbuchauszug",
           "status": "open",
-          "source": "noc-grundbuch-portal oder manuell gepruefter Upload",
+          "source": "nac-grundbuch-portal oder manuell gepruefter Upload",
           "contains_personal_data": true
         }
       ],
@@ -303,9 +303,9 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-grundbuch-portal",
-        "noc-bnotk-xnp"
+        "nac-regulated-core",
+        "nac-grundbuch-portal",
+        "nac-bnotk-xnp"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

@@ -127,8 +127,8 @@ def validate_case_graph(usecase_dir: Path) -> tuple[list[str], set[str]]:
             errors.append(f"{kg_file.relative_to(REPO_ROOT)} ist kein gueltiges JSON: {exc}")
             payload = {}
 
-        if payload.get("schema_version") != "noc.knowledge-graph/v0.1":
-            errors.append(f"{slug}: KG schema_version muss noc.knowledge-graph/v0.1 sein")
+        if payload.get("schema_version") != "nac.knowledge-graph/v0.1":
+            errors.append(f"{slug}: KG schema_version muss nac.knowledge-graph/v0.1 sein")
         if payload.get("graph_id") != f"usecase.{slug}":
             errors.append(f"{slug}: graph_id muss usecase.{slug} sein")
         cases = payload.get("cases")

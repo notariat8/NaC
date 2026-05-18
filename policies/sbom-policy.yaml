@@ -59,7 +59,7 @@ ai_sbom:
     - infrastructure
     - security_properties
     - key_performance_indicators
-  noc_extensions:
+  nac_extensions:
     - privacy_and_avv_dpa_status
     - notary_professional_secret_boundary
     - human_review_and_approval_owner

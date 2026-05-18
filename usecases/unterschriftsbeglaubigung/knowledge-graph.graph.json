@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.unterschriftsbeglaubigung",
   "catalog_group": "top10",
-  "title": "NoC Usecase-Wissensgraph: Beglaubigung von Unterschriften",
+  "title": "NaC Usecase-Wissensgraph: Beglaubigung von Unterschriften",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -298,9 +298,9 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-idaas",
-        "noc-bnotk-xnp"
+        "nac-regulated-core",
+        "nac-idaas",
+        "nac-bnotk-xnp"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

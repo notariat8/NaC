@@ -1,12 +1,12 @@
 # Betriebsstart: Privater Fork Und Lokale Pruefung
 
 Dieses Dokument richtet sich an Office-Admin, IT-Betrieb und technische
-Verantwortliche, die NoC lokal pruefen oder als privaten Betriebs-Fork
+Verantwortliche, die NaC lokal pruefen oder als privaten Betriebs-Fork
 vorbereiten.
 
 ## Ziel
 
-Der oeffentliche NoC-Stand ist eine Vorlage. Produktiver Betrieb gehoert in eine
+Der oeffentliche NaC-Stand ist eine Vorlage. Produktiver Betrieb gehoert in eine
 private Umgebung mit eigener Zugriffskontrolle, eigenen Rollen, eigenen
 Freigaben und ohne echte Mandatsdaten im oeffentlichen Muster.
 

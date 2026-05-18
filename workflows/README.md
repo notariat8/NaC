@@ -1,4 +1,4 @@
-# NoC Workflows
+# NaC Workflows
 
 Dieser Ordner ist die Ausfuehrungsschicht fuer Geschaeftsprozesse im
 Notariatsbetrieb. Er ist von [plugins/](../plugins) und

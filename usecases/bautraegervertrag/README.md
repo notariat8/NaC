@@ -42,10 +42,10 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 
 Primaere Plugins:
 
-- `noc-regulated-core`
-- `noc-grundbuch-portal`
-- `noc-bnotk-xnp`
-- `noc-idaas`
+- `nac-regulated-core`
+- `nac-grundbuch-portal`
+- `nac-bnotk-xnp`
+- `nac-idaas`
 
 Workflow-Bezug:
 

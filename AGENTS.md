@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NaC` als konkreter Betriebsauspraegung.
 
 ## Prioritaet der Vorgaben
 
@@ -47,7 +47,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Arbeitsmethode und Team-Cadence werden nach [docs/de/operations/agile-cadence.md](docs/de/operations/agile-cadence.md) dokumentiert.
 - Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in [docs/de/issues/operations.md](docs/de/issues/operations.md).
 - Plugin- und Connector-Plaene werden unter [docs/de/plugin-plans/](docs/de/plugin-plans) und [docs/en/plugin-plans/](docs/en/plugin-plans) gepflegt.
-- NoC-Ausfuehrung erfolgt lokal im genehmigten Workspace; Omnistation ist fuer NoC kein Ausfuehrungsort. Kartenleser-, morris- und XNP-Pfade werden ueber das lokale Profil `notary-workstation` geprueft.
+- NaC-Ausfuehrung erfolgt lokal im genehmigten Workspace; Omnistation ist fuer NaC kein Ausfuehrungsort. Kartenleser-, morris- und XNP-Pfade werden ueber das lokale Profil `notary-workstation` geprueft.
 - Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](policies/language-policy.yaml); die Policy gilt fuer alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](README.md).
 - Sprachabhaengige Inhalte werden in ISO-639-Sprachordnern gepflegt, mindestens `de` und `en`.
 - Unabhaengig von der Sprache des Prompts muessen Aenderungen an lokalisierten Inhalten immer alle Standardsprachen pflegen.

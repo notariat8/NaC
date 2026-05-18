@@ -36,7 +36,7 @@ class InstallLocalPluginsTests(unittest.TestCase):
             self.assertTrue(marketplace_path.is_file())
             marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
             plugin_names = [entry["name"] for entry in marketplace["plugins"]]
-            self.assertIn("noc-cyberjack-rfid", plugin_names)
+            self.assertIn("nac-cyberjack-rfid", plugin_names)
             self.assertIn("plugin count", actions[-1])
             for plugin_name in plugin_names:
                 manifest = (

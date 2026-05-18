@@ -213,7 +213,7 @@ def check_notary_workstation() -> tuple[list[str], list[str], list[str]]:
         warnings.append("PC/SC-Dienst konnte auf diesem System nicht geprueft werden.")
 
     warnings.append("XNP-Installation und SAK-lite/XNP-Kartenpfad muessen manuell oder per Plugin-Check bestaetigt werden.")
-    warnings.append("morris-Loopback bitte mit `plugins/noc-cyberjack-rfid/scripts/check_readiness.py --json --probe-morris-api` pruefen.")
+    warnings.append("morris-Loopback bitte mit `plugins/nac-cyberjack-rfid/scripts/check_readiness.py --json --probe-morris-api` pruefen.")
 
     return ok, warnings, errors
 
@@ -263,7 +263,7 @@ def build_python_env() -> dict[str, str]:
 
 
 def default_plugin_home() -> Path:
-    return Path(os.environ.get("NOC_PLUGIN_HOME", Path.home())).expanduser()
+    return Path(os.environ.get("NAC_PLUGIN_HOME", Path.home())).expanduser()
 
 
 def check_local_plugin_mirror() -> tuple[list[str], list[str], list[str]]:

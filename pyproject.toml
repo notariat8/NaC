@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "noc"
+name = "nac"
 version = "0.1.0"
 description = "Notariat as Code"
 readme = "README.md"

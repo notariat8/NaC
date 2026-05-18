@@ -1,4 +1,4 @@
-name: NoC Quality Gate
+name: NaC Quality Gate
 
 on:
   push:
@@ -78,7 +78,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- noc-quality-gate-comment -->';
+            const marker = '<!-- nac-quality-gate-comment -->';
             const body = fs.readFileSync('out/quality/comment.md', 'utf8');
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(
@@ -113,5 +113,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: noc-quality-gate
+          name: nac-quality-gate
           path: out/quality/

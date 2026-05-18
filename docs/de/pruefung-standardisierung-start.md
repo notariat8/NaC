@@ -1,13 +1,13 @@
-# Pruefung Und Standardisierung: Nachvollziehbarkeit Von NoC
+# Pruefung Und Standardisierung: Nachvollziehbarkeit Von NaC
 
-Dieses Dokument richtet sich an Stellen und Personen, die NoC aus Sicht von
+Dieses Dokument richtet sich an Stellen und Personen, die NaC aus Sicht von
 Kontrolle, Standardisierung, Zertifizierung, Aufsichtnaehe oder fachlicher
 Vergleichbarkeit bewerten. Es benennt keine konkrete Institution, sondern den
 Pruefpfad im Repository.
 
 ## Was Bewertbar Ist
 
-NoC macht nicht nur Prompts sichtbar, sondern auch:
+NaC macht nicht nur Prompts sichtbar, sondern auch:
 
 - Rollen und Freigaben,
 - technische und fachliche Gates,
@@ -58,7 +58,7 @@ python scripts/validate_plugins.py
 
 ## Standardisierungsfrage
 
-NoC ist geeignet, wiederholbare fachliche Muster versioniert zu diskutieren:
+NaC ist geeignet, wiederholbare fachliche Muster versioniert zu diskutieren:
 Welche Vorgangsknoten sind erforderlich, welche Freigaben sind zwingend, welche
 Nachweise duerfen nur referenziert werden, und welche Automatisierung bleibt
 bewusst gesperrt?

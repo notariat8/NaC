@@ -4,14 +4,14 @@ Status: `proposed`
 
 ## Kernentscheidung
 
-`noc-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
+`nac-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
 
 Korrektur der Entwicklungsreihenfolge: Fuer einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist zuerst die `NoC Karte/SAK`
-(`noc-cyberjack-rfid`)
+Anmelde- oder Vollzugspfad ist zuerst die `NaC Karte/SAK`
+(`nac-cyberjack-rfid`)
 erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
 XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt
-`noc-bnotk-xnp`; `noc-handelsregister` ist dann der fachliche Layer fuer
+`nac-bnotk-xnp`; `nac-handelsregister` ist dann der fachliche Layer fuer
 Registerspur, HRA-/HRB-Plausibilitaet und Paketbereitschaft.
 
 Nur eine reine Buerger-/Mandanten-Vorpruefung fuer `online.notar.de` kann ohne
@@ -34,7 +34,7 @@ Es darf:
 - den Online-Anmeldefall strukturieren,
 - HRA/HRB-Track, Rechtsform und fehlende Angaben pruefen,
 - Voraussetzungen fuer das notarielle Online-Verfahren abfragen,
-- bei notariatsseitigem Ziel auf `noc-cyberjack-rfid` und danach `noc-bnotk-xnp` als vorgelagerte Karten-/XNP-Pruefungen verweisen,
+- bei notariatsseitigem Ziel auf `nac-cyberjack-rfid` und danach `nac-bnotk-xnp` als vorgelagerte Karten-/XNP-Pruefungen verweisen,
 - ein Anmeldepaket als Planvorschau vorbereiten,
 - Nachweis-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
 
@@ -53,8 +53,8 @@ Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet we
 ## Day0
 
 - Betriebsmodus klaeren: Buerger-/Mandanten-Vorpruefung oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `noc-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
-- Danach `noc-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
+- Bei Notariatsarbeitsplatz zuerst `nac-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- Danach `nac-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
 - Registerspur klaeren: HRA, HRB oder anderes Register.
 - Rechtsform klaeren.
 - Firma, Sitz, Registergericht, Beteiligte und Vertretungsbefugnis erfassen.

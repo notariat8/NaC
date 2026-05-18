@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.online-gmbh-gruendung",
   "catalog_group": "top10",
-  "title": "NoC Usecase-Wissensgraph: GmbH-Gruendung / UG-Gruendung",
+  "title": "NaC Usecase-Wissensgraph: GmbH-Gruendung / UG-Gruendung",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -266,7 +266,7 @@
           "id": "doc.register_application",
           "label": "Dokument: Register Antrag",
           "status": "open",
-          "source": "Route ueber noc-bnotk-xnp und noc-handelsregister",
+          "source": "Route ueber nac-bnotk-xnp und nac-handelsregister",
           "contains_personal_data": true
         }
       ],
@@ -308,11 +308,11 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-cyberjack-rfid",
-        "noc-bnotk-xnp",
-        "noc-handelsregister",
-        "noc-idaas"
+        "nac-regulated-core",
+        "nac-cyberjack-rfid",
+        "nac-bnotk-xnp",
+        "nac-handelsregister",
+        "nac-idaas"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

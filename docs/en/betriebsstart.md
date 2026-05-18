@@ -1,11 +1,11 @@
 # Operations Start: Private Fork And Local Checks
 
 This document is for office admins, IT operations and technical owners who want
-to evaluate NoC locally or prepare a private operating fork.
+to evaluate NaC locally or prepare a private operating fork.
 
 ## Goal
 
-The public NoC state is a template. Productive operation belongs in a private
+The public NaC state is a template. Productive operation belongs in a private
 environment with its own access control, roles, approvals and no real mandate
 data in the public reference.
 

@@ -3,7 +3,7 @@
 ## Architekturrahmen
 
 Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
-`NoC` ist die konkrete Auspraegung dieses Rahmens.
+`NaC` ist die konkrete Auspraegung dieses Rahmens.
 
 Referenz: `docs/de/organization-as-code-positioning.md`
 
@@ -21,7 +21,7 @@ Das operative CLI-first-Ausfuehrungsmodell steht in
 4. `Automation Plane`
    GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
 
-## NoC-Layer-Mapping
+## NaC-Layer-Mapping
 
 ```mermaid
 flowchart LR

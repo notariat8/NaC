@@ -1,6 +1,6 @@
 # Beispiel: Immobilienkaufvertrag Ohne Echte Mandatsdaten
 
-Dieses Beispiel zeigt den NoC-Ablauf an einem Immobilienkaufvertrag. Es nutzt
+Dieses Beispiel zeigt den NaC-Ablauf an einem Immobilienkaufvertrag. Es nutzt
 keine echten Namen, keine Adresse, keinen Kaufpreis und keinen Grundbuchauszug.
 
 ## 1. Vorgang Auswaehlen
@@ -16,7 +16,7 @@ fachliche Vorderseite steht in
 python scripts/notary_kg.py --repo-root . case immobilienkaufvertrag
 ```
 
-NoC zeigt zum Beispiel offene Knoten fuer Objekt, Verkaeufer, Kaeufer,
+NaC zeigt zum Beispiel offene Knoten fuer Objekt, Verkaeufer, Kaeufer,
 Kaufpreis, Belastungen, Finanzierung, Besitzuebergang und Genehmigungen.
 
 ## 3. Fachliche Eingabe Nicht In Git Speichern
@@ -45,7 +45,7 @@ bleiben menschliche Verantwortung.
 
 ## 6. Nachweis Statt Akteninhalt
 
-NoC speichert im Muster nur Nachweis-Metadaten: Status, Referenz, Gate,
+NaC speichert im Muster nur Nachweis-Metadaten: Status, Referenz, Gate,
 Freigabepunkt. Der eigentliche Grundbuchauszug, Ausweis, Vertrag oder
 Zahlungsnachweis gehoert in ein geprueftes Fachsystem, DMS oder einen
 freigegebenen Nachweisspeicher.

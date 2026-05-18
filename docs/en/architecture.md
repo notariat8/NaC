@@ -3,7 +3,7 @@
 ## Architecture Frame
 
 This architecture follows the `Notariat as Code` model with `Enterprise GitOps`
-as the control principle. `NoC` is the concrete implementation of this frame.
+as the control principle. `NaC` is the concrete implementation of this frame.
 
 Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
@@ -27,7 +27,7 @@ The operational CLI-first execution model is described in
    Local plugin and connector adapters create plan previews, execute approved
    changes idempotently and write audit evidence back.
 
-## NoC Layer Mapping
+## NaC Layer Mapping
 
 ```mermaid
 flowchart LR
@@ -129,8 +129,8 @@ subject-matter truth remains in Git, policies, schemas and review decisions.
 Every adapter must create a readable plan before a change, reconcile
 idempotently after approval and make Day 2 drift visible.
 
-Local execution happens in the WSL workspace `~/NoC`. Omnistation is not an
-execution location for NoC.
+Local execution happens in the WSL workspace `~/NaC`. Omnistation is not an
+execution location for NaC.
 
 ## Python Components
 

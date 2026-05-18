@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NaC` als konkreter Betriebsauspraegung.
 
 ## Verbindliche Prioritaet
 
@@ -12,7 +12,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 ## Arbeitsweise
 
 - Behandle das LLM als Assistent fuer Eingaben, nicht als finale fachliche Autoritaet.
-- Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NoC` ist die konkrete Umsetzung.
+- Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
 - Schlage keine direkten Aenderungen an `main` vor.
 - Erzwinge Vorschlaege ueber Branch + Pull Request + Review.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
@@ -37,7 +37,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Plugin- und Connector-Plaene liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
 - Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
-- NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
+- NaC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
 - Repo-lokale Plugins werden fuer neue Rechner mit `python scripts/install_local_plugins.py --mode link`
   in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
   neue Session oeffnen.

@@ -4,7 +4,7 @@ Status: `proposed`
 
 ## Ziel
 
-OCI wird lokal aus WSL angebunden und dient fuer NoC als moegliche Infrastruktur- und Evidence-Plattform:
+OCI wird lokal aus WSL angebunden und dient fuer NaC als moegliche Infrastruktur- und Evidence-Plattform:
 
 - OCI CLI fuer lokale Verwaltung.
 - Resource Manager fuer Terraform/OpenTofu-Stacks.

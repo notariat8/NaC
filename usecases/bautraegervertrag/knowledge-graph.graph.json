@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.bautraegervertrag",
   "catalog_group": "next10",
-  "title": "NoC Usecase-Wissensgraph: Bautraegervertrag",
+  "title": "NaC Usecase-Wissensgraph: Bautraegervertrag",
   "status": "draft",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -242,7 +242,7 @@
           "id": "doc.land_register_state",
           "label": "Dokument: Grundbuch Register Stand",
           "status": "open",
-          "source": "noc-grundbuch-portal oder manuell gepruefter Upload",
+          "source": "nac-grundbuch-portal oder manuell gepruefter Upload",
           "contains_personal_data": true
         }
       ],
@@ -286,10 +286,10 @@
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-grundbuch-portal",
-        "noc-bnotk-xnp",
-        "noc-idaas"
+        "nac-regulated-core",
+        "nac-grundbuch-portal",
+        "nac-bnotk-xnp",
+        "nac-idaas"
       ],
       "workflow_dependencies": [
         "workflows/contracts",

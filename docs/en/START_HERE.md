@@ -1,4 +1,4 @@
-# START HERE: Operational Entry Into NoC
+# START HERE: Operational Entry Into NaC
 
 Status: binding start path
 Last content update: 2026-05-15
@@ -6,7 +6,7 @@ Last content update: 2026-05-15
 ## Why This Document Exists Next To The README
 
 [README.md](../../README.md) and [docs/en/README.md](README.md) are project overview and index files. This
-document is the operational start sequence for working in the active NoC project.
+document is the operational start sequence for working in the active NaC project.
 
 [START_HERE.md](START_HERE.md) remains necessary, but it has a different job than the README:
 
@@ -16,7 +16,7 @@ document is the operational start sequence for working in the active NoC project
 | [docs/en/README.md](README.md) | English business orientation and documentation index. |
 | [docs/en/START_HERE.md](START_HERE.md) | Binding work-start sequence for new sessions, contributors and agents. |
 
-This repository is the active project state for `Notariat as Code` with `NoC`
+This repository is the active project state for `Notariat as Code` with `NaC`
 as the concrete Enterprise Control Plane.
 
 ## When To Use START_HERE
@@ -76,7 +76,7 @@ restart.
 
 ## Working Mode
 
-NoC is developed as software. Concept work is complete only when it also updates
+NaC is developed as software. Concept work is complete only when it also updates
 at least one matching implementation surface:
 
 - runtime code under [src/](../../src)

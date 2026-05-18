@@ -1,4 +1,4 @@
-# Fachkonzept: Notariat as Code mit NoC
+# Fachkonzept: Notariat as Code mit NaC
 
 ## Leitprinzip
 
@@ -13,7 +13,7 @@ Git wird als versioniertes Betriebssystem fuer Geschaeftsprozesse verstanden. Ni
 
 - `Notariat as Code` beschreibt das uebergeordnete Zielmodell.
 - `Enterprise GitOps` beschreibt den operativen Aenderungsfluss.
-- `NoC` ist die konkrete Betriebsumsetzung in diesem Repository.
+- `NaC` ist die konkrete Betriebsumsetzung in diesem Repository.
 
 Referenz: `docs/de/organization-as-code-positioning.md`
 

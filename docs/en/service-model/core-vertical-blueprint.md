@@ -2,7 +2,7 @@
 
 ## Goal
 
-This blueprint defines a uniform structure for a central `NoC` that can be used
+This blueprint defines a uniform structure for a central `NaC` that can be used
 across several service industries:
 
 - law firm (`law_firm`)

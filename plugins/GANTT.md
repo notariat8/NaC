@@ -1,6 +1,6 @@
 # Plugin Gantt
 
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-18
 
 ```mermaid
 gantt
@@ -17,7 +17,8 @@ gantt
     Lokaler Plugin-Erkennungsbootstrap          :done,   p3c, 2026-05-17, 1d
     Deutsche Plugin-UX dauerhaft erzwingen      :done,   p3d, 2026-05-17, 1d
     Plugin-Karten und Icons lesbar machen       :done,   p3e, 2026-05-17, 1d
-    NoC eID-Pruefung                            :active, p4, 2026-05-14, 14d
+    Funktion8-Marktplatznamen setzen            :done,   p3f, 2026-05-18, 1d
+    NaC eID-Pruefung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegspruefungen
     CyberJack-RFID-Bereitschaftsplugin         :active, p5, 2026-05-01, 21d
@@ -36,16 +37,16 @@ gantt
 
 | Plugin | Zweck | Status | Naechster Pruefpunkt |
 | --- | --- | --- | --- |
-| `noc-regulated-core` | Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe | Basis bereit | Kurzer Anzeigename und echtes Icon sind validiert; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut pruefen. |
-| `noc-idaas` | Deutsche eID-Pruefung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestaetigen. |
-| `noc-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Pruefung und Linux-Treiber-Vorpruefung sind implementiert; die lokale Pruefung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestaetigung. |
-| `noc-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorpruefung an die cyberJack-Pruefung und kann die optionale morris-API-Pruefung durchreichen; naechste Pruefung ist Workstation-Validierung mit installiertem XNP. |
-| `noc-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Pruefung, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Haertung entfernt PEM-aehnliche Testliterale aus Quellfixtures. |
-| `noc-handelsregister` | Registeranmeldungsbereitschaft | Aktiv | An GmbH-Gruendungs-Usecase binden. |
-| `noc-bea-portal` | beA-Arbeitsablauf-Begleiter | Geplant | Prioritaet fuer Notariats-/Kanzleibetrieb bestaetigen. |
-| `noc-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benoetigt. |
-| `noc-grundbuch-portal` | Grundbuch-Begleiter | Geplant | An Immobilienkaufvertrags-Starter binden. |
-| `noc-oci-evidence` | OCI-Nachweisbetrieb | Geplant | Als Infrastruktur-/Nachweisplugin fuehren, nicht als Usecase. |
+| `nac-regulated-core` | Gemeinsame Schutzplanken fuer regulierte Arbeitsablaeufe | Basis bereit | Kurzer Anzeigename und echtes Icon sind validiert; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut pruefen. |
+| `nac-idaas` | Deutsche eID-Pruefung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestaetigen. |
+| `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Pruefung und Linux-Treiber-Vorpruefung sind implementiert; die lokale Pruefung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestaetigung. |
+| `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorpruefung an die cyberJack-Pruefung und kann die optionale morris-API-Pruefung durchreichen; naechste Pruefung ist Workstation-Validierung mit installiertem XNP. |
+| `nac-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbuendel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Pruefung, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Haertung entfernt PEM-aehnliche Testliterale aus Quellfixtures. |
+| `nac-handelsregister` | Registeranmeldungsbereitschaft | Aktiv | An GmbH-Gruendungs-Usecase binden. |
+| `nac-bea-portal` | beA-Arbeitsablauf-Begleiter | Geplant | Prioritaet fuer Notariats-/Kanzleibetrieb bestaetigen. |
+| `nac-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benoetigt. |
+| `nac-grundbuch-portal` | Grundbuch-Begleiter | Geplant | An Immobilienkaufvertrags-Starter binden. |
+| `nac-oci-evidence` | OCI-Nachweisbetrieb | Geplant | Als Infrastruktur-/Nachweisplugin fuehren, nicht als Usecase. |
 
 Plugin-Skills werden fachlich deutsch gefuehrt und enthalten eine kurze
 englische Kurzfassung; technische Namen, Ordner, Befehle, IDs und stabile
@@ -54,6 +55,9 @@ Output-Labels bleiben englisch/ASCII.
 Plugin-Karten muessen kurze Anzeigenamen, knappe Kurzbeschreibungen und echte
 PNG-Icons/-Logos haben. `scripts/validate_plugins.py` blockiert leere
 Platzhalterbilder und zu lange Kartenanzeigen.
+
+Der repo-lokale Marktplatz wird sichtbar als `funktion8 - NaC` gefuehrt;
+technische Marketplace- und Plugin-IDs bleiben stabil.
 
 Repo-lokale Plugins werden ueber `scripts/install_local_plugins.py` in einen
 home-lokalen Plugin-Root gespiegelt: `~/.agents/plugins/marketplace.json` plus

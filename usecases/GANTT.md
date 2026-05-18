@@ -47,7 +47,7 @@ gantt
 | Deutsch gefuehrtes KG-Inhaltsgate | `usecases/*/knowledge-graph.*` plus `scripts/validate_language_parity.py` | Fertig | KG-Markdown-Review-Sichten und fachliche JSON-Textfelder sind deutsch gefuehrt; alte englische KG-Geruesttexte werden vom Sprachvalidator abgelehnt. |
 | Deutsche fachliche Usecase-Vorderseiten | `usecases/*/README.md` plus `scripts/validate_language_parity.py` | Fertig | Jeder Usecase hat eine kurze deutsche Vorderseite fuer Nicht-Technik-Leser; alte englische Usecase-README-Geruesttexte werden vom Sprachvalidator abgelehnt. |
 | Online-GmbH-/UG-Gruendung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
-| Bereinigte aktive Aufnahme | `usecases/` | Fertig | Ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus diesem Repository entfernt und ist nicht mehr Teil des NoC-Usecase-Katalogs. |
+| Bereinigte aktive Aufnahme | `usecases/` | Fertig | Ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus diesem Repository entfernt und ist nicht mehr Teil des NaC-Usecase-Katalogs. |
 | Steuer-aaS-Steuer-Readiness | `usecases/steuer-aas/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Steuer-aaS` kanonisiert. |
 | Immobilienkaufvertrag | `usecases/immobilienkaufvertrag/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
 | Grundschuld / Hypothekenbestellung | `usecases/grundschuld-hypothekenbestellung/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
@@ -73,7 +73,7 @@ gantt
 
 | Quelle | Entscheidung |
 | --- | --- |
-| `ofunk/IDaaS` | Als `plugins/noc-idaas/` migriert, nicht als Usecase. |
+| `ofunk/IDaaS` | Als `plugins/nac-idaas/` migriert, nicht als Usecase. |
 
 ## KG-Regel
 

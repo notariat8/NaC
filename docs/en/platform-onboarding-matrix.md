@@ -21,7 +21,7 @@ The following content must remain equivalent on both platforms:
 - culture and language policy,
 - onboarding order for non-IT users,
 - default MVP modules and related onboarding prompts,
-- local execution location for NoC: `~/NoC` in WSL,
+- local execution location for NaC: `~/NaC` in WSL,
 - plugin and connector planning model.
 
 ## Change Rule

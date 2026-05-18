@@ -42,8 +42,8 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 
 Primaere Plugins:
 
-- `noc-regulated-core`
-- `noc-idaas`
+- `nac-regulated-core`
+- `nac-idaas`
 
 Workflow-Bezug:
 

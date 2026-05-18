@@ -25,11 +25,11 @@ ergaenzt klassische SBOMs, weil KI-Systeme neben Softwarekomponenten auch
 Modelle, Datensaetze, Infrastruktur, Sicherheits- und Betriebsparameter
 enthalten.
 
-## NoC Mindestcluster
+## NaC Mindestcluster
 
 NaC fuehrt die folgenden Mindestcluster als Arbeitsstand ein:
 
-| Cluster | NoC-Inhalt |
+| Cluster | NaC-Inhalt |
 | --- | --- |
 | `metadata` | Name, Version, Owner, Lebenszyklus, Release-Bindung |
 | `system_level_properties` | Systemgrenzen, Zweck, Autonomiegrad, menschliche Freigabe |
@@ -39,7 +39,7 @@ NaC fuehrt die folgenden Mindestcluster als Arbeitsstand ein:
 | `security_properties` | Schutz gegen Datenabfluss, Prompt Injection, Supply-Chain-Risiken |
 | `key_performance_indicators` | Abdeckung, Drift, Fehlerraten, Review- und Incident-Metriken |
 
-NoC ergaenzt zusaetzlich Datenschutz-/AVV-DPA-Status, Berufsgeheimnisgrenzen,
+NaC ergaenzt zusaetzlich Datenschutz-/AVV-DPA-Status, Berufsgeheimnisgrenzen,
 Human-Review-Owner, lokale Runtime-/Hardware-Mindestvoraussetzungen und
 Release-/Evidence-Bindung.
 

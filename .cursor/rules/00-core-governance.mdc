@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Core Governance (MUSS)
 
-- Rahmen ist `Notariat as Code (NoC)` mit `Enterprise GitOps`.
+- Rahmen ist `Notariat as Code (NaC)` mit `Enterprise GitOps`.
 - Aenderungen an Prozessen nur ueber Branch + Pull Request.
 - Direkte Aenderungen am Hauptstand sind nicht erlaubt.
 - Jede Aenderung braucht Zweck, Risiko und Verantwortliche.

@@ -1,6 +1,6 @@
-# Ausfuehrungsmodell: Warum NoC CLI-First Ist
+# Ausfuehrungsmodell: Warum NaC CLI-First Ist
 
-NoC ist heute bewusst CLI-first. Das heisst: Die stabile Ausfuehrung liegt in
+NaC ist heute bewusst CLI-first. Das heisst: Die stabile Ausfuehrung liegt in
 lokalen, pruefbaren Befehlen. Codex-Plugins, spaetere Apps oder eine UI duerfen
 diese Befehle bedienen, aber sie sind nicht die fachliche Wahrheit.
 
@@ -49,7 +49,7 @@ flowchart TD
 ## Warum Nicht Zuerst Eine UI?
 
 Eine UI wirkt fuer Anwender zunaechst einfacher, aber sie kann zu frueh die
-falschen Dinge festlegen: Masken, Klickwege, Rollen und Datenfluesse. NoC will
+falschen Dinge festlegen: Masken, Klickwege, Rollen und Datenfluesse. NaC will
 zuerst den pruefbaren Kern stabil machen:
 
 1. Welche Vorgangstypen gibt es?
@@ -71,7 +71,7 @@ belastbare Prozesslogik.
 | GitHub Actions | Heute nutzbar | Fuehren Gates und Validierungen reproduzierbar aus. |
 | Sidecar-Editor | Geplant | Grafische Bedienung fuer KG-Formulare und Checklisten. |
 | ChatGPT-App oder Workspace-App | Geplant | Komfortable Bedienoberflaeche fuer berechtigte Nutzer. |
-| Eigenstaendige NoC-Web-App | Nicht heutiger Kern | Moeglich, aber erst sinnvoll, wenn Runtime, Rollen und Gates stabil sind. |
+| Eigenstaendige NaC-Web-App | Nicht heutiger Kern | Moeglich, aber erst sinnvoll, wenn Runtime, Rollen und Gates stabil sind. |
 
 ## Merksatz
 

@@ -35,37 +35,37 @@ Fuer Nicht-Technik-Leser helfen zusaetzlich
 
 | Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
 | --- | --- | --- | --- |
-| Immobilienkaufvertrag | [immobilienkaufvertrag/](immobilienkaufvertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Grundschuld / Hypothekenbestellung | [grundschuld-hypothekenbestellung/](grundschuld-hypothekenbestellung) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| GmbH-/UG-Gruendung | [online-gmbh-gruendung/](online-gmbh-gruendung) | KG-Basis, aktive Aufnahme | `noc-regulated-core`, `noc-cyberjack-rfid`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
-| Handelsregisteranmeldung | [handelsregisteranmeldung/](handelsregisteranmeldung) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
-| Beglaubigung von Unterschriften | [unterschriftsbeglaubigung/](unterschriftsbeglaubigung) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-bnotk-xnp` |
-| Testament / Erbvertrag | [testament-erbvertrag/](testament-erbvertrag) | KG-Basis | `noc-regulated-core` |
-| Erbscheinsantrag / Nachlassangelegenheiten | [erbscheinsantrag-nachlass/](erbscheinsantrag-nachlass) | KG-Basis | `noc-regulated-core` |
-| Vorsorgevollmacht und Patientenverfuegung | [vorsorgevollmacht-patientenverfuegung/](vorsorgevollmacht-patientenverfuegung) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Schenkungsvertrag / Uebertragungsvertrag | [schenkungsvertrag-uebertragungsvertrag/](schenkungsvertrag-uebertragungsvertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal` |
-| Ehevertrag / Scheidungsfolgenvereinbarung | [ehevertrag-scheidungsfolgenvereinbarung/](ehevertrag-scheidungsfolgenvereinbarung) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal` |
+| Immobilienkaufvertrag | [immobilienkaufvertrag/](immobilienkaufvertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Grundschuld / Hypothekenbestellung | [grundschuld-hypothekenbestellung/](grundschuld-hypothekenbestellung) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| GmbH-/UG-Gruendung | [online-gmbh-gruendung/](online-gmbh-gruendung) | KG-Basis, aktive Aufnahme | `nac-regulated-core`, `nac-cyberjack-rfid`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-idaas` |
+| Handelsregisteranmeldung | [handelsregisteranmeldung/](handelsregisteranmeldung) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-cyberjack-rfid` |
+| Beglaubigung von Unterschriften | [unterschriftsbeglaubigung/](unterschriftsbeglaubigung) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-bnotk-xnp` |
+| Testament / Erbvertrag | [testament-erbvertrag/](testament-erbvertrag) | KG-Basis | `nac-regulated-core` |
+| Erbscheinsantrag / Nachlassangelegenheiten | [erbscheinsantrag-nachlass/](erbscheinsantrag-nachlass) | KG-Basis | `nac-regulated-core` |
+| Vorsorgevollmacht und Patientenverfuegung | [vorsorgevollmacht-patientenverfuegung/](vorsorgevollmacht-patientenverfuegung) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Schenkungsvertrag / Uebertragungsvertrag | [schenkungsvertrag-uebertragungsvertrag/](schenkungsvertrag-uebertragungsvertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal` |
+| Ehevertrag / Scheidungsfolgenvereinbarung | [ehevertrag-scheidungsfolgenvereinbarung/](ehevertrag-scheidungsfolgenvereinbarung) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-grundbuch-portal` |
 
 ## Zusaetzliche aktive Aufnahmequellen
 
 | Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
 | --- | --- | --- | --- |
-| Steuer-aaS Steuer-Readiness | [steuer-aas/](steuer-aas) | Aktive Aufnahme | `noc-regulated-core`, `noc-elster-eric` |
+| Steuer-aaS Steuer-Readiness | [steuer-aas/](steuer-aas) | Aktive Aufnahme | `nac-regulated-core`, `nac-elster-eric` |
 
 ## Kanonischer Next-10-Katalog
 
 | Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
 | --- | --- | --- | --- |
-| Loeschungsbewilligung / Grundbuchloeschung | [loeschungsbewilligung-grundbuchloeschung/](loeschungsbewilligung-grundbuchloeschung) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Teilungserklaerung nach WEG | [teilungserklaerung-weg/](teilungserklaerung-weg) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Bautraegervertrag | [bautraegervertrag/](bautraegervertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp`, `noc-idaas` |
-| Gesellschafterbeschluss bei GmbH/UG | [gesellschafterbeschluss-gmbh-ug/](gesellschafterbeschluss-gmbh-ug) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
-| Geschaeftsanteilsuebertragung GmbH | [geschaeftsanteilsuebertragung-gmbh/](geschaeftsanteilsuebertragung-gmbh) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
-| Vereinsregisteranmeldung | [vereinsregisteranmeldung/](vereinsregisteranmeldung) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-idaas` |
-| Erbausschlagung | [erbausschlagung/](erbausschlagung) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Pflichtteilsverzicht / Erbverzicht | [pflichtteilsverzicht-erbverzicht/](pflichtteilsverzicht-erbverzicht) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Adoption / familienrechtliche Erklaerungen | [adoption-familienrechtliche-erklaerungen/](adoption-familienrechtliche-erklaerungen) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte | [vollmacht-immobilien-gesellschaftsgeschaefte/](vollmacht-immobilien-gesellschaftsgeschaefte) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| Loeschungsbewilligung / Grundbuchloeschung | [loeschungsbewilligung-grundbuchloeschung/](loeschungsbewilligung-grundbuchloeschung) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Teilungserklaerung nach WEG | [teilungserklaerung-weg/](teilungserklaerung-weg) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Bautraegervertrag | [bautraegervertrag/](bautraegervertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp`, `nac-idaas` |
+| Gesellschafterbeschluss bei GmbH/UG | [gesellschafterbeschluss-gmbh-ug/](gesellschafterbeschluss-gmbh-ug) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-cyberjack-rfid` |
+| Geschaeftsanteilsuebertragung GmbH | [geschaeftsanteilsuebertragung-gmbh/](geschaeftsanteilsuebertragung-gmbh) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-idaas` |
+| Vereinsregisteranmeldung | [vereinsregisteranmeldung/](vereinsregisteranmeldung) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-idaas` |
+| Erbausschlagung | [erbausschlagung/](erbausschlagung) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Pflichtteilsverzicht / Erbverzicht | [pflichtteilsverzicht-erbverzicht/](pflichtteilsverzicht-erbverzicht) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Adoption / familienrechtliche Erklaerungen | [adoption-familienrechtliche-erklaerungen/](adoption-familienrechtliche-erklaerungen) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte | [vollmacht-immobilien-gesellschaftsgeschaefte/](vollmacht-immobilien-gesellschaftsgeschaefte) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
 
 ## Knowledge-Graph-Bindung
 

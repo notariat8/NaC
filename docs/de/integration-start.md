@@ -1,12 +1,12 @@
 # Integrationsstart: Fachsysteme, Plugins Und Connectoren
 
 Dieses Dokument richtet sich an Fachsystemanbieter, Integrationspartner und
-technische Produktteams, die NoC mit bestehender Notariatssoftware, lokalen
+technische Produktteams, die NaC mit bestehender Notariatssoftware, lokalen
 Arbeitsplatzkomponenten oder Portalen verbinden wollen.
 
 ## Integrationsprinzip
 
-NoC behandelt externe Systeme als getrennte Verantwortungs- und
+NaC behandelt externe Systeme als getrennte Verantwortungs- und
 Nachweisschichten. Das oeffentliche Repository modelliert:
 
 - welche Informationen und Gates ein Vorgang braucht,
@@ -44,6 +44,6 @@ Nachweisschichten. Das oeffentliche Repository modelliert:
 
 ## Leitplanke
 
-Eine Integration ist fuer NoC erst belastbar, wenn sie lokal pruefbar,
+Eine Integration ist fuer NaC erst belastbar, wenn sie lokal pruefbar,
 datenschutzseitig eingeordnet, versioniert, testbar und durch einen
 menschlichen Freigabeprozess begrenzt ist.

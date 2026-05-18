@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "plugins" / "noc-cyberjack-rfid" / "scripts" / "check_readiness.py"
+SCRIPT_PATH = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 
 
 def load_readiness_module():
@@ -76,7 +76,7 @@ class CyberJackReadinessTests(unittest.TestCase):
                 readiness.probe_ausweisapp_status,
             ) = original_probes
 
-        self.assertEqual(evidence["plugin"], "noc-cyberjack-rfid")
+        self.assertEqual(evidence["plugin"], "nac-cyberjack-rfid")
         self.assertEqual(evidence["overall_status"], "blocked")
         self.assertFalse(evidence["policy"]["pin_captured"])
         self.assertFalse(evidence["policy"]["card_data_captured"])

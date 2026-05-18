@@ -40,7 +40,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         assert summary is not None
         self.assertEqual(summary.priority, "P0")
         self.assertGreaterEqual(summary.open_required_information, 6)
-        self.assertIn("noc-grundbuch-portal", summary.plugin_dependencies)
+        self.assertIn("nac-grundbuch-portal", summary.plugin_dependencies)
         self.assertTrue(summary.first_open_questions)
 
     def test_cli_status_returns_json_totals(self) -> None:
@@ -99,7 +99,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "noc.kg-editor-view/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.kg-editor-view/v0.1")
         self.assertEqual(payload["editor_model"]["tabs"][0]["id"], "open_information")
         self.assertIn("value", payload["patch_policy"]["forbidden_fields"])
 

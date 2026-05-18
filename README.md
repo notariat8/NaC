@@ -1,6 +1,6 @@
-# NoC: Notariat as Code
+# NaC: Notariat as Code
 
-NoC ist ein oeffentliches Referenz- und Produktkern-Repository fuer den
+NaC ist ein oeffentliches Referenz- und Produktkern-Repository fuer den
 AI-first-Betrieb notarieller Vorgangsarten. Ein Notariat soll dieses Repository
 klonen, pruefen und als Vorlage fuer einen privaten, eigenen Betriebs-Fork nutzen
 koennen.
@@ -26,7 +26,7 @@ geprueft.
 | --- | --- | --- |
 | Notariat und fachliche Entscheidung | [docs/de/notar-start.md](docs/de/notar-start.md) | Nutzen, Grenzen, Datenschutz, erster Prueflauf und Entscheidung, ob ein privater Fork sinnvoll ist. |
 | Office-Admin und IT-Betrieb | [docs/de/betriebsstart.md](docs/de/betriebsstart.md) | Klonen, lokale Checks, private Betriebsumgebung, Rollen, Arbeitsplatz- und Plugin-Voraussetzungen. |
-| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NoC angebunden werden koennen. |
+| Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NaC angebunden werden koennen. |
 | Pruefung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart fuer Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
@@ -54,9 +54,9 @@ Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
 
 ## Was Es Bewusst Nicht Leistet
 
-- NoC ersetzt kein vorgeschriebenes Fachsystem und keine berufsrechtliche
+- NaC ersetzt kein vorgeschriebenes Fachsystem und keine berufsrechtliche
   Verantwortung.
-- NoC ist keine automatische Rechtsberatung und keine autonome Beurkundung.
+- NaC ist keine automatische Rechtsberatung und keine autonome Beurkundung.
 - Oeffentliche Repository-Dateien sind keine Ablage fuer echte Akten,
   Ausweisdaten, Registerauszuege, Zahlungsdaten oder Signaturgeheimnisse.
 - Produktive Nutzung braucht einen privaten Fork, lokale Rollen, Freigaben,
@@ -105,7 +105,7 @@ Wenn Python noch nicht eingerichtet ist, zuerst
 
 ## Aktueller Entwicklungsmodus
 
-NoC wird als ausfuehrbare Software entwickelt, nicht nur als Dokumentation. Die
+NaC wird als ausfuehrbare Software entwickelt, nicht nur als Dokumentation. Die
 aktuell implementierte Runtime-Oberflaeche ist die notarielle KG-CLI:
 
 ```bash

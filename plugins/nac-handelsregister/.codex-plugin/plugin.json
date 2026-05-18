@@ -1,0 +1,49 @@
+{
+  "name": "nac-handelsregister",
+  "version": "0.1.0",
+  "description": "Handelsregister-Anmeldungen mit Schutzplanken vorbereiten.",
+  "author": {
+    "name": "NaC Maintainers",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "oac",
+    "handelsregister",
+    "register",
+    "hra",
+    "online-application",
+    "notary",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "NaC Register",
+    "shortDescription": "Registeranmeldungen vorbereiten.",
+    "longDescription": "Lokaler Handelsregister-Begleiter fuer HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
+    "developerName": "NaC Maintainers",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "NotaryReadiness",
+      "DependsOnXnpGate",
+      "HRA",
+      "OnlineProcedure",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Bereite eine HRA-Onlineanmeldung nach der XNP-Pruefung vor.",
+      "Pruefe die notarielle Online-Verfahrensbereitschaft.",
+      "Erzeuge Nachweismetadaten fuer eine HRA-Anmeldung."
+    ],
+    "brandColor": "#2F5C8A",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

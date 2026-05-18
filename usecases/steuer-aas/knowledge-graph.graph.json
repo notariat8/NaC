@@ -1,8 +1,8 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.steuer-aas",
   "catalog_group": "active-intake",
-  "title": "NoC Usecase-Wissensgraph: Steuer-aaS Steuer-Readiness",
+  "title": "NaC Usecase-Wissensgraph: Steuer-aaS Steuer-Readiness",
   "status": "active_intake",
   "last_update": "2026-05-17",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Pruefgates und Nachweise fuer diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
@@ -260,8 +260,8 @@
       ],
       "edges": [],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-elster-eric"
+        "nac-regulated-core",
+        "nac-elster-eric"
       ],
       "workflow_dependencies": [
         "workflow.tax_readiness_intake"

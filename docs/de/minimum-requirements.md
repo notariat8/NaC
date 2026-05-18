@@ -58,7 +58,7 @@ python scripts/install_local_plugins.py --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
 
-Danach Codex neu starten oder eine neue Session mit Workspace `~/NoC` oeffnen,
+Danach Codex neu starten oder eine neue Session mit Workspace `~/NaC` oeffnen,
 weil aktive Plugins beim Session-Start geladen werden. Wenn Symlinks auf einem
 Arbeitsplatz nicht erlaubt sind, nach Freigabe `--mode copy --force` verwenden.
 
@@ -86,7 +86,7 @@ Signatur- oder XNP-Komponenten benoetigt werden.
 | AusweisApp | optional fuer IDaaS/eID-Pfade | eID-Funktionspruefung |
 
 Ein morris-Test ist erfolgreich, wenn die Middleware erreichbar antwortet. Eine
-Antwort wie `kein Kartenleser angeschlossen`, `NoReader` oder `NoCard` ist fuer
+Antwort wie `kein Kartenleser angeschlossen`, `NoReader` oder `NaCard` ist fuer
 die technische Anbindungspruefung ausreichend, solange keine echte Kartenaktion
 ausgefuehrt werden soll.
 
@@ -94,8 +94,8 @@ Notariatsarbeitsplatz-Check:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
-python plugins\noc-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
-python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
+python plugins\nac-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
+python plugins\nac-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
 ```
 
 ## Datenschutz Und Betriebsgrenzen
@@ -103,7 +103,7 @@ python plugins\noc-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
 - Keine PINs, Kartenseriennummern, Zertifikatsinhalte, Mandatsdaten oder echten
   personenbezogenen Daten im Repository speichern.
 - Karten- und XNP-Tests arbeiten zuerst mit Readiness-Status und technischen
-  Negativantworten wie `NoReader` oder `NoCard`.
+  Negativantworten wie `NoReader` oder `NaCard`.
 - Externe Verarbeitung mit personenbezogenen Daten braucht vor einem Pilot einen
   dokumentierten AVV/DPA-Status.
 - Lokale Fachsysteme bleiben lokale Abhaengigkeiten und muessen in SBOM und

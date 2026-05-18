@@ -28,7 +28,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | --- | --- | --- | --- |
 | `doc.division_declaration` | Dokument: Teilung Erklaerung | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
 | `doc.plans_certificate` | Dokument: Plaene Bescheinigung | `offen` | freigegebener Nachweisspeicher |
-| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_excerpt` | Dokument: aktueller Grundbuchauszug | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
 
 ## Entscheidungen
 

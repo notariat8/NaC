@@ -1,12 +1,12 @@
 # Integration Start: Systems, Plugins And Connectors
 
 This document is for software vendors, integration partners and technical
-product teams that want to connect NoC with existing notary-office software,
+product teams that want to connect NaC with existing notary-office software,
 local workstation components or portals.
 
 ## Integration Principle
 
-NoC treats external systems as separate responsibility and evidence layers. The
+NaC treats external systems as separate responsibility and evidence layers. The
 public repository models:
 
 - which information and gates a case needs,
@@ -44,5 +44,5 @@ public repository models:
 
 ## Guardrail
 
-An integration is dependable for NoC only when it is locally checkable, reviewed
+An integration is dependable for NaC only when it is locally checkable, reviewed
 for privacy, versioned, testable and bounded by a human approval process.

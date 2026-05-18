@@ -33,7 +33,7 @@ KG_MD_FORBIDDEN_MARKERS = (
     "All `value` fields remain empty",
 )
 KG_JSON_FORBIDDEN_MARKERS = (
-    "NoC usecase knowledge graph:",
+    "NaC usecase knowledge graph:",
     "Track open information",
     "All value fields are intentionally empty",
     "Real personal, property, health, estate, family or company data",
@@ -216,8 +216,8 @@ def validate_domain_language_rules() -> list[str]:
         errors.append("GitHub-Root-README fehlt: README.md")
     else:
         text = root_readme.read_text(encoding="utf-8")
-        if not text.startswith("# NoC: Notariat as Code"):
-            errors.append("README.md muss als deutscher GitHub-Root-README beginnen: # NoC: Notariat as Code")
+        if not text.startswith("# NaC: Notariat as Code"):
+            errors.append("README.md muss als deutscher GitHub-Root-README beginnen: # NaC: Notariat as Code")
         if GERMAN_ROOT_MARKER not in text:
             errors.append("README.md muss Deutsch als repo-weit fuehrende Sprache nennen.")
         if "This repository is maintained" in text:

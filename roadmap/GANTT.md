@@ -1,6 +1,6 @@
-# NoC Globaler Gantt
+# NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-18
 
 Jedes Change-Set mit repo-relevanten Dateien muss diesen globalen Gantt
 mitpflegen. Repo-relevant sind alle Aenderungen ausser generierten Artefakten
@@ -13,7 +13,7 @@ unter `out/` und Git-Interna. Aenderungen unter `plugins/`, `workflows/` oder
 
 ```mermaid
 gantt
-    title NoC globaler Lieferplan
+    title NaC globaler Lieferplan
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
 
@@ -30,6 +30,7 @@ gantt
     Lokaler Plugin-Erkennungsbootstrap           :done,    a4f, 2026-05-17, 1d
     Deutsche Plugin-UX dauerhaft erzwingen       :done,    a4g, 2026-05-17, 1d
     Plugin-Karten und Icons lesbar machen        :done,    a4h, 2026-05-17, 1d
+    Funktion8-Marktplatznamen setzen             :done,    a4i, 2026-05-18, 1d
     Notariats-Pilot-Plugin-Bereitschaft          :         a5, after a4, 35d
     Veroeffentlichung und Supportbetrieb         :         a6, after a5, 28d
 
@@ -79,9 +80,9 @@ gantt
 
 | Arbeitsstrang | Umfang | Status | Fortschritt | Aktueller Pruefpunkt |
 | --- | --- | --- | --- | --- |
-| A | Installierbare Plugins fuer Notariate | Aktiv | 74% | `noc-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `noc-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung, deutsch gefuehrte Skill-Anweisungen mit englischer Kurzfassung, kurzen deutschen Plugin-Anzeigenamen, knappen Kurzbeschreibungen, echten Icon-/Logo-Assets und einen lokalen Codex-Erkennungsbootstrap fuer neue Rechner. |
+| A | Installierbare Plugins fuer Notariate | Aktiv | 74% | `nac-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `nac-pkcs7-certbundle` fuehrt einen getrennten lokalen Zertifikatsbuendel-Nachweistrack ohne Signatur; OpenAI-gestuetzte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Fuehrung, deutsch gefuehrte Skill-Anweisungen mit englischer Kurzfassung, kurzen deutschen Plugin-Anzeigenamen, knappen Kurzbeschreibungen, echten Icon-/Logo-Assets, sichtbarem Marktplatznamen `funktion8 - NaC` und einen lokalen Codex-Erkennungsbootstrap fuer neue Rechner. |
 | B | Installierbare Skills und deterministische Python-Arbeitsablaeufe | Aktiv | 42% | Das erste ausfuehrbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Ueberblick; Startpruefungen haben Profile fuer Basis-, Plugin-Dev- und Notariats-Arbeitsplatz-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparitaet blockiert kopierte lokalisierte Markdown-/Textspiegel und prueft SKILL.md-Sprachmarker; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Arbeitsablauf-MD ist jetzt deutsch gefuehrt. |
-| C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NoC entfernt und ist nicht mehr Teil des Katalogs. |
+| C | Notarielle Usecases fuer Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die fuehrende und rechtlich bindende Sprache fuer deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch gefuehrt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewuenschter aktiver Aufnahme-Usecase wurde aus NaC entfernt und ist nicht mehr Teil des Katalogs. |
 | D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 31% | Root-README fuehrt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit und vier Zielgruppenpfaden plus Maintainer-Pfad; separate Startseiten erklaeren Notariatsentscheidung, Betrieb, Integration sowie Pruefung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausfuehrungsmodell, praezisierte Gantt-Regel und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand fuer Nicht-Technik-Leser greifbarer. |
 
 ## Regel

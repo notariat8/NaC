@@ -1,13 +1,13 @@
-# Review And Standardization: How To Assess NoC
+# Review And Standardization: How To Assess NaC
 
-This document is for people and organizations that evaluate NoC from a control,
+This document is for people and organizations that evaluate NaC from a control,
 standardization, certification, supervisory-adjacent or comparability
 perspective. It does not name any specific institution; it describes the review
 path in the repository.
 
 ## What Can Be Assessed
 
-NoC makes visible more than prompts:
+NaC makes visible more than prompts:
 
 - roles and approvals,
 - technical and subject-matter gates,
@@ -58,7 +58,7 @@ python scripts/validate_plugins.py
 
 ## Standardization Question
 
-NoC is suitable for discussing repeatable subject-matter patterns in versioned
+NaC is suitable for discussing repeatable subject-matter patterns in versioned
 form: Which case nodes are required, which approvals are mandatory, which
 evidence may only be referenced, and which automation remains deliberately
 blocked?

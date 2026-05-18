@@ -28,7 +28,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | --- | --- | --- | --- |
 | `doc.resolution_minutes` | Dokument: Beschluss Protokoll | `offen` | notarielle Urkunde oder beglaubigtes Protokoll |
 | `doc.current_articles` | Dokument: Aktueller Stand Satzung | `offen` | Nachweispaket der Gesellschaft |
-| `doc.register_application` | Dokument: Register Antrag | `offen` | noc-bnotk-xnp und noc-handelsregister |
+| `doc.register_application` | Dokument: Register Antrag | `offen` | nac-bnotk-xnp und nac-handelsregister |
 
 ## Entscheidungen
 

@@ -28,7 +28,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | --- | --- | --- | --- |
 | `doc.developer_contract_draft` | Dokument: Bautraeger Vertrag Entwurf | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
 | `doc.specification_package` | Dokument: Spezifikation Paket | `offen` | freigegebener Nachweisspeicher |
-| `doc.land_register_state` | Dokument: Grundbuch Register Stand | `offen` | noc-grundbuch-portal oder manuell gepruefter Upload |
+| `doc.land_register_state` | Dokument: Grundbuch Register Stand | `offen` | nac-grundbuch-portal oder manuell gepruefter Upload |
 
 ## Entscheidungen
 

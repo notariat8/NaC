@@ -1,5 +1,5 @@
 {
-  "schema_version": "noc.ai-sbom/v0.1",
+  "schema_version": "nac.ai-sbom/v0.1",
   "status": "draft",
   "review_date": "2026-05-15",
   "scope": "NaC repository-wide AI supply-chain baseline for plugins, workflows and usecases",
@@ -23,7 +23,7 @@
     "metadata": {
       "name": "NaC AI-SBOM baseline",
       "version": "0.1.0",
-      "owner": "NoC Maintainers",
+      "owner": "NaC Maintainers",
       "lifecycle_state": "planning",
       "release_binding": "draft only until first AI-enabled release package"
     },
@@ -53,7 +53,7 @@
     ],
     "infrastructure": [
       {
-        "id": "local-noc-workspace",
+        "id": "local-nac-workspace",
         "processing_mode": "local-first",
         "external_service_use": "requires AVV/DPA and channel approval",
         "minimum_requirements_reference": {
@@ -189,7 +189,7 @@
         ],
         "negative_readiness_responses_allowed": [
           "NoReader",
-          "NoCard",
+          "NaCard",
           "no card reader attached"
         ],
         "privacy_exclusions": [
@@ -201,8 +201,8 @@
         ],
         "verification": [
           "python scripts/startup_check.py --profile notary-workstation --ide auto",
-          "python plugins\\noc-cyberjack-rfid\\scripts\\check_readiness.py --json --probe-morris-api",
-          "python plugins\\noc-bnotk-xnp\\scripts\\reader_prompt.py --json --probe-morris-api"
+          "python plugins\\nac-cyberjack-rfid\\scripts\\check_readiness.py --json --probe-morris-api",
+          "python plugins\\nac-bnotk-xnp\\scripts\\reader_prompt.py --json --probe-morris-api"
         ]
       }
     ],

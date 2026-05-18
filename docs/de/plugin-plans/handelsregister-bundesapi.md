@@ -2,14 +2,14 @@
 
 Status: `deprecated`
 
-Dieser Plan ist fuer den installierbaren `noc-handelsregister`-Pluginpfad ersetzt durch
+Dieser Plan ist fuer den installierbaren `nac-handelsregister`-Pluginpfad ersetzt durch
 `docs/de/plugin-plans/handelsregister-online-anmeldung.md`. Er bleibt nur als historischer
 Recherche-/Abruf-Spike erhalten und ist nicht die Zielrichtung fuer den aktuellen MVP.
 
 ## Kernentscheidung
 
-`bundesAPI/handelsregister` wird fuer NoC nur als technischer Spike behandelt.
-Es wird nicht direkt produktiv in NoC uebernommen.
+`bundesAPI/handelsregister` wird fuer NaC nur als technischer Spike behandelt.
+Es wird nicht direkt produktiv in NaC uebernommen.
 
 Gruende:
 
@@ -21,11 +21,11 @@ Gruende:
 
 ## Ziel
 
-NoC soll Handelsregister-Recherchen fuer erlaubte Einzelfaelle nachvollziehbar vorbereiten, dokumentieren und evidenzfaehig machen.
+NaC soll Handelsregister-Recherchen fuer erlaubte Einzelfaelle nachvollziehbar vorbereiten, dokumentieren und evidenzfaehig machen.
 
 Der Spike darf pruefen:
 
-- welche Suchparameter fuer NoC-Prozesse relevant sind,
+- welche Suchparameter fuer NaC-Prozesse relevant sind,
 - wie ein menschenlesbarer Rechercheplan aussieht,
 - welche Evidence nach einem manuellen oder zulässigen Abruf gespeichert werden darf,
 - welche technische Schnittstelle spaeter rechtlich und betrieblich tragfaehig waere.
@@ -87,13 +87,13 @@ Der Spike darf nicht:
 
 ## Quellenbewertung
 
-| Quelle | Befund | NoC-Folge |
+| Quelle | Befund | NaC-Folge |
 | --- | --- | --- |
 | `bundesAPI/handelsregister` | Python-CLI, wenige Dateien, kein sichtbares LICENSE-File, kein Release | nur Spike, keine direkte Code-Uebernahme |
 | Registerportal Nutzungsordnung | einzelne Abrufe erlaubt, systematische Abrufe unzulaessig, 60 Suchen/Aufrufe pro Stunde | hartes Rate-Limit und kein Massenbetrieb |
 | HGB § 9 | Einsichtnahme zu Informationszwecken durch einzelne Abrufe | Intent und Zweck dokumentieren |
 | HRV § 52 | automatisierter Abruf nur einzeln je Registerblatt und keine gezielte Personensuche | keine Bulk- oder Personensuche |
-| HRV § 53 | Abrufe werden protokolliert | NoC-Audit nicht als Ersatz fuer amtliche Protokollierung behandeln |
+| HRV § 53 | Abrufe werden protokolliert | NaC-Audit nicht als Ersatz fuer amtliche Protokollierung behandeln |
 
 ## Akzeptanzkriterien fuer einen spaeteren produktiven Connector
 

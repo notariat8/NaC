@@ -4,11 +4,11 @@ Stand: 2026-05-14
 
 ## Ziel
 
-Dieses Dokument plant die Integration des REINER SCT cyberJack RFID standard und vergleichbarer lokaler Kartenpfade als Sicherheits-Plugin fuer NoC. Ziel ist ein belastbarer Einstieg fuer eID-, BNotK-/Notar-Kartenleser-, SAK-lite-, secureFramework- und spaeter Signatur-Workflows, ohne dass PIN, Kartenrohdaten oder lokale Geraetekontrolle in die SaaS wandern.
+Dieses Dokument plant die Integration des REINER SCT cyberJack RFID standard und vergleichbarer lokaler Kartenpfade als Sicherheits-Plugin fuer NaC. Ziel ist ein belastbarer Einstieg fuer eID-, BNotK-/Notar-Kartenleser-, SAK-lite-, secureFramework- und spaeter Signatur-Workflows, ohne dass PIN, Kartenrohdaten oder lokale Geraetekontrolle in die SaaS wandern.
 
 Fuer notariatsseitige Online-HRA-Workflows ist dieses Plugin dem XNP-Plugin vorgelagert. XNP-Login-Tests sind erst sinnvoll, wenn BNotK Chip-/Signaturkarte, kompatibler Kartenleser der Sicherheitsklasse 3, PC/SC, BNotK SAK lite oder XNP-Kartenpfad, secureFramework und die lokale XNP-Schnittstelle bereit sind.
 
-Der cyberJack wird nicht als Cloud-Geraet behandelt. Er bleibt am Arbeitsplatz des Nutzers. Die NoC SaaS erzeugt nur Challenges, fuehrt Policies, speichert Evidenz und protokolliert auditierbare Entscheidungen.
+Der cyberJack wird nicht als Cloud-Geraet behandelt. Er bleibt am Arbeitsplatz des Nutzers. Die NaC SaaS erzeugt nur Challenges, fuehrt Policies, speichert Evidenz und protokolliert auditierbare Entscheidungen.
 
 ## Produkt- und Schnittstellenlage
 
@@ -21,12 +21,12 @@ Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrati
 - Reiner SCT e-com/e-com plus und weitere nicht kompatible oder nicht mehr unterstuetzte Leser sind als Blocker zu behandeln.
 - Die BNotK beschreibt fuer Chipkartenanmeldungen den Bedarf an Chipkarte, Kartenlesegeraet der Sicherheitsklasse 3 und BNotK SAK lite oder XNP.
 - Fuer die Kommunikation mit dem Kartenleser wird im BNotK-Kartenloginpfad secureFramework verwendet.
-- XNP kann sich mit Signaturkarte/Chipkarte und PIN anmelden; die PIN-Eingabe erfolgt am Kartenlesegeraet bzw. in der lokalen zertifizierten Komponente, nicht in NoC.
-- XNP stellt fuer Notariatssoftware eine lokale Web-Service-Schnittstelle bereit. Sie ist auf den jeweiligen Rechner beschraenkt, bindet standardmaessig den ersten freien Port im Bereich `12774` bis `12784` und kann einen API-Key fuer Anmeldefunktionen nutzen. NoC darf API-Keys nicht speichern.
+- XNP kann sich mit Signaturkarte/Chipkarte und PIN anmelden; die PIN-Eingabe erfolgt am Kartenlesegeraet bzw. in der lokalen zertifizierten Komponente, nicht in NaC.
+- XNP stellt fuer Notariatssoftware eine lokale Web-Service-Schnittstelle bereit. Sie ist auf den jeweiligen Rechner beschraenkt, bindet standardmaessig den ersten freien Port im Bereich `12774` bis `12784` und kann einen API-Key fuer Anmeldefunktionen nutzen. NaC darf API-Keys nicht speichern.
 - Der Leser nutzt PC/SC 2.0 und CT-API als lokale Schnittstellen.
 - Unter Windows wird der REINER-SCT-Stack ueber `C:\Program Files\REINER SCT\DriverPackage`, PC/SC-/CT-API-Dateien und den installierten SmartCardReader-Treiberprovider geprueft.
-- REINER SCT beschreibt morris als lokale Middleware, mit der Browser-Anwendungen auf den Chipkartenleser zugreifen koennen. Fuer NoC ist das als lokaler, benutzergefuehrter Browser-Middleware-Pfad relevant, nicht als Cloud-Steuerung des Lesers.
-- Der Leser bietet sichere PIN-Eingabe am Geraet; PIN-Eingabe darf nicht in NoC oder ein LLM wandern.
+- REINER SCT beschreibt morris als lokale Middleware, mit der Browser-Anwendungen auf den Chipkartenleser zugreifen koennen. Fuer NaC ist das als lokaler, benutzergefuehrter Browser-Middleware-Pfad relevant, nicht als Cloud-Steuerung des Lesers.
+- Der Leser bietet sichere PIN-Eingabe am Geraet; PIN-Eingabe darf nicht in NaC oder ein LLM wandern.
 - REINER SCT nennt BSI-/TUEV-IT-Zertifizierung und Sicherheitsklasse 3.
 - Unter Linux und macOS ist Nutzung moeglich; Firmwareupdate/-upgrade ist laut Herstellerhinweis dort nicht ueber das cyberJack ControlCenter vorgesehen.
 - Fuer Linux verweist REINER SCT darauf, dass cyberJack-Treiber in vielen Distributionen bereits ueber Standard-Repositories verfuegbar sind; falls nicht, sind distributionsspezifische Pakete bzw. Quellcode zu nutzen.
@@ -48,15 +48,15 @@ User Workstation
   XNP local web-service interface
   REINER SCT Treiber / PCSC
   AusweisApp
-  noc-cyberjack-local-plugin
+  nac-cyberjack-local-plugin
         |
         | mTLS oder signierte short-lived challenge
         v
-NoC SaaS / OCI
-  noc-identity-service
+NaC SaaS / OCI
+  nac-identity-service
   tenant evidence store
   audit log
-  NoC process request / pull request
+  NaC process request / pull request
 ```
 
 ## Plugin-Rollen
@@ -78,12 +78,12 @@ Es darf nicht:
 
 - PINs lesen oder speichern,
 - XNP-API-Keys, Login-Informationen oder verschluesselte Schluesselblobs speichern,
-- Kartenrohdaten an NoC oder ein LLM geben,
+- Kartenrohdaten an NaC oder ein LLM geben,
 - personenbezogene Attribute ohne explizite Policy-Freigabe ausgeben,
 - globale Adminrechte benoetigen,
 - automatisch produktive Freigaben ersetzen.
 
-### NoC SaaS
+### NaC SaaS
 
 Die SaaS darf:
 
@@ -102,7 +102,7 @@ Die SaaS darf nicht:
 
 ## Vorgeschlagene Plugin-API
 
-Das Plugin sollte als lokaler MCP- oder HTTP-Adapter startbar sein. MCP ist fuer NoC/Codex ergonomisch; HTTP ist fuer Desktop- und Browser-Integrationen einfacher testbar. Beide Varianten koennen denselben Kern nutzen.
+Das Plugin sollte als lokaler MCP- oder HTTP-Adapter startbar sein. MCP ist fuer NaC/Codex ergonomisch; HTTP ist fuer Desktop- und Browser-Integrationen einfacher testbar. Beide Varianten koennen denselben Kern nutzen.
 
 ### Minimale Tools
 
@@ -167,19 +167,19 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad fuer XN
 7. Lokale XNP-Schnittstelle nur ueber nicht geheime Metadaten pruefen.
 8. Keine PIN, keine API-Keys und keine Kartenrohdaten erfassen.
 9. Ergebnis minimiert als Evidence speichern.
-10. `noc-bnotk-xnp` erst nach erfolgreicher `NoC Karte/SAK` testen.
-11. Evidence in einem NoC-Prozess referenzieren.
+10. `nac-bnotk-xnp` erst nach erfolgreicher `NaC Karte/SAK` testen.
+11. Evidence in einem NaC-Prozess referenzieren.
 12. Audit Event erzeugen.
 
-Der erste lauffaehige MVP liegt jetzt unter `plugins/noc-cyberjack-rfid/scripts/check_readiness.py`. Er erzeugt ein Evidence-JSON nach `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json`, prueft nur lokale Komponenten, nutzt ausschliesslich localhost fuer XNP/AusweisApp-Erreichbarkeit und speichert keine PINs, Kartendaten oder XNP-API-Keys. RFID-off und Kartenverfuegbarkeit werden als manuelle Attestationen erfasst, bis eine gepruefte lokale Schnittstelle diese Zustaende deterministisch liefern kann.
+Der erste lauffaehige MVP liegt jetzt unter `plugins/nac-cyberjack-rfid/scripts/check_readiness.py`. Er erzeugt ein Evidence-JSON nach `plugins/nac-cyberjack-rfid/contracts/readiness-evidence.schema.json`, prueft nur lokale Komponenten, nutzt ausschliesslich localhost fuer XNP/AusweisApp-Erreichbarkeit und speichert keine PINs, Kartendaten oder XNP-API-Keys. RFID-off und Kartenverfuegbarkeit werden als manuelle Attestationen erfasst, bis eine gepruefte lokale Schnittstelle diese Zustaende deterministisch liefern kann.
 
 Auf Linux prueft der MVP zusaetzlich cyberJack-/PCSC-Paketstatus, `pcscd`, USB-Sichtbarkeit ueber `lsusb` und PC/SC-Reader-Signale ueber `pcsc_scan -n`, sofern diese Werkzeuge vorhanden sind.
 
 Auf Windows prueft der MVP zusaetzlich den installierten REINER-SCT-DriverPackage-Pfad, zentrale Treiberdateien, CT-API/PCSC-Dateien und den installierten REINER-SCT-SmartCardReader-Provider ueber `pnputil`. Angeschlossene Reader-Hardware wird getrennt geprueft; ein installierter Treiberstack beweist noch keinen angeschlossenen cyberJack-Reader.
 
-Wenn morris installiert ist, prueft der MVP zusaetzlich den lokalen morris-Pfad, den Windows-Dienst `morris`, die laufenden Prozesse `morrisServer` und `morrisDispatcherService` sowie lokale Named-Pipe-Endpunkte wie `net.pipe://localhost/morris`. Optional kann der MVP mit `--probe-morris-api` den echten morris-Loopback-Pfad ueber `http://127.0.0.1:8800` pruefen: `system::check`, `system::auth`, `system::list_provider`, `pcsc::establishcontext` und `pcsc::listreaders`. SID und Auth-Daten werden nur gehasht, Karten-ATR wird nicht gespeichert. Antworten wie `NoReader` oder `NoCard` gelten als erfolgreiche Middleware-Anbindung ohne angeschlossene bzw. ohne eingelegte Karte; die physische cyberJack-Bereitschaft bleibt ein separater Reader-Gate. Es werden keine PIN-Abfragen, Kartendaten, Zertifikate oder Portalaktionen ausgefuehrt.
+Wenn morris installiert ist, prueft der MVP zusaetzlich den lokalen morris-Pfad, den Windows-Dienst `morris`, die laufenden Prozesse `morrisServer` und `morrisDispatcherService` sowie lokale Named-Pipe-Endpunkte wie `net.pipe://localhost/morris`. Optional kann der MVP mit `--probe-morris-api` den echten morris-Loopback-Pfad ueber `http://127.0.0.1:8800` pruefen: `system::check`, `system::auth`, `system::list_provider`, `pcsc::establishcontext` und `pcsc::listreaders`. SID und Auth-Daten werden nur gehasht, Karten-ATR wird nicht gespeichert. Antworten wie `NoReader` oder `NaCard` gelten als erfolgreiche Middleware-Anbindung ohne angeschlossene bzw. ohne eingelegte Karte; die physische cyberJack-Bereitschaft bleibt ein separater Reader-Gate. Es werden keine PIN-Abfragen, Kartendaten, Zertifikate oder Portalaktionen ausgefuehrt.
 
-Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrungsort genutzt werden. Fuer einen isolierten Hardware-Lab-Test waere Omnistation nur dann sinnvoll, wenn der cyberJack-USB-Reader per USB-Passthrough dort sichtbar ist und eine dokumentierte Policy-Ausnahme oder Policy-Aenderung vorliegt. Ohne USB-Passthrough kann ein Omnistation-Cloud-Desktop den physischen RFID-/Kartenleser nicht testen.
+Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NaC-Ausfuehrungsort genutzt werden. Fuer einen isolierten Hardware-Lab-Test waere Omnistation nur dann sinnvoll, wenn der cyberJack-USB-Reader per USB-Passthrough dort sichtbar ist und eine dokumentierte Policy-Ausnahme oder Policy-Aenderung vorliegt. Ohne USB-Passthrough kann ein Omnistation-Cloud-Desktop den physischen RFID-/Kartenleser nicht testen.
 
 ## Nicht im MVP
 
@@ -237,7 +237,7 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrung
 7. `cyberjack.health` ausfuehren.
 8. Test-Challenge erzeugen.
 9. Test-Evidence erzeugen und Audit Event pruefen.
-10. Produktive Freigabe im NoC-Prozess dokumentieren.
+10. Produktive Freigabe im NaC-Prozess dokumentieren.
 
 ## Implementierungsphasen
 
@@ -249,12 +249,12 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrung
 
 ### Phase 1: MVP
 
-- Lokales Readiness-Script `plugins/noc-cyberjack-rfid/scripts/check_readiness.py` implementiert.
+- Lokales Readiness-Script `plugins/nac-cyberjack-rfid/scripts/check_readiness.py` implementiert.
 - Windows-DriverPackage-/SmartCardReader-Provider-Erkennung implementiert.
 - Windows-morris-Browser-Middleware-Erkennung implementiert.
 - Optionaler Windows-morris-Loopback-Probe ueber `--probe-morris-api` implementiert.
 - Linux-Treiber-/PCSC-/USB-Preflight im Readiness-Script implementiert.
-- Evidence-Schema `plugins/noc-cyberjack-rfid/contracts/readiness-evidence.schema.json` implementiert.
+- Evidence-Schema `plugins/nac-cyberjack-rfid/contracts/readiness-evidence.schema.json` implementiert.
 - `cyberjack.health`, `cyberjack.list_readers`, `cyberjack.check_bnotk_card_path` werden aus dem Script-Kern in den spaeteren MCP-/HTTP-Adapter abgeleitet.
 - `cyberjack.check_ausweisapp` bleibt fuer eID-Folgefaelle vorgesehen.
 - Challenge-Flow stubben.
@@ -284,7 +284,7 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NoC-Ausfuehrung
 - Erstplattform: Windows nativ oder zusaetzlich Linux/macOS?
 - Plugin-Form: MCP-only, lokaler HTTP-Service oder beides?
 - Evidence-Retention je Tenant?
-- Attributfreigabe komplett ausserhalb NoC oder mit minimiertem Attributsatz?
+- Attributfreigabe komplett ausserhalb NaC oder mit minimiertem Attributsatz?
 - Signierung/Update-Kanal fuer das lokale Plugin?
 
 ## Akzeptanzkriterien fuer den ersten PR

@@ -89,5 +89,5 @@ dependency. Missing or unclear license information blocks code adoption.
 
 - Active filing path:
   [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md)
-- Register-related NoC plugin plans:
+- Register-related NaC plugin plans:
   [README.md](README.md)

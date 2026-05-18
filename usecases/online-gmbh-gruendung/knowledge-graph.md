@@ -30,7 +30,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 | --- | --- | --- | --- |
 | `doc.articles` | Dokument: Satzung | `offen` | nach Pruefung erzeugter Workflow-Entwurf |
 | `doc.shareholder_list` | Dokument: Gesellschafterliste | `offen` | per Workflow erzeugt und geprueft |
-| `doc.register_application` | Dokument: Register Antrag | `offen` | Route ueber noc-bnotk-xnp und noc-handelsregister |
+| `doc.register_application` | Dokument: Register Antrag | `offen` | Route ueber nac-bnotk-xnp und nac-handelsregister |
 
 ## Entscheidungen
 

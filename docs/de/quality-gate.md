@@ -1,4 +1,4 @@
-# NoC Quality Gate
+# NaC Quality Gate
 
 ## Zweck
 

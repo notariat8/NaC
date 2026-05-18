@@ -1,12 +1,12 @@
-# Notar-Start: NoC In 15 Minuten Einschaetzen
+# Notar-Start: NaC In 15 Minuten Einschaetzen
 
 Dieses Dokument richtet sich an fachliche Entscheider im Notariat. Es erklaert,
-was NoC ist, was es nicht ist und wie ein erster lokaler Prueflauf ohne echte
+was NaC ist, was es nicht ist und wie ein erster lokaler Prueflauf ohne echte
 Mandatsdaten aussieht.
 
 ## Kurzbild
 
-NoC ist ein Muster fuer AI-first-Betrieb im Notariat:
+NaC ist ein Muster fuer AI-first-Betrieb im Notariat:
 
 - KI strukturiert Eingaben und offene Fragen.
 - Fachpersonal und Notar entscheiden.

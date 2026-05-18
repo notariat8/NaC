@@ -6,7 +6,7 @@ Dieses Dokument definiert, welche Themen in welches Repository gehoeren und wie 
 
 ## Repo-Typen
 
-### Upstream-Repo (zentrales NoC)
+### Upstream-Repo (zentrales NaC)
 
 Zustaendig fuer:
 

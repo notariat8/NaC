@@ -4,7 +4,7 @@
 
 This guide shows how an organization can use this reference repository with
 VS Code and GitHub Copilot instead of Cursor. The business frame is `Notariat
-as Code` with `Enterprise GitOps`; `NoC` is the concrete implementation.
+as Code` with `Enterprise GitOps`; `NaC` is the concrete implementation.
 
 If you are a first-time user and do not want to read every document, use the
 guided path:

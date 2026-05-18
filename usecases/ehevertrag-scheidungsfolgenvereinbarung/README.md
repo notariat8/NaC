@@ -44,9 +44,9 @@ Diese Datei ist die fachliche Vorderseite fuer Menschen. Der genaue maschinenles
 
 Primaere Plugins:
 
-- `noc-regulated-core`
-- `noc-idaas`
-- `noc-grundbuch-portal`
+- `nac-regulated-core`
+- `nac-idaas`
+- `nac-grundbuch-portal`
 
 Workflow-Bezug:
 

@@ -28,7 +28,7 @@ Diese Datei ist die menschliche Review-Sicht fuer den usecase-lokalen statischen
 
 | ID | Bezeichnung | Status | Quelle |
 | --- | --- | --- | --- |
-| `doc.register_application` | Dokument: Register Antrag | `offen` | noc-bnotk-xnp und noc-handelsregister |
+| `doc.register_application` | Dokument: Register Antrag | `offen` | nac-bnotk-xnp und nac-handelsregister |
 | `doc.corporate_evidence` | Dokument: Gesellschaftsrecht Nachweis | `offen` | manuell gepruefter Upload oder erzeugter Entwurf |
 
 ## Entscheidungen

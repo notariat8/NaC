@@ -4,7 +4,7 @@ Status: `draft`
 
 ## Target Picture
 
-This plan defines how NoC can support ELSTER and ERiC related workflows as a
+This plan defines how NaC can support ELSTER and ERiC related workflows as a
 local companion first and, only after separate approval, as a deeper technical
 integration.
 
@@ -37,11 +37,11 @@ until the exact legal and technical authorization path is approved.
 
 ```mermaid
 flowchart LR
-    NoC[NoC workflow] --> Plan[ELSTER plan preview]
+    NaC[NaC workflow] --> Plan[ELSTER plan preview]
     Plan --> Approval[Human approval gate]
     Approval --> Official[Official ELSTER or ERiC route]
     Official --> Evidence[Evidence metadata and hashes]
-    Evidence --> Git[NoC audit state]
+    Evidence --> Git[NaC audit state]
 ```
 
 ## What The Plugin May Do
@@ -65,7 +65,7 @@ flowchart LR
 
 ### Path A: Local/Workflow Companion, MVP
 
-The user executes official ELSTER or specialist-system steps manually. NoC
+The user executes official ELSTER or specialist-system steps manually. NaC
 tracks readiness, approvals, package version and evidence metadata.
 
 ### Path B: ERiC Manufacturer Integration
@@ -111,7 +111,7 @@ Personal data, certificate material and tax identifiers are excluded by default.
 If a process needs them, the customer policy must define purpose, retention,
 recipients and review path.
 
-## NoC Process Types
+## NaC Process Types
 
 - `tax_filing_readiness`
 - `tax_period_package`
@@ -166,7 +166,7 @@ The first implementation covers:
 
 - Is the first productive customer route portal-based or ERiC-based?
 - Which specialist tax software is authoritative?
-- Which evidence may be stored in NoC and which must stay in the DMS?
+- Which evidence may be stored in NaC and which must stay in the DMS?
 - Who approves corrections and re-submissions?
 
 ## Acceptance Criteria For The First Implementation

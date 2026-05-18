@@ -1,11 +1,11 @@
-# Notary Start: Evaluate NoC In 15 Minutes
+# Notary Start: Evaluate NaC In 15 Minutes
 
-This document is for notary-office decision makers. It explains what NoC is,
+This document is for notary-office decision makers. It explains what NaC is,
 what it is not, and how to run a first local check without real mandate data.
 
 ## Short Picture
 
-NoC is a reference model for AI-first notary-office operations:
+NaC is a reference model for AI-first notary-office operations:
 
 - AI structures input and open questions.
 - Subject-matter staff and the notary decide.
