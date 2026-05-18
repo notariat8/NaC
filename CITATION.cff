@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "Bitte zitieren Sie NaC als Notariat as Code von funktion8 / ofunk."
+title: "NaC: Notariat as Code"
+authors:
+  - name: "funktion8 / ofunk"
+repository-code: "https://github.com/ofunk/NaC"
+license: "AGPL-3.0-or-later AND CC-BY-4.0"
+date-released: "2026-05-18"

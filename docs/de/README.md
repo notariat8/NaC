@@ -1,11 +1,11 @@
 # NaC: Notariat as Code mit Enterprise Control Plane
 
-Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten über ein LLM-Frontend in natuerlicher Sprache, während Git, Pull Requests, Reviews, Actions und signierte Abschlüsse die verbindliche Prozessführung übernehmen. `NaC` ist dabei die konkrete Ausprägung als Enterprise Control Plane.
+Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten über ein LLM-Frontend in natürlicher Sprache, während Git, Pull Requests, Reviews, Actions und signierte Abschlüsse die verbindliche Prozessführung übernehmen. `NaC` ist dabei die konkrete Ausprägung als Enterprise Control Plane.
 
 ## Kernidee
 
 - Das LLM erzeugt aus Prompts strukturierte Prozessanträge.
-- Git repraesentiert den offiziellen Lebenszyklus eines Geschäftsvorgangs.
+- Git repräsentiert den offiziellen Lebenszyklus eines Geschäftsvorgangs.
 - Python validiert fachliche Regeln und führt wiederholbare Prozesse deterministisch aus.
 - GitHub Actions orchestrieren Checks, Freigaben, periodische Jobs und Artefakt-Erzeugung.
 
@@ -132,8 +132,8 @@ python -m business_os monthly-close --year 2026 --month 3
 ## Betriebsmodell
 
 1. Ein Fachanwender beschreibt einen Vorgang per Prompt.
-2. Das LLM erstellt einen Prozessantrag als JSON-Datei und eroeffnet einen Branch oder Pull Request.
-3. Die Python-Engine validiert Schema, Zustandsübergaenge und Idempotenz.
+2. Das LLM erstellt einen Prozessantrag als JSON-Datei und eröffnet einen Branch oder Pull Request.
+3. Die Python-Engine validiert Schema, Zustandsübergänge und Idempotenz.
 4. GitHub Actions führen automatische Checks aus und fordern Freigaben an.
 5. Nach dem Merge nach `main` gilt der Vorgang als verbindlich freigegeben und kann exportiert, archiviert oder periodisch aggregiert werden.
 
@@ -142,17 +142,27 @@ python -m business_os monthly-close --year 2026 --month 3
 - `main` ist geschützt und wird nur per Pull Request aktualisiert.
 - Jeder Push muss [roadmap/GANTT.md](../../roadmap/GANTT.md) aktualisieren; Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
 - Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
-- Tags und Releases repraesentieren Monats- oder Quartalsabschlüsse.
+- Tags und Releases repräsentieren Monats- oder Quartalsabschlüsse.
 - Erzeugte Artefakte können als Actions-Artefakte archiviert werden.
 - Laufende Vorgänge bleiben auf der beim Start gebundenen Prozessversion.
 
 ## Hinweise
 
-Dieses Repo ist ein Referenzsystem. Es ersetzt kein vorgeschriebenes Fachsystem, sondern zeigt, wie Git als Orchestrierungs-, Kontroll- und Nachweisschicht für kaufmaennische Prozesse dienen kann.
+Dieses Repo ist ein Referenzsystem. Es ersetzt kein vorgeschriebenes Fachsystem, sondern zeigt, wie Git als Orchestrierungs-, Kontroll- und Nachweisschicht für kaufmännische Prozesse dienen kann.
 
 ## Lizenz
 
-Dieses Repository steht unter `GPL-3.0` (siehe `LICENSE`).
+NaC trennt Software- und Dokumentationslizenz:
+
+- Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele:
+  `AGPL-3.0-or-later`
+- Dokumentation, Diagramme, Policies, Roadmap, Prompts und fachliche Usecases:
+  `CC-BY-4.0`
+
+Die verbindliche Zuordnung steht in [LICENSES/README.md](../../LICENSES/README.md).
+Bitte die Attribution aus [NOTICE](../../NOTICE), [AUTHORS.md](../../AUTHORS.md)
+und [CITATION.cff](../../CITATION.cff) erhalten. Marken- und Namensgrenzen
+stehen in [TRADEMARK.md](../../TRADEMARK.md).
 
 ## Empfohlene Lesereihenfolge für Nicht-IT
 

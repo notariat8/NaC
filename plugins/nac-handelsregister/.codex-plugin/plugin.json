@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "Handelsregister-Anmeldungen mit Schutzplanken vorbereiten.",
   "author": {
-    "name": "NaC Maintainers",
+    "name": "funktion8 / ofunk",
     "email": "security@example.com",
     "url": "https://github.com/ofunk/NaC"
   },
   "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
   "repository": "https://github.com/ofunk/NaC",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "oac",
     "handelsregister",
@@ -24,7 +24,7 @@
     "displayName": "NaC Register",
     "shortDescription": "Registeranmeldungen vorbereiten.",
     "longDescription": "Lokaler Handelsregister-Begleiter für HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
-    "developerName": "NaC Maintainers",
+    "developerName": "funktion8 / ofunk",
     "category": "Regulierung",
     "capabilities": [
       "Local",

@@ -117,6 +117,24 @@ python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.
 
+## Lizenz Und Attribution
+
+NaC ist maximal offen und zugleich schützend lizenziert:
+
+- Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele:
+  `AGPL-3.0-or-later`
+- Dokumentation, Diagramme, Policies, Roadmap, Prompts und fachliche Usecases:
+  `CC-BY-4.0`
+
+Die verbindliche Zuordnung steht in [LICENSES/README.md](LICENSES/README.md).
+Bitte bei Forks, öffentlichen Deployments, Präsentationen und abgeleiteten
+Unterlagen sichtbar nennen:
+
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+
+Weitere Hinweise: [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md),
+[CITATION.cff](CITATION.cff) und [TRADEMARK.md](TRADEMARK.md).
+
 ## Push- Und Qualitätsregel
 
 Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren. Änderungen

@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "XNP-Prüfung für notarielle Arbeitsplätze.",
   "author": {
-    "name": "NaC Maintainers",
+    "name": "funktion8 / ofunk",
     "email": "security@example.com",
     "url": "https://github.com/ofunk/NaC"
   },
   "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
   "repository": "https://github.com/ofunk/NaC",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "oac",
     "bnotk",
@@ -29,7 +29,7 @@
     "displayName": "NaC XNP-Prüfung",
     "shortDescription": "XNP lokal und ohne Zugangsdaten prüfen.",
     "longDescription": "Installierbares lokales Codex-Plugin für Notariatsarbeitsplätze. Es prüft XNP-Bereitschaft, Amtstätigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
-    "developerName": "NaC Maintainers",
+    "developerName": "funktion8 / ofunk",
     "category": "Regulierung",
     "capabilities": [
       "Local",

@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "OCI-Landing-Zone, Audit und Drift nachweisen.",
   "author": {
-    "name": "NaC Maintainers",
+    "name": "funktion8 / ofunk",
     "email": "security@example.com",
     "url": "https://github.com/ofunk/NaC"
   },
   "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
   "repository": "https://github.com/ofunk/NaC",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "oac",
     "oci",
@@ -22,7 +22,7 @@
     "displayName": "NaC OCI-Nachweis",
     "shortDescription": "Cloud-Audit und Drift nachweisen.",
     "longDescription": "Lokaler OCI-Nachweisbegleiter für Landing-Zone-Prüfungen, Planreview, Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
-    "developerName": "NaC Maintainers",
+    "developerName": "funktion8 / ofunk",
     "category": "Regulierung",
     "capabilities": [
       "CloudReadiness",

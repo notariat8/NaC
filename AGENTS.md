@@ -19,6 +19,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
 - Wenn gefragt wird, ob die Arbeit fertig ist, darf `fertig` nur gemeldet werden, wenn der geprüfte Stand in `main` gemerged ist und der lokale Workspace auf dem aktuellen `main` sauber ist.
 - Jeder Push muss [roadmap/GANTT.md](roadmap/GANTT.md) aktualisieren; Änderungen unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
+- Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
+- Attribution nach [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md) und [CITATION.cff](CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](TRADEMARK.md) beachten.
 - Das Repo trennt installierbare Plugin-Artefakte in [plugins/](plugins), ausführbare Notariats-Workflows in [workflows/](workflows) und konkrete notarielle Usecases in [usecases/](usecases).
 - Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
 - Konzeptänderungen werden IDE-übergreifend synchron gepflegt (Cursor und VS Code + Copilot).
@@ -59,12 +61,12 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 1. [docs/de/START_HERE.md](docs/de/START_HERE.md) oder [docs/en/START_HERE.md](docs/en/START_HERE.md) lesen.
 2. [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) oder [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) lesen.
-3. [policies/culture-policy.yaml](policies/culture-policy.yaml), [policies/process-policy.yaml](policies/process-policy.yaml), [policies/technology-policy.yaml](policies/technology-policy.yaml), [policies/data-protection-policy.yaml](policies/data-protection-policy.yaml), [policies/role-model-policy.yaml](policies/role-model-policy.yaml) und [policies/language-policy.yaml](policies/language-policy.yaml) bestätigen.
+3. [policies/culture-policy.yaml](policies/culture-policy.yaml), [policies/process-policy.yaml](policies/process-policy.yaml), [policies/technology-policy.yaml](policies/technology-policy.yaml), [policies/data-protection-policy.yaml](policies/data-protection-policy.yaml), [policies/role-model-policy.yaml](policies/role-model-policy.yaml), [policies/language-policy.yaml](policies/language-policy.yaml) und [policies/license-policy.yaml](policies/license-policy.yaml) bestätigen.
 4. `python scripts/startup_check.py --profile base --ide auto --run-tests` erfolgreich ausführen.
    Für Plugin-Arbeit zusätzlich `python scripts/validate_plugins.py`,
    `python scripts/install_local_plugins.py --mode link` und
    `python scripts/startup_check.py --profile plugin-dev --ide auto`.
-   Danach Codex neu starten oder eine neue Session oeffnen, weil Plugins beim
+   Danach Codex neu starten oder eine neue Session öffnen, weil Plugins beim
    Session-Start geladen werden.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide auto`.
 5. Passendes Onboarding-Prompt unter [prompts/de/onboarding/](prompts/de/onboarding) oder [prompts/en/onboarding/](prompts/en/onboarding) starten.

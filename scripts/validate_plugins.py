@@ -9,6 +9,8 @@ MARKETPLACE_NAME = "nac-regulierung"
 REQUIRED_PLUGIN_FIELDS = ["name", "version", "description", "author", "homepage", "repository", "license", "skills", "interface"]
 REQUIRED_INTERFACE_FIELDS = ["displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt", "brandColor"]
 REQUIRED_MARKETPLACE_ORDER = ["nac-cyberjack-rfid", "nac-bnotk-xnp", "nac-handelsregister"]
+REQUIRED_PLUGIN_LICENSE = "AGPL-3.0-or-later"
+REQUIRED_DEVELOPER_NAME = "funktion8 / ofunk"
 MAX_DISPLAY_NAME_CHARS = 22
 MAX_SHORT_DESCRIPTION_CHARS = 64
 MIN_PLUGIN_ASSET_PX = 64
@@ -191,10 +193,17 @@ def validate() -> list[str]:
         for field in REQUIRED_PLUGIN_FIELDS:
             if field not in manifest:
                 errors.append(f"{name}: missing manifest field {field}")
+        if manifest.get("license") != REQUIRED_PLUGIN_LICENSE:
+            errors.append(f"{name}: manifest license must be {REQUIRED_PLUGIN_LICENSE}")
+        author = manifest.get("author", {})
+        if not isinstance(author, dict) or author.get("name") != REQUIRED_DEVELOPER_NAME:
+            errors.append(f"{name}: author.name must be {REQUIRED_DEVELOPER_NAME}")
         interface = manifest.get("interface", {})
         for field in REQUIRED_INTERFACE_FIELDS:
             if field not in interface:
                 errors.append(f"{name}: missing interface field {field}")
+        if interface.get("developerName") != REQUIRED_DEVELOPER_NAME:
+            errors.append(f"{name}: interface.developerName must be {REQUIRED_DEVELOPER_NAME}")
         errors.extend(validate_german_plugin_ux(name, "description", manifest.get("description")))
         for field in PLUGIN_UX_FIELDS[1:]:
             errors.extend(validate_german_plugin_ux(name, f"interface.{field}", interface.get(field)))

@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "Grundbuch-Berechtigung und Abrufplanung prüfen.",
   "author": {
-    "name": "NaC Maintainers",
+    "name": "funktion8 / ofunk",
     "email": "security@example.com",
     "url": "https://github.com/ofunk/NaC"
   },
   "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
   "repository": "https://github.com/ofunk/NaC",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "oac",
     "grundbuch",
@@ -22,7 +22,7 @@
     "displayName": "NaC Grundbuch",
     "shortDescription": "Berechtigung und Abrufplanung prüfen.",
     "longDescription": "Lokaler Grundbuchportal-Begleiter für Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
-    "developerName": "NaC Maintainers",
+    "developerName": "funktion8 / ofunk",
     "category": "Regulierung",
     "capabilities": [
       "Local",

@@ -112,6 +112,20 @@ python scripts/quality_gate.py --profile strict
 Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes under [plugins/](../../plugins),
 [workflows/](../../workflows), or [usecases/](../../usecases) must also update the matching area Gantt.
 
+## License And Attribution
+
+NaC uses a split open-source licensing model:
+
+- Code, plugins, workflows, validators, schemas, and runnable examples:
+  `AGPL-3.0-or-later`
+- Documentation, diagrams, policies, roadmap material, prompts, and notarial
+  usecases: `CC-BY-4.0`
+
+The binding mapping is documented in [LICENSES/README.md](../../LICENSES/README.md).
+Please preserve attribution from [NOTICE](../../NOTICE), [AUTHORS.md](../../AUTHORS.md),
+and [CITATION.cff](../../CITATION.cff). Trademark and naming boundaries are
+documented in [TRADEMARK.md](../../TRADEMARK.md).
+
 ## Recommended Reading Order
 
 1. [docs/en/START_HERE.md](START_HERE.md)

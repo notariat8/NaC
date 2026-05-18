@@ -7,7 +7,7 @@ Diese Liste ist als Vorlage für GitHub Issues gedacht.
 ### 1) Lizenz für Public Nutzung festlegen - erledigt
 - **Typ:** Governance
 - **Status:** erledigt
-- **Umsetzung:** `LICENSE` (GPL-3.0) angelegt
+- **Umsetzung:** `AGPL-3.0-or-later` für Software und `CC-BY-4.0` für Dokumentation festgelegt
 - **Akzeptanzkriterien:**
   - Lizenzentscheidung dokumentiert
   - `LICENSE` im Repo

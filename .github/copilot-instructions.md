@@ -20,6 +20,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
 - Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, geprüfter und lokal sauberer Stand fertig.
 - Jeder Push muss [roadmap/GANTT.md](../roadmap/GANTT.md) aktualisieren; Änderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
+- Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](../policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
+- Attribution nach [NOTICE](../NOTICE), [AUTHORS.md](../AUTHORS.md) und [CITATION.cff](../CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](../TRADEMARK.md) beachten.
 - Trenne installierbare Plugin-Artefakte ([plugins/](../plugins)), ausführbare Notariats-Workflows ([workflows/](../workflows)) und konkrete notarielle Usecases ([usecases/](../usecases)).
 - Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
 - Konzept- und Regelupdates müssen plattformübergreifend synchronisiert werden (Cursor und VS Code + Copilot).
@@ -41,7 +43,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - NaC-Ausführung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht über Omnistation.
 - Repo-lokale Plugins werden für neue Rechner mit `python scripts/install_local_plugins.py --mode link`
   in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
-  neue Session oeffnen.
+  neue Session öffnen.
 
 ## Pflichtquellen im Repository
 
@@ -54,6 +56,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - [policies/technology-policy.yaml](../policies/technology-policy.yaml)
 - [policies/data-protection-policy.yaml](../policies/data-protection-policy.yaml)
 - [policies/language-policy.yaml](../policies/language-policy.yaml)
+- [policies/license-policy.yaml](../policies/license-policy.yaml)
 - [docs/de/avv-checkliste-eventlock-saas.md](../docs/de/avv-checkliste-eventlock-saas.md)
 - [policies/sbom-policy.yaml](../policies/sbom-policy.yaml)
 - [docs/de/sbom-for-ai.md](../docs/de/sbom-for-ai.md)
@@ -118,7 +121,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
    Für Plugin-Entwicklung zusätzlich `python scripts/validate_plugins.py`,
    `python scripts/install_local_plugins.py --mode link` und
    `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
-   Danach Codex neu starten oder eine neue Session oeffnen.
+   Danach Codex neu starten oder eine neue Session öffnen.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
 3. Wähle das passende Branchen-Onboarding unter [prompts/de/onboarding/](../prompts/de/onboarding) oder [prompts/en/onboarding/](../prompts/en/onboarding).
    Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.

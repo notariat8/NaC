@@ -19,6 +19,7 @@ gantt
     Plugin-Karten und Icons lesbar machen       :done,   p3e, 2026-05-17, 1d
     Funktion8-Marktplatznamen setzen            :done,   p3f, 2026-05-18, 1d
     Deutsche Plugin-Umlaute validieren           :done,   p3g, 2026-05-18, 1d
+    Plugin-Lizenz und Herausgeber setzen         :done,   p3h, 2026-05-18, 1d
     NaC eID-Prüfung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsprüfungen
@@ -38,7 +39,7 @@ gantt
 
 | Plugin | Zweck | Status | Nächster Prüfpunkt |
 | --- | --- | --- | --- |
-| `nac-regulated-core` | Gemeinsame Schutzplanken für regulierte Arbeitsabläufe | Basis bereit | Kurzer Anzeigename und echtes Icon sind validiert; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut prüfen. |
+| `nac-regulated-core` | Gemeinsame Schutzplanken für regulierte Arbeitsabläufe | Basis bereit | Plugin-Manifeste führen `AGPL-3.0-or-later` und `funktion8 / ofunk` sichtbar; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut prüfen. |
 | `nac-idaas` | Deutsche eID-Prüfung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestätigen. |
 | `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Prüfung und Linux-Treiber-Vorprüfung sind implementiert; die lokale Prüfung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestätigung. |
 | `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorprüfung an die cyberJack-Prüfung und kann die optionale morris-API-Prüfung durchreichen; nächste Prüfung ist Workstation-Validierung mit installiertem XNP. |

@@ -36,6 +36,18 @@ Das öffentliche Repository zeigt den prüfbaren Kern. Produktive Einführung,
 Pilotierung, Integration mit Fachsystemen, Betrieb in privaten Forks und
 begleitende Leistungen sind separate Projekt- oder Vertragsfragen.
 
+## Lizenz Und Attribution
+
+NaC ist offen nutzbar: Software und ausführbare Artefakte stehen unter
+`AGPL-3.0-or-later`, fachliche Texte und Dokumentation unter `CC-BY-4.0`.
+Attribution soll sichtbar erhalten bleiben:
+
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+
+Details stehen in [LICENSES/README.md](LICENSES/README.md), [NOTICE](NOTICE),
+[AUTHORS.md](AUTHORS.md), [CITATION.cff](CITATION.cff) und
+[TRADEMARK.md](TRADEMARK.md).
+
 ## Kontakt Und Sicherheit
 
 Öffentliche fachliche Rückfragen gehören in GitHub Issues. Sicherheits-,

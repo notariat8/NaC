@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "eID-Prüfung und IAM-Projektion mit NaC-Schutzplanken.",
   "author": {
-    "name": "NaC Maintainers",
+    "name": "funktion8 / ofunk",
     "email": "security@example.com",
     "url": "https://github.com/ofunk/NaC"
   },
   "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
   "repository": "https://github.com/ofunk/NaC",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "oac",
     "idaas",
@@ -25,7 +25,7 @@
     "displayName": "NaC eID-Prüfung",
     "shortDescription": "eID prüfen, IAM-Projektion planen.",
     "longDescription": "Lokaler Begleiter für deutsche eID-Prüfung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
-    "developerName": "NaC Maintainers",
+    "developerName": "funktion8 / ofunk",
     "category": "Regulierung",
     "capabilities": [
       "Local",

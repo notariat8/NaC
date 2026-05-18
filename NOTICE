@@ -1,0 +1,20 @@
+NaC: Notariat as Code
+Copyright (c) 2026 funktion8 / ofunk
+
+NaC wird als offenes Referenz- und Produktkern-Repository von funktion8 / ofunk
+veröffentlicht.
+
+Bitte Attribution in Kopien, Forks, öffentlichen Deployments, Dokumentation,
+Präsentationen und abgeleiteten Werken sichtbar erhalten:
+
+Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+
+Software, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele
+stehen unter AGPL-3.0-or-later.
+
+Dokumentation, Diagramme, Roadmap-Material, Policies, fachliche Usecase-
+Beschreibungen und Knowledge-Graph-Reviewtexte stehen unter CC-BY-4.0, sofern
+eine Datei nichts Abweichendes sagt.
+
+Open-Source-Lizenzen gewähren keine Markenrechte. Details stehen in
+TRADEMARK.md.
