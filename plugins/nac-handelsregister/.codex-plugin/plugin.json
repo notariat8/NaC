@@ -21,7 +21,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC Register",
+    "displayName": "Register",
     "shortDescription": "Registeranmeldungen vorbereiten.",
     "longDescription": "Lokaler Handelsregister-Begleiter für HRA-zuerst Online-Registeranmeldungen, Freigabepunkte und metadatenbasierte Nachweise.",
     "developerName": "funktion8 / ofunk",

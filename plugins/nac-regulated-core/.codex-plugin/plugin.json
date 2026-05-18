@@ -19,7 +19,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC Regulierung",
+    "displayName": "Regulierung",
     "shortDescription": "Schutzplanken, Freigaben und Nachweise.",
     "longDescription": "Lokaler Begleiter für Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisführung in regulierten NaC-Arbeitsabläufen.",
     "developerName": "funktion8 / ofunk",

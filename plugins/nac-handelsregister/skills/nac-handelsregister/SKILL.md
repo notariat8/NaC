@@ -3,7 +3,7 @@ name: nac-handelsregister
 description: Nutzen, wenn HRA-zuerst Online-Handelsregisteranmeldungen vorbereitet, Bürger-Vorprüfung und Notariatsmodus getrennt, notarielle Online-Verfahrensbereitschaft geprüft, eID-/App-Voraussetzungen dokumentiert oder nicht geheime Nachweismetadaten für Registerabläufe erstellt werden.
 ---
 
-# NaC Register
+# Register
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

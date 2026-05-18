@@ -17,7 +17,7 @@ NaC SaaS oder Remote-Ausführung bekommen nur:
 
 Direkte API-Aufrufe bleiben deaktiviert, bis die offizielle BNotK-Schnittstellendefinition lokal vorliegt und fachlich freigegeben ist.
 
-Der erste lauffähige MVP liegt unter `plugins/nac-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt für den cyberJack-Reader-Pfad, ruft die `NaC Karte/SAK` auf, prüft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/nac-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Prüfung aus der Kartenprüfung durchreichen. Er führt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
+Der erste lauffähige MVP liegt unter `plugins/nac-bnotk-xnp/scripts/reader_prompt.py`. Er erzeugt einen lokalen Trockenlauf-Leser-Prompt für den cyberJack-Reader-Pfad, ruft die `Karte/SAK` auf, prüft nur die XNP-Localhost-Erreichbarkeit im Portbereich `12774` bis `12784` und schreibt Nachweise nach `plugins/nac-bnotk-xnp/contracts/reader-prompt-evidence.schema.json`. Mit `--probe-morris-api` kann der Leser-Prompt die optionale morris-Loopback-/PCSC-Prüfung aus der Kartenprüfung durchreichen. Er führt keinen XNP-Login aus, nutzt keinen XNP-API-Key und schreibt keine produktiven XNP-Daten.
 
 ## Reihenfolge für Handelsregister-Online-Anmeldungen
 
@@ -25,8 +25,8 @@ Dieser Plan ist der zweite technische Baustein, wenn NaC einen echten notariatss
 Handelsregister- oder HRA-Arbeitsablauf vorbereiten soll.
 
 Korrektur nach Karten-/Login-Abhängigkeit: XNP selbst ist erst testbar, wenn der
-lokale Kartenpfad steht. Daher ist `nac-cyberjack-rfid` als `NaC Karte/SAK`
-der `NaC XNP-Prüfung` vorgelagert.
+lokale Kartenpfad steht. Daher ist `nac-cyberjack-rfid` als `Karte/SAK`
+der `XNP-Prüfung` vorgelagert.
 
 `nac-handelsregister` darf in diesem Zielbild erst nachgelagert fachliche Anmeldedaten,
 Registerspur und Paketbereitschaft strukturieren. Der Startpunkt ist vorher:
@@ -69,7 +69,7 @@ Mögliche Zielbereiche laut BNotK-Onlinehilfe:
 ## Day0
 
 - Zielrolle klären: Bürger-/Mandanten-Vorprüfung oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `NaC Karte/SAK` abschließen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- Bei Notariatsarbeitsplatz zuerst `Karte/SAK` abschließen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
 - XNP-Installationskontext lokal prüfen.
 - Lokale XNP-Anmeldung, Nutzerrolle und Amtstätigkeitskontext als Voraussetzung behandeln.
 - Klären, ob die Notariatssoftware-Schnittstelle aktiv ist.

@@ -3,7 +3,7 @@ name: nac-elster-eric
 description: Nutzen, wenn ELSTER, ERiC, Mein Unternehmenskonto oder Steuer-Einreichungsnachweise vorbereitet werden, besonders vor regulierter Übermittlung oder Hersteller-Onboarding.
 ---
 
-# NaC ELSTER/ERiC
+# ELSTER/ERiC
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

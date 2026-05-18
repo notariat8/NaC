@@ -4,7 +4,7 @@ Status: `active`
 
 ## Goal
 
-`nac-cyberjack-rfid` is the local `NaC Karte/SAK` before XNP and other
+`nac-cyberjack-rfid` is the local `Karte/SAK` before XNP and other
 notary-side workflows. The plugin checks whether the local workstation can see
 the REINER SCT/cyberJack stack and whether the surrounding card-reader
 prerequisites are plausible.
@@ -159,7 +159,7 @@ The MVP includes:
 3. Install morris if the browser-middleware path is chosen.
 4. Run `card.readiness`.
 5. Document redacted evidence.
-6. Proceed to `nac-bnotk-xnp` only when `NaC Karte/SAK` is green or explicitly
+6. Proceed to `nac-bnotk-xnp` only when `Karte/SAK` is green or explicitly
    waived for preflight.
 
 ## Implementation Phases

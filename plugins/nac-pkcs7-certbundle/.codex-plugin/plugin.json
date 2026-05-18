@@ -25,7 +25,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC PKCS7-Nachweis",
+    "displayName": "PKCS7-Nachweis",
     "shortDescription": "Zertifikatsbündel ohne Signatur prüfen.",
     "longDescription": "Installierbares lokales Codex-Plugin für die Prüfung von PKCS7-, P7B- und P7C-Zertifikatsbündeln als metadatenbasierter Nachweis ohne Signatur- oder Private-Key-Zugriff.",
     "developerName": "funktion8 / ofunk",

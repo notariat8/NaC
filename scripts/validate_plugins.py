@@ -208,6 +208,8 @@ def validate() -> list[str]:
         for field in PLUGIN_UX_FIELDS[1:]:
             errors.extend(validate_german_plugin_ux(name, f"interface.{field}", interface.get(field)))
         display_name = interface.get("displayName")
+        if isinstance(display_name, str) and display_name.startswith("NaC "):
+            errors.append(f"{name}: interface.displayName must omit the NaC prefix because the marketplace already names NaC")
         if isinstance(display_name, str) and len(display_name) > MAX_DISPLAY_NAME_CHARS:
             errors.append(f"{name}: interface.displayName must be <= {MAX_DISPLAY_NAME_CHARS} chars for card readability")
         short_description = interface.get("shortDescription")

@@ -3,7 +3,7 @@ name: nac-pkcs7-certbundle
 description: Lokale PKCS7-/P7B-/P7C-Zertifikatsbündel als metadatenbasierten Nachweis prüfen, ohne Signatur, Private-Key-Zugriff, PIN-Erfassung oder externe Aufrufe.
 ---
 
-# NaC PKCS7-Nachweis
+# PKCS7-Nachweis
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

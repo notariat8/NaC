@@ -3,7 +3,7 @@ name: nac-oci-evidence
 description: Nutzen, wenn OCI-Landing-Zone, Resource Manager, Vault, Eventstream, Audit oder Drift-Nachweise für regulierten NaC-Betrieb vorbereitet werden.
 ---
 
-# NaC OCI-Nachweis
+# OCI-Nachweis
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

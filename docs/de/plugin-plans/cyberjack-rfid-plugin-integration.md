@@ -167,7 +167,7 @@ Der MVP umfasst zuerst den sicheren Nachweis, dass der lokale Kartenpfad für XN
 7. Lokale XNP-Schnittstelle nur über nicht geheime Metadaten prüfen.
 8. Keine PIN, keine API-Keys und keine Kartenrohdaten erfassen.
 9. Ergebnis minimiert als Evidence speichern.
-10. `nac-bnotk-xnp` erst nach erfolgreicher `NaC Karte/SAK` testen.
+10. `nac-bnotk-xnp` erst nach erfolgreicher `Karte/SAK` testen.
 11. Evidence in einem NaC-Prozess referenzieren.
 12. Audit Event erzeugen.
 

@@ -1,4 +1,4 @@
-# NaC Regulierung
+# Regulierung
 
 Gemeinsame lokale Arbeitsablauf-, Sicherheitsgrenzen-, Planvorschau-,
 Freigabe- und Nachweisführung für NaC-Plugins in Anwaltskanzleien,

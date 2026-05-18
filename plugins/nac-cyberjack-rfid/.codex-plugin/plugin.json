@@ -25,7 +25,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC Karte/SAK",
+    "displayName": "Karte/SAK",
     "shortDescription": "Karte und Leser vor XNP prüfen.",
     "longDescription": "Installierbares lokales Codex-Plugin für notarielle Kartenbereitschaft vor XNP-Login und Online-HRA ohne PIN-, API-Key- oder Kartendatenerfassung.",
     "developerName": "funktion8 / ofunk",

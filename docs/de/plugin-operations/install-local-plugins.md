@@ -58,9 +58,9 @@ Codex-Discovery bleibt der home-lokale Root maßgeblich.
 6. Falls die Codex-Umgebung es unterstützt, aus dem repo-lokalen Marktplatz
    installieren.
 7. Prüfen, dass das installierte Card-Plugin den Anzeigenamen
-   `NaC Karte/SAK` und den Quellpfad `./plugins/nac-cyberjack-rfid` hat.
+   `Karte/SAK` und den Quellpfad `./plugins/nac-cyberjack-rfid` hat.
 8. Prüfen, dass das installierte XNP-Plugin den Anzeigenamen
-   `NaC XNP-Prüfung` und den Quellpfad `./plugins/nac-bnotk-xnp` hat.
+   `XNP-Prüfung` und den Quellpfad `./plugins/nac-bnotk-xnp` hat.
 9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
    `python3 scripts/install_local_plugins.py --mode copy --force` nach
    Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.

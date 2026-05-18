@@ -1,4 +1,4 @@
-# NaC beA-Postfach
+# beA-Postfach
 
 Lokaler beA-Arbeitsablaufbegleiter für Bereitschaft, Postfach-/eEB-Aufgabenplanung,
 Client-Security-Prüfungen und Nachweiserfassung, ohne PINs, Kartendaten,

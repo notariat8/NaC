@@ -8,7 +8,7 @@ Status: `proposed`
 filings.
 
 Correction of the development sequence: for a real notary-side filing or
-completion path, `NaC Karte/SAK` (`nac-cyberjack-rfid`) is required first,
+completion path, `Karte/SAK` (`nac-cyberjack-rfid`) is required first,
 because XNP login tests are not robust without card, card reader, SAK lite or
 XNP card path and secureFramework. Then `nac-bnotk-xnp` follows.
 `nac-handelsregister` is then the subject-matter layer for register track,
@@ -79,7 +79,7 @@ official ID with eID function and a valid official photo ID.
 
 The plugin creates a plan preview with:
 
-- operating mode, `NaC Karte/SAK` status and `NaC XNP-Pruefung` status,
+- operating mode, `Karte/SAK` status and `XNP-Prüfung` status,
 - register track and plausibility warnings,
 - missing required information,
 - document list for the notary,

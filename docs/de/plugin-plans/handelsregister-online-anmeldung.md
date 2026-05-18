@@ -7,7 +7,7 @@ Status: `proposed`
 `nac-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
 
 Korrektur der Entwicklungsreihenfolge: Für einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist zuerst die `NaC Karte/SAK`
+Anmelde- oder Vollzugspfad ist zuerst die `Karte/SAK`
 (`nac-cyberjack-rfid`)
 erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
 XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt

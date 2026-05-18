@@ -3,7 +3,7 @@ name: nac-grundbuch-portal
 description: Nutzen, wenn Grundbuchportalzugang, berechtigtes Interesse, landesspezifische Portalbereitschaft, Abrufnachweise oder notarielle Grundbuchabläufe geplant werden.
 ---
 
-# NaC Grundbuch
+# Grundbuch
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

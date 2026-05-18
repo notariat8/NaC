@@ -1,4 +1,4 @@
-# NaC OCI-Nachweis
+# OCI-Nachweis
 
 OCI-Nachweisbegleiter für Landing-Zone-Day0-Prüfungen, Resource-Manager-
 Planprüfung, Eventstream-/Audit-Journal-Design, Vault-Grenze sowie Day2-Drift-

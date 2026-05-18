@@ -20,7 +20,8 @@ gantt
     Funktion8-Marktplatznamen setzen            :done,   p3f, 2026-05-18, 1d
     Deutsche Plugin-Umlaute validieren           :done,   p3g, 2026-05-18, 1d
     Plugin-Lizenz und Herausgeber setzen         :done,   p3h, 2026-05-18, 1d
-    NaC eID-Prüfung                            :active, p4, 2026-05-14, 14d
+    Plugin-Kartennamen ohne NaC-Präfix           :done,   p3i, 2026-05-18, 1d
+    eID-Prüfung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsprüfungen
     CyberJack-RFID-Bereitschaftsplugin         :active, p5, 2026-05-01, 21d
@@ -54,9 +55,10 @@ Plugin-Skills werden fachlich deutsch geführt und enthalten eine kurze
 englische Kurzfassung; technische Namen, Ordner, Befehle, IDs und stabile
 Output-Labels bleiben englisch/ASCII.
 
-Plugin-Karten müssen kurze Anzeigenamen, knappe Kurzbeschreibungen und echte
-PNG-Icons/-Logos haben. `scripts/validate_plugins.py` blockiert leere
-Platzhalterbilder und zu lange Kartenanzeigen.
+Plugin-Karten müssen kurze Anzeigenamen ohne `NaC`-Präfix, knappe
+Kurzbeschreibungen und echte PNG-Icons/-Logos haben.
+`scripts/validate_plugins.py` blockiert leere Platzhalterbilder, zu lange
+Kartenanzeigen und erneute `NaC`-Präfixe.
 
 Der repo-lokale Marktplatz wird sichtbar als `funktion8 - NaC` geführt;
 technische Marketplace- und Plugin-IDs bleiben stabil.

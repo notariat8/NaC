@@ -19,7 +19,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC ELSTER/ERiC",
+    "displayName": "ELSTER/ERiC",
     "shortDescription": "ELSTER/ERiC mit Nachweisen planen.",
     "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter für Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-Prüfungen.",
     "developerName": "funktion8 / ofunk",

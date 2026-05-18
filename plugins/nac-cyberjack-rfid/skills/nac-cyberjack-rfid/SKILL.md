@@ -3,7 +3,7 @@ name: nac-cyberjack-rfid
 description: Zuerst nutzen, wenn XNP-Login oder Online-HRA BNotK-Kartenbereitschaft, cyberJack-Leserprüfung, RFID-aus-Bestätigung, Sicherheitsklasse-3-Leser, SAK-lite-/XNP-Kartenpfad, secureFramework, lokale XNP-Schnittstelle, PC/SC, Treiberversionen, Firmware-Hinweise oder Nachweismetadaten braucht.
 ---
 
-# NaC Karte/SAK
+# Karte/SAK
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

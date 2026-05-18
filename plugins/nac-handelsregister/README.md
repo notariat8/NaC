@@ -1,4 +1,4 @@
-# NaC Register
+# Register
 
 Lokaler HRA-zuerst-Handelsregister-Begleiter für die Vorbereitung von Online-
 Registeranmeldungspaketen, notarielle Online-Verfahrensbereitschaft, eID-/App-

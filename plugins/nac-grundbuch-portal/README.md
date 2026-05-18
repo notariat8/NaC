@@ -1,4 +1,4 @@
-# NaC Grundbuch
+# Grundbuch
 
 Grundbuchportal-Arbeitsablaufbegleiter für Berechtigung, berechtigtes Interesse,
 Abrufplanung und Nachweisimport ohne unbefugte Portalautomatisierung oder

@@ -26,7 +26,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC XNP-Prüfung",
+    "displayName": "XNP-Prüfung",
     "shortDescription": "XNP lokal und ohne Zugangsdaten prüfen.",
     "longDescription": "Installierbares lokales Codex-Plugin für Notariatsarbeitsplätze. Es prüft XNP-Bereitschaft, Amtstätigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
     "developerName": "funktion8 / ofunk",

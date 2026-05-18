@@ -22,7 +22,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC eID-Prüfung",
+    "displayName": "eID-Prüfung",
     "shortDescription": "eID prüfen, IAM-Projektion planen.",
     "longDescription": "Lokaler Begleiter für deutsche eID-Prüfung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
     "developerName": "funktion8 / ofunk",

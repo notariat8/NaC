@@ -19,7 +19,7 @@ Mailbox-IDs, Steuer-IDs, Zertifikatsmaterialien oder Mandatsinhalte.
 | --- | --- | --- |
 | `nac-regulated-core` | GitHub-Schreibzugriff; freigegebene Reviewer-Liste; Nachweisablage-Entscheidung | Day1 produktive Nutzung |
 | `nac-handelsregister` | Modusentscheidung: Bürger-Vorprüfung oder notariatsseitiger Arbeitsablauf; abgeschlossene `nac-cyberjack-rfid`- und `nac-bnotk-xnp`-Bereitschaft für Notariatsabläufe; Notartermin oder Notariatsablauf; Bundesnotarkammer-App für Online-Verfahren; eID-fähiger amtlicher Ausweis und PIN; Antragsteller- und Reviewer-Freigabe für das Registeranmeldungspaket | Day1 produktive Nutzung |
-| `nac-bnotk-xnp` | Abgeschlossene `NaC Karte/SAK`; BNotK/XNP-Zugang für das Notariat; lokale XNP-Anmeldung und aktiver Amtstätigkeitskontext; XNotar-/Registermodul oder Austauschordnerroute; Freigabe der Schnittstelle durch Notariatssoftwarehersteller; lokale Arbeitsplatz-Adminfreigabe | Day1 produktive Nutzung |
+| `nac-bnotk-xnp` | Abgeschlossene `Karte/SAK`; BNotK/XNP-Zugang für das Notariat; lokale XNP-Anmeldung und aktiver Amtstätigkeitskontext; XNotar-/Registermodul oder Austauschordnerroute; Freigabe der Schnittstelle durch Notariatssoftwarehersteller; lokale Arbeitsplatz-Adminfreigabe | Day1 produktive Nutzung |
 | `nac-bea-portal` | beA-Postfachzugriff; beA-Karte oder freigegebene Authentifizierungsmethode; beA Client Security am lokalen Arbeitsplatz; Kanzleipolicy für eEB und Exporte | Day1 produktive Nutzung |
 | `nac-elster-eric` | ELSTER-Organisations- oder Nutzerzugang; lokales Zertifikat oder freigegebene Authentifizierungsmethode; ERiC-Herstellerregistrierung bei serverseitiger Integration; Freigabe zur steuerlichen Vertretung | Day1 produktive Nutzung |
 | `nac-cyberjack-rfid` | BNotK-Chip-/Signaturkarte oder lokale Schneider/SCP-Karte; Kartenleser Sicherheitsklasse 3; BNotK SAK lite oder XNP-Kartenpfad; secureFramework-Kommunikationspfad; freigegebene Hardwarebeschaffung; lokale Arbeitsplatz-Adminfreigabe; Treiber-/Hersteller-Supportkanal | Day1 produktive Nutzung |
@@ -32,10 +32,10 @@ Direkte externe Schreibadapter dürfen nicht implementiert oder aktiviert
 werden, bis diese Punkte schriftlich freigegeben sind:
 
 - beA-Sende-/Empfangs-/eEB-Automationspfad und Client-Security-Grenze.
-- `NaC Karte/SAK` für BNotK-Chip-/Signaturkarte oder lokale Schneider/SCP-Karte,
+- `Karte/SAK` für BNotK-Chip-/Signaturkarte oder lokale Schneider/SCP-Karte,
   Kartenleser Sicherheitsklasse 3, secureFramework und keine PIN-Erfassung.
 - Offizieller XNP-/Notariatssoftware-Schnittstellenvertrag, abgeschlossenes
-  `NaC Karte/SAK`, lokale Authentifizierungsprüfung,
+  `Karte/SAK`, lokale Authentifizierungsprüfung,
   Amtstätigkeitskontext und Zugangsdaten-Grenze.
 - ELSTER/ERiC-Hersteller- oder Portalbetreiber-Onboarding, falls serverseitige
   Integration verfolgt wird.

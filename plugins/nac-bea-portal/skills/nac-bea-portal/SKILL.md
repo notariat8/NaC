@@ -3,7 +3,7 @@ name: nac-bea-portal
 description: Nutzen, wenn beA-Postfach, Versand, Eingang, eEB, Client Security oder Export-/Importnachweise für eine Kanzlei geplant werden.
 ---
 
-# NaC beA-Postfach
+# beA-Postfach
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

@@ -1,4 +1,4 @@
-# NaC Karte/SAK
+# Karte/SAK
 
 Installierbares lokales Codex-Plugin für notarielle Kartenbereitschaft vor
 XNP-Login und Online-HRA-Arbeit. Es prüft Verfügbarkeit der

@@ -1,4 +1,4 @@
-# NaC ELSTER/ERiC
+# ELSTER/ERiC
 
 Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter für Abgabe-Bereitschaft, lokale
 Zugangsmittelgrenzen, Nachweisimport und Hersteller-/Onboarding-Prüfungen ohne

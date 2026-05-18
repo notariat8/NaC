@@ -3,7 +3,7 @@ name: nac-regulated-core
 description: Nutzen, wenn ein regulierter NaC-Arbeitsablauf Aufnahme, Regelprüfung, Planvorschau, menschliche Freigabe, Nachweiserfassung, Drift-Behandlung oder sicheren Rückfallpfad braucht.
 ---
 
-# NaC Regulierung
+# Regulierung
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

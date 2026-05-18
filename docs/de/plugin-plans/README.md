@@ -28,10 +28,10 @@ Diese Entscheidung verhindert Brüche bei GitHub-Authentifizierung, Browser-Call
 | [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Planen, ausführen, abgleichen | Beobachtung, Wiederholung, Ersatzpfad |
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurückweisungen, Signatur-/Identfehler, Paketversionen |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzprüfung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `NaC Karte/SAK`, Arbeitsplatz- und Schnittstellenprüfung | lokale Plan-/Ausführungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `Karte/SAK`, Arbeitsplatz- und Schnittstellenprüfung | lokale Plan-/Ausführungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
 | [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security-Begleiter | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Arbeitsablauf | Störungen, Versionen, Nachweise |
 | [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC-Entwickler- und lokaler Begleiter | Hersteller-/Tooling-Prüfung | Trockenlauf-Abgabe- und Nachweispläne | ERiC-Versionen, Nachweise, Fristen |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `NaC Karte/SAK` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft für XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `Karte/SAK` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft für XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
 | [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Arbeitsablauf- und Nachweisbegleiter | Zulassung und berechtigtes Interesse | Abrufplan und Nachweisimport | Bundesland-Drift, Protokolle, Gebühren |
 
 ## Reihenfolge bei Handelsregister-/HRA-Arbeitsabläufen
@@ -42,7 +42,7 @@ Der erste technische Baustein hängt vom Betriebsmodus ab:
 - Notariatsseitiger Vollzug oder einreichungsnaher Arbeitsablauf: `nac-cyberjack-rfid` kommt zuerst, weil XNP-Login ohne Karte/Kartenleser/SAK-lite bzw. XNP-Kartenpfad und secureFramework nicht testbar ist.
 - Danach kommt `nac-bnotk-xnp`. Erst wenn lokale XNP-Anmeldung, Amtstätigkeitskontext, XNotar-Modul und Austauschordner geklärt sind, darf `nac-handelsregister` als fachlicher Register-Layer darauf aufbauen.
 
-Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomäne oberhalb der `NaC Karte/SAK` und der `NaC XNP-Prüfung`.
+Damit ist HRA nicht der erste technische Integrationspunkt, sondern die erste Fachdomäne oberhalb der `Karte/SAK` und der `XNP-Prüfung`.
 
 ## Verbindliches Adapter-Muster
 

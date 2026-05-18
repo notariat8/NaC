@@ -19,7 +19,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC beA-Postfach",
+    "displayName": "beA-Postfach",
     "shortDescription": "beA-Aufgaben und Nachweise planen.",
     "longDescription": "Lokaler beA-Arbeitsablaufbegleiter für Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Prüfungen und Nachweiserfassung.",
     "developerName": "funktion8 / ofunk",

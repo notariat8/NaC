@@ -3,7 +3,7 @@ name: nac-idaas
 description: Nutzen, wenn deutsche eID-Prüfungsbereitschaft, AusweisApp-orientierte Identitätsprüfung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft für Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NaC-Ablaufen geplant werden.
 ---
 
-# NaC eID-Prüfung
+# eID-Prüfung
 
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen, Ordner,
 Commands und IDs bleiben englisch/ASCII.

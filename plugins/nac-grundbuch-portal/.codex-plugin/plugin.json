@@ -19,7 +19,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "NaC Grundbuch",
+    "displayName": "Grundbuch",
     "shortDescription": "Berechtigung und Abrufplanung prüfen.",
     "longDescription": "Lokaler Grundbuchportal-Begleiter für Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
     "developerName": "funktion8 / ofunk",
@@ -34,7 +34,7 @@
     "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
     "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
     "defaultPrompt": [
-      "Prüfe die NaC Grundbuchportal-Bereitschaft.",
+      "Prüfe die Grundbuchportal-Bereitschaft.",
       "Erstelle einen Einrichtungsplan für den Grundbuchportal-Pfad.",
       "Prüfe Betriebsdrift für Grundbuchportal-Nachweise."
     ],

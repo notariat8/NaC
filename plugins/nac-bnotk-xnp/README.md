@@ -1,4 +1,4 @@
-# NaC XNP-Prüfung
+# XNP-Prüfung
 
 Installierbares lokales Codex-Plugin für Notariate und Notariatsarbeitsplätze.
 Es schaltet Online-HRA und andere notarielle Registerabläufe erst frei,

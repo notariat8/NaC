@@ -1,4 +1,4 @@
-# NaC PKCS7-Nachweis
+# PKCS7-Nachweis
 
 Installierbares lokales Codex-Plugin für metadatenbasierte PKCS#7/P7B/P7C-
 Zertifikatsbündel-Nachweise. Dieser Arbeitsstrang ist bewusst kein
