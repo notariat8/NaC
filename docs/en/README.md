@@ -48,9 +48,10 @@ Quick orientation: [docs/en/cli.md](cli.md), [docs/en/ausfuehrungsmodell.md](aus
 
 ## Multilingual Maintenance
 
-Language-specific content is maintained under ISO-639 folder codes:
+Language-specific content is maintained under ISO-639 folder codes. This
+English overview links only to English localized reading paths; German remains
+the leading source language in its own path.
 
-- German: [docs/de/](../de), [prompts/de/](../../prompts/de)
 - English: [docs/en/](.), [prompts/en/](../../prompts/en)
 
 `de` and `en` are mandatory. Every localized change must update both languages,
@@ -60,7 +61,6 @@ regardless of the language used in the prompt. The binding rule is defined in
 ## Repository Structure
 
 - [docs/en/](.) contains English documentation.
-- [docs/de/](../de) contains German documentation.
 - [docs/en/notar-start.md](notar-start.md) is the business entry path for notary offices and decision makers.
 - [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
 - [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
@@ -77,7 +77,6 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/glossar.md](glossar.md) explains terms for non-technical readers.
 - [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md) shows one full case without real mandate data.
 - [prompts/en/](../../prompts/en) contains English prompt templates.
-- [prompts/de/](../../prompts/de) contains German prompt templates.
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) tracks global progress for plugins, workflows, and usecases.
 - [plugins/GANTT.md](../../plugins/GANTT.md), [workflows/GANTT.md](../../workflows/GANTT.md), and [usecases/GANTT.md](../../usecases/GANTT.md) track area progress.
 - [plugins/](../../plugins) contains installable plugin artifacts for GPT Store review or workspace installation.

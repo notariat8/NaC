@@ -109,6 +109,17 @@ maintenance_rules:
   non_localized_human_content_defaults_to_german: true
   github_root_readme_is_human_content: true
 
+localized_navigation:
+  localized_markdown_links_follow_source_language: true
+  cross_language_markdown_links_allowed_in_localized_content: false
+  german_links_prefer:
+    - docs/de
+    - prompts/de
+  english_links_prefer:
+    - docs/en
+    - prompts/en
+  root_language_selector_may_link_all_standard_languages: true
+
 notes:
   - "Deutsch (de) und Englisch (en) sind die verpflichtenden Standardsprachen."
   - "Die Policy gilt repo-weit für alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
@@ -118,6 +129,7 @@ notes:
   - "Technische Plugin-IDs, Ordner, Commands, Output-Labels, Akronyme und Produktnamen dürfen englisch/ASCII bleiben."
   - "Jeder SKILL.md braucht im Body eine kurze englische Summary für technische Anschlussfähigkeit; sie ersetzt keine deutsche Frontmatter- oder UX-Sprache."
   - "Sprachabhängige Inhalte liegen unter ISO-639-Sprachordnern."
+  - "Markdown-Links in lokalisierten Inhalten bleiben im jeweiligen Sprachpfad; deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch."
   - "Unabhängig von der Sprache des Prompts müssen alle Standardsprachen gepflegt werden."
   - "Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen deutscher Umlaute sind nur in technischen Identifiern, Pfaden, URLs, Commands und Code zulässig."
   - "Neue Sprachen dürfen ergänzt werden, aber de und en bleiben immer Pflicht."

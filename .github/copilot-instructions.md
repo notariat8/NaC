@@ -32,6 +32,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](../policies/language-policy.yaml); die Policy gilt für alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../README.md).
 - Sprachabhängige Inhalte liegen in ISO-639-Ordnern; `de` und `en` sind immer zu pflegen.
 - Die Sprache des Prompts begrenzt die Änderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
+- Lokalisierte Markdown-Links bleiben im Sprachpfad der Quelldatei: deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch.
 - Für deutsches Recht und notarielle Usecases ist Deutsch die führende und rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch geführt.
 - Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels dürfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
 - Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
@@ -99,6 +100,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Folge immer [policies/culture-policy.yaml](../policies/culture-policy.yaml).
 - Folge immer [policies/language-policy.yaml](../policies/language-policy.yaml).
 - Lokal gepflegte Inhalte müssen immer in `de` und `en` aktualisiert werden.
+- Lokalisierte Markdown-Links dürfen nicht in den anderen Sprachpfad springen.
 - Plugins und Skills: deutsche UX- und fachliche Anweisung führt; englische Summary dient nur technischer Orientierung.
 - Bei Genderfragen gilt die konfigurierte Policy.
 - Wenn keine Policy gesetzt ist, nutze neutrale Sprache und bitte einmal um Entscheidung.

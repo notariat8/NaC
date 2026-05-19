@@ -135,11 +135,12 @@ Deutsch und Englisch sind Standardsprachen. Änderungen an lokalisierten
 Inhalten müssen immer beide Sprachpfade pflegen:
 
 - [docs/de/](.)
-- [docs/en/](../en)
 - [prompts/de/](../../prompts/de)
-- [prompts/en/](../../prompts/en)
 
-Die Parität wird mit [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py) geprüft.
+Die englischen Gegenstücke werden parallel gepflegt, aber nicht als
+Navigationsziel aus deutschen Fachdokumenten verlinkt.
+
+Die Parität wird mit `python scripts/nac.py doctor --profile strict` geprüft.
 
 ## Abschlussregel
 

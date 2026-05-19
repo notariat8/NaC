@@ -4,7 +4,7 @@ This file is part of the Omnistation import archive. It is not the active
 English plugin-plan source.
 
 - German source artifact:
-  [docs/de/plugin-plans/omnistation-imports/nac-bnotk-xnp-notariatssoftware-plugin-integration.md](../../../de/plugin-plans/omnistation-imports/nac-bnotk-xnp-notariatssoftware-plugin-integration.md)
+  same filename in the separate German import archive.
 - Active English plan:
   [docs/en/plugin-plans/bnotk-xnp-notariatssoftware.md](../bnotk-xnp-notariatssoftware.md)
 - Integrity hashes:

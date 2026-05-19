@@ -4,7 +4,7 @@ This file is part of the Omnistation import archive. It is not the active
 English plugin-plan source.
 
 - German source artifact:
-  [docs/de/plugin-plans/omnistation-imports/nac-grundbuch-portal-plugin-integration.md](../../../de/plugin-plans/omnistation-imports/nac-grundbuch-portal-plugin-integration.md)
+  same filename in the separate German import archive.
 - Active English plan:
   [docs/en/plugin-plans/grundbuch-portal-plugin-integration.md](../grundbuch-portal-plugin-integration.md)
 - Integrity hashes:

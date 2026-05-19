@@ -19,16 +19,14 @@ rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung.
 - `SKILL.md`-Dateien werden fachlich deutsch geführt und enthalten eine kurze
   englische Summary; technische Namen, Ordner, Commands und IDs bleiben
   englisch/ASCII.
-- [docs/en/README.md](../en/README.md) und
-  [docs/en/START_HERE.md](../en/START_HERE.md) sind englische
-  Einstiegsfassungen.
+- Englische Einstiegsfassungen werden parallel im englischen Sprachpfad
+  gepflegt, aber nicht aus deutschen Leseflüssen verlinkt.
 - Zielgruppenpfade, Reifegrad, Glossar und Beispielpfad werden in `de` und `en`
   gepflegt.
 - Die wichtigsten englischen Einstiegs-, Governance-, Betriebs-, Eventstream-,
   Service- und aktiven Pluginplan-Dokumente sind nicht mehr nur Dateispiegel.
-- Alte Omnistation-Importe unter
-  [docs/en/plugin-plans/omnistation-imports/](../en/plugin-plans/omnistation-imports/)
-  sind als englische Importnotizen geführt; die deutschen Originalartefakte
+- Alte Omnistation-Importe im englischen Sprachpfad sind als englische
+  Importnotizen geführt; die deutschen Originalartefakte
   bleiben unter
   [docs/de/plugin-plans/omnistation-imports/](plugin-plans/omnistation-imports/)
   nachvollziehbar.
@@ -44,7 +42,8 @@ prüft:
 - deutsche KG- und Usecase-README-Marker für unmittelbare Usecase-Ordner,
 - Skill-Sprachmarker für deutsch geführte `SKILL.md`-Dateien mit englischer
   Summary,
-- keine identischen Markdown-/Textspiegel zwischen `docs/de` und `docs/en`.
+- keine identischen Markdown-/Textspiegel zwischen `docs/de` und `docs/en`,
+- sprachgleiche Markdown-Links innerhalb lokalisierter Dokumente und Prompts.
 
 ## Nächster sinnvoller Schritt
 
