@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import subprocess
@@ -95,11 +96,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     plugins = subparsers.add_parser("plugins", help="Steuert lokale NaC-Plugins.")
     plugins_sub = plugins.add_subparsers(dest="plugins_command", required=True)
+    plugins_actions = plugins_sub.add_parser("actions", help="Listet fachliche Plugin-Befehle.")
+    plugins_actions.add_argument("--format", choices=["text", "json"], default="text")
     plugins_install = plugins_sub.add_parser("install", help="Spiegelt repo-lokale Plugins.")
     plugins_install.add_argument("--mode", choices=["dry-run", "link", "copy"], default="dry-run")
     plugins_install.add_argument("--target-root", type=Path)
     plugins_install.add_argument("--force", action="store_true")
     plugins_sub.add_parser("validate", help="Validiert Plugin-Manifeste.")
+    plugins_card = plugins_sub.add_parser("card-readiness", help="Prüft Karten-/SAK-Bereitschaft lokal.")
+    add_card_readiness_args(plugins_card)
+    plugins_xnp = plugins_sub.add_parser("xnp-reader-prompt", help="Erzeugt XNP-Reader-Prompt und Card-Gate-Nachweis.")
+    add_xnp_reader_prompt_args(plugins_xnp)
+    plugins_pkcs7 = plugins_sub.add_parser("pkcs7-inspect", help="Prüft PKCS7/P7B/P7C-Zertifikatsbündel lokal.")
+    add_pkcs7_inspect_args(plugins_pkcs7)
     plugins.set_defaults(func=command_plugins)
 
     config = subparsers.add_parser("config", help="Zeigt und prüft NaC-Konfigurationen.")
@@ -118,6 +127,50 @@ def add_web_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--host", default="127.0.0.1", help="Bind-Adresse. Standard: 127.0.0.1.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port. Standard: {DEFAULT_PORT}.")
     parser.add_argument("--open", action="store_true", help="Browser nach Serverstart öffnen.")
+
+
+def add_card_readiness_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--manual-card-present", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--manual-rfid-off", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--output", type=Path, help="Optionaler JSON-Nachweispfad.")
+    parser.add_argument("--json", action="store_true", help="Vollen JSON-Nachweis ausgeben.")
+    parser.add_argument(
+        "--probe-morris-api",
+        action="store_true",
+        help="Lokale morris-Loopback-API ohne Karten- oder PIN-Daten aktiv prüfen.",
+    )
+    parser.add_argument("--strict", action="store_true", help="Nur bei vollständiger Bereitschaft mit 0 beenden.")
+
+
+def add_xnp_reader_prompt_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--prompt", help="Optionaler lokaler Bedienhinweis. Keine Secrets eintragen.")
+    parser.add_argument(
+        "--intent",
+        choices=["reader_function_check", "xnp_login_preflight", "online_hra_preflight"],
+        default="reader_function_check",
+    )
+    parser.add_argument("--manual-card-present", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--manual-rfid-off", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--output", type=Path, help="Optionaler JSON-Nachweispfad.")
+    parser.add_argument("--json", action="store_true", help="Vollen JSON-Nachweis ausgeben.")
+    parser.add_argument(
+        "--probe-morris-api",
+        action="store_true",
+        help="Karten-Gate soll die lokale morris-Loopback-API aktiv prüfen.",
+    )
+    parser.add_argument("--strict", action="store_true", help="Nur bei promptfähigem Stand mit 0 beenden.")
+
+
+def add_pkcs7_inspect_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--input",
+        type=Path,
+        help="Lokaler PKCS7/P7B/P7C-Zertifikatsbündelpfad. Keine PFX/P12/Key-Dateien übergeben.",
+    )
+    parser.add_argument("--max-bytes", type=int, default=5 * 1024 * 1024)
+    parser.add_argument("--output", type=Path, help="Optionaler JSON-Nachweispfad.")
+    parser.add_argument("--json", action="store_true", help="Vollen JSON-Nachweis ausgeben.")
+    parser.add_argument("--strict", action="store_true", help="Nur bei bereitem Zertifikatsbündel-Gate mit 0 beenden.")
 
 
 def command_status(args: argparse.Namespace) -> int:
@@ -140,6 +193,7 @@ def command_status(args: argparse.Namespace) -> int:
             "kg_status": "nac kg status",
             "bpmn_validate": "nac bpmn validate",
             "config_validate": "nac config validate",
+            "plugin_actions": "nac plugins actions",
         },
     }
     if args.format == "json":
@@ -262,12 +316,74 @@ def command_plugins(args: argparse.Namespace) -> int:
     if args.plugins_command == "validate":
         return run_script(repo_root, "scripts/validate_plugins.py", [])
 
-    script_args = ["--mode", args.mode]
-    if args.target_root:
-        script_args.extend(["--target-root", str(args.target_root)])
-    if args.force:
-        script_args.append("--force")
-    return run_script(repo_root, "scripts/install_local_plugins.py", script_args)
+    if args.plugins_command == "install":
+        script_args = ["--mode", args.mode]
+        if args.target_root:
+            script_args.extend(["--target-root", str(args.target_root)])
+        if args.force:
+            script_args.append("--force")
+        return run_script(repo_root, "scripts/install_local_plugins.py", script_args)
+
+    if args.plugins_command == "actions":
+        actions = plugin_actions()
+        if args.format == "json":
+            print_json({"actions": actions})
+            return 0
+        print("NaC-Plugin-Befehle")
+        for action in actions:
+            print(f"- {action['command']}: {action['description']}")
+        return 0
+
+    if args.plugins_command == "card-readiness":
+        return run_plugin_main(
+            repo_root,
+            "plugins/nac-cyberjack-rfid/scripts/check_readiness.py",
+            [
+                "--manual-card-present",
+                args.manual_card_present,
+                "--manual-rfid-off",
+                args.manual_rfid_off,
+                *optional_flag(args.json, "--json"),
+                *optional_flag(args.probe_morris_api, "--probe-morris-api"),
+                *optional_flag(args.strict, "--strict"),
+                *optional_path("--output", args.output),
+            ],
+        )
+
+    if args.plugins_command == "xnp-reader-prompt":
+        return run_plugin_main(
+            repo_root,
+            "plugins/nac-bnotk-xnp/scripts/reader_prompt.py",
+            [
+                "--intent",
+                args.intent,
+                "--manual-card-present",
+                args.manual_card_present,
+                "--manual-rfid-off",
+                args.manual_rfid_off,
+                *optional_value("--prompt", args.prompt),
+                *optional_flag(args.json, "--json"),
+                *optional_flag(args.probe_morris_api, "--probe-morris-api"),
+                *optional_flag(args.strict, "--strict"),
+                *optional_path("--output", args.output),
+            ],
+        )
+
+    if args.plugins_command == "pkcs7-inspect":
+        return run_plugin_main(
+            repo_root,
+            "plugins/nac-pkcs7-certbundle/scripts/inspect_certbundle.py",
+            [
+                "--max-bytes",
+                str(args.max_bytes),
+                *optional_path("--input", args.input),
+                *optional_flag(args.json, "--json"),
+                *optional_flag(args.strict, "--strict"),
+                *optional_path("--output", args.output),
+            ],
+        )
+
+    raise AssertionError(f"Unknown plugin command: {args.plugins_command}")
 
 
 def command_config(args: argparse.Namespace) -> int:
@@ -374,6 +490,58 @@ def run_script(repo_root: Path, script_path: str, args: list[str]) -> int:
     src_path = str(repo_root / "src")
     env["PYTHONPATH"] = src_path if not env.get("PYTHONPATH") else f"{src_path}{os.pathsep}{env['PYTHONPATH']}"
     return subprocess.call([sys.executable, str(repo_root / script_path), *args], cwd=repo_root, env=env)
+
+
+def run_plugin_main(repo_root: Path, script_path: str, args: list[str]) -> int:
+    absolute = repo_root / script_path
+    spec = importlib.util.spec_from_file_location(f"nac_plugin_{absolute.stem}", absolute)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: Plugin-Skript kann nicht geladen werden: {script_path}")
+        return 1
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    main = getattr(module, "main", None)
+    if not callable(main):
+        print(f"ERROR: Plugin-Skript hat keinen main(argv)-Einstieg: {script_path}")
+        return 1
+    previous_cwd = Path.cwd()
+    try:
+        os.chdir(repo_root)
+        return int(main(args))
+    finally:
+        os.chdir(previous_cwd)
+
+
+def optional_flag(enabled: bool, flag: str) -> list[str]:
+    return [flag] if enabled else []
+
+
+def optional_value(flag: str, value: str | None) -> list[str]:
+    return [flag, value] if value is not None else []
+
+
+def optional_path(flag: str, value: Path | None) -> list[str]:
+    return [flag, str(value)] if value is not None else []
+
+
+def plugin_actions() -> list[dict[str, str]]:
+    return [
+        {
+            "command": "nac plugins card-readiness",
+            "plugin": "nac-cyberjack-rfid",
+            "description": "Kartenleser-, SAK-/XNP- und lokale Readiness-Metadaten prüfen.",
+        },
+        {
+            "command": "nac plugins xnp-reader-prompt",
+            "plugin": "nac-bnotk-xnp",
+            "description": "XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate erzeugen.",
+        },
+        {
+            "command": "nac plugins pkcs7-inspect",
+            "plugin": "nac-pkcs7-certbundle",
+            "description": "Lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only prüfen.",
+        },
+    ]
 
 
 def display_path(repo_root: Path, path: Path) -> str:

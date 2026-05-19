@@ -57,6 +57,21 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("NaC KG development status", output)
 
+    def test_plugin_actions_are_listed(self) -> None:
+        rc, output = run_cli("plugins", "actions")
+
+        self.assertEqual(rc, 0)
+        self.assertIn("nac plugins card-readiness", output)
+        self.assertIn("nac plugins xnp-reader-prompt", output)
+        self.assertIn("nac plugins pkcs7-inspect", output)
+
+    def test_pkcs7_plugin_action_is_reachable_through_nac_cli(self) -> None:
+        rc, output = run_cli("plugins", "pkcs7-inspect", "--json")
+
+        self.assertEqual(rc, 0)
+        self.assertIn('"plugin": "nac-pkcs7-certbundle"', output)
+        self.assertIn('"overall_status": "manual_review"', output)
+
 
 if __name__ == "__main__":
     unittest.main()

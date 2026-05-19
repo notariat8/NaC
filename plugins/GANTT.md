@@ -1,6 +1,6 @@
 # Plugin Gantt
 
-Letzte Aktualisierung: 2026-05-18
+Letzte Aktualisierung: 2026-05-19
 
 ```mermaid
 gantt
@@ -21,6 +21,7 @@ gantt
     Deutsche Plugin-Umlaute validieren           :done,   p3g, 2026-05-18, 1d
     Plugin-Lizenz und Herausgeber setzen         :done,   p3h, 2026-05-18, 1d
     Plugin-Kartennamen ohne NaC-Präfix           :done,   p3i, 2026-05-18, 1d
+    Plugin-Fachprüfungen über nac-CLI            :done,   p3j, 2026-05-19, 1d
     eID-Prüfung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsprüfungen
@@ -42,9 +43,9 @@ gantt
 | --- | --- | --- | --- |
 | `nac-regulated-core` | Gemeinsame Schutzplanken für regulierte Arbeitsabläufe | Basis bereit | Plugin-Manifeste führen `AGPL-3.0-or-later` und `funktion8 / ofunk` sichtbar; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut prüfen. |
 | `nac-idaas` | Deutsche eID-Prüfung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestätigen. |
-| `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Prüfung und Linux-Treiber-Vorprüfung sind implementiert; die lokale Prüfung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestätigung. |
-| `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorprüfung an die cyberJack-Prüfung und kann die optionale morris-API-Prüfung durchreichen; nächste Prüfung ist Workstation-Validierung mit installiertem XNP. |
-| `nac-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Prüfung, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Härtung entfernt PEM-ähnliche Testliterale aus Quellfixtures. |
+| `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Prüfung und Linux-Treiber-Vorprüfung sind implementiert und über `nac plugins card-readiness` erreichbar; die lokale Prüfung braucht weiterhin einen angeschlossenen cyberJack-Leser oder eine manuelle Bestätigung. |
+| `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorprüfung an die cyberJack-Prüfung, kann die optionale morris-API-Prüfung durchreichen und ist über `nac plugins xnp-reader-prompt` erreichbar; nächste Prüfung ist Workstation-Validierung mit installiertem XNP. |
+| `nac-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Prüfung über `nac plugins pkcs7-inspect`, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Härtung entfernt PEM-ähnliche Testliterale aus Quellfixtures. |
 | `nac-handelsregister` | Registeranmeldungsbereitschaft | Aktiv | An GmbH-Gründungs-Usecase binden. |
 | `nac-bea-portal` | beA-Arbeitsablauf-Begleiter | Geplant | Priorität für Notariats-/Kanzleibetrieb bestätigen. |
 | `nac-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benötigt. |
@@ -63,11 +64,14 @@ Kartenanzeigen und erneute `NaC`-Präfixe.
 Der repo-lokale Marktplatz wird sichtbar als `funktion8 - NaC` geführt;
 technische Marketplace- und Plugin-IDs bleiben stabil.
 
-Repo-lokale Plugins werden über `scripts/install_local_plugins.py` in einen
+Repo-lokale Plugins werden über `nac plugins install --mode link` in einen
 home-lokalen Plugin-Root gespiegelt: `~/.agents/plugins/marketplace.json` plus
 `~/plugins/<plugin>`. Danach muss Codex neu gestartet beziehungsweise eine neue
 Session geöffnet werden, weil aktive Plugins beim Session-Start geladen
 werden.
+
+Vorhandene fachliche Plugin-Prüfungen werden über `nac plugins actions`
+sichtbar und über die jeweiligen `nac plugins ...`-Befehle ausgeführt.
 
 ## Paketierungshinweis
 

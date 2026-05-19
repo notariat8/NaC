@@ -10,6 +10,7 @@ Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 
 ```bash
 cd ~/NaC
+python3 scripts/nac.py plugins actions
 python3 scripts/nac.py plugins validate
 python3 scripts/nac.py plugins install --mode link
 python3 scripts/nac.py doctor --profile standard
@@ -77,3 +78,17 @@ SAK-Prüfung und `nac-bnotk-xnp` die installierbare XNP-Bereitschafts- und
 Authentifizierungsprüfung. Sie authentifizieren nicht eigenständig als Notar,
 speichern keine PINs oder Zugangsdaten, lösen keine XNotar-Importe aus und
 reichen keine Anmeldungen ein.
+
+## Fachprüfungen Über Die CLI
+
+Die vorhandenen lokalen Plugin-Prüfungen sind über die zentrale CLI erreichbar:
+
+```bash
+python3 scripts/nac.py plugins card-readiness
+python3 scripts/nac.py plugins xnp-reader-prompt
+python3 scripts/nac.py plugins pkcs7-inspect --input beispiel.p7b
+```
+
+Diese Befehle erzeugen nur lokale Readiness- und Nachweis-Metadaten. Sie
+führen keine Anmeldung, keine Signatur, keine Registereinreichung, keinen
+Private-Key-Zugriff und keine produktive Portalaktion aus.

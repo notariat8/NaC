@@ -8,6 +8,7 @@ The plugin suite is repo-local and versioned with NaC. Marketplace metadata live
 
 ```bash
 cd ~/NaC
+python3 scripts/nac.py plugins actions
 python3 scripts/nac.py plugins validate
 python3 scripts/nac.py plugins install --mode link
 python3 scripts/nac.py doctor --profile standard
@@ -57,3 +58,17 @@ real Codex discovery, the home-local root remains authoritative.
 The current plugins are installable skill plugins. They do not contain direct external write adapters, portal automation, card access, certificate handling or secret storage. Those require a separate reviewed connector PR.
 
 For Online HRA, `nac-cyberjack-rfid` is the installable `Karte/SAK`, and `nac-bnotk-xnp` is the installable `XNP-Prüfung`. They do not authenticate as a notary by themselves, store PINs or notary credentials, trigger XNotar imports or submit filings.
+
+## Subject-Matter Checks Through The CLI
+
+The existing local plugin checks are reachable through the unified CLI:
+
+```bash
+python3 scripts/nac.py plugins card-readiness
+python3 scripts/nac.py plugins xnp-reader-prompt
+python3 scripts/nac.py plugins pkcs7-inspect --input example.p7b
+```
+
+These commands only create local readiness and evidence metadata. They do not
+perform login, signing, register filing, private-key access or productive portal
+actions.

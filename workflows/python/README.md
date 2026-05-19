@@ -26,6 +26,8 @@ jetzt die zentrale [NaC-CLI](../../docs/de/cli.md).
 python scripts/nac.py kg status
 python scripts/nac.py kg case bautraegervertrag
 python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py plugins actions
+python scripts/nac.py plugins card-readiness
 ```
 
 Direkte Skripte bleiben als interne Kompatibilität erlaubt. Neue

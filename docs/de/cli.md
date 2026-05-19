@@ -51,6 +51,7 @@ python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
+python scripts/nac.py plugins actions
 ```
 
 Nach Installation entsprechend:
@@ -62,6 +63,7 @@ nac web
 nac kg status
 nac bpmn validate
 nac config list
+nac plugins actions
 ```
 
 ## Bedienflächen
@@ -74,8 +76,31 @@ nac config list
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
-| Plugins | `nac plugins install --mode dry-run` | Prüft die lokale Plugin-Spiegelung, ohne Dateien zu ändern. |
+| Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
+
+## Plugin-Befehle
+
+Die Plugin-Verwaltung und die bereits vorhandenen lokalen Plugin-Fachprüfungen
+laufen jetzt ebenfalls über `nac`:
+
+```bash
+nac plugins actions
+nac plugins validate
+nac plugins install --mode dry-run
+nac plugins card-readiness
+nac plugins xnp-reader-prompt
+nac plugins pkcs7-inspect --input beispiel.p7b
+```
+
+| Befehl | Bedeutung |
+| --- | --- |
+| `nac plugins card-readiness` | Prüft lokale Kartenleser-, SAK-/XNP- und Readiness-Metadaten ohne PIN- oder Kartendaten. |
+| `nac plugins xnp-reader-prompt` | Erzeugt einen sicheren XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate. |
+| `nac plugins pkcs7-inspect` | Prüft ein lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only, ohne Signatur oder Private-Key-Zugriff. |
+
+Die alten Plugin-Skripte bleiben die interne Ausführungsebene. Sichtbar für
+Anwender, Doku und Agenten ist der `nac plugins ...`-Aufruf.
 
 ## Architekturregel
 

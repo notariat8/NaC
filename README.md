@@ -118,6 +118,7 @@ als kurzer Befehl `nac`:
 python scripts/nac.py status
 python scripts/nac.py config list
 python scripts/nac.py bpmn validate
+python scripts/nac.py plugins actions
 python scripts/nac.py kg case bautraegervertrag
 python scripts/nac.py web
 ```

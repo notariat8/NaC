@@ -50,6 +50,7 @@ python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
+python scripts/nac.py plugins actions
 ```
 
 After installation:
@@ -61,6 +62,7 @@ nac web
 nac kg status
 nac bpmn validate
 nac config list
+nac plugins actions
 ```
 
 ## Operating Areas
@@ -73,8 +75,31 @@ nac config list
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
-| Plugins | `nac plugins install --mode dry-run` | Checks local plugin mirroring without changing files. |
+| Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
+
+## Plugin Commands
+
+Plugin management and the existing local plugin checks now also run through
+`nac`:
+
+```bash
+nac plugins actions
+nac plugins validate
+nac plugins install --mode dry-run
+nac plugins card-readiness
+nac plugins xnp-reader-prompt
+nac plugins pkcs7-inspect --input example.p7b
+```
+
+| Command | Meaning |
+| --- | --- |
+| `nac plugins card-readiness` | Checks local card-reader, SAK/XNP and readiness metadata without PIN or card data. |
+| `nac plugins xnp-reader-prompt` | Creates a safe XNP reader prompt with the card gate in front. |
+| `nac plugins pkcs7-inspect` | Inspects a local PKCS7/P7B/P7C certificate bundle metadata-only, without signing or private-key access. |
+
+The old plugin scripts remain the internal execution layer. The visible path
+for users, docs and agents is `nac plugins ...`.
 
 ## Architecture Rule
 
