@@ -204,13 +204,13 @@ def build_home_page(repo_root: Path) -> str:
 def build_bpmn_page(model) -> str:
     node_rows = "".join(
         "<tr>"
-        f"<td>{html.escape(node.name)}</td>"
-        f"<td>{html.escape(node.type)}</td>"
-        f"<td>{html.escape(node.nac.get('role', ''))}</td>"
-        f"<td>{html.escape(node.nac.get('channel', ''))}</td>"
-        f"<td>{html.escape(node.nac.get('dataClass', ''))}</td>"
-        f"<td>{html.escape(node.nac.get('approval', ''))}</td>"
-        f"<td>{html.escape(node.nac.get('evidence', ''))}</td>"
+        f'<td data-label="Name">{html.escape(node.name)}</td>'
+        f'<td data-label="Typ">{html.escape(node.type)}</td>'
+        f'<td data-label="Rolle">{html.escape(node.nac.get("role", ""))}</td>'
+        f'<td data-label="Kanal">{html.escape(node.nac.get("channel", ""))}</td>'
+        f'<td data-label="Datenklasse">{html.escape(node.nac.get("dataClass", ""))}</td>'
+        f'<td data-label="Freigabe">{html.escape(node.nac.get("approval", ""))}</td>'
+        f'<td data-label="Nachweis">{html.escape(node.nac.get("evidence", ""))}</td>'
         "</tr>"
         for node in model.nodes
     )
@@ -221,13 +221,15 @@ def build_bpmn_page(model) -> str:
       <h1>{html.escape(model.name)}</h1>
       <p>{html.escape(model.path)} · {"bpmn-js-Diagrammfläche vorhanden" if model.has_diagram else "Fallback-Layout"}</p>
     </section>
-    <section class="canvas">{render_bpmn_svg(model)}</section>
+    <section class="canvas bpmn-diagram-panel"><div class="diagram-scroll">{render_bpmn_svg(model)}</div></section>
     <section>
       <h2>NaC-Schritte</h2>
-      <table>
-        <thead><tr><th>Name</th><th>Typ</th><th>Rolle</th><th>Kanal</th><th>Datenklasse</th><th>Freigabe</th><th>Nachweis</th></tr></thead>
-        <tbody>{node_rows}</tbody>
-      </table>
+      <div class="table-scroll responsive-table">
+        <table>
+          <thead><tr><th>Name</th><th>Typ</th><th>Rolle</th><th>Kanal</th><th>Datenklasse</th><th>Freigabe</th><th>Nachweis</th></tr></thead>
+          <tbody>{node_rows}</tbody>
+        </table>
+      </div>
     </section>
     """
     return _layout(f"BPMN: {model.name}", body)
@@ -792,10 +794,10 @@ def _css() -> str:
     :root { color-scheme: light; --ink: #1f2328; --muted: #636c76; --line: #d8dee4; --bg: #f6f8fa; --panel: #fff; --accent: #2f6f88; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
-    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    main { width: calc(100% - 32px); max-width: 1440px; margin: 0 auto; padding: 28px 0; }
     h1 { margin: 0 0 12px; font-size: 36px; line-height: 1.1; letter-spacing: 0; }
     h2 { margin: 0 0 16px; font-size: 22px; letter-spacing: 0; }
-    p { color: var(--muted); line-height: 1.55; }
+    p { color: var(--muted); line-height: 1.55; overflow-wrap: anywhere; }
     code { background: #eef2f5; border-radius: 4px; padding: 2px 5px; }
     .hero, section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px; margin: 0 0 20px; }
     .eyebrow { margin: 0 0 8px; color: var(--accent); font-weight: 700; }
@@ -805,8 +807,8 @@ def _css() -> str:
     .link-list a { display: block; color: #0b4f6c; font-weight: 700; text-decoration: none; margin-bottom: 4px; }
     .link-list .inline-link { display: inline; margin: 0; font-weight: 600; }
     .link-list span { color: var(--muted); font-size: 14px; }
-    .topline { display: flex; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
-    .topline span { display: flex; gap: 14px; }
+    .topline { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 18px; }
+    .topline span { display: flex; gap: 14px; flex-wrap: wrap; }
     .topline a { color: #0b4f6c; font-weight: 700; text-decoration: none; }
     .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; }
     button { appearance: none; border: 0; border-radius: 6px; background: #0b4f6c; color: #fff; font-weight: 700; padding: 10px 14px; cursor: pointer; }
@@ -848,8 +850,10 @@ def _css() -> str:
     .xml-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
     .xml-label { display: block; font-weight: 700; margin: 0 0 8px; }
     textarea { width: 100%; min-height: 280px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.45; }
-    .canvas { overflow: auto; padding: 8px; background: #fbfcfd; }
-    .bpmn-svg { width: 100%; min-width: 840px; height: auto; display: block; }
+    .canvas { overflow: hidden; padding: 8px; background: #fbfcfd; }
+    .bpmn-diagram-panel { min-height: 220px; }
+    .diagram-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; padding: 6px 0 12px; }
+    .bpmn-svg { width: auto; max-width: none; height: auto; display: block; }
     .flow { fill: none; stroke: #41516b; stroke-width: 2.2; }
     .flow-label { font-size: 13px; fill: #41516b; text-anchor: middle; font-weight: 700; }
     .node rect, .node circle, .node polygon { fill: #fff; stroke: #2f6f88; stroke-width: 2.2; }
@@ -858,12 +862,15 @@ def _css() -> str:
     .end circle { stroke: #7b2d26; }
     .node-label { text-anchor: middle; dominant-baseline: middle; font-size: 14px; font-weight: 700; fill: var(--ink); }
     .node-badge { text-anchor: middle; font-size: 12px; fill: var(--muted); }
+    .table-scroll { width: 100%; overflow-x: auto; }
+    .table-scroll table { min-width: 980px; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top; overflow-wrap: anywhere; }
     th { background: #eef2f5; font-size: 13px; color: #424a53; }
     .notice { border-left: 4px solid var(--accent); }
     @media (max-width: 1040px) { .editor-workbench { grid-template-columns: 1fr; } .editor-side-panel, .editor-properties-panel { border: 0; border-bottom: 1px solid var(--line); } .modeler-canvas { min-height: 560px; } }
-    @media (max-width: 720px) { main { padding: 16px; } h1 { font-size: 28px; } .hero, section { padding: 16px; } .bpmn-editor-shell { padding: 0; } }
+    @media (max-width: 760px) { .responsive-table { overflow: visible; } .responsive-table table, .responsive-table thead, .responsive-table tbody, .responsive-table tr, .responsive-table th, .responsive-table td { display: block; width: 100%; min-width: 0; } .responsive-table thead { display: none; } .responsive-table table { min-width: 0; border: 0; background: transparent; } .responsive-table tr { border: 1px solid var(--line); border-radius: 8px; background: #fff; margin: 0 0 10px; padding: 10px 12px; } .responsive-table td { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px; border: 0; padding: 6px 0; } .responsive-table td::before { content: attr(data-label); color: #424a53; font-size: 13px; font-weight: 700; } }
+    @media (max-width: 720px) { main { width: calc(100% - 24px); padding: 16px 0; } h1 { font-size: 28px; } .hero, section { padding: 16px; } .bpmn-editor-shell { padding: 0; } }
     """
 
 

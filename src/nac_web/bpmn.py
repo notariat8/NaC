@@ -174,7 +174,7 @@ def render_bpmn_svg(model: BpmnModel) -> str:
     height = max(320, int(max_y - min_y))
 
     parts = [
-        f'<svg class="bpmn-svg" viewBox="{min_x:g} {min_y:g} {width:g} {height:g}" role="img" aria-label="{html.escape(model.name)}">',
+        f'<svg class="bpmn-svg" width="{width:g}" height="{height:g}" viewBox="{min_x:g} {min_y:g} {width:g} {height:g}" role="img" aria-label="{html.escape(model.name)}">',
         "<defs>",
         '<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">',
         '<path d="M 0 0 L 10 5 L 0 10 z" fill="#41516b"/>',

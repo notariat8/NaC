@@ -12,7 +12,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
-from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_home_page, build_kg_page  # noqa: E402
+from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_home_page, build_kg_page  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
 
 
@@ -31,9 +31,23 @@ class NaCLocalWebTests(unittest.TestCase):
         svg = render_bpmn_svg(model)
 
         self.assertIn("<svg", svg)
+        self.assertIn('width="', svg)
+        self.assertIn('height="', svg)
         self.assertIn("Auftrag und Beteiligte", svg)
         self.assertIn("xnp_local", svg)
         self.assertTrue(model.has_diagram)
+
+    def test_bpmn_page_uses_responsive_diagram_and_table_layout(self) -> None:
+        model = find_bpmn_model(REPO_ROOT, "immobilienkaufvertrag")
+        html = build_bpmn_page(model)
+
+        self.assertIn('class="canvas bpmn-diagram-panel"', html)
+        self.assertIn('class="diagram-scroll"', html)
+        self.assertIn('class="table-scroll responsive-table"', html)
+        self.assertIn('data-label="Name"', html)
+        self.assertIn('data-label="Nachweis"', html)
+        self.assertIn(".responsive-table td::before", html)
+        self.assertIn(".diagram-scroll", html)
 
     def test_kg_page_blocks_value_field_surface(self) -> None:
         view = build_editor_view(REPO_ROOT, "immobilienkaufvertrag")
