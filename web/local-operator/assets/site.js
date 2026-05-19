@@ -2,6 +2,36 @@ const navToggle = document.querySelector(".nav-toggle");
 const siteNav = document.querySelector(".site-nav");
 const caseSearch = document.querySelector("[data-case-search]");
 const caseRows = Array.from(document.querySelectorAll("[data-case]"));
+const panels = Array.from(document.querySelectorAll("[data-app-panel]"));
+const areaTabs = Array.from(document.querySelectorAll("[data-area-tab]"));
+const panelButtons = Array.from(document.querySelectorAll("[data-open-panel]"));
+const areaTitle = document.querySelector("[data-area-title]");
+const areaSummary = document.querySelector("[data-area-summary]");
+const areaCount = document.querySelector("[data-area-count]");
+let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "immobilienrecht";
+
+const areaCopy = {
+  immobilienrecht: {
+    title: "Immobilienrecht",
+    summary: "Immobilienkauf, Grundschuld, WEG, Löschung und Übertragung als tägliche Büroarbeit.",
+  },
+  "gesellschaft-register": {
+    title: "Gesellschaft & Register",
+    summary: "Registeranmeldung, GmbH-/UG-Gründung, Geschäftsanteile, Beschlüsse und Vereinsregister.",
+  },
+  erbrecht: {
+    title: "Erbrecht",
+    summary: "Testament, Erbvertrag, Erbschein, Erbausschlagung und Verzichtsvorgänge.",
+  },
+  "familienrecht-vorsorge": {
+    title: "Familienrecht & Vorsorge",
+    summary: "Ehevertrag, Scheidungsfolgen, Adoption, Vorsorgevollmacht und gerichtsfeste Vollmachten.",
+  },
+  "allgemeines-zivilrecht": {
+    title: "Allgemeines Zivilrecht",
+    summary: "Beglaubigungen, Steuer-Readiness und sonstige Büroprozesse ohne eigenes Spezialgebiet.",
+  },
+};
 
 if (navToggle && siteNav) {
   navToggle.addEventListener("click", () => {
@@ -11,13 +41,83 @@ if (navToggle && siteNav) {
 }
 
 if (caseSearch && caseRows.length) {
-  caseSearch.addEventListener("input", () => {
-    const query = caseSearch.value.trim().toLowerCase();
-    caseRows.forEach((row) => {
-      const haystack = `${row.textContent || ""} ${row.dataset.case || ""}`.toLowerCase();
-      row.classList.toggle("is-hidden", query.length > 0 && !haystack.includes(query));
-    });
+  caseSearch.addEventListener("input", filterCases);
+}
+
+areaTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    activeArea = tab.dataset.areaTab || activeArea;
+    showPanel("cases");
+    filterCases();
+    closeNavigation();
   });
+});
+
+panelButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    showPanel(button.dataset.openPanel || "cases");
+    closeNavigation();
+  });
+});
+
+showPanel("cases");
+filterCases();
+
+function showPanel(panelName) {
+  panels.forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.appPanel !== panelName);
+  });
+
+  areaTabs.forEach((tab) => {
+    const isActiveArea = panelName === "cases" && tab.dataset.areaTab === activeArea;
+    tab.classList.toggle("is-active", isActiveArea);
+    tab.setAttribute("aria-pressed", String(isActiveArea));
+  });
+
+  panelButtons.forEach((button) => {
+    const isActivePanel = button.dataset.openPanel === panelName;
+    button.classList.toggle("is-active", isActivePanel);
+    button.setAttribute("aria-pressed", String(isActivePanel));
+  });
+}
+
+function filterCases() {
+  const query = (caseSearch?.value || "").trim().toLowerCase();
+  const copy = areaCopy[activeArea] || areaCopy.immobilienrecht;
+  let visibleCount = 0;
+
+  if (areaTitle) {
+    areaTitle.textContent = copy.title;
+  }
+
+  if (areaSummary) {
+    areaSummary.textContent = copy.summary;
+  }
+
+  caseRows.forEach((row) => {
+    const haystack = `${row.textContent || ""} ${row.dataset.case || ""}`.toLowerCase();
+    const matchesArea = row.dataset.area === activeArea;
+    const matchesQuery = query.length === 0 || haystack.includes(query);
+    const isVisible = matchesArea && matchesQuery;
+    row.classList.toggle("is-hidden", !isVisible);
+    if (isVisible) {
+      visibleCount += 1;
+    }
+  });
+
+  if (areaCount) {
+    const suffix = visibleCount === 1 ? "Vorgang" : "Vorgänge";
+    areaCount.textContent = `${visibleCount} ${suffix}`;
+  }
+}
+
+function closeNavigation() {
+  if (!siteNav || !navToggle) {
+    return;
+  }
+
+  siteNav.classList.remove("open");
+  navToggle.setAttribute("aria-expanded", "false");
 }
 
 document.querySelectorAll("[data-hardware-test]").forEach((hardwareTest) => {

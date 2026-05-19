@@ -94,21 +94,41 @@ a {
 .site-nav {
   align-items: center;
   display: flex;
+  flex: 1;
+  flex-wrap: wrap;
   gap: 0.35rem;
+  justify-content: flex-end;
 }
 
-.site-nav a {
+.site-nav a,
+.site-nav button {
+  background: transparent;
+  border: 0;
   border-radius: 8px;
   color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 0.94rem;
+  font-weight: 700;
   padding: 0.5rem 0.7rem;
   text-decoration: none;
 }
 
 .site-nav a:hover,
-.site-nav a:focus-visible {
+.site-nav a:focus-visible,
+.site-nav button:hover,
+.site-nav button:focus-visible {
   background: #e8eee9;
   color: var(--ink);
+}
+
+.site-nav button.is-active {
+  background: var(--green);
+  color: var(--surface);
+}
+
+.site-nav .nav-tool {
+  border: 1px solid var(--line);
 }
 
 .language-link {
@@ -199,6 +219,12 @@ h3 {
   margin: 0;
 }
 
+.workbench-summary {
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+  max-width: 780px;
+}
+
 .workbench-actions,
 .handbook-actions {
   display: flex;
@@ -213,7 +239,7 @@ h3 {
   border-radius: 8px;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: auto minmax(260px, 1fr);
+  grid-template-columns: auto minmax(260px, 1fr) auto;
   margin: 0 auto 1rem;
   max-width: 1280px;
   padding: 0.8rem 1rem;
@@ -232,6 +258,16 @@ h3 {
   min-height: 42px;
   padding: 0.55rem 0.75rem;
   width: 100%;
+}
+
+.case-count {
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.app-panel.is-hidden {
+  display: none;
 }
 
 .case-list {
@@ -291,12 +327,17 @@ h3 {
 }
 
 .case-actions a,
-.connection-list a {
+.connection-list a,
+.text-button {
   background: #f4f7f4;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
   font-weight: 700;
+  justify-content: center;
   min-height: 38px;
   padding: 0.45rem 0.65rem;
   text-decoration: none;
@@ -305,7 +346,9 @@ h3 {
 .case-actions a:hover,
 .case-actions a:focus-visible,
 .connection-list a:hover,
-.connection-list a:focus-visible {
+.connection-list a:focus-visible,
+.text-button:hover,
+.text-button:focus-visible {
   background: #e8eee9;
 }
 
@@ -710,8 +753,15 @@ h3 {
   gap: 0.8rem;
 }
 
-.site-footer a {
+.site-footer a,
+.site-footer button {
+  background: transparent;
+  border: 0;
   color: #e8eee9;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
 }
 
 .legal-page {
@@ -775,7 +825,9 @@ h3 {
     display: flex;
   }
 
-  .site-nav a {
+  .site-nav a,
+  .site-nav button {
+    text-align: left;
     width: 100%;
   }
 
