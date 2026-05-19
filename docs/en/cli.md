@@ -72,6 +72,7 @@ nac bpmn validate
 nac config list
 nac plugins actions
 nac tenant status --repo ../demo8notariat
+nac qms status
 ```
 
 ## Technical Operating Areas
@@ -88,6 +89,20 @@ nac tenant status --repo ../demo8notariat
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
 | Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
+| QMS | `nac qms status` and `nac qms evidence --repo ../demo8notariat` | Shows ISO 9001/QMS artifacts and evidence counts from the data repository. |
+
+## QMS And ISO 9001 Layer
+
+NaC contains a QMS layer under [qms/](../../qms). It maps quality policy,
+quality objectives, roles, process map, internal audits, management review and
+nonconformities to NaC artifacts.
+
+```bash
+nac qms status
+nac qms iso9001-map
+nac qms audit-plan
+nac qms evidence --repo ../demo8notariat
+```
 
 ## Separate Data Repository
 

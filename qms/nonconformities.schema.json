@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ofunk/NaC/qms/nonconformities.schema.json",
+  "title": "NaC QMS Nonconformity",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "opened_at",
+    "source",
+    "severity",
+    "description",
+    "owner_role",
+    "status",
+    "corrective_actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "nac.qms.nonconformity/v0.1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^NC-[0-9]{4}-[0-9]{4}$"
+    },
+    "matter_id": {
+      "type": "string"
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "enum": [
+        "internal_audit",
+        "complaint",
+        "quality_gate",
+        "management_review",
+        "manual_observation"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "minor",
+        "major",
+        "critical"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "root_cause": {
+      "type": "string"
+    },
+    "owner_role": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "in_progress",
+        "effectiveness_check",
+        "closed"
+      ]
+    },
+    "corrective_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "action",
+          "owner_role",
+          "due_date",
+          "status"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "owner_role": {
+            "type": "string"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "done",
+              "blocked"
+            ]
+          }
+        }
+      }
+    },
+    "effectiveness_check": {
+      "type": "object",
+      "properties": {
+        "planned_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "result": {
+          "enum": [
+            "pending",
+            "effective",
+            "not_effective"
+          ]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

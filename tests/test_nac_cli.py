@@ -75,6 +75,22 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn('"plugin": "nac-pkcs7-certbundle"', output)
         self.assertIn('"overall_status": "manual_review"', output)
 
+    def test_qms_status_and_documents_are_reachable(self) -> None:
+        rc, output = run_cli("qms", "status")
+
+        self.assertEqual(rc, 0)
+        self.assertIn("NaC-QMS Status", output)
+        self.assertIn("Qualitätsziele: 4", output)
+        self.assertIn("Rollen: 4", output)
+
+        rc, output = run_cli("qms", "iso9001-map")
+        self.assertEqual(rc, 0)
+        self.assertIn("ISO-9001-Mapping", output)
+
+        rc, output = run_cli("qms", "audit-plan")
+        self.assertEqual(rc, 0)
+        self.assertIn("Internes Auditprogramm", output)
+
     def test_tenant_init_status_and_write_demo(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tenant_repo = Path(temp_dir) / "demo8notariat"
@@ -142,6 +158,12 @@ class NaCCliTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("Akten: 1", output)
             self.assertIn("Personen: 3", output)
+            self.assertIn("Dokumente: 2", output)
+
+            rc, output = run_cli("qms", "evidence", "--repo", str(tenant_repo))
+            self.assertEqual(rc, 0)
+            self.assertIn("NaC-QMS Nachweisbild", output)
+            self.assertIn("Akten: 1", output)
             self.assertIn("Dokumente: 2", output)
 
 
