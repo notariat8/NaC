@@ -135,7 +135,7 @@
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/immobilienkaufvertrag",
-      "summary": "Kauf oder Verkauf von Grundstück, Wohnungseigentum, Haus oder Teileigentum mit Grundbuch, Kaufpreisfaelligkeit, Finanzierung und Vollzugsgates.",
+      "summary": "Kauf oder Verkauf von Grundstück, Wohnungseigentum, Haus oder Teileigentum mit Grundbuch, Kaufpreisfälligkeit, Finanzierung und Vollzugsgates.",
       "legal_anchors": [
         "src.beurkg",
         "src.bgb.311b",
@@ -144,10 +144,10 @@
       "required_information": [
         {
           "id": "property.identity",
-          "label": "Grundstück Identität",
+          "label": "Grundstücksidentität",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Identität benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für die Grundstücksidentität benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -158,10 +158,10 @@
         },
         {
           "id": "seller.identity",
-          "label": "Verkäufer Identität",
+          "label": "Identität Verkäufer",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Verkäufer Identität benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für die Identität des Verkäufers benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_data",
           "required_for": [
@@ -172,10 +172,10 @@
         },
         {
           "id": "buyer.identity",
-          "label": "Käufer Identität",
+          "label": "Identität Käufer",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für die Identität des Käufers benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_data",
           "required_for": [
@@ -186,10 +186,10 @@
         },
         {
           "id": "purchase.price",
-          "label": "Kaufpreis und Faelligkeitsmodell",
+          "label": "Kaufpreis und Fälligkeitsmodell",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Faelligkeitsmodell benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Fälligkeitsmodell benötigt?",
           "owner_role": "notary",
           "privacy_class": "financial_data",
           "required_for": [
@@ -200,10 +200,10 @@
         },
         {
           "id": "encumbrances.current",
-          "label": "Belastungen aktueller Stand",
+          "label": "Aktueller Belastungsstand",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Belastungen aktueller Stand benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für den aktuellen Belastungsstand benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -217,7 +217,7 @@
           "label": "Finanzierung erforderlich",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Finanzierung erforderlich benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für die erforderliche Finanzierung benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "financial_data",
           "required_for": [
@@ -227,10 +227,10 @@
         },
         {
           "id": "possession.transfer",
-          "label": "Besitz Übertragung",
+          "label": "Besitzübergang",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Besitz Übertragung benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für den Besitzübergang benötigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -240,10 +240,10 @@
         },
         {
           "id": "public.approvals",
-          "label": "Öffentlich Genehmigungen",
+          "label": "Öffentlich-rechtliche Genehmigungen",
           "status": "open",
           "value": null,
-          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Öffentlich Genehmigungen benötigt?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für öffentlich-rechtliche Genehmigungen benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -278,7 +278,7 @@
       "decisions": [
         {
           "id": "decision.financing_route",
-          "label": "Entscheidung: Finanzierung Route",
+          "label": "Entscheidung: Finanzierungsweg",
           "status": "open",
           "options": [
             "separate",
@@ -289,7 +289,7 @@
         },
         {
           "id": "decision.encumbrance_handling",
-          "label": "Entscheidung: Belastung Behandlung",
+          "label": "Entscheidung: Umgang mit Belastungen",
           "status": "open",
           "options": [
             "delete",

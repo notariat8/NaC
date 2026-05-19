@@ -24,6 +24,7 @@ gantt
     Deutsche fachliche Usecase-Vorderseiten     :done,   u6e, 2026-05-17, 1d
     Deutsche Umlautpflicht für Usecases       :done,   u6f, 2026-05-18, 1d
     Usecase-BPMN-Basismodelle                  :done,   u6g, 2026-05-19, 1d
+    Immobilien-KG-Bürosprache schärfen        :done,   u6h, 2026-05-19, 1d
     Online-GmbH-Gründung                      :active, u7, 2026-05-14, 28d
     Aktive Aufnahme bereinigt                  :done,   u8, 2026-05-17, 1d
     Steuer-aaS-Steuer-Readiness                :active, u9, 2026-05-14, 28d
@@ -49,6 +50,7 @@ gantt
 | Deutsch geführtes KG-Inhaltsgate | `usecases/*/knowledge-graph.*` plus `scripts/validate_language_parity.py` | Fertig | KG-Markdown-Review-Sichten und fachliche JSON-Textfelder sind deutsch geführt; alte englische KG-Gerüsttexte werden vom Sprachvalidator abgelehnt. |
 | Deutsche fachliche Usecase-Vorderseiten | `usecases/*/README.md` plus `scripts/validate_language_parity.py` | Fertig | Jeder Usecase hat eine kurze deutsche Vorderseite für Nicht-Technik-Leser; alte englische Usecase-README-Gerüsttexte werden vom Sprachvalidator abgelehnt. |
 | Usecase-BPMN-Basismodelle | `bpmn/immobilienkaufvertrag.bpmn`, `bpmn/usecases/*.bpmn` plus `scripts/generate_usecase_bpmn.py` | Fertig | Alle usecase-lokalen KGs haben ein bpmn-js-taugliches BPMN-2.0-Basismodell mit Rolle, Ausführungskanal einschließlich E-Mail, Fax/Post, Portal, XNP und digitaler Signatur, Freigabe, Nachweis und KG-Referenz. |
+| Immobilien-KG-Bürosprache | `usecases/immobilienkaufvertrag/knowledge-graph.*` | Fertig | Sichtbare Pflichtangaben und Entscheidungslabels sind in deutscher Büro- und Fachsprache formuliert, inklusive Umlauten und ohne technische Wort-für-Wort-Bezeichnungen. |
 | Online-GmbH-/UG-Gründung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
 | Bereinigte aktive Aufnahme | `usecases/` | Fertig | Ein nicht mehr gewünschter aktiver Aufnahme-Usecase wurde aus diesem Repository entfernt und ist nicht mehr Teil des NaC-Usecase-Katalogs. |
 | Steuer-aaS-Steuer-Readiness | `usecases/steuer-aas/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Steuer-aaS` kanonisiert. |

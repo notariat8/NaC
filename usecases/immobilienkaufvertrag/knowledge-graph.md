@@ -15,14 +15,14 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 
 | ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `property.identity` | Grundstück Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Identität benötigt? |
-| `seller.identity` | Verkäufer Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verkäufer Identität benötigt? |
-| `buyer.identity` | Käufer Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt? |
-| `purchase.price` | Kaufpreis und Faelligkeitsmodell | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Faelligkeitsmodell benötigt? |
-| `encumbrances.current` | Belastungen aktueller Stand | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Belastungen aktueller Stand benötigt? |
-| `financing.required` | Finanzierung erforderlich | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Finanzierung erforderlich benötigt? |
-| `possession.transfer` | Besitz Übertragung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Besitz Übertragung benötigt? |
-| `public.approvals` | Öffentlich Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Öffentlich Genehmigungen benötigt? |
+| `property.identity` | Grundstücksidentität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für die Grundstücksidentität benötigt? |
+| `seller.identity` | Identität Verkäufer | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für die Identität des Verkäufers benötigt? |
+| `buyer.identity` | Identität Käufer | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für die Identität des Käufers benötigt? |
+| `purchase.price` | Kaufpreis und Fälligkeitsmodell | `offen` | Notarin/Notar | Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Fälligkeitsmodell benötigt? |
+| `encumbrances.current` | Aktueller Belastungsstand | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für den aktuellen Belastungsstand benötigt? |
+| `financing.required` | Finanzierung erforderlich | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für die erforderliche Finanzierung benötigt? |
+| `possession.transfer` | Besitzübergang | `offen` | Notarin/Notar | Welche Angaben, Nachweise und Prüfpunkte werden für den Besitzübergang benötigt? |
+| `public.approvals` | Öffentlich-rechtliche Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für öffentlich-rechtliche Genehmigungen benötigt? |
 
 ## Dokumente
 
@@ -36,8 +36,8 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 
 | ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `decision.financing_route` | Entscheidung: Finanzierung Route | `offen` |
-| `decision.encumbrance_handling` | Entscheidung: Belastung Behandlung | `offen` |
+| `decision.financing_route` | Entscheidung: Finanzierungsweg | `offen` |
+| `decision.encumbrance_handling` | Entscheidung: Umgang mit Belastungen | `offen` |
 
 ## Prüfgates
 

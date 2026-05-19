@@ -41,7 +41,24 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertIn("Schutzregel", html)
         self.assertIn("Offene Angaben", html)
+        self.assertIn("Mandatswerte", html)
         self.assertNotIn("<td>value</td>", html)
+        self.assertNotIn("<code>value</code>", html)
+
+    def test_kg_page_uses_german_status_and_role_labels(self) -> None:
+        view = build_editor_view(REPO_ROOT, "immobilienkaufvertrag")
+        html = build_kg_page(view)
+
+        self.assertIn("Status: offen", html)
+        self.assertIn("Kaufpreis und Fälligkeitsmodell", html)
+        self.assertIn("Öffentlich-rechtliche Genehmigungen", html)
+        self.assertIn("Notariatsfachkraft", html)
+        self.assertIn("Notarin/Notar", html)
+        self.assertNotIn(">open<", html)
+        self.assertNotIn("Faellig", html)
+        self.assertNotIn("notary_clerk", html)
+        self.assertNotIn(">notary<", html)
+        self.assertNotIn("Pull Request", html)
 
     def test_app_serves_health_and_api(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

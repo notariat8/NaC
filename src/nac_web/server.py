@@ -23,6 +23,30 @@ from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.editor import build_editor_view
 
 
+STATUS_LABELS_DE = {
+    "active_intake": "aktive Aufnahme",
+    "draft": "Entwurf",
+    "legacy_alias": "Altbezeichnung",
+    "open": "offen",
+}
+
+ROLE_LABELS_DE = {
+    "applicant": "Antragsteller",
+    "association": "Verein",
+    "client": "Mandant",
+    "compliance": "Compliance",
+    "developer": "Entwicklung",
+    "founder": "Gründer",
+    "notary": "Notarin/Notar",
+    "notary_clerk": "Notariatsfachkraft",
+    "principal": "Vollmachtgeber",
+    "spouses": "Ehegatten",
+    "system_betreuer": "Systembetreuung",
+    "tax_clerk": "Steuerfachkraft",
+    "testator": "Erblasser",
+}
+
+
 class NaCLocalWebApp:
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root.resolve()
@@ -313,16 +337,17 @@ def build_bpmn_editor_page(model) -> str:
 
 def build_kg_page(view: dict[str, Any]) -> str:
     tabs = "".join(_render_kg_tab(tab) for tab in view["editor_model"]["tabs"])
+    status = _status_label(view.get("status", ""))
     body = f"""
     <nav class="topline"><a href="/">← Übersicht</a><a href="/api/kg/{html.escape(view['usecase_slug'])}">JSON</a></nav>
     <section class="hero">
       <p class="eyebrow">KG-Editor-View</p>
       <h1>{html.escape(view['title'])}</h1>
-      <p>{html.escape(view['usecase_slug'])} · {html.escape(view['status'])}</p>
+      <p>Status: {html.escape(status)}</p>
     </section>
     <section class="notice">
-      <strong>Schutzregel:</strong> Diese Ansicht zeigt keine <code>value</code>-Felder.
-      Änderungen laufen später über Patch, Validierung, Diff und Pull Request.
+      <strong>Schutzregel:</strong> Diese Ansicht zeigt keine Mandatswerte.
+      Änderungen werden als Vorschlag erfasst und erst nach Validierung, Änderungsvergleich und Review übernommen.
     </section>
     {tabs}
     """
@@ -343,8 +368,8 @@ def _render_kg_items(label: str, items: list[dict[str, Any]]) -> str:
     rows = "".join(
         "<tr>"
         f"<td>{html.escape(str(item.get('label', item.get('id', ''))))}</td>"
-        f"<td>{html.escape(str(item.get('status', '')))}</td>"
-        f"<td>{html.escape(str(item.get('owner_role', item.get('source', ''))))}</td>"
+        f"<td>{html.escape(_status_label(item.get('status', '')))}</td>"
+        f"<td>{html.escape(_role_or_source_label(item))}</td>"
         "</tr>"
         for item in items
     )
@@ -354,6 +379,22 @@ def _render_kg_items(label: str, items: list[dict[str, Any]]) -> str:
         f"<tbody>{rows}</tbody>"
         "</table>"
     )
+
+
+def _status_label(value: Any) -> str:
+    raw = str(value or "").strip()
+    return STATUS_LABELS_DE.get(raw, _identifier_fallback(raw))
+
+
+def _role_or_source_label(item: dict[str, Any]) -> str:
+    if "owner_role" in item:
+        raw = str(item.get("owner_role") or "").strip()
+        return ROLE_LABELS_DE.get(raw, _identifier_fallback(raw))
+    return str(item.get("source", "") or "").strip()
+
+
+def _identifier_fallback(value: str) -> str:
+    return value.replace("_", " ").replace("-", " ")
 
 
 def _layout(title: str, body: str) -> str:
