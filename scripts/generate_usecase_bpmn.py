@@ -262,8 +262,8 @@ def intake_channel(slug: str) -> str:
     if slug in LAND_REGISTER_SLUGS:
         return "personal;email;phone;post"
     if slug in COURT_OR_ESTATE_SLUGS:
-        return "personal;email;phone;post"
-    return "personal;email;phone"
+        return "personal;email;phone;post;fax"
+    return "personal;email;phone;fax"
 
 
 def documents_channel(slug: str) -> str:
@@ -272,8 +272,8 @@ def documents_channel(slug: str) -> str:
     if slug in LAND_REGISTER_SLUGS:
         return "land_register_portal;email;post;internal"
     if slug in COURT_OR_ESTATE_SLUGS:
-        return "email;post;court;internal"
-    return "email;post;internal"
+        return "email;fax;post;court;internal"
+    return "email;fax;post;internal"
 
 
 def draft_channel(slug: str) -> str:
@@ -282,8 +282,8 @@ def draft_channel(slug: str) -> str:
     if slug in LAND_REGISTER_SLUGS:
         return "email;post;land_register_portal;internal"
     if slug in COURT_OR_ESTATE_SLUGS:
-        return "email;post;personal;internal"
-    return "email;post;internal"
+        return "email;fax;post;personal;internal"
+    return "email;fax;post;internal"
 
 
 def identity_channel(slug: str) -> str:
@@ -304,12 +304,12 @@ def submission_channel(slug: str) -> str:
     if slug in LAND_REGISTER_SLUGS:
         return "land_register_portal;post;email"
     if slug in {"testament", "testament-erbvertrag"}:
-        return "post;court;ben"
+        return "post;fax;court;ben"
     if slug == "vorsorgevollmacht-patientenverfuegung":
-        return "post;email;authority"
+        return "post;fax;email;authority"
     if slug in COURT_OR_ESTATE_SLUGS:
-        return "post;court;email"
-    return "email;post"
+        return "post;fax;court;email"
+    return "email;fax;post"
 
 
 def follow_up_channel(slug: str) -> str:
