@@ -55,6 +55,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](policies/language-policy.yaml); die Policy gilt für alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](README.md).
 - Sprachabhängige Inhalte werden in ISO-639-Sprachordnern gepflegt, mindestens `de` und `en`.
 - Unabhängig von der Sprache des Prompts müssen Änderungen an lokalisierten Inhalten immer alle Standardsprachen pflegen.
+- Lokalisierte Markdown-Links bleiben im Sprachpfad der Quelldatei: deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch; Sprachwechsel gehören in explizite Sprachübersichten, nicht in den fachlichen Lesefluss.
 - Für deutsches Recht und notarielle Usecases ist Deutsch die führende und rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung. Usecase-Indizes, fachliche Usecase-Inhalte, Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deshalb deutsch geführt, während stabile technische Identifier englisch bleiben dürfen.
 - Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
 - Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.

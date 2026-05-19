@@ -131,12 +131,13 @@ Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes below
 German and English are standard languages. Changes to localized content must
 always maintain both language paths:
 
-- [docs/de/](../de)
 - [docs/en/](.)
-- [prompts/de/](../../prompts/de)
 - [prompts/en/](../../prompts/en)
 
-Parity is checked with [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py).
+The German counterparts are maintained in parallel, but they are not linked as
+navigation targets from English subject-matter documents.
+
+Parity is checked with `python scripts/nac.py doctor --profile strict`.
 
 ## Completion Rule
 
