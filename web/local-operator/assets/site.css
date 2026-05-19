@@ -179,6 +179,168 @@ h3 {
   margin: 0 0 0.65rem;
 }
 
+.workbench {
+  min-height: calc(100vh - 72px);
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 4rem);
+}
+
+.workbench-head {
+  align-items: end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 auto 1.25rem;
+  max-width: 1280px;
+}
+
+.workbench h1 {
+  font-size: 2.5rem;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.workbench-actions,
+.handbook-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.case-toolbar {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(260px, 1fr);
+  margin: 0 auto 1rem;
+  max-width: 1280px;
+  padding: 0.8rem 1rem;
+}
+
+.case-toolbar label {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.case-toolbar input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
+.case-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.case-row {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--green);
+  border-radius: 8px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.95rem 1rem;
+}
+
+.case-row:nth-child(3n + 1) {
+  border-left-color: var(--blue);
+}
+
+.case-row:nth-child(3n + 2) {
+  border-left-color: var(--gold);
+}
+
+.case-row.is-hidden {
+  display: none;
+}
+
+.case-group {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+}
+
+.case-row h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.2rem;
+}
+
+.case-row p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.case-actions a,
+.connection-list a {
+  background: #f4f7f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 700;
+  min-height: 38px;
+  padding: 0.45rem 0.65rem;
+  text-decoration: none;
+}
+
+.case-actions a:hover,
+.case-actions a:focus-visible,
+.connection-list a:hover,
+.connection-list a:focus-visible {
+  background: #e8eee9;
+}
+
+.diagnostics {
+  background: #fbfcfb;
+}
+
+.diagnostic-grid,
+.connection-list {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 1180px;
+}
+
+.diagnostic-grid article,
+.connection-list article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.diagnostic-grid p,
+.connection-list p {
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+
+.handbook {
+  background: var(--surface);
+}
+
 .lead {
   color: #314139;
   font-size: 1.22rem;
@@ -195,7 +357,10 @@ h3 {
 .button {
   align-items: center;
   border-radius: 8px;
+  border: 0;
+  cursor: pointer;
   display: inline-flex;
+  font-family: inherit;
   font-weight: 700;
   justify-content: center;
   min-height: 46px;
@@ -217,6 +382,11 @@ h3 {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--line);
   color: var(--ink);
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .hero-facts {
@@ -629,11 +799,28 @@ h3 {
   .hero-facts,
   .content-grid.two,
   .hardware-panel,
+  .workbench-head,
   .card-grid,
   .bpmn-feature-grid,
+  .diagnostic-grid,
+  .connection-list,
   .governance-list,
   .artifact-layout {
     grid-template-columns: 1fr;
+  }
+
+  .workbench-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .case-row {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .case-actions {
+    justify-content: flex-start;
   }
 
   .bpmn-link-grid {
@@ -661,6 +848,14 @@ h3 {
   }
 
   .button {
+    width: 100%;
+  }
+
+  .case-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .case-actions a {
     width: 100%;
   }
 

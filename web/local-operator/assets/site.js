@@ -1,5 +1,7 @@
 const navToggle = document.querySelector(".nav-toggle");
 const siteNav = document.querySelector(".site-nav");
+const caseSearch = document.querySelector("[data-case-search]");
+const caseRows = Array.from(document.querySelectorAll("[data-case]"));
 
 if (navToggle && siteNav) {
   navToggle.addEventListener("click", () => {
@@ -8,18 +10,28 @@ if (navToggle && siteNav) {
   });
 }
 
-const hardwareTest = document.querySelector("[data-hardware-test]");
+if (caseSearch && caseRows.length) {
+  caseSearch.addEventListener("input", () => {
+    const query = caseSearch.value.trim().toLowerCase();
+    caseRows.forEach((row) => {
+      const haystack = `${row.textContent || ""} ${row.dataset.case || ""}`.toLowerCase();
+      row.classList.toggle("is-hidden", query.length > 0 && !haystack.includes(query));
+    });
+  });
+}
 
-if (hardwareTest) {
-  const trigger = hardwareTest.querySelector("[data-hardware-test-trigger]");
+document.querySelectorAll("[data-hardware-test]").forEach((hardwareTest) => {
+  const triggers = Array.from(hardwareTest.querySelectorAll("[data-hardware-test-trigger]"));
   const result = hardwareTest.querySelector("[data-hardware-test-result]");
 
-  trigger?.addEventListener("click", async () => {
+  triggers.forEach((trigger) => trigger.addEventListener("click", async () => {
     if (!result) {
       return;
     }
 
-    trigger.disabled = true;
+    triggers.forEach((button) => {
+      button.disabled = true;
+    });
     result.dataset.status = "running";
     result.innerHTML = `<p>${hardwareTest.dataset.runningLabel}</p>`;
 
@@ -29,7 +41,7 @@ if (hardwareTest) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ requested_by: "nac-local-operator-webapp" }),
+        body: JSON.stringify({ requested_by: trigger.dataset.requestedBy || "nac-local-operator-webapp" }),
       });
 
       if (!response.ok) {
@@ -40,12 +52,14 @@ if (hardwareTest) {
       renderHardwareResult(result, payload, hardwareTest.dataset.emptyLabel || "No detailed checks received.");
     } catch (error) {
       result.dataset.status = "error";
-      result.innerHTML = `<h3>${hardwareTest.dataset.unavailableLabel}</h3><p>CLI-Bridge fuer diese lokale Operator-Webapp starten: <code>python scripts\\nac.py operator --open</code></p>`;
+      result.innerHTML = `<h3>${hardwareTest.dataset.unavailableLabel}</h3><p>Lokalen Adapter starten: <code>python scripts\\nac.py operator --open</code></p>`;
     } finally {
-      trigger.disabled = false;
+      triggers.forEach((button) => {
+        button.disabled = false;
+      });
     }
-  });
-}
+  }));
+});
 
 function hardwareBridgeUrl(path) {
   const isLocalHttp = (window.location.protocol === "http:" || window.location.protocol === "https:")

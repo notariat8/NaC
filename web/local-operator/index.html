@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>NaC Lokale Operator-Webapp</title>
-    <meta name="description" content="Lokale NaC Operator-Webapp fuer Hardware-Readiness, Governance-Pruefung und Artefaktuebersicht im genehmigten Arbeitsplatz.">
+    <title>NaC Bueroworkbench</title>
+    <meta name="description" content="Lokale NaC Bueroworkbench fuer Vorgangsauswahl, Arbeitsplatztests, XNP-Pruefung und GitHub-Handbuch.">
     <meta name="theme-color" content="#f5f7f4">
     <meta name="robots" content="noindex">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -14,231 +14,223 @@
   <body>
     <a class="skip-link" href="#content">Zum Inhalt springen</a>
     <header class="site-header">
-      <a class="brand" href="./" aria-label="NaC lokale Operator-Webapp">
+      <a class="brand" href="./" aria-label="NaC Bueroworkbench">
         <img class="brand-logo" src="assets/n8.svg" alt="" aria-hidden="true">
         <span>
-          <strong>NaC lokal</strong>
-          <small>Operator-Webapp</small>
+          <strong>NaC Buero</strong>
+          <small>Vorgaenge und Arbeitsplatztests</small>
         </span>
       </a>
       <button class="nav-toggle" type="button" aria-label="Navigation oeffnen" aria-expanded="false" aria-controls="site-nav">☰</button>
       <nav class="site-nav" id="site-nav" aria-label="Hauptnavigation">
-        <a href="#modell">Modell</a>
-        <a href="#bpmn-modelle">BPMN</a>
-        <a href="#hardware-test">HW-Test</a>
-        <a href="#governance">Governance</a>
-        <a href="#artefakte">Artefakte</a>
-        <a href="/api/healthz">Bridge</a>
+        <a href="#bpmn-modelle">Vorgaenge</a>
+        <a href="#tests">Tests</a>
+        <a href="#anbindungen">Anbindungen</a>
+        <a href="#handbuch">Handbuch</a>
       </nav>
     </header>
 
     <main id="content">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-content">
-          <p class="eyebrow">Lokale NaC-Arbeitsplatzoberflaeche</p>
-          <h1 id="hero-title">Notariat as Code lokal pruefen</h1>
-          <p class="lead">Diese Operator-Webapp liegt im NaC-Repository und nutzt nur die lokal per CLI gestartete Bridge auf <code>127.0.0.1</code>. Sie prueft Arbeitsplatz-Gates, zeigt minimierte Readiness-Metadaten und schreibt Testlog-Eintraege ohne PINs, Kartendaten oder Secrets.</p>
-          <div class="hero-actions" aria-label="Primaere Aktionen">
-            <a class="button primary" href="#modell">Betriebsmodell ansehen</a>
-            <a class="button secondary" href="#bpmn-modelle">BPMN oeffnen</a>
-            <a class="button secondary" href="#hardware-test">HW-Test starten</a>
-          </div>
-          <dl class="hero-facts" aria-label="NaC Kurzstatus">
-            <div>
-              <dt>Quelle</dt>
-              <dd>NaC-Repo</dd>
-            </div>
-            <div>
-              <dt>Aenderungsfluss</dt>
-              <dd>Enterprise GitOps</dd>
-            </div>
-            <div>
-              <dt>Ausfuehrung</dt>
-              <dd>Lokaler Notariatsarbeitsplatz</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <section class="band intro" aria-label="Positionierung">
-        <div class="content-grid two">
+      <section class="workbench" id="bpmn-modelle" aria-labelledby="workbench-title">
+        <div class="workbench-head">
           <div>
-            <p class="section-kicker">Zielbild</p>
-            <h2>Ein lokaler Kontrollpunkt fuer notarielle Arbeitsplatz-Gates.</h2>
+            <p class="section-kicker">Buerostart</p>
+            <h1 id="workbench-title">Vorgang auswaehlen</h1>
           </div>
-          <p>Die Webapp gehoert zum NaC-Hauptrepo. Oeffentliche Website-Checkouts sind keine Laufzeitabhaengigkeit. Hardware-nahe Tests bleiben lokal: Die Webapp klickt nur die lokale Bridge an, die freigegebene CLI-Pruefskripte im Workspace startet.</p>
+          <div class="workbench-actions">
+            <a class="button secondary" href="#tests">Problem pruefen</a>
+            <a class="button secondary" href="#handbuch">Handbuch</a>
+          </div>
+        </div>
+
+        <div class="case-toolbar">
+          <label for="case-search">Usecase suchen</label>
+          <input id="case-search" type="search" placeholder="z.B. Immobilien, Register, Testament, Vollmacht" data-case-search>
+        </div>
+
+        <div class="case-list" data-case-list>
+          <article class="case-row" data-case="immobilienkaufvertrag immobilien kauf grundbuch xnp">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Immobilienkaufvertrag</h2>
+              <p>Grundbuchstand, Entwurf, Beurkundung, Vollzug und XNP-/Grundbuchkanal.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/immobilienkaufvertrag">Checkliste</a>
+              <a href="/bpmn/immobilienkaufvertrag">Ablauf</a>
+              <a href="/bpmn/immobilienkaufvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="handelsregisteranmeldung register gesellschaft xnp signatur">
+            <div>
+              <span class="case-group">Register</span>
+              <h2>Handelsregisteranmeldung</h2>
+              <p>Anmeldung, Anlagen, lokale XNP-Pruefung und digitale Registereinreichung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/handelsregisteranmeldung">Checkliste</a>
+              <a href="/bpmn/handelsregisteranmeldung">Ablauf</a>
+              <a href="/bpmn/handelsregisteranmeldung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="online gmbh ug gruendung gesellschaft video signatur">
+            <div>
+              <span class="case-group">Gesellschaft</span>
+              <h2>Online-GmbH-/UG-Gruendung</h2>
+              <p>Gruenderdaten, Kapital, Videokonferenz, Signatur und Registerpaket.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/online-gmbh-gruendung">Checkliste</a>
+              <a href="/bpmn/online-gmbh-gruendung">Ablauf</a>
+              <a href="/bpmn/online-gmbh-gruendung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="grundschuld hypothek finanzierung grundbuch">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Grundschuld / Hypothek</h2>
+              <p>Finanzierungsunterlagen, Grundbuchvollzug und Nachweise.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/grundschuld-hypothekenbestellung">Checkliste</a>
+              <a href="/bpmn/grundschuld-hypothekenbestellung">Ablauf</a>
+              <a href="/bpmn/grundschuld-hypothekenbestellung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="unterschriftsbeglaubigung identitaet beglaubigung">
+            <div>
+              <span class="case-group">Beglaubigung</span>
+              <h2>Unterschriftsbeglaubigung</h2>
+              <p>Identitaet, Vertretung, Signaturpfad und Versand.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/unterschriftsbeglaubigung">Checkliste</a>
+              <a href="/bpmn/unterschriftsbeglaubigung">Ablauf</a>
+              <a href="/bpmn/unterschriftsbeglaubigung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="testament erbvertrag nachlass verwahrung">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Testament / Erbvertrag</h2>
+              <p>Verfuegung, Beurkundung, Verwahrung und Benachrichtigung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/testament-erbvertrag">Checkliste</a>
+              <a href="/bpmn/testament-erbvertrag">Ablauf</a>
+              <a href="/bpmn/testament-erbvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="erbschein nachlass erbe gericht">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Erbscheinsantrag / Nachlass</h2>
+              <p>Nachlassangaben, Nachweise, Antrag und Gerichtskommunikation.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/erbscheinsantrag-nachlass">Checkliste</a>
+              <a href="/bpmn/erbscheinsantrag-nachlass">Ablauf</a>
+              <a href="/bpmn/erbscheinsantrag-nachlass/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="vorsorgevollmacht patientenverfuegung vollmacht vorsorge">
+            <div>
+              <span class="case-group">Vollmacht</span>
+              <h2>Vorsorgevollmacht / Patientenverfuegung</h2>
+              <p>Auftrag, Identitaet, Erklaerung, Registrierung oder Versand.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/vorsorgevollmacht-patientenverfuegung">Checkliste</a>
+              <a href="/bpmn/vorsorgevollmacht-patientenverfuegung">Ablauf</a>
+              <a href="/bpmn/vorsorgevollmacht-patientenverfuegung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-case="alle usecases bpmn editor katalog">
+            <div>
+              <span class="case-group">Katalog</span>
+              <h2>Alle Usecases</h2>
+              <p>Weitere Vorgangsarten wie Bautraeger, Ehevertrag, Erbverzicht, Verein und WEG.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/bpmn/bautraegervertrag/edit">Bautraeger</a>
+              <a href="/bpmn/ehevertrag-scheidungsfolgenvereinbarung/edit">Ehevertrag</a>
+              <a href="/bpmn/vereinsregisteranmeldung/edit">Verein</a>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section class="section" id="modell" aria-labelledby="modell-title">
+      <section class="section diagnostics" id="tests" aria-labelledby="tests-title" data-hardware-test data-running-label="Test laeuft lokal." data-ready-label="Lokaler Adapter bereit." data-unavailable-label="Lokaler Adapter nicht erreichbar." data-error-label="Test fehlgeschlagen." data-empty-label="Keine Detailchecks empfangen.">
         <div class="section-heading">
-          <p class="section-kicker">Betriebsmodell</p>
-          <h2 id="modell-title">Vom lokalen Check zum versionierten Nachweis.</h2>
+          <p class="section-kicker">Probleme pruefen</p>
+          <h2 id="tests-title">Arbeitsplatztests starten</h2>
         </div>
-        <div class="card-grid">
-          <article class="card">
-            <span class="card-number">01</span>
-            <h3>Lokale Ausfuehrung</h3>
-            <p>Die Bridge wird per CLI gestartet, startet die freigegebenen lokalen Pruefskripte im NaC-Workspace und bindet standardmaessig nur an <code>127.0.0.1</code>.</p>
-          </article>
-          <article class="card">
-            <span class="card-number">02</span>
-            <h3>Minimierter Nachweis</h3>
-            <p>Ergebnisse werden als Status, Zaehler und nicht-sensitive Metadaten angezeigt. Rohdaten, PINs, Zertifikate und API-Keys bleiben ausserhalb der Oberflaeche.</p>
-          </article>
-          <article class="card">
-            <span class="card-number">03</span>
-            <h3>Governance</h3>
-            <p>Ein offener manueller Status ist kein Erfolg. Fachliche Freigabe entsteht erst durch dokumentierte Pruefung, Commit, Review und Merge in den Zielbranch.</p>
-          </article>
-          <article class="card">
-            <span class="card-number">04</span>
-            <h3>BPMN-Usecases</h3>
-            <p>Alle usecase-lokalen KGs haben BPMN-Modelle mit Rolle, Ausfuehrungskanal und Nachweis. Oeffne die lokale <a href="/bpmn/handelsregisteranmeldung/edit">bpmn-js-Editorflaeche</a> oder die <a href="/bpmn/immobilienkaufvertrag">SVG-Ansicht</a>.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section bpmn-menu" id="bpmn-modelle" aria-labelledby="bpmn-modelle-title">
-        <div class="section-heading">
-          <p class="section-kicker">BPMN-Modelle</p>
-          <h2 id="bpmn-modelle-title">Usecases im Browser ansehen und bearbeiten.</h2>
-        </div>
-        <div class="bpmn-feature-grid">
+        <div class="diagnostic-grid">
           <article>
-            <h3>Immobilienkaufvertrag</h3>
-            <p>Kanonisches Top-Level-Modell mit Grundbuch-, XNP- und Vollzugskanaelen.</p>
-            <div class="inline-actions">
-              <a class="button primary" href="/bpmn/immobilienkaufvertrag">Ansicht</a>
-              <a class="button secondary" href="/bpmn/immobilienkaufvertrag/edit">Editor</a>
-            </div>
+            <h3>HW-Test</h3>
+            <p>Kartenleser, PC/SC, morris und lokale Treiber pruefen.</p>
+            <button class="button primary" type="button" data-hardware-test-trigger data-requested-by="hardware-test">HW-Test starten</button>
           </article>
           <article>
-            <h3>Handelsregisteranmeldung</h3>
-            <p>Registerroute mit lokaler XNP-/Signaturpfadpruefung und digitaler Einreichung.</p>
-            <div class="inline-actions">
-              <a class="button primary" href="/bpmn/handelsregisteranmeldung">Ansicht</a>
-              <a class="button secondary" href="/bpmn/handelsregisteranmeldung/edit">Editor</a>
-            </div>
+            <h3>XNP-Anbindung</h3>
+            <p>XNP-Localhost-Pfad, Signaturpfad und Karten-Gate pruefen.</p>
+            <button class="button primary" type="button" data-hardware-test-trigger data-requested-by="xnp-check">XNP pruefen</button>
           </article>
           <article>
-            <h3>Online-GmbH-/UG-Gruendung</h3>
-            <p>Online-Verfahren mit notary_app, Videokonferenz und qualifizierter elektronischer Signatur.</p>
-            <div class="inline-actions">
-              <a class="button primary" href="/bpmn/online-gmbh-gruendung">Ansicht</a>
-              <a class="button secondary" href="/bpmn/online-gmbh-gruendung/edit">Editor</a>
-            </div>
+            <h3>Systemstatus</h3>
+            <p>Prueft, ob der lokale Adapter fuer diese Webapp antwortet.</p>
+            <a class="button secondary" href="/api/healthz">Status ansehen</a>
           </article>
-        </div>
-        <div class="bpmn-link-panel" aria-label="Alle BPMN-Usecase-Editoren">
-          <h3>Alle Usecase-Editoren</h3>
-          <div class="bpmn-link-grid">
-            <a href="/bpmn/adoption-familienrechtliche-erklaerungen/edit">Adoption / Familienrecht</a>
-            <a href="/bpmn/bautraegervertrag/edit">Bautraegervertrag</a>
-            <a href="/bpmn/ehevertrag-scheidungsfolgenvereinbarung/edit">Ehevertrag</a>
-            <a href="/bpmn/erbausschlagung/edit">Erbausschlagung</a>
-            <a href="/bpmn/erbscheinsantrag-nachlass/edit">Erbscheinsantrag</a>
-            <a href="/bpmn/geschaeftsanteilsuebertragung-gmbh/edit">GmbH-Anteile</a>
-            <a href="/bpmn/gesellschafterbeschluss-gmbh-ug/edit">Gesellschafterbeschluss</a>
-            <a href="/bpmn/grundschuld-hypothekenbestellung/edit">Grundschuld</a>
-            <a href="/bpmn/grundstueckskaufvertrag/edit">Grundstueckskauf</a>
-            <a href="/bpmn/handelsregisteranmeldung/edit">Handelsregister</a>
-            <a href="/bpmn/immobilienkaufvertrag/edit">Immobilienkauf</a>
-            <a href="/bpmn/loeschungsbewilligung-grundbuchloeschung/edit">Loeschungsbewilligung</a>
-            <a href="/bpmn/online-gmbh-gruendung/edit">Online-GmbH</a>
-            <a href="/bpmn/pflichtteilsverzicht-erbverzicht/edit">Erbverzicht</a>
-            <a href="/bpmn/schenkungsvertrag-uebertragungsvertrag/edit">Schenkung</a>
-            <a href="/bpmn/steuer-aas/edit">Steuer-aaS</a>
-            <a href="/bpmn/teilungserklaerung-weg/edit">Teilungserklaerung</a>
-            <a href="/bpmn/testament/edit">Testament</a>
-            <a href="/bpmn/testament-erbvertrag/edit">Testament / Erbvertrag</a>
-            <a href="/bpmn/unterschriftsbeglaubigung/edit">Unterschriftsbeglaubigung</a>
-            <a href="/bpmn/vereinsregisteranmeldung/edit">Vereinsregister</a>
-            <a href="/bpmn/vollmacht-immobilien-gesellschaftsgeschaefte/edit">Vollmacht</a>
-            <a href="/bpmn/vorsorgevollmacht-patientenverfuegung/edit">Vorsorgevollmacht</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="section hardware-test" id="hardware-test" aria-labelledby="hardware-test-title" data-hardware-test data-running-label="HW-Test laeuft lokal." data-ready-label="Lokale Bridge bereit." data-unavailable-label="Lokale Bridge nicht erreichbar." data-error-label="HW-Test fehlgeschlagen." data-empty-label="Keine Detailchecks empfangen.">
-        <div class="section-heading">
-          <p class="section-kicker">Lokaler Arbeitsplatz</p>
-          <h2 id="hardware-test-title">Kartenleser, morris und XNP-Pfad pruefen.</h2>
-        </div>
-        <div class="hardware-panel">
-          <div>
-            <h3>Hardware-Pruefung</h3>
-            <p>Der Test prueft lokale Readiness ueber <code>127.0.0.1</code>. PINs, Kartendaten, XNP-API-Keys und Secrets werden nicht angezeigt.</p>
-          </div>
-          <button class="button primary hardware-test-button" type="button" data-hardware-test-trigger>HW-Test starten</button>
         </div>
         <div class="hardware-result" data-hardware-test-result role="status" aria-live="polite">
-          <p>CLI-Bridge fuer die lokale Operator-Webapp starten: <code>python scripts\nac.py operator --open</code>. Ohne Bridge bleibt der HW-Test in der Webapp deaktiviert.</p>
+          <p>Falls die Tests nicht starten: lokalen Adapter mit <code>python scripts\nac.py operator --open</code> neu starten.</p>
         </div>
       </section>
 
-      <section class="band" id="governance" aria-labelledby="governance-title">
+      <section class="section" id="anbindungen" aria-labelledby="anbindungen-title">
         <div class="section-heading">
-          <p class="section-kicker">Governance</p>
-          <h2 id="governance-title">Regeln zuerst, Automatisierung danach.</h2>
+          <p class="section-kicker">Anbindungen</p>
+          <h2 id="anbindungen-title">Lokale Verbindungen verwalten</h2>
         </div>
-        <div class="governance-list">
-          <div>
-            <h3>Recht und Regulierung</h3>
-            <p>Gesetzliche, regulatorische und revisionssichere Anforderungen haben Vorrang vor Automatisierungskomfort.</p>
-          </div>
-          <div>
-            <h3>Datenschutz und AVV</h3>
-            <p>Keine echten Secrets oder personenbezogenen Daten im Repo. SaaS-Verarbeitung mit personenbezogenen Daten erfordert AVV-Pruefung.</p>
-          </div>
-          <div>
-            <h3>Lokaler Arbeitsplatz</h3>
-            <p>NaC fuehrt notarielle Gates lokal im genehmigten Workspace aus. Omnistation ist kein Ausfuehrungsort fuer NaC.</p>
-          </div>
-          <div>
-            <h3>Mehrsprachigkeit</h3>
-            <p>Deutsch ist fuer deutsches Recht und notarielle Usecases fuehrend; Englisch dient als Orientierung und Spiegelung.</p>
-          </div>
+        <div class="connection-list">
+          <article>
+            <h3>Kartenleser / morris</h3>
+            <p>Status ueber HW-Test pruefen; keine PINs oder Kartendaten speichern.</p>
+            <a href="#tests">Test starten</a>
+          </article>
+          <article>
+            <h3>XNP</h3>
+            <p>Localhost-Schnittstelle und Signaturpfad ueber XNP-Pruefung validieren.</p>
+            <a href="#tests">XNP pruefen</a>
+          </article>
+          <article>
+            <h3>Register / Grundbuch</h3>
+            <p>Aktuell als Prozesskanal modelliert; produktive Zugangsdaten bleiben ausserhalb des Repos.</p>
+            <a href="/bpmn/handelsregisteranmeldung">Registerablauf ansehen</a>
+          </article>
         </div>
       </section>
 
-      <section class="section" id="artefakte" aria-labelledby="artefakte-title">
+      <section class="section handbook" id="handbuch" aria-labelledby="handbuch-title">
         <div class="section-heading">
-          <p class="section-kicker">Artefakte</p>
-          <h2 id="artefakte-title">Die Arbeitsflaechen sind bewusst getrennt.</h2>
+          <p class="section-kicker">Handbuch</p>
+          <h2 id="handbuch-title">Dokumentation getrennt auf GitHub lesen</h2>
         </div>
-        <div class="artifact-layout">
-          <article>
-            <h3>Plugins</h3>
-            <p>Installierbare Schnittstellen und Arbeitsplatzadapter, etwa Kartenleser-, Register- oder Portalpfade.</p>
-          </article>
-          <article>
-            <h3>Workflows</h3>
-            <p>Ausfuehrbare notarielle Ablaufketten mit deterministischen Checks, Gates und Evidenzpunkten.</p>
-          </article>
-          <article>
-            <h3>Usecases</h3>
-            <p>Konkrete notarielle Vorgangsarten mit eigenem Knowledge Graph und fachlicher Fallstruktur.</p>
-          </article>
+        <div class="handbook-actions">
+          <a class="button primary" href="https://github.com/ofunk/NaC">Repository oeffnen</a>
+          <a class="button secondary" href="https://github.com/ofunk/NaC/tree/main/docs/de">Deutsche Doku</a>
+          <a class="button secondary" href="https://github.com/ofunk/NaC/tree/main/usecases">Usecase-Doku</a>
         </div>
-      </section>
-
-      <section class="cta-band" aria-labelledby="cta-title">
-        <div>
-          <p class="section-kicker">Naechster Schritt</p>
-          <h2 id="cta-title">Referenzstand pruefen, dann gezielt pilotieren.</h2>
-        </div>
-        <a class="button primary" href="#hardware-test">HW-Test oeffnen</a>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>© 2026 Funktion8. Lokale NaC-Operator-Webapp fuer den genehmigten Arbeitsplatz.</p>
+      <p>© 2026 Funktion8. Lokale NaC-Bueroworkbench.</p>
       <nav aria-label="Footer Navigation">
-        <a href="#hardware-test">HW-Test</a>
-        <a href="#bpmn-modelle">BPMN</a>
-        <a href="#governance">Governance</a>
-        <a href="#artefakte">Artefakte</a>
+        <a href="#bpmn-modelle">Vorgaenge</a>
+        <a href="#tests">Tests</a>
+        <a href="#anbindungen">Anbindungen</a>
+        <a href="#handbuch">Handbuch</a>
       </nav>
     </footer>
   </body>

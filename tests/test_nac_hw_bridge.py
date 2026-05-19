@@ -30,20 +30,28 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         )
         self.assertNotIn("funktion8-nac-website", str(bridge.SITE_ROOT))
 
-    def test_operator_copy_keeps_bridge_as_cli_started_local_adapter(self) -> None:
+    def test_operator_copy_is_usecase_first_workbench(self) -> None:
         html = (bridge.SITE_ROOT / "index.html").read_text(encoding="utf-8")
         js = (bridge.SITE_ROOT / "assets" / "site.js").read_text(encoding="utf-8")
 
         self.assertIn('src="assets/n8.svg"', html)
         self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
-        self.assertIn("lokal per CLI gestartete Bridge", html)
+        self.assertIn("Vorgang auswaehlen", html)
         self.assertIn('href="#bpmn-modelle"', html)
-        self.assertIn("Alle Usecase-Editoren", html)
+        self.assertIn('href="#tests"', html)
+        self.assertIn('href="#anbindungen"', html)
+        self.assertIn('href="#handbuch"', html)
+        self.assertIn("/kg/immobilienkaufvertrag", html)
         self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
         self.assertIn("/bpmn/vorsorgevollmacht-patientenverfuegung/edit", html)
+        self.assertIn("HW-Test starten", html)
+        self.assertIn("XNP pruefen", html)
+        self.assertIn("Repository oeffnen", html)
         self.assertIn("python scripts\\nac.py operator --open", html)
-        self.assertIn("freigegebene CLI-Pruefskripte", html)
         self.assertIn("python scripts\\\\nac.py operator --open", js)
+        self.assertIn("[data-case-search]", js)
+        self.assertNotIn(">Bridge<", html)
+        self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles laeuft ueber CLI", html.lower())
 
     def test_operator_bridge_delegates_bpmn_routes(self) -> None:
