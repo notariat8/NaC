@@ -24,3 +24,6 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/bpmn-js-editor.contract.json](bpmn-js-editor.contract.json):
   BPMN-js-Editor-Vertrag für visuell bearbeitbare BPMN-2.0-Prozessmodelle mit
   NaC-Properties, Python-Validierung und Pull-Request-Freigabe.
+- [workflows/contracts/local-web-preview.contract.json](local-web-preview.contract.json):
+  lokaler Webserver-Vertrag für grafische BPMN- und KG-Ausgaben ohne Cloud-
+  oder Mandatsdatenpflicht.

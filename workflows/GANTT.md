@@ -19,6 +19,7 @@ gantt
     NaC-Namenskonvention in Workflows           :done,   w4d, 2026-05-18, 1d
     Deutsche Umlautpflicht in Workflows         :done,   w4e, 2026-05-18, 1d
     BPMN-js Business-Layer-Profil               :done,   w4f, 2026-05-19, 1d
+    Lokalen Webserver für Grafikflächen bauen  :done,   w4g, 2026-05-19, 1d
     Workflow-Vertragsformat ergänzen          :active, w4, 2026-05-15, 21d
 
     section Ausführung
@@ -39,7 +40,8 @@ gantt
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung führt; englische Summary dient technischer Anschlussfähigkeit, keine finale rechtliche Wahrheit. |
 | Python-Workflows | `workflows/python/` plus `src/notary_kg/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und stellt die sichere No-code-Editor-View bereit. |
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Profil bereit | BPMN ist fachliche Prozessquelle; `bpmn-js` wird Editor, Python validiert NaC-Properties, Sequenzflüsse und bpmn-js-taugliche Modelle. |
-| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor- und BPMN-js-Editor-Vertrag. |
+| Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, KG-Editor-Views und KG-JSON lokal im Browser. |
+| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor- und lokaler Webpreview-Vertrag. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr

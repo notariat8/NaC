@@ -39,6 +39,8 @@ approval.
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - The workflow contract lives in
   [workflows/contracts/bpmn-js-editor.contract.json](../../workflows/contracts/bpmn-js-editor.contract.json).
+- The local browser surface for graphical outputs is documented in
+  [docs/en/lokaler-webserver.md](lokaler-webserver.md).
 
 ## Relationship To KG
 
@@ -56,7 +58,7 @@ remain controlled in the KG.
 
 ## Next Steps
 
-1. Build a bpmn-js prototype with a restricted palette and NaC properties panel.
+1. Embed the bpmn-js prototype into the local web server.
 2. Show BPMN diff and validation report in pull requests.
 3. Model further notarial case types according to the NaC BPMN profile.
 4. Generate safe form and checklist views from BPMN and KG together.

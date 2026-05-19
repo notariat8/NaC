@@ -70,6 +70,7 @@ belastbare Prozesslogik.
 | Codex-Plugins | Pilotfähig | Führen lokale Readiness-, Plan- und Evidence-Prüfungen geführt aus. |
 | GitHub Actions | Heute nutzbar | Führen Gates und Validierungen reproduzierbar aus. |
 | BPMN-js Business Layer | Erstes Profil vorhanden | Visuelle BPMN-Bearbeitung für fachliche Abläufe; Python prüft das Modell vor Merge. |
+| Lokaler Webserver | Heute nutzbar | Zeigt BPMN- und KG-Ansichten lokal im Browser, ohne Cloud und ohne echte Mandatsdaten. |
 | Sidecar-Editor | Geplant | Grafische Bedienung für KG-Formulare und Checklisten. |
 | ChatGPT-App oder Workspace-App | Geplant | Komfortable Bedienoberfläche für berechtigte Nutzer. |
 | Eigenständige NaC-Web-App | Nicht heutiger Kern | Möglich, aber erst sinnvoll, wenn Runtime, Rollen und Gates stabil sind. |
@@ -87,4 +88,5 @@ bedienbar.
 - [docs/de/integration-start.md](integration-start.md)
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md)
 - [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
+- [docs/de/lokaler-webserver.md](lokaler-webserver.md)
 - [workflows/python/README.md](../../workflows/python/README.md)

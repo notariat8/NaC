@@ -39,6 +39,8 @@ Review und menschlicher Freigabe.
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - Der Workflow-Vertrag liegt in
   [workflows/contracts/bpmn-js-editor.contract.json](../../workflows/contracts/bpmn-js-editor.contract.json).
+- Die lokale Browserfläche für grafische Ausgaben liegt in
+  [docs/de/lokaler-webserver.md](lokaler-webserver.md).
 
 ## Zusammenspiel Mit KG
 
@@ -56,7 +58,7 @@ Detailfragen im KG kontrolliert bleiben.
 
 ## Nächste Schritte
 
-1. bpmn-js-Prototyp mit eingeschränkter Palette und NaC-Properties-Panel bauen.
+1. bpmn-js-Prototyp in den lokalen Webserver einbetten.
 2. BPMN-Diff und Validierungsbericht in Pull Requests sichtbar machen.
 3. Weitere notarielle Vorgangsarten nach dem NaC-BPMN-Profil modellieren.
 4. Aus BPMN und KG gemeinsam sichere Formular- und Checklisten-Sichten erzeugen.

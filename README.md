@@ -83,6 +83,7 @@ Weitere Dokumentation:
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
 - Ausführungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
 - BPMN-js Business Layer: [docs/de/bpmn-js-business-layer.md](docs/de/bpmn-js-business-layer.md)
+- Lokaler Webserver: [docs/de/lokaler-webserver.md](docs/de/lokaler-webserver.md)
 - Reifegrad: [docs/de/reifegrad.md](docs/de/reifegrad.md)
 - Glossar: [docs/de/glossar.md](docs/de/glossar.md)
 - Beispiel Immobilienkaufvertrag: [docs/de/beispiel-immobilienkaufvertrag.md](docs/de/beispiel-immobilienkaufvertrag.md)
@@ -98,6 +99,7 @@ Nach dem Klonen:
 ```bash
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765
 python scripts/quality_gate.py --profile strict
 ```
 
@@ -113,6 +115,7 @@ aktuell implementierte Runtime-Oberfläche ist die notarielle KG-CLI:
 python scripts/notary_kg.py --repo-root . status
 python scripts/notary_kg.py --repo-root . case bautraegervertrag
 python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765
 ```
 
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
