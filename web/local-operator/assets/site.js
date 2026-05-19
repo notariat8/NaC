@@ -1,6 +1,7 @@
 const navToggle = document.querySelector(".nav-toggle");
 const siteNav = document.querySelector(".site-nav");
 const caseSearch = document.querySelector("[data-case-search]");
+const caseList = document.querySelector("[data-case-list]");
 const caseRows = Array.from(document.querySelectorAll("[data-case]"));
 const panels = Array.from(document.querySelectorAll("[data-app-panel]"));
 const areaTabs = Array.from(document.querySelectorAll("[data-area-tab]"));
@@ -8,7 +9,7 @@ const panelButtons = Array.from(document.querySelectorAll("[data-open-panel]"));
 const areaTitle = document.querySelector("[data-area-title]");
 const areaSummary = document.querySelector("[data-area-summary]");
 const areaCount = document.querySelector("[data-area-count]");
-let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "immobilienrecht";
+let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
 
 const areaCopy = {
   immobilienrecht: {
@@ -43,6 +44,8 @@ if (navToggle && siteNav) {
 if (caseSearch && caseRows.length) {
   caseSearch.addEventListener("input", filterCases);
 }
+
+sortCaseRows();
 
 areaTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -109,6 +112,20 @@ function filterCases() {
     const suffix = visibleCount === 1 ? "Vorgang" : "Vorgänge";
     areaCount.textContent = `${visibleCount} ${suffix}`;
   }
+}
+
+function sortCaseRows() {
+  if (!caseList || !caseRows.length) {
+    return;
+  }
+
+  caseRows
+    .sort((left, right) => caseTitle(left).localeCompare(caseTitle(right), "de", { sensitivity: "base" }))
+    .forEach((row) => caseList.appendChild(row));
+}
+
+function caseTitle(row) {
+  return row.querySelector("h2")?.textContent?.trim() || "";
 }
 
 function closeNavigation() {

@@ -24,10 +24,16 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
+  display: flex;
+  flex-direction: column;
   font-family: Arial, Helvetica, sans-serif;
   line-height: 1.55;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+main {
+  flex: 1 0 auto;
 }
 
 a {
@@ -739,7 +745,8 @@ h3 {
   align-items: center;
   background: #172019;
   color: #e8eee9;
-  display: none;
+  display: flex;
+  flex: 0 0 auto;
   gap: 1rem;
   justify-content: space-between;
   padding: 1.2rem clamp(1rem, 4vw, 4rem);
