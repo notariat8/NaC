@@ -17,9 +17,12 @@ const matterFormTitle = document.querySelector("[data-matter-form-title]");
 const matterFormStatus = document.querySelector("[data-matter-form-status]");
 const matterList = document.querySelector("[data-matter-list]");
 const matterListTitle = document.querySelector("[data-matter-list-title]");
+const importList = document.querySelector("[data-import-list]");
+const importCount = document.querySelector("[data-import-count]");
 let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
 let activeMatterUsecase = "";
 let matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
+let importState = { counts: { pending: 0 }, proposals: [], status_labels: { pending: "neu", accepted: "übernommen", rejected: "abgelehnt" } };
 
 const areaCopy = {
   immobilienrecht: {
@@ -90,6 +93,7 @@ showPanel("cases");
 filterCases();
 loadOperatorConfig();
 loadMatters();
+loadImportProposals();
 
 function showPanel(panelName) {
   panels.forEach((panel) => {
@@ -114,6 +118,10 @@ function showPanel(panelName) {
 
   if (panelName === "matters") {
     loadMatters().then(() => renderMatterList(activeMatterUsecase));
+  }
+
+  if (panelName === "imports") {
+    loadImportProposals().then(renderImportList);
   }
 }
 
@@ -318,6 +326,30 @@ async function loadMatters() {
   }
 }
 
+async function loadImportProposals() {
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/import-proposals"));
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    importState = await response.json();
+    updateImportCount();
+  } catch (error) {
+    importState = { counts: { pending: 0 }, proposals: [], status_labels: { pending: "neu", accepted: "übernommen", rejected: "abgelehnt" } };
+    updateImportCount();
+    if (importList) {
+      importList.dataset.status = "error";
+      importList.innerHTML = `<p>Eingang konnte nicht geladen werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`;
+    }
+  }
+}
+
+function updateImportCount() {
+  if (importCount) {
+    importCount.textContent = String(importState.counts?.pending || 0);
+  }
+}
+
 function updateMatterBadges() {
   document.querySelectorAll("[data-matter-badges]").forEach((badges) => {
     const counts = matterState.counts?.[badges.dataset.matterBadges] || {};
@@ -465,6 +497,80 @@ async function saveMatterStatus(matterId) {
   }
 }
 
+function renderImportList() {
+  if (!importList) {
+    return;
+  }
+  const proposals = importState.proposals || [];
+  importList.dataset.status = "ready";
+  if (!proposals.length) {
+    importList.innerHTML = "<p>Keine Import-Vorschläge vorhanden.</p>";
+    return;
+  }
+  importList.innerHTML = proposals.map((proposal) => importCardHtml(proposal)).join("");
+  importList.querySelectorAll("[data-import-accept]").forEach((button) => {
+    button.addEventListener("click", () => acceptImportProposal(button.dataset.importAccept || ""));
+  });
+}
+
+function importCardHtml(proposal) {
+  const values = proposal.matter_values || {};
+  const metadata = values.metadata || {};
+  const files = proposal.source_files || [];
+  const fileText = files.length ? `${files.length} Datei${files.length === 1 ? "" : "en"}` : "keine Datei";
+  const accepted = proposal.status !== "pending";
+  const identityLine = [
+    metadata.document_number ? `Ausweis ${metadata.document_number}` : "",
+    metadata.date_of_birth ? `Geboren ${metadata.date_of_birth}` : "",
+    metadata.valid_until ? `Gültig bis ${metadata.valid_until}` : "",
+  ].filter(Boolean).join(" · ");
+  return `
+    <article class="import-card">
+      <div>
+        <h3>${escapeHtml(proposal.summary || values.title || proposal.proposal_id)}</h3>
+        <p class="matter-meta">${escapeHtml(importStatusLabel(proposal.status))} · ${escapeHtml(values.usecase_title || values.usecase_slug || "Vorgang")} · ${escapeHtml(fileText)}</p>
+        <dl class="import-fields">
+          <div><dt>Aktenbetreff</dt><dd>${escapeHtml(values.title || "")}</dd></div>
+          <div><dt>Person</dt><dd>${escapeHtml(values.participant_name || values.client_name || "")}</dd></div>
+          <div><dt>Dokument</dt><dd>${escapeHtml(values.document_title || "")}</dd></div>
+          ${identityLine ? `<div><dt>Ausweis</dt><dd>${escapeHtml(identityLine)}</dd></div>` : ""}
+        </dl>
+      </div>
+      <div class="import-actions">
+        <button class="button primary" type="button" data-import-accept="${escapeHtml(proposal.proposal_id)}"${accepted ? " disabled" : ""}>Übernehmen</button>
+      </div>
+    </article>
+  `;
+}
+
+async function acceptImportProposal(proposalId) {
+  if (!proposalId || !importList) {
+    return;
+  }
+  importList.dataset.status = "running";
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/import-proposals/accept"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ proposal_id: proposalId }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    activeMatterUsecase = payload.matter?.usecase_slug || activeMatterUsecase;
+    await loadImportProposals();
+    await loadMatters();
+    renderMatterList(activeMatterUsecase);
+    showPanel("matters");
+  } catch (error) {
+    importList.dataset.status = "error";
+    importList.insertAdjacentHTML("afterbegin", `<p>Import konnte nicht übernommen werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`);
+  }
+}
+
 function usecaseTitleBySlug(slug) {
   const row = caseRows.find((candidate) => caseSlug(candidate) === slug);
   return row ? caseTitle(row) : slug;
@@ -472,6 +578,10 @@ function usecaseTitleBySlug(slug) {
 
 function statusLabelForMatter(status) {
   return matterState.status_labels?.[status] || status;
+}
+
+function importStatusLabel(status) {
+  return importState.status_labels?.[status] || status;
 }
 
 function cssEscape(value) {

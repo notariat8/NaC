@@ -247,7 +247,7 @@ h3 {
   border-radius: 8px;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: auto minmax(260px, 1fr) auto;
+  grid-template-columns: auto minmax(260px, 1fr) auto auto;
   margin: 0 auto 1rem;
   max-width: 1280px;
   padding: 0.8rem 1rem;
@@ -448,7 +448,8 @@ h3 {
 
 .matter-form,
 .matter-status,
-.matter-list {
+.matter-list,
+.import-list {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -484,24 +485,28 @@ h3 {
 }
 
 .matter-actions,
-.matter-card-actions {
+.matter-card-actions,
+.import-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
 }
 
 .matter-status,
-.matter-list {
+.matter-list,
+.import-list {
   border-left: 6px solid var(--green);
   color: var(--muted);
 }
 
 .matter-status[data-status="error"],
-.matter-list[data-status="error"] {
+.matter-list[data-status="error"],
+.import-list[data-status="error"] {
   border-left-color: #a53535;
 }
 
-.matter-card {
+.matter-card,
+.import-card {
   border-bottom: 1px solid var(--line);
   display: grid;
   gap: 0.85rem;
@@ -509,16 +514,19 @@ h3 {
   padding: 1rem 0;
 }
 
-.matter-card:first-child {
+.matter-card:first-child,
+.import-card:first-child {
   padding-top: 0;
 }
 
-.matter-card:last-child {
+.matter-card:last-child,
+.import-card:last-child {
   border-bottom: 0;
   padding-bottom: 0;
 }
 
-.matter-card h3 {
+.matter-card h3,
+.import-card h3 {
   color: var(--ink);
   margin-bottom: 0.35rem;
 }
@@ -535,6 +543,28 @@ h3 {
   font: inherit;
   min-height: 38px;
   padding: 0.4rem 0.55rem;
+}
+
+.import-fields {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.75rem 0 0;
+}
+
+.import-fields div {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.import-fields dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.import-fields dd {
+  color: var(--ink);
+  margin: 0;
 }
 
 .config-actions {
@@ -1055,7 +1085,9 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .matter-card {
+  .matter-card,
+  .import-card,
+  .import-fields div {
     grid-template-columns: 1fr;
   }
 

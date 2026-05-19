@@ -86,6 +86,9 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('data-app-panel="konfig"', html)
         self.assertIn('data-app-panel="matter-new"', html)
         self.assertIn('data-app-panel="matters"', html)
+        self.assertIn('data-app-panel="imports"', html)
+        self.assertIn('data-import-list', html)
+        self.assertIn('data-import-count', html)
         self.assertIn('data-config-form', html)
         self.assertIn('data-config-field="nac_fork_git_url"', html)
         self.assertIn('data-config-field="data_git_url"', html)
@@ -131,6 +134,10 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("saveMatter", js)
         self.assertIn("/api/matters", js)
         self.assertIn("/api/matters/status", js)
+        self.assertIn("loadImportProposals", js)
+        self.assertIn("acceptImportProposal", js)
+        self.assertIn("/api/import-proposals", js)
+        self.assertIn("/api/import-proposals/accept", js)
         self.assertNotIn("Steuer-Readiness", js)
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
@@ -209,6 +216,78 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             relisted = bridge.list_operator_matters(config_path=config_path)
             self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["waiting"], 1)
             self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["open"], 0)
+
+    def test_operator_import_proposal_accepts_into_matter_with_staged_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tenant_repo = Path(temp_dir) / "tenant"
+            tenant_repo.mkdir()
+            bridge.write_json(
+                tenant_repo / ".nac-tenant.json",
+                {
+                    "schema_version": "nac.tenant/v0.2",
+                    "name": "tenant",
+                    "mode": "demo",
+                },
+            )
+            source_file = Path(temp_dir) / "personalausweis-vorderseite.jpg"
+            source_file.write_bytes(b"synthetic-image")
+            config_path = Path(temp_dir) / "operator-config.json"
+            bridge.save_operator_config(
+                {
+                    "values": {
+                        "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
+                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_repo_path": str(tenant_repo),
+                    }
+                },
+                config_path=config_path,
+            )
+
+            created = bridge.create_import_proposal(
+                {
+                    "values": {
+                        "title": "Unterschriftsbeglaubigung Erika Mustermann",
+                        "usecase_slug": "unterschriftsbeglaubigung",
+                        "usecase_title": "Unterschriftsbeglaubigung",
+                        "client_name": "Erika Mustermann",
+                        "participant_name": "Erika Mustermann",
+                        "document_title": "Personalausweis zur Identitätsprüfung",
+                        "document_type": "id_document_scan",
+                        "media_type": "image/jpeg",
+                        "data_classification": "synthetic_identity_document",
+                        "status": "open",
+                        "status_reason": "Ausweisdaten aus synthetischem Testscan übernommen, manuelle Prüfung offen",
+                        "synthetic_test_data": True,
+                        "metadata": {"document_number": "LZ6311T47"},
+                        "source_files": [
+                            {
+                                "label": "Vorderseite",
+                                "path": str(source_file),
+                                "filename": "personalausweis-vorderseite-erika-mustermann.jpg",
+                                "media_type": "image/jpeg",
+                            }
+                        ],
+                    }
+                },
+                config_path=config_path,
+            )
+
+            proposal_id = created["proposal"]["proposal_id"]
+            listed = bridge.list_import_proposals(config_path=config_path)
+            self.assertEqual(listed["counts"]["pending"], 1)
+            self.assertTrue((tenant_repo / "eingang" / "dateien" / proposal_id / "personalausweis-vorderseite-erika-mustermann.jpg").is_file())
+
+            accepted = bridge.accept_import_proposal({"proposal_id": proposal_id}, config_path=config_path)
+            matter_id = accepted["matter"]["matter_id"]
+            self.assertEqual(accepted["proposal"]["status"], "accepted")
+            self.assertEqual(accepted["matter"]["participants"], ["Erika Mustermann", "Erika Mustermann"])
+            matter = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "akte.json")
+            document_id = matter["document_ids"][0]
+            document = bridge.read_json(tenant_repo / "dokumente" / document_id / "metadata.json")
+            self.assertEqual(document["document_type"], "id_document_scan")
+            self.assertEqual(document["extracted_metadata"]["document_number"], "LZ6311T47")
+            self.assertEqual(document["storage"]["originals"][0]["label"], "Vorderseite")
+            self.assertTrue((tenant_repo / document["storage"]["originals"][0]["path"]).is_file())
 
     def test_operator_config_allows_arbitrary_git_and_data_repo_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

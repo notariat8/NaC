@@ -62,6 +62,9 @@ Operator-Webapp die Modelle direkt öffnen kann.
 | `/api/matters` | Liest Akten/Vorgänge aus dem konfigurierten Datenrepo inklusive Statuszählern je Usecase. |
 | `POST /api/matters` | Legt eine neue Demo-Akte im konfigurierten Datenrepo an. |
 | `POST /api/matters/status` | Schreibt Statuswechsel für eine bestehende Demo-Akte ins Datenrepo und Journal. |
+| `/api/import-proposals` | Liest Import-Vorschläge aus dem Datenrepo-Eingang, z.B. aus Prompt-, Scan-, E-Mail- oder Fax-Auswertungen. |
+| `POST /api/import-proposals` | Legt einen synthetischen Import-Vorschlag samt optional gestagten Testdateien im Datenrepo-Eingang an. |
+| `POST /api/import-proposals/accept` | Übernimmt einen geprüften Import-Vorschlag als Demo-Akte und kopiert gestagte Testdateien in den Dokumentbereich. |
 | `/healthz` | einfacher Gesundheitscheck. |
 
 ## Sicherheitsgrenzen
@@ -105,3 +108,11 @@ es ändert weder Git-Remotes noch klont es Repositories automatisch. Die
 Vorgangskarten bieten zusätzlich `Neu` und `Akten öffnen`; diese Funktionen
 schreiben ausschließlich in das konfigurierte Demo-Datenrepo und führen die
 Status `offen`, `warten` und `abgeschlossen`.
+
+Der Bereich `Eingang` verbindet Prompt-/Scan-/E-Mail-/Fax-Erfassung mit der
+Webapp: Codex oder ein lokaler Importer schreibt zunächst nur einen
+Import-Vorschlag unter `eingang/import-vorschlaege/`. Die Bürooberfläche zeigt
+diesen Vorschlag mit erkannten Metadaten und Dateien an. Erst die explizite
+Aktion `Übernehmen` erzeugt daraus eine Demo-Akte mit Journalereignis. Für
+echte Produktivdaten bleibt Rohdokumentablage außerhalb öffentlicher Git-Repos
+verpflichtend; im Demo-Modus sind nur synthetische Testdaten zulässig.

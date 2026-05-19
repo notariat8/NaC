@@ -8,8 +8,8 @@
     <meta name="theme-color" content="#f5f7f4">
     <meta name="robots" content="noindex">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/site.css?v=20260519-matters">
-    <script src="assets/site.js?v=20260519-matters" defer></script>
+    <link rel="stylesheet" href="assets/site.css?v=20260519-imports">
+    <script src="assets/site.js?v=20260519-imports" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#content">Zum Inhalt springen</a>
@@ -45,6 +45,7 @@
           <label for="case-search">Vorgang suchen</label>
           <input id="case-search" type="search" placeholder="z.B. Immobilien, Register, Testament, Vollmacht" data-case-search>
           <output class="case-count" data-area-count for="case-search">0 Vorgänge</output>
+          <button class="button secondary" type="button" data-open-panel="imports">Eingang <span data-import-count>0</span></button>
         </div>
 
         <div class="case-list" data-case-list>
@@ -461,11 +462,22 @@
           <p>Akten werden aus dem konfigurierten Datenrepo geladen.</p>
         </div>
       </section>
+
+      <section class="section app-panel is-hidden" id="eingang" aria-labelledby="imports-title" data-app-panel="imports">
+        <div class="section-heading">
+          <p class="section-kicker">Eingang</p>
+          <h2 id="imports-title">Import-Vorschläge prüfen</h2>
+        </div>
+        <div class="import-list" data-import-list role="status" aria-live="polite">
+          <p>Import-Vorschläge werden aus dem konfigurierten Datenrepo geladen.</p>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
       <p>© 2026 Funktion8. Lokale NaC-Büroworkbench.</p>
       <nav aria-label="Systembereiche">
+        <button type="button" data-open-panel="imports">Eingang</button>
         <button type="button" data-open-panel="tests">Tests</button>
         <button type="button" data-open-panel="anbindungen">Anbindungen</button>
         <button type="button" data-open-panel="konfig">Konfig</button>

@@ -5,6 +5,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -96,6 +97,9 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/matters":
                 self._send_json(list_operator_matters())
                 return
+            if route == "/api/import-proposals":
+                self._send_json(list_import_proposals())
+                return
             if is_local_web_route(route):
                 self._send_local_web_response(local_web_app.handle(self.path))
                 return
@@ -135,6 +139,22 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/matters/status":
                 try:
                     payload = update_operator_matter_status_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload)
+                return
+            if route == "/api/import-proposals":
+                try:
+                    payload = create_import_proposal_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload, HTTPStatus.CREATED)
+                return
+            if route == "/api/import-proposals/accept":
+                try:
+                    payload = accept_import_proposal_from_body(self._read_request_body())
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                     return
@@ -347,6 +367,129 @@ MATTER_STATUS_LABELS = {
     "waiting": "warten",
     "completed": "abgeschlossen",
 }
+IMPORT_STATUS_LABELS = {
+    "pending": "neu",
+    "accepted": "übernommen",
+    "rejected": "abgelehnt",
+}
+
+
+def list_import_proposals(config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    proposals = read_import_proposals(repo)
+    counts = {"pending": 0, "accepted": 0, "rejected": 0, "total": 0}
+    for proposal in proposals:
+        status = str(proposal.get("status") or "pending")
+        counts[status] = counts.get(status, 0) + 1
+        counts["total"] += 1
+    return {
+        "schema_version": "nac.operator-import-proposals/v1",
+        "data_repo_path": str(repo),
+        "data_repo_exists": repo.exists(),
+        "status_labels": IMPORT_STATUS_LABELS,
+        "counts": counts,
+        "proposals": proposals,
+    }
+
+
+def create_import_proposal_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    payload = parse_request_json(body)
+    return create_import_proposal(payload, config_path=config_path)
+
+
+def create_import_proposal(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    ensure_demo_data_repo(repo)
+    values = payload.get("values") if isinstance(payload.get("values"), dict) else payload
+    title = clean_text(values.get("title") or "Eingang ohne Betreff")
+    usecase_slug = clean_text(values.get("usecase_slug") or "unterschriftsbeglaubigung")
+    usecase_title = clean_text(values.get("usecase_title") or "Unterschriftsbeglaubigung")
+    now = _now_utc()
+    proposal_id = next_import_proposal_id(repo, title, now)
+    source_files = stage_import_source_files(repo, proposal_id, values.get("source_files", []), values.get("synthetic_test_data"))
+    matter_values = {
+        "usecase_slug": usecase_slug,
+        "usecase_title": usecase_title,
+        "title": title,
+        "client_name": clean_text(values.get("client_name") or ""),
+        "participant_name": clean_text(values.get("participant_name") or values.get("client_name") or ""),
+        "document_title": clean_text(values.get("document_title") or "Eingangsdokument"),
+        "document_type": clean_text(values.get("document_type") or "input_document"),
+        "media_type": clean_text(values.get("media_type") or "application/octet-stream"),
+        "data_classification": clean_text(values.get("data_classification") or "synthetic_document_metadata"),
+        "status": normalize_matter_status(values.get("status") or "open"),
+        "status_reason": clean_text(values.get("status_reason") or ""),
+        "metadata": clean_json_payload(values.get("metadata") if isinstance(values.get("metadata"), dict) else {}),
+    }
+    proposal = {
+        "schema_version": "nac.import-proposal/v0.1",
+        "proposal_id": proposal_id,
+        "status": "pending",
+        "created_at": now,
+        "source": clean_text(values.get("source") or "codex_prompt"),
+        "source_type": clean_text(values.get("source_type") or "prompt"),
+        "summary": clean_text(values.get("summary") or title),
+        "synthetic_test_data": bool(values.get("synthetic_test_data")),
+        "matter_values": matter_values,
+        "source_files": source_files,
+        "review": {
+            "requires_human_confirmation": True,
+            "reason": clean_text(values.get("review_reason") or "Import-Vorschlag muss vor Übernahme fachlich geprüft werden."),
+        },
+        "guardrails": {
+            "real_mandate_data_allowed": False,
+            "pin_or_card_data_allowed": False,
+            "secrets_allowed": False,
+        },
+    }
+    write_json(import_proposal_file(repo, proposal_id), proposal)
+    return {
+        "schema_version": "nac.operator-import-proposal-write/v1",
+        "proposal": summarize_import_proposal(proposal),
+    }
+
+
+def accept_import_proposal_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    payload = parse_request_json(body)
+    return accept_import_proposal(payload, config_path=config_path)
+
+
+def accept_import_proposal(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    ensure_demo_data_repo(repo)
+    proposal_id = required_text(payload, "proposal_id")
+    proposal_file = import_proposal_file(repo, proposal_id)
+    if not proposal_file.is_file():
+        raise ValueError(f"Import-Vorschlag nicht gefunden: {proposal_id}")
+    proposal = read_json(proposal_file)
+    if proposal.get("status") != "pending":
+        raise ValueError("Import-Vorschlag wurde bereits bearbeitet.")
+    matter_values = proposal.get("matter_values") if isinstance(proposal.get("matter_values"), dict) else {}
+    matter_values["document_files"] = [
+        {
+            "source": file.get("staged_path"),
+            "filename": file.get("filename"),
+            "label": file.get("label"),
+            "media_type": file.get("media_type"),
+        }
+        for file in proposal.get("source_files", [])
+        if isinstance(file, dict) and file.get("staged_path")
+    ]
+    matter_payload = create_operator_matter({"values": matter_values}, config_path=config_path)
+    matter = matter_payload["matter"]
+    now = _now_utc()
+    proposal["status"] = "accepted"
+    proposal["accepted_at"] = now
+    proposal["matter_id"] = matter["matter_id"]
+    proposal["aktenzeichen"] = matter["aktenzeichen"]
+    write_json(proposal_file, proposal)
+    append_import_accepted_event(repo, matter["matter_id"], proposal_id, now)
+    rebuild_operator_indexes(repo)
+    return {
+        "schema_version": "nac.operator-import-proposal-accept/v1",
+        "proposal": summarize_import_proposal(proposal),
+        "matter": matter,
+    }
 
 
 def list_operator_matters(config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
@@ -384,6 +527,11 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
     client_name = clean_text(values.get("client_name") or "Demo Mandant")
     participant_name = clean_text(values.get("participant_name") or client_name)
     document_title = clean_text(values.get("document_title") or f"{usecase_title} Unterlage")
+    document_type = clean_text(values.get("document_type") or "input_document")
+    media_type = clean_text(values.get("media_type") or "application/octet-stream")
+    data_classification = clean_text(values.get("data_classification") or "synthetic_document_metadata")
+    extracted_metadata = clean_json_payload(values.get("metadata") if isinstance(values.get("metadata"), dict) else {})
+    document_files = values.get("document_files") if isinstance(values.get("document_files"), list) else []
     status = normalize_matter_status(values.get("status") or "open")
     status_reason = clean_text(values.get("status_reason") or "")
 
@@ -420,15 +568,15 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
         "document_id": document_id,
         "matter_id": matter_id,
         "title": document_title,
-        "document_type": "input_document",
-        "media_type": "application/octet-stream",
-        "data_classification": "synthetic_document_metadata",
+        "document_type": document_type,
+        "media_type": media_type,
+        "data_classification": data_classification,
         "subject_person_ids": [participant_person_id],
-        "storage": {
-            "original": f"dokumente/{document_id}/original/{safe_identifier(document_title).lower()}.placeholder.txt"
-        },
+        "storage": {},
         "created_at": now,
     }
+    if extracted_metadata:
+        document["extracted_metadata"] = extracted_metadata
     matter = {
         "schema_version": "nac.matter/v0.2",
         "matter_id": matter_id,
@@ -483,8 +631,8 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
 
     for person in persons:
         write_json(repo / "personen" / f"{person['person_id']}.json", person)
+    attach_document_files(repo, document_id, document, document_title, document_files)
     write_json(repo / "dokumente" / document_id / "metadata.json", document)
-    write_if_missing(repo / document["storage"]["original"], f"Placeholder für {document_title} ({document_id}).\n")
     write_json(matter_dir / "akte.json", matter)
     write_json(matter_dir / "beteiligte.json", participants)
     write_json(matter_dir / "dokumente.json", matter_documents)
@@ -531,6 +679,148 @@ def update_operator_matter_status(payload: dict[str, Any], config_path: Path = O
     append_jsonl(journal_path(repo, now), event)
     rebuild_operator_indexes(repo)
     return {"schema_version": "nac.operator-matter-status/v1", "matter": summarize_matter(repo, matter)}
+
+
+def read_import_proposals(repo: Path) -> list[dict[str, Any]]:
+    proposals: list[dict[str, Any]] = []
+    if not repo.exists():
+        return proposals
+    for proposal_file in sorted(import_proposals_dir(repo).glob("*.json")):
+        try:
+            proposal = read_json(proposal_file)
+        except (OSError, json.JSONDecodeError):
+            continue
+        proposals.append(summarize_import_proposal(proposal))
+    proposals.sort(key=lambda item: (str(item.get("created_at") or ""), str(item.get("proposal_id") or "")), reverse=True)
+    return proposals
+
+
+def summarize_import_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
+    matter_values = proposal.get("matter_values") if isinstance(proposal.get("matter_values"), dict) else {}
+    source_files = proposal.get("source_files") if isinstance(proposal.get("source_files"), list) else []
+    return {
+        "proposal_id": str(proposal.get("proposal_id") or ""),
+        "status": str(proposal.get("status") or "pending"),
+        "status_label": IMPORT_STATUS_LABELS.get(str(proposal.get("status") or "pending"), str(proposal.get("status") or "pending")),
+        "created_at": str(proposal.get("created_at") or ""),
+        "accepted_at": str(proposal.get("accepted_at") or ""),
+        "source": str(proposal.get("source") or ""),
+        "source_type": str(proposal.get("source_type") or ""),
+        "summary": str(proposal.get("summary") or matter_values.get("title") or "Import-Vorschlag"),
+        "synthetic_test_data": bool(proposal.get("synthetic_test_data")),
+        "matter_id": str(proposal.get("matter_id") or ""),
+        "aktenzeichen": str(proposal.get("aktenzeichen") or ""),
+        "matter_values": matter_values,
+        "source_file_count": len(source_files),
+        "source_files": [
+            {
+                "label": str(file.get("label") or ""),
+                "filename": str(file.get("filename") or ""),
+                "media_type": str(file.get("media_type") or ""),
+                "staged_path": str(file.get("staged_path") or ""),
+            }
+            for file in source_files
+            if isinstance(file, dict)
+        ],
+        "review": proposal.get("review") if isinstance(proposal.get("review"), dict) else {},
+    }
+
+
+def next_import_proposal_id(repo: Path, title: str, timestamp: str) -> str:
+    base = f"IMP-{timestamp[:10].replace('-', '')}-{safe_identifier(title)[:44]}"
+    candidate = base
+    counter = 2
+    while import_proposal_file(repo, candidate).exists():
+        candidate = f"{base}-{counter}"
+        counter += 1
+    return candidate
+
+
+def stage_import_source_files(repo: Path, proposal_id: str, source_files: Any, synthetic_test_data: Any) -> list[dict[str, Any]]:
+    if not isinstance(source_files, list):
+        return []
+    staged_files: list[dict[str, Any]] = []
+    for index, file in enumerate(source_files, start=1):
+        if not isinstance(file, dict):
+            continue
+        label = clean_text(file.get("label") or f"Datei {index}")
+        filename = safe_filename(clean_text(file.get("filename") or Path(str(file.get("path") or f"datei-{index}")).name))
+        media_type = clean_text(file.get("media_type") or mimetypes.guess_type(filename)[0] or "application/octet-stream")
+        staged = {
+            "label": label,
+            "filename": filename,
+            "media_type": media_type,
+            "staged_path": "",
+        }
+        source_path_text = clean_text(file.get("path") or "")
+        if source_path_text:
+            if not bool(synthetic_test_data):
+                raise ValueError("Lokale Dateien dürfen nur für ausdrücklich synthetische Testdaten übernommen werden.")
+            source_path = Path(source_path_text).expanduser().resolve()
+            if not source_path.is_file():
+                raise ValueError(f"Quelldatei nicht gefunden: {source_path}")
+            target = repo / "eingang" / "dateien" / proposal_id / filename
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target)
+            staged["staged_path"] = relative_to_repo(repo, target)
+        staged_files.append(staged)
+    return staged_files
+
+
+def attach_document_files(
+    repo: Path,
+    document_id: str,
+    document: dict[str, Any],
+    document_title: str,
+    document_files: list[Any],
+) -> None:
+    originals: list[dict[str, str]] = []
+    for index, file in enumerate(document_files, start=1):
+        if not isinstance(file, dict):
+            continue
+        source_relative = clean_text(file.get("source") or "")
+        if not source_relative:
+            continue
+        source = resolve_repo_relative(repo, source_relative)
+        if not source.is_file():
+            raise ValueError(f"Import-Datei fehlt: {source_relative}")
+        filename = safe_filename(clean_text(file.get("filename") or source.name))
+        label = clean_text(file.get("label") or f"Original {index}")
+        media_type = clean_text(file.get("media_type") or mimetypes.guess_type(filename)[0] or "application/octet-stream")
+        target = repo / "dokumente" / document_id / "original" / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        originals.append(
+            {
+                "label": label,
+                "path": relative_to_repo(repo, target),
+                "media_type": media_type,
+            }
+        )
+    if originals:
+        document["storage"] = {"originals": originals}
+        return
+    placeholder = repo / "dokumente" / document_id / "original" / f"{safe_identifier(document_title).lower()}.placeholder.txt"
+    write_if_missing(placeholder, f"Placeholder für {document_title} ({document_id}).\n")
+    document["storage"] = {"original": relative_to_repo(repo, placeholder)}
+
+
+def append_import_accepted_event(repo: Path, matter_id: str, proposal_id: str, timestamp: str) -> None:
+    matter_file = find_matter_file(repo, matter_id)
+    if matter_file is None:
+        return
+    event = {
+        "schema_version": "nac.event/v0.1",
+        "event_id": f"EVT-{safe_identifier(matter_id)}-IMPORT-{safe_identifier(proposal_id)}",
+        "matter_id": matter_id,
+        "timestamp": timestamp,
+        "actor": "nac_operator",
+        "event_type": "import_proposal_accepted",
+        "summary": f"Import-Vorschlag {proposal_id} übernommen.",
+        "affected_ids": {"proposal_id": proposal_id},
+    }
+    append_jsonl(matter_file.parent / "ereignisse.jsonl", event)
+    append_jsonl(journal_path(repo, timestamp), event)
 
 
 def operator_data_repo(config_path: Path = OPERATOR_CONFIG) -> Path:
@@ -660,6 +950,15 @@ def clean_text(value: Any, max_length: int = 512) -> str:
     return text
 
 
+def clean_json_payload(value: Any, max_length: int = 4096) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    encoded = json.dumps(value, ensure_ascii=False)
+    if len(encoded) > max_length:
+        raise ValueError("Metadaten sind zu lang.")
+    return json.loads(encoded)
+
+
 def normalize_matter_status(value: Any) -> str:
     status = str(value or "open").strip().lower()
     if status not in MATTER_STATUS_ALIASES:
@@ -687,6 +986,32 @@ def find_matter_file(repo: Path, matter_id: str) -> Path | None:
 def safe_identifier(value: str) -> str:
     normalized = re.sub(r"[^A-Za-z0-9]+", "-", value).strip("-").upper()
     return normalized or "UNBENANNT"
+
+
+def safe_filename(value: str) -> str:
+    name = Path(value).name
+    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip(".-")
+    return normalized or "datei.bin"
+
+
+def import_proposals_dir(repo: Path) -> Path:
+    return repo / "eingang" / "import-vorschlaege"
+
+
+def import_proposal_file(repo: Path, proposal_id: str) -> Path:
+    return import_proposals_dir(repo) / f"{safe_identifier(proposal_id)}.json"
+
+
+def resolve_repo_relative(repo: Path, value: str) -> Path:
+    candidate = (repo / value).resolve()
+    repo_root = repo.resolve()
+    if candidate != repo_root and repo_root not in candidate.parents:
+        raise ValueError("Pfad liegt außerhalb des Datenrepos.")
+    return candidate
+
+
+def relative_to_repo(repo: Path, path: Path) -> str:
+    return path.resolve().relative_to(repo.resolve()).as_posix()
 
 
 def journal_path(repo: Path, timestamp: str) -> Path:

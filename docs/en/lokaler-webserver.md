@@ -62,6 +62,9 @@ can open the models directly.
 | `/api/matters` | Reads matters/cases from the configured data repository including status counts per use case. |
 | `POST /api/matters` | Creates a new demo matter in the configured data repository. |
 | `POST /api/matters/status` | Writes status changes for an existing demo matter to the data repository and journal. |
+| `/api/import-proposals` | Reads import proposals from the data-repository inbox, e.g. from prompt, scan, email or fax extraction. |
+| `POST /api/import-proposals` | Creates a synthetic import proposal, including optional staged test files, in the data-repository inbox. |
+| `POST /api/import-proposals/accept` | Accepts a reviewed import proposal as a demo matter and copies staged test files into the document area. |
 | `/healthz` | Simple health check. |
 
 ## Safety Boundaries
@@ -103,3 +106,11 @@ change Git remotes or clone repositories automatically. The use case cards also
 provide `Neu` and `Akten öffnen`; these functions write only to the configured
 demo data repository and track the statuses `offen`, `warten` and
 `abgeschlossen`.
+
+The `Eingang` area connects prompt, scan, email and fax capture with the web
+app. Codex or a local importer first writes only an import proposal under
+`eingang/import-vorschlaege/`. The office surface shows that proposal with
+recognized metadata and files. Only the explicit `Übernehmen` action creates a
+demo matter and journal event from it. For real production data, raw document
+storage must stay outside public Git repositories; demo mode only permits
+synthetic test data.
