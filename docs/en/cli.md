@@ -94,12 +94,23 @@ nac plugins pkcs7-inspect --input example.p7b
 
 | Command | Meaning |
 | --- | --- |
-| `nac plugins card-readiness` | Checks local card-reader, SAK/XNP and readiness metadata without PIN or card data. |
+| `nac plugins card-readiness` | Checks local card-reader, SAK/XNP and readiness metadata. With installed hardware, a real local hardware test is possible; PINs and raw card data are not stored. |
 | `nac plugins xnp-reader-prompt` | Creates a safe XNP reader prompt with the card gate in front. |
 | `nac plugins pkcs7-inspect` | Inspects a local PKCS7/P7B/P7C certificate bundle metadata-only, without signing or private-key access. |
 
 The old plugin scripts remain the internal execution layer. The visible path
 for users, docs and agents is `nac plugins ...`.
+
+For a workstation with installed real hardware:
+
+```bash
+nac plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+nac plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+```
+
+These commands may check real local drivers, morris, PC/SC, card-reader and XNP
+reachability. Productive portal actions, signing, PIN capture, raw card data,
+secrets and mandate data in the repository remain blocked.
 
 ## Architecture Rule
 

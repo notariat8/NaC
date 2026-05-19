@@ -15,7 +15,7 @@ blocked automation. It helps decision makers assess NaC realistically.
 | BPMN-js business layer | Profile present | BPMN 2.0 is the subject-matter process source; a first bpmn-js-ready model and Python validation exist. |
 | Local web server | Usable today | BPMN models and KG editor views can be reviewed locally in the browser. |
 | Private operating fork | Pilot-ready | A notary office can move the template into a private fork and define roles, approvals and local storage. |
-| Local card/XNP readiness | Pilot-ready | Plugin paths first check technical readiness and metadata, not real signatures or productive filing. |
+| Local card/XNP readiness | Pilot-ready | With installed hardware, plugin paths check real local card-reader, morris, PC/SC, SAK/XNP and XNP reachability; signing, PIN capture and productive filing remain blocked. |
 | System connectors | Planned / integration work | Write adapters need separate approval, privacy review, test mode and responsibility model. |
 | Automatic register, portal or system filing | Deliberately blocked | No productive write action without reviewed connector, human approval and private operating frame. |
 | Real mandate data in the public repo | Forbidden | Personal, register, financial, health, estate and family data do not belong in this repository. |

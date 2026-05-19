@@ -84,24 +84,27 @@ required.
 | XNotar/exchange path | present when register cases are tested | HRA/HRB and exchange packages |
 | AusweisApp | optional for IDaaS/eID paths | eID function check |
 
-A morris test is successful when the middleware responds. A response such as
-`no card reader attached`, `NoReader` or `NaCard` is sufficient for the
-technical binding check as long as no real card action is being executed.
+A morris test is successful when the middleware responds. Without an attached
+or inserted card, a response such as `no card reader attached`, `NoReader` or
+`NaCard` is sufficient for the technical binding check. When real hardware,
+card, morris and XNP are installed locally, real local hardware-readiness tests
+are expected.
 
 Notary-workstation check:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
-python plugins\nac-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
-python plugins\nac-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
+python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 ```
 
 ## Privacy And Operating Boundaries
 
 - Do not store PINs, card serial numbers, certificate contents, mandate data or
   real personal data in the repository.
-- Card and XNP tests start with readiness status and technical negative
-  responses such as `NoReader` or `NaCard`.
+- Card and XNP tests may check local hardware, middleware and XNP reachability
+  when real hardware is installed. PIN capture, raw card data, secrets, mandate
+  data, signing and productive actions remain blocked.
 - External processing with personal data requires documented AVV/DPA status
   before a pilot.
 - Local domain systems remain local dependencies and must appear in the SBOM

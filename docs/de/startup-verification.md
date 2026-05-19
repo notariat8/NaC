@@ -44,13 +44,19 @@ Für Notariatsarbeitsplatz, Kartenleser, morris und XNP-Pfad:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
+python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 ```
 
 ## Grenzen
 
 - Der Check sieht nur lokal verfügbare Informationen.
 - Er ersetzt keine GitHub-Servereinstellungen (z. B. Branch Protection).
-- Er ersetzt keine echte Fachsystemfreigabe und keine Kartenaktion.
-- Eine morris-Antwort wie `NoReader` oder `NaCard` reicht für die technische
-  Middleware-Anbindungsprüfung, aber nicht für einen produktiven Kartenlauf.
+- Er ersetzt keine echte Fachsystemfreigabe.
+- Bei installierter Hardware sind echte lokale Kartenleser-, morris-, PC/SC-,
+  SAK-/XNP- und XNP-Readiness-Tests möglich. Produktive Kartenläufe,
+  Signaturen, PIN-Erfassung und Einreichungen bleiben gesondert freizugeben.
+- Eine morris-Antwort wie `NoReader` oder `NaCard` reicht ohne eingelegte oder
+  angeschlossene Karte für die technische Middleware-Anbindungsprüfung, aber
+  nicht für einen produktiven Kartenlauf.
 - Für Forks muss der Check ebenfalls übernommen und aktiv genutzt werden.

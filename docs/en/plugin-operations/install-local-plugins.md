@@ -69,6 +69,14 @@ python3 scripts/nac.py plugins xnp-reader-prompt
 python3 scripts/nac.py plugins pkcs7-inspect --input example.p7b
 ```
 
-These commands only create local readiness and evidence metadata. They do not
-perform login, signing, register filing, private-key access or productive portal
-actions.
+When real hardware is installed, the readiness commands should check the real
+local card reader, morris, PC/SC, SAK/XNP and XNP loopback path:
+
+```bash
+python3 scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python3 scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+```
+
+These commands create local readiness and evidence metadata from real local
+infrastructure. They do not perform login, signing, register filing,
+private-key access, PIN capture or productive portal actions.

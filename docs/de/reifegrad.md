@@ -16,7 +16,7 @@ NaC realistisch einzuordnen.
 | BPMN-js Business Layer | Profil vorhanden | BPMN 2.0 ist fachliche Prozessquelle; ein erstes bpmn-js-taugliches Modell und die Python-Prüfung sind vorhanden. |
 | Lokaler Webserver | Heute nutzbar | BPMN-Modelle und KG-Editor-Views können lokal im Browser geprüft werden. |
 | Privater Betriebs-Fork | Pilotfähig | Ein Notariat kann das Muster in einen privaten Fork übernehmen und Rollen, Freigaben und lokale Speicherorte definieren. |
-| Lokale Karten-/XNP-Readiness | Pilotfähig | Die Plugin-Pfade prüfen zunächst technische Bereitschaft und Metadaten, keine echte Signatur oder produktive Einreichung. |
+| Lokale Karten-/XNP-Readiness | Pilotfähig | Bei installierter Hardware prüfen die Plugin-Pfade echte lokale Kartenleser-, morris-, PC/SC-, SAK-/XNP- und XNP-Erreichbarkeit; Signatur, PIN-Erfassung und produktive Einreichung bleiben gesperrt. |
 | Fachsystem-Connectoren | Geplant / Integrationsarbeit | Schreibende Adapter brauchen gesonderte Freigabe, Datenschutzklärung, Testmodus und Verantwortlichkeitsmodell. |
 | Automatische Register-, Portal- oder Fachsystemeinreichung | Bewusst gesperrt | Keine produktive Schreibaktion ohne geprüften Connector, menschliche Freigabe und privaten Betriebsrahmen. |
 | Echte Mandatsdaten im öffentlichen Repo | Verboten | Personen-, Register-, Finanz-, Gesundheits-, Nachlass- und Familiendaten gehören nicht in dieses Repository. |

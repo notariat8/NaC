@@ -85,25 +85,27 @@ Signatur- oder XNP-Komponenten benötigt werden.
 | XNotar/Exchange-Pfad | vorhanden, wenn Registervorgänge getestet werden | HRA/HRB- und Austauschpakete |
 | AusweisApp | optional für IDaaS/eID-Pfade | eID-Funktionsprüfung |
 
-Ein morris-Test ist erfolgreich, wenn die Middleware erreichbar antwortet. Eine
-Antwort wie `kein Kartenleser angeschlossen`, `NoReader` oder `NaCard` ist für
-die technische Anbindungsprüfung ausreichend, solange keine echte Kartenaktion
-ausgeführt werden soll.
+Ein morris-Test ist erfolgreich, wenn die Middleware erreichbar antwortet. Ohne
+angeschlossene oder eingelegte Karte ist eine Antwort wie `kein Kartenleser
+angeschlossen`, `NoReader` oder `NaCard` für die technische
+Anbindungsprüfung ausreichend. Wenn echte Hardware, Karte, morris und XNP lokal
+installiert sind, sind echte lokale Hardware-Readiness-Tests vorgesehen.
 
 Notariatsarbeitsplatz-Check:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
-python plugins\nac-cyberjack-rfid\scripts\check_readiness.py --json --probe-morris-api
-python plugins\nac-bnotk-xnp\scripts\reader_prompt.py --json --probe-morris-api
+python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 ```
 
 ## Datenschutz Und Betriebsgrenzen
 
 - Keine PINs, Kartenseriennummern, Zertifikatsinhalte, Mandatsdaten oder echten
   personenbezogenen Daten im Repository speichern.
-- Karten- und XNP-Tests arbeiten zuerst mit Readiness-Status und technischen
-  Negativantworten wie `NoReader` oder `NaCard`.
+- Karten- und XNP-Tests dürfen bei installierter echter Hardware lokale
+  Hardware-, Middleware- und XNP-Erreichbarkeit prüfen. Gesperrt bleiben PIN-,
+  Kartenrohdaten-, Secret-, Mandatsdaten-, Signatur- und Produktivaktionen.
 - Externe Verarbeitung mit personenbezogenen Daten braucht vor einem Pilot einen
   dokumentierten AVV/DPA-Status.
 - Lokale Fachsysteme bleiben lokale Abhängigkeiten und müssen in SBOM und
