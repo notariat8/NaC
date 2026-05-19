@@ -72,6 +72,26 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn(b"BPMN-js Editor", edit_body)
         self.assertIn(b"/api/bpmn/handelsregisteranmeldung/xml", edit_body)
 
+    def test_app_serves_all_usecase_workbench_routes(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+        slugs = sorted(
+            path.name
+            for path in (REPO_ROOT / "usecases").iterdir()
+            if path.is_dir() and (path / "knowledge-graph.graph.json").is_file()
+        )
+
+        self.assertEqual(len(slugs), 23)
+        failures: list[str] = []
+        for slug in slugs:
+            for route in (f"/kg/{slug}", f"/bpmn/{slug}", f"/bpmn/{slug}/edit"):
+                status, content_type, body = app.handle(route)
+                if status != 200:
+                    failures.append(f"{status} {route}")
+                self.assertIn(content_type, {"text/html; charset=utf-8", "application/json; charset=utf-8"})
+                self.assertGreater(len(body), 100)
+
+        self.assertEqual(failures, [])
+
     def test_bpmn_xml_save_rejects_stale_hash(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
