@@ -28,6 +28,10 @@ SITE_ROOT = REPO_ROOT / "web" / "local-operator"
 READINESS_SCRIPT = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 STARTUP_SCRIPT = REPO_ROOT / "scripts" / "startup_check.py"
 TEST_LOG = REPO_ROOT / "logs" / "test-log.jsonl"
+LOCAL_NO_STORE_HEADERS = (
+    ("Cache-Control", "no-store, max-age=0"),
+    ("Pragma", "no-cache"),
+)
 ALLOWED_ORIGINS = {
     "https://funktion8.de",
     "https://www.funktion8.de",
@@ -128,6 +132,7 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
+            self._send_no_store_headers()
             self.end_headers()
             if include_body:
                 self.wfile.write(body)
@@ -146,9 +151,14 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
+            self._send_no_store_headers()
             self.end_headers()
             if include_body:
                 self.wfile.write(body)
+
+        def _send_no_store_headers(self) -> None:
+            for name, value in LOCAL_NO_STORE_HEADERS:
+                self.send_header(name, value)
 
         def _send_cors_headers(self) -> None:
             origin = self.headers.get("Origin")

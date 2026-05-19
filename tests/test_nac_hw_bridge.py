@@ -56,6 +56,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         css = (bridge.SITE_ROOT / "assets" / "site.css").read_text(encoding="utf-8")
 
         self.assertIn('src="assets/n8.svg"', html)
+        self.assertIn('href="assets/site.css?v=', html)
+        self.assertIn('src="assets/site.js?v=', html)
         self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
         self.assertIn("Immobilienrecht", html)
         self.assertIn('data-area-tab="immobilienrecht"', html)
@@ -93,6 +95,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("[data-area-tab]", js)
         self.assertIn("filterCases", js)
         self.assertIn("showPanel", js)
+        self.assertNotIn("Steuer-Readiness", js)
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
         self.assertNotIn("Bautraeger", html)
@@ -101,9 +104,16 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn(">Vorgänge</", html)
         case_group_block = css.split(".case-group {", maxsplit=1)[1].split("}", maxsplit=1)[0]
         self.assertNotIn("text-transform", case_group_block)
+        self.assertNotIn("min-height: calc(100vh - 72px)", css)
+        self.assertIn("min-height: 0;", css)
+        self.assertIn("overflow-x: hidden;", css)
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
+
+    def test_operator_bridge_disables_local_cache(self) -> None:
+        self.assertIn(("Cache-Control", "no-store, max-age=0"), bridge.LOCAL_NO_STORE_HEADERS)
+        self.assertIn(("Pragma", "no-cache"), bridge.LOCAL_NO_STORE_HEADERS)
 
     def test_operator_bridge_delegates_bpmn_routes(self) -> None:
         self.assertTrue(bridge.is_local_web_route("/bpmn/handelsregisteranmeldung/edit"))
