@@ -17,8 +17,10 @@ from urllib.parse import unquote, urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+SRC_ROOT_TEXT = str(SRC_ROOT)
+if SRC_ROOT_TEXT in sys.path:
+    sys.path.remove(SRC_ROOT_TEXT)
+sys.path.insert(0, SRC_ROOT_TEXT)
 
 from nac_web.server import NaCLocalWebApp  # noqa: E402
 

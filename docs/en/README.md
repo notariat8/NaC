@@ -73,6 +73,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry
   point for graphical BPMN and KG outputs.
+- [docs/en/webapp-ohne-zugriff.md](webapp-ohne-zugriff.md) explains the
+  operator web app with screenshots for readers without local web-app access.
 - [docs/en/reifegrad.md](reifegrad.md) separates usable today, pilot-ready, planned and deliberately blocked surfaces.
 - [docs/en/glossar.md](glossar.md) explains terms for non-technical readers.
 - [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md) shows one full case without real mandate data.

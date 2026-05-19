@@ -86,6 +86,8 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische
   BPMN- und KG-Ausgaben.
+- [webapp-ohne-zugriff.md](webapp-ohne-zugriff.md): bebilderte Erklärung der
+  Operator-Webapp für Leser ohne lokale Webapp.
 - [docs/de/reifegrad.md](reifegrad.md): Matrix für heute nutzbar, pilotfähig, geplant und bewusst gesperrt.
 - [docs/de/glossar.md](glossar.md): Begriffe für Nicht-Technik-Leser.
 - [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md): ein durchgehender Vorgang ohne echte Mandatsdaten.
