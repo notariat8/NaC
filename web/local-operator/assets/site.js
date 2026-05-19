@@ -128,11 +128,11 @@ function statusLabel(status, locale) {
     de: {
       passed: "erfolgreich",
       ready: "bereit",
-      manual_review: "manuelle Pruefung erforderlich",
+      manual_review: "manuelle Prüfung erforderlich",
       blocked: "blockiert",
       failed: "fehlgeschlagen",
       error: "Fehler",
-      running: "laeuft",
+      running: "läuft",
       unknown: "unbekannt",
     },
     en: {
@@ -157,7 +157,7 @@ function uiText(locale, key) {
       manual: "Manuell offen",
       failed: "Fehler",
       notes: "Hinweise",
-      manualHint: "Die lokale Hardware-Basis ist teilweise erfolgreich. Fuer die fachliche Freigabe bleiben manuelle Bestaetigungen oder XNP-/SAK-/secureFramework-Pfade offen.",
+      manualHint: "Die lokale Hardware-Basis ist teilweise erfolgreich. Für die fachliche Freigabe bleiben manuelle Bestätigungen oder XNP-/SAK-/secureFramework-Pfade offen.",
     },
     en: {
       overallStatus: "Overall status",
@@ -180,11 +180,11 @@ function localizedCheck(check, locale) {
     de: {
       bnotk_card_present: {
         title: "BNotK Chip-/Signaturkarte",
-        message: "Die Verfuegbarkeit der Karte muss manuell bestaetigt werden.",
+        message: "Die Verfügbarkeit der Karte muss manuell bestätigt werden.",
       },
       rfid_disabled: {
-        title: "RFID fuer BNotK-Chipkartenworkflow deaktiviert",
-        message: "RFID-off oder Nichtnutzung muss manuell bestaetigt werden.",
+        title: "RFID für BNotK-Chipkartenworkflow deaktiviert",
+        message: "RFID-off oder Nichtnutzung muss manuell bestätigt werden.",
       },
       windows_driver_stack: {
         title: "Windows REINER SCT Treiberstack",
@@ -192,7 +192,7 @@ function localizedCheck(check, locale) {
       },
       windows_morris_stack: {
         title: "Windows morris Browser-Middleware",
-        message: "REINER SCT morris ist installiert und laeuft lokal.",
+        message: "REINER SCT morris ist installiert und läuft lokal.",
       },
       windows_morris_loopback_api: {
         title: "Windows morris Loopback-API",
@@ -200,7 +200,7 @@ function localizedCheck(check, locale) {
       },
       pcsc_service: {
         title: "PC/SC-Dienst",
-        message: "Der Windows-Smartcard-Dienst laeuft.",
+        message: "Der Windows-Smartcard-Dienst läuft.",
       },
       reader_detection: {
         title: "Kartenleser-Erkennung",

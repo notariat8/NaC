@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -30,13 +33,30 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         )
         self.assertNotIn("funktion8-nac-website", str(bridge.SITE_ROOT))
 
+    def test_bridge_help_works_when_src_is_already_on_pythonpath(self) -> None:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO_ROOT / "src")
+
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT_PATH), "--help"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("--port", completed.stdout)
+
     def test_operator_copy_is_usecase_first_workbench(self) -> None:
         html = (bridge.SITE_ROOT / "index.html").read_text(encoding="utf-8")
         js = (bridge.SITE_ROOT / "assets" / "site.js").read_text(encoding="utf-8")
 
         self.assertIn('src="assets/n8.svg"', html)
         self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
-        self.assertIn("Vorgang auswaehlen", html)
+        self.assertIn("Vorgang auswählen", html)
         self.assertIn('href="#bpmn-modelle"', html)
         self.assertIn('href="#tests"', html)
         self.assertIn('href="#anbindungen"', html)
@@ -45,14 +65,14 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
         self.assertIn("/bpmn/vorsorgevollmacht-patientenverfuegung/edit", html)
         self.assertIn("HW-Test starten", html)
-        self.assertIn("XNP pruefen", html)
-        self.assertIn("Repository oeffnen", html)
+        self.assertIn("XNP prüfen", html)
+        self.assertIn("Repository öffnen", html)
         self.assertIn("python scripts\\nac.py operator --open", html)
         self.assertIn("python scripts\\\\nac.py operator --open", js)
         self.assertIn("[data-case-search]", js)
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
-        self.assertNotIn("alles laeuft ueber CLI", html.lower())
+        self.assertNotIn("alles läuft über CLI", html.lower())
 
     def test_operator_bridge_delegates_bpmn_routes(self) -> None:
         self.assertTrue(bridge.is_local_web_route("/bpmn/handelsregisteranmeldung/edit"))

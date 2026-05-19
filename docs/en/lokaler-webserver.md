@@ -15,6 +15,9 @@ server is the shared surface for:
 The server is local by design. It binds to `127.0.0.1` by default and reads only
 files from the current repository.
 
+For readers without access to the running web app, a screenshot-based
+explanation is available at [webapp-ohne-zugriff.md](webapp-ohne-zugriff.md).
+
 ## Start
 
 ```bash
@@ -77,3 +80,15 @@ The editor surface can load bpmn-js with the descriptor
 in the browser, the XML fallback remains usable. Before merge, validation with
 [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py)
 remains mandatory. Git and review decide, not the browser.
+
+## Operator Web App For The Office
+
+In addition to `nac web`, there is `nac operator --open`. This surface is
+usecase-first: it starts with case cards, search, checklist/flow/edit links,
+workstation tests and a handbook path.
+
+Technically, [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) serves
+the static surface from [web/local-operator/](../../web/local-operator) and
+delegates BPMN/KG routes to [src/nac_web/server.py](../../src/nac_web/server.py).
+This lets the office surface and model views run through the same local port
+without writing mandate data or credentials into the repository.

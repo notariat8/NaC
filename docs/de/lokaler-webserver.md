@@ -15,6 +15,9 @@ lokale Webserver ist die gemeinsame Oberfläche für:
 Der Server ist lokal gedacht. Standardmäßig bindet er an `127.0.0.1` und liest
 nur Dateien aus dem aktuellen Repository.
 
+Für Leser ohne Zugriff auf die laufende Webapp gibt es eine bebilderte
+Erklärung der Oberfläche unter [webapp-ohne-zugriff.md](webapp-ohne-zugriff.md).
+
 ## Start
 
 ```bash
@@ -79,3 +82,15 @@ Die Editorfläche kann bpmn-js mit dem Descriptor
 Browser nicht verfügbar ist, bleibt der XML-Fallback nutzbar. Vor Merge bleibt
 die Prüfung mit [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py)
 verbindlich. Git und Review entscheiden, nicht der Browser.
+
+## Operator-Webapp Für Das Büro
+
+Neben `nac web` gibt es `nac operator --open`. Diese Oberfläche ist
+usecase-zentriert: Sie startet mit Vorgangskarten, Suchfeld,
+Checklisten-/Ablauf-/Bearbeiten-Links, Arbeitsplatztests und Handbuchpfad.
+
+Technisch dient [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) die
+statische Oberfläche aus [web/local-operator/](../../web/local-operator) aus
+und delegiert BPMN-/KG-Routen an [src/nac_web/server.py](../../src/nac_web/server.py).
+Dadurch können Bürooberfläche und Modellansichten über denselben lokalen Port
+laufen, ohne Mandatsdaten oder Zugangsdaten ins Repo zu schreiben.
