@@ -335,6 +335,7 @@ h3 {
 }
 
 .case-actions a,
+.case-actions button,
 .connection-list a,
 .text-button {
   background: #f4f7f4;
@@ -353,11 +354,34 @@ h3 {
 
 .case-actions a:hover,
 .case-actions a:focus-visible,
+.case-actions button:hover,
+.case-actions button:focus-visible,
 .connection-list a:hover,
 .connection-list a:focus-visible,
 .text-button:hover,
 .text-button:focus-visible {
   background: #e8eee9;
+}
+
+.case-actions button {
+  min-height: 0;
+}
+
+.matter-badges {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.matter-badges span {
+  background: #edf2ef;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.45rem;
 }
 
 .diagnostics {
@@ -420,6 +444,97 @@ h3 {
   min-height: 44px;
   padding: 0.55rem 0.75rem;
   width: 100%;
+}
+
+.matter-form,
+.matter-status,
+.matter-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 0 auto 1rem;
+  max-width: 960px;
+  padding: 1.25rem;
+}
+
+.matter-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.matter-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.matter-form span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.matter-form input,
+.matter-form select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
+.matter-actions,
+.matter-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.matter-status,
+.matter-list {
+  border-left: 6px solid var(--green);
+  color: var(--muted);
+}
+
+.matter-status[data-status="error"],
+.matter-list[data-status="error"] {
+  border-left-color: #a53535;
+}
+
+.matter-card {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1rem 0;
+}
+
+.matter-card:first-child {
+  padding-top: 0;
+}
+
+.matter-card:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.matter-card h3 {
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+
+.matter-meta {
+  color: var(--muted);
+  margin: 0;
+}
+
+.matter-card select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 38px;
+  padding: 0.4rem 0.55rem;
 }
 
 .config-actions {
@@ -937,6 +1052,10 @@ h3 {
 
   .case-row {
     align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .matter-card {
     grid-template-columns: 1fr;
   }
 

@@ -84,11 +84,18 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('data-app-panel="anbindungen"', html)
         self.assertIn('data-app-panel="handbuch"', html)
         self.assertIn('data-app-panel="konfig"', html)
+        self.assertIn('data-app-panel="matter-new"', html)
+        self.assertIn('data-app-panel="matters"', html)
         self.assertIn('data-config-form', html)
         self.assertIn('data-config-field="nac_fork_git_url"', html)
         self.assertIn('data-config-field="data_git_url"', html)
         self.assertIn('data-config-field="data_repo_path"', html)
-        self.assertIn("https://github.com/ofunk/demo8notariat.git", html)
+        self.assertIn('data-matter-form', html)
+        self.assertIn('data-matter-list', html)
+        self.assertIn('data-matter-field="client_name"', html)
+        self.assertIn('data-matter-field="participant_name"', html)
+        self.assertIn('data-matter-field="status"', html)
+        self.assertIn("https://github.com/funktion8/demo8notariat.git", html)
         self.assertNotIn('href="#bpmn-modelle"', html)
         self.assertNotIn('href="#tests"', html)
         self.assertNotIn('href="#anbindungen"', html)
@@ -119,6 +126,11 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("loadOperatorConfig", js)
         self.assertIn("saveOperatorConfig", js)
         self.assertIn("/api/operator-config", js)
+        self.assertIn("enhanceCaseRows", js)
+        self.assertIn("loadMatters", js)
+        self.assertIn("saveMatter", js)
+        self.assertIn("/api/matters", js)
+        self.assertIn("/api/matters/status", js)
         self.assertNotIn("Steuer-Readiness", js)
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
@@ -139,6 +151,64 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
+
+    def test_operator_matter_api_creates_lists_and_updates_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tenant_repo = Path(temp_dir) / "tenant"
+            tenant_repo.mkdir()
+            bridge.write_json(
+                tenant_repo / ".nac-tenant.json",
+                {
+                    "schema_version": "nac.tenant/v0.2",
+                    "name": "tenant",
+                    "mode": "demo",
+                },
+            )
+            config_path = Path(temp_dir) / "operator-config.json"
+            bridge.save_operator_config(
+                {
+                    "values": {
+                        "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
+                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_repo_path": str(tenant_repo),
+                    }
+                },
+                config_path=config_path,
+            )
+
+            created = bridge.create_operator_matter(
+                {
+                    "values": {
+                        "usecase_slug": "unterschriftsbeglaubigung",
+                        "usecase_title": "Unterschriftsbeglaubigung",
+                        "title": "Unterschriftsbeglaubigung Demo",
+                        "client_name": "Mara Muster",
+                        "participant_name": "Timo Test",
+                        "document_title": "Vollmacht Demo",
+                        "status": "open",
+                    }
+                },
+                config_path=config_path,
+            )
+
+            matter_id = created["matter"]["matter_id"]
+            self.assertEqual(created["matter"]["usecase_slug"], "unterschriftsbeglaubigung")
+            self.assertEqual(created["matter"]["status"], "open")
+            self.assertTrue((tenant_repo / "akten" / "2026" / matter_id / "akte.json").is_file())
+            self.assertTrue((tenant_repo / "index" / "akten.json").is_file())
+
+            listed = bridge.list_operator_matters(config_path=config_path)
+            self.assertEqual(listed["counts"]["unterschriftsbeglaubigung"]["open"], 1)
+            self.assertEqual(listed["matters"][0]["participants"], ["Mara Muster", "Timo Test"])
+
+            updated = bridge.update_operator_matter_status(
+                {"matter_id": matter_id, "status": "waiting", "status_reason": "wartet auf Unterlage"},
+                config_path=config_path,
+            )
+            self.assertEqual(updated["matter"]["status"], "waiting")
+            relisted = bridge.list_operator_matters(config_path=config_path)
+            self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["waiting"], 1)
+            self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["open"], 0)
 
     def test_operator_config_allows_arbitrary_git_and_data_repo_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -166,8 +236,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         payload = bridge.build_operator_config_payload(config_path=Path("missing-operator-config.json"))
 
         self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
-        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")
-        self.assertTrue(payload["values"]["data_repo_path"].endswith("demo8notariat"))
+        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/funktion8/demo8notariat.git")
+        self.assertTrue(payload["values"]["data_repo_path"].endswith("funktion8-demo8notariat"))
 
     def test_operator_bridge_disables_local_cache(self) -> None:
         self.assertIn(("Cache-Control", "no-store, max-age=0"), bridge.LOCAL_NO_STORE_HEADERS)

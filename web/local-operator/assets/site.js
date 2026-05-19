@@ -12,7 +12,14 @@ const areaCount = document.querySelector("[data-area-count]");
 const configForm = document.querySelector("[data-config-form]");
 const configReload = document.querySelector("[data-config-reload]");
 const configStatus = document.querySelector("[data-config-status]");
+const matterForm = document.querySelector("[data-matter-form]");
+const matterFormTitle = document.querySelector("[data-matter-form-title]");
+const matterFormStatus = document.querySelector("[data-matter-form-status]");
+const matterList = document.querySelector("[data-matter-list]");
+const matterListTitle = document.querySelector("[data-matter-list-title]");
 let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
+let activeMatterUsecase = "";
+let matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
 
 const areaCopy = {
   immobilienrecht: {
@@ -49,6 +56,7 @@ if (caseSearch && caseRows.length) {
 }
 
 sortCaseRows();
+enhanceCaseRows();
 
 areaTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -74,9 +82,14 @@ if (configReload) {
   configReload.addEventListener("click", loadOperatorConfig);
 }
 
+if (matterForm) {
+  matterForm.addEventListener("submit", saveMatter);
+}
+
 showPanel("cases");
 filterCases();
 loadOperatorConfig();
+loadMatters();
 
 function showPanel(panelName) {
   panels.forEach((panel) => {
@@ -97,6 +110,10 @@ function showPanel(panelName) {
 
   if (panelName === "konfig") {
     loadOperatorConfig();
+  }
+
+  if (panelName === "matters") {
+    loadMatters().then(() => renderMatterList(activeMatterUsecase));
   }
 }
 
@@ -142,6 +159,46 @@ function sortCaseRows() {
 
 function caseTitle(row) {
   return row.querySelector("h2")?.textContent?.trim() || "";
+}
+
+function enhanceCaseRows() {
+  caseRows.forEach((row) => {
+    const actions = row.querySelector(".case-actions");
+    const slug = caseSlug(row);
+    if (!actions || !slug || actions.querySelector("[data-new-matter]")) {
+      return;
+    }
+
+    const badges = document.createElement("div");
+    badges.className = "matter-badges";
+    badges.dataset.matterBadges = slug;
+    badges.innerHTML = "<span>0 offen</span><span>0 warten</span><span>0 abgeschlossen</span>";
+
+    const newButton = document.createElement("button");
+    newButton.type = "button";
+    newButton.textContent = "Neu";
+    newButton.dataset.newMatter = slug;
+    newButton.addEventListener("click", () => openMatterForm(slug, caseTitle(row)));
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.textContent = "Akten öffnen";
+    openButton.dataset.openMatters = slug;
+    openButton.addEventListener("click", () => {
+      activeMatterUsecase = slug;
+      renderMatterList(slug);
+      showPanel("matters");
+    });
+
+    actions.prepend(openButton);
+    actions.prepend(newButton);
+    actions.prepend(badges);
+  });
+}
+
+function caseSlug(row) {
+  const kgLink = row.querySelector('a[href^="/kg/"]');
+  return kgLink?.getAttribute("href")?.replace("/kg/", "") || "";
 }
 
 function closeNavigation() {
@@ -241,6 +298,187 @@ function renderOperatorConfigStatus(payload, title = "Konfiguration geladen") {
       <li>Datenordner: ${escapeHtml(values.data_repo_path || "nicht gesetzt")} (${escapeHtml(dataRepoState)})</li>
     </ul>
   `;
+}
+
+async function loadMatters() {
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/matters"));
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    matterState = await response.json();
+    updateMatterBadges();
+  } catch (error) {
+    matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
+    updateMatterBadges();
+    if (matterList) {
+      matterList.dataset.status = "error";
+      matterList.innerHTML = `<p>Akten konnten nicht geladen werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`;
+    }
+  }
+}
+
+function updateMatterBadges() {
+  document.querySelectorAll("[data-matter-badges]").forEach((badges) => {
+    const counts = matterState.counts?.[badges.dataset.matterBadges] || {};
+    badges.innerHTML = `
+      <span>${counts.open || 0} offen</span>
+      <span>${counts.waiting || 0} warten</span>
+      <span>${counts.completed || 0} abgeschlossen</span>
+    `;
+  });
+}
+
+function openMatterForm(slug, title) {
+  activeMatterUsecase = slug;
+  if (matterFormTitle) {
+    matterFormTitle.textContent = `${title} starten`;
+  }
+  if (matterForm) {
+    setMatterField("usecase_slug", slug);
+    setMatterField("usecase_title", title);
+    setMatterField("title", `${title} Demo-Vorgang`);
+    setMatterField("client_name", "");
+    setMatterField("participant_name", "");
+    setMatterField("document_title", "");
+    setMatterField("status", "open");
+    setMatterField("status_reason", "");
+  }
+  if (matterFormStatus) {
+    matterFormStatus.dataset.status = "ready";
+    matterFormStatus.innerHTML = "<p>Nur Demo- oder Testdaten in das öffentliche Datenrepo eintragen.</p>";
+  }
+  showPanel("matter-new");
+}
+
+function setMatterField(name, value) {
+  const field = matterForm?.querySelector(`[data-matter-field="${name}"]`);
+  if (field) {
+    field.value = value;
+  }
+}
+
+async function saveMatter(event) {
+  event.preventDefault();
+  if (!matterForm || !matterFormStatus) {
+    return;
+  }
+  matterFormStatus.dataset.status = "running";
+  matterFormStatus.innerHTML = "<p>Akte wird im Datenrepo angelegt.</p>";
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/matters"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: readMatterFields() }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    matterFormStatus.dataset.status = "ready";
+    matterFormStatus.innerHTML = `<h3>Akte angelegt</h3><p>${escapeHtml(payload.matter?.aktenzeichen || payload.matter?.matter_id || "Neue Akte")} wurde im Datenrepo gespeichert.</p>`;
+    activeMatterUsecase = payload.matter?.usecase_slug || activeMatterUsecase;
+    await loadMatters();
+    renderMatterList(activeMatterUsecase);
+    showPanel("matters");
+  } catch (error) {
+    matterFormStatus.dataset.status = "error";
+    matterFormStatus.innerHTML = `<h3>Speichern fehlgeschlagen</h3><p>${escapeHtml(error.message || "Unbekannter Fehler")}</p>`;
+  }
+}
+
+function readMatterFields() {
+  const values = {};
+  matterForm.querySelectorAll("[data-matter-field]").forEach((field) => {
+    values[field.dataset.matterField] = field.value.trim();
+  });
+  return values;
+}
+
+function renderMatterList(slug = "") {
+  if (!matterList) {
+    return;
+  }
+  const title = slug ? usecaseTitleBySlug(slug) : "Alle Akten";
+  if (matterListTitle) {
+    matterListTitle.textContent = slug ? `${title}: vorhandene Akten` : "Vorhandene Akten";
+  }
+  const matters = (matterState.matters || []).filter((matter) => !slug || matter.usecase_slug === slug);
+  matterList.dataset.status = "ready";
+  if (!matters.length) {
+    matterList.innerHTML = `<p>Keine Akten für ${escapeHtml(title)} vorhanden.</p>`;
+    return;
+  }
+  matterList.innerHTML = matters.map((matter) => matterCardHtml(matter)).join("");
+  matterList.querySelectorAll("[data-matter-status-save]").forEach((button) => {
+    button.addEventListener("click", () => saveMatterStatus(button.dataset.matterStatusSave || ""));
+  });
+}
+
+function matterCardHtml(matter) {
+  const participants = Array.isArray(matter.participants) && matter.participants.length
+    ? matter.participants.join(", ")
+    : "keine Beteiligten";
+  const reason = matter.status_reason ? ` · ${matter.status_reason}` : "";
+  return `
+    <article class="matter-card">
+      <div>
+        <h3>${escapeHtml(matter.aktenzeichen || matter.matter_id)} · ${escapeHtml(matter.title)}</h3>
+        <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente</p>
+      </div>
+      <div class="matter-card-actions">
+        <select data-matter-status="${escapeHtml(matter.matter_id)}">
+          <option value="open"${matter.status === "open" ? " selected" : ""}>offen</option>
+          <option value="waiting"${matter.status === "waiting" ? " selected" : ""}>warten</option>
+          <option value="completed"${matter.status === "completed" ? " selected" : ""}>abgeschlossen</option>
+        </select>
+        <button class="button secondary" type="button" data-matter-status-save="${escapeHtml(matter.matter_id)}">Status speichern</button>
+      </div>
+    </article>
+  `;
+}
+
+async function saveMatterStatus(matterId) {
+  const selector = matterList?.querySelector(`[data-matter-status="${cssEscape(matterId)}"]`);
+  if (!selector) {
+    return;
+  }
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/matters/status"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ matter_id: matterId, status: selector.value }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    await loadMatters();
+    renderMatterList(activeMatterUsecase);
+  } catch (error) {
+    matterList.dataset.status = "error";
+    matterList.insertAdjacentHTML("afterbegin", `<p>Status konnte nicht gespeichert werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`);
+  }
+}
+
+function usecaseTitleBySlug(slug) {
+  const row = caseRows.find((candidate) => caseSlug(candidate) === slug);
+  return row ? caseTitle(row) : slug;
+}
+
+function statusLabelForMatter(status) {
+  return matterState.status_labels?.[status] || status;
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) {
+    return window.CSS.escape(value);
+  }
+  return String(value).replaceAll('"', '\\"');
 }
 
 document.querySelectorAll("[data-hardware-test]").forEach((hardwareTest) => {

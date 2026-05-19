@@ -59,6 +59,9 @@ can open the models directly.
 | `/api/kg/<slug>` | JSON structure of the KG editor view. |
 | `/api/operator-config` | Local operator configuration for the NaC fork Git remote and separate data repository folder. |
 | `POST /api/operator-config` | Saves local operator configuration without secrets or mandate data in the user configuration. |
+| `/api/matters` | Reads matters/cases from the configured data repository including status counts per use case. |
+| `POST /api/matters` | Creates a new demo matter in the configured data repository. |
+| `POST /api/matters/status` | Writes status changes for an existing demo matter to the data repository and journal. |
 | `/healthz` | Simple health check. |
 
 ## Safety Boundaries
@@ -96,4 +99,7 @@ This lets the office surface and model views run through the same local port
 without writing mandate data or credentials into the repository. The footer
 menu `Konfig` stores only local workstation values such as the NaC fork Git URL,
 data Git URL and data repository folder in the user configuration; it does not
-change Git remotes or clone repositories automatically.
+change Git remotes or clone repositories automatically. The use case cards also
+provide `Neu` and `Akten öffnen`; these functions write only to the configured
+demo data repository and track the statuses `offen`, `warten` and
+`abgeschlossen`.

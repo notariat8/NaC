@@ -8,8 +8,8 @@
     <meta name="theme-color" content="#f5f7f4">
     <meta name="robots" content="noindex">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/site.css?v=20260519-config">
-    <script src="assets/site.js?v=20260519-config" defer></script>
+    <link rel="stylesheet" href="assets/site.css?v=20260519-matters">
+    <script src="assets/site.js?v=20260519-matters" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#content">Zum Inhalt springen</a>
@@ -386,15 +386,15 @@
         <form class="config-form" data-config-form>
           <label>
             <span>NaC Fork-Git URL</span>
-            <input name="nac_fork_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="nac_fork_git_url" placeholder="https://github.com/ofunk/NaC.git">
+            <input name="nac_fork_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="nac_fork_git_url" placeholder="https://github.com/funktion8/NaC.git">
           </label>
           <label>
             <span>Daten-Git URL</span>
-            <input name="data_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="data_git_url" placeholder="https://github.com/ofunk/demo8notariat.git">
+            <input name="data_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="data_git_url" placeholder="https://github.com/funktion8/demo8notariat.git">
           </label>
           <label>
             <span>Lokaler Datenrepo-Ordner</span>
-            <input name="data_repo_path" type="text" autocomplete="off" spellcheck="false" data-config-field="data_repo_path" placeholder="C:\Users\ofunk\Documents\Projects\demo8notariat">
+            <input name="data_repo_path" type="text" autocomplete="off" spellcheck="false" data-config-field="data_repo_path" placeholder="C:\Users\ofunk\Documents\Projects\funktion8-demo8notariat">
           </label>
           <div class="config-actions">
             <button class="button primary" type="submit">Speichern</button>
@@ -403,6 +403,62 @@
         </form>
         <div class="config-status" data-config-status role="status" aria-live="polite">
           <p>Lokale Konfiguration wird geladen.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="neue-akte" aria-labelledby="matter-new-title" data-app-panel="matter-new">
+        <div class="section-heading">
+          <p class="section-kicker">Neue Akte</p>
+          <h2 id="matter-new-title" data-matter-form-title>Vorgang starten</h2>
+        </div>
+        <form class="matter-form" data-matter-form>
+          <input type="hidden" name="usecase_slug" data-matter-field="usecase_slug">
+          <input type="hidden" name="usecase_title" data-matter-field="usecase_title">
+          <label>
+            <span>Aktenbetreff</span>
+            <input name="title" type="text" autocomplete="off" data-matter-field="title" placeholder="z.B. Unterschriftsbeglaubigung Muster GmbH">
+          </label>
+          <label>
+            <span>Mandant / Auftraggeber</span>
+            <input name="client_name" type="text" autocomplete="off" data-matter-field="client_name" placeholder="synthetischer Name im Demo-Datenrepo">
+          </label>
+          <label>
+            <span>Beteiligte Person</span>
+            <input name="participant_name" type="text" autocomplete="off" data-matter-field="participant_name" placeholder="synthetischer Name im Demo-Datenrepo">
+          </label>
+          <label>
+            <span>Dokument / Unterlage</span>
+            <input name="document_title" type="text" autocomplete="off" data-matter-field="document_title" placeholder="z.B. Vollmacht zur Beglaubigung">
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status" data-matter-field="status">
+              <option value="open">offen</option>
+              <option value="waiting">warten</option>
+              <option value="completed">abgeschlossen</option>
+            </select>
+          </label>
+          <label>
+            <span>Statusgrund</span>
+            <input name="status_reason" type="text" autocomplete="off" data-matter-field="status_reason" placeholder="z.B. wartet auf Ausweis oder Unterlage">
+          </label>
+          <div class="matter-actions">
+            <button class="button primary" type="submit">Akte speichern</button>
+            <button class="button secondary" type="button" data-open-panel="cases">Abbrechen</button>
+          </div>
+        </form>
+        <div class="matter-status" data-matter-form-status role="status" aria-live="polite">
+          <p>Neue Akten werden in das konfigurierte Demo-Datenrepo geschrieben.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="akten" aria-labelledby="matters-title" data-app-panel="matters">
+        <div class="section-heading">
+          <p class="section-kicker">Akten</p>
+          <h2 id="matters-title" data-matter-list-title>Vorhandene Akten</h2>
+        </div>
+        <div class="matter-list" data-matter-list role="status" aria-live="polite">
+          <p>Akten werden aus dem konfigurierten Datenrepo geladen.</p>
         </div>
       </section>
     </main>

@@ -59,6 +59,9 @@ Operator-Webapp die Modelle direkt öffnen kann.
 | `/api/kg/<slug>` | JSON-Struktur der KG-Editor-View. |
 | `/api/operator-config` | Lokale Operator-Konfiguration für NaC-Fork-Git und getrennten Datenrepo-Ordner. |
 | `POST /api/operator-config` | Speichert lokale Operator-Konfiguration ohne Secrets oder Mandatsdaten in der Benutzerkonfiguration. |
+| `/api/matters` | Liest Akten/Vorgänge aus dem konfigurierten Datenrepo inklusive Statuszählern je Usecase. |
+| `POST /api/matters` | Legt eine neue Demo-Akte im konfigurierten Datenrepo an. |
+| `POST /api/matters/status` | Schreibt Statuswechsel für eine bestehende Demo-Akte ins Datenrepo und Journal. |
 | `/healthz` | einfacher Gesundheitscheck. |
 
 ## Sicherheitsgrenzen
@@ -98,4 +101,7 @@ Dadurch können Bürooberfläche und Modellansichten über denselben lokalen Por
 laufen, ohne Mandatsdaten oder Zugangsdaten ins Repo zu schreiben. Das
 Footer-Menü `Konfig` speichert nur lokale Arbeitsstationswerte wie
 NaC-Fork-Git-URL, Daten-Git-URL und Datenrepo-Ordner in der Benutzerkonfiguration;
-es ändert weder Git-Remotes noch klont es Repositories automatisch.
+es ändert weder Git-Remotes noch klont es Repositories automatisch. Die
+Vorgangskarten bieten zusätzlich `Neu` und `Akten öffnen`; diese Funktionen
+schreiben ausschließlich in das konfigurierte Demo-Datenrepo und führen die
+Status `offen`, `warten` und `abgeschlossen`.
