@@ -8,8 +8,8 @@
     <meta name="theme-color" content="#f5f7f4">
     <meta name="robots" content="noindex">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="assets/site.css?v=20260519-menu-footer">
-    <script src="assets/site.js?v=20260519-menu-footer" defer></script>
+    <link rel="stylesheet" href="assets/site.css?v=20260519-config">
+    <script src="assets/site.js?v=20260519-config" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#content">Zum Inhalt springen</a>
@@ -377,6 +377,34 @@
           <a class="button secondary" href="https://github.com/ofunk/NaC/tree/main/usecases">Usecase-Doku</a>
         </div>
       </section>
+
+      <section class="section app-panel is-hidden" id="konfig" aria-labelledby="konfig-title" data-app-panel="konfig">
+        <div class="section-heading">
+          <p class="section-kicker">Konfiguration</p>
+          <h2 id="konfig-title">Git-Ziele für Produkt und Daten setzen</h2>
+        </div>
+        <form class="config-form" data-config-form>
+          <label>
+            <span>NaC Fork-Git URL</span>
+            <input name="nac_fork_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="nac_fork_git_url" placeholder="https://github.com/ofunk/NaC.git">
+          </label>
+          <label>
+            <span>Daten-Git URL</span>
+            <input name="data_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="data_git_url" placeholder="https://github.com/ofunk/demo8notariat.git">
+          </label>
+          <label>
+            <span>Lokaler Datenrepo-Ordner</span>
+            <input name="data_repo_path" type="text" autocomplete="off" spellcheck="false" data-config-field="data_repo_path" placeholder="C:\Users\ofunk\Documents\Projects\demo8notariat">
+          </label>
+          <div class="config-actions">
+            <button class="button primary" type="submit">Speichern</button>
+            <button class="button secondary" type="button" data-config-reload>Neu laden</button>
+          </div>
+        </form>
+        <div class="config-status" data-config-status role="status" aria-live="polite">
+          <p>Lokale Konfiguration wird geladen.</p>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -384,6 +412,7 @@
       <nav aria-label="Systembereiche">
         <button type="button" data-open-panel="tests">Tests</button>
         <button type="button" data-open-panel="anbindungen">Anbindungen</button>
+        <button type="button" data-open-panel="konfig">Konfig</button>
         <button type="button" data-open-panel="handbuch">Handbuch</button>
       </nav>
     </footer>

@@ -57,6 +57,8 @@ Operator-Webapp die Modelle direkt öffnen kann.
 | `POST /api/bpmn/<modell>/xml` | Speichert BPMN-XML nur, wenn `base_sha256` zum aktuellen Repo-Stand passt. |
 | `/api/bpmn-moddle` | NaC-moddle-Descriptor für bpmn-js. |
 | `/api/kg/<slug>` | JSON-Struktur der KG-Editor-View. |
+| `/api/operator-config` | Lokale Operator-Konfiguration für NaC-Fork-Git und getrennten Datenrepo-Ordner. |
+| `POST /api/operator-config` | Speichert lokale Operator-Konfiguration ohne Secrets oder Mandatsdaten in der Benutzerkonfiguration. |
 | `/healthz` | einfacher Gesundheitscheck. |
 
 ## Sicherheitsgrenzen
@@ -93,4 +95,7 @@ Technisch dient [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) die
 statische Oberfläche aus [web/local-operator/](../../web/local-operator) aus
 und delegiert BPMN-/KG-Routen an [src/nac_web/server.py](../../src/nac_web/server.py).
 Dadurch können Bürooberfläche und Modellansichten über denselben lokalen Port
-laufen, ohne Mandatsdaten oder Zugangsdaten ins Repo zu schreiben.
+laufen, ohne Mandatsdaten oder Zugangsdaten ins Repo zu schreiben. Das
+Footer-Menü `Konfig` speichert nur lokale Arbeitsstationswerte wie
+NaC-Fork-Git-URL, Daten-Git-URL und Datenrepo-Ordner in der Benutzerkonfiguration;
+es ändert weder Git-Remotes noch klont es Repositories automatisch.

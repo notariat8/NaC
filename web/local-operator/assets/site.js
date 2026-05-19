@@ -9,6 +9,9 @@ const panelButtons = Array.from(document.querySelectorAll("[data-open-panel]"));
 const areaTitle = document.querySelector("[data-area-title]");
 const areaSummary = document.querySelector("[data-area-summary]");
 const areaCount = document.querySelector("[data-area-count]");
+const configForm = document.querySelector("[data-config-form]");
+const configReload = document.querySelector("[data-config-reload]");
+const configStatus = document.querySelector("[data-config-status]");
 let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
 
 const areaCopy = {
@@ -63,8 +66,17 @@ panelButtons.forEach((button) => {
   });
 });
 
+if (configForm) {
+  configForm.addEventListener("submit", saveOperatorConfig);
+}
+
+if (configReload) {
+  configReload.addEventListener("click", loadOperatorConfig);
+}
+
 showPanel("cases");
 filterCases();
+loadOperatorConfig();
 
 function showPanel(panelName) {
   panels.forEach((panel) => {
@@ -82,6 +94,10 @@ function showPanel(panelName) {
     button.classList.toggle("is-active", isActivePanel);
     button.setAttribute("aria-pressed", String(isActivePanel));
   });
+
+  if (panelName === "konfig") {
+    loadOperatorConfig();
+  }
 }
 
 function filterCases() {
@@ -135,6 +151,96 @@ function closeNavigation() {
 
   siteNav.classList.remove("open");
   navToggle.setAttribute("aria-expanded", "false");
+}
+
+async function loadOperatorConfig() {
+  if (!configForm || !configStatus) {
+    return;
+  }
+
+  configStatus.dataset.status = "running";
+  configStatus.innerHTML = "<p>Lokale Konfiguration wird geladen.</p>";
+
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/operator-config"));
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    const payload = await response.json();
+    fillOperatorConfig(payload.values || {});
+    renderOperatorConfigStatus(payload);
+  } catch (error) {
+    configStatus.dataset.status = "error";
+    configStatus.innerHTML = `<h3>Konfiguration nicht erreichbar</h3><p>Lokalen Adapter starten: <code>python scripts\\nac.py operator --open</code></p>`;
+  }
+}
+
+async function saveOperatorConfig(event) {
+  event.preventDefault();
+  if (!configForm || !configStatus) {
+    return;
+  }
+
+  configStatus.dataset.status = "running";
+  configStatus.innerHTML = "<p>Lokale Konfiguration wird gespeichert.</p>";
+
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/operator-config"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: readOperatorConfigFields() }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    fillOperatorConfig(payload.values || {});
+    renderOperatorConfigStatus(payload, "Konfiguration gespeichert");
+  } catch (error) {
+    configStatus.dataset.status = "error";
+    configStatus.innerHTML = `<h3>Speichern fehlgeschlagen</h3><p>${escapeHtml(error.message || "Unbekannter Fehler")}</p>`;
+  }
+}
+
+function readOperatorConfigFields() {
+  const values = {};
+  configForm.querySelectorAll("[data-config-field]").forEach((field) => {
+    values[field.dataset.configField] = field.value.trim();
+  });
+  return values;
+}
+
+function fillOperatorConfig(values) {
+  if (!configForm) {
+    return;
+  }
+  configForm.querySelectorAll("[data-config-field]").forEach((field) => {
+    field.value = values[field.dataset.configField] || "";
+  });
+}
+
+function renderOperatorConfigStatus(payload, title = "Konfiguration geladen") {
+  if (!configStatus) {
+    return;
+  }
+  const values = payload.values || {};
+  const status = payload.status || {};
+  const dataRepoState = status.data_repo_exists
+    ? `${status.data_repo_git_present ? "Git-Repo" : "Ordner ohne Git"}`
+    : "Ordner fehlt lokal";
+  const dataRemote = status.data_repo_remote || values.data_git_url || "nicht gesetzt";
+
+  configStatus.dataset.status = "ready";
+  configStatus.innerHTML = `
+    <h3>${escapeHtml(title)}</h3>
+    <ul>
+      <li>NaC Git: ${escapeHtml(values.nac_fork_git_url || status.nac_git_origin || "nicht gesetzt")}</li>
+      <li>Daten-Git: ${escapeHtml(dataRemote)}</li>
+      <li>Datenordner: ${escapeHtml(values.data_repo_path || "nicht gesetzt")} (${escapeHtml(dataRepoState)})</li>
+    </ul>
+  `;
 }
 
 document.querySelectorAll("[data-hardware-test]").forEach((hardwareTest) => {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 import threading
@@ -28,6 +29,9 @@ SITE_ROOT = REPO_ROOT / "web" / "local-operator"
 READINESS_SCRIPT = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 STARTUP_SCRIPT = REPO_ROOT / "scripts" / "startup_check.py"
 TEST_LOG = REPO_ROOT / "logs" / "test-log.jsonl"
+DEFAULT_DATA_REPO = REPO_ROOT.parent / "demo8notariat"
+DEFAULT_DATA_REPO_URL = "https://github.com/ofunk/demo8notariat.git"
+OPERATOR_CONFIG = (Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".nac") / "NaC" / "operator-config.json")
 LOCAL_NO_STORE_HEADERS = (
     ("Cache-Control", "no-store, max-age=0"),
     ("Pragma", "no-cache"),
@@ -85,6 +89,9 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/healthz":
                 self._send_json({"status": "ok", "localhost_only": True})
                 return
+            if route == "/api/operator-config":
+                self._send_json(build_operator_config_payload())
+                return
             if is_local_web_route(route):
                 self._send_local_web_response(local_web_app.handle(self.path))
                 return
@@ -104,6 +111,14 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
                 return
             if route.startswith("/api/bpmn/"):
                 self._send_local_web_response(local_web_app.handle_post(self.path, self._read_request_body()))
+                return
+            if route == "/api/operator-config":
+                try:
+                    payload = save_operator_config_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload)
                 return
             if route != "/api/hardware-readiness":
                 self.send_error(HTTPStatus.NOT_FOUND)
@@ -186,6 +201,113 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 
 def is_local_web_route(route: str) -> bool:
     return route == "/api/bpmn-moddle" or route.startswith(("/bpmn/", "/kg/", "/api/bpmn/", "/api/kg/"))
+
+
+def build_operator_config_payload(config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    values = load_operator_config(config_path)
+    data_repo = Path(values["data_repo_path"]).expanduser()
+    data_repo_exists = data_repo.exists()
+    data_repo_git = data_repo / ".git"
+    return {
+        "schema_version": "nac.operator-config/v1",
+        "config_path": str(config_path),
+        "values": values,
+        "status": {
+            "nac_repo_path": str(REPO_ROOT),
+            "nac_git_origin": git_origin(REPO_ROOT),
+            "data_repo_exists": data_repo_exists,
+            "data_repo_git_present": data_repo_git.exists(),
+            "data_repo_remote": git_origin(data_repo) if data_repo_git.exists() else None,
+            "demo_data_repo_default": str(DEFAULT_DATA_REPO),
+        },
+    }
+
+
+def load_operator_config(config_path: Path = OPERATOR_CONFIG) -> dict[str, str]:
+    values = default_operator_config()
+    if config_path.is_file():
+        try:
+            raw = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            raw = {}
+        configured = raw.get("values") if isinstance(raw, dict) else None
+        if isinstance(configured, dict):
+            for key in values:
+                if key in configured:
+                    values[key] = clean_config_value(configured[key])
+    return values
+
+
+def default_operator_config() -> dict[str, str]:
+    return {
+        "nac_fork_git_url": git_origin(REPO_ROOT) or "",
+        "data_git_url": git_origin(DEFAULT_DATA_REPO) or tenant_manifest_remote(DEFAULT_DATA_REPO) or DEFAULT_DATA_REPO_URL,
+        "data_repo_path": str(DEFAULT_DATA_REPO),
+    }
+
+
+def save_operator_config_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    try:
+        payload = json.loads(body.decode("utf-8") if body else "{}")
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Ungültiges JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Konfiguration muss ein JSON-Objekt sein.")
+    return save_operator_config(payload, config_path=config_path)
+
+
+def save_operator_config(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    current = load_operator_config(config_path)
+    values = payload.get("values") if isinstance(payload.get("values"), dict) else payload
+    for key in current:
+        if key in values:
+            current[key] = clean_config_value(values[key])
+    document = {
+        "schema_version": "nac.operator-config/v1",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "values": current,
+    }
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return build_operator_config_payload(config_path)
+
+
+def clean_config_value(value: Any) -> str:
+    text = str(value or "").strip()
+    if len(text) > 2048:
+        raise ValueError("Konfigurationswert ist zu lang.")
+    if any(ord(char) < 32 for char in text):
+        raise ValueError("Konfigurationswert enthält Steuerzeichen.")
+    return text
+
+
+def tenant_manifest_remote(repo: Path) -> str | None:
+    manifest = repo / ".nac-tenant.json"
+    if not manifest.is_file():
+        return None
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    remote = payload.get("remote_url") if isinstance(payload, dict) else None
+    return str(remote) if remote else None
+
+
+def git_origin(repo: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=repo,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
 
 
 def run_hardware_readiness() -> dict[str, Any]:

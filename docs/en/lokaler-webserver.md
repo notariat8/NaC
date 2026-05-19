@@ -57,6 +57,8 @@ can open the models directly.
 | `POST /api/bpmn/<model>/xml` | Saves BPMN XML only when `base_sha256` still matches the current repository state. |
 | `/api/bpmn-moddle` | NaC moddle descriptor for bpmn-js. |
 | `/api/kg/<slug>` | JSON structure of the KG editor view. |
+| `/api/operator-config` | Local operator configuration for the NaC fork Git remote and separate data repository folder. |
+| `POST /api/operator-config` | Saves local operator configuration without secrets or mandate data in the user configuration. |
 | `/healthz` | Simple health check. |
 
 ## Safety Boundaries
@@ -91,4 +93,7 @@ Technically, [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) serves
 the static surface from [web/local-operator/](../../web/local-operator) and
 delegates BPMN/KG routes to [src/nac_web/server.py](../../src/nac_web/server.py).
 This lets the office surface and model views run through the same local port
-without writing mandate data or credentials into the repository.
+without writing mandate data or credentials into the repository. The footer
+menu `Konfig` stores only local workstation values such as the NaC fork Git URL,
+data Git URL and data repository folder in the user configuration; it does not
+change Git remotes or clone repositories automatically.

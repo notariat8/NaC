@@ -4,6 +4,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -71,6 +72,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn("Handbuch", header_nav)
         self.assertIn("Tests", footer_nav)
         self.assertIn("Anbindungen", footer_nav)
+        self.assertIn("Konfig", footer_nav)
         self.assertIn("Handbuch", footer_nav)
         self.assertIn('data-area-tab="immobilienrecht"', html)
         self.assertIn('data-area-tab="gesellschaft-register"', html)
@@ -81,6 +83,12 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('data-app-panel="tests"', html)
         self.assertIn('data-app-panel="anbindungen"', html)
         self.assertIn('data-app-panel="handbuch"', html)
+        self.assertIn('data-app-panel="konfig"', html)
+        self.assertIn('data-config-form', html)
+        self.assertIn('data-config-field="nac_fork_git_url"', html)
+        self.assertIn('data-config-field="data_git_url"', html)
+        self.assertIn('data-config-field="data_repo_path"', html)
+        self.assertIn("https://github.com/ofunk/demo8notariat.git", html)
         self.assertNotIn('href="#bpmn-modelle"', html)
         self.assertNotIn('href="#tests"', html)
         self.assertNotIn('href="#anbindungen"', html)
@@ -108,6 +116,9 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("filterCases", js)
         self.assertIn("showPanel", js)
         self.assertIn("sortCaseRows", js)
+        self.assertIn("loadOperatorConfig", js)
+        self.assertIn("saveOperatorConfig", js)
+        self.assertIn("/api/operator-config", js)
         self.assertNotIn("Steuer-Readiness", js)
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
@@ -128,6 +139,35 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
+
+    def test_operator_config_allows_arbitrary_git_and_data_repo_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "operator-config.json"
+            payload = bridge.save_operator_config(
+                {
+                    "values": {
+                        "nac_fork_git_url": "ssh://git.example.invalid/nac/fork.git",
+                        "data_git_url": "git@example.invalid:any/demo-data.git",
+                        "data_repo_path": str(Path(temp_dir) / "data-store"),
+                    }
+                },
+                config_path=config_path,
+            )
+
+            self.assertTrue(config_path.is_file())
+            self.assertEqual(payload["values"]["nac_fork_git_url"], "ssh://git.example.invalid/nac/fork.git")
+            self.assertEqual(payload["values"]["data_git_url"], "git@example.invalid:any/demo-data.git")
+            self.assertEqual(payload["status"]["data_repo_exists"], False)
+
+            reloaded = bridge.load_operator_config(config_path)
+            self.assertEqual(reloaded["data_git_url"], "git@example.invalid:any/demo-data.git")
+
+    def test_operator_config_defaults_to_demo8notariat(self) -> None:
+        payload = bridge.build_operator_config_payload(config_path=Path("missing-operator-config.json"))
+
+        self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
+        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")
+        self.assertTrue(payload["values"]["data_repo_path"].endswith("demo8notariat"))
 
     def test_operator_bridge_disables_local_cache(self) -> None:
         self.assertIn(("Cache-Control", "no-store, max-age=0"), bridge.LOCAL_NO_STORE_HEADERS)
