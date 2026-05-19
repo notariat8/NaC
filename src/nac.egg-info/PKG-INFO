@@ -20,6 +20,11 @@ Der Kern ist einfach: KI hilft beim Strukturieren, Menschen entscheiden, Git
 dokumentiert, Python prüft, und echte Mandatsdaten bleiben außerhalb dieses
 öffentlichen Repositories.
 
+NaC ist zugleich als Grundlage für ein auditierbares Qualitätsmanagementsystem
+gedacht: Die QMS-/ISO-9001-Schicht ordnet Prozesse, Rollen, Qualitätsziele,
+interne Audits, Abweichungen und Nachweise so, dass ein Notariat daraus eine
+spätere ISO-9001-Prüfung vorbereiten kann.
+
 Herausgeber und Maintainer: [ofunk](https://github.com/ofunk). Weitere
 Einordnung steht in [HERAUSGEBER.md](HERAUSGEBER.md).
 
@@ -38,12 +43,13 @@ geprüft.
 | Notariat und fachliche Entscheidung | [docs/de/notar-start.md](docs/de/notar-start.md) | Nutzen, Grenzen, Datenschutz, erster Prüflauf und Entscheidung, ob ein privater Fork sinnvoll ist. |
 | Office-Admin und IT-Betrieb | [docs/de/betriebsstart.md](docs/de/betriebsstart.md) | Klonen, lokale Checks, private Betriebsumgebung, Rollen, Arbeitsplatz- und Plugin-Voraussetzungen. |
 | Fachsystem- und Integrationsseite | [docs/de/integration-start.md](docs/de/integration-start.md) | Wie bestehende Fachsysteme, lokale Middleware, Portale und Connectoren an NaC angebunden werden können. |
-| Prüfung und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
+| Prüfung, QMS und Standardisierung | [docs/de/pruefung-standardisierung-start.md](docs/de/pruefung-standardisierung-start.md) | Wie Kontroll-, Nachweis-, ISO-9001-, Zertifizierungs- und Standardisierungsfragen am Repo nachvollzogen werden. |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart für Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
 Schnelle Orientierung für Nicht-Technik:
 [NaC-CLI](docs/de/cli.md), [Ausführungsmodell](docs/de/ausfuehrungsmodell.md),
-[Reifegrad](docs/de/reifegrad.md), [Glossar](docs/de/glossar.md) und
+[QMS-/ISO-9001-Schicht](qms/README.md), [Reifegrad](docs/de/reifegrad.md),
+[Glossar](docs/de/glossar.md) und
 [Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
 
 Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
@@ -58,6 +64,8 @@ Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
   Fachsysteme.
 - Es stellt Plugins, Workflow-Verträge und deterministische Python-Prüfungen
   für AI-first-Betrieb bereit.
+- Es bereitet eine QMS-/ISO-9001-Schicht vor, die Qualitätsziele, Rollen,
+  Prozesslandkarte, interne Audits und Nachweise versioniert greifbar macht.
 - Es macht Freigaben, offene Fragen, technische Readiness, Datenschutzgrenzen und
   Nachweise nachvollziehbar.
 - Es verhindert im Musterrepo echte personenbezogene Daten, Secrets, PINs,
@@ -75,7 +83,7 @@ Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
 
 ## Produktstruktur
 
-Dieses Repository trennt drei Produktbereiche:
+Dieses Repository trennt vier Produktbereiche:
 
 - [plugins/](plugins): installierbare Plugin-Artefakte für GPT-Store-Prüfung,
   Workspace-Installation oder lokale Integration.
@@ -86,6 +94,9 @@ Dieses Repository trennt drei Produktbereiche:
   Online-GmbH-Gründung, Immobilienkaufvertrag, Handelsregisteranmeldung oder
   Testament. Jeder Usecase besitzt seine eigene statische KG/DB für offene
   Fragen, Dokumente, Entscheidungen, Gates und Nachweisreferenzen.
+- [qms/](qms): QMS-/ISO-9001-Schicht mit Qualitätspolitik, Qualitätszielen,
+  Prozesslandkarte, Rollen, Auditprogramm, Abweichungsschema und
+  Managementbewertung.
 
 Weitere Dokumentation:
 
