@@ -30,6 +30,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("NaC Status", output)
         self.assertIn("nac doctor --profile strict", output)
         self.assertIn("nac web", output)
+        self.assertIn("nac operator --open", output)
 
     def test_config_list_includes_language_policy(self) -> None:
         rc, output = run_cli("config", "list")

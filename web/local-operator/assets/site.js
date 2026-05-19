@@ -1,0 +1,227 @@
+const navToggle = document.querySelector(".nav-toggle");
+const siteNav = document.querySelector(".site-nav");
+
+if (navToggle && siteNav) {
+  navToggle.addEventListener("click", () => {
+    const isOpen = siteNav.classList.toggle("open");
+    navToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+}
+
+const hardwareTest = document.querySelector("[data-hardware-test]");
+
+if (hardwareTest) {
+  const trigger = hardwareTest.querySelector("[data-hardware-test-trigger]");
+  const result = hardwareTest.querySelector("[data-hardware-test-result]");
+
+  trigger?.addEventListener("click", async () => {
+    if (!result) {
+      return;
+    }
+
+    trigger.disabled = true;
+    result.dataset.status = "running";
+    result.innerHTML = `<p>${hardwareTest.dataset.runningLabel}</p>`;
+
+    try {
+      const response = await fetch(hardwareBridgeUrl("/api/hardware-readiness"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requested_by: "nac-local-operator-webapp" }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`);
+      }
+
+      const payload = await response.json();
+      renderHardwareResult(result, payload, hardwareTest.dataset.emptyLabel || "No detailed checks received.");
+    } catch (error) {
+      result.dataset.status = "error";
+      result.innerHTML = `<h3>${hardwareTest.dataset.unavailableLabel}</h3><p>CLI-Bridge fuer diese lokale Operator-Webapp starten: <code>python scripts\\nac.py operator --open</code></p>`;
+    } finally {
+      trigger.disabled = false;
+    }
+  });
+}
+
+function hardwareBridgeUrl(path) {
+  const isLocalHttp = (window.location.protocol === "http:" || window.location.protocol === "https:")
+    && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+  if (isLocalHttp) {
+    return path;
+  }
+
+  return `http://127.0.0.1:8766${path}`;
+}
+
+function renderHardwareResult(target, payload, emptyLabel) {
+  const locale = currentLocale();
+  const status = payload?.overall_status || "unknown";
+  const checks = Array.isArray(payload?.readiness?.checks) ? payload.readiness.checks : [];
+  const visibleChecks = checks.slice(0, 8);
+  target.dataset.status = status;
+
+  const counts = countCheckStatuses(checks);
+  const summary = [
+    `${uiText(locale, "passed")}: ${counts.passed || 0}`,
+    `${uiText(locale, "manual")}: ${counts.manual_review || 0}`,
+    `${uiText(locale, "failed")}: ${(counts.failed || 0) + (counts.blocked || 0)}`,
+  ].join(" · ");
+
+  const checkItems = visibleChecks.map((check) => {
+    const copy = localizedCheck(check, locale);
+    const title = escapeHtml(copy.title);
+    const checkStatus = escapeHtml(statusLabel(check.status || "unknown", locale));
+    const message = escapeHtml(copy.message);
+    return `<li><span class="hardware-status">${checkStatus}</span> ${title}<br>${message}</li>`;
+  }).join("");
+
+  const warnings = Array.isArray(payload?.startup_check?.warnings) ? payload.startup_check.warnings : [];
+  const warningText = warnings.length
+    ? `<div class="hardware-warning"><strong>${uiText(locale, "notes")}</strong><ul>${warnings.slice(0, 3).map((warning) => `<li>${escapeHtml(cleanWarning(warning))}</li>`).join("")}</ul></div>`
+    : "";
+  const hint = status === "manual_review"
+    ? `<p class="hardware-hint">${uiText(locale, "manualHint")}</p>`
+    : "";
+
+  target.innerHTML = `
+    <h3>${uiText(locale, "overallStatus")}: ${escapeHtml(statusLabel(status, locale))}</h3>
+    <p class="hardware-summary">${escapeHtml(summary)}</p>
+    ${hint}
+    ${warningText}
+    ${checkItems ? `<ul class="hardware-check-list">${checkItems}</ul>` : `<p>${escapeHtml(emptyLabel)}</p>`}
+  `;
+}
+
+function currentLocale() {
+  return (document.documentElement.lang || "de").toLowerCase().startsWith("en") ? "en" : "de";
+}
+
+function countCheckStatuses(checks) {
+  return checks.reduce((counts, check) => {
+    const status = check?.status || "unknown";
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function statusLabel(status, locale) {
+  const labels = {
+    de: {
+      passed: "erfolgreich",
+      ready: "bereit",
+      manual_review: "manuelle Pruefung erforderlich",
+      blocked: "blockiert",
+      failed: "fehlgeschlagen",
+      error: "Fehler",
+      running: "laeuft",
+      unknown: "unbekannt",
+    },
+    en: {
+      passed: "passed",
+      ready: "ready",
+      manual_review: "manual review required",
+      blocked: "blocked",
+      failed: "failed",
+      error: "error",
+      running: "running",
+      unknown: "unknown",
+    },
+  };
+  return labels[locale][status] || status;
+}
+
+function uiText(locale, key) {
+  const labels = {
+    de: {
+      overallStatus: "Gesamtstatus",
+      passed: "Erfolgreich",
+      manual: "Manuell offen",
+      failed: "Fehler",
+      notes: "Hinweise",
+      manualHint: "Die lokale Hardware-Basis ist teilweise erfolgreich. Fuer die fachliche Freigabe bleiben manuelle Bestaetigungen oder XNP-/SAK-/secureFramework-Pfade offen.",
+    },
+    en: {
+      overallStatus: "Overall status",
+      passed: "Passed",
+      manual: "Manual",
+      failed: "Failed",
+      notes: "Notes",
+      manualHint: "The local hardware baseline is partially successful. Domain approval still needs manual confirmations or XNP/SAK/secureFramework paths.",
+    },
+  };
+  return labels[locale][key] || key;
+}
+
+function localizedCheck(check, locale) {
+  const fallback = {
+    title: check.title || check.id || "Check",
+    message: check.message || "",
+  };
+  const copy = {
+    de: {
+      bnotk_card_present: {
+        title: "BNotK Chip-/Signaturkarte",
+        message: "Die Verfuegbarkeit der Karte muss manuell bestaetigt werden.",
+      },
+      rfid_disabled: {
+        title: "RFID fuer BNotK-Chipkartenworkflow deaktiviert",
+        message: "RFID-off oder Nichtnutzung muss manuell bestaetigt werden.",
+      },
+      windows_driver_stack: {
+        title: "Windows REINER SCT Treiberstack",
+        message: "DriverPackage und SmartCardReader-Treiberanbieter sind sichtbar.",
+      },
+      windows_morris_stack: {
+        title: "Windows morris Browser-Middleware",
+        message: "REINER SCT morris ist installiert und laeuft lokal.",
+      },
+      windows_morris_loopback_api: {
+        title: "Windows morris Loopback-API",
+        message: "morris erreicht PC/SC und meldet einen REINER SCT/cyberJack-Leser.",
+      },
+      pcsc_service: {
+        title: "PC/SC-Dienst",
+        message: "Der Windows-Smartcard-Dienst laeuft.",
+      },
+      reader_detection: {
+        title: "Kartenleser-Erkennung",
+        message: "Mindestens ein relevanter lokaler Kartenleser wurde erkannt.",
+      },
+      sak_or_xnp_card_path: {
+        title: "BNotK SAK lite oder XNP-Kartenpfad",
+        message: "SAK-lite oder XNP-Kartenpfad wurde nicht automatisch erkannt.",
+      },
+      secureframework: {
+        title: "secureFramework",
+        message: "secureFramework wurde nicht automatisch erkannt.",
+      },
+      xnp_local_interface: {
+        title: "XNP-Localhost-Schnittstelle",
+        message: "Im erwarteten Portbereich wurde keine XNP-Localhost-Schnittstelle erreicht.",
+      },
+      ausweisapp_status: {
+        title: "AusweisApp-Status",
+        message: "Der lokale AusweisApp-Statusendpunkt ist nicht erreichbar.",
+      },
+    },
+  };
+  return copy[locale]?.[check.id] || fallback;
+}
+
+function cleanWarning(warning) {
+  return String(warning).replace(/^WARN:\s*/, "");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}

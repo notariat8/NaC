@@ -80,6 +80,11 @@ stateDiagram-v2
 - uses the Python CLI entry point,
 - is suitable for bot calls from an LLM frontend.
 
+The local operator webapp is an operator channel for workstation gates. It does
+not execute NaC remotely. It talks to a `127.0.0.1` bridge started through
+`nac operator --open`; the bridge runs approved local check scripts in the
+workspace and returns minimized readiness metadata.
+
 ### `monthly-close.yml`
 
 - runs periodically or manually,
@@ -139,3 +144,5 @@ execution location for NaC.
 - `schema_tools.py`: lightweight validation against JSON schemas.
 - `engine.py`: orchestration, idempotency check and monthly close.
 - `cli.py`: command-line interface for local and CI runs.
+- `scripts/nac_hw_bridge.py`: localhost bridge started through `nac operator`
+  for the local operator webapp and hardware-readiness checks.

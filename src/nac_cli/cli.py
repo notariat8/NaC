@@ -55,12 +55,16 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.set_defaults(func=command_doctor)
 
     web = subparsers.add_parser("web", help="Startet den lokalen NaC-Webserver.")
-    add_web_args(web)
+    add_web_args(web, default_port=DEFAULT_PORT)
     web.set_defaults(func=command_web)
 
     preview = subparsers.add_parser("preview", help="Alias für `nac web`.")
-    add_web_args(preview)
+    add_web_args(preview, default_port=DEFAULT_PORT)
     preview.set_defaults(func=command_web)
+
+    operator = subparsers.add_parser("operator", help="Startet die lokale Operator-Webapp mit Hardware-Bridge.")
+    add_web_args(operator, default_port=8766)
+    operator.set_defaults(func=command_operator)
 
     kg = subparsers.add_parser("kg", help="Steuert usecase-lokale Knowledge Graphs.")
     kg.add_argument("--format", choices=["text", "json"], default="text")
@@ -123,9 +127,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def add_web_args(parser: argparse.ArgumentParser) -> None:
+def add_web_args(parser: argparse.ArgumentParser, default_port: int) -> None:
     parser.add_argument("--host", default="127.0.0.1", help="Bind-Adresse. Standard: 127.0.0.1.")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port. Standard: {DEFAULT_PORT}.")
+    parser.add_argument("--port", type=int, default=default_port, help=f"Port. Standard: {default_port}.")
     parser.add_argument("--open", action="store_true", help="Browser nach Serverstart öffnen.")
 
 
@@ -190,6 +194,7 @@ def command_status(args: argparse.Namespace) -> int:
         "commands": {
             "quality_gate": "nac doctor --profile strict",
             "local_web": "nac web",
+            "local_operator": "nac operator --open",
             "kg_status": "nac kg status",
             "bpmn_validate": "nac bpmn validate",
             "config_validate": "nac config validate",
@@ -233,6 +238,21 @@ def command_web(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     run_server(repo_root, args.host, args.port, open_browser=args.open)
     return 0
+
+
+def command_operator(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    return run_script(
+        repo_root,
+        "scripts/nac_hw_bridge.py",
+        [
+            "--host",
+            args.host,
+            "--port",
+            str(args.port),
+            *optional_flag(args.open, "--open"),
+        ],
+    )
 
 
 def command_kg(args: argparse.Namespace) -> int:

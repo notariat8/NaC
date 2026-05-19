@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NaC Lokale Operator-Webapp</title>
+    <meta name="description" content="Lokale NaC Operator-Webapp fuer Hardware-Readiness, Governance-Pruefung und Artefaktuebersicht im genehmigten Arbeitsplatz.">
+    <meta name="theme-color" content="#f5f7f4">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/site.css">
+    <script src="assets/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Zum Inhalt springen</a>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="NaC lokale Operator-Webapp">
+        <img class="brand-logo" src="assets/funktion8-logo.png" alt="" aria-hidden="true">
+        <span>
+          <strong>NaC lokal</strong>
+          <small>Operator-Webapp</small>
+        </span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Navigation oeffnen" aria-expanded="false" aria-controls="site-nav">☰</button>
+      <nav class="site-nav" id="site-nav" aria-label="Hauptnavigation">
+        <a href="#modell">Modell</a>
+        <a href="#hardware-test">HW-Test</a>
+        <a href="#governance">Governance</a>
+        <a href="#artefakte">Artefakte</a>
+        <a href="/api/healthz">Bridge</a>
+      </nav>
+    </header>
+
+    <main id="content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <p class="eyebrow">Lokale NaC-Arbeitsplatzoberflaeche</p>
+          <h1 id="hero-title">Notariat as Code lokal pruefen</h1>
+          <p class="lead">Diese Operator-Webapp liegt im NaC-Repository und nutzt nur die lokal per CLI gestartete Bridge auf <code>127.0.0.1</code>. Sie prueft Arbeitsplatz-Gates, zeigt minimierte Readiness-Metadaten und schreibt Testlog-Eintraege ohne PINs, Kartendaten oder Secrets.</p>
+          <div class="hero-actions" aria-label="Primaere Aktionen">
+            <a class="button primary" href="#modell">Betriebsmodell ansehen</a>
+            <a class="button secondary" href="#hardware-test">HW-Test starten</a>
+          </div>
+          <dl class="hero-facts" aria-label="NaC Kurzstatus">
+            <div>
+              <dt>Quelle</dt>
+              <dd>NaC-Repo</dd>
+            </div>
+            <div>
+              <dt>Aenderungsfluss</dt>
+              <dd>Enterprise GitOps</dd>
+            </div>
+            <div>
+              <dt>Ausfuehrung</dt>
+              <dd>Lokaler Notariatsarbeitsplatz</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="band intro" aria-label="Positionierung">
+        <div class="content-grid two">
+          <div>
+            <p class="section-kicker">Zielbild</p>
+            <h2>Ein lokaler Kontrollpunkt fuer notarielle Arbeitsplatz-Gates.</h2>
+          </div>
+          <p>Die Webapp gehoert zum NaC-Hauptrepo. Oeffentliche Website-Checkouts sind keine Laufzeitabhaengigkeit. Hardware-nahe Tests bleiben lokal: Die Webapp klickt nur die lokale Bridge an, die freigegebene CLI-Pruefskripte im Workspace startet.</p>
+        </div>
+      </section>
+
+      <section class="section" id="modell" aria-labelledby="modell-title">
+        <div class="section-heading">
+          <p class="section-kicker">Betriebsmodell</p>
+          <h2 id="modell-title">Vom lokalen Check zum versionierten Nachweis.</h2>
+        </div>
+        <div class="card-grid">
+          <article class="card">
+            <span class="card-number">01</span>
+            <h3>Lokale Ausfuehrung</h3>
+            <p>Die Bridge wird per CLI gestartet, startet die freigegebenen lokalen Pruefskripte im NaC-Workspace und bindet standardmaessig nur an <code>127.0.0.1</code>.</p>
+          </article>
+          <article class="card">
+            <span class="card-number">02</span>
+            <h3>Minimierter Nachweis</h3>
+            <p>Ergebnisse werden als Status, Zaehler und nicht-sensitive Metadaten angezeigt. Rohdaten, PINs, Zertifikate und API-Keys bleiben ausserhalb der Oberflaeche.</p>
+          </article>
+          <article class="card">
+            <span class="card-number">03</span>
+            <h3>Governance</h3>
+            <p>Ein offener manueller Status ist kein Erfolg. Fachliche Freigabe entsteht erst durch dokumentierte Pruefung, Commit, Review und Merge in den Zielbranch.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section hardware-test" id="hardware-test" aria-labelledby="hardware-test-title" data-hardware-test data-running-label="HW-Test laeuft lokal." data-ready-label="Lokale Bridge bereit." data-unavailable-label="Lokale Bridge nicht erreichbar." data-error-label="HW-Test fehlgeschlagen." data-empty-label="Keine Detailchecks empfangen.">
+        <div class="section-heading">
+          <p class="section-kicker">Lokaler Arbeitsplatz</p>
+          <h2 id="hardware-test-title">Kartenleser, morris und XNP-Pfad pruefen.</h2>
+        </div>
+        <div class="hardware-panel">
+          <div>
+            <h3>Hardware-Pruefung</h3>
+            <p>Der Test prueft lokale Readiness ueber <code>127.0.0.1</code>. PINs, Kartendaten, XNP-API-Keys und Secrets werden nicht angezeigt.</p>
+          </div>
+          <button class="button primary hardware-test-button" type="button" data-hardware-test-trigger>HW-Test starten</button>
+        </div>
+        <div class="hardware-result" data-hardware-test-result role="status" aria-live="polite">
+          <p>CLI-Bridge fuer die lokale Operator-Webapp starten: <code>python scripts\nac.py operator --open</code>. Ohne Bridge bleibt der HW-Test in der Webapp deaktiviert.</p>
+        </div>
+      </section>
+
+      <section class="band" id="governance" aria-labelledby="governance-title">
+        <div class="section-heading">
+          <p class="section-kicker">Governance</p>
+          <h2 id="governance-title">Regeln zuerst, Automatisierung danach.</h2>
+        </div>
+        <div class="governance-list">
+          <div>
+            <h3>Recht und Regulierung</h3>
+            <p>Gesetzliche, regulatorische und revisionssichere Anforderungen haben Vorrang vor Automatisierungskomfort.</p>
+          </div>
+          <div>
+            <h3>Datenschutz und AVV</h3>
+            <p>Keine echten Secrets oder personenbezogenen Daten im Repo. SaaS-Verarbeitung mit personenbezogenen Daten erfordert AVV-Pruefung.</p>
+          </div>
+          <div>
+            <h3>Lokaler Arbeitsplatz</h3>
+            <p>NaC fuehrt notarielle Gates lokal im genehmigten Workspace aus. Omnistation ist kein Ausfuehrungsort fuer NaC.</p>
+          </div>
+          <div>
+            <h3>Mehrsprachigkeit</h3>
+            <p>Deutsch ist fuer deutsches Recht und notarielle Usecases fuehrend; Englisch dient als Orientierung und Spiegelung.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="artefakte" aria-labelledby="artefakte-title">
+        <div class="section-heading">
+          <p class="section-kicker">Artefakte</p>
+          <h2 id="artefakte-title">Die Arbeitsflaechen sind bewusst getrennt.</h2>
+        </div>
+        <div class="artifact-layout">
+          <article>
+            <h3>Plugins</h3>
+            <p>Installierbare Schnittstellen und Arbeitsplatzadapter, etwa Kartenleser-, Register- oder Portalpfade.</p>
+          </article>
+          <article>
+            <h3>Workflows</h3>
+            <p>Ausfuehrbare notarielle Ablaufketten mit deterministischen Checks, Gates und Evidenzpunkten.</p>
+          </article>
+          <article>
+            <h3>Usecases</h3>
+            <p>Konkrete notarielle Vorgangsarten mit eigenem Knowledge Graph und fachlicher Fallstruktur.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta-band" aria-labelledby="cta-title">
+        <div>
+          <p class="section-kicker">Naechster Schritt</p>
+          <h2 id="cta-title">Referenzstand pruefen, dann gezielt pilotieren.</h2>
+        </div>
+        <a class="button primary" href="#hardware-test">HW-Test oeffnen</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2026 Funktion8. Lokale NaC-Operator-Webapp fuer den genehmigten Arbeitsplatz.</p>
+      <nav aria-label="Footer Navigation">
+        <a href="#hardware-test">HW-Test</a>
+        <a href="#governance">Governance</a>
+        <a href="#artefakte">Artefakte</a>
+      </nav>
+    </footer>
+  </body>
+</html>

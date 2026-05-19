@@ -46,7 +46,12 @@ Für Notariatsarbeitsplatz, Kartenleser, morris und XNP-Pfad:
 python scripts/startup_check.py --profile notary-workstation --ide auto
 python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py operator --open
 ```
+
+Die Operator-Webapp ist nur ein lokaler Bedienkanal. Sie spricht die per CLI
+gestartete Bridge auf `127.0.0.1` an; die Bridge startet freigegebene
+Prüfskripte im NaC-Workspace.
 
 ## Grenzen
 

@@ -32,7 +32,7 @@ MORRIS_STATUS_TID_PATTERN = re.compile(
     re.IGNORECASE,
 )
 MORRIS_HTTP_BASE_URL = "http://127.0.0.1:8800"
-MORRIS_PROBE_APP_NAME = "NaCReadinessProbe"
+MORRIS_PROBE_APP_NAME = "NaC Hardware Readiness Check"
 MORRIS_STATUS_OK = 0
 MORRIS_STATUS_NO_CARD = -19
 MORRIS_STATUS_NO_READER = -20
@@ -533,7 +533,6 @@ def probe_windows_morris_loopback_api(http_get: MorrisHttpGet | None = None) -> 
                 "app_name": MORRIS_PROBE_APP_NAME,
                 "auth_data": "",
                 "lic_data": "",
-                "no_always_allow_button": "1",
             },
             8.0,
         )

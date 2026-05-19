@@ -46,7 +46,12 @@ For the notary workstation, card reader, morris and XNP path:
 python scripts/startup_check.py --profile notary-workstation --ide auto
 python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py operator --open
 ```
+
+The operator webapp is only a local operator channel. It talks to the
+CLI-started bridge on `127.0.0.1`; the bridge runs approved check scripts in the
+NaC workspace.
 
 ## Limits
 

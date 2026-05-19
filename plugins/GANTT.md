@@ -23,6 +23,7 @@ gantt
     Plugin-Kartennamen ohne NaC-Präfix           :done,   p3i, 2026-05-18, 1d
     Plugin-Fachprüfungen über nac-CLI            :done,   p3j, 2026-05-19, 1d
     Echte Hardware-Readiness dokumentieren       :done,   p3k, 2026-05-19, 1d
+    Operator-HW-Bridge über nac-CLI              :done,   p3l, 2026-05-19, 1d
     eID-Prüfung                            :active, p4, 2026-05-14, 14d
 
     section Notariats-Einstiegsprüfungen
@@ -44,7 +45,7 @@ gantt
 | --- | --- | --- | --- |
 | `nac-regulated-core` | Gemeinsame Schutzplanken für regulierte Arbeitsabläufe | Basis bereit | Plugin-Manifeste führen `AGPL-3.0-or-later` und `funktion8 / ofunk` sichtbar; GPT-Store-/Arbeitsbereich-Paketierungsannahmen erneut prüfen. |
 | `nac-idaas` | Deutsche eID-Prüfung und IAM-Projektionsbereitschaft | Aktiv | Connector-Grenze und Datenverarbeitungsgrundlage vor jedem Produktionspiloten bestätigen. |
-| `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Prüfung und Linux-Treiber-Vorprüfung sind implementiert und über `nac plugins card-readiness` erreichbar; bei installierter echter Hardware soll der reale lokale Kartenleser-/SAK-Pfad geprüft werden, ohne PINs oder Kartenrohdaten zu speichern. |
+| `nac-cyberjack-rfid` | Lokale Karten-, RFID-aus-, SAK- und XNP-Schnittstellenbereitschaft | Aktiv | Windows DriverPackage, morris-Middleware, optionale morris-Loopback-API/PCSC-Prüfung, Linux-Treiber-Vorprüfung und lokale Operator-HW-Bridge sind implementiert und über `nac plugins card-readiness` beziehungsweise `nac operator --open` erreichbar; bei installierter echter Hardware soll der reale lokale Kartenleser-/SAK-Pfad geprüft werden, ohne PINs oder Kartenrohdaten zu speichern. |
 | `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorprüfung an die cyberJack-Prüfung, kann die optionale morris-API-Prüfung durchreichen und ist über `nac plugins xnp-reader-prompt` erreichbar; bei installiertem XNP ist echte lokale Workstation-Validierung vorgesehen, ohne Login, Signatur oder Einreichung. |
 | `nac-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Prüfung über `nac plugins pkcs7-inspect`, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Härtung entfernt PEM-ähnliche Testliterale aus Quellfixtures. |
 | `nac-handelsregister` | Registeranmeldungsbereitschaft | Aktiv | An GmbH-Gründungs-Usecase binden. |

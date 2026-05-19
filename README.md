@@ -101,6 +101,7 @@ Nach dem Klonen:
 python scripts/nac.py status
 python scripts/nac.py kg editor-view immobilienkaufvertrag
 python scripts/nac.py web
+python scripts/nac.py operator --open
 python scripts/nac.py doctor --profile strict
 ```
 
@@ -121,11 +122,17 @@ python scripts/nac.py bpmn validate
 python scripts/nac.py plugins actions
 python scripts/nac.py kg case bautraegervertrag
 python scripts/nac.py web
+python scripts/nac.py operator --open
 ```
 
 Architekturregel: Neue NaC-Funktionalität braucht künftig eine Bedienkante in
 `nac`. Alte Skriptnamen bleiben als interne oder kompatible Ebene möglich, aber
 die Produktdokumentation soll den zentralen CLI-Weg zeigen.
+
+Die lokale Operator-Webapp für Hardware-Readiness ersetzt die CLI nicht. Sie
+wird über `nac operator --open` gestartet, bindet standardmäßig nur an
+`127.0.0.1` und ruft freigegebene lokale Prüfskripte ohne PINs, Kartendaten
+oder Secrets auf.
 
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Funktion8">
+  <rect width="64" height="64" rx="12" fill="#1f2b24"/>
+  <path d="M15 14h22v8H25v8h10v8H25v12H15V14Z" fill="#f5f7f4"/>
+  <path d="M43 13c7 0 11 4 11 10 0 4-2 7-5 9 4 2 7 5 7 10 0 7-5 11-13 11s-13-4-13-11c0-5 3-8 7-10-3-2-5-5-5-9 0-6 4-10 11-10Zm0 23c-3 0-5 2-5 5s2 5 5 5 5-2 5-5-2-5-5-5Zm0-16c-3 0-4 2-4 4s1 4 4 4 4-2 4-4-1-4-4-4Z" fill="#f2c14e"/>
+</svg>

@@ -74,6 +74,11 @@ stateDiagram-v2
 - nutzt den Python-CLI-Einstieg
 - eignet sich für Bot-Aufrufe aus einem LLM-Frontend
 
+Die lokale Operator-Webapp ist ein Bedienkanal für Arbeitsplatz-Gates. Sie
+führt NaC nicht remote aus, sondern spricht eine per `nac operator --open`
+gestartete `127.0.0.1`-Bridge an, die freigegebene lokale Prüfskripte im
+Workspace startet und minimierte Readiness-Metadaten zurückgibt.
+
 ### `monthly-close.yml`
 
 - läuft periodisch oder manuell
@@ -122,3 +127,5 @@ Operative Details sind ausgelagert nach:
 - `schema_tools.py`: leichtgewichtige Validierung gegen JSON-Schemas
 - `engine.py`: Orchestrierung, Idempotenzprüfung und Monatsabschluss
 - `cli.py`: Kommandozeilenoberfläche für lokale und CI-Läufe
+- `scripts/nac_hw_bridge.py`: per `nac operator` gestartete Localhost-Bridge
+  für die lokale Operator-Webapp und Hardware-Readiness-Prüfungen
