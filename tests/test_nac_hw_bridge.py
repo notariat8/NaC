@@ -53,6 +53,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
     def test_operator_copy_is_usecase_first_workbench(self) -> None:
         html = (bridge.SITE_ROOT / "index.html").read_text(encoding="utf-8")
         js = (bridge.SITE_ROOT / "assets" / "site.js").read_text(encoding="utf-8")
+        css = (bridge.SITE_ROOT / "assets" / "site.css").read_text(encoding="utf-8")
 
         self.assertIn('src="assets/n8.svg"', html)
         self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
@@ -61,8 +62,13 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('href="#tests"', html)
         self.assertIn('href="#anbindungen"', html)
         self.assertIn('href="#handbuch"', html)
+        self.assertEqual(html.count('class="case-row"'), 23)
         self.assertIn("/kg/immobilienkaufvertrag", html)
         self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
+        self.assertIn("/kg/bautraegervertrag", html)
+        self.assertIn("/bpmn/bautraegervertrag", html)
+        self.assertIn("Bauträgervertrag", html)
+        self.assertIn("Vorgang suchen", html)
         self.assertIn("/bpmn/vorsorgevollmacht-patientenverfuegung/edit", html)
         self.assertIn("HW-Test starten", html)
         self.assertIn("XNP prüfen", html)
@@ -70,6 +76,11 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("python scripts\\nac.py operator --open", html)
         self.assertIn("python scripts\\\\nac.py operator --open", js)
         self.assertIn("[data-case-search]", js)
+        self.assertNotIn("Alle Usecases", html)
+        self.assertNotIn("Katalog", html)
+        self.assertNotIn("Bautraeger", html)
+        case_group_block = css.split(".case-group {", maxsplit=1)[1].split("}", maxsplit=1)[0]
+        self.assertNotIn("text-transform", case_group_block)
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
