@@ -16,6 +16,12 @@ from urllib.parse import unquote, urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from nac_web.server import NaCLocalWebApp  # noqa: E402
+
 SITE_ROOT = REPO_ROOT / "web" / "local-operator"
 READINESS_SCRIPT = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 STARTUP_SCRIPT = REPO_ROOT / "scripts" / "startup_check.py"
@@ -55,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def build_server(host: str, port: int) -> ThreadingHTTPServer:
+    local_web_app = NaCLocalWebApp(REPO_ROOT)
+
     class Handler(BaseHTTPRequestHandler):
         def do_OPTIONS(self) -> None:  # noqa: N802
             if not self._origin_allowed():
@@ -71,19 +79,28 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/healthz":
                 self._send_json({"status": "ok", "localhost_only": True})
                 return
+            if is_local_web_route(route):
+                self._send_local_web_response(local_web_app.handle(self.path))
+                return
             self._serve_static(route)
 
         def do_HEAD(self) -> None:  # noqa: N802
             route = unquote(urlparse(self.path).path)
+            if is_local_web_route(route):
+                self._send_local_web_response(local_web_app.handle(self.path), include_body=False)
+                return
             self._serve_static(route, include_body=False)
 
         def do_POST(self) -> None:  # noqa: N802
             route = unquote(urlparse(self.path).path)
-            if route != "/api/hardware-readiness":
-                self.send_error(HTTPStatus.NOT_FOUND)
-                return
             if not self._origin_allowed():
                 self.send_error(HTTPStatus.FORBIDDEN)
+                return
+            if route.startswith("/api/bpmn/"):
+                self._send_local_web_response(local_web_app.handle_post(self.path, self._read_request_body()))
+                return
+            if route != "/api/hardware-readiness":
+                self.send_error(HTTPStatus.NOT_FOUND)
                 return
             self._discard_request_body()
             self._send_json(run_hardware_readiness(), HTTPStatus.OK)
@@ -115,13 +132,21 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 
         def _send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
             body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+            self._send_bytes(int(status), "application/json; charset=utf-8", body)
+
+        def _send_local_web_response(self, response: tuple[int, str, bytes], include_body: bool = True) -> None:
+            status, content_type, body = response
+            self._send_bytes(status, content_type, body, include_body=include_body)
+
+        def _send_bytes(self, status: int, content_type: str, body: bytes, include_body: bool = True) -> None:
             self.send_response(status)
             self._send_cors_headers()
-            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
-            self.wfile.write(body)
+            if include_body:
+                self.wfile.write(body)
 
         def _send_cors_headers(self) -> None:
             origin = self.headers.get("Origin")
@@ -138,11 +163,17 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             return any(origin.startswith(prefix + ":") for prefix in {"http://localhost", "http://127.0.0.1"})
 
         def _discard_request_body(self) -> None:
+            self._read_request_body()
+
+        def _read_request_body(self) -> bytes:
             length = int(self.headers.get("Content-Length") or "0")
-            if length:
-                self.rfile.read(length)
+            return self.rfile.read(length) if length else b""
 
     return ThreadingHTTPServer((host, port), Handler)
+
+
+def is_local_web_route(route: str) -> bool:
+    return route == "/api/bpmn-moddle" or route.startswith(("/bpmn/", "/kg/", "/api/bpmn/", "/api/kg/"))
 
 
 def run_hardware_readiness() -> dict[str, Any]:

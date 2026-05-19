@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import xml.etree.ElementTree as ET
@@ -32,6 +33,10 @@ FLOW_NODE_NAMES = {
     "parallelGateway",
     "eventBasedGateway",
 }
+
+
+class BpmnSaveConflict(ValueError):
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,15 +83,60 @@ class BpmnModel:
 
 
 def list_bpmn_models(repo_root: Path) -> list[BpmnModel]:
-    return [load_bpmn_model(path, repo_root) for path in sorted((repo_root / "bpmn").glob("*.bpmn"))]
+    return [load_bpmn_model(path, repo_root) for path in sorted((repo_root / "bpmn").rglob("*.bpmn"))]
 
 
 def find_bpmn_model(repo_root: Path, stem: str) -> BpmnModel:
-    safe_stem = Path(stem).name
-    path = repo_root / "bpmn" / f"{safe_stem}.bpmn"
-    if not path.exists():
+    return load_bpmn_model(find_bpmn_path(repo_root, stem), repo_root)
+
+
+def find_bpmn_path(repo_root: Path, stem: str) -> Path:
+    safe_stem = _safe_stem(stem)
+    bpmn_root = repo_root / "bpmn"
+    primary = bpmn_root / f"{safe_stem}.bpmn"
+    if primary.exists():
+        return primary
+    candidates = sorted(path for path in bpmn_root.rglob(f"{safe_stem}.bpmn") if path.is_file())
+    if not candidates:
         raise KeyError(f"Unknown BPMN model: {stem}")
-    return load_bpmn_model(path, repo_root)
+    return candidates[0]
+
+
+def bpmn_xml_document(repo_root: Path, stem: str) -> dict[str, str]:
+    path = find_bpmn_path(repo_root, stem)
+    xml = path.read_text(encoding="utf-8")
+    return {
+        "stem": path.stem,
+        "path": _display_path(path, repo_root),
+        "sha256": hashlib.sha256(xml.encode("utf-8")).hexdigest(),
+        "xml": xml,
+    }
+
+
+def save_bpmn_xml(repo_root: Path, stem: str, xml: str, base_sha256: str) -> dict[str, str]:
+    path = find_bpmn_path(repo_root, stem)
+    current = path.read_text(encoding="utf-8")
+    current_sha = hashlib.sha256(current.encode("utf-8")).hexdigest()
+    if not base_sha256:
+        raise ValueError("base_sha256 fehlt")
+    if base_sha256 != current_sha:
+        raise BpmnSaveConflict("BPMN-Modell wurde seit dem Laden geändert")
+
+    validate_xml_for_save(xml)
+    normalized = xml if xml.endswith("\n") else f"{xml}\n"
+    path.write_text(normalized, encoding="utf-8")
+    return bpmn_xml_document(repo_root, stem)
+
+
+def validate_xml_for_save(xml: str) -> None:
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as exc:
+        raise ValueError(f"BPMN XML ist ungültig: {exc}") from exc
+    if root.tag != f"{{{BPMN_NS}}}definitions":
+        raise ValueError("Root-Element muss bpmn:definitions sein")
+    if root.find("bpmn:process", _ns()) is None:
+        raise ValueError("Mindestens ein bpmn:process ist erforderlich")
 
 
 def load_bpmn_model(path: Path, repo_root: Path) -> BpmnModel:
@@ -155,6 +205,15 @@ def _display_path(path: Path, repo_root: Path) -> str:
         return path.relative_to(repo_root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _safe_stem(value: str) -> str:
+    stem = Path(value).name
+    if stem.endswith(".bpmn"):
+        stem = stem[:-5]
+    if not stem or stem in {".", ".."}:
+        raise KeyError(value)
+    return stem
 
 
 def _shape_bounds(root: ET.Element) -> dict[str, tuple[float, float, float, float]]:
@@ -311,7 +370,9 @@ def _render_badge(node: BpmnNode) -> str:
     role = node.nac.get("role")
     if not role:
         return ""
+    channel = node.nac.get("channel", "").split(";")[0]
+    text = role if not channel else f"{role} · {channel}"
     return (
         f'<text class="node-badge" x="{node.x + node.width / 2:g}" '
-        f'y="{node.y + node.height + 18:g}">{html.escape(role)}</text>'
+        f'y="{node.y + node.height + 18:g}">{html.escape(text)}</text>'
     )

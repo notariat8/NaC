@@ -55,6 +55,27 @@ ALLOWED_DATA_CLASSES = {
 }
 ALLOWED_APPROVALS = {"none", "human", "four_eyes"}
 ALLOWED_EVIDENCE = {"none", "optional", "required"}
+ALLOWED_CHANNELS = {
+    "authority",
+    "bea",
+    "ben",
+    "court",
+    "email",
+    "fax",
+    "github",
+    "internal",
+    "land_register_portal",
+    "notary_app",
+    "paper_signature",
+    "personal",
+    "phone",
+    "post",
+    "qualified_e_signature",
+    "register_portal",
+    "tax_portal",
+    "video",
+    "xnp_local",
+}
 FORBIDDEN_NAME_PARTS = ("passwort", "password", "pin", "secret", "token", "api-key", "apikey")
 
 
@@ -141,7 +162,19 @@ def validate_moddle_descriptor() -> list[str]:
             if prop.get("isAttr"):
                 properties.add(prop.get("name", ""))
 
-    required = {"profile", "owner", "binding", "role", "dataClass", "approval", "evidence", "plugin", "localExecution", "kgRef"}
+    required = {
+        "profile",
+        "owner",
+        "binding",
+        "role",
+        "channel",
+        "dataClass",
+        "approval",
+        "evidence",
+        "plugin",
+        "localExecution",
+        "kgRef",
+    }
     missing = sorted(required - properties)
     for name in missing:
         errors.append(f"bpmn/nac-moddle.json fehlt NaC-Attribut: {name}")
@@ -233,6 +266,12 @@ def validate_nac_profile(path: Path, root: ET.Element) -> list[str]:
         for node in flow_nodes(process, path):
             if not node.nac_attr("role"):
                 errors.append(f"{node.location()}: nac:role fehlt")
+            channels = split_channel_tokens(node.nac_attr("channel"))
+            if not channels:
+                errors.append(f"{node.location()}: nac:channel fehlt")
+            invalid_channels = sorted(set(channels) - ALLOWED_CHANNELS)
+            if invalid_channels:
+                errors.append(f"{node.location()}: nac:channel ist ungültig: {', '.join(invalid_channels)}")
             data_class = node.nac_attr("dataClass")
             if data_class not in ALLOWED_DATA_CLASSES:
                 errors.append(f"{node.location()}: nac:dataClass ist ungültig: {data_class!r}")
@@ -249,6 +288,12 @@ def validate_nac_profile(path: Path, root: ET.Element) -> list[str]:
             if node.tag_name in TASK_NAMES and data_class == "no_mandate_data" and approval == "four_eyes":
                 errors.append(f"{node.location()}: four_eyes passt nicht zu no_mandate_data")
     return errors
+
+
+def split_channel_tokens(value: str | None) -> list[str]:
+    if value is None:
+        return []
+    return [token.strip() for token in value.split(";") if token.strip()]
 
 
 def validate_file(path: Path) -> list[str]:

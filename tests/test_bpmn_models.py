@@ -9,6 +9,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "validate_bpmn_models.py"
+USECASES_ROOT = REPO_ROOT / "usecases"
+BPMN_ROOT = REPO_ROOT / "bpmn"
 
 
 def load_validator_module():
@@ -27,6 +29,17 @@ validator = load_validator_module()
 class BpmnModelValidationTests(unittest.TestCase):
     def test_repository_bpmn_models_are_valid(self) -> None:
         self.assertEqual(validator.validate(), [])
+
+    def test_every_usecase_has_a_bpmn_model(self) -> None:
+        usecase_slugs = {
+            path.name
+            for path in USECASES_ROOT.iterdir()
+            if path.is_dir() and (path / "knowledge-graph.graph.json").is_file()
+        }
+        model_stems = {path.stem for path in BPMN_ROOT.rglob("*.bpmn")}
+
+        self.assertTrue(usecase_slugs)
+        self.assertEqual(sorted(usecase_slugs - model_stems), [])
 
     def test_unknown_sequence_target_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

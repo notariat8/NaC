@@ -5,10 +5,10 @@
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                   xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
-                  id="Definitions_immobilienkaufvertrag"
+                  id="Definitions_grundstueckskaufvertrag"
                   targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
-  <bpmn:process id="Process_immobilienkaufvertrag"
-                name="Immobilienkaufvertrag"
+  <bpmn:process id="Process_grundstueckskaufvertrag"
+                name="Grundstückskaufvertrag"
                 isExecutable="false"
                 nac:profile="nac-bpmn/v0.1"
                 nac:owner="funktion8 / ofunk"
@@ -21,7 +21,7 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="none"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="grundstueckskaufvertrag">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="Task_AuftragAufnehmen"
@@ -31,7 +31,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_00</bpmn:incoming>
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
     </bpmn:userTask>
@@ -42,7 +42,7 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -53,23 +53,10 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_XnpArbeitsplatzPruefen"
-                     name="Karte, XNP und Signaturpfad lokal prüfen"
-                     nac:role="IT-Betrieb"
-                     nac:channel="xnp_local"
-                     nac:dataClass="metadata"
-                     nac:approval="none"
-                     nac:evidence="required"
-                     nac:plugin="nac-cyberjack-rfid"
-                     nac:localExecution="true"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_03</bpmn:incoming>
-      <bpmn:outgoing>Flow_04</bpmn:outgoing>
-    </bpmn:serviceTask>
     <bpmn:userTask id="Task_EntwurfAbstimmen"
                      name="Urkundenentwurf und Vollzugshinweise abstimmen"
                      nac:role="Notariatsfachkraft"
@@ -77,9 +64,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_04</bpmn:incoming>
-      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:manualTask id="Task_IdentitaetVertretung"
                      name="Identität und Vertretung prüfen"
@@ -88,9 +75,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_05</bpmn:incoming>
-      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
     </bpmn:manualTask>
     <bpmn:manualTask id="Task_Beurkundung"
                      name="Beurkundung oder Erklärung durchführen"
@@ -99,9 +86,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="four_eyes"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_06</bpmn:incoming>
-      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:manualTask>
     <bpmn:sendTask id="Task_EinreichungVersand"
                      name="Vollzug und Grundbuchkommunikation ausführen"
@@ -110,9 +97,9 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_07</bpmn:incoming>
-      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:userTask id="Task_NachweiseNachhalten"
                      name="Nachweis und Fristen nachhalten"
@@ -121,9 +108,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_08</bpmn:incoming>
-      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:endEvent id="EndEvent_Abgeschlossen"
                      name="Vorgang abgeschlossen"
@@ -132,22 +119,21 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_09</bpmn:incoming>
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_AuftragAufnehmen"/>
     <bpmn:sequenceFlow id="Flow_01" sourceRef="Task_AuftragAufnehmen" targetRef="Task_FormFristenPruefen"/>
     <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_FormFristenPruefen" targetRef="Task_UnterlagenPruefen"/>
-    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_XnpArbeitsplatzPruefen"/>
-    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_XnpArbeitsplatzPruefen" targetRef="Task_EntwurfAbstimmen"/>
-    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
-    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
-    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Beurkundung" targetRef="Task_EinreichungVersand"/>
-    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
-    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_EntwurfAbstimmen"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_Beurkundung" targetRef="Task_EinreichungVersand"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_immobilienkaufvertrag">
-    <bpmndi:BPMNPlane id="BPMNPlane_immobilienkaufvertrag" bpmnElement="Process_immobilienkaufvertrag">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_grundstueckskaufvertrag">
+    <bpmndi:BPMNPlane id="BPMNPlane_grundstueckskaufvertrag" bpmnElement="Process_grundstueckskaufvertrag">
       <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
         <dc:Bounds x="130" y="160" width="36" height="36"/>
       </bpmndi:BPMNShape>
@@ -160,26 +146,23 @@
       <bpmndi:BPMNShape id="Shape_Task_UnterlagenPruefen" bpmnElement="Task_UnterlagenPruefen">
         <dc:Bounds x="760" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_XnpArbeitsplatzPruefen" bpmnElement="Task_XnpArbeitsplatzPruefen">
+      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
         <dc:Bounds x="975" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
+      <bpmndi:BPMNShape id="Shape_Task_IdentitaetVertretung" bpmnElement="Task_IdentitaetVertretung">
         <dc:Bounds x="1190" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_IdentitaetVertretung" bpmnElement="Task_IdentitaetVertretung">
+      <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
         <dc:Bounds x="1405" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
+      <bpmndi:BPMNShape id="Shape_Task_EinreichungVersand" bpmnElement="Task_EinreichungVersand">
         <dc:Bounds x="1620" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_EinreichungVersand" bpmnElement="Task_EinreichungVersand">
+      <bpmndi:BPMNShape id="Shape_Task_NachweiseNachhalten" bpmnElement="Task_NachweiseNachhalten">
         <dc:Bounds x="1835" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_NachweiseNachhalten" bpmnElement="Task_NachweiseNachhalten">
-        <dc:Bounds x="2050" y="138" width="160" height="80"/>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_EndEvent_Abgeschlossen" bpmnElement="EndEvent_Abgeschlossen">
-        <dc:Bounds x="2280" y="160" width="36" height="36"/>
+        <dc:Bounds x="2065" y="160" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Edge_Flow_00" bpmnElement="Flow_00">
         <di:waypoint x="166" y="178"/>
@@ -215,11 +198,7 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
         <di:waypoint x="1995" y="178"/>
-        <di:waypoint x="2050" y="178"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
-        <di:waypoint x="2210" y="178"/>
-        <di:waypoint x="2280" y="178"/>
+        <di:waypoint x="2065" y="178"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

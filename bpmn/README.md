@@ -19,8 +19,17 @@ geplante visuelle Bearbeitungsschicht, Python prüft deterministisch.
 
 ## Erste Modelle
 
-- [immobilienkaufvertrag.bpmn](immobilienkaufvertrag.bpmn): erstes
-  bpmn-js-taugliches NaC-Profilmodell mit BPMNDI-Diagrammfläche.
+- [immobilienkaufvertrag.bpmn](immobilienkaufvertrag.bpmn): kanonisches
+  Top-Level-Modell für den Immobilienkaufvertrag.
+- [usecases/](usecases): BPMN-Modelle für alle usecase-lokalen KGs unter
+  [../usecases/](../usecases), jeweils mit Rollen, Ausführungskanälen,
+  Freigabe, Nachweis und KG-Referenz.
 - [invoice-process.bpmn](invoice-process.bpmn), [bookkeeping-process.bpmn](bookkeeping-process.bpmn)
   und [onboarding-entry.bpmn](onboarding-entry.bpmn): ältere Referenzmodelle,
   die weiterhin strukturell validiert werden.
+
+Die Usecase-Modelle werden mit
+[../scripts/generate_usecase_bpmn.py](../scripts/generate_usecase_bpmn.py)
+erzeugt. Vor einer manuellen Änderung sollte klar sein, ob die Änderung
+absichtlich vom Generator abweicht; in diesem Fall bleibt der Git-Diff die
+fachliche Reviewfläche.

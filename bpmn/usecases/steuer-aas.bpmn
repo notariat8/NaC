@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
+                  id="Definitions_steuer_aas"
+                  targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
+  <bpmn:process id="Process_steuer_aas"
+                name="Steuer-aaS Steuer-Readiness"
+                isExecutable="false"
+                nac:profile="nac-bpmn/v0.1"
+                nac:owner="funktion8 / ofunk"
+                nac:binding="Git Pull Request">
+    <bpmn:documentation>Generiert aus usecase-lokalem KG, BNotK-XNP-Onlinehilfe fuer lokale XNP-Schnittstelle und BNotK-Onlineverfahren-Onlinehilfe fuer Vorgangseingang/Videokonferenz. Keine Mandatswerte im Repo.</bpmn:documentation>
+    <bpmn:startEvent id="StartEvent_VorgangAnlegen"
+                     name="Steuer-Readiness-Auftrag anlegen"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="none"
+                     nac:kgRef="steuer-aas">
+      <bpmn:outgoing>Flow_00</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_MandatAbgrenzen"
+                     name="Mandat und Steuerrolle abgrenzen"
+                     nac:role="Steuerfachkraft"
+                     nac:channel="email;phone;internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_00</bpmn:incoming>
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:businessRuleTask id="Task_DatenschutzUndAVV"
+                     name="Datenschutz, AVV und Quellen prüfen"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:userTask id="Task_UnterlagenPruefen"
+                     name="Steuerunterlagen und Fristen prüfen"
+                     nac:role="Steuerfachkraft"
+                     nac:channel="email;tax_portal;internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_EntwurfAbstimmen"
+                     name="Entwurf und Rückfragen abstimmen"
+                     nac:role="Steuerfachkraft"
+                     nac:channel="email;phone"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_FreigabeEinholen"
+                     name="Fachliche Freigabe einholen"
+                     nac:role="Notariat"
+                     nac:channel="internal;email"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Task_SteuerkanalAusfuehren"
+                     name="Steuerkanal oder Antwort ausführen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="tax_portal;email"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_NachweisAblage"
+                     name="Nachweis und Fristen ablegen"
+                     nac:role="Steuerfachkraft"
+                     nac:channel="internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_Abgeschlossen"
+                     name="Steuer-Readiness abgeschlossen"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="required"
+                     nac:kgRef="steuer-aas">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_MandatAbgrenzen"/>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Task_MandatAbgrenzen" targetRef="Task_DatenschutzUndAVV"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_DatenschutzUndAVV" targetRef="Task_UnterlagenPruefen"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_EntwurfAbstimmen"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_FreigabeEinholen"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_FreigabeEinholen" targetRef="Task_SteuerkanalAusfuehren"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_SteuerkanalAusfuehren" targetRef="Task_NachweisAblage"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_NachweisAblage" targetRef="EndEvent_Abgeschlossen"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_steuer_aas">
+    <bpmndi:BPMNPlane id="BPMNPlane_steuer_aas" bpmnElement="Process_steuer_aas">
+      <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
+        <dc:Bounds x="130" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_MandatAbgrenzen" bpmnElement="Task_MandatAbgrenzen">
+        <dc:Bounds x="330" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_DatenschutzUndAVV" bpmnElement="Task_DatenschutzUndAVV">
+        <dc:Bounds x="545" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_UnterlagenPruefen" bpmnElement="Task_UnterlagenPruefen">
+        <dc:Bounds x="760" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
+        <dc:Bounds x="975" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_FreigabeEinholen" bpmnElement="Task_FreigabeEinholen">
+        <dc:Bounds x="1190" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SteuerkanalAusfuehren" bpmnElement="Task_SteuerkanalAusfuehren">
+        <dc:Bounds x="1405" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_NachweisAblage" bpmnElement="Task_NachweisAblage">
+        <dc:Bounds x="1620" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Abgeschlossen" bpmnElement="EndEvent_Abgeschlossen">
+        <dc:Bounds x="1850" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_00" bpmnElement="Flow_00">
+        <di:waypoint x="166" y="178"/>
+        <di:waypoint x="330" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="490" y="178"/>
+        <di:waypoint x="545" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="705" y="178"/>
+        <di:waypoint x="760" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_03" bpmnElement="Flow_03">
+        <di:waypoint x="920" y="178"/>
+        <di:waypoint x="975" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_04" bpmnElement="Flow_04">
+        <di:waypoint x="1135" y="178"/>
+        <di:waypoint x="1190" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="1350" y="178"/>
+        <di:waypoint x="1405" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
+        <di:waypoint x="1565" y="178"/>
+        <di:waypoint x="1620" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07" bpmnElement="Flow_07">
+        <di:waypoint x="1780" y="178"/>
+        <di:waypoint x="1850" y="178"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

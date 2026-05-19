@@ -7,8 +7,9 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 
 - `*.bpmn` ist die fachliche Prozessquelle.
 - `bpmn-js` ist die visuelle Bearbeitungsschicht.
-- `bpmn/nac-moddle.json` ergänzt BPMN um NaC-Metadaten für Rollen, Datenklasse,
-  Freigabe, Nachweis, Plugin-Bindung und KG-Referenz.
+- `bpmn/nac-moddle.json` ergänzt BPMN um NaC-Metadaten für Rollen,
+  Ausführungskanal, Datenklasse, Freigabe, Nachweis, Plugin-Bindung und
+  KG-Referenz.
 - `scripts/validate_bpmn_models.py` prüft BPMN-Dateien deterministisch.
 - Python bleibt Ausführungs-, Prüf- und Exportlogik.
 - Mermaid bleibt eine Zusatzsicht, nicht die Prozessquelle.
@@ -21,6 +22,7 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 | `nac:owner` | Prozess | Herausgeber oder fachlich verantwortliche Stelle. |
 | `nac:binding` | Prozess | Bindungsmodell, zum Beispiel `Git Pull Request`. |
 | `nac:role` | Flow Node | Fachliche Rolle, die den Schritt verantwortet. |
+| `nac:channel` | Flow Node | Ausführungsform, Semikolon-getrennt, zum Beispiel `personal`, `email`, `fax`, `video`, `qualified_e_signature`, `xnp_local`, `register_portal` oder `land_register_portal`. |
 | `nac:dataClass` | Flow Node | Datenklasse: `metadata`, `public_reference`, `confidential_placeholder`, `no_mandate_data`. |
 | `nac:approval` | Flow Node | Freigabe: `none`, `human`, `four_eyes`. |
 | `nac:evidence` | Flow Node | Nachweis: `none`, `optional`, `required`. |
@@ -37,8 +39,8 @@ Fachpersonal reichen zunächst:
 - Aufgabe, User Task und Service Task
 - exklusives Gateway
 - Sequenzfluss mit sichtbarer Beschriftung bei Entscheidungen
-- NaC-Properties-Panel für Rolle, Datenklasse, Freigabe, Nachweis, Plugin und
-  KG-Referenz
+- NaC-Properties-Panel für Rolle, Ausführungskanal, Datenklasse, Freigabe,
+  Nachweis, Plugin und KG-Referenz
 
 ## Grenzen
 

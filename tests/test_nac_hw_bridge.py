@@ -37,10 +37,17 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('src="assets/n8.svg"', html)
         self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
         self.assertIn("lokal per CLI gestartete Bridge", html)
+        self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
         self.assertIn("python scripts\\nac.py operator --open", html)
         self.assertIn("freigegebene CLI-Pruefskripte", html)
         self.assertIn("python scripts\\\\nac.py operator --open", js)
         self.assertNotIn("alles laeuft ueber CLI", html.lower())
+
+    def test_operator_bridge_delegates_bpmn_routes(self) -> None:
+        self.assertTrue(bridge.is_local_web_route("/bpmn/handelsregisteranmeldung/edit"))
+        self.assertTrue(bridge.is_local_web_route("/api/bpmn/handelsregisteranmeldung/xml"))
+        self.assertTrue(bridge.is_local_web_route("/api/bpmn-moddle"))
+        self.assertFalse(bridge.is_local_web_route("/assets/site.js"))
 
     def test_manual_review_is_logged_as_fail_without_raw_output(self) -> None:
         entry = bridge.build_test_log_entry(

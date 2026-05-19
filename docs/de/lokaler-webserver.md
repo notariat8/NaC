@@ -1,6 +1,6 @@
 # Lokaler Webserver Für Grafische Ausgaben
 
-Status: erster lokaler Webserver umgesetzt am 2026-05-19
+Status: BPMN-Editor- und Speicherfläche ergänzt am 2026-05-19
 
 ## Zweck
 
@@ -9,7 +9,7 @@ lokale Webserver ist die gemeinsame Oberfläche für:
 
 - BPMN-Prozessansichten,
 - KG-Editor-Views,
-- spätere bpmn-js-Bearbeitung,
+- bpmn-js-nahe BPMN-Bearbeitung,
 - spätere Prüfberichte, Diffs und Freigabeansichten.
 
 Der Server ist lokal gedacht. Standardmäßig bindet er an `127.0.0.1` und liest
@@ -37,14 +37,22 @@ Der ältere Direkteinstieg `python scripts/nac_web.py --repo-root .` bleibt
 kompatibel. Die Produktdokumentation führt aber über `nac`, damit jede
 grafische Oberfläche denselben zentralen Bedienpfad nutzt.
 
+Die lokale Operator-Bridge unter `python scripts/nac.py operator --open`
+delegiert dieselben BPMN-/KG-Routen zusätzlich auf Port `8766`, damit die
+Operator-Webapp die Modelle direkt öffnen kann.
+
 ## Aktuelle Routen
 
 | Route | Inhalt |
 | --- | --- |
 | `/` | Lokales Dashboard mit BPMN- und KG-Links. |
 | `/bpmn/<modell>` | SVG-Ansicht eines lokalen BPMN-Modells. |
+| `/bpmn/<modell>/edit` | Lokale BPMN-Editorfläche mit bpmn-js-Ladepfad und XML-Fallback. |
 | `/kg/<slug>` | Sichere KG-Editor-View ohne `value`-Felder. |
 | `/api/bpmn/<modell>` | JSON-Struktur des BPMN-Modells. |
+| `/api/bpmn/<modell>/xml` | BPMN-XML plus SHA-256 zum konfliktarmen Speichern. |
+| `POST /api/bpmn/<modell>/xml` | Speichert BPMN-XML nur, wenn `base_sha256` zum aktuellen Repo-Stand passt. |
+| `/api/bpmn-moddle` | NaC-moddle-Descriptor für bpmn-js. |
 | `/api/kg/<slug>` | JSON-Struktur der KG-Editor-View. |
 | `/healthz` | einfacher Gesundheitscheck. |
 
@@ -60,14 +68,14 @@ grafische Oberfläche denselben zentralen Bedienpfad nutzt.
 
 ## Beziehung Zu bpmn-js
 
-Der aktuelle Server rendert BPMN bereits lokal als SVG-Vorschau. Der nächste
-Schritt ist, in diese lokale Oberfläche einen bpmn-js-Editor einzubetten:
+Der Server rendert BPMN lokal als SVG-Vorschau und stellt zusätzlich eine
+Editorfläche unter `/bpmn/<modell>/edit` bereit. Die Seite lädt das aktuelle
+BPMN-XML aus `/api/bpmn/<modell>/xml`, hält den SHA-256 des geladenen Stands
+und speichert nur, wenn dieser Hash noch aktuell ist. Dadurch bleiben
+Browseränderungen versionierbar und konfliktarm.
 
-1. eingeschränkte Palette,
-2. NaC-Properties-Panel aus [bpmn/nac-moddle.json](../../bpmn/nac-moddle.json),
-3. Speichern als BPMN-XML,
-4. Prüfung mit [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py),
-5. Pull Request statt Direktänderung.
-
-Damit wird bpmn-js zur Bedienoberfläche, während Python und Git die
-prüfbare Governance-Schicht bleiben.
+Die Editorfläche kann bpmn-js mit dem Descriptor
+[bpmn/nac-moddle.json](../../bpmn/nac-moddle.json) laden; wenn bpmn-js im
+Browser nicht verfügbar ist, bleibt der XML-Fallback nutzbar. Vor Merge bleibt
+die Prüfung mit [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py)
+verbindlich. Git und Review entscheiden, nicht der Browser.

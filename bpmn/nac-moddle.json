@@ -41,6 +41,11 @@
           "type": "String"
         },
         {
+          "name": "channel",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
           "name": "dataClass",
           "isAttr": true,
           "type": "String"

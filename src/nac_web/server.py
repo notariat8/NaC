@@ -10,7 +10,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
+from nac_web.bpmn import (
+    BpmnSaveConflict,
+    bpmn_model_json,
+    bpmn_xml_document,
+    find_bpmn_model,
+    list_bpmn_models,
+    render_bpmn_svg,
+    save_bpmn_xml,
+)
 from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.editor import build_editor_view
 
@@ -27,6 +35,8 @@ class NaCLocalWebApp:
                 return _html_response(build_home_page(self.repo_root))
             if route == "/healthz":
                 return _json_response({"status": "ok"})
+            if route == "/api/bpmn-moddle":
+                return _json_text_response((self.repo_root / "bpmn" / "nac-moddle.json").read_text(encoding="utf-8"))
             if route.startswith("/bpmn/"):
                 return self._bpmn_route(route.removeprefix("/bpmn/"))
             if route.startswith("/kg/"):
@@ -41,7 +51,24 @@ class NaCLocalWebApp:
             return _html_response(_layout("Ungültiges Modell", f"<p>{html.escape(str(exc))}</p>"), HTTPStatus.BAD_REQUEST)
         return _html_response(_layout("Nicht Gefunden", "<p>Diese lokale NaC-Seite gibt es nicht.</p>"), HTTPStatus.NOT_FOUND)
 
+    def handle_post(self, path: str, body: bytes) -> tuple[int, str, bytes]:
+        parsed = urlparse(path)
+        route = unquote(parsed.path)
+        try:
+            if route.startswith("/api/bpmn/"):
+                return self._bpmn_api_post(route.removeprefix("/api/bpmn/"), body)
+        except KeyError as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+        except BpmnSaveConflict as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.CONFLICT)
+        except ValueError as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        return _json_response({"error": "Diese lokale NaC-POST-Route gibt es nicht."}, HTTPStatus.NOT_FOUND)
+
     def _bpmn_route(self, stem: str) -> tuple[int, str, bytes]:
+        if stem.endswith("/edit"):
+            model = find_bpmn_model(self.repo_root, _safe_segment(stem.removesuffix("/edit")))
+            return _html_response(build_bpmn_editor_page(model))
         model = find_bpmn_model(self.repo_root, _safe_segment(stem))
         return _html_response(build_bpmn_page(model))
 
@@ -50,8 +77,25 @@ class NaCLocalWebApp:
         return _html_response(build_kg_page(view))
 
     def _bpmn_api_route(self, stem: str) -> tuple[int, str, bytes]:
+        if stem.endswith("/xml"):
+            return _json_response(bpmn_xml_document(self.repo_root, _safe_segment(stem.removesuffix("/xml"))))
         model = find_bpmn_model(self.repo_root, _safe_segment(stem))
         return _json_text_response(bpmn_model_json(model))
+
+    def _bpmn_api_post(self, stem: str, body: bytes) -> tuple[int, str, bytes]:
+        if not stem.endswith("/xml"):
+            return _json_response({"error": "Nur /api/bpmn/<modell>/xml nimmt POST entgegen."}, HTTPStatus.NOT_FOUND)
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except ValueError as exc:
+            raise ValueError(f"Request Body ist kein gültiges JSON: {exc}") from exc
+        xml = payload.get("xml")
+        base_sha256 = payload.get("base_sha256")
+        if not isinstance(xml, str):
+            raise ValueError("xml muss ein String sein")
+        if not isinstance(base_sha256, str):
+            raise ValueError("base_sha256 muss ein String sein")
+        return _json_response(save_bpmn_xml(self.repo_root, _safe_segment(stem.removesuffix("/xml")), xml, base_sha256))
 
     def _kg_api_route(self, slug: str) -> tuple[int, str, bytes]:
         view = build_editor_view(self.repo_root, _safe_segment(slug))
@@ -64,6 +108,16 @@ def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             status, content_type, body = app.handle(self.path)
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("Content-Length", "0"))
+            status, content_type, body = app.handle_post(self.path, self.rfile.read(length))
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
@@ -94,7 +148,7 @@ def build_home_page(repo_root: Path) -> str:
     cases = all_case_summaries(catalogs)
     bpmn_items = "".join(
         f'<li><a href="/bpmn/{html.escape(model.stem)}">{html.escape(model.name)}</a>'
-        f'<span>{html.escape(model.path)}</span></li>'
+        f'<span>{html.escape(model.path)} · <a class="inline-link" href="/bpmn/{html.escape(model.stem)}/edit">bearbeiten</a></span></li>'
         for model in bpmn_models
     )
     kg_items = "".join(
@@ -129,6 +183,7 @@ def build_bpmn_page(model) -> str:
         f"<td>{html.escape(node.name)}</td>"
         f"<td>{html.escape(node.type)}</td>"
         f"<td>{html.escape(node.nac.get('role', ''))}</td>"
+        f"<td>{html.escape(node.nac.get('channel', ''))}</td>"
         f"<td>{html.escape(node.nac.get('dataClass', ''))}</td>"
         f"<td>{html.escape(node.nac.get('approval', ''))}</td>"
         f"<td>{html.escape(node.nac.get('evidence', ''))}</td>"
@@ -136,7 +191,7 @@ def build_bpmn_page(model) -> str:
         for node in model.nodes
     )
     body = f"""
-    <nav class="topline"><a href="/">← Übersicht</a><a href="/api/bpmn/{html.escape(model.stem)}">JSON</a></nav>
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/bpmn/{html.escape(model.stem)}/edit">Bearbeiten</a><a href="/api/bpmn/{html.escape(model.stem)}">JSON</a></span></nav>
     <section class="hero">
       <p class="eyebrow">BPMN-Modell</p>
       <h1>{html.escape(model.name)}</h1>
@@ -146,12 +201,114 @@ def build_bpmn_page(model) -> str:
     <section>
       <h2>NaC-Schritte</h2>
       <table>
-        <thead><tr><th>Name</th><th>Typ</th><th>Rolle</th><th>Datenklasse</th><th>Freigabe</th><th>Nachweis</th></tr></thead>
+        <thead><tr><th>Name</th><th>Typ</th><th>Rolle</th><th>Kanal</th><th>Datenklasse</th><th>Freigabe</th><th>Nachweis</th></tr></thead>
         <tbody>{node_rows}</tbody>
       </table>
     </section>
     """
     return _layout(f"BPMN: {model.name}", body)
+
+
+def build_bpmn_editor_page(model) -> str:
+    stem = html.escape(model.stem)
+    body = f"""
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/bpmn/{stem}">Ansicht</a><a href="/api/bpmn/{stem}/xml">XML API</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">BPMN-js Editor</p>
+      <h1>{html.escape(model.name)}</h1>
+      <p>{html.escape(model.path)} · Änderungen werden erst als BPMN-XML im Repository gespeichert und danach über Git validiert.</p>
+    </section>
+    <section>
+      <div class="toolbar">
+        <button id="load-modeler" type="button">bpmn-js laden</button>
+        <button id="save-model" type="button">Speichern</button>
+        <span id="editor-status">lade Modell ...</span>
+      </div>
+      <div id="bpmn-canvas" class="modeler-canvas"></div>
+      <label class="xml-label" for="xml-editor">BPMN XML</label>
+      <textarea id="xml-editor" spellcheck="false"></textarea>
+    </section>
+    <script>
+    const endpoint = "/api/bpmn/{stem}/xml";
+    const moddleEndpoint = "/api/bpmn-moddle";
+    const modelerScript = "https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js";
+    let baseSha256 = "";
+    let modeler = null;
+
+    const statusEl = document.getElementById("editor-status");
+    const xmlEditor = document.getElementById("xml-editor");
+    const loadButton = document.getElementById("load-modeler");
+    const saveButton = document.getElementById("save-model");
+
+    function setStatus(value) {{
+      statusEl.textContent = value;
+    }}
+
+    async function loadDocument() {{
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error(await response.text());
+      const payload = await response.json();
+      baseSha256 = payload.sha256;
+      xmlEditor.value = payload.xml;
+      setStatus("geladen · " + payload.sha256.slice(0, 12));
+    }}
+
+    function loadScript(src) {{
+      return new Promise((resolve, reject) => {{
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      }});
+    }}
+
+    async function loadModeler() {{
+      try {{
+        if (!window.BpmnJS) await loadScript(modelerScript);
+        const descriptor = await fetch(moddleEndpoint).then((response) => response.json());
+        modeler = new window.BpmnJS({{
+          container: "#bpmn-canvas",
+          keyboard: {{ bindTo: document }},
+          moddleExtensions: {{ nac: descriptor }}
+        }});
+        await modeler.importXML(xmlEditor.value);
+        setStatus("bpmn-js aktiv · Änderungen bleiben lokal bis Speichern");
+      }} catch (error) {{
+        modeler = null;
+        setStatus("bpmn-js nicht geladen · XML-Fallback aktiv");
+      }}
+    }}
+
+    async function saveDocument() {{
+      setStatus("speichere ...");
+      let xml = xmlEditor.value;
+      if (modeler) {{
+        const saved = await modeler.saveXML({{ format: true }});
+        xml = saved.xml;
+        xmlEditor.value = xml;
+      }}
+      const response = await fetch(endpoint, {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ xml, base_sha256: baseSha256 }})
+      }});
+      const payload = await response.json();
+      if (!response.ok) {{
+        setStatus("nicht gespeichert · " + payload.error);
+        return;
+      }}
+      baseSha256 = payload.sha256;
+      xmlEditor.value = payload.xml;
+      setStatus("gespeichert · " + payload.sha256.slice(0, 12));
+    }}
+
+    loadButton.addEventListener("click", loadModeler);
+    saveButton.addEventListener("click", saveDocument);
+    loadDocument().catch((error) => setStatus("Fehler · " + error.message));
+    </script>
+    """
+    return _layout(f"BPMN bearbeiten: {model.name}", body)
 
 
 def build_kg_page(view: dict[str, Any]) -> str:
@@ -231,9 +388,17 @@ def _css() -> str:
     .link-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .link-list li { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
     .link-list a { display: block; color: #0b4f6c; font-weight: 700; text-decoration: none; margin-bottom: 4px; }
+    .link-list .inline-link { display: inline; margin: 0; font-weight: 600; }
     .link-list span { color: var(--muted); font-size: 14px; }
     .topline { display: flex; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
+    .topline span { display: flex; gap: 14px; }
     .topline a { color: #0b4f6c; font-weight: 700; text-decoration: none; }
+    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; }
+    button { appearance: none; border: 0; border-radius: 6px; background: #0b4f6c; color: #fff; font-weight: 700; padding: 10px 14px; cursor: pointer; }
+    #editor-status { color: var(--muted); font-size: 14px; }
+    .modeler-canvas { height: 560px; border: 1px solid var(--line); background: #fff; margin: 0 0 14px; }
+    .xml-label { display: block; font-weight: 700; margin: 0 0 8px; }
+    textarea { width: 100%; min-height: 280px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.45; }
     .canvas { overflow: auto; padding: 8px; background: #fbfcfd; }
     .bpmn-svg { width: 100%; min-width: 840px; height: auto; display: block; }
     .flow { fill: none; stroke: #41516b; stroke-width: 2.2; }
@@ -256,12 +421,12 @@ def _html_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> tuple[int, 
     return int(status), "text/html; charset=utf-8", text.encode("utf-8")
 
 
-def _json_response(payload: dict[str, Any]) -> tuple[int, str, bytes]:
-    return _json_text_response(json.dumps(payload, ensure_ascii=False, indent=2))
+def _json_response(payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> tuple[int, str, bytes]:
+    return _json_text_response(json.dumps(payload, ensure_ascii=False, indent=2), status)
 
 
-def _json_text_response(text: str) -> tuple[int, str, bytes]:
-    return int(HTTPStatus.OK), "application/json; charset=utf-8", text.encode("utf-8")
+def _json_text_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> tuple[int, str, bytes]:
+    return int(status), "application/json; charset=utf-8", text.encode("utf-8")
 
 
 def _safe_segment(value: str) -> str:

@@ -5,10 +5,10 @@
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                   xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
-                  id="Definitions_immobilienkaufvertrag"
+                  id="Definitions_vereinsregisteranmeldung"
                   targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
-  <bpmn:process id="Process_immobilienkaufvertrag"
-                name="Immobilienkaufvertrag"
+  <bpmn:process id="Process_vereinsregisteranmeldung"
+                name="Vereinsregisteranmeldung"
                 isExecutable="false"
                 nac:profile="nac-bpmn/v0.1"
                 nac:owner="funktion8 / ofunk"
@@ -17,21 +17,21 @@
     <bpmn:startEvent id="StartEvent_VorgangAnlegen"
                      name="Vorgang anlegen"
                      nac:role="Notariat"
-                     nac:channel="personal;email;phone;post"
+                     nac:channel="email;phone;register_portal"
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="none"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="Task_AuftragAufnehmen"
                      name="Auftrag und Beteiligte aufnehmen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="personal;email;phone;post"
+                     nac:channel="email;phone;register_portal"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_00</bpmn:incoming>
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
     </bpmn:userTask>
@@ -42,18 +42,18 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:businessRuleTask>
     <bpmn:userTask id="Task_UnterlagenPruefen"
-                     name="Grundbuchstand und Unterlagen prüfen"
+                     name="Registerstand und Anlagen prüfen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="land_register_portal;email;post;internal"
+                     nac:channel="register_portal;email;internal"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:userTask>
@@ -66,62 +66,62 @@
                      nac:evidence="required"
                      nac:plugin="nac-cyberjack-rfid"
                      nac:localExecution="true"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:userTask id="Task_EntwurfAbstimmen"
-                     name="Urkundenentwurf und Vollzugshinweise abstimmen"
+                     name="Anmeldung und Anlagen entwerfen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="email;post;land_register_portal;internal"
+                     nac:channel="email;register_portal;internal"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:manualTask id="Task_IdentitaetVertretung"
                      name="Identität und Vertretung prüfen"
                      nac:role="Notarin/Notar"
-                     nac:channel="personal;paper_signature"
+                     nac:channel="personal;qualified_e_signature;xnp_local"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_05</bpmn:incoming>
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:manualTask>
     <bpmn:manualTask id="Task_Beurkundung"
-                     name="Beurkundung oder Erklärung durchführen"
+                     name="Beglaubigung oder Beurkundung durchführen"
                      nac:role="Notarin/Notar"
-                     nac:channel="personal;paper_signature"
+                     nac:channel="paper_signature;qualified_e_signature;xnp_local"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="four_eyes"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_06</bpmn:incoming>
       <bpmn:outgoing>Flow_07</bpmn:outgoing>
     </bpmn:manualTask>
     <bpmn:sendTask id="Task_EinreichungVersand"
-                     name="Vollzug und Grundbuchkommunikation ausführen"
+                     name="Registereinreichung ausführen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="land_register_portal;post;email"
+                     nac:channel="xnp_local;register_portal;qualified_e_signature"
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:userTask id="Task_NachweiseNachhalten"
                      name="Nachweis und Fristen nachhalten"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="land_register_portal;email;internal"
+                     nac:channel="register_portal;email;internal"
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
     </bpmn:userTask>
@@ -132,7 +132,7 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="vereinsregisteranmeldung">
       <bpmn:incoming>Flow_09</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_AuftragAufnehmen"/>
@@ -146,8 +146,8 @@
     <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
     <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_immobilienkaufvertrag">
-    <bpmndi:BPMNPlane id="BPMNPlane_immobilienkaufvertrag" bpmnElement="Process_immobilienkaufvertrag">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_vereinsregisteranmeldung">
+    <bpmndi:BPMNPlane id="BPMNPlane_vereinsregisteranmeldung" bpmnElement="Process_vereinsregisteranmeldung">
       <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
         <dc:Bounds x="130" y="160" width="36" height="36"/>
       </bpmndi:BPMNShape>

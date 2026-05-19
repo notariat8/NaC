@@ -50,7 +50,8 @@ class NaCCliTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertIn("<svg", output)
-        self.assertIn("Offene Angaben", output)
+        self.assertIn("Auftrag und Beteiligte", output)
+        self.assertIn("xnp_local", output)
 
     def test_kg_status_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli("kg", "status")

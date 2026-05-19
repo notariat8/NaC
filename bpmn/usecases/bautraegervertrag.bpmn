@@ -5,10 +5,10 @@
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                   xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
-                  id="Definitions_immobilienkaufvertrag"
+                  id="Definitions_bautraegervertrag"
                   targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
-  <bpmn:process id="Process_immobilienkaufvertrag"
-                name="Immobilienkaufvertrag"
+  <bpmn:process id="Process_bautraegervertrag"
+                name="Bauträgervertrag"
                 isExecutable="false"
                 nac:profile="nac-bpmn/v0.1"
                 nac:owner="funktion8 / ofunk"
@@ -21,7 +21,7 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="none"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="Task_AuftragAufnehmen"
@@ -31,7 +31,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_00</bpmn:incoming>
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
     </bpmn:userTask>
@@ -42,7 +42,7 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -53,7 +53,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:userTask>
@@ -66,7 +66,7 @@
                      nac:evidence="required"
                      nac:plugin="nac-cyberjack-rfid"
                      nac:localExecution="true"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -77,7 +77,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
     </bpmn:userTask>
@@ -88,7 +88,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_05</bpmn:incoming>
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:manualTask>
@@ -99,7 +99,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="four_eyes"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_06</bpmn:incoming>
       <bpmn:outgoing>Flow_07</bpmn:outgoing>
     </bpmn:manualTask>
@@ -110,7 +110,7 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
     </bpmn:sendTask>
@@ -121,7 +121,7 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
     </bpmn:userTask>
@@ -132,7 +132,7 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="required"
-                     nac:kgRef="immobilienkaufvertrag">
+                     nac:kgRef="bautraegervertrag">
       <bpmn:incoming>Flow_09</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_AuftragAufnehmen"/>
@@ -146,8 +146,8 @@
     <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
     <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_immobilienkaufvertrag">
-    <bpmndi:BPMNPlane id="BPMNPlane_immobilienkaufvertrag" bpmnElement="Process_immobilienkaufvertrag">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_bautraegervertrag">
+    <bpmndi:BPMNPlane id="BPMNPlane_bautraegervertrag" bpmnElement="Process_bautraegervertrag">
       <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
         <dc:Bounds x="130" y="160" width="36" height="36"/>
       </bpmndi:BPMNShape>
