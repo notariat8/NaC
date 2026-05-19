@@ -96,12 +96,14 @@ demo data lives in a separate data repository, for example `../demo8notariat`:
 
 ```bash
 nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
+nac tenant write-sample-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
 ```
 
-GitHub is only intended for synthetic demo data here. Productive notary-office
-data requires a reviewed sovereign/GDPR Git provider. The separation is
-documented in [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
+The leading matter model uses small JSON files with stable IDs for matters,
+people, documents, events and indices. PDF, JPG and other binary files live as
+ordinary files next to their metadata. The separation is documented in
+[datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 
 ## Plugin Commands
 
