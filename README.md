@@ -31,7 +31,7 @@ geprüft.
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](docs/de/START_HERE.md) | Verbindlicher Arbeitsstart für Code, Policies, Plugins, Workflows, Usecases und Agenten. |
 
 Schnelle Orientierung für Nicht-Technik:
-[Ausführungsmodell](docs/de/ausfuehrungsmodell.md),
+[NaC-CLI](docs/de/cli.md), [Ausführungsmodell](docs/de/ausfuehrungsmodell.md),
 [Reifegrad](docs/de/reifegrad.md), [Glossar](docs/de/glossar.md) und
 [Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
 
@@ -81,6 +81,7 @@ Weitere Dokumentation:
 - Deutsch: [docs/de/](docs/de), [prompts/de/](prompts/de)
 - Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
+- NaC-CLI: [docs/de/cli.md](docs/de/cli.md)
 - Ausführungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
 - BPMN-js Business Layer: [docs/de/bpmn-js-business-layer.md](docs/de/bpmn-js-business-layer.md)
 - Lokaler Webserver: [docs/de/lokaler-webserver.md](docs/de/lokaler-webserver.md)
@@ -97,10 +98,10 @@ Weitere Dokumentation:
 Nach dem Klonen:
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py status
+python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py web
+python scripts/nac.py doctor --profile strict
 ```
 
 Wenn Python noch nicht eingerichtet ist, zuerst
@@ -109,14 +110,21 @@ Wenn Python noch nicht eingerichtet ist, zuerst
 ## Aktueller Entwicklungsmodus
 
 NaC wird als ausführbare Software entwickelt, nicht nur als Dokumentation. Die
-aktuell implementierte Runtime-Oberfläche ist die notarielle KG-CLI:
+zentrale Bedienkante ist die `nac`-CLI. Ohne Installation steht sie über
+[scripts/nac.py](scripts/nac.py) bereit; nach `python -m pip install -e .` auch
+als kurzer Befehl `nac`:
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . case bautraegervertrag
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765
+python scripts/nac.py status
+python scripts/nac.py config list
+python scripts/nac.py bpmn validate
+python scripts/nac.py kg case bautraegervertrag
+python scripts/nac.py web
 ```
+
+Architekturregel: Neue NaC-Funktionalität braucht künftig eine Bedienkante in
+`nac`. Alte Skriptnamen bleiben als interne oder kompatible Ebene möglich, aber
+die Produktdokumentation soll den zentralen CLI-Weg zeigen.
 
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.

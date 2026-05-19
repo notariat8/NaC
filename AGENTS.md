@@ -27,6 +27,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Onboarding wird nie nur für eine Plattform gepflegt, sondern für alle unterstützten Plattformen.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; reine Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Der verbindliche Technikstack steht in [policies/technology-policy.yaml](policies/technology-policy.yaml).
+- Neue NaC-Funktionalität braucht eine Bedienkante in der zentralen `nac`-CLI; direkte Skripte dürfen als interne Kompatibilität bleiben, aber Produktdokumentation führt über [docs/de/cli.md](docs/de/cli.md) und [docs/en/cli.md](docs/en/cli.md).
 - Fachliche Prozessmodelle sind BPMN-2.0-first; `bpmn-js` ist die geplante visuelle Bearbeitungsschicht, NaC-BPMN-Properties stehen in [bpmn/nac-moddle.json](bpmn/nac-moddle.json), und BPMN-Modelle müssen mit [scripts/validate_bpmn_models.py](scripts/validate_bpmn_models.py) validierbar sein.
 - Keine realen Secrets oder personenbezogenen Daten im Repository speichern ([policies/data-protection-policy.yaml](policies/data-protection-policy.yaml)).
 - Bei SaaS-Verarbeitung mit personenbezogenen Daten ist ein AVV verpflichtend ([docs/de/avv-checkliste-eventlock-saas.md](docs/de/avv-checkliste-eventlock-saas.md)).
@@ -64,8 +65,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 2. [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) oder [docs/en/minimum-requirements.md](docs/en/minimum-requirements.md) lesen.
 3. [policies/culture-policy.yaml](policies/culture-policy.yaml), [policies/process-policy.yaml](policies/process-policy.yaml), [policies/technology-policy.yaml](policies/technology-policy.yaml), [policies/data-protection-policy.yaml](policies/data-protection-policy.yaml), [policies/role-model-policy.yaml](policies/role-model-policy.yaml), [policies/language-policy.yaml](policies/language-policy.yaml) und [policies/license-policy.yaml](policies/license-policy.yaml) bestätigen.
 4. `python scripts/startup_check.py --profile base --ide auto --run-tests` erfolgreich ausführen.
-   Für Plugin-Arbeit zusätzlich `python scripts/validate_plugins.py`,
-   `python scripts/install_local_plugins.py --mode link` und
+   Für Plugin-Arbeit zusätzlich `python scripts/nac.py plugins validate`,
+   `python scripts/nac.py plugins install --mode link` und
    `python scripts/startup_check.py --profile plugin-dev --ide auto`.
    Danach Codex neu starten oder eine neue Session öffnen, weil Plugins beim
    Session-Start geladen werden.

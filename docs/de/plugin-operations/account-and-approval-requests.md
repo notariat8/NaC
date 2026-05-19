@@ -53,4 +53,4 @@ werden, bis diese Punkte schriftlich freigegeben sind:
 - Lokale Arbeitsplatzvoraussetzungen nach OS-, XNP-, beA-Client-Security-,
   ERiC-, Browser-, Treiber- oder Kartenleser-Updates erneut bestätigen.
 - Nach jeder Plugin-Manifest-Änderung
-  `python3 scripts/validate_plugins.py` erneut ausführen.
+  `python3 scripts/nac.py plugins validate` erneut ausführen.

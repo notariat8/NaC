@@ -14,6 +14,7 @@ alwaysApply: true
 - BPMN-Modelle müssen mit [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py) validierbar sein.
 - Mermaid ist nur für Übersichten, nicht als BPMN-Quelle.
 - Python ist die Ausführungsschicht für validierte Prozesslogik.
+- Neue NaC-Funktionalität muss über die zentrale `nac`-CLI erreichbar sein; direkte Skripte bleiben nur interne oder kompatible Bedienebenen.
 - SBOM-Vorgaben folgen [policies/sbom-policy.yaml](../../policies/sbom-policy.yaml); AI-SBOM gilt repo-weit für AI-fähige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe.
 
 Bei Abweichungen ist ein formaler Change Request erforderlich.

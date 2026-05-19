@@ -13,7 +13,7 @@ A CLI is a clearly named work order for the computer. Instead of clicking a
 button, a command is executed, for example:
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
+python scripts/nac.py status
 ```
 
 The point is not that humans should enjoy typing commands. The point is that the
@@ -66,7 +66,7 @@ process logic.
 
 | Layer | State | Role |
 | --- | --- | --- |
-| CLI and Python runtime | Usable today | Checks KG, status, editor view and quality gates. |
+| Unified `nac` CLI and Python runtime | Usable today | Checks KG, BPMN, configuration, status, editor view and quality gates. |
 | Codex plugins | Pilot-ready | Guide local readiness, plan and evidence checks. |
 | GitHub Actions | Usable today | Run gates and validations reproducibly. |
 | BPMN-js business layer | First profile present | Visual BPMN editing for subject-matter flows; Python validates the model before merge. |
@@ -80,9 +80,14 @@ process logic.
 CLI-first does not mean "for technicians only". It means: the core is small,
 local, checkable, automatable and later operable from many surfaces.
 
+The binding operating surface is now `nac`. Direct scripts may remain as
+internal or compatibility layers, but new product functionality should be
+reachable through the unified CLI.
+
 ## Next Documents
 
 - [docs/en/notar-start.md](notar-start.md)
+- [docs/en/cli.md](cli.md)
 - [docs/en/betriebsstart.md](betriebsstart.md)
 - [docs/en/integration-start.md](integration-start.md)
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md)

@@ -50,10 +50,10 @@ NaC macht nicht nur Prompts sichtbar, sondern auch:
 ## Lokale Reproduzierbarkeit
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 python scripts/validate_language_parity.py
 python scripts/validate_knowledge_graph.py
-python scripts/validate_plugins.py
+python scripts/nac.py plugins validate
 ```
 
 ## Standardisierungsfrage

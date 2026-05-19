@@ -1,6 +1,6 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-05-18
+Letzte Aktualisierung: 2026-05-19
 
 ```mermaid
 gantt
@@ -20,6 +20,7 @@ gantt
     Deutsche Umlautpflicht in Workflows         :done,   w4e, 2026-05-18, 1d
     BPMN-js Business-Layer-Profil               :done,   w4f, 2026-05-19, 1d
     Lokalen Webserver für Grafikflächen bauen  :done,   w4g, 2026-05-19, 1d
+    Zentrale NaC-CLI-Bedienkante                :done,   w4h, 2026-05-19, 1d
     Workflow-Vertragsformat ergänzen          :active, w4, 2026-05-15, 21d
 
     section Ausführung
@@ -38,7 +39,7 @@ gantt
 | Schicht | Root | Status | Grenze |
 | --- | --- | --- | --- |
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung führt; englische Summary dient technischer Anschlussfähigkeit, keine finale rechtliche Wahrheit. |
-| Python-Workflows | `workflows/python/` plus `src/notary_kg/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und stellt die sichere No-code-Editor-View bereit. |
+| Python-Workflows | `workflows/python/` plus `src/notary_kg/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Profil bereit | BPMN ist fachliche Prozessquelle; `bpmn-js` wird Editor, Python validiert NaC-Properties, Sequenzflüsse und bpmn-js-taugliche Modelle. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, KG-Editor-Views und KG-JSON lokal im Browser. |
 | Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor- und lokaler Webpreview-Vertrag. |

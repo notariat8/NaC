@@ -9,7 +9,7 @@ NaC realistisch einzuordnen.
 | Bereich | Stand | Was das bedeutet |
 | --- | --- | --- |
 | Repository klonen und lesen | Heute nutzbar | Die Struktur, Policies, Usecases und Startpfade sind öffentlich nachvollziehbar. |
-| CLI-/Python-Kern ausführen | Heute nutzbar | Die stabile Logik läuft lokal und kann später von Plugins, CI oder UI-Schichten bedient werden. |
+| Zentrale `nac`-CLI ausführen | Heute nutzbar | Status, KG, BPMN, Konfiguration, Webserver und Quality Gate haben eine gemeinsame lokale Bedienkante. |
 | Quality Gate lokal ausführen | Heute nutzbar | Tests, Sprachregeln, Datenschutzlint, Plugin-Validierung, KG-Validierung und Gantt-Regel laufen lokal. |
 | Usecase-KGs prüfen | Heute nutzbar | Jeder Usecase hat eine maschinenlesbare KG und eine menschliche Review-Sicht. |
 | KG-Editor-View anzeigen | Heute nutzbar | Fachpersonal kann offene Knoten als sichere Formular-/Checklisten-Sicht ansehen, ohne `value`-Felder zu bearbeiten. |
@@ -32,6 +32,7 @@ menschlichen Freigaben.
 ## Nächste Dokumente
 
 - [docs/de/notar-start.md](notar-start.md)
+- [cli.md](cli.md)
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [lokaler-webserver.md](lokaler-webserver.md)

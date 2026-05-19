@@ -13,7 +13,7 @@ fachliche Vorderseite steht in
 ## 2. Offene Fragen Sichtbar Machen
 
 ```bash
-python scripts/notary_kg.py --repo-root . case immobilienkaufvertrag
+python scripts/nac.py kg case immobilienkaufvertrag
 ```
 
 NaC zeigt zum Beispiel offene Knoten für Objekt, Verkäufer, Käufer,
@@ -31,7 +31,7 @@ Echte Daten werden nicht eingetragen. Der öffentliche KG-Stand merkt nur:
 ## 4. Sichere Editor-Sicht Anzeigen
 
 ```bash
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/nac.py kg editor-view immobilienkaufvertrag
 ```
 
 Die Editor-Sicht zeigt Formular- und Checklistenfelder. `value`-Felder bleiben
@@ -53,7 +53,7 @@ freigegebenen Nachweisspeicher.
 ## 7. Qualität Prüfen
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 Erst wenn das Gate gruen ist, gilt der technische Musterstand als konsistent.

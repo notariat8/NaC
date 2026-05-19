@@ -24,19 +24,19 @@ Freigaben und ohne echte Mandatsdaten im öffentlichen Muster.
 
 ```bash
 python scripts/startup_check.py --profile base --ide auto --run-tests
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 Bei Plugin- oder Arbeitsplatzarbeit:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
 
-Nach `install_local_plugins.py` Codex neu oeffnen, damit die lokale Plugin-
+Nach `nac plugins install --mode link` Codex neu öffnen, damit die lokale Plugin-
 Discovery die repo-lokalen Plugins in der neuen Session sieht.
 
 ## Betriebsgrenzen
@@ -52,6 +52,7 @@ Discovery die repo-lokalen Plugins in der neuen Session sieht.
 ## Nächste Dokumente
 
 - [docs/de/minimum-requirements.md](minimum-requirements.md)
+- [cli.md](cli.md)
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/startup-verification.md](startup-verification.md)
 - [docs/de/plugin-operations/install-local-plugins.md](plugin-operations/install-local-plugins.md)

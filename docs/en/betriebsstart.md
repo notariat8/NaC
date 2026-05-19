@@ -22,20 +22,20 @@ data in the public reference.
 
 ```bash
 python scripts/startup_check.py --profile base --ide auto --run-tests
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 For plugin or workstation work:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
 
-After `install_local_plugins.py`, reopen Codex so the local plugin discovery can
-see the repo-local plugins in the new session.
+After `nac plugins install --mode link`, reopen Codex so the local plugin
+discovery can see the repo-local plugins in the new session.
 
 ## Operating Boundaries
 
@@ -49,6 +49,7 @@ see the repo-local plugins in the new session.
 ## Next Documents
 
 - [docs/en/minimum-requirements.md](minimum-requirements.md)
+- [docs/en/cli.md](cli.md)
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/en/startup-verification.md](startup-verification.md)
 - [docs/en/plugin-operations/install-local-plugins.md](plugin-operations/install-local-plugins.md)

@@ -31,8 +31,8 @@ Der kleinste sinnvolle Endnutzer-Flow ist:
 Die aktuelle CLI erzeugt eine sichere Editor-View für jeden Usecase-Slug:
 
 ```bash
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag
+python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py kg --format json editor-view immobilienkaufvertrag
 ```
 
 Die Ausgabe ist kein finaler Web-Editor, aber sie ist ein implementierter

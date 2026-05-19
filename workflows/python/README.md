@@ -19,13 +19,17 @@ Python-Workflows müssen bereitstellen:
 Die erste implementierte Runtime ist [src/notary_kg/](../../src/notary_kg). Sie
 liest die usecase-lokalen statischen notariellen KG-Dateien und stellt
 ausführbare Readiness-/Status-Sichten sowie die erste sichere No-code-
-Editor-View bereit.
+Editor-View bereit. Die verbindliche Bedienkante für Produktdokumentation ist
+jetzt die zentrale [NaC-CLI](../../docs/de/cli.md).
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . case bautraegervertrag
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/nac.py kg status
+python scripts/nac.py kg case bautraegervertrag
+python scripts/nac.py kg editor-view immobilienkaufvertrag
 ```
+
+Direkte Skripte bleiben als interne Kompatibilität erlaubt. Neue
+Workflow-Funktionen sollen aber zusätzlich über `nac` erreichbar sein.
 
 ## Nächster Entwicklungsschritt
 

@@ -40,4 +40,4 @@ Do not implement or enable direct external write adapters until these are approv
 
 - Reconfirm account ownership and role necessity at least quarterly for pilots and before production release.
 - Reconfirm local workstation prerequisites after OS, XNP, beA Client Security, ERiC, browser, driver or card-reader updates.
-- Re-run `python3 scripts/validate_plugins.py` after each plugin manifest change.
+- Re-run `python3 scripts/nac.py plugins validate` after each plugin manifest change.

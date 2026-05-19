@@ -84,7 +84,7 @@ when:
 3. This AVV/DPA section is linked as checklist reference.
 4. No real contract document, organization ID or account secret is in the diff.
 5. An issue or PR comment documents the approval decision.
-6. `python scripts/quality_gate.py --profile strict` passes.
+6. `python scripts/nac.py doctor --profile strict` passes.
 
 ## Minimum Decision Per Plugin Or Workflow
 

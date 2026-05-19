@@ -89,4 +89,4 @@ ist erst releasefähig, wenn:
 3. Runtime-, Middleware- und Hardware-Mindestvoraussetzungen dokumentiert sind,
 4. Datenschutz-/AVV-DPA-Status dokumentiert ist,
 5. Human-Review-Owner benannt ist,
-6. `python scripts/quality_gate.py --profile strict` erfolgreich läuft.
+6. `python scripts/nac.py doctor --profile strict` erfolgreich läuft.

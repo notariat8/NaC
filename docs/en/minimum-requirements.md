@@ -52,8 +52,8 @@ Plugin and integration development adds the following to the base workspace:
 Mandatory plugin-work check:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
 

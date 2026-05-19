@@ -86,4 +86,4 @@ An AI-enabled plugin, workflow or usecase is release-ready only when:
 3. runtime, middleware and hardware minimum requirements are documented,
 4. privacy/AVV-DPA status is documented,
 5. a human-review owner is named,
-6. `python scripts/quality_gate.py --profile strict` passes.
+6. `python scripts/nac.py doctor --profile strict` passes.

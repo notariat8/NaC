@@ -87,7 +87,7 @@ ist erst mergefähig, wenn:
 4. Kein echtes Vertragsdokument, keine Organisations-ID und kein Account-Secret
    im Diff liegt.
 5. Ein Issue oder PR-Kommentar die Freigabeentscheidung dokumentiert.
-6. `python scripts/quality_gate.py --profile strict` erfolgreich läuft.
+6. `python scripts/nac.py doctor --profile strict` erfolgreich läuft.
 
 ## Mindestentscheidung je Plugin oder Workflow
 

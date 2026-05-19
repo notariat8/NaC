@@ -18,7 +18,7 @@ files from the current repository.
 ## Start
 
 ```bash
-python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765
+python scripts/nac.py web
 ```
 
 Then open in the browser:
@@ -30,8 +30,12 @@ http://127.0.0.1:8765/
 Optional:
 
 ```bash
-python scripts/nac_web.py --repo-root . --open
+python scripts/nac.py web --open
 ```
+
+The older direct entry point `python scripts/nac_web.py --repo-root .` remains
+compatible. Product documentation uses `nac` so every graphical surface follows
+the same central operating path.
 
 ## Current Routes
 

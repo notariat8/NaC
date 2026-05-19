@@ -53,12 +53,12 @@ Für Plugin- und Integrationsentwicklung kommt zum Base-Workspace hinzu:
 Pflichtcheck für Plugin-Arbeit:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
 
-Danach Codex neu starten oder eine neue Session mit Workspace `~/NaC` oeffnen,
+Danach Codex neu starten oder eine neue Session mit Workspace `~/NaC` öffnen,
 weil aktive Plugins beim Session-Start geladen werden. Wenn Symlinks auf einem
 Arbeitsplatz nicht erlaubt sind, nach Freigabe `--mode copy --force` verwenden.
 

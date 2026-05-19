@@ -16,7 +16,7 @@ Prinzip:
 Lokal:
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 CI:

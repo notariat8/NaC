@@ -48,7 +48,7 @@ beschrieben und über eine Enterprise Control Plane in prüfbare Ausführung
 | Prüfung und Standardisierung | [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Entwicklung und Maintainer | [docs/de/START_HERE.md](START_HERE.md) |
 
-Schnelle Orientierung: [ausfuehrungsmodell.md](ausfuehrungsmodell.md),
+Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 [docs/de/reifegrad.md](reifegrad.md), [docs/de/glossar.md](glossar.md) und
 [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
 
@@ -80,6 +80,8 @@ Schnelle Orientierung: [ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 - [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit für Prüfung und Standardisierung.
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NaC heute
   CLI-first ist und später trotzdem UI-fähig bleibt.
+- [cli.md](cli.md): zentrale `nac`-CLI, erste Befehle und
+  Architekturregel für neue Funktionen.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische
@@ -128,9 +130,10 @@ Schnelle Orientierung: [ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 ## Schnellstart
 
 ```bash
-python -m business_os validate processes/invoices/2026/REQ-2026-0001.json
-python -m business_os render-summary processes/invoices/2026/REQ-2026-0001.json
-python -m business_os monthly-close --year 2026 --month 3
+python scripts/nac.py status
+python scripts/nac.py process validate processes/invoices/2026/REQ-2026-0001.json
+python scripts/nac.py process render-summary processes/invoices/2026/REQ-2026-0001.json
+python scripts/nac.py process monthly-close --year 2026 --month 3
 ```
 
 ## Betriebsmodell
@@ -203,7 +206,7 @@ Konzeptänderungen werden immer für Cursor und VS Code + Copilot synchron gepfl
 
 Vor produktiver Arbeit:
 
-`python scripts/startup_check.py --profile base --ide auto --run-tests`
+`python scripts/nac.py doctor --profile strict`
 
 Für Plugin-Entwicklung:
 

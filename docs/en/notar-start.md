@@ -34,9 +34,9 @@ NaC is a reference model for AI-first notary-office operations:
 ## First Check
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py status
+python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py doctor --profile strict
 ```
 
 If these commands run, you can inspect available usecases, open case nodes and
@@ -53,6 +53,7 @@ whether the repository passes its own gates.
 ## Next Documents
 
 - [docs/en/reifegrad.md](reifegrad.md)
+- [docs/en/cli.md](cli.md)
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/en/glossar.md](glossar.md)
 - [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)

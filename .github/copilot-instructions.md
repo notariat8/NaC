@@ -28,6 +28,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Onboarding-Updates müssen für alle unterstützten Plattformen parallel gepflegt werden.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Access- und Rollenregeln sind nur unter [policies/](../policies) zu ändern; AI-Regelflächen sind Spiegel dieser Policy.
+- Neue NaC-Funktionalität braucht eine Bedienkante in der zentralen `nac`-CLI; direkte Skripte dürfen als interne Kompatibilität bleiben, aber Produktdokumentation führt über [docs/de/cli.md](../docs/de/cli.md) und [docs/en/cli.md](../docs/en/cli.md).
 - Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](../policies/language-policy.yaml); die Policy gilt für alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../README.md).
 - Sprachabhängige Inhalte liegen in ISO-639-Ordnern; `de` und `en` sind immer zu pflegen.
 - Die Sprache des Prompts begrenzt die Änderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
@@ -41,7 +42,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
 - Mindestvoraussetzungen für Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
 - NaC-Ausführung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht über Omnistation.
-- Repo-lokale Plugins werden für neue Rechner mit `python scripts/install_local_plugins.py --mode link`
+- Repo-lokale Plugins werden für neue Rechner mit `python scripts/nac.py plugins install --mode link`
   in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
   neue Session öffnen.
 
@@ -51,6 +52,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - [docs/en/START_HERE.md](../docs/en/START_HERE.md)
 - [docs/de/fachanwender-guide.md](../docs/de/fachanwender-guide.md)
 - [docs/en/fachanwender-guide.md](../docs/en/fachanwender-guide.md)
+- [docs/de/cli.md](../docs/de/cli.md)
+- [docs/en/cli.md](../docs/en/cli.md)
 - [policies/culture-policy.yaml](../policies/culture-policy.yaml)
 - [policies/process-policy.yaml](../policies/process-policy.yaml)
 - [policies/technology-policy.yaml](../policies/technology-policy.yaml)
@@ -122,8 +125,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 1. Lies [docs/de/vscode-copilot-start.md](../docs/de/vscode-copilot-start.md) oder [docs/en/vscode-copilot-start.md](../docs/en/vscode-copilot-start.md).
 2. Führe `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
-   Für Plugin-Entwicklung zusätzlich `python scripts/validate_plugins.py`,
-   `python scripts/install_local_plugins.py --mode link` und
+   Für Plugin-Entwicklung zusätzlich `python scripts/nac.py plugins validate`,
+   `python scripts/nac.py plugins install --mode link` und
    `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
    Danach Codex neu starten oder eine neue Session öffnen.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.

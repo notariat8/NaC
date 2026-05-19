@@ -13,7 +13,7 @@ business-facing front page is
 ## 2. Show Open Questions
 
 ```bash
-python scripts/notary_kg.py --repo-root . case immobilienkaufvertrag
+python scripts/nac.py kg case immobilienkaufvertrag
 ```
 
 NaC shows open nodes for property, seller, buyer, purchase price, encumbrances,
@@ -31,7 +31,7 @@ Real data is not entered. The public KG state only tracks:
 ## 4. Show The Safe Editor View
 
 ```bash
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
+python scripts/nac.py kg editor-view immobilienkaufvertrag
 ```
 
 The editor view shows form and checklist fields. `value` fields remain blocked
@@ -51,7 +51,7 @@ belongs in a reviewed system, DMS or approved evidence store.
 ## 7. Check Quality
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 Only a green gate means the technical reference state is consistent. Productive

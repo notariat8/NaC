@@ -13,9 +13,13 @@ approved_stack:
   process_logic:
     execution_language: python
     approach: model_first
+    operating_surface: nac_cli
+    cli_entrypoint: nac
+    cli_wrapper: scripts/nac.py
     notes:
       - "Python implementiert Ausführung, Validierung und Integrationen."
       - "Fachlicher Ablauf wird primär als BPMN 2.0 modelliert."
+      - "Neue NaC-Funktionalität muss über die zentrale nac-CLI erreichbar sein; direkte Skripte bleiben nur interne oder kompatible Bedienebenen."
   visualization:
     canonical_business_model: bpmn_2_0
     canonical_source_format: bpmn_xml

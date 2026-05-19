@@ -1,7 +1,7 @@
 # START_HERE: Operativer Einstieg in NaC
 
 Status: verbindlicher Startpfad
-Letzte inhaltliche Anpassung: 2026-05-15
+Letzte inhaltliche Anpassung: 2026-05-19
 
 ## Warum dieses Dokument neben dem README existiert
 
@@ -52,27 +52,27 @@ Dieses Dokument ist zu verwenden:
 4. Aktive Runtime prüfen:
 
    ```bash
-   python scripts/notary_kg.py --repo-root . status
+   python scripts/nac.py status
    ```
 
 5. Strikten lokalen Gate ausführen, bevor ein Stand als push-ready gilt:
 
    ```bash
    python scripts/startup_check.py --profile base --ide auto --run-tests
-   python scripts/quality_gate.py --profile strict
+   python scripts/nac.py doctor --profile strict
    ```
 
 Bei Plugin- oder Notariatsarbeitsplatz-Arbeit zusätzlich das passende Profil
 ausführen:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
 
-Nach `install_local_plugins.py` Codex neu oeffnen. Die laufende Session liest
+Nach `nac plugins install --mode link` Codex neu öffnen. Die laufende Session liest
 Plugins beim Start ein und sieht repo-lokale Plugins erst nach der lokalen
 Spiegelung und einem Neustart.
 
@@ -109,12 +109,14 @@ sie mindestens eine passende Umsetzungsfläche mitpflegt:
 ## Aktuelle Entwicklerkommandos
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . case bautraegervertrag
+python scripts/nac.py status
+python scripts/nac.py kg case bautraegervertrag
+python scripts/nac.py bpmn validate
+python scripts/nac.py config validate
 python scripts/validate_knowledge_graph.py
-python scripts/validate_plugins.py
+python scripts/nac.py plugins validate
 python scripts/startup_check.py --profile base --ide auto --run-tests
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 ## Push-Regel

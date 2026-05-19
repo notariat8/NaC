@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-05-18
+Letzte Aktualisierung: 2026-05-19
 
 Jedes Change-Set mit repo-relevanten Dateien muss diesen globalen Gantt
 mitpflegen. Repo-relevant sind alle Änderungen außer generierten Artefakten
@@ -53,6 +53,7 @@ gantt
     Deutsche Umlautpflicht validieren            :done,    b1n, 2026-05-18, 1d
     BPMN-js Business-Layer-Profil                :done,    b1o, 2026-05-19, 1d
     Lokalen Webserver für Grafikflächen bauen   :done,    b1p, 2026-05-19, 1d
+    Zentrale NaC-CLI-Bedienkante                 :done,    b1q, 2026-05-19, 1d
     Skill- und Python-Arbeitsablauf-Verträge    :active,  b2, 2026-05-15, 28d
     Deterministischer Arbeitsablauf-Runner-MVP   :active,  b3, 2026-05-15, 35d
     BPMN-Modellvalidierung im Quality Gate       :done,    b3a, 2026-05-19, 1d
@@ -87,7 +88,7 @@ gantt
 | Arbeitsstrang | Umfang | Status | Fortschritt | Aktueller Prüfpunkt |
 | --- | --- | --- | --- | --- |
 | A | Installierbare Plugins für Notariate | Aktiv | 75% | `nac-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad; `nac-pkcs7-certbundle` führt einen getrennten lokalen Zertifikatsbündel-Nachweistrack ohne Signatur; OpenAI-gestützte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Führung, deutsch geführte Skill-Anweisungen mit englischer Kurzfassung, kurzen deutschen Plugin-Anzeigenamen ohne `NaC`-Präfix, knappen Kurzbeschreibungen, echten Icon-/Logo-Assets, sichtbarem Marktplatznamen `funktion8 - NaC` und einen lokalen Codex-Erkennungsbootstrap für neue Rechner. |
-| B | Installierbare Skills und deterministische Python-Arbeitsabläufe | Aktiv | 48% | Das erste ausführbare KG-Runtime-Paket und die CLI sind mit Unit-Tests implementiert; `START_HERE` ist der operative Einstieg getrennt vom README-Überblick; Startprüfungen haben Profile für Basis-, Plugin-Dev- und Notariats-Arbeitsplatz-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparität blockiert kopierte lokalisierte Markdown-/Textspiegel, prüft SKILL.md-Sprachmarker und erzwingt echte Umlaute in deutscher Menschensprache; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; der BPMN-js Business Layer hat ein NaC-Modellprofil, einen ersten Immobilienkaufvertrag-Prozess, eine Python-Validierung im strikten Quality Gate und einen lokalen Webserver für grafische BPMN-/KG-Ausgaben. |
+| B | Installierbare Skills und deterministische Python-Arbeitsabläufe | Aktiv | 52% | Das erste ausführbare KG-Runtime-Paket ist unter der zentralen `nac`-CLI erreichbar; `nac status`, `nac kg`, `nac bpmn`, `nac config`, `nac plugins`, `nac process`, `nac web` und `nac doctor` bilden die gemeinsame Bedienkante für Runtime, Konfiguration, Webserver und Quality Gate; `START_HERE` ist der operative Einstieg getrennt vom README-Überblick; Startprüfungen haben Profile für Basis-, Plugin-Dev- und Notariats-Arbeitsplatz-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparität blockiert kopierte lokalisierte Markdown-/Textspiegel, prüft SKILL.md-Sprachmarker und erzwingt echte Umlaute in deutscher Menschensprache; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; der BPMN-js Business Layer hat ein NaC-Modellprofil, einen ersten Immobilienkaufvertrag-Prozess, eine Python-Validierung im strikten Quality Gate und einen lokalen Webserver für grafische BPMN-/KG-Ausgaben. |
 | C | Notarielle Usecases für Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 60% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG; Deutsch ist explizit die führende und rechtlich bindende Sprache für deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch geführt und durch den Sprachvalidator abgedeckt; ein nicht mehr gewünschter aktiver Aufnahme-Usecase wurde aus NaC entfernt und ist nicht mehr Teil des Katalogs. |
 | D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 34% | Root-README führt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit, vier Zielgruppenpfaden plus Maintainer-Pfad und sichtbarer Attribution; separate Startseiten erklären Notariatsentscheidung, Betrieb, Integration sowie Prüfung und Standardisierung; Reifegrad, Glossar, CLI-first-Ausführungsmodell, präzisierte Gantt-Regel, AGPL-/CC-BY-Lizenzmodell und ein durchgehender Immobilienkaufvertrag-Pfad machen den Stand für Nicht-Technik-Leser greifbarer. |
 

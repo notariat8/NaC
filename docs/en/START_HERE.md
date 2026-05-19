@@ -1,7 +1,7 @@
 # START HERE: Operational Entry Into NaC
 
 Status: binding start path
-Last content update: 2026-05-15
+Last content update: 2026-05-19
 
 ## Why This Document Exists Next To The README
 
@@ -51,26 +51,26 @@ Use this document:
 4. Check the active runtime:
 
    ```bash
-   python scripts/notary_kg.py --repo-root . status
+   python scripts/nac.py status
    ```
 
 5. Run the strict local gate before treating a state as push-ready:
 
    ```bash
    python scripts/startup_check.py --profile base --ide auto --run-tests
-   python scripts/quality_gate.py --profile strict
+   python scripts/nac.py doctor --profile strict
    ```
 
 For plugin or notary-workstation work, also run the matching profile:
 
 ```bash
-python scripts/validate_plugins.py
-python scripts/install_local_plugins.py --mode link
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
 
-After `install_local_plugins.py`, reopen Codex. The running session reads
+After `nac plugins install --mode link`, reopen Codex. The running session reads
 plugins at startup and sees repo-local plugins only after the local mirror and a
 restart.
 
@@ -107,12 +107,14 @@ at least one matching implementation surface:
 ## Current Developer Commands
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . case bautraegervertrag
+python scripts/nac.py status
+python scripts/nac.py kg case bautraegervertrag
+python scripts/nac.py bpmn validate
+python scripts/nac.py config validate
 python scripts/validate_knowledge_graph.py
-python scripts/validate_plugins.py
+python scripts/nac.py plugins validate
 python scripts/startup_check.py --profile base --ide auto --run-tests
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 ## Push Rule

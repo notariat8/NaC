@@ -13,7 +13,7 @@ Eine CLI ist ein eindeutig benannter Arbeitsauftrag an den Computer. Statt auf
 einen Button zu klicken, wird ein Befehl ausgeführt, zum Beispiel:
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
+python scripts/nac.py status
 ```
 
 Der Vorteil ist nicht, dass Menschen gerne Befehle tippen sollen. Der Vorteil
@@ -66,7 +66,7 @@ belastbare Prozesslogik.
 
 | Ebene | Stand | Rolle |
 | --- | --- | --- |
-| CLI und Python-Runtime | Heute nutzbar | Prüft KG, Status, Editor-View und Quality Gates. |
+| Zentrale `nac`-CLI und Python-Runtime | Heute nutzbar | Prüft KG, BPMN, Konfiguration, Status, Editor-View und Quality Gates. |
 | Codex-Plugins | Pilotfähig | Führen lokale Readiness-, Plan- und Evidence-Prüfungen geführt aus. |
 | GitHub Actions | Heute nutzbar | Führen Gates und Validierungen reproduzierbar aus. |
 | BPMN-js Business Layer | Erstes Profil vorhanden | Visuelle BPMN-Bearbeitung für fachliche Abläufe; Python prüft das Modell vor Merge. |
@@ -81,9 +81,14 @@ CLI-first bedeutet nicht "nur für Techniker". Es bedeutet: Der Kern ist klein,
 lokal, prüfbar, automatisierbar und später von vielen Oberflächen aus
 bedienbar.
 
+Die verbindliche Bedienkante heißt künftig `nac`. Direkte Skripte bleiben als
+interne oder kompatible Ebene möglich, aber neue Produktfunktionen sollen über
+die zentrale CLI erreichbar sein.
+
 ## Nächste Dokumente
 
 - [docs/de/notar-start.md](notar-start.md)
+- [docs/de/cli.md](cli.md)
 - [docs/de/betriebsstart.md](betriebsstart.md)
 - [docs/de/integration-start.md](integration-start.md)
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md)

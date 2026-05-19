@@ -35,9 +35,9 @@ NaC ist ein Muster für AI-first-Betrieb im Notariat:
 ## Erster Prüflauf
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py status
+python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py doctor --profile strict
 ```
 
 Wenn diese Befehle laufen, können Sie sehen, welche Usecases vorhanden sind,
@@ -55,6 +55,7 @@ besteht.
 ## Nächste Dokumente
 
 - [docs/de/reifegrad.md](reifegrad.md)
+- [cli.md](cli.md)
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/de/glossar.md](glossar.md)
 - [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md)

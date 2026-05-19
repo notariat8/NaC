@@ -11,10 +11,10 @@ Bei erster Nutzung dieses Repositories:
 2. Nutze das passende Onboarding unter [prompts/de/onboarding/](../../prompts/de/onboarding) oder [prompts/en/onboarding/](../../prompts/en/onboarding).
 3. Bestätige Unternehmensart und gewünschte Branchenmodule.
 4. Bestätige Kultur-, Sprach-, Language- und Technologie-Policy.
-5. Für Plugin-Arbeit führe `python scripts/validate_plugins.py`,
-   `python scripts/install_local_plugins.py --mode link` und danach
+5. Für Plugin-Arbeit führe `python scripts/nac.py plugins validate`,
+   `python scripts/nac.py plugins install --mode link` und danach
    `python scripts/startup_check.py --profile plugin-dev --ide auto` aus.
-   Oeffne Codex anschließend neu, damit die Plugin-Discovery die lokalen
+   Öffne Codex anschließend neu, damit die Plugin-Discovery die lokalen
    Plugins sieht.
 6. Starte mit einem Pilotprozess statt mit Vollausrollung.
 

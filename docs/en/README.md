@@ -42,7 +42,7 @@ and moved into verifiable execution through an Enterprise Control Plane.
 | Review and standardization | [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) |
 | Development and maintainers | [docs/en/START_HERE.md](START_HERE.md) |
 
-Quick orientation: [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md),
+Quick orientation: [docs/en/cli.md](cli.md), [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 [docs/en/reifegrad.md](reifegrad.md), [docs/en/glossar.md](glossar.md) and
 [docs/en/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
 
@@ -67,6 +67,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains why NaC
   is CLI-first today and still UI-ready later.
+- [docs/en/cli.md](cli.md) explains the central `nac` CLI, first commands and
+  the architecture rule for new functionality.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry
@@ -102,15 +104,16 @@ regardless of the language used in the prompt. The binding rule is defined in
 ## Quick Start
 
 ```bash
-python -m business_os validate processes/invoices/2026/REQ-2026-0001.json
-python -m business_os render-summary processes/invoices/2026/REQ-2026-0001.json
-python -m business_os monthly-close --year 2026 --month 3
+python scripts/nac.py status
+python scripts/nac.py process validate processes/invoices/2026/REQ-2026-0001.json
+python scripts/nac.py process render-summary processes/invoices/2026/REQ-2026-0001.json
+python scripts/nac.py process monthly-close --year 2026 --month 3
 ```
 
 For a full local gate:
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes under [plugins/](../../plugins),

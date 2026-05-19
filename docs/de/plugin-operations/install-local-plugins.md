@@ -10,13 +10,13 @@ Plugin-Wurzeln liegen unter [plugins/](../../../plugins).
 
 ```bash
 cd ~/NaC
-python3 scripts/validate_plugins.py
-python3 scripts/install_local_plugins.py --mode link
-PYTHONPATH=src python3 scripts/quality_gate.py --profile standard
+python3 scripts/nac.py plugins validate
+python3 scripts/nac.py plugins install --mode link
+python3 scripts/nac.py doctor --profile standard
 ```
 
 Nach dem Installationsschritt Codex beenden und mit dem Workspace `~/NaC` neu
-oeffnen. Die laufende Session liest aktive Tools und Plugins beim Start ein;
+öffnen. Die laufende Session liest aktive Tools und Plugins beim Start ein;
 repo-lokale Plugins werden nicht nachträglich in eine bereits gestartete
 Session injiziert.
 
@@ -32,7 +32,7 @@ zeigt, sind zwei Dinge auseinandergefallen:
    home-lokalen Plugin-Root. Ohne diese Spiegelung, oder ohne Neustart nach
    der Spiegelung, sieht eine neue Session die repo-lokalen Plugins nicht.
 
-`scripts/install_local_plugins.py --mode link` spiegelt deshalb den Marktplatz
+`nac plugins install --mode link` spiegelt deshalb den Marktplatz
 nach `~/.agents/plugins/marketplace.json`. Die Plugin-Ordner werden unter
 `~/plugins/<plugin>` verlinkt. Mit `NAC_PLUGIN_HOME=/anderer/root` kann ein
 abweichender Home-Root gesetzt werden; dann liegen Marktplatz und Plugins
@@ -48,11 +48,11 @@ Codex-Discovery bleibt der home-lokale Root maßgeblich.
 
 ## Lokales Installationsmuster
 
-1. Codex mit Workspace `~/NaC` oeffnen.
+1. Codex mit Workspace `~/NaC` öffnen.
 2. Prüfen, dass [.agents/plugins/marketplace.json](../../../.agents/plugins/marketplace.json)
    die gewünschten Plugins listet.
-3. `python3 scripts/install_local_plugins.py --mode link` ausführen.
-4. Codex neu starten oder eine neue Session mit Workspace `~/NaC` oeffnen.
+3. `python3 scripts/nac.py plugins install --mode link` ausführen.
+4. Codex neu starten oder eine neue Session mit Workspace `~/NaC` öffnen.
 5. Für notariatsseitige Online-HRA-Arbeit zuerst `nac-cyberjack-rfid`,
    danach `nac-bnotk-xnp` und danach `nac-handelsregister` installieren.
 6. Falls die Codex-Umgebung es unterstützt, aus dem repo-lokalen Marktplatz
@@ -62,7 +62,7 @@ Codex-Discovery bleibt der home-lokale Root maßgeblich.
 8. Prüfen, dass das installierte XNP-Plugin den Anzeigenamen
    `XNP-Prüfung` und den Quellpfad `./plugins/nac-bnotk-xnp` hat.
 9. Falls eine Umgebung nur Kopien statt Symlinks akzeptiert,
-   `python3 scripts/install_local_plugins.py --mode copy --force` nach
+   `python3 scripts/nac.py plugins install --mode copy --force` nach
    Freigabe nutzen; die Quelle der Wahrheit bleibt dieses Repository.
 
 ## Operative Grenze
@@ -75,5 +75,5 @@ separat geprüften Connector-PR.
 Für Online-HRA ist `nac-cyberjack-rfid` die installierbare Karten- und
 SAK-Prüfung und `nac-bnotk-xnp` die installierbare XNP-Bereitschafts- und
 Authentifizierungsprüfung. Sie authentifizieren nicht eigenständig als Notar,
-speichern keine PINs oder Zugangsdaten, loesen keine XNotar-Importe aus und
+speichern keine PINs oder Zugangsdaten, lösen keine XNotar-Importe aus und
 reichen keine Anmeldungen ein.
