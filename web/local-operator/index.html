@@ -24,6 +24,7 @@
       <button class="nav-toggle" type="button" aria-label="Navigation oeffnen" aria-expanded="false" aria-controls="site-nav">☰</button>
       <nav class="site-nav" id="site-nav" aria-label="Hauptnavigation">
         <a href="#modell">Modell</a>
+        <a href="#bpmn-modelle">BPMN</a>
         <a href="#hardware-test">HW-Test</a>
         <a href="#governance">Governance</a>
         <a href="#artefakte">Artefakte</a>
@@ -39,6 +40,7 @@
           <p class="lead">Diese Operator-Webapp liegt im NaC-Repository und nutzt nur die lokal per CLI gestartete Bridge auf <code>127.0.0.1</code>. Sie prueft Arbeitsplatz-Gates, zeigt minimierte Readiness-Metadaten und schreibt Testlog-Eintraege ohne PINs, Kartendaten oder Secrets.</p>
           <div class="hero-actions" aria-label="Primaere Aktionen">
             <a class="button primary" href="#modell">Betriebsmodell ansehen</a>
+            <a class="button secondary" href="#bpmn-modelle">BPMN oeffnen</a>
             <a class="button secondary" href="#hardware-test">HW-Test starten</a>
           </div>
           <dl class="hero-facts" aria-label="NaC Kurzstatus">
@@ -94,6 +96,67 @@
             <h3>BPMN-Usecases</h3>
             <p>Alle usecase-lokalen KGs haben BPMN-Modelle mit Rolle, Ausfuehrungskanal und Nachweis. Oeffne die lokale <a href="/bpmn/handelsregisteranmeldung/edit">bpmn-js-Editorflaeche</a> oder die <a href="/bpmn/immobilienkaufvertrag">SVG-Ansicht</a>.</p>
           </article>
+        </div>
+      </section>
+
+      <section class="section bpmn-menu" id="bpmn-modelle" aria-labelledby="bpmn-modelle-title">
+        <div class="section-heading">
+          <p class="section-kicker">BPMN-Modelle</p>
+          <h2 id="bpmn-modelle-title">Usecases im Browser ansehen und bearbeiten.</h2>
+        </div>
+        <div class="bpmn-feature-grid">
+          <article>
+            <h3>Immobilienkaufvertrag</h3>
+            <p>Kanonisches Top-Level-Modell mit Grundbuch-, XNP- und Vollzugskanaelen.</p>
+            <div class="inline-actions">
+              <a class="button primary" href="/bpmn/immobilienkaufvertrag">Ansicht</a>
+              <a class="button secondary" href="/bpmn/immobilienkaufvertrag/edit">Editor</a>
+            </div>
+          </article>
+          <article>
+            <h3>Handelsregisteranmeldung</h3>
+            <p>Registerroute mit lokaler XNP-/Signaturpfadpruefung und digitaler Einreichung.</p>
+            <div class="inline-actions">
+              <a class="button primary" href="/bpmn/handelsregisteranmeldung">Ansicht</a>
+              <a class="button secondary" href="/bpmn/handelsregisteranmeldung/edit">Editor</a>
+            </div>
+          </article>
+          <article>
+            <h3>Online-GmbH-/UG-Gruendung</h3>
+            <p>Online-Verfahren mit notary_app, Videokonferenz und qualifizierter elektronischer Signatur.</p>
+            <div class="inline-actions">
+              <a class="button primary" href="/bpmn/online-gmbh-gruendung">Ansicht</a>
+              <a class="button secondary" href="/bpmn/online-gmbh-gruendung/edit">Editor</a>
+            </div>
+          </article>
+        </div>
+        <div class="bpmn-link-panel" aria-label="Alle BPMN-Usecase-Editoren">
+          <h3>Alle Usecase-Editoren</h3>
+          <div class="bpmn-link-grid">
+            <a href="/bpmn/adoption-familienrechtliche-erklaerungen/edit">Adoption / Familienrecht</a>
+            <a href="/bpmn/bautraegervertrag/edit">Bautraegervertrag</a>
+            <a href="/bpmn/ehevertrag-scheidungsfolgenvereinbarung/edit">Ehevertrag</a>
+            <a href="/bpmn/erbausschlagung/edit">Erbausschlagung</a>
+            <a href="/bpmn/erbscheinsantrag-nachlass/edit">Erbscheinsantrag</a>
+            <a href="/bpmn/geschaeftsanteilsuebertragung-gmbh/edit">GmbH-Anteile</a>
+            <a href="/bpmn/gesellschafterbeschluss-gmbh-ug/edit">Gesellschafterbeschluss</a>
+            <a href="/bpmn/grundschuld-hypothekenbestellung/edit">Grundschuld</a>
+            <a href="/bpmn/grundstueckskaufvertrag/edit">Grundstueckskauf</a>
+            <a href="/bpmn/handelsregisteranmeldung/edit">Handelsregister</a>
+            <a href="/bpmn/immobilienkaufvertrag/edit">Immobilienkauf</a>
+            <a href="/bpmn/loeschungsbewilligung-grundbuchloeschung/edit">Loeschungsbewilligung</a>
+            <a href="/bpmn/online-gmbh-gruendung/edit">Online-GmbH</a>
+            <a href="/bpmn/pflichtteilsverzicht-erbverzicht/edit">Erbverzicht</a>
+            <a href="/bpmn/schenkungsvertrag-uebertragungsvertrag/edit">Schenkung</a>
+            <a href="/bpmn/steuer-aas/edit">Steuer-aaS</a>
+            <a href="/bpmn/teilungserklaerung-weg/edit">Teilungserklaerung</a>
+            <a href="/bpmn/testament/edit">Testament</a>
+            <a href="/bpmn/testament-erbvertrag/edit">Testament / Erbvertrag</a>
+            <a href="/bpmn/unterschriftsbeglaubigung/edit">Unterschriftsbeglaubigung</a>
+            <a href="/bpmn/vereinsregisteranmeldung/edit">Vereinsregister</a>
+            <a href="/bpmn/vollmacht-immobilien-gesellschaftsgeschaefte/edit">Vollmacht</a>
+            <a href="/bpmn/vorsorgevollmacht-patientenverfuegung/edit">Vorsorgevollmacht</a>
+          </div>
         </div>
       </section>
 
@@ -173,6 +236,7 @@
       <p>© 2026 Funktion8. Lokale NaC-Operator-Webapp fuer den genehmigten Arbeitsplatz.</p>
       <nav aria-label="Footer Navigation">
         <a href="#hardware-test">HW-Test</a>
+        <a href="#bpmn-modelle">BPMN</a>
         <a href="#governance">Governance</a>
         <a href="#artefakte">Artefakte</a>
       </nav>

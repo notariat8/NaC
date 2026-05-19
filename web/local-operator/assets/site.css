@@ -279,20 +279,24 @@ h3 {
 
 .card-grid,
 .artifact-layout,
-.governance-list {
+.governance-list,
+.bpmn-feature-grid {
   display: grid;
   gap: 1rem;
   margin: 0 auto;
   max-width: 1180px;
 }
 
-.card-grid {
+.card-grid,
+.bpmn-feature-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .card,
 .artifact-layout article,
 .governance-list div,
+.bpmn-feature-grid article,
+.bpmn-link-panel,
 .legal-box {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -314,9 +318,61 @@ h3 {
 .card p,
 .artifact-layout p,
 .governance-list p,
+.bpmn-feature-grid p,
 .legal-page p {
   color: var(--muted);
   margin: 0;
+}
+
+.bpmn-menu {
+  background: #fbfcfb;
+}
+
+.bpmn-feature-grid article {
+  border-left: 6px solid var(--blue);
+}
+
+.bpmn-feature-grid article:nth-child(2) {
+  border-left-color: var(--green);
+}
+
+.bpmn-feature-grid article:nth-child(3) {
+  border-left-color: var(--gold);
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.bpmn-link-panel {
+  margin: 1rem auto 0;
+  max-width: 1180px;
+}
+
+.bpmn-link-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.bpmn-link-grid a {
+  background: #f4f7f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  text-decoration: none;
+}
+
+.bpmn-link-grid a:hover,
+.bpmn-link-grid a:focus-visible {
+  background: #e8eee9;
 }
 
 .governance-list {
@@ -574,9 +630,14 @@ h3 {
   .content-grid.two,
   .hardware-panel,
   .card-grid,
+  .bpmn-feature-grid,
   .governance-list,
   .artifact-layout {
     grid-template-columns: 1fr;
+  }
+
+  .bpmn-link-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .cta-band,
@@ -601,5 +662,9 @@ h3 {
 
   .button {
     width: 100%;
+  }
+
+  .bpmn-link-grid {
+    grid-template-columns: 1fr;
   }
 }
