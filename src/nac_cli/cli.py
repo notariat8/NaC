@@ -17,7 +17,7 @@ from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.cli import main as notary_kg_main
 
 from . import __version__
-from .tenant import init_tenant_repo, tenant_status, write_demo_case
+from .tenant import init_tenant_repo, tenant_status, write_demo_case, write_sample_matter
 
 
 DEFAULT_PORT = 8765
@@ -142,6 +142,11 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_write_demo.add_argument("--case-id", help="Optionale Demo-Vorgangs-ID.")
     tenant_write_demo.add_argument("--force", action="store_true", help="Bestehenden Demo-Vorgang überschreiben.")
     tenant_write_demo.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_sample = tenant_sub.add_parser("write-sample-akte", help="Schreibt eine synthetische Musterakte im ID-Pointer-Modell.")
+    tenant_sample.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
+    tenant_sample.add_argument("--akten-id", help="Optionale technische Akten-ID. Standard: UVZ-2026-0001.")
+    tenant_sample.add_argument("--force", action="store_true", help="Bestehende Musterakte überschreiben.")
+    tenant_sample.add_argument("--format", choices=["text", "json"], default="text")
     tenant.set_defaults(func=command_tenant)
 
     return parser
@@ -502,6 +507,9 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Git: {'ja' if status.git_present else 'nein'}")
             print(f"- Remote: {status.remote_origin or 'nicht gesetzt'}")
             print(f"- Demo-Vorgänge: {status.demo_cases}")
+            print(f"- Akten: {status.matters}")
+            print(f"- Personen: {status.persons}")
+            print(f"- Dokumente: {status.documents}")
             return 0
 
         if args.tenant_command == "write-demo":
@@ -519,6 +527,24 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Repo: {payload['repo']}")
             print(f"- Vorgang: {payload['case_id']}")
             print(f"- Datei: {payload['path']}")
+            print(f"- Datenklasse: {payload['data_classification']}")
+            return 0
+
+        if args.tenant_command == "write-sample-akte":
+            payload = write_sample_matter(
+                tenant_repo=args.repo,
+                matter_id=args.akten_id,
+                force=args.force,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC-Musterakte geschrieben")
+            print(f"- Repo: {payload['repo']}")
+            print(f"- Akte: {payload['matter_id']}")
+            print(f"- Datei: {payload['path']}")
+            print(f"- Personen: {payload['person_count']}")
+            print(f"- Dokumente: {payload['document_count']}")
             print(f"- Datenklasse: {payload['data_classification']}")
             return 0
     except (KeyError, ValueError, subprocess.CalledProcessError) as exc:

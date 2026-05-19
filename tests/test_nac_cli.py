@@ -96,6 +96,7 @@ class NaCCliTests(unittest.TestCase):
             rc, output = run_cli("tenant", "status", "--repo", str(tenant_repo))
             self.assertEqual(rc, 0)
             self.assertIn("Demo-Vorgänge: 0", output)
+            self.assertIn("Akten: 0", output)
             self.assertIn("https://github.com/ofunk/demo8notariat.git", output)
 
             rc, output = run_cli(
@@ -115,6 +116,33 @@ class NaCCliTests(unittest.TestCase):
             case_text = case_file.read_text(encoding="utf-8")
             self.assertIn('"data_classification": "synthetic_demo_only"', case_text)
             self.assertIn('"real_mandate_data_allowed": false', case_text)
+
+            rc, output = run_cli(
+                "tenant",
+                "write-sample-akte",
+                "--repo",
+                str(tenant_repo),
+                "--akten-id",
+                "UVZ-2026-0001",
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("NaC-Musterakte geschrieben", output)
+
+            matter_file = tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "akte.json"
+            person_file = tenant_repo / "personen" / "PER-DEMO-VERKAEUFER-ANNA-BERGER.json"
+            document_file = tenant_repo / "dokumente" / "DOC-DEMO-2026-0001-GRUNDBUCH" / "metadata.json"
+            self.assertTrue(matter_file.is_file())
+            self.assertTrue(person_file.is_file())
+            self.assertTrue(document_file.is_file())
+            matter_text = matter_file.read_text(encoding="utf-8")
+            self.assertIn('"participant_person_ids"', matter_text)
+            self.assertIn('"document_ids"', matter_text)
+
+            rc, output = run_cli("tenant", "status", "--repo", str(tenant_repo))
+            self.assertEqual(rc, 0)
+            self.assertIn("Akten: 1", output)
+            self.assertIn("Personen: 3", output)
+            self.assertIn("Dokumente: 2", output)
 
 
 if __name__ == "__main__":
