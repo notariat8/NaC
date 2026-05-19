@@ -71,7 +71,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn('href="#tests"', html)
         self.assertNotIn('href="#anbindungen"', html)
         self.assertNotIn('href="#handbuch"', html)
-        self.assertEqual(html.count('class="case-row"'), 23)
+        self.assertEqual(html.count('class="case-row"'), 22)
         self.assertIn('data-area="immobilienrecht"', html)
         self.assertIn('data-area="gesellschaft-register"', html)
         self.assertIn('data-area="erbrecht"', html)
@@ -96,6 +96,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
         self.assertNotIn("Bautraeger", html)
+        self.assertNotIn("Steuer-aaS", html)
+        self.assertNotIn("/kg/steuer-aas", html)
         self.assertNotIn(">Vorgänge</", html)
         case_group_block = css.split(".case-group {", maxsplit=1)[1].split("}", maxsplit=1)[0]
         self.assertNotIn("text-transform", case_group_block)

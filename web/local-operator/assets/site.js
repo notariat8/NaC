@@ -29,7 +29,7 @@ const areaCopy = {
   },
   "allgemeines-zivilrecht": {
     title: "Allgemeines Zivilrecht",
-    summary: "Beglaubigungen, Steuer-Readiness und sonstige Büroprozesse ohne eigenes Spezialgebiet.",
+    summary: "Beglaubigungen und weitere zivilrechtliche Büroprozesse ohne eigenes Spezialgebiet.",
   },
 };
 

@@ -1,6 +1,6 @@
 # Repository-Konsolidierung nach NaC
 
-Stand: 2026-05-14
+Stand: 2026-05-19
 
 ## Zweck
 
@@ -20,7 +20,7 @@ Ein Repo verschwindet in GitHub nicht dadurch, dass sein Inhalt in NaC
 | --- | --- | --- | --- | --- |
 | `ofunk/NaC` | Zielrepo | Zielsystem | offen | PR #6 mergen. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | kanonisiert in PR #6 | altes Repo sichtbar, leer | Nach Merge Redirect-README setzen oder archivieren. |
-| `ofunk/Steuer-aaS` | `usecases/steuer-aas/` | kanonisiert in PR #6 | altes Repo sichtbar, leer | Nach Merge Redirect-README setzen oder archivieren. |
+| `ofunk/Steuer-aaS` | keine NaC-Usecase-Zielstruktur | aus dem NaC-Usecase-Katalog entfernt | altes Repo sichtbar, leer | Extern belassen oder später als Plugin-/Workflow-Idee neu bewerten. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migriert in PR #6 | altes Repo sichtbar | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/NaaS` | `usecases/` und `workflows/` | noch nicht migriert | altes Repo sichtbar | Zerlegen statt 1:1 verschieben: Usecases, Workflow-Kontrakte und ggf. Backlog getrennt übernehmen. |
 | `ofunk/oci-landing-zone` | `plugins/nac-oci-evidence/` und Cloud-/Evidence-Doku | teilweise fachlich abgedeckt | altes Repo sichtbar | Prüfen, ob Runbooks/Infra-Verträge in NaC fehlen; dann migrieren oder als externe Infrastrukturquelle belassen. |

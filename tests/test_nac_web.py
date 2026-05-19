@@ -128,7 +128,7 @@ class NaCLocalWebTests(unittest.TestCase):
             if path.is_dir() and (path / "knowledge-graph.graph.json").is_file()
         )
 
-        self.assertEqual(len(slugs), 23)
+        self.assertEqual(len(slugs), 22)
         failures: list[str] = []
         for slug in slugs:
             for route in (f"/kg/{slug}", f"/bpmn/{slug}", f"/bpmn/{slug}/edit"):

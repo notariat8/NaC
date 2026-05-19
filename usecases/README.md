@@ -46,12 +46,6 @@ Für Nicht-Technik-Leser helfen zusätzlich
 | Schenkungsvertrag / Übertragungsvertrag | [schenkungsvertrag-uebertragungsvertrag/](schenkungsvertrag-uebertragungsvertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal` |
 | Ehevertrag / Scheidungsfolgenvereinbarung | [ehevertrag-scheidungsfolgenvereinbarung/](ehevertrag-scheidungsfolgenvereinbarung) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-grundbuch-portal` |
 
-## Zusätzliche aktive Aufnahmequellen
-
-| Usecase | Ordner | Status | Primäre Plugin-Abhängigkeiten |
-| --- | --- | --- | --- |
-| Steuer-aaS Steuer-Readiness | [steuer-aas/](steuer-aas) | Aktive Aufnahme | `nac-regulated-core`, `nac-elster-eric` |
-
 ## Kanonischer Next-10-Katalog
 
 | Usecase | Ordner | Status | Primäre Plugin-Abhängigkeiten |
@@ -74,7 +68,6 @@ Der statische KG wird im jeweiligen Usecase-Ordner gepflegt:
 - [immobilienkaufvertrag/knowledge-graph.graph.json](immobilienkaufvertrag/knowledge-graph.graph.json)
 - [online-gmbh-gruendung/knowledge-graph.graph.json](online-gmbh-gruendung/knowledge-graph.graph.json)
 - [bautraegervertrag/knowledge-graph.graph.json](bautraegervertrag/knowledge-graph.graph.json)
-- [steuer-aas/knowledge-graph.graph.json](steuer-aas/knowledge-graph.graph.json)
 
 Jeder Usecase-Ordner muss genau einen lokalen KG-Graph und eine Markdown-
 Review-Sicht enthalten. Workflows lesen diesen lokalen KG als Status offener

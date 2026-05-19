@@ -169,19 +169,6 @@ def build_steps(slug: str) -> list[Step]:
             ],
         )
 
-    if slug == "steuer-aas":
-        return [
-            start("Steuer-Readiness-Auftrag anlegen", "internal"),
-            user("Task_MandatAbgrenzen", "Mandat und Steuerrolle abgrenzen", "Steuerfachkraft", "email;phone;internal"),
-            rule("Task_DatenschutzUndAVV", "Datenschutz, AVV und Quellen prüfen", "internal"),
-            user("Task_UnterlagenPruefen", "Steuerunterlagen und Fristen prüfen", "Steuerfachkraft", "email;tax_portal;internal"),
-            user("Task_EntwurfAbstimmen", "Entwurf und Rückfragen abstimmen", "Steuerfachkraft", "email;phone"),
-            manual("Task_FreigabeEinholen", "Fachliche Freigabe einholen", "Notariat", "internal;email", "metadata", "human"),
-            send("Task_SteuerkanalAusfuehren", "Steuerkanal oder Antwort ausführen", "tax_portal;email"),
-            user("Task_NachweisAblage", "Nachweis und Fristen ablegen", "Steuerfachkraft", "internal"),
-            end("Steuer-Readiness abgeschlossen"),
-        ]
-
     steps = [
         start("Vorgang anlegen", intake_channel(slug)),
         user("Task_AuftragAufnehmen", "Auftrag und Beteiligte aufnehmen", "Notariatsfachkraft", intake_channel(slug)),

@@ -27,7 +27,7 @@ gantt
     Immobilien-KG-Bürosprache schärfen        :done,   u6h, 2026-05-19, 1d
     Online-GmbH-Gründung                      :active, u7, 2026-05-14, 28d
     Aktive Aufnahme bereinigt                  :done,   u8, 2026-05-17, 1d
-    Steuer-aaS-Steuer-Readiness                :active, u9, 2026-05-14, 28d
+    Steuer-aaS-Aufnahme aus Katalog entfernen  :done,   u9, 2026-05-19, 1d
     Immobilienkaufvertrag und Grundschuld      :active, u10, 2026-05-15, 28d
     Register-, Vereins- und Gesellschaftsfälle :active, u11, 2026-05-15, 35d
     Familien-, Nachlass- und Vollmachtsfälle  :active, u12, 2026-05-15, 35d
@@ -52,8 +52,7 @@ gantt
 | Usecase-BPMN-Basismodelle | `bpmn/immobilienkaufvertrag.bpmn`, `bpmn/usecases/*.bpmn` plus `scripts/generate_usecase_bpmn.py` | Fertig | Alle usecase-lokalen KGs haben ein bpmn-js-taugliches BPMN-2.0-Basismodell mit Rolle, Ausführungskanal einschließlich E-Mail, Fax/Post, Portal, XNP und digitaler Signatur, Freigabe, Nachweis und KG-Referenz. |
 | Immobilien-KG-Bürosprache | `usecases/immobilienkaufvertrag/knowledge-graph.*` | Fertig | Sichtbare Pflichtangaben und Entscheidungslabels sind in deutscher Büro- und Fachsprache formuliert, inklusive Umlauten und ohne technische Wort-für-Wort-Bezeichnungen. |
 | Online-GmbH-/UG-Gründung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
-| Bereinigte aktive Aufnahme | `usecases/` | Fertig | Ein nicht mehr gewünschter aktiver Aufnahme-Usecase wurde aus diesem Repository entfernt und ist nicht mehr Teil des NaC-Usecase-Katalogs. |
-| Steuer-aaS-Steuer-Readiness | `usecases/steuer-aas/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Steuer-aaS` kanonisiert. |
+| Bereinigte aktive Aufnahme | `usecases/` | Fertig | Nicht passende aktive Aufnahmequellen, darunter `Steuer-aaS`, wurden aus diesem Repository entfernt und sind nicht mehr Teil des NaC-Usecase-Katalogs. |
 | Immobilienkaufvertrag | `usecases/immobilienkaufvertrag/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
 | Grundschuld / Hypothekenbestellung | `usecases/grundschuld-hypothekenbestellung/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
 | Handelsregisteranmeldung | `usecases/handelsregisteranmeldung/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
