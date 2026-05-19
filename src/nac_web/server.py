@@ -235,104 +235,477 @@ def build_bpmn_page(model) -> str:
 
 def build_bpmn_editor_page(model) -> str:
     stem = html.escape(model.stem)
+    node_menu = _bpmn_editor_node_menu(model)
     body = f"""
-    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/bpmn/{stem}">Ansicht</a><a href="/api/bpmn/{stem}/xml">XML API</a></span></nav>
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/kg/{stem}">Checkliste</a><a href="/bpmn/{stem}">Ansicht</a><a href="/api/bpmn/{stem}/xml">XML API</a></span></nav>
     <section class="hero">
       <p class="eyebrow">BPMN-js Editor</p>
       <h1>{html.escape(model.name)}</h1>
       <p>{html.escape(model.path)} · Änderungen werden erst als BPMN-XML im Repository gespeichert und danach über Git validiert.</p>
     </section>
-    <section>
-      <div class="toolbar">
-        <button id="load-modeler" type="button">bpmn-js laden</button>
-        <button id="save-model" type="button">Speichern</button>
-        <span id="editor-status">lade Modell ...</span>
+    <section class="bpmn-editor-shell">
+      <div class="editor-commandbar" role="toolbar" aria-label="BPMN Editor Menü">
+        <div class="command-group">
+          <button id="save-model" type="button">Speichern</button>
+          <button id="reload-model" type="button">Neu laden</button>
+          <button id="validate-model" type="button">Prüfen</button>
+        </div>
+        <div class="command-group">
+          <button id="undo-model" type="button">Rückgängig</button>
+          <button id="redo-model" type="button">Wiederholen</button>
+          <button id="delete-element" type="button">Löschen</button>
+        </div>
+        <div class="command-group">
+          <button data-create-kind="bpmn:Task" type="button">Aufgabe</button>
+          <button data-create-kind="bpmn:UserTask" type="button">Person</button>
+          <button data-create-kind="bpmn:ServiceTask" type="button">Service</button>
+          <button data-create-kind="bpmn:ExclusiveGateway" type="button">Entscheidung</button>
+          <button data-create-kind="bpmn:EndEvent" type="button">Ende</button>
+        </div>
+        <div class="command-group">
+          <button id="fit-model" type="button">Einpassen</button>
+          <button id="zoom-in-model" type="button">Zoom +</button>
+          <button id="zoom-out-model" type="button">Zoom -</button>
+          <button id="toggle-xml" type="button">XML</button>
+        </div>
       </div>
-      <div id="bpmn-canvas" class="modeler-canvas"></div>
-      <label class="xml-label" for="xml-editor">BPMN XML</label>
-      <textarea id="xml-editor" spellcheck="false"></textarea>
+      <div class="editor-statusbar">
+        <span id="editor-status">lade Editor ...</span>
+        <span id="dirty-state">unverändert</span>
+      </div>
+      <div class="editor-workbench">
+        <aside class="editor-side-panel">
+          <h2>Schritte</h2>
+          <div class="step-list">{node_menu}</div>
+        </aside>
+        <div class="editor-canvas-region">
+          <div id="bpmn-canvas" class="modeler-canvas"></div>
+        </div>
+        <aside class="editor-properties-panel">
+          <h2>Eigenschaften</h2>
+          <form id="properties-form">
+            <div class="selected-element" id="selected-element">Kein Element ausgewählt</div>
+            <label for="element-name">Name</label>
+            <input id="element-name" name="name" type="text" autocomplete="off">
+            <label for="nac-role">Rolle</label>
+            <select id="nac-role" name="role">
+              <option value=""></option>
+              <option value="notary_clerk">Notariatsfachkraft</option>
+              <option value="notary">Notarin/Notar</option>
+              <option value="system_betreuer">Systembetreuung</option>
+              <option value="client">Mandant</option>
+              <option value="compliance">Compliance</option>
+            </select>
+            <label for="nac-channel">Kanal</label>
+            <input id="nac-channel" name="channel" type="text" autocomplete="off">
+            <label for="nac-data-class">Datenklasse</label>
+            <input id="nac-data-class" name="dataClass" type="text" autocomplete="off">
+            <label for="nac-approval">Freigabe</label>
+            <input id="nac-approval" name="approval" type="text" autocomplete="off">
+            <label for="nac-evidence">Nachweis</label>
+            <input id="nac-evidence" name="evidence" type="text" autocomplete="off">
+            <label for="nac-plugin">Plugin</label>
+            <input id="nac-plugin" name="plugin" type="text" autocomplete="off">
+            <label for="nac-kg-ref">KG-Referenz</label>
+            <input id="nac-kg-ref" name="kgRef" type="text" autocomplete="off">
+            <label class="check-label" for="nac-local-execution">
+              <input id="nac-local-execution" name="localExecution" type="checkbox">
+              lokal ausführen
+            </label>
+            <button id="apply-properties" type="submit">Übernehmen</button>
+          </form>
+        </aside>
+      </div>
+      <div id="xml-panel" class="xml-panel is-hidden">
+        <div class="xml-toolbar">
+          <label class="xml-label" for="xml-editor">BPMN XML</label>
+          <button id="import-xml" type="button">XML anwenden</button>
+        </div>
+        <textarea id="xml-editor" spellcheck="false"></textarea>
+      </div>
     </section>
-    <script>
-    const endpoint = "/api/bpmn/{stem}/xml";
-    const moddleEndpoint = "/api/bpmn-moddle";
+    <script>{_bpmn_editor_script(model.stem)}</script>
+    """
+    return _layout(f"BPMN bearbeiten: {model.name}", body, head_extra=_bpmn_editor_head())
+
+
+def _bpmn_editor_head() -> str:
+    return """
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-font/css/bpmn-embedded.css">
+"""
+
+
+def _bpmn_editor_node_menu(model) -> str:
+    if not model.nodes:
+        return '<p class="empty-state">Keine Schritte.</p>'
+    return "".join(
+        '<button class="step-button" type="button" '
+        f'data-select-element="{html.escape(node.id, quote=True)}">'
+        f'<span>{html.escape(node.name or node.id)}</span>'
+        f'<small>{html.escape(_bpmn_node_type_label(node.type))}</small>'
+        "</button>"
+        for node in model.nodes
+    )
+
+
+def _bpmn_node_type_label(node_type: str) -> str:
+    labels = {
+        "businessRuleTask": "Regel",
+        "callActivity": "Aufruf",
+        "endEvent": "Ende",
+        "exclusiveGateway": "Entscheidung",
+        "manualTask": "Manuell",
+        "parallelGateway": "Parallel",
+        "receiveTask": "Empfang",
+        "scriptTask": "Skript",
+        "sendTask": "Versand",
+        "serviceTask": "Service",
+        "startEvent": "Start",
+        "subProcess": "Teilprozess",
+        "task": "Aufgabe",
+        "userTask": "Person",
+    }
+    return labels.get(node_type, node_type)
+
+
+def _bpmn_editor_script(stem: str) -> str:
+    replacements = {
+        "__ENDPOINT__": json.dumps(f"/api/bpmn/{stem}/xml"),
+        "__MODDLE_ENDPOINT__": json.dumps("/api/bpmn-moddle"),
+    }
+    script = r"""
+    const endpoint = __ENDPOINT__;
+    const moddleEndpoint = __MODDLE_ENDPOINT__;
     const modelerScript = "https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-modeler.production.min.js";
+    const nacKeys = ["role", "channel", "dataClass", "approval", "evidence", "plugin", "kgRef"];
     let baseSha256 = "";
+    let loadedXml = "";
     let modeler = null;
+    let selectedElement = null;
+    let wired = false;
 
     const statusEl = document.getElementById("editor-status");
+    const dirtyEl = document.getElementById("dirty-state");
     const xmlEditor = document.getElementById("xml-editor");
-    const loadButton = document.getElementById("load-modeler");
-    const saveButton = document.getElementById("save-model");
+    const xmlPanel = document.getElementById("xml-panel");
+    const propertiesForm = document.getElementById("properties-form");
+    const selectedEl = document.getElementById("selected-element");
+    const buttons = {
+      save: document.getElementById("save-model"),
+      reload: document.getElementById("reload-model"),
+      validate: document.getElementById("validate-model"),
+      undo: document.getElementById("undo-model"),
+      redo: document.getElementById("redo-model"),
+      delete: document.getElementById("delete-element"),
+      fit: document.getElementById("fit-model"),
+      zoomIn: document.getElementById("zoom-in-model"),
+      zoomOut: document.getElementById("zoom-out-model"),
+      toggleXml: document.getElementById("toggle-xml"),
+      importXml: document.getElementById("import-xml")
+    };
 
-    function setStatus(value) {{
+    function setStatus(value) {
       statusEl.textContent = value;
-    }}
+    }
 
-    async function loadDocument() {{
-      const response = await fetch(endpoint);
-      if (!response.ok) throw new Error(await response.text());
-      const payload = await response.json();
-      baseSha256 = payload.sha256;
-      xmlEditor.value = payload.xml;
-      setStatus("geladen · " + payload.sha256.slice(0, 12));
-    }}
+    function setDirty(value) {
+      dirtyEl.textContent = value ? "ungespeichert" : "unverändert";
+      dirtyEl.classList.toggle("is-dirty", value);
+    }
 
-    function loadScript(src) {{
-      return new Promise((resolve, reject) => {{
+    function setBusy(value) {
+      document.querySelectorAll(".editor-commandbar button, #import-xml")
+        .forEach((button) => { button.disabled = value; });
+      if (value) document.getElementById("apply-properties").disabled = true;
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        if (window.BpmnJS) {
+          resolve();
+          return;
+        }
         const script = document.createElement("script");
         script.src = src;
         script.onload = resolve;
         script.onerror = reject;
         document.head.appendChild(script);
-      }});
-    }}
+      });
+    }
 
-    async function loadModeler() {{
-      try {{
-        if (!window.BpmnJS) await loadScript(modelerScript);
-        const descriptor = await fetch(moddleEndpoint).then((response) => response.json());
-        modeler = new window.BpmnJS({{
-          container: "#bpmn-canvas",
-          keyboard: {{ bindTo: document }},
-          moddleExtensions: {{ nac: descriptor }}
-        }});
-        await modeler.importXML(xmlEditor.value);
-        setStatus("bpmn-js aktiv · Änderungen bleiben lokal bis Speichern");
-      }} catch (error) {{
-        modeler = null;
-        setStatus("bpmn-js nicht geladen · XML-Fallback aktiv");
-      }}
-    }}
-
-    async function saveDocument() {{
-      setStatus("speichere ...");
-      let xml = xmlEditor.value;
-      if (modeler) {{
-        const saved = await modeler.saveXML({{ format: true }});
-        xml = saved.xml;
-        xmlEditor.value = xml;
-      }}
-      const response = await fetch(endpoint, {{
-        method: "POST",
-        headers: {{ "Content-Type": "application/json" }},
-        body: JSON.stringify({{ xml, base_sha256: baseSha256 }})
-      }});
+    async function loadDocument() {
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error(await response.text());
       const payload = await response.json();
-      if (!response.ok) {{
-        setStatus("nicht gespeichert · " + payload.error);
-        return;
-      }}
       baseSha256 = payload.sha256;
+      loadedXml = payload.xml;
       xmlEditor.value = payload.xml;
-      setStatus("gespeichert · " + payload.sha256.slice(0, 12));
-    }}
+      setDirty(false);
+      setStatus("geladen · " + payload.sha256.slice(0, 12));
+    }
 
-    loadButton.addEventListener("click", loadModeler);
-    saveButton.addEventListener("click", saveDocument);
-    loadDocument().catch((error) => setStatus("Fehler · " + error.message));
-    </script>
-    """
-    return _layout(f"BPMN bearbeiten: {model.name}", body)
+    async function createModeler() {
+      if (modeler) return;
+      await loadScript(modelerScript);
+      const descriptor = await fetch(moddleEndpoint).then((response) => response.json());
+      modeler = new window.BpmnJS({
+        container: "#bpmn-canvas",
+        keyboard: { bindTo: document },
+        moddleExtensions: { nac: descriptor }
+      });
+      wireModeler();
+    }
+
+    function wireModeler() {
+      if (wired) return;
+      wired = true;
+      const eventBus = modeler.get("eventBus");
+      eventBus.on("selection.changed", (event) => {
+        selectedElement = event.newSelection[0] || null;
+        renderProperties();
+        markStepSelection();
+      });
+      eventBus.on("element.changed", (event) => {
+        if (selectedElement && event.element && event.element.id === selectedElement.id) {
+          selectedElement = event.element;
+          renderProperties();
+        }
+      });
+      eventBus.on("commandStack.changed", async () => {
+        await syncXmlFromCanvas();
+        updateCommandState();
+      });
+    }
+
+    async function importXml(xml) {
+      await createModeler();
+      await modeler.importXML(xml);
+      modeler.get("canvas").zoom("fit-viewport");
+      selectedElement = null;
+      renderProperties();
+      updateCommandState();
+      setStatus("Editor bereit · Änderungen bleiben lokal bis Speichern");
+    }
+
+    async function syncXmlFromCanvas() {
+      if (!modeler) return;
+      const saved = await modeler.saveXML({ format: true });
+      xmlEditor.value = saved.xml;
+      setDirty(saved.xml !== loadedXml);
+    }
+
+    function updateCommandState() {
+      if (!modeler) return;
+      const commandStack = modeler.get("commandStack");
+      buttons.undo.disabled = !commandStack.canUndo();
+      buttons.redo.disabled = !commandStack.canRedo();
+      buttons.delete.disabled = !selectedElement;
+    }
+
+    function markStepSelection() {
+      document.querySelectorAll("[data-select-element]").forEach((button) => {
+        button.classList.toggle("is-selected", selectedElement && button.dataset.selectElement === selectedElement.id);
+      });
+    }
+
+    function selectElement(id) {
+      if (!modeler) return;
+      const registry = modeler.get("elementRegistry");
+      const selection = modeler.get("selection");
+      const element = registry.get(id);
+      if (!element) return;
+      selection.select(element);
+      focusElement(element);
+    }
+
+    function focusElement(element) {
+      const canvas = modeler.get("canvas");
+      const viewbox = canvas.viewbox();
+      canvas.viewbox({
+        x: element.x + element.width / 2 - viewbox.width / 2,
+        y: element.y + element.height / 2 - viewbox.height / 2,
+        width: viewbox.width,
+        height: viewbox.height
+      });
+    }
+
+    function getNacValue(businessObject, key) {
+      if (!businessObject) return "";
+      if (typeof businessObject.get === "function") {
+        const namespaced = businessObject.get("nac:" + key);
+        if (namespaced !== undefined && namespaced !== null) return String(namespaced);
+        const plain = businessObject.get(key);
+        if (plain !== undefined && plain !== null) return String(plain);
+      }
+      if (businessObject.$attrs && businessObject.$attrs["nac:" + key] !== undefined) {
+        return String(businessObject.$attrs["nac:" + key]);
+      }
+      return "";
+    }
+
+    function canHaveNacProperties(businessObject) {
+      if (!businessObject || !businessObject.$type) return false;
+      return !businessObject.$type.includes("SequenceFlow") && !businessObject.$type.includes("Participant");
+    }
+
+    function renderProperties() {
+      const businessObject = selectedElement && selectedElement.businessObject;
+      const hasSelection = Boolean(businessObject);
+      const hasNac = canHaveNacProperties(businessObject);
+      selectedEl.textContent = hasSelection
+        ? selectedElement.id + " · " + businessObject.$type.replace("bpmn:", "")
+        : "Kein Element ausgewählt";
+      document.getElementById("element-name").value = hasSelection ? (businessObject.name || "") : "";
+      nacKeys.forEach((key) => {
+        const fieldId = "nac-" + key.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase());
+        const field = document.getElementById(fieldId);
+        if (!field) return;
+        field.value = hasSelection ? getNacValue(businessObject, key) : "";
+        field.disabled = !hasNac;
+      });
+      const localExecution = document.getElementById("nac-local-execution");
+      localExecution.checked = hasSelection && getNacValue(businessObject, "localExecution") === "true";
+      localExecution.disabled = !hasNac;
+      document.getElementById("apply-properties").disabled = !hasSelection;
+      updateCommandState();
+    }
+
+    function applyProperties(event) {
+      event.preventDefault();
+      if (!modeler || !selectedElement) return;
+      const modeling = modeler.get("modeling");
+      const props = { name: document.getElementById("element-name").value.trim() };
+      if (canHaveNacProperties(selectedElement.businessObject)) {
+        nacKeys.forEach((key) => {
+          const fieldId = "nac-" + key.replace(/[A-Z]/g, (letter) => "-" + letter.toLowerCase());
+          const field = document.getElementById(fieldId);
+          props["nac:" + key] = field ? field.value.trim() : "";
+        });
+        props["nac:localExecution"] = document.getElementById("nac-local-execution").checked;
+      }
+      modeling.updateProperties(selectedElement, props);
+      setStatus("Eigenschaften übernommen");
+    }
+
+    function addShape(type) {
+      if (!modeler) return;
+      const canvas = modeler.get("canvas");
+      const elementFactory = modeler.get("elementFactory");
+      const modeling = modeler.get("modeling");
+      const shape = elementFactory.createShape({ type });
+      if (selectedElement && selectedElement.parent && !selectedElement.businessObject.$type.includes("SequenceFlow")) {
+        const position = {
+          x: selectedElement.x + selectedElement.width + 180,
+          y: selectedElement.y + selectedElement.height / 2
+        };
+        modeling.appendShape(selectedElement, shape, position, selectedElement.parent);
+        return;
+      }
+      const root = canvas.getRootElement();
+      const viewbox = canvas.viewbox();
+      modeling.createShape(shape, {
+        x: viewbox.x + viewbox.width / 2,
+        y: viewbox.y + viewbox.height / 2
+      }, root);
+    }
+
+    async function saveDocument() {
+      try {
+        setBusy(true);
+        setStatus("speichere ...");
+        await syncXmlFromCanvas();
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ xml: xmlEditor.value, base_sha256: baseSha256 })
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          setStatus("nicht gespeichert · " + payload.error);
+          return;
+        }
+        baseSha256 = payload.sha256;
+        loadedXml = payload.xml;
+        xmlEditor.value = payload.xml;
+        setDirty(false);
+        setStatus("gespeichert · " + payload.sha256.slice(0, 12));
+      } catch (error) {
+        setStatus("nicht gespeichert · " + error.message);
+      } finally {
+        setBusy(false);
+        renderProperties();
+      }
+    }
+
+    async function reloadDocument() {
+      if (dirtyEl.classList.contains("is-dirty") && !window.confirm("Ungespeicherte Änderungen verwerfen?")) return;
+      try {
+        setBusy(true);
+        await loadDocument();
+        await importXml(xmlEditor.value);
+      } catch (error) {
+        setStatus("Fehler · " + error.message);
+      } finally {
+        setBusy(false);
+        renderProperties();
+      }
+    }
+
+    async function validateDocument() {
+      try {
+        await syncXmlFromCanvas();
+        if (!xmlEditor.value.includes("<bpmn:process")) {
+          setStatus("Prüfung fehlgeschlagen · bpmn:process fehlt");
+          return;
+        }
+        setStatus("Prüfung ok · XML kann gespeichert werden");
+      } catch (error) {
+        setStatus("Prüfung fehlgeschlagen · " + error.message);
+      }
+    }
+
+    buttons.save.addEventListener("click", saveDocument);
+    buttons.reload.addEventListener("click", reloadDocument);
+    buttons.validate.addEventListener("click", validateDocument);
+    buttons.undo.addEventListener("click", () => modeler && modeler.get("commandStack").undo());
+    buttons.redo.addEventListener("click", () => modeler && modeler.get("commandStack").redo());
+    buttons.delete.addEventListener("click", () => {
+      if (modeler && selectedElement) modeler.get("modeling").removeElements([selectedElement]);
+    });
+    buttons.fit.addEventListener("click", () => modeler && modeler.get("canvas").zoom("fit-viewport"));
+    buttons.zoomIn.addEventListener("click", () => modeler && modeler.get("zoomScroll").stepZoom(1));
+    buttons.zoomOut.addEventListener("click", () => modeler && modeler.get("zoomScroll").stepZoom(-1));
+    buttons.toggleXml.addEventListener("click", () => xmlPanel.classList.toggle("is-hidden"));
+    buttons.importXml.addEventListener("click", async () => {
+      try {
+        await importXml(xmlEditor.value);
+        setDirty(xmlEditor.value !== loadedXml);
+      } catch (error) {
+        setStatus("XML nicht angewendet · " + error.message);
+      }
+    });
+    propertiesForm.addEventListener("submit", applyProperties);
+    xmlEditor.addEventListener("input", () => setDirty(xmlEditor.value !== loadedXml));
+    document.querySelectorAll("[data-select-element]").forEach((button) => {
+      button.addEventListener("click", () => selectElement(button.dataset.selectElement));
+    });
+    document.querySelectorAll("[data-create-kind]").forEach((button) => {
+      button.addEventListener("click", () => addShape(button.dataset.createKind));
+    });
+
+    setBusy(true);
+    loadDocument()
+      .then(() => importXml(xmlEditor.value))
+      .catch((error) => setStatus("Fehler · " + error.message))
+      .finally(() => {
+        setBusy(false);
+        renderProperties();
+      });
+"""
+    for key, value in replacements.items():
+        script = script.replace(key, value)
+    return script
 
 
 def build_kg_page(view: dict[str, Any]) -> str:
@@ -397,7 +770,7 @@ def _identifier_fallback(value: str) -> str:
     return value.replace("_", " ").replace("-", " ")
 
 
-def _layout(title: str, body: str) -> str:
+def _layout(title: str, body: str, head_extra: str = "") -> str:
     return f"""<!doctype html>
 <html lang="de">
 <head>
@@ -405,6 +778,7 @@ def _layout(title: str, body: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)}</title>
   <style>{_css()}</style>
+{head_extra}
 </head>
 <body>
   <main>{body}</main>
@@ -436,8 +810,42 @@ def _css() -> str:
     .topline a { color: #0b4f6c; font-weight: 700; text-decoration: none; }
     .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; }
     button { appearance: none; border: 0; border-radius: 6px; background: #0b4f6c; color: #fff; font-weight: 700; padding: 10px 14px; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
     #editor-status { color: var(--muted); font-size: 14px; }
-    .modeler-canvas { height: 560px; border: 1px solid var(--line); background: #fff; margin: 0 0 14px; }
+    .bpmn-editor-shell { padding: 0; overflow: hidden; }
+    .editor-commandbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px; border-bottom: 1px solid var(--line); background: #fff; }
+    .command-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-right: 10px; border-right: 1px solid var(--line); }
+    .command-group:last-child { border-right: 0; }
+    .command-group button { background: #254b68; padding: 9px 12px; }
+    .command-group [data-create-kind] { background: #2f6b50; }
+    .editor-statusbar { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: #fbfcfd; }
+    #dirty-state { font-size: 13px; color: var(--muted); font-weight: 700; }
+    #dirty-state.is-dirty { color: #9a5b00; }
+    .editor-workbench { display: grid; grid-template-columns: 250px minmax(520px, 1fr) 300px; min-height: 680px; }
+    .editor-side-panel, .editor-properties-panel { border: 0; border-radius: 0; margin: 0; padding: 14px; background: #fbfcfd; overflow: auto; }
+    .editor-side-panel { border-right: 1px solid var(--line); }
+    .editor-properties-panel { border-left: 1px solid var(--line); }
+    .editor-side-panel h2, .editor-properties-panel h2 { font-size: 16px; margin-bottom: 12px; }
+    .step-list { display: grid; gap: 8px; }
+    .step-button { width: 100%; background: #fff; color: var(--ink); border: 1px solid var(--line); text-align: left; padding: 10px; }
+    .step-button span, .step-button small { display: block; }
+    .step-button span { font-weight: 700; line-height: 1.25; }
+    .step-button small { color: var(--muted); margin-top: 3px; }
+    .step-button.is-selected { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+    .editor-canvas-region { min-width: 0; background: #fff; }
+    .modeler-canvas { height: 68vh; min-height: 680px; border: 0; background: #fff; margin: 0; position: relative; overflow: hidden; }
+    .modeler-canvas .djs-container { width: 100% !important; height: 100% !important; }
+    .modeler-canvas .djs-palette { top: 16px; left: 16px; }
+    .selected-element { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 9px 10px; color: var(--muted); font-size: 13px; margin-bottom: 12px; overflow-wrap: anywhere; }
+    #properties-form { display: grid; gap: 8px; }
+    #properties-form label { font-weight: 700; font-size: 13px; }
+    #properties-form input, #properties-form select { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px; font: inherit; background: #fff; }
+    #properties-form input:disabled, #properties-form select:disabled { background: #eef2f5; color: var(--muted); }
+    .check-label { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+    .check-label input { width: auto; }
+    .xml-panel { border-top: 1px solid var(--line); padding: 14px; background: #fff; }
+    .xml-panel.is-hidden { display: none; }
+    .xml-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
     .xml-label { display: block; font-weight: 700; margin: 0 0 8px; }
     textarea { width: 100%; min-height: 280px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.45; }
     .canvas { overflow: auto; padding: 8px; background: #fbfcfd; }
@@ -454,7 +862,8 @@ def _css() -> str:
     th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top; }
     th { background: #eef2f5; font-size: 13px; color: #424a53; }
     .notice { border-left: 4px solid var(--accent); }
-    @media (max-width: 720px) { main { padding: 16px; } h1 { font-size: 28px; } .hero, section { padding: 16px; } }
+    @media (max-width: 1040px) { .editor-workbench { grid-template-columns: 1fr; } .editor-side-panel, .editor-properties-panel { border: 0; border-bottom: 1px solid var(--line); } .modeler-canvas { min-height: 560px; } }
+    @media (max-width: 720px) { main { padding: 16px; } h1 { font-size: 28px; } .hero, section { padding: 16px; } .bpmn-editor-shell { padding: 0; } }
     """
 
 

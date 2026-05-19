@@ -12,7 +12,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
-from nac_web.server import NaCLocalWebApp, build_home_page, build_kg_page  # noqa: E402
+from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_home_page, build_kg_page  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
 
 
@@ -88,6 +88,23 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(edit_type, "text/html; charset=utf-8")
         self.assertIn(b"BPMN-js Editor", edit_body)
         self.assertIn(b"/api/bpmn/handelsregisteranmeldung/xml", edit_body)
+
+    def test_bpmn_editor_exposes_full_workbench_controls(self) -> None:
+        model = find_bpmn_model(REPO_ROOT, "immobilienkaufvertrag")
+        html = build_bpmn_editor_page(model)
+
+        self.assertIn("BPMN Editor Menü", html)
+        self.assertIn("diagram-js.css", html)
+        self.assertIn("bpmn-embedded.css", html)
+        self.assertIn('class="editor-workbench"', html)
+        self.assertIn('class="editor-properties-panel"', html)
+        self.assertIn('data-create-kind="bpmn:Task"', html)
+        self.assertIn('data-select-element="', html)
+        self.assertIn('id="nac-role"', html)
+        self.assertIn('id="nac-kg-ref"', html)
+        self.assertIn('id="toggle-xml"', html)
+        self.assertIn('modeling.updateProperties', html)
+        self.assertNotIn("bpmn-js laden", html)
 
     def test_app_serves_all_usecase_workbench_routes(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
