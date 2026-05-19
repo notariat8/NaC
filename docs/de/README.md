@@ -109,6 +109,8 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
   [docs/de/avv-checkliste-eventlock-saas.md](avv-checkliste-eventlock-saas.md): Datenschutz, AVV und DPA.
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md): no-code KG-Editor
   für Fachpersonal, Patch-Prinzip und Sidecar-Editor-Pfad.
+- [docs/de/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md): getrenntes
+  Demo-Datenrepo für synthetische NaC-Vorgänge und späteren Sovereign-Git-Wechsel.
 
 ### Governance Und Runtime
 

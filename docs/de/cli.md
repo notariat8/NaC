@@ -72,6 +72,7 @@ nac kg status
 nac bpmn validate
 nac config list
 nac plugins actions
+nac tenant status --repo ../demo8notariat
 ```
 
 ## Technische Bedienflächen
@@ -87,6 +88,22 @@ nac plugins actions
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
+| Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
+
+## Getrenntes Datenrepo
+
+NaC schreibt Vorgangs- und Testdaten nicht in das Produktrepo. Für synthetische
+Demo-Daten gibt es ein getrenntes Datenrepo, zum Beispiel `../demo8notariat`:
+
+```bash
+nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
+nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
+```
+
+GitHub ist dabei nur für synthetische Demo-Daten vorgesehen. Produktive
+Notariatsdaten brauchen einen geprüften Sovereign-/DSGVO-Git-Anbieter. Die
+Trennung ist dokumentiert in
+[datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 
 ## Plugin-Befehle
 

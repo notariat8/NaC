@@ -17,6 +17,7 @@ from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.cli import main as notary_kg_main
 
 from . import __version__
+from .tenant import init_tenant_repo, tenant_status, write_demo_case
 
 
 DEFAULT_PORT = 8765
@@ -124,6 +125,25 @@ def build_parser() -> argparse.ArgumentParser:
     config_sub.add_parser("validate", help="Prüft die wichtigsten Konfigurationsregeln.")
     config.set_defaults(func=command_config)
 
+    tenant = subparsers.add_parser("tenant", help="Steuert getrennte NaC-Datenrepositories.")
+    tenant_sub = tenant.add_subparsers(dest="tenant_command", required=True)
+    tenant_init = tenant_sub.add_parser("init", help="Initialisiert ein getrenntes NaC-Datenrepo.")
+    tenant_init.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo, getrennt vom NaC-Repo.")
+    tenant_init.add_argument("--name", help="Anzeigename des Datenrepos. Standard: Ordnername.")
+    tenant_init.add_argument("--mode", choices=["demo", "production"], default="demo")
+    tenant_init.add_argument("--remote-url", help="Optionaler Git-Remote für das Datenrepo.")
+    tenant_init.add_argument("--force", action="store_true", help="Manifest und Standarddateien überschreiben.")
+    tenant_status_parser = tenant_sub.add_parser("status", help="Prüft ein NaC-Datenrepo.")
+    tenant_status_parser.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
+    tenant_status_parser.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_write_demo = tenant_sub.add_parser("write-demo", help="Schreibt synthetische Demo-Vorgangsdaten.")
+    tenant_write_demo.add_argument("slug", help="NaC-Usecase-Slug, zum Beispiel immobilienkaufvertrag.")
+    tenant_write_demo.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
+    tenant_write_demo.add_argument("--case-id", help="Optionale Demo-Vorgangs-ID.")
+    tenant_write_demo.add_argument("--force", action="store_true", help="Bestehenden Demo-Vorgang überschreiben.")
+    tenant_write_demo.add_argument("--format", choices=["text", "json"], default="text")
+    tenant.set_defaults(func=command_tenant)
+
     return parser
 
 
@@ -199,6 +219,7 @@ def command_status(args: argparse.Namespace) -> int:
             "bpmn_validate": "nac bpmn validate",
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
+            "tenant_status": "nac tenant status --repo ../demo8notariat",
         },
     }
     if args.format == "json":
@@ -446,6 +467,65 @@ def command_config(args: argparse.Namespace) -> int:
         return 1 if failed else 0
 
     raise AssertionError(f"Unknown config command: {args.config_command}")
+
+
+def command_tenant(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    try:
+        if args.tenant_command == "init":
+            payload = init_tenant_repo(
+                args.repo,
+                name=args.name,
+                mode=args.mode,
+                remote_url=args.remote_url,
+                force=args.force,
+            )
+            print("NaC-Datenrepo initialisiert")
+            print(f"- Repo: {payload['repo']}")
+            print(f"- Manifest: {payload['manifest']}")
+            print(f"- Modus: {payload['mode']}")
+            if payload["remote_origin"]:
+                print(f"- Remote: {payload['remote_origin']}")
+            return 0
+
+        if args.tenant_command == "status":
+            status = tenant_status(args.repo)
+            if args.format == "json":
+                print_json(status.to_dict())
+                return 0
+            print("NaC-Datenrepo Status")
+            print(f"- Repo: {status.repo}")
+            print(f"- Manifest: {'ja' if status.manifest else 'nein'}")
+            if status.manifest:
+                print(f"- Name: {status.manifest.get('name')}")
+                print(f"- Modus: {status.manifest.get('mode')}")
+            print(f"- Git: {'ja' if status.git_present else 'nein'}")
+            print(f"- Remote: {status.remote_origin or 'nicht gesetzt'}")
+            print(f"- Demo-Vorgänge: {status.demo_cases}")
+            return 0
+
+        if args.tenant_command == "write-demo":
+            payload = write_demo_case(
+                nac_repo_root=repo_root,
+                tenant_repo=args.repo,
+                slug=args.slug,
+                case_id=args.case_id,
+                force=args.force,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC-Demo-Vorgang geschrieben")
+            print(f"- Repo: {payload['repo']}")
+            print(f"- Vorgang: {payload['case_id']}")
+            print(f"- Datei: {payload['path']}")
+            print(f"- Datenklasse: {payload['data_classification']}")
+            return 0
+    except (KeyError, ValueError, subprocess.CalledProcessError) as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    raise AssertionError(f"Unknown tenant command: {args.tenant_command}")
 
 
 def resolve_repo_root(path: Path) -> Path:

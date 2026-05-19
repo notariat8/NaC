@@ -19,6 +19,7 @@ src/nac.egg-info/top_level.txt
 src/nac_cli/__init__.py
 src/nac_cli/__main__.py
 src/nac_cli/cli.py
+src/nac_cli/tenant.py
 src/nac_web/__init__.py
 src/nac_web/bpmn.py
 src/nac_web/cli.py
