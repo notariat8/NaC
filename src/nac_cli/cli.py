@@ -17,6 +17,7 @@ from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.cli import main as notary_kg_main
 
 from . import __version__
+from .qms import qms_status, read_qms_text
 from .tenant import init_tenant_repo, tenant_status, write_demo_case, write_sample_matter
 
 
@@ -124,6 +125,18 @@ def build_parser() -> argparse.ArgumentParser:
     config_show.add_argument("id_or_path")
     config_sub.add_parser("validate", help="Prüft die wichtigsten Konfigurationsregeln.")
     config.set_defaults(func=command_config)
+
+    qms = subparsers.add_parser("qms", help="Steuert die NaC-QMS- und ISO-9001-Schicht.")
+    qms_sub = qms.add_subparsers(dest="qms_command", required=True)
+    qms_status_parser = qms_sub.add_parser("status", help="Zeigt QMS-Artefakte und Bereitschaft.")
+    qms_status_parser.add_argument("--format", choices=["text", "json"], default="text")
+    qms_status_parser.add_argument("--repo", type=Path, help="Optionales Datenrepo für Nachweiszählung.")
+    qms_sub.add_parser("iso9001-map", help="Gibt das ISO-9001-Mapping aus.")
+    qms_sub.add_parser("audit-plan", help="Gibt das interne Auditprogramm aus.")
+    qms_evidence = qms_sub.add_parser("evidence", help="Zeigt QMS-Nachweiszahlen aus einem Datenrepo.")
+    qms_evidence.add_argument("--repo", type=Path, required=True, help="Pfad zum NaC-Datenrepo.")
+    qms_evidence.add_argument("--format", choices=["text", "json"], default="text")
+    qms.set_defaults(func=command_qms)
 
     tenant = subparsers.add_parser("tenant", help="Steuert getrennte NaC-Datenrepositories.")
     tenant_sub = tenant.add_subparsers(dest="tenant_command", required=True)
@@ -472,6 +485,58 @@ def command_config(args: argparse.Namespace) -> int:
         return 1 if failed else 0
 
     raise AssertionError(f"Unknown config command: {args.config_command}")
+
+
+def command_qms(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    try:
+        if args.qms_command == "status":
+            status = qms_status(repo_root, evidence_repo=args.repo)
+            if args.format == "json":
+                print_json(status.to_dict())
+                return 0 if status.ok else 1
+            print("NaC-QMS Status")
+            print(f"- QMS-Artefakte: {sum(status.files_present.values())}/{len(status.files_present)}")
+            print(f"- Qualitätsziele: {status.quality_objectives}")
+            print(f"- Rollen: {status.raci_roles}")
+            print(f"- ISO-9001-Mappingzeilen: {status.iso_mapping_rows}")
+            if status.evidence_repo:
+                print(f"- Nachweisrepo: {status.evidence_repo}")
+                for key, value in status.evidence_counts.items():
+                    print(f"- {key}: {value}")
+            missing = [name for name, present in status.files_present.items() if not present]
+            if missing:
+                print("Fehlende Dateien")
+                for name in missing:
+                    print(f"- qms/{name}")
+                return 1
+            return 0
+
+        if args.qms_command == "iso9001-map":
+            print(read_qms_text(repo_root, "iso9001-mapping.md"))
+            return 0
+
+        if args.qms_command == "audit-plan":
+            print(read_qms_text(repo_root, "audit-program.md"))
+            return 0
+
+        if args.qms_command == "evidence":
+            status = qms_status(repo_root, evidence_repo=args.repo)
+            if args.format == "json":
+                print_json(status.to_dict())
+                return 0 if status.ok else 1
+            print("NaC-QMS Nachweisbild")
+            print(f"- Datenrepo: {status.evidence_repo}")
+            print(f"- Akten: {status.evidence_counts.get('matters', 0)}")
+            print(f"- Personen: {status.evidence_counts.get('persons', 0)}")
+            print(f"- Dokumente: {status.evidence_counts.get('documents', 0)}")
+            print(f"- Legacy-Demo-Vorgänge: {status.evidence_counts.get('demo_cases', 0)}")
+            return 0 if status.ok else 1
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    raise AssertionError(f"Unknown QMS command: {args.qms_command}")
 
 
 def command_tenant(args: argparse.Namespace) -> int:

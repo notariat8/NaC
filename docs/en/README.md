@@ -92,6 +92,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   patch principle and sidecar-editor path for subject-matter staff.
 - [docs/en/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md) defines the
   separate demo data repository for synthetic NaC cases and a later sovereign Git move.
+- [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
+  quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.

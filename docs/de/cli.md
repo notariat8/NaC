@@ -73,6 +73,7 @@ nac bpmn validate
 nac config list
 nac plugins actions
 nac tenant status --repo ../demo8notariat
+nac qms status
 ```
 
 ## Technische Bedienflächen
@@ -89,6 +90,20 @@ nac tenant status --repo ../demo8notariat
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
+| QMS | `nac qms status` und `nac qms evidence --repo ../demo8notariat` | Zeigt ISO-9001/QMS-Artefakte und Nachweiszahlen aus dem Datenrepo. |
+
+## QMS- und ISO-9001-Schicht
+
+NaC enthält eine QMS-Schicht unter [qms/](../../qms). Sie ordnet
+Qualitätspolitik, Qualitätsziele, Rollen, Prozesslandkarte, interne Audits,
+Managementbewertung und Abweichungen den NaC-Artefakten zu.
+
+```bash
+nac qms status
+nac qms iso9001-map
+nac qms audit-plan
+nac qms evidence --repo ../demo8notariat
+```
 
 ## Getrenntes Datenrepo
 

@@ -1,0 +1,41 @@
+{
+  "schema_version": "nac.qms.quality-objectives/v0.1",
+  "objectives": [
+    {
+      "id": "qms-complete-intake",
+      "title": "Vollständige Vorgangsaufnahme",
+      "metric": "Anteil der Akten mit erfassten Beteiligten, Dokumentliste und offenem Punkte-Status",
+      "target": ">= 95%",
+      "measurement_source": "index/akten.json und akten/<jahr>/<akten_id>/akte.json",
+      "owner_role": "office_quality_owner",
+      "review_cycle": "quarterly"
+    },
+    {
+      "id": "qms-review-before-execution",
+      "title": "Freigabe vor Vollzug",
+      "metric": "Anteil der Vollzugsvorgänge mit dokumentierter notarieller Freigabe",
+      "target": "100%",
+      "measurement_source": "Aktenereignisse und Review-Nachweise",
+      "owner_role": "notary",
+      "review_cycle": "quarterly"
+    },
+    {
+      "id": "qms-quality-gate-green",
+      "title": "Stabile NaC-Qualitätsprüfung",
+      "metric": "Anteil erfolgreicher strikter Quality-Gate-Läufe vor Merge",
+      "target": "100%",
+      "measurement_source": "nac doctor --profile strict",
+      "owner_role": "technical_maintainer",
+      "review_cycle": "monthly"
+    },
+    {
+      "id": "qms-nonconformity-followup",
+      "title": "Wirksame Korrekturmaßnahmen",
+      "metric": "Anteil fristgerecht bewerteter Abweichungen",
+      "target": ">= 90%",
+      "measurement_source": "CAPA-Register",
+      "owner_role": "office_quality_owner",
+      "review_cycle": "quarterly"
+    }
+  ]
+}

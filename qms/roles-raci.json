@@ -1,0 +1,84 @@
+{
+  "schema_version": "nac.qms.raci/v0.1",
+  "roles": [
+    {
+      "id": "notary",
+      "label": "Notar",
+      "accountable_for": [
+        "fachliche Entscheidung",
+        "notarielle Freigabe",
+        "Managementbewertung"
+      ]
+    },
+    {
+      "id": "notary_clerk",
+      "label": "Sachbearbeitung",
+      "responsible_for": [
+        "Vorgangsaufnahme",
+        "Dokumentenstatus",
+        "Fristen- und Vollzugsnachverfolgung"
+      ]
+    },
+    {
+      "id": "office_quality_owner",
+      "label": "QMS-Verantwortung im Büro",
+      "responsible_for": [
+        "Qualitätsziele",
+        "interne Audits",
+        "Korrekturmaßnahmen"
+      ]
+    },
+    {
+      "id": "technical_maintainer",
+      "label": "Technische Pflege",
+      "responsible_for": [
+        "NaC-CLI",
+        "Quality Gate",
+        "Git- und Datenrepo-Struktur"
+      ]
+    }
+  ],
+  "raci": [
+    {
+      "activity": "Qualitätspolitik freigeben",
+      "responsible": "office_quality_owner",
+      "accountable": "notary",
+      "consulted": [
+        "technical_maintainer"
+      ],
+      "informed": [
+        "notary_clerk"
+      ]
+    },
+    {
+      "activity": "Akte vollständig aufnehmen",
+      "responsible": "notary_clerk",
+      "accountable": "notary",
+      "consulted": [
+        "office_quality_owner"
+      ],
+      "informed": []
+    },
+    {
+      "activity": "Quality Gate betreiben",
+      "responsible": "technical_maintainer",
+      "accountable": "office_quality_owner",
+      "consulted": [
+        "notary"
+      ],
+      "informed": [
+        "notary_clerk"
+      ]
+    },
+    {
+      "activity": "Interne Audits durchführen",
+      "responsible": "office_quality_owner",
+      "accountable": "notary",
+      "consulted": [
+        "notary_clerk",
+        "technical_maintainer"
+      ],
+      "informed": []
+    }
+  ]
+}
