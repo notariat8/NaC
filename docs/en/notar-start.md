@@ -1,7 +1,8 @@
 # Notary Start: Evaluate NaC In 15 Minutes
 
 This document is for notary-office decision makers. It explains what NaC is,
-what it is not, and how to run a first local check without real mandate data.
+what it is not, and how to take a first local look at the office UI without
+real mandate data.
 
 ## Short Picture
 
@@ -31,16 +32,23 @@ NaC is a reference model for AI-first notary-office operations:
 - do not start production without a private fork, role model, privacy review and
   local approvals.
 
-## First Check
+## First Look At The Office UI
+
+```bash
+python scripts/nac.py operator --open
+```
+
+The local UI shows cases, checklists, process views, editing surfaces and
+workstation tests. Without browser access,
+[webapp-ohne-zugriff.md](webapp-ohne-zugriff.md) explains the main screens with
+screenshots.
+
+The same NaC core remains available for technical checks in the background:
 
 ```bash
 python scripts/nac.py status
-python scripts/nac.py kg editor-view immobilienkaufvertrag
 python scripts/nac.py doctor --profile strict
 ```
-
-If these commands run, you can inspect available usecases, open case nodes and
-whether the repository passes its own gates.
 
 ## Decision Questions
 

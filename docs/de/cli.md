@@ -1,13 +1,21 @@
-# NaC-CLI: Ein Steuerpult Für Das Repository
+# NaC-CLI: Technische Steuerfläche Hinter Der Bürooberfläche
 
 Status: erste zentrale CLI umgesetzt am 2026-05-19
 
 ## Idee
 
-NaC wird CLI-first gebaut. Das bedeutet nicht, dass ein Notar dauerhaft im
-Terminal arbeiten soll. Es bedeutet: Jede fachliche Aktion hat einen
-eindeutigen, prüfbaren Befehl. Eine Weboberfläche, ein Plugin oder Codex darf
-diesen Befehl später auslösen, aber die Logik bleibt dieselbe.
+Die NaC-CLI ist nicht die Produktoberfläche für das Notariat. Sie ist die
+technische Steuer- und Prüfschicht hinter der lokalen Bürooberfläche, hinter
+Codex-Plugins und hinter späteren Automatisierungen.
+
+Für fachliche Nutzer beginnt NaC mit der lokalen Operator-Webapp:
+
+```bash
+python scripts/nac.py operator --open
+```
+
+Die CLI bleibt wichtig, weil sie dieselben Prüfungen reproduzierbar macht:
+Status, Quality Gate, BPMN, Knowledge Graphs, Plugins und Konfigurationen.
 
 Der gemeinsame Einstieg heißt:
 
@@ -28,18 +36,18 @@ python -m pip install -e .
 nac status
 ```
 
-## Warum Das Für Nicht-Techniker Wichtig Ist
+## Warum Das Für Nicht-Techniker Trotzdem Relevant Ist
 
-Eine CLI ist ein klar benannter Arbeitsauftrag an den Computer. Im Alltag kann
-daraus später ein Button, ein Plugin-Aufruf oder eine geführte Webansicht
-werden. Der Vorteil ist, dass alle diese Wege dieselbe geprüfte Handlung
-ausführen.
+Eine CLI ist ein klar benannter Arbeitsauftrag an den Computer. Ein Notar muss
+diese Befehle nicht auswendig können. Aber das Büro profitiert davon, dass
+jeder Button, jeder Plugin-Aufruf und jeder automatische Check auf eine
+prüfbare technische Handlung zurückgeführt werden kann.
 
 | Frage | Antwort |
 | --- | --- |
-| Muss der Notar Befehle auswendig können? | Nein. Die CLI ist die stabile technische Bedienkante. Oberflächen können sie nutzen. |
-| Warum nicht nur Web-UI? | Eine reine UI kann Abläufe verstecken. Die CLI macht jeden Schritt wiederholbar und auditierbar. |
-| Warum ist das zukunftsfähig? | Lokaler Webserver, Codex-Plugin, CI und spätere Apps können dieselben Befehle verwenden. |
+| Muss der Notar Befehle auswendig können? | Nein. Der sichtbare Einstieg ist die Bürooberfläche; die CLI ist die technische Prüffläche dahinter. |
+| Warum nicht nur Web-UI? | Eine reine UI kann Logik verstecken. Die CLI macht Prüfungen, Ergebnisse und Wiederholung sichtbar. |
+| Warum ist das zukunftsfähig? | Lokale Webapp, Codex-Plugin, CI und spätere Apps können dieselbe geprüfte Runtime nutzen. |
 | Was wird protokollierbar? | Befehl, Eingabe, Ergebnis, Review und Git-Änderung. |
 
 ## Erste Befehle
@@ -66,13 +74,14 @@ nac config list
 nac plugins actions
 ```
 
-## Bedienflächen
+## Technische Bedienflächen
 
 | Bereich | Befehl | Aufgabe |
 | --- | --- | --- |
 | Überblick | `nac status` | Zeigt Usecases, offene Pflichtangaben, BPMN-Modelle und Konfigurationen. |
 | Qualität | `nac doctor --profile strict` | Führt den strikten Quality Gate aus. |
-| Grafische Ansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
+| Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
+| Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
@@ -116,10 +125,11 @@ Repository.
 
 ## Architekturregel
 
-Neue NaC-Funktionalität muss künftig mindestens eine CLI-Bedienkante haben.
-Direkte Skripte wie `scripts/quality_gate.py` dürfen als interne oder
-kompatible Ebene bleiben, aber die Dokumentation soll den zentralen Weg über
-`nac` zeigen.
+Neue NaC-Funktionalität braucht eine verständliche Bedienfläche und eine
+prüfbare technische Ausführung. Für fachliche Nutzung kann das eine Webapp-,
+Plugin- oder Codex-Fläche sein; für Reproduzierbarkeit, Tests und Betrieb soll
+die technische Kante über `nac` erreichbar sein. Direkte Skripte wie
+`scripts/quality_gate.py` dürfen als interne oder kompatible Ebene bleiben.
 
 Für schreibende Konfigurationsänderungen gilt eine zusätzliche Grenze:
 Solange eine Konfiguration kein klares Schema, keine Validierung und keine
@@ -127,18 +137,21 @@ Freigaberegel besitzt, zeigt und prüft die CLI diese Datei nur. Schreibbefehle
 werden pro Konfigurationsfamilie ergänzt, sobald der sichere Änderungsvertrag
 feststeht.
 
-## Beziehung Zum Lokalen Webserver
+## Beziehung Zur Lokalen Webapp
 
-Der lokale Webserver ist eine Bedienoberfläche. Er ersetzt die CLI nicht,
-sondern nutzt dieselbe Runtime-Schicht. Das Zielbild ist:
+Die lokale Webapp ist die sichtbare Bürooberfläche. Sie startet über `nac`,
+liest dieselben BPMN-/KG-Dateien und nutzt dieselbe geprüfte Runtime-Familie.
+Das Zielbild ist:
 
 ```mermaid
 flowchart LR
-    User["Notar / Fachanwender"] --> UI["Webserver, Plugin oder Codex"]
-    UI --> CLI["nac CLI"]
-    CLI --> Runtime["Python-Runtime"]
+    User["Notar / Fachanwender"] --> UI["Operator-Webapp, Plugin oder Codex"]
+    UI --> Runtime["NaC-Runtime"]
+    Admin["Admin / CI / Maintainer"] --> CLI["nac CLI"]
+    CLI --> Runtime
     Runtime --> Files["BPMN, KG, Policies, Verträge"]
     Runtime --> Gate["Quality Gate und Review"]
 ```
 
-Dadurch bleibt NaC zugleich visuell nutzbar und maschinell prüfbar.
+Dadurch wird NaC für das Büro visuell nutzbar und bleibt für Betrieb, Prüfung
+und Weiterentwicklung maschinell nachvollziehbar.

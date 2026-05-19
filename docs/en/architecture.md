@@ -7,7 +7,7 @@ as the control principle. `NaC` is the concrete implementation of this frame.
 
 Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
-The operational CLI-first execution model is described in
+The operational execution model with office UI and checkable core is described in
 [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Layers

@@ -65,10 +65,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/betriebsstart.md](betriebsstart.md) covers private fork setup, local checks and operating boundaries.
 - [docs/en/integration-start.md](integration-start.md) covers system, plugin and connector integration.
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
-- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains why NaC
-  is CLI-first today and still UI-ready later.
-- [docs/en/cli.md](cli.md) explains the central `nac` CLI, first commands and
-  the architecture rule for new functionality.
+- [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains how the
+  office UI and the checkable NaC core work together.
+- [docs/en/cli.md](cli.md) explains the technical `nac` control surface behind
+  the office UI, first commands and the architecture rule for new functionality.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
   the business layer becomes BPMN-first, bpmn-js-edited and Python-validated.
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md) describes the local entry

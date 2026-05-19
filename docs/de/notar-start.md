@@ -1,8 +1,8 @@
 # Notar-Start: NaC In 15 Minuten Einschaetzen
 
 Dieses Dokument richtet sich an fachliche Entscheider im Notariat. Es erklärt,
-was NaC ist, was es nicht ist und wie ein erster lokaler Prüflauf ohne echte
-Mandatsdaten aussieht.
+was NaC ist, was es nicht ist und wie ein erster lokaler Blick in die
+Bürooberfläche ohne echte Mandatsdaten aussieht.
 
 ## Kurzbild
 
@@ -32,17 +32,23 @@ NaC ist ein Muster für AI-first-Betrieb im Notariat:
 - keinen Produktivbetrieb ohne privaten Fork, Rollenmodell, Datenschutzprüfung
   und lokale Freigaben starten.
 
-## Erster Prüflauf
+## Erster Blick In Die Bürooberfläche
+
+```bash
+python scripts/nac.py operator --open
+```
+
+Die lokale Oberfläche zeigt Vorgänge, Checklisten, Ablaufansichten,
+Bearbeitungsflächen und Arbeitsplatztests. Ohne Browserzugriff erklärt
+[webapp-ohne-zugriff.md](webapp-ohne-zugriff.md) die wichtigsten Ansichten mit
+Screenshots.
+
+Für die technische Prüfung im Hintergrund bleibt derselbe NaC-Kern erreichbar:
 
 ```bash
 python scripts/nac.py status
-python scripts/nac.py kg editor-view immobilienkaufvertrag
 python scripts/nac.py doctor --profile strict
 ```
-
-Wenn diese Befehle laufen, können Sie sehen, welche Usecases vorhanden sind,
-welche offenen Knoten ein Vorgang hat und ob das Repository seine eigenen Gates
-besteht.
 
 ## Entscheidungsfragen
 

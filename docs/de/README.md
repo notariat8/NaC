@@ -78,10 +78,10 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 - [docs/de/betriebsstart.md](betriebsstart.md): privater Fork, lokale Checks und Betriebsgrenzen.
 - [docs/de/integration-start.md](integration-start.md): Fachsystem-, Plugin- und Connector-Pfad.
 - [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit für Prüfung und Standardisierung.
-- [ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NaC heute
-  CLI-first ist und später trotzdem UI-fähig bleibt.
-- [cli.md](cli.md): zentrale `nac`-CLI, erste Befehle und
-  Architekturregel für neue Funktionen.
+- [ausfuehrungsmodell.md](ausfuehrungsmodell.md): wie Bürooberfläche und
+  prüfbarer NaC-Kern zusammenspielen.
+- [cli.md](cli.md): technische `nac`-Steuerfläche hinter der Bürooberfläche,
+  erste Befehle und Architekturregel für neue Funktionen.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
   Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [lokaler-webserver.md](lokaler-webserver.md): lokaler Einstieg für grafische

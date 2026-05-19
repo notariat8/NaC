@@ -1,13 +1,21 @@
-# NaC CLI: One Control Surface For The Repository
+# NaC CLI: Technical Control Surface Behind The Office UI
 
 Status: first unified CLI implemented on 2026-05-19
 
 ## Idea
 
-NaC is built CLI-first. This does not mean a notary must live in a terminal. It
-means every subject-matter action has a named, checkable command. A web UI,
-plugin or Codex can call that command later while the underlying logic remains
-the same.
+The NaC CLI is not the product surface for a notary office. It is the
+technical control and validation layer behind the local office UI, Codex
+plugins and later automations.
+
+For subject-matter users, NaC starts with the local operator web app:
+
+```bash
+python scripts/nac.py operator --open
+```
+
+The CLI remains important because it makes the same checks reproducible:
+status, quality gate, BPMN, knowledge graphs, plugins and configuration.
 
 The shared entry point is:
 
@@ -28,17 +36,17 @@ python -m pip install -e .
 nac status
 ```
 
-## Why This Matters For Non-Technical Readers
+## Why This Still Matters For Non-Technical Readers
 
-A CLI is a clearly named work order for the computer. Later, that work order can
-be triggered by a button, plugin action or guided web view. The important part
-is that all surfaces run the same reviewed action.
+A CLI is a clearly named work order for the computer. A notary does not need
+to memorize these commands. The office benefits because every button, plugin
+action and automated check can be traced back to a checkable technical action.
 
 | Question | Answer |
 | --- | --- |
-| Does the notary need to memorize commands? | No. The CLI is the stable technical operating surface. User interfaces can call it. |
-| Why not only a web UI? | A UI alone can hide process logic. The CLI keeps each step repeatable and auditable. |
-| Why is this future-ready? | Local web server, Codex plugin, CI and later apps can reuse the same commands. |
+| Does the notary need to memorize commands? | No. The visible entry point is the office UI; the CLI is the technical validation surface behind it. |
+| Why not only a web UI? | A UI alone can hide logic. The CLI keeps checks, results and repetition visible. |
+| Why is this future-ready? | Local web app, Codex plugin, CI and later apps can reuse the same reviewed runtime. |
 | What becomes traceable? | Command, input, result, review and Git change. |
 
 ## First Commands
@@ -65,13 +73,14 @@ nac config list
 nac plugins actions
 ```
 
-## Operating Areas
+## Technical Operating Areas
 
 | Area | Command | Purpose |
 | --- | --- | --- |
 | Overview | `nac status` | Shows usecases, open required information, BPMN models and configuration files. |
 | Quality | `nac doctor --profile strict` | Runs the strict quality gate. |
-| Graphical view | `nac web` | Starts the local web server for BPMN and KG views. |
+| Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
+| Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
@@ -114,27 +123,32 @@ secrets and mandate data in the repository remain blocked.
 
 ## Architecture Rule
 
-New NaC functionality must expose a CLI operating surface. Direct scripts such
-as `scripts/quality_gate.py` may remain as internal or compatibility layers, but
-documentation should show the central `nac` path.
+New NaC functionality needs an understandable user surface and a checkable
+technical execution path. For subject-matter use, that may be a web app,
+plugin or Codex surface; for reproducibility, tests and operations, the
+technical edge should be reachable through `nac`. Direct scripts such as
+`scripts/quality_gate.py` may remain as internal or compatibility layers.
 
 For configuration writes, there is an additional boundary: until a configuration
 family has a clear schema, validation and approval rule, the CLI only shows and
 validates it. Write commands are added per configuration family once the safe
 change contract exists.
 
-## Relationship To The Local Web Server
+## Relationship To The Local Web App
 
-The local web server is an operating surface. It does not replace the CLI; it
-uses the same runtime layer. The target picture is:
+The local web app is the visible office surface. It starts through `nac`,
+reads the same BPMN/KG files and uses the same reviewed runtime family. The
+target picture is:
 
 ```mermaid
 flowchart LR
-    User["Notary / subject-matter user"] --> UI["Web server, plugin or Codex"]
-    UI --> CLI["nac CLI"]
-    CLI --> Runtime["Python runtime"]
+    User["Notary / subject-matter user"] --> UI["Operator web app, plugin or Codex"]
+    UI --> Runtime["NaC runtime"]
+    Admin["Admin / CI / maintainer"] --> CLI["nac CLI"]
+    CLI --> Runtime
     Runtime --> Files["BPMN, KG, policies, contracts"]
     Runtime --> Gate["Quality gate and review"]
 ```
 
-This keeps NaC visually usable and machine-checkable at the same time.
+This makes NaC visually usable for the office while keeping it machine-checkable
+for operations, review and further development.

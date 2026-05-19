@@ -7,17 +7,17 @@ Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` al
 
 Referenz: `docs/de/organization-as-code-positioning.md`
 
-Das operative CLI-first-Ausführungsmodell steht in
+Das operative Ausführungsmodell mit Bürooberfläche und prüfbarem Kern steht in
 [ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Schichten
 
 1. `Prompt Frontend`
-   Ein LLM oder Bot nimmt Anfragen in Alltagssprache entgegen und fuellt standardisierte Prozessanträge.
+   Ein LLM oder Bot nimmt Anfragen in Alltagssprache entgegen und füllt standardisierte Prozessanträge.
 2. `Git Control Plane`
    Branches, Pull Requests, Reviews, Rulesets, Tags und Releases führen den offiziellen Lebenszyklus.
 3. `Python Execution Plane`
-   Die Engine validiert Schemas, prüft Zustandsübergaenge, berechnet Folgewerte und erzeugt Zusammenfassungen.
+   Die Engine validiert Schemas, prüft Zustandsübergänge, berechnet Folgewerte und erzeugt Zusammenfassungen.
 4. `Automation Plane`
    GitHub Actions führen PR-Checks, periodische Prozesse und Genehmigungsgates aus.
 
@@ -54,7 +54,7 @@ stateDiagram-v2
     Validated --> NeedsReview: sensitiver vorgang
     Validated --> Approved: auto-approval erlaubt
     NeedsReview --> Approved: reviewer stimmt zu
-    Approved --> Executed: action oder cli führt aus
+    Approved --> Executed: action oder nac führt aus
     Executed --> Archived: merge tag release
     Approved --> Rejected: reviewer lehnt ab
     Rejected --> Draft: neuer entwurf
