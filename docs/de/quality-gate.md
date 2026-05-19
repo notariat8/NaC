@@ -29,8 +29,8 @@ CI:
 - `minimal`: Prozessvalidierung + Unit Tests
 - `standard`: `minimal` + Privacy Lint
 - `strict`: `standard` + Governance Policy Sync + Language Parity inklusive
-  Skill-Sprachmarkern + Documentation Links + Cloud Runbook Parity + Gantt +
-  AI-SBOM + Knowledge Graph
+  Skill-Sprachmarkern + Documentation Links + BPMN-Modellprüfung + Cloud
+  Runbook Parity + Gantt + AI-SBOM + Knowledge Graph
 
 ## Feste Reihenfolge
 
@@ -41,10 +41,11 @@ CI:
 5. `governance_sync` (nur `strict`)
 6. `language_parity` (nur `strict`)
 7. `doc_links` (nur `strict`)
-8. `gantt_progress` (nur `strict`)
-9. `cloud_runbook_parity` (nur `strict`)
-10. `ai_sbom` (nur `strict`)
-11. `knowledge_graph` (nur `strict`)
+8. `bpmn_models` (nur `strict`)
+9. `gantt_progress` (nur `strict`)
+10. `cloud_runbook_parity` (nur `strict`)
+11. `ai_sbom` (nur `strict`)
+12. `knowledge_graph` (nur `strict`)
 
 ## Artefakte
 

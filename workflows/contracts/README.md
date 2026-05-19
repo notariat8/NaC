@@ -21,3 +21,6 @@ Jeder Vertrag soll definieren:
   [knowledge-graph.graph.json](../../usecases/immobilienkaufvertrag/knowledge-graph.graph.json)
   Dateien als sichere Formulare, Checklisten und Patch-Vorschläge, ohne
   `value`-Felder für Fachpersonal offenzulegen.
+- [workflows/contracts/bpmn-js-editor.contract.json](bpmn-js-editor.contract.json):
+  BPMN-js-Editor-Vertrag für visuell bearbeitbare BPMN-2.0-Prozessmodelle mit
+  NaC-Properties, Python-Validierung und Pull-Request-Freigabe.

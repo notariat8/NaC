@@ -6,7 +6,8 @@ Verbindlicher Standard ist:
 
 - Dokumentation in Markdown (Quelle), PDF-Export automatisiert,
 - Prozessausführung in Python, aber fachlicher Ablauf BPMN-2.0-first,
-- BPMN-2.0 als kanonisches Fachmodell, Mermaid nur für Übersicht.
+- BPMN-2.0 als kanonisches Fachmodell, `bpmn-js` als geplante visuelle
+  Bearbeitungsschicht, Mermaid nur für Übersicht.
 
 ## Bewertung der aktuellen Fassung
 
@@ -51,10 +52,12 @@ Reines code-first ist für Fachbereiche langfristig nicht optimal, weil:
 
 Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Fachbereich.
 
-## c) BPMN-2.0-Visualisierung: Mermaid oder Alternativen
+## c) BPMN-2.0-Visualisierung: bpmn-js, Mermaid oder Alternativen
 
 ### Bewertung
 
+- `bpmn-js`: passend als einbettbarer Web-Modeler für BPMN 2.0, weil
+  Fachnutzer Prozesse visuell bearbeiten können.
 - `Mermaid`: sehr gut für einfache Übersichtsbilder, aber kein vollwertiges BPMN-2.0-Quellformat.
 - `PlantUML`: gut für Technikdiagramme, jedoch ebenfalls kein vollwertiger BPMN-2.0-Ersatz.
 - `BPMN-2.0 XML` mit geeigneten BPMN-Werkzeugen: beste Wahl für fachlich verbindliche Prozessmodelle und Exporte.
@@ -62,6 +65,8 @@ Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Fachberei
 ### Entscheidung
 
 - Verbindliche Fachquelle: BPMN-2.0 XML.
+- Geplante Bearbeitungsschicht: `bpmn-js` mit eingeschränkter Palette,
+  [bpmn/nac-moddle.json](../../bpmn/nac-moddle.json) und Python-Validator.
 - Mermaid nur als Zusatzsicht für Management- und Schnellübersichten.
 - PlantUML optional für technische Architektur, nicht für die fachliche BPMN-Quelle.
 
@@ -70,3 +75,5 @@ Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Fachberei
 - Das Unternehmen kann Prozesse primär über visuelle BPMN-Modelle verstehen.
 - IT und Fachbereich arbeiten auf derselben Prozesswahrheit.
 - Dokumentation ist versioniert, exportierbar und revisionsfähig.
+- [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md) beschreibt den
+  NaC-Pfad vom visuellen Editor zum geprüften Pull Request.

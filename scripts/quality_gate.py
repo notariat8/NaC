@@ -96,6 +96,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_doc_links.py"],
                 ),
                 (
+                    "bpmn_models",
+                    "BPMN Model Validation",
+                    [sys.executable, "scripts/validate_bpmn_models.py"],
+                ),
+                (
                     "gantt_progress",
                     "Gantt Progress Update",
                     [sys.executable, "scripts/validate_gantt_progress.py"],

@@ -80,6 +80,8 @@ Schnelle Orientierung: [ausfuehrungsmodell.md](ausfuehrungsmodell.md),
 - [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit für Prüfung und Standardisierung.
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md): warum NaC heute
   CLI-first ist und später trotzdem UI-fähig bleibt.
+- [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
+  Layer BPMN-first, bpmn-js-editiert und Python-validiert wird.
 - [docs/de/reifegrad.md](reifegrad.md): Matrix für heute nutzbar, pilotfähig, geplant und bewusst gesperrt.
 - [docs/de/glossar.md](glossar.md): Begriffe für Nicht-Technik-Leser.
 - [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md): ein durchgehender Vorgang ohne echte Mandatsdaten.

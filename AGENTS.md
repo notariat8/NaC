@@ -27,6 +27,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Onboarding wird nie nur für eine Plattform gepflegt, sondern für alle unterstützten Plattformen.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; reine Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Der verbindliche Technikstack steht in [policies/technology-policy.yaml](policies/technology-policy.yaml).
+- Fachliche Prozessmodelle sind BPMN-2.0-first; `bpmn-js` ist die geplante visuelle Bearbeitungsschicht, NaC-BPMN-Properties stehen in [bpmn/nac-moddle.json](bpmn/nac-moddle.json), und BPMN-Modelle müssen mit [scripts/validate_bpmn_models.py](scripts/validate_bpmn_models.py) validierbar sein.
 - Keine realen Secrets oder personenbezogenen Daten im Repository speichern ([policies/data-protection-policy.yaml](policies/data-protection-policy.yaml)).
 - Bei SaaS-Verarbeitung mit personenbezogenen Daten ist ein AVV verpflichtend ([docs/de/avv-checkliste-eventlock-saas.md](docs/de/avv-checkliste-eventlock-saas.md)).
 - SBOM-Vorgaben sind verbindlich nach [policies/sbom-policy.yaml](policies/sbom-policy.yaml).

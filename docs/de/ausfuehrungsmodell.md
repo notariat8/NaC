@@ -69,6 +69,7 @@ belastbare Prozesslogik.
 | CLI und Python-Runtime | Heute nutzbar | Prüft KG, Status, Editor-View und Quality Gates. |
 | Codex-Plugins | Pilotfähig | Führen lokale Readiness-, Plan- und Evidence-Prüfungen geführt aus. |
 | GitHub Actions | Heute nutzbar | Führen Gates und Validierungen reproduzierbar aus. |
+| BPMN-js Business Layer | Erstes Profil vorhanden | Visuelle BPMN-Bearbeitung für fachliche Abläufe; Python prüft das Modell vor Merge. |
 | Sidecar-Editor | Geplant | Grafische Bedienung für KG-Formulare und Checklisten. |
 | ChatGPT-App oder Workspace-App | Geplant | Komfortable Bedienoberfläche für berechtigte Nutzer. |
 | Eigenständige NaC-Web-App | Nicht heutiger Kern | Möglich, aber erst sinnvoll, wenn Runtime, Rollen und Gates stabil sind. |
@@ -85,4 +86,5 @@ bedienbar.
 - [docs/de/betriebsstart.md](betriebsstart.md)
 - [docs/de/integration-start.md](integration-start.md)
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md)
+- [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [workflows/python/README.md](../../workflows/python/README.md)

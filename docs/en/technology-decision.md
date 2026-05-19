@@ -8,8 +8,8 @@ The binding standard is:
   artifact,
 - process execution in Python, while the subject-matter process remains
   BPMN 2.0 first,
-- BPMN 2.0 as the canonical subject-matter model, with Mermaid only for
-  overviews.
+- BPMN 2.0 as the canonical subject-matter model, `bpmn-js` as the planned
+  visual editing layer, with Mermaid only for overviews.
 
 ## Assessment Of The Current State
 
@@ -61,10 +61,12 @@ because:
 This improves readability, auditability and maintainability for both IT and
 business departments.
 
-## c) BPMN 2.0 Visualization: Mermaid Or Alternatives
+## c) BPMN 2.0 Visualization: bpmn-js, Mermaid Or Alternatives
 
 ### Assessment
 
+- `bpmn-js`: suitable as an embeddable BPMN 2.0 web modeler because
+  subject-matter users can edit processes visually.
 - `Mermaid`: very good for simple overview diagrams, but not a full BPMN 2.0
   source format.
 - `PlantUML`: useful for technical diagrams, but also not a full BPMN 2.0
@@ -75,6 +77,8 @@ business departments.
 ### Decision
 
 - Binding subject-matter source: BPMN 2.0 XML.
+- Planned editing layer: `bpmn-js` with a restricted palette,
+  [bpmn/nac-moddle.json](../../bpmn/nac-moddle.json) and Python validation.
 - Mermaid only as an additional view for management and quick overviews.
 - PlantUML optional for technical architecture, not for the subject-matter BPMN
   source.
@@ -85,3 +89,5 @@ business departments.
   models.
 - IT and business departments work from the same process truth.
 - Documentation is versioned, exportable and audit-ready.
+- [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) describes the
+  NaC path from visual editor to checked pull request.

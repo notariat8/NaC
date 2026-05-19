@@ -82,6 +82,7 @@ Weitere Dokumentation:
 - Englisch: [docs/en/](docs/en), [prompts/en/](prompts/en)
 - Mindestvoraussetzungen: [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md)
 - Ausführungsmodell: [docs/de/ausfuehrungsmodell.md](docs/de/ausfuehrungsmodell.md)
+- BPMN-js Business Layer: [docs/de/bpmn-js-business-layer.md](docs/de/bpmn-js-business-layer.md)
 - Reifegrad: [docs/de/reifegrad.md](docs/de/reifegrad.md)
 - Glossar: [docs/de/glossar.md](docs/de/glossar.md)
 - Beispiel Immobilienkaufvertrag: [docs/de/beispiel-immobilienkaufvertrag.md](docs/de/beispiel-immobilienkaufvertrag.md)

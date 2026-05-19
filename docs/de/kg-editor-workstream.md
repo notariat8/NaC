@@ -17,7 +17,7 @@ Entscheidungen, Gates und Evidence-Metadaten.
 
 Der kleinste sinnvolle Endnutzer-Flow ist:
 
-1. ChatGPT oder ein anderes LLM nimmt die natuerliche Anweisung entgegen.
+1. ChatGPT oder ein anderes LLM nimmt die natürliche Anweisung entgegen.
 2. Die Runtime liest den passenden KG über [src/notary_kg/editor.py](../../src/notary_kg/editor.py).
 3. Fachpersonal sieht vier Tabs: Offene Angaben, Dokumente, Entscheidungen und
    Gates/Evidence.

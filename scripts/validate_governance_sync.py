@@ -19,6 +19,7 @@ POLICY_FILES = {
     "policies/language-policy.yaml",
     "policies/license-policy.yaml",
     "policies/sbom-policy.yaml",
+    "policies/technology-policy.yaml",
 }
 
 MIRROR_FILES = {

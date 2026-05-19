@@ -20,11 +20,16 @@ approved_stack:
     canonical_business_model: bpmn_2_0
     canonical_source_format: bpmn_xml
     canonical_directory: bpmn/
+    visual_editor: bpmn_js
+    model_extension: bpmn/nac-moddle.json
+    validator: scripts/validate_bpmn_models.py
     allowed_overview_format: mermaid
     disallowed_for_bpmn_source:
       - mermaid
       - plantuml
     notes:
+      - "bpmn-js ist die geplante visuelle Bearbeitungsschicht für BPMN-2.0-Modelle."
+      - "Python validiert BPMN-Modelle, NaC-Properties und bpmn-js-taugliche Profilmodelle vor Merge."
       - "Mermaid ist nur für Übersichtsdiagramme erlaubt."
       - "PlantUML ist optional für technische Architektur, nicht für BPMN-Quellen."
 

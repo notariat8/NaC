@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
+                  id="Definitions_Immobilienkaufvertrag"
+                  targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat">
+  <bpmn:process id="Process_Immobilienkaufvertrag"
+                name="Immobilienkaufvertrag"
+                isExecutable="false"
+                nac:profile="nac-bpmn/v0.1"
+                nac:owner="funktion8 / ofunk"
+                nac:binding="Git Pull Request">
+    <bpmn:startEvent id="StartEvent_VorgangAnlegen"
+                     name="Vorgang anlegen"
+                     nac:role="Notariat"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="none"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_OffeneAngabenPruefen"
+                   name="Offene Angaben prüfen"
+                   nac:role="Sachbearbeitung"
+                   nac:dataClass="confidential_placeholder"
+                   nac:approval="human"
+                   nac:evidence="required"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_KartenpfadPruefen"
+                      name="Karte/SAK lokal prüfen"
+                      nac:role="IT-Betrieb"
+                      nac:dataClass="metadata"
+                      nac:approval="none"
+                      nac:evidence="required"
+                      nac:plugin="nac-cyberjack-rfid"
+                      nac:localExecution="true"
+                      nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Bereit"
+                           name="Bereit?"
+                           nac:role="Notariat"
+                           nac:dataClass="metadata"
+                           nac:approval="human"
+                           nac:evidence="required"
+                           nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4_yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_NotarielleFreigabe"
+                   name="Notarielle Freigabe"
+                   nac:role="Notarin/Notar"
+                   nac:dataClass="confidential_placeholder"
+                   nac:approval="four_eyes"
+                   nac:evidence="required"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_4_yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Nacharbeit"
+                   name="Nacharbeit klären"
+                   nac:role="Sachbearbeitung"
+                   nac:dataClass="metadata"
+                   nac:approval="human"
+                   nac:evidence="required"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_4_no</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_Freigegeben"
+                   name="Freigegeben"
+                   nac:role="Notariat"
+                   nac:dataClass="metadata"
+                   nac:approval="none"
+                   nac:evidence="required"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Nacharbeit"
+                   name="Nacharbeit offen"
+                   nac:role="Notariat"
+                   nac:dataClass="metadata"
+                   nac:approval="none"
+                   nac:evidence="required"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_OffeneAngabenPruefen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_OffeneAngabenPruefen" targetRef="Task_KartenpfadPruefen"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_KartenpfadPruefen" targetRef="Gateway_Bereit"/>
+    <bpmn:sequenceFlow id="Flow_4_yes" name="ja" sourceRef="Gateway_Bereit" targetRef="Task_NotarielleFreigabe"/>
+    <bpmn:sequenceFlow id="Flow_4_no" name="nein" sourceRef="Gateway_Bereit" targetRef="Task_Nacharbeit"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_NotarielleFreigabe" targetRef="EndEvent_Freigegeben"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Nacharbeit" targetRef="EndEvent_Nacharbeit"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Immobilienkaufvertrag">
+    <bpmndi:BPMNPlane id="BPMNPlane_Immobilienkaufvertrag" bpmnElement="Process_Immobilienkaufvertrag">
+      <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
+        <dc:Bounds x="150" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_OffeneAngabenPruefen" bpmnElement="Task_OffeneAngabenPruefen">
+        <dc:Bounds x="240" y="138" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_KartenpfadPruefen" bpmnElement="Task_KartenpfadPruefen">
+        <dc:Bounds x="450" y="138" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Bereit" bpmnElement="Gateway_Bereit" isMarkerVisible="true">
+        <dc:Bounds x="660" y="153" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_NotarielleFreigabe" bpmnElement="Task_NotarielleFreigabe">
+        <dc:Bounds x="780" y="80" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Nacharbeit" bpmnElement="Task_Nacharbeit">
+        <dc:Bounds x="780" y="240" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Freigegeben" bpmnElement="EndEvent_Freigegeben">
+        <dc:Bounds x="990" y="102" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Nacharbeit" bpmnElement="EndEvent_Nacharbeit">
+        <dc:Bounds x="990" y="262" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="186" y="178"/>
+        <di:waypoint x="240" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="390" y="178"/>
+        <di:waypoint x="450" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_3" bpmnElement="Flow_3">
+        <di:waypoint x="600" y="178"/>
+        <di:waypoint x="660" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_4_yes" bpmnElement="Flow_4_yes">
+        <di:waypoint x="685" y="153"/>
+        <di:waypoint x="685" y="120"/>
+        <di:waypoint x="780" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_4_no" bpmnElement="Flow_4_no">
+        <di:waypoint x="685" y="203"/>
+        <di:waypoint x="685" y="280"/>
+        <di:waypoint x="780" y="280"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_5" bpmnElement="Flow_5">
+        <di:waypoint x="930" y="120"/>
+        <di:waypoint x="990" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_6" bpmnElement="Flow_6">
+        <di:waypoint x="930" y="280"/>
+        <di:waypoint x="990" y="280"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

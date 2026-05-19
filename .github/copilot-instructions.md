@@ -112,6 +112,10 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Folge [policies/technology-policy.yaml](../policies/technology-policy.yaml) als verbindlichem Stack.
 - Markdown ist die einzige manuell gepflegte Doku-Quelle.
 - BPMN-2.0 ist die fachliche Quellnotation für Prozesse.
+- `bpmn-js` ist die geplante visuelle Bearbeitungsschicht für BPMN-Modelle.
+- NaC-BPMN-Properties stehen in [bpmn/nac-moddle.json](../bpmn/nac-moddle.json);
+  BPMN-Modelle müssen mit [scripts/validate_bpmn_models.py](../scripts/validate_bpmn_models.py)
+  validierbar sein.
 - Mermaid darf nur als Übersicht eingesetzt werden.
 
 ## Erststart für VS Code + Copilot

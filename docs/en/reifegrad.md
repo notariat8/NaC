@@ -12,6 +12,7 @@ blocked automation. It helps decision makers assess NaC realistically.
 | Run the local quality gate | Usable today | Tests, language rules, privacy lint, plugin validation, KG validation and Gantt rules run locally. |
 | Review usecase KGs | Usable today | Each usecase has a machine-readable KG and a human review view. |
 | Show KG editor view | Usable today | Subject-matter staff can inspect open nodes as safe form/checklist views without editing `value` fields. |
+| BPMN-js business layer | Profile present | BPMN 2.0 is the subject-matter process source; a first bpmn-js-ready model and Python validation exist. |
 | Private operating fork | Pilot-ready | A notary office can move the template into a private fork and define roles, approvals and local storage. |
 | Local card/XNP readiness | Pilot-ready | Plugin paths first check technical readiness and metadata, not real signatures or productive filing. |
 | System connectors | Planned / integration work | Write adapters need separate approval, privacy review, test mode and responsibility model. |
@@ -29,6 +30,7 @@ with local systems, roles, privacy review and human approvals.
 
 - [docs/en/notar-start.md](notar-start.md)
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
+- [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [docs/en/betriebsstart.md](betriebsstart.md)
 - [docs/en/integration-start.md](integration-start.md)
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md)

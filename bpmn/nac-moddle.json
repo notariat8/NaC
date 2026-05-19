@@ -1,0 +1,76 @@
+{
+  "name": "NaC",
+  "uri": "https://github.com/ofunk/NaC/bpmn/nac",
+  "prefix": "nac",
+  "xml": {
+    "tagAlias": "lowerCase"
+  },
+  "types": [
+    {
+      "name": "GovernedProcess",
+      "extends": [
+        "bpmn:Process"
+      ],
+      "properties": [
+        {
+          "name": "profile",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "owner",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "binding",
+          "isAttr": true,
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "name": "GovernedFlowNode",
+      "extends": [
+        "bpmn:FlowNode"
+      ],
+      "properties": [
+        {
+          "name": "role",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "dataClass",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "approval",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "evidence",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "plugin",
+          "isAttr": true,
+          "type": "String"
+        },
+        {
+          "name": "localExecution",
+          "isAttr": true,
+          "type": "Boolean"
+        },
+        {
+          "name": "kgRef",
+          "isAttr": true,
+          "type": "String"
+        }
+      ]
+    }
+  ]
+}

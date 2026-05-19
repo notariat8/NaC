@@ -69,6 +69,7 @@ process logic.
 | CLI and Python runtime | Usable today | Checks KG, status, editor view and quality gates. |
 | Codex plugins | Pilot-ready | Guide local readiness, plan and evidence checks. |
 | GitHub Actions | Usable today | Run gates and validations reproducibly. |
+| BPMN-js business layer | First profile present | Visual BPMN editing for subject-matter flows; Python validates the model before merge. |
 | Sidecar editor | Planned | Graphical operation for KG forms and checklists. |
 | ChatGPT app or workspace app | Planned | Comfortable operating surface for authorized users. |
 | Standalone NaC web app | Not today's core | Possible, but useful only after runtime, roles and gates are stable. |
@@ -84,4 +85,5 @@ local, checkable, automatable and later operable from many surfaces.
 - [docs/en/betriebsstart.md](betriebsstart.md)
 - [docs/en/integration-start.md](integration-start.md)
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md)
+- [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [workflows/python/README.md](../../workflows/python/README.md)

@@ -18,11 +18,13 @@ gantt
     Skill-Sprachregel und EN-Summary            :done,   w4c, 2026-05-17, 1d
     NaC-Namenskonvention in Workflows           :done,   w4d, 2026-05-18, 1d
     Deutsche Umlautpflicht in Workflows         :done,   w4e, 2026-05-18, 1d
+    BPMN-js Business-Layer-Profil               :done,   w4f, 2026-05-19, 1d
     Workflow-Vertragsformat ergänzen          :active, w4, 2026-05-15, 21d
 
     section Ausführung
     Skill-Scaffolds für Notariatsworkflows    :        w5, 2026-06-01, 28d
     Deterministisches Python-Workflow-MVP      :active, w6, 2026-05-15, 35d
+    BPMN-Modellvalidierung im Quality Gate      :done,   w6a, 2026-05-19, 1d
     Nachweis- und Replay-Prüfungen            :        w7, after w6, 28d
 
     section Betrieb
@@ -36,7 +38,8 @@ gantt
 | --- | --- | --- | --- |
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung führt; englische Summary dient technischer Anschlussfähigkeit, keine finale rechtliche Wahrheit. |
 | Python-Workflows | `workflows/python/` plus `src/notary_kg/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und stellt die sichere No-code-Editor-View bereit. |
-| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten und der implementierte KG-Editor-Vertrag. |
+| BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Profil bereit | BPMN ist fachliche Prozessquelle; `bpmn-js` wird Editor, Python validiert NaC-Properties, Sequenzflüsse und bpmn-js-taugliche Modelle. |
+| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor- und BPMN-js-Editor-Vertrag. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr
