@@ -91,6 +91,7 @@ Weitere Dokumentation:
 - Datenschutz und AVV/DPA: [docs/de/datenschutz-avv-dpa.md](docs/de/datenschutz-avv-dpa.md)
 - AI-SBOM: [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md)
 - KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)
+- Demo-Datenrepo: [docs/de/datenrepo-demo8notariat.md](docs/de/datenrepo-demo8notariat.md)
 - Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
 
 ## Erster Blick Nach Dem Klonen
@@ -122,6 +123,7 @@ Prüfschicht dahinter heißt `nac`.
 | Ich will prüfen, ob das Repo gesund ist. | `python scripts/nac.py doctor --profile strict` |
 | Ich will wissen, welche Modelle und Usecases vorhanden sind. | `python scripts/nac.py status` |
 | Ich will BPMN, KG oder Plugins automatisiert prüfen. | `python scripts/nac.py bpmn validate`, `python scripts/nac.py kg status`, `python scripts/nac.py plugins actions` |
+| Ich will Demo-Daten getrennt vom Produktrepo schreiben. | `python scripts/nac.py tenant status --repo ../demo8notariat`, `python scripts/nac.py tenant write-demo immobilienkaufvertrag --repo ../demo8notariat` |
 
 Nach einer lokalen Installation aus dem Repo kann statt `python scripts/nac.py`
 auch der kurze Befehl `nac` verwendet werden.

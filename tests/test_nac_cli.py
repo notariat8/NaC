@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -73,6 +74,47 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn('"plugin": "nac-pkcs7-certbundle"', output)
         self.assertIn('"overall_status": "manual_review"', output)
+
+    def test_tenant_init_status_and_write_demo(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tenant_repo = Path(temp_dir) / "demo8notariat"
+
+            rc, output = run_cli(
+                "tenant",
+                "init",
+                "--repo",
+                str(tenant_repo),
+                "--name",
+                "demo8notariat",
+                "--remote-url",
+                "https://github.com/ofunk/demo8notariat.git",
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("NaC-Datenrepo initialisiert", output)
+            self.assertTrue((tenant_repo / ".nac-tenant.json").is_file())
+
+            rc, output = run_cli("tenant", "status", "--repo", str(tenant_repo))
+            self.assertEqual(rc, 0)
+            self.assertIn("Demo-Vorgänge: 0", output)
+            self.assertIn("https://github.com/ofunk/demo8notariat.git", output)
+
+            rc, output = run_cli(
+                "tenant",
+                "write-demo",
+                "immobilienkaufvertrag",
+                "--repo",
+                str(tenant_repo),
+                "--case-id",
+                "DEMO-2026-0001",
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("NaC-Demo-Vorgang geschrieben", output)
+
+            case_file = tenant_repo / "daten" / "demo" / "DEMO-2026-0001" / "case.json"
+            self.assertTrue(case_file.is_file())
+            case_text = case_file.read_text(encoding="utf-8")
+            self.assertIn('"data_classification": "synthetic_demo_only"', case_text)
+            self.assertIn('"real_mandate_data_allowed": false', case_text)
 
 
 if __name__ == "__main__":

@@ -71,6 +71,7 @@ nac kg status
 nac bpmn validate
 nac config list
 nac plugins actions
+nac tenant status --repo ../demo8notariat
 ```
 
 ## Technical Operating Areas
@@ -86,6 +87,21 @@ nac plugins actions
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
+| Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
+
+## Separate Data Repository
+
+NaC does not write case and test data into the product repository. Synthetic
+demo data lives in a separate data repository, for example `../demo8notariat`:
+
+```bash
+nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
+nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
+```
+
+GitHub is only intended for synthetic demo data here. Productive notary-office
+data requires a reviewed sovereign/GDPR Git provider. The separation is
+documented in [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 
 ## Plugin Commands
 

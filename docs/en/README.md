@@ -90,6 +90,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md) defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md) defines the no-code KG editor,
   patch principle and sidecar-editor path for subject-matter staff.
+- [docs/en/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md) defines the
+  separate demo data repository for synthetic NaC cases and a later sovereign Git move.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.
