@@ -34,6 +34,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         html = (bridge.SITE_ROOT / "index.html").read_text(encoding="utf-8")
         js = (bridge.SITE_ROOT / "assets" / "site.js").read_text(encoding="utf-8")
 
+        self.assertIn('src="assets/n8.svg"', html)
+        self.assertTrue((bridge.SITE_ROOT / "assets" / "n8.svg").is_file())
         self.assertIn("lokal per CLI gestartete Bridge", html)
         self.assertIn("python scripts\\nac.py operator --open", html)
         self.assertIn("freigegebene CLI-Pruefskripte", html)

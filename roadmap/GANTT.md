@@ -84,6 +84,7 @@ gantt
     Regel zur Gantt-Pflege präzisieren         :done,    d1c, 2026-05-17, 1d
     AGPL-/CC-BY-Lizenzmodell setzen              :done,    d1d, 2026-05-18, 1d
     Codex-Logo-Assets importieren                :done,    d1e, 2026-05-19, 1d
+    Operator-Webapp-n8-Logo setzen               :done,    d1f, 2026-05-19, 1d
     Notariats-Startseite weiter schärfen        :active,  d2, 2026-05-17, 14d
 ```
 
