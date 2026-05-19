@@ -5,7 +5,7 @@ Status: MVP umgesetzt am 2026-05-15
 Der KG-Editor ist die fachliche Bearbeitungsschicht über den usecase-lokalen
 statischen Knowledge Graphs. Die Dateien
 [usecases/*/knowledge-graph.graph.json](../../usecases) bleiben die
-maschinenlesbare Repraesentation. Fachpersonal soll diese JSON-Dateien nicht
+maschinenlesbare Repräsentation. Fachpersonal soll diese JSON-Dateien nicht
 direkt bearbeiten.
 
 ## Produktentscheidung
@@ -39,7 +39,8 @@ Die Ausgabe ist kein finaler Web-Editor, aber sie ist ein implementierter
 Vertrag für einen GitHub-backed Sidecar-Editor oder eine spätere ChatGPT App.
 Der Workflow-Vertrag steht in
 [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
-Warum diese CLI-first-Schicht bewusst gewählt ist, beschreibt
+Warum die sichtbare Bedienung einen prüfbaren technischen Kern braucht,
+beschreibt
 [ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Tabs

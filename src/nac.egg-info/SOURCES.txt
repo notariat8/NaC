@@ -32,6 +32,7 @@ tests/test_cyberjack_readiness.py
 tests/test_engine.py
 tests/test_install_local_plugins.py
 tests/test_nac_cli.py
+tests/test_nac_hw_bridge.py
 tests/test_nac_web.py
 tests/test_notary_kg.py
 tests/test_pkcs7_certbundle.py

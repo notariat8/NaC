@@ -93,46 +93,48 @@ Weitere Dokumentation:
 - KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)
 - Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
 
-## Erster Prüflauf
+## Erster Blick Nach Dem Klonen
 
-Nach dem Klonen:
+NaC soll zuerst als lokale Büroarbeitsfläche verständlich werden. Der
+schnellste Einstieg ist deshalb die Operator-Webapp:
 
 ```bash
-python scripts/nac.py status
-python scripts/nac.py kg editor-view immobilienkaufvertrag
-python scripts/nac.py web
 python scripts/nac.py operator --open
-python scripts/nac.py doctor --profile strict
 ```
+
+Sie öffnet eine lokale Oberfläche mit Vorgangsauswahl, Checklisten,
+BPMN-Abläufen, Bearbeitungsansicht und Arbeitsplatztests. Wer die Webapp nicht
+öffnen kann, findet eine bebilderte Erklärung unter
+[docs/de/webapp-ohne-zugriff.md](docs/de/webapp-ohne-zugriff.md).
 
 Wenn Python noch nicht eingerichtet ist, zuerst
 [docs/de/minimum-requirements.md](docs/de/minimum-requirements.md) lesen.
 
-## Aktueller Entwicklungsmodus
+## Bedienmodell
 
-NaC wird als ausführbare Software entwickelt, nicht nur als Dokumentation. Die
-zentrale Bedienkante ist die `nac`-CLI. Ohne Installation steht sie über
-[scripts/nac.py](scripts/nac.py) bereit; nach `python -m pip install -e .` auch
-als kurzer Befehl `nac`:
+NaC wird als ausführbare lokale Software entwickelt. Für das Notariat ist die
+sichtbare Bedienung die lokale Bürooberfläche. Die technische Steuer- und
+Prüfschicht dahinter heißt `nac`.
 
-```bash
-python scripts/nac.py status
-python scripts/nac.py config list
-python scripts/nac.py bpmn validate
-python scripts/nac.py plugins actions
-python scripts/nac.py kg case bautraegervertrag
-python scripts/nac.py web
-python scripts/nac.py operator --open
-```
+| Nutzerfrage | Einstieg |
+| --- | --- |
+| Ich will sehen, wie ein Vorgang aussieht. | `python scripts/nac.py operator --open` |
+| Ich will prüfen, ob das Repo gesund ist. | `python scripts/nac.py doctor --profile strict` |
+| Ich will wissen, welche Modelle und Usecases vorhanden sind. | `python scripts/nac.py status` |
+| Ich will BPMN, KG oder Plugins automatisiert prüfen. | `python scripts/nac.py bpmn validate`, `python scripts/nac.py kg status`, `python scripts/nac.py plugins actions` |
 
-Architekturregel: Neue NaC-Funktionalität braucht künftig eine Bedienkante in
-`nac`. Alte Skriptnamen bleiben als interne oder kompatible Ebene möglich, aber
-die Produktdokumentation soll den zentralen CLI-Weg zeigen.
+Nach einer lokalen Installation aus dem Repo kann statt `python scripts/nac.py`
+auch der kurze Befehl `nac` verwendet werden.
 
-Die lokale Operator-Webapp für Hardware-Readiness ersetzt die CLI nicht. Sie
-wird über `nac operator --open` gestartet, bindet standardmäßig nur an
-`127.0.0.1` und ruft freigegebene lokale Prüfskripte ohne PINs, Kartendaten
-oder Secrets auf.
+Wichtig: Die Webapp und spätere Buttons sind die Oberfläche. `nac` bleibt die
+prüfbare Ausführungsschicht, damit dieselben Aktionen lokal, in Tests, in
+Codex und später in CI nachvollziehbar bleiben. Alte Skriptnamen dürfen intern
+weiter existieren; Produktdokumentation und neue Funktionen sollen aber über
+verständliche Webapp-Flächen oder `nac` erreichbar sein.
+
+Die Operator-Webapp bindet standardmäßig nur an `127.0.0.1`. Lokale
+Arbeitsplatztests dürfen freigegebene Prüfskripte ausführen, speichern aber
+keine PINs, Kartenrohdaten, Zugangsdaten oder Mandatsdaten.
 
 Das aktive Build-Board wird in [roadmap/BUILD_NOW.md](roadmap/BUILD_NOW.md)
 gepflegt.
