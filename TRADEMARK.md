@@ -10,7 +10,7 @@ Dokumenten. Sie gewähren keine Markenrechte an `funktion8`, `NaC`,
   funktion8 / ofunk".
 - Beschreibung eines Forks als technisch auf NaC basierend.
 - Verweise auf das Originalrepository unter
-  `https://github.com/ofunk/NaC`.
+  `https://github.com/notariat8/NaC`.
 
 ## Nicht Erlaubt Ohne Zustimmung
 

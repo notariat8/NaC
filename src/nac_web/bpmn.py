@@ -13,7 +13,7 @@ BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
 DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 DI_NS = "http://www.omg.org/spec/DD/20100524/DI"
-NAC_NS = "https://github.com/ofunk/NaC/bpmn/nac"
+NAC_NS = "https://github.com/notariat8/NaC/bpmn/nac"
 
 FLOW_NODE_NAMES = {
     "startEvent",

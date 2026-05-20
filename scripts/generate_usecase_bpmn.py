@@ -15,8 +15,8 @@ USECASES_ROOT = REPO_ROOT / "usecases"
 BPMN_ROOT = REPO_ROOT / "bpmn"
 BPMN_USECASE_ROOT = BPMN_ROOT / "usecases"
 
-NAC_NS = "https://github.com/ofunk/NaC/bpmn/nac"
-TARGET_NS = "https://github.com/ofunk/NaC/bpmn/notariat/usecases"
+NAC_NS = "https://github.com/notariat8/NaC/bpmn/nac"
+TARGET_NS = "https://github.com/notariat8/NaC/bpmn/notariat/usecases"
 
 TOP_LEVEL_MODELS = {"immobilienkaufvertrag"}
 

@@ -1,6 +1,6 @@
 # Datenrepo: demo8notariat
 
-NaC trennt Produktlogik und Notariatsdaten. Das Produktrepo `ofunk/NaC` enthält
+NaC trennt Produktlogik und Notariatsdaten. Das Produktrepo `notariat8/NaC` enthält
 Usecases, BPMN-Modelle, Plugins, Regeln, Validatoren und Dokumentation. Das
 Datenrepo `ofunk/demo8notariat` ist ein getrenntes Ziel für Akten, Beteiligte,
 Dokumente, Ereignisse, Exporte und spätere produktive Datenstände.

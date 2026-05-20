@@ -4,9 +4,9 @@
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                  xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
+                  xmlns:nac="https://github.com/notariat8/NaC/bpmn/nac"
                   id="Definitions_immobilienkaufvertrag"
-                  targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
+                  targetNamespace="https://github.com/notariat8/NaC/bpmn/notariat/usecases">
   <bpmn:process id="Process_immobilienkaufvertrag"
                 name="Immobilienkaufvertrag"
                 isExecutable="false"

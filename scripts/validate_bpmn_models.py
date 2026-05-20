@@ -13,7 +13,7 @@ NAC_MODDLE = BPMN_ROOT / "nac-moddle.json"
 
 BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
-NAC_NS = "https://github.com/ofunk/NaC/bpmn/nac"
+NAC_NS = "https://github.com/notariat8/NaC/bpmn/nac"
 NAC_PROFILE = "nac-bpmn/v0.1"
 
 FLOW_NODE_NAMES = {

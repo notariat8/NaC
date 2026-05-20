@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ofunk/NaC/plugins/nac-pkcs7-certbundle/contracts/certbundle-evidence.schema.json",
+  "$id": "https://github.com/notariat8/NaC/plugins/nac-pkcs7-certbundle/contracts/certbundle-evidence.schema.json",
   "title": "NaC PKCS7 CertBundle Evidence",
   "type": "object",
   "required": [

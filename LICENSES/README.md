@@ -11,7 +11,7 @@ Weiterentwicklung und öffentliche Betreiberpflichten.
   Beschreibungen und Knowledge-Graph-Reviewtexte stehen unter `CC-BY-4.0`,
   sofern eine Datei nichts Abweichendes sagt.
 - Attribution ist gewünscht und erforderlich: "NaC: Notariat as Code by
-  funktion8 / ofunk (https://github.com/ofunk/NaC)".
+  funktion8 / ofunk (https://github.com/notariat8/NaC)".
 - Die Open-Source-Lizenzen gewähren keine Markenrechte. Details stehen in
   [TRADEMARK.md](../TRADEMARK.md).
 
@@ -45,7 +45,7 @@ zitier- und weiterverwendbar. Die zentrale Pflicht ist Namensnennung.
 Bitte in Forks, Veröffentlichungen, Präsentationen, Produktunterlagen und
 öffentlichen Deployments sichtbar nennen:
 
-> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/notariat8/NaC).
 
 Maschinenlesbare Zitierdaten stehen in [CITATION.cff](../CITATION.cff). Die
 Herausgeber- und Urheberhinweise stehen in [AUTHORS.md](../AUTHORS.md) und

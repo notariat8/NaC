@@ -42,7 +42,7 @@ NaC ist offen nutzbar: Software und ausführbare Artefakte stehen unter
 `AGPL-3.0-or-later`, fachliche Texte und Dokumentation unter `CC-BY-4.0`.
 Attribution soll sichtbar erhalten bleiben:
 
-> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/notariat8/NaC).
 
 Details stehen in [LICENSES/README.md](LICENSES/README.md), [NOTICE](NOTICE),
 [AUTHORS.md](AUTHORS.md), [CITATION.cff](CITATION.cff) und

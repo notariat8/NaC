@@ -733,7 +733,7 @@ Dokumente, Ereignisse und Exporte.
 ## Zweck
 
 - Akten- und Testdaten aus NaC aufnehmen.
-- Vorgangsstände getrennt vom Produktrepo `ofunk/NaC` versionieren.
+- Vorgangsstände getrennt vom Produktrepo `notariat8/NaC` versionieren.
 - Viele Akten, viele Bearbeiter und viele Generationen lesbar halten.
 - Den späteren Wechsel auf einen Sovereign-/DSGVO-Git-Anbieter ermöglichen.
 

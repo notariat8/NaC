@@ -8,7 +8,7 @@ Copyright (c) 2026 funktion8 / ofunk.
 
 Kanonische Attribution:
 
-> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/notariat8/NaC).
 
 ## Beiträge
 

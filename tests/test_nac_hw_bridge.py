@@ -495,7 +495,15 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             self.assertEqual(reloaded["data_git_url"], "git@example.invalid:any/demo-data.git")
 
     def test_operator_config_defaults_to_demo8notariat(self) -> None:
-        payload = bridge.build_operator_config_payload(config_path=Path("missing-operator-config.json"))
+        original_default_data_repo = bridge.DEFAULT_DATA_REPO
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bridge.DEFAULT_DATA_REPO = Path(temp_dir) / "demo8notariat"
+            try:
+                payload = bridge.build_operator_config_payload(
+                    config_path=Path(temp_dir) / "missing-operator-config.json"
+                )
+            finally:
+                bridge.DEFAULT_DATA_REPO = original_default_data_repo
 
         self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
         self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")

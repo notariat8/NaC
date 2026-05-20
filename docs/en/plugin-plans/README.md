@@ -11,7 +11,7 @@ versioned and readable without a proprietary runtime.
 NaC runs locally:
 
 - Workspace: `~/NaC` in Ubuntu WSL.
-- Git source: `https://github.com/ofunk/NaC.git`.
+- Git source: `https://github.com/notariat8/NaC.git`.
 - Codex, OCI CLI, GitHub CLI and domain integrations are installed locally.
 - Omnistation is not an execution location for NaC.
 - Remote hosts may only be used for non-critical research.

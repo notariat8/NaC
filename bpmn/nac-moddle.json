@@ -1,6 +1,6 @@
 {
   "name": "NaC",
-  "uri": "https://github.com/ofunk/NaC/bpmn/nac",
+  "uri": "https://github.com/notariat8/NaC/bpmn/nac",
   "prefix": "nac",
   "xml": {
     "tagAlias": "lowerCase"

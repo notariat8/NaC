@@ -10,7 +10,7 @@ Die Pläne sind bewusst als Markdown-Quellen gepflegt, damit sie reviewbar, vers
 NaC wird lokal betrieben:
 
 - Workspace: `~/NaC` in Ubuntu WSL.
-- Git-Quelle: `https://github.com/ofunk/NaC.git`.
+- Git-Quelle: `https://github.com/notariat8/NaC.git`.
 - Codex, OCI CLI, GitHub-CLI und Fachintegrationen werden lokal eingerichtet.
 - Omnistation ist für NaC kein Ausführungsort.
 - Remote-Hosts dürfen nur für unkritische Recherche genutzt werden.

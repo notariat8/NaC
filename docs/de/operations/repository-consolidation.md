@@ -19,7 +19,7 @@ Ein Repo verschwindet in GitHub nicht dadurch, dass sein Inhalt in NaC
 
 | Quellrepo | NaC-Ziel | Status in NaC | Quellrepo-Status | Nächste Aktion |
 | --- | --- | --- | --- | --- |
-| `ofunk/NaC` | Zielrepo | Zielsystem | offen | PR #6 mergen. |
+| `notariat8/NaC` | Zielrepo | Zielsystem | offen | PR #6 mergen. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | kanonisiert in PR #6 | altes Repo sichtbar, leer | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/Steuer-aaS` | keine NaC-Usecase-Zielstruktur | aus dem NaC-Usecase-Katalog entfernt | altes Repo sichtbar, leer | Extern belassen oder später als Plugin-/Workflow-Idee neu bewerten. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migriert in PR #6 | altes Repo sichtbar | Nach Merge Redirect-README setzen oder archivieren. |
@@ -50,10 +50,10 @@ löschen. Ich kann aber, wenn gewünscht, Redirect-READMEs per Git-Push setzen.
 ```markdown
 # Moved to NaC
 
-This repository has been consolidated into `ofunk/NaC`.
+This repository has been consolidated into `notariat8/NaC`.
 
 Canonical location:
 `<target-path>`
 
-Do not create new work here. Open issues and changes in `ofunk/NaC`.
+Do not create new work here. Open issues and changes in `notariat8/NaC`.
 ```

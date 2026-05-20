@@ -168,7 +168,7 @@ Die verbindliche Zuordnung steht in [LICENSES/README.md](LICENSES/README.md).
 Bitte bei Forks, öffentlichen Deployments, Präsentationen und abgeleiteten
 Unterlagen sichtbar nennen:
 
-> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC).
+> Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/notariat8/NaC).
 
 Weitere Hinweise: [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md),
 [CITATION.cff](CITATION.cff) und [TRADEMARK.md](TRADEMARK.md).

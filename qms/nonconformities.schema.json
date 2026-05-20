@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ofunk/NaC/qms/nonconformities.schema.json",
+  "$id": "https://github.com/notariat8/NaC/qms/nonconformities.schema.json",
   "title": "NaC QMS Nonconformity",
   "type": "object",
   "required": [

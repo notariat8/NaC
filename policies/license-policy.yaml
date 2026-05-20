@@ -2,7 +2,7 @@ license_policy:
   source_of_truth: LICENSES/README.md
   effective_date: "2026-05-18"
   copyright_holder: "funktion8 / ofunk"
-  canonical_repository: "https://github.com/ofunk/NaC"
+  canonical_repository: "https://github.com/notariat8/NaC"
   software:
     spdx: AGPL-3.0-or-later
     applies_to:
@@ -24,7 +24,7 @@ license_policy:
       - usecases
     rule: "Dokumentation, Diagramme, Policies, Roadmap, fachliche Usecases und Knowledge-Graph-Reviewtexte bleiben unter CC-BY-4.0, sofern eine Datei nichts Abweichendes sagt."
   attribution:
-    required_notice: "Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC)."
+    required_notice: "Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/notariat8/NaC)."
     files:
       - NOTICE
       - AUTHORS.md

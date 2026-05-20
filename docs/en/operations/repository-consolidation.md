@@ -19,7 +19,7 @@ Retirement is a separate step.
 
 | Source repo | NaC target | Status in NaC | Source repo status | Next action |
 | --- | --- | --- | --- | --- |
-| `ofunk/NaC` | Target repository | Target system | open | Merge PR #6. |
+| `notariat8/NaC` | Target repository | Target system | open | Merge PR #6. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | canonicalized in PR #6 | old repo visible, empty | After merge, add redirect README or archive. |
 | `ofunk/Steuer-aaS` | no NaC usecase target | removed from the NaC usecase catalog | old repo visible, empty | Keep external or re-evaluate later as a plugin/workflow idea. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migrated in PR #6 | old repo visible | After merge, add redirect README or archive. |
@@ -50,10 +50,10 @@ repositories. I can push redirect READMEs if requested.
 ```markdown
 # Moved to NaC
 
-This repository has been consolidated into `ofunk/NaC`.
+This repository has been consolidated into `notariat8/NaC`.
 
 Canonical location:
 `<target-path>`
 
-Do not create new work here. Open issues and changes in `ofunk/NaC`.
+Do not create new work here. Open issues and changes in `notariat8/NaC`.
 ```

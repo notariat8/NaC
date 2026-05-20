@@ -1,7 +1,7 @@
 # Data Repository: demo8notariat
 
 NaC separates product logic from notary-office data. The product repository
-`ofunk/NaC` contains usecases, BPMN models, plugins, rules, validators and
+`notariat8/NaC` contains usecases, BPMN models, plugins, rules, validators and
 documentation. The data repository `ofunk/demo8notariat` is a separate target
 for matters, participants, documents, events, exports and later production data
 states.
