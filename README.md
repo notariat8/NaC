@@ -135,7 +135,7 @@ Prüfschicht dahinter heißt `nac`.
 | Ich will sehen, wie ein Vorgang aussieht. | `python scripts/nac.py operator --open` |
 | Ich will prüfen, ob das Repo gesund ist. | `python scripts/nac.py doctor --profile strict` |
 | Ich will wissen, welche Modelle und Usecases vorhanden sind. | `python scripts/nac.py status` |
-| Ich will BPMN, KG oder Plugins automatisiert prüfen. | `python scripts/nac.py bpmn validate`, `python scripts/nac.py kg status`, `python scripts/nac.py plugins actions` |
+| Ich will BPMN, KG oder Anbindungen automatisiert prüfen. | `python scripts/nac.py bpmn validate`, `python scripts/nac.py kg status`, `python scripts/nac.py plugins status`, `python scripts/nac.py plugins actions` |
 | Ich will Akten-/Demo-Daten getrennt vom Produktrepo schreiben und lesen. | `nac tenant status --repo ../demo8notariat`, `nac tenant write-sample-akte --repo ../demo8notariat`, `nac tenant list-akten --repo ../demo8notariat`, `nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001` |
 | Ich will ISO-9001/QMS-Nachweise vorbereiten. | `python scripts/nac.py qms status`, `python scripts/nac.py qms evidence --repo ../demo8notariat` |
 

@@ -24,6 +24,17 @@ def run_cli(*argv: str) -> tuple[int, str]:
     return rc, buffer.getvalue()
 
 
+def run_cli_with_exit(*argv: str) -> tuple[int, str]:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            rc = main(["--repo-root", str(REPO_ROOT), *argv])
+        except SystemExit as exc:
+            rc = int(exc.code or 0)
+    return rc, stdout.getvalue() + stderr.getvalue()
+
+
 class NaCCliTests(unittest.TestCase):
     def test_status_shows_single_entrypoint(self) -> None:
         rc, output = run_cli("status")
@@ -68,6 +79,55 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("nac plugins card-readiness", output)
         self.assertIn("nac plugins xnp-reader-prompt", output)
         self.assertIn("nac plugins pkcs7-inspect", output)
+        self.assertIn("nac plugins status nac-grundbuch-portal", output)
+        self.assertIn("geplant", output)
+
+    def test_plugin_status_lists_every_marketplace_plugin_as_cli_reachable(self) -> None:
+        rc, output = run_cli_with_exit("plugins", "status", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        plugins = {plugin["name"]: plugin for plugin in payload["plugins"]}
+        self.assertEqual(
+            set(plugins),
+            {
+                "nac-regulated-core",
+                "nac-idaas",
+                "nac-cyberjack-rfid",
+                "nac-bnotk-xnp",
+                "nac-pkcs7-certbundle",
+                "nac-handelsregister",
+                "nac-bea-portal",
+                "nac-elster-eric",
+                "nac-grundbuch-portal",
+                "nac-oci-evidence",
+            },
+        )
+        self.assertEqual(plugins["nac-cyberjack-rfid"]["cli_status"], "executable")
+        self.assertEqual(plugins["nac-cyberjack-rfid"]["command"], "nac plugins card-readiness")
+        self.assertEqual(plugins["nac-bnotk-xnp"]["command"], "nac plugins xnp-reader-prompt")
+        self.assertEqual(plugins["nac-pkcs7-certbundle"]["command"], "nac plugins pkcs7-inspect")
+        self.assertEqual(plugins["nac-grundbuch-portal"]["cli_status"], "planned")
+        self.assertEqual(plugins["nac-grundbuch-portal"]["command"], "nac plugins status nac-grundbuch-portal")
+        self.assertIn("Codex-Plugin", plugins["nac-grundbuch-portal"]["plugin_role"])
+        self.assertIn("NaC-CLI", plugins["nac-grundbuch-portal"]["cli_role"])
+
+    def test_single_plugin_status_explains_cli_and_plugin_boundary(self) -> None:
+        rc, output = run_cli_with_exit("plugins", "status", "nac-grundbuch-portal")
+
+        self.assertEqual(rc, 0, output)
+        self.assertIn("NaC-Anbindung: Grundbuch", output)
+        self.assertIn("CLI-Status: geplant", output)
+        self.assertIn("CLI-Befehl: nac plugins status nac-grundbuch-portal", output)
+        self.assertIn("Plugin-Rolle: Sichtbarkeit", output)
+        self.assertIn("CLI-Rolle: kanonische Bedienkante", output)
+
+    def test_unknown_plugin_status_fails_with_available_names(self) -> None:
+        rc, output = run_cli_with_exit("plugins", "status", "nac-unbekannt")
+
+        self.assertEqual(rc, 1)
+        self.assertIn("Unbekannte NaC-Anbindung: nac-unbekannt", output)
+        self.assertIn("nac-grundbuch-portal", output)
 
     def test_pkcs7_plugin_action_is_reachable_through_nac_cli(self) -> None:
         rc, output = run_cli("plugins", "pkcs7-inspect", "--json")

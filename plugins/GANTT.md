@@ -72,8 +72,10 @@ home-lokalen Plugin-Root gespiegelt: `~/.agents/plugins/marketplace.json` plus
 Session geöffnet werden, weil aktive Plugins beim Session-Start geladen
 werden.
 
-Vorhandene fachliche Plugin-Prüfungen werden über `nac plugins actions`
-sichtbar und über die jeweiligen `nac plugins ...`-Befehle ausgeführt.
+Alle repo-lokalen Anbindungen werden über `nac plugins status` sichtbar.
+Ausführbare fachliche Prüfungen werden zusätzlich über `nac plugins actions`
+und die jeweiligen `nac plugins ...`-Befehle ausgeführt; geplante Anbindungen
+bleiben als CLI-Status erreichbar, ohne als fertige Automatisierung zu gelten.
 
 ## Paketierungshinweis
 

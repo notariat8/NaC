@@ -23,6 +23,9 @@ Cloud-Nachweisbetrieb.
 - Plugins arbeiten standardmäßig lokal, trockenlaufbasiert, mit Planvorschau
   und ausschließlich Metadaten-Nachweisen.
 - Externe Schreibadapter sind im MVP nicht aktiviert.
+- Die kanonische Bedienkante ist die NaC-CLI: `nac plugins status` listet alle
+  Anbindungen, echte Prüfungen laufen über `nac plugins ...`; Codex-Plugins
+  bleiben Sichtbarkeit, Anleitung und Installationshülle.
 - Fehlende Konten oder Freigaben werden in
   [docs/de/plugin-operations/account-and-approval-requests.md](../docs/de/plugin-operations/account-and-approval-requests.md)
   und

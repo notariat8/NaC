@@ -133,6 +133,8 @@ laufen jetzt ebenfalls über `nac`:
 
 ```bash
 nac plugins actions
+nac plugins status
+nac plugins status nac-grundbuch-portal
 nac plugins validate
 nac plugins install --mode dry-run
 nac plugins card-readiness
@@ -142,12 +144,17 @@ nac plugins pkcs7-inspect --input beispiel.p7b
 
 | Befehl | Bedeutung |
 | --- | --- |
+| `nac plugins status` | Listet alle repo-lokalen NaC-Anbindungen aus dem Marketplace mit CLI-Status. |
+| `nac plugins status <plugin>` | Zeigt die Grenze zwischen Codex-Plugin und kanonischer NaC-CLI für eine Anbindung. |
 | `nac plugins card-readiness` | Prüft lokale Kartenleser-, SAK-/XNP- und Readiness-Metadaten. Bei installierter Hardware ist ein echter lokaler Hardwaretest möglich; PINs und Kartenrohdaten werden nicht gespeichert. |
 | `nac plugins xnp-reader-prompt` | Erzeugt einen sicheren XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate. |
 | `nac plugins pkcs7-inspect` | Prüft ein lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only, ohne Signatur oder Private-Key-Zugriff. |
 
 Die alten Plugin-Skripte bleiben die interne Ausführungsebene. Sichtbar für
-Anwender, Doku und Agenten ist der `nac plugins ...`-Aufruf.
+Anwender, Doku und Agenten ist der `nac plugins ...`-Aufruf. Geplante
+Anbindungen sind ebenfalls über `nac plugins status <plugin>` erreichbar, aber
+werden als `geplant` ausgewiesen, bis ein echter fachlicher CLI-Befehl
+implementiert ist.
 
 Für einen Arbeitsplatz mit installierter echter Hardware:
 

@@ -131,6 +131,8 @@ Plugin management and the existing local plugin checks now also run through
 
 ```bash
 nac plugins actions
+nac plugins status
+nac plugins status nac-grundbuch-portal
 nac plugins validate
 nac plugins install --mode dry-run
 nac plugins card-readiness
@@ -140,12 +142,16 @@ nac plugins pkcs7-inspect --input example.p7b
 
 | Command | Meaning |
 | --- | --- |
+| `nac plugins status` | Lists all repo-local NaC integrations from the marketplace with CLI status. |
+| `nac plugins status <plugin>` | Shows the boundary between Codex plugin and canonical NaC CLI for one integration. |
 | `nac plugins card-readiness` | Checks local card-reader, SAK/XNP and readiness metadata. With installed hardware, a real local hardware test is possible; PINs and raw card data are not stored. |
 | `nac plugins xnp-reader-prompt` | Creates a safe XNP reader prompt with the card gate in front. |
 | `nac plugins pkcs7-inspect` | Inspects a local PKCS7/P7B/P7C certificate bundle metadata-only, without signing or private-key access. |
 
 The old plugin scripts remain the internal execution layer. The visible path
-for users, docs and agents is `nac plugins ...`.
+for users, docs and agents is `nac plugins ...`. Planned integrations are also
+reachable through `nac plugins status <plugin>`, but they are shown as
+`planned` until a real subject-matter CLI command exists.
 
 For a workstation with installed real hardware:
 

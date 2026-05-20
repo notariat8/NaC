@@ -64,10 +64,16 @@ For Online HRA, `nac-cyberjack-rfid` is the installable `Karte/SAK`, and `nac-bn
 The existing local plugin checks are reachable through the unified CLI:
 
 ```bash
+python3 scripts/nac.py plugins status
+python3 scripts/nac.py plugins status nac-grundbuch-portal
 python3 scripts/nac.py plugins card-readiness
 python3 scripts/nac.py plugins xnp-reader-prompt
 python3 scripts/nac.py plugins pkcs7-inspect --input example.p7b
 ```
+
+`status` is the complete integration overview. Executable integrations show
+their real CLI command; planned integrations stay visible, but are not
+presented as finished automation.
 
 When real hardware is installed, the readiness commands should check the real
 local card reader, morris, PC/SC, SAK/XNP and XNP loopback path:

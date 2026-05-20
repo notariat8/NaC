@@ -84,10 +84,16 @@ reichen keine Anmeldungen ein.
 Die vorhandenen lokalen Plugin-Prüfungen sind über die zentrale CLI erreichbar:
 
 ```bash
+python3 scripts/nac.py plugins status
+python3 scripts/nac.py plugins status nac-grundbuch-portal
 python3 scripts/nac.py plugins card-readiness
 python3 scripts/nac.py plugins xnp-reader-prompt
 python3 scripts/nac.py plugins pkcs7-inspect --input beispiel.p7b
 ```
+
+`status` ist die vollständige Anbindungsübersicht. Ausführbare Anbindungen
+zeigen ihren echten CLI-Befehl; geplante Anbindungen bleiben sichtbar, werden
+aber nicht als fertige Automatisierung ausgegeben.
 
 Wenn echte Hardware installiert ist, sollen die Readiness-Befehle den echten
 lokalen Kartenleser-, morris-, PC/SC-, SAK-/XNP- und XNP-Loopback-Pfad prüfen:

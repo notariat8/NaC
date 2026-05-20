@@ -30,6 +30,26 @@ from .tenant import (
 
 DEFAULT_PORT = 8765
 
+PLUGIN_CLI_ROLES = {
+    "cli_role": "kanonische Bedienkante der NaC-CLI für Prüfung, Automatisierung und Dokumentation.",
+    "plugin_role": "Sichtbarkeit als Codex-Plugin, geführte Bedienung und Installationsmetadaten.",
+}
+
+EXECUTABLE_PLUGIN_COMMANDS = {
+    "nac-cyberjack-rfid": {
+        "command": "nac plugins card-readiness",
+        "description": "Kartenleser-, SAK-/XNP- und lokale Readiness-Metadaten prüfen.",
+    },
+    "nac-bnotk-xnp": {
+        "command": "nac plugins xnp-reader-prompt",
+        "description": "XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate erzeugen.",
+    },
+    "nac-pkcs7-certbundle": {
+        "command": "nac plugins pkcs7-inspect",
+        "description": "Lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only prüfen.",
+    },
+}
+
 
 @dataclass(frozen=True, slots=True)
 class ConfigEntry:
@@ -111,6 +131,9 @@ def build_parser() -> argparse.ArgumentParser:
     plugins_sub = plugins.add_subparsers(dest="plugins_command", required=True)
     plugins_actions = plugins_sub.add_parser("actions", help="Listet fachliche Plugin-Befehle.")
     plugins_actions.add_argument("--format", choices=["text", "json"], default="text")
+    plugins_status = plugins_sub.add_parser("status", help="Zeigt CLI-Status aller NaC-Anbindungen.")
+    plugins_status.add_argument("plugin", nargs="?", help="Optionaler Plugin-Name, z.B. nac-grundbuch-portal.")
+    plugins_status.add_argument("--format", choices=["text", "json"], default="text")
     plugins_install = plugins_sub.add_parser("install", help="Spiegelt repo-lokale Plugins.")
     plugins_install.add_argument("--mode", choices=["dry-run", "link", "copy"], default="dry-run")
     plugins_install.add_argument("--target-root", type=Path)
@@ -398,13 +421,37 @@ def command_plugins(args: argparse.Namespace) -> int:
         return run_script(repo_root, "scripts/install_local_plugins.py", script_args)
 
     if args.plugins_command == "actions":
-        actions = plugin_actions()
+        actions = plugin_actions(repo_root)
         if args.format == "json":
-            print_json({"actions": actions})
+            print_json({"schema_version": "nac.plugin-actions/v1", "actions": actions})
             return 0
         print("NaC-Plugin-Befehle")
         for action in actions:
-            print(f"- {action['command']}: {action['description']}")
+            status = "ausführbar" if action["cli_status"] == "executable" else "geplant"
+            print(f"- {action['command']}: {action['description']} ({status})")
+        return 0
+
+    if args.plugins_command == "status":
+        plugins = plugin_status_entries(repo_root)
+        if args.plugin:
+            plugin = next((candidate for candidate in plugins if candidate["name"] == args.plugin), None)
+            if plugin is None:
+                print(f"Unbekannte NaC-Anbindung: {args.plugin}")
+                print("Verfügbare Anbindungen:")
+                for candidate in plugins:
+                    print(f"- {candidate['name']}")
+                return 1
+            if args.format == "json":
+                print_json({"schema_version": "nac.plugin-status/v1", "plugin": plugin})
+                return 0
+            print_plugin_status(plugin)
+            return 0
+        if args.format == "json":
+            print_json({"schema_version": "nac.plugin-status/v1", "plugins": plugins})
+            return 0
+        print("NaC-Anbindungen")
+        for plugin in plugins:
+            print_plugin_status(plugin, prefix="- ")
         return 0
 
     if args.plugins_command == "card-readiness":
@@ -766,24 +813,56 @@ def optional_path(flag: str, value: Path | None) -> list[str]:
     return [flag, str(value)] if value is not None else []
 
 
-def plugin_actions() -> list[dict[str, str]]:
+def plugin_actions(repo_root: Path) -> list[dict[str, str]]:
     return [
         {
-            "command": "nac plugins card-readiness",
-            "plugin": "nac-cyberjack-rfid",
-            "description": "Kartenleser-, SAK-/XNP- und lokale Readiness-Metadaten prüfen.",
-        },
-        {
-            "command": "nac plugins xnp-reader-prompt",
-            "plugin": "nac-bnotk-xnp",
-            "description": "XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate erzeugen.",
-        },
-        {
-            "command": "nac plugins pkcs7-inspect",
-            "plugin": "nac-pkcs7-certbundle",
-            "description": "Lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only prüfen.",
-        },
+            "plugin": plugin["name"],
+            "command": plugin["command"],
+            "description": plugin["description"],
+            "cli_status": plugin["cli_status"],
+        }
+        for plugin in plugin_status_entries(repo_root)
     ]
+
+
+def plugin_status_entries(repo_root: Path) -> list[dict[str, Any]]:
+    marketplace_path = repo_root / ".agents" / "plugins" / "marketplace.json"
+    marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
+    entries: list[dict[str, Any]] = []
+    for entry in marketplace.get("plugins", []):
+        name = str(entry.get("name", ""))
+        source_path = str(entry.get("source", {}).get("path", f"./plugins/{name}"))
+        plugin_root = repo_root / source_path.removeprefix("./")
+        manifest_path = plugin_root / ".codex-plugin" / "plugin.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        interface = manifest.get("interface", {})
+        executable = EXECUTABLE_PLUGIN_COMMANDS.get(name)
+        command = executable["command"] if executable else f"nac plugins status {name}"
+        description = executable["description"] if executable else str(interface.get("shortDescription") or manifest.get("description") or "")
+        entries.append(
+            {
+                "name": name,
+                "display_name": str(interface.get("displayName") or name),
+                "description": description,
+                "category": str(interface.get("category") or entry.get("category") or ""),
+                "cli_status": "executable" if executable else "planned",
+                "command": command,
+                "plugin_role": PLUGIN_CLI_ROLES["plugin_role"],
+                "cli_role": PLUGIN_CLI_ROLES["cli_role"],
+                "plugin_path": source_path,
+                "manifest_path": manifest_path.relative_to(repo_root).as_posix(),
+            }
+        )
+    return entries
+
+
+def print_plugin_status(plugin: dict[str, Any], prefix: str = "") -> None:
+    status = "ausführbar" if plugin["cli_status"] == "executable" else "geplant"
+    print(f"{prefix}NaC-Anbindung: {plugin['display_name']} ({plugin['name']})")
+    print(f"{prefix}  CLI-Status: {status}")
+    print(f"{prefix}  CLI-Befehl: {plugin['command']}")
+    print(f"{prefix}  Plugin-Rolle: {plugin['plugin_role']}")
+    print(f"{prefix}  CLI-Rolle: {plugin['cli_role']}")
 
 
 def display_path(repo_root: Path, path: Path) -> str:
