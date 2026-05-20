@@ -7,7 +7,8 @@ Git wird als versioniertes Betriebssystem für Geschäftsprozesse verstanden. Ni
 1. als strukturierter Antrag vorliegt,
 2. die fachliche Validierung besteht,
 3. die erforderlichen Freigaben durchlaufen hat,
-4. in den verbindlichen Hauptstand übernommen wurde.
+4. je nach Auslieferungsmodus per Pull Request oder Owner-Direct in den
+   verbindlichen Hauptstand übernommen wurde.
 
 ## Positionierung
 
@@ -15,13 +16,13 @@ Git wird als versioniertes Betriebssystem für Geschäftsprozesse verstanden. Ni
 - `Enterprise GitOps` beschreibt den operativen Änderungsfluss.
 - `NaC` ist die konkrete Betriebsumsetzung in diesem Repository.
 
-Referenz: `docs/de/organization-as-code-positioning.md`
+Referenz: [docs/de/organization-as-code-positioning.md](organization-as-code-positioning.md)
 
 ## Rollenmodell
 
 - `requester`: startet einen Vorgang per Prompt.
 - `operator`: pflegt Vorlagen, Schemas und Regelwerke.
-- `reviewer`: gibt sensible Vorgange fachlich frei.
+- `reviewer`: gibt sensible Vorgänge fachlich frei.
 - `approver`: entscheidet über Zahlung, Rechnungsausgang oder Steuerabgabe.
 - `auditor`: prüft Historie, Nachweise, Status und Abschlüsse.
 - `automation`: GitHub Actions und Python-Engine führen deterministische Schritte aus.
@@ -29,11 +30,12 @@ Referenz: `docs/de/organization-as-code-positioning.md`
 Erweiterung für den operativen Betrieb:
 
 - Ticket erstellen darf jede Rolle (`everyone_can_open_ticket=true`).
-- Selbst loesen ist nur innerhalb der freigegebenen Kompetenz erlaubt.
+- Selbst lösen ist nur innerhalb der freigegebenen Kompetenz erlaubt.
 - Fachkritische Schritte laufen über Review/Approval je Impact und Compliance.
 - Fachliche Spezialfälle können Qualifikationspflichten erzwingen (z. B. RVG-Rechnung).
 
-Details: `docs/de/role-model.md` und `policies/role-model-policy.yaml`
+Details: [docs/de/role-model.md](role-model.md) und
+[policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)
 
 ## Prozessdomänen
 
@@ -44,7 +46,7 @@ Die Gründung wird als Folge von kontrollierten Checkpoints geführt:
 - Gesellschaftsform festlegen
 - Gründungsdokumente erstellen
 - Register- und Steueranmeldung vorbereiten
-- Bankkonto, Rollen und Bevollmaechtigungen einrichten
+- Bankkonto, Rollen und Bevollmächtigungen einrichten
 - Laufende Compliance-Fristen anlegen
 
 Typische Zustände:
@@ -81,7 +83,7 @@ Typische Zustände:
 
 ### Steuer
 
-Steuerfälle aggregieren periodische Daten, dokumentieren Entscheidungen und führen zur vorbereiteten Abgabe. Die Abgabe selbst kann je nach rechtlichem Umfeld in ein externes Fachsystem muenden; Git bleibt die kontrollierende Nachweisschicht.
+Steuerfälle aggregieren periodische Daten, dokumentieren Entscheidungen und führen zur vorbereiteten Abgabe. Die Abgabe selbst kann je nach rechtlichem Umfeld in ein externes Fachsystem münden; Git bleibt die kontrollierende Nachweisschicht.
 
 Typische Zustände:
 
@@ -101,11 +103,13 @@ Typische Zustände:
 
 ## Git als Steuerungsschicht
 
-- Ein Branch oder Pull Request repraesentiert Arbeit am Vorgang.
-- Reviews repraesentieren Fachfreigaben.
-- Merge nach `main` repraesentiert die verbindliche Übernahme.
-- Tags repraesentieren Abschlüsse wie `close/2026-03`.
-- Releases oder Artefakte repraesentieren exportierte Nachweise.
+- Ein Branch oder Pull Request repräsentiert Arbeit am Vorgang.
+- Reviews repräsentieren Fachfreigaben.
+- Die Übernahme nach `main` repräsentiert die verbindliche Übernahme; im
+  produktiven Fork per Merge, im aktiven Referenzrepo bei ausdrücklicher
+  Beauftragung auch Owner-Direct.
+- Tags repräsentieren Abschlüsse wie `close/2026-03`.
+- Releases oder Artefakte repräsentieren exportierte Nachweise.
 
 ## Generisch vs. branchenspezifisch
 

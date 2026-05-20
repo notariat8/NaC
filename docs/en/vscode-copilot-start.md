@@ -67,7 +67,9 @@ Then:
 
 ## Operating Rules
 
-- Process changes only through pull requests.
+- Production process changes and sensitive subject-matter changes only through
+  pull requests; in the active reference repo, owner-direct delivery to `main`
+  is allowed when the owner explicitly asks for direct delivery.
 - Always include review for sensitive steps.
 - Document every change with purpose, risk, and owner.
 - For open-scope, issue-driven work or multiple relevant solution paths, explore first, provide a short plan with purpose and risk, and ask for confirmation before editing code.

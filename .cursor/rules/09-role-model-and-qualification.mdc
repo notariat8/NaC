@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Rollenmodell und Qualifikation (MUSS)
 
-- Jede Rolle darf Tickets eroefnnen.
+- Jede Rolle darf Tickets eröffnen.
 - Self-Resolve ist nur innerhalb der freigegebenen Kompetenz erlaubt.
 - Fachkritische Schritte brauchen Review/Approval nach Impact.
 - Qualifikationspflichten haben Vorrang vor allgemeinen Rollenrechten.

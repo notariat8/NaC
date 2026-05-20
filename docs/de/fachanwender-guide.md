@@ -2,19 +2,19 @@
 
 ## Warum dieses Modell hilfreich ist
 
-Ein Unternehmen lebt von wiederholbaren Entscheidungen und nachvollziehbaren Abläufen. In vielen Firmen existieren diese Regeln nur in Koepfen, E-Mails oder einzelnen Tools. Das führt zu:
+Ein Unternehmen lebt von wiederholbaren Entscheidungen und nachvollziehbaren Abläufen. In vielen Firmen existieren diese Regeln nur in Köpfen, E-Mails oder einzelnen Tools. Das führt zu:
 
 - unklaren Verantwortlichkeiten,
 - unvollständiger Dokumentation,
 - schwerer Prüfbarkeit bei Audit, Steuer oder Qualitätsnachweisen,
 - hoher Abhängigkeit von Einzelpersonen.
 
-Git als Business-OS loest dieses Problem, indem jeder relevante Prozessschritt versioniert, freigegeben und dauerhaft nachvollziehbar dokumentiert wird.
+Git als Business-OS löst dieses Problem, indem jeder relevante Prozessschritt versioniert, freigegeben und dauerhaft nachvollziehbar dokumentiert wird.
 
 Kurz gesagt:
 
 - Das LLM ist die einfache Spracheingabe für Mitarbeitende.
-- Git ist das verlaessliche Protokoll- und Freigabesystem.
+- Git ist das verlässliche Protokoll- und Freigabesystem.
 - Python ist die standardisierte Ausführung für wiederholbare Prozesse.
 
 ## Warum Prozesse zuerst gebaut werden sollten
@@ -69,7 +69,7 @@ Wenn Unternehmen unterschiedlich arbeiten, muss das als konfigurierbare Wahlmög
 Beispiel:
 
 - Variante A: Rechnung wird nach fachlicher Freigabe automatisch versendet.
-- Variante B: Rechnung wird erst nach kaufmaennischer Endfreigabe versendet.
+- Variante B: Rechnung wird erst nach kaufmännischer Endfreigabe versendet.
 
 Beide Varianten können gültig sein. Das System dokumentiert, welche Variante für welches Unternehmen gilt und seit wann.
 
@@ -95,7 +95,9 @@ Beide Varianten können gültig sein. Das System dokumentiert, welche Variante f
 
 ## Schritt 4: Freigaberegeln verbindlich machen
 
-- Prozesse dürfen nur über Pull Request geändert werden.
+- In produktiven Unternehmens-Forks werden Prozesse über Pull Request geändert;
+  im aktiven Referenzrepo kann der Owner direkte Lieferung ausdrücklich
+  beauftragen.
 - Sensible Schritte erhalten Vier-Augen-Freigabe.
 - Monatsabschlüsse werden als versionierte Stände markiert.
 
@@ -129,7 +131,7 @@ Sinnvoll ist ein Modell aus:
 
 Damit entstehen:
 
-- lokale Flexibilitaet,
+- lokale Flexibilität,
 - gemeinsamer Lerngewinn,
 - stabiler, versionierter Dokumentationsstandard.
 

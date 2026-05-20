@@ -16,8 +16,10 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Fachliche Wahrheit entsteht durch versionierte Änderung + Review + Freigabe.
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessänderungen werden immer mit Begründung dokumentiert.
-- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
-- Wenn gefragt wird, ob die Arbeit fertig ist, darf `fertig` nur gemeldet werden, wenn der geprüfte Stand in `main` gemerged ist und der lokale Workspace auf dem aktuellen `main` sauber ist.
+- Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](docs/en/regelarchitektur.md).
+- Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist.
+- Wenn gefragt wird, ob die Arbeit fertig ist, darf `fertig` nur gemeldet werden, wenn `nac doctor --profile strict` frisch bestanden hat, `HEAD` dem GitHub-Zielstand entspricht und der lokale Workspace sauber ist.
 - [roadmap/GANTT.md](roadmap/GANTT.md) wird aktualisiert, wenn Roadmap, Scope, Status, Meilenstein oder aktives Build-Board betroffen sind; Änderungen unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung. Kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 - Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
 - Attribution nach [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md) und [CITATION.cff](CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](TRADEMARK.md) beachten.

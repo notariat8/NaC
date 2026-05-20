@@ -13,12 +13,12 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 - Behandle das LLM als Assistent für Eingaben, nicht als finale fachliche Autorität.
 - Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
-- Schlage keine direkten Änderungen an `main` vor.
-- Erzwinge Vorschläge über Branch + Pull Request + Review.
+- Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](../docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](../docs/en/regelarchitektur.md).
+- Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
 - Jede Prozessänderung muss begründet und versioniert sein.
-- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
-- Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, geprüfter und lokal sauberer Stand fertig.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist.
+- Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig.
 - [roadmap/GANTT.md](../roadmap/GANTT.md) wird aktualisiert, wenn Roadmap, Scope, Status, Meilenstein oder aktives Build-Board betroffen sind; Änderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung. Kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 - Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](../policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
 - Attribution nach [NOTICE](../NOTICE), [AUTHORS.md](../AUTHORS.md) und [CITATION.cff](../CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](../TRADEMARK.md) beachten.

@@ -9,7 +9,8 @@ A matter becomes effective only when it:
 1. exists as a structured request,
 2. passes subject-matter validation,
 3. has completed the required approvals,
-4. has been merged into the binding main state.
+4. has reached the binding main state through the applicable delivery mode,
+   either protected PR or owner-direct delivery.
 
 ## Positioning
 

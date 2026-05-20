@@ -38,7 +38,7 @@ geprüft.
 Schnelle Orientierung für Nicht-Technik:
 [NaC-CLI](docs/de/cli.md), [Ausführungsmodell](docs/de/ausfuehrungsmodell.md),
 [QMS-/ISO-9001-Schicht](qms/README.md), [Reifegrad](docs/de/reifegrad.md),
-[Glossar](docs/de/glossar.md) und
+[Regelarchitektur](docs/de/regelarchitektur.md), [Glossar](docs/de/glossar.md) und
 [Beispiel Immobilienkaufvertrag](docs/de/beispiel-immobilienkaufvertrag.md).
 
 Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),

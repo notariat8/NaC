@@ -36,6 +36,7 @@ Use this document:
    - [AGENTS.md](../../AGENTS.md), if present in the workspace.
    - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
    - [.cursor/rules/](../../.cursor/rules)
+   - [docs/en/regelarchitektur.md](regelarchitektur.md)
 2. Read project status:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
    - [roadmap/GANTT.md](../../roadmap/GANTT.md)
@@ -150,5 +151,12 @@ Parity is checked with `python scripts/nac.py doctor --profile strict`.
 ## Completion Rule
 
 An update is complete only after it has been validated, committed, pushed to
-GitHub and merged into the target branch. Local changes and unmerged PR branches
-are intermediate states.
+GitHub and, depending on delivery mode, either merged into the target branch or
+delivered directly to the target branch. Production forks use protected PR
+mode; in the active reference repo, owner-direct delivery to `main` is allowed
+when the owner explicitly asks for direct delivery.
+
+`finished` may be reported only after a fresh `python scripts/nac.py doctor
+--profile strict` pass, `HEAD` equals the GitHub target state and the local
+working tree is clean. Local changes and unmerged PR branches are intermediate
+states.

@@ -37,6 +37,7 @@ Dieses Dokument ist zu verwenden:
    - [AGENTS.md](../../AGENTS.md), sofern im Workspace vorhanden.
    - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
    - [.cursor/rules/](../../.cursor/rules)
+   - [docs/de/regelarchitektur.md](regelarchitektur.md)
 2. Projektstatus lesen:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
    - [roadmap/GANTT.md](../../roadmap/GANTT.md)
@@ -152,5 +153,12 @@ Die Parität wird mit `python scripts/nac.py doctor --profile strict` geprüft.
 ## Abschlussregel
 
 Ein Update gilt erst als abgeschlossen, wenn es validiert, committed, zu GitHub
-gepusht und in den Zielbranch gemerged wurde. Lokale Änderungen und unge-mergte
-PR-Branches sind Zwischenstand.
+gepusht und je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder
+direkt auf dem Zielbranch angekommen ist. Im produktiven Fork gilt der
+geschützte PR-Modus; im aktiven Referenzrepo ist Owner-Direct auf `main`
+zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
+
+`fertig` darf nur gemeldet werden, wenn `python scripts/nac.py doctor --profile
+strict` frisch bestanden hat, `HEAD` dem GitHub-Zielstand entspricht und der
+lokale Arbeitsbaum sauber ist. Lokale Änderungen und unge-mergte PR-Branches
+sind Zwischenstand.

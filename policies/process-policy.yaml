@@ -68,11 +68,79 @@ change_management:
   require_version_bump: true
   require_commit_for_update_completion: true
   require_github_push_for_update_completion: true
-  require_target_branch_merge_for_update_completion: true
+  require_target_branch_merge_for_update_completion: false
   completion_target_branch: main
   completion_remote: github
-  report_finished_only_after_target_branch_merge: true
+  report_finished_only_after_target_branch_merge: false
+  report_finished_only_after_target_branch_reaches_head: true
   finished_status_requires_clean_target_branch_workspace: true
+  delivery_modes:
+    protected_pr:
+      target: production_forks_and_sensitive_process_changes
+      require_branch: true
+      require_pull_request: true
+      require_review: true
+      completion_requires_merge_to_target_branch: true
+    owner_direct_main:
+      target: active_reference_repo_when_owner_explicitly_requests_direct_delivery
+      require_branch: false
+      require_pull_request: false
+      require_review: false
+      completion_requires_push_to_target_branch: true
+      completion_requires_strict_validation: true
+      completion_requires_clean_workspace: true
+  default_delivery_mode_for_production: protected_pr
+  current_reference_repo_delivery_mode: owner_direct_main
+
+rule_architecture:
+  source_of_truth: policies/process-policy.yaml
+  human_explanation_de: docs/de/regelarchitektur.md
+  human_explanation_en: docs/en/regelarchitektur.md
+  mirror_surfaces:
+    - AGENTS.md
+    - .github/copilot-instructions.md
+    - .cursor/rules
+    - docs/de/START_HERE.md
+    - docs/en/START_HERE.md
+  groups:
+    completion_and_finished_state:
+      hardness: hard
+      enforced_by:
+        - git status
+        - git rev-parse HEAD
+        - git rev-parse origin/main
+        - nac doctor --profile strict
+    git_delivery:
+      hardness: mode_dependent
+      production_default: protected_pr
+      active_reference_repo_default: owner_direct_main
+    roadmap_and_gantt:
+      hardness: guidance_plus_render_gate
+      enforced_by:
+        - scripts/validate_gantt_progress.py
+    language_and_localization:
+      hardness: hard
+      enforced_by:
+        - scripts/validate_language_parity.py
+    cli_and_operator_surface:
+      hardness: hard_for_new_functionality
+      enforced_by:
+        - tests
+        - nac doctor --profile strict
+    data_protection_and_data_repo:
+      hardness: hard
+      enforced_by:
+        - scripts/privacy_lint.py
+        - policies/data-protection-policy.yaml
+    plugins_skills_and_agent_method:
+      hardness: mixed
+      enforced_by:
+        - scripts/validate_plugins.py
+        - scripts/install_local_plugins.py --mode link
+    validation_and_doctor:
+      hardness: hard
+      enforced_by:
+        - scripts/quality_gate.py
 
 agent_workflows:
   require_plan_before_code_when_scope_is_open: true

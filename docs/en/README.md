@@ -25,6 +25,7 @@ Binding positioning:
   approvals and evidence run declaratively, auditable and automated through
   Git."
 - Current development state: [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
+- Rule architecture and rule hardness: [docs/en/regelarchitektur.md](regelarchitektur.md)
 
 One-sentence pitch:
 

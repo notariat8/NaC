@@ -30,6 +30,7 @@ Verbindliche Positionierung:
   Rollen, Freigaben und Nachweise laufen deklarativ, auditierbar und
   automatisiert über Git."
 - aktueller Entwicklungsstand: [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
+- Regelarchitektur und Härtegrade: [docs/de/regelarchitektur.md](regelarchitektur.md)
 
 Ein-Satz-Pitch:
 
@@ -152,7 +153,10 @@ python scripts/nac.py process monthly-close --year 2026 --month 3
 
 ## Governance
 
-- `main` ist geschützt und wird nur per Pull Request aktualisiert.
+- Produktive Forks und sensible Prozessänderungen nutzen geschützten `main`,
+  Pull Request und Review. Im aktiven Referenzrepo ist Owner-Direct auf `main`
+  möglich, wenn der Owner direkte Lieferung ausdrücklich beauftragt; Details
+  stehen in [docs/de/regelarchitektur.md](regelarchitektur.md).
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) wird bei Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Änderungen aktualisiert; Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung.
 - Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
 - Tags und Releases repräsentieren Monats- oder Quartalsabschlüsse.

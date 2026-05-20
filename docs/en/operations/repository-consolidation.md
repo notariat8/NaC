@@ -7,7 +7,8 @@ Status: 2026-05-19
 This document separates three states that are easy to confuse in GitHub:
 
 1. `canonicalized`: content or the business slot exists in the NaC repository.
-2. `merged`: the NaC target state is on `main`.
+2. `delivered`: the NaC target state is on `main` through the applicable
+   delivery mode, either merge or owner-direct.
 3. `retired`: the old source repository is archived, deleted, or has a clear
    redirect README.
 

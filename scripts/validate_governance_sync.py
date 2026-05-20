@@ -46,6 +46,15 @@ MANDATORY_LANGUAGE_POLICY_KEYS = (
     "require_all_standard_languages:",
 )
 
+MANDATORY_PROCESS_POLICY_KEYS = (
+    "delivery_modes:",
+    "protected_pr:",
+    "owner_direct_main:",
+    "rule_architecture:",
+    "human_explanation_de: docs/de/regelarchitektur.md",
+    "human_explanation_en: docs/en/regelarchitektur.md",
+)
+
 
 def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -66,7 +75,7 @@ def changed_files() -> list[str]:
         diff = run_git(["diff", "--name-only", "HEAD"])
 
     if diff.returncode != 0:
-        print("ERROR: Konnte geaenderte Dateien nicht bestimmen.")
+        print("ERROR: Konnte geänderte Dateien nicht bestimmen.")
         print(diff.stderr.strip())
         return []
 
@@ -121,10 +130,28 @@ def validate_language_policy_file() -> list[str]:
     return errors
 
 
+def validate_process_policy_file() -> list[str]:
+    errors: list[str] = []
+    policy_path = REPO_ROOT / "policies" / "process-policy.yaml"
+    if not policy_path.exists():
+        errors.append("Pflichtdatei fehlt: policies/process-policy.yaml")
+        return errors
+
+    text = policy_path.read_text(encoding="utf-8")
+    for key in MANDATORY_PROCESS_POLICY_KEYS:
+        if key not in text:
+            errors.append(f"Pflichtabschnitt fehlt in process-policy: {key}")
+
+    for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
+        if not (REPO_ROOT / rel_path).exists():
+            errors.append(f"Pflichtdokument zur Regelarchitektur fehlt: {rel_path}")
+    return errors
+
+
 def main() -> int:
     files = changed_files()
     if not files:
-        print("INFO: Keine geaenderten Dateien erkannt oder nur nicht relevante Aenderungen.")
+        print("INFO: Keine geänderten Dateien erkannt oder nur nicht relevante Änderungen.")
         return 0
 
     policy_changed = any(is_policy_file(path) for path in files)
@@ -132,16 +159,17 @@ def main() -> int:
 
     errors = validate_access_policy_file()
     errors.extend(validate_language_policy_file())
+    errors.extend(validate_process_policy_file())
 
     if mirror_changed and not policy_changed:
         errors.append(
-            "Aenderung an AI-Regelflaechen ohne Policy-Aenderung erkannt. "
-            "Bitte zuerst Policies unter policies/ aendern und Spiegel synchronisieren."
+            "Änderung an AI-Regelflächen ohne Policy-Änderung erkannt. "
+            "Bitte zuerst Policies unter policies/ ändern und Spiegel synchronisieren."
         )
 
     if policy_changed and not mirror_changed:
         errors.append(
-            "Policy-Aenderung ohne Spiegel-Aktualisierung erkannt. "
+            "Policy-Änderung ohne Spiegel-Aktualisierung erkannt. "
             "Bitte AGENTS.md, .github/copilot-instructions.md und relevante .cursor/rules/ synchronisieren."
         )
 

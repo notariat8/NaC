@@ -136,8 +136,9 @@ Maintenance cycle:
 
 ## Minimum Controls
 
-- no direct changes on `main`
-- PR and review for all process changes
+- no direct changes on `main` in production forks
+- PR and review for process changes in production forks; owner-direct delivery
+  only in the active reference repo when explicitly requested
 - CODEOWNERS per domain or case
 - environment gates for approval-required steps
 - regular audit-log review for guest access, repository permissions and

@@ -58,7 +58,7 @@ Danach:
 
 ## Operative Regeln für Copilot-Nutzung
 
-- Prozessänderungen nur als Pull Request.
+- Produktive Prozessänderungen und sensible Fachänderungen nur als Pull Request; im aktiven Referenzrepo ist Owner-Direct auf `main` möglich, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - Bei sensiblen Schritten immer Review einplanen.
 - Jede Änderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
 - Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Lösungswegen zuerst erkunden, Plan mit Zweck/Risiko nennen und Bestätigung einholen.

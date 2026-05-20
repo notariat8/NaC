@@ -104,7 +104,9 @@ organization and since when.
 
 ## Step 4: Make Approval Rules Binding
 
-- Processes may be changed only through pull requests.
+- In production organization forks, processes are changed through pull
+  requests; in the active reference repo, the owner may explicitly request
+  direct delivery.
 - Sensitive steps receive four-eyes approval.
 - Monthly closings are marked as versioned states.
 

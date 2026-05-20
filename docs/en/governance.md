@@ -1,14 +1,21 @@
 # Governance With Git And GitHub
 
-## Repository Rules
+## Repository Rules And Delivery Modes
 
-Recommended target state for `main`:
+Recommended target state for production forks and sensitive process changes:
 
 - prohibit direct pushes to `main`,
 - require pull requests,
 - require status checks from `Validate Business Processes`,
 - require review by at least one subject-matter owner,
 - use signed tags for closures such as `close/2026-03`.
+
+In the active reference repo, the owner can explicitly request direct delivery
+to `main`. In that mode, a state is finished only after the strict quality gate
+passes, `main` is pushed to GitHub, `HEAD` equals the GitHub target state and
+the working tree is clean. This owner-direct mode does not replace protected PR
+mode for production forks, sensitive subject-matter changes or external
+contribution.
 
 Recommendation for organization forks:
 

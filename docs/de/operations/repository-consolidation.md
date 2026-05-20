@@ -7,7 +7,8 @@ Stand: 2026-05-19
 Dieses Dokument trennt drei Zustände, die in GitHub leicht verwechselt werden:
 
 1. `kanonisiert`: Inhalt oder fachlicher Platz ist im NaC-Repo angelegt.
-2. `gemerged`: der NaC-Zielstand ist in `main`.
+2. `ausgeliefert`: der NaC-Zielstand ist je nach Auslieferungsmodus per Merge
+   oder Owner-Direct in `main`.
 3. `stillgelegt`: das alte Quellrepo ist archiviert, gelöscht oder hat ein
    klares Redirect-README.
 
@@ -41,7 +42,7 @@ Nach erfolgreichem Merge von PR #6:
 ## Berechtigungsrealitaet
 
 Die GitHub-App zeigt für mehrere `ofunk/*`-Repos Schreibrechte, aber keine
-Adminrechte. Ohne Adminrechte kann ich Repos nicht verlaesslich archivieren oder
+Adminrechte. Ohne Adminrechte kann ich Repos nicht verlässlich archivieren oder
 löschen. Ich kann aber, wenn gewünscht, Redirect-READMEs per Git-Push setzen.
 
 ## Redirect-README-Muster

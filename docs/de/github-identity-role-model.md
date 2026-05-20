@@ -2,7 +2,7 @@
 
 ## Ist eine Rollen-Definition direkt im GitHub-Profil möglich?
 
-Kurz: nicht als verlaessliche, workflow-taugliche Standardquelle für fachliche Berechtigungen.
+Kurz: nicht als verlässliche, workflow-taugliche Standardquelle für fachliche Berechtigungen.
 
 GitHub-Profile sind für Darstellung gedacht, nicht als verbindliches Berechtigungsregister für Fachrollen.
 

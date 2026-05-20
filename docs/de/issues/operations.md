@@ -127,7 +127,8 @@ Pflegezyklus:
 ## Mindestkontrollen
 
 - keine direkten Änderungen auf `main`
-- PR + Review für alle Prozessänderungen
+- PR + Review für alle Prozessänderungen in produktiven Forks; Owner-Direct
+  nur im aktiven Referenzrepo bei ausdrücklicher Beauftragung
 - CODEOWNERS pro Domain/Case
 - Environment-Gates bei approval-pflichtigen Schritten
 - Audit-Log regelmäßig prüfen (Gastzugriffe, Repo-Berechtigungen, Freigaben)
