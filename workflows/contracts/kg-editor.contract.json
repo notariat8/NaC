@@ -1,5 +1,5 @@
 {
-  "schema_version": "noc.workflow-contract/v0.1",
+  "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.kg_editor",
   "title": "KG Editor for notarial usecase graphs",
   "status": "active_mvp",

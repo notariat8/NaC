@@ -3,7 +3,7 @@
 ## Goal
 
 This document describes the binding operating model for organizations that use
-the central `NoC` repository as a reference:
+the central `NaC` repository as a reference:
 
 - a central upstream as reference standard,
 - an organization fork as binding operating state,

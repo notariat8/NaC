@@ -1,0 +1,67 @@
+{
+  "contract_id": "workflow.bpmn_js_editor",
+  "version": "0.2.0",
+  "status": "usecase_models_and_local_save_ready",
+  "purpose": "Visuelle BPMN-Bearbeitung für fachliche NaC-Prozesse mit Python-validierter Governance.",
+  "source_models": [
+    "bpmn/*.bpmn",
+    "bpmn/usecases/*.bpmn"
+  ],
+  "modeler": {
+    "library": "bpmn-js",
+    "moddle_extension": "bpmn/nac-moddle.json",
+    "profile_document": "bpmn/nac-bpmn-profile.md"
+  },
+  "local_editor_surface": {
+    "view_route": "/bpmn/<model>/edit",
+    "read_endpoint": "GET /api/bpmn/<model>/xml",
+    "write_endpoint": "POST /api/bpmn/<model>/xml",
+    "conflict_control": "base_sha256 must match the current BPMN XML SHA-256 before write"
+  },
+  "validator": {
+    "command": "python scripts/validate_bpmn_models.py",
+    "quality_gate": "strict"
+  },
+  "editable_surface": [
+    "BPMN-Flow-Nodes",
+    "BPMN-Sequence-Flows",
+    "nac:role",
+    "nac:channel",
+    "nac:dataClass",
+    "nac:approval",
+    "nac:evidence",
+    "nac:plugin",
+    "nac:localExecution",
+    "nac:kgRef"
+  ],
+  "blocked_surface": [
+    "echte Mandatsdaten",
+    "PINs",
+    "Passwörter",
+    "Tokens",
+    "API-Keys",
+    "produktive Fachsystem-Zugangsdaten",
+    "automatische Ausführung ohne Pull-Request-Freigabe"
+  ],
+  "required_review": [
+    "BPMN XML diff",
+    "Python validator report",
+    "source and channel plausibility review",
+    "privacy lint",
+    "human approval before merge"
+  ],
+  "relationship_to_kg_editor": {
+    "bpmn_question": "Was passiert wann?",
+    "kg_question": "Welche Angaben, Dokumente, Entscheidungen und Nachweise sind offen?",
+    "link_field": "nac:kgRef"
+  },
+  "mvp_sequence": [
+    "BPMN-Profil und Validator im Quality Gate",
+    "Usecase-BPMN-Modelle mit Ausführungskanälen",
+    "lokale Editor- und Speicherfläche mit SHA-256-Konfliktprüfung",
+    "bpmn-js-Prototyp mit eingeschränkter Palette",
+    "NaC-Properties-Panel",
+    "Pull-Request-Diff und Validierungsbericht",
+    "gemeinsame Formular-/Checklisten-Sicht aus BPMN und KG"
+  ]
+}

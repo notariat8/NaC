@@ -1,91 +1,71 @@
 # Testament / Erbvertrag
 
-Status: KG baseline  
-KG node: `case.testament_erbvertrag`  
+Status: offen
+Reifegrad: Top-10-Usecase, P0
+KG-Knoten: `case.testament_erbvertrag`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB succession rules
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for testamentary dispositions and
-inheritance contracts. The workflow must support intake, drafting and execution
-tracking while preserving the rule that capacity, free will, interpretation and
-binding legal effects remain human notarial decisions.
+Vorbereitung und Beurkundung testamentarischer Verfügungen oder Erbverträge mit Geschäftsfähigkeit, Familienlage, Vermögen, Vorverfügungen und Verwahrungsgates.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for testator identity, capacity flags, family situation, asset
-  categories, wishes, prior dispositions, executor choices and custody route.
-- Drafting support for testament, joint will or inheritance contract.
-- Review gates for capacity, binding effects, revocations and custody.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automated final interpretation of testamentary wishes.
-- No real estate, family or health details in Git.
-- No replacement for notarial capacity and free-will review.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `testator.identity` | Who makes the disposition and how are identity and capacity reviewed? | Notary | Personal data |
-| `capacity.flags` | Are there capacity, language, health or support flags? | Notary | Sensitive personal data |
-| `family.structure` | Which spouse, children, relatives or dependents are relevant? | Testator | Family data |
-| `assets.categories` | Which asset categories are relevant without storing values in Git? | Testator | Financial data |
-| `dispositions.wishes` | Who should inherit or receive legacies and under which conditions? | Testator | Sensitive personal data |
-| `prior.dispositions` | Which prior wills or inheritance contracts exist? | Notary | Sensitive legal data |
-| `executor.choice` | Should executor, substitute heirs or administration rules be included? | Testator | Sensitive personal data |
-| `custody.register` | Which custody and central register route applies? | Notary clerk | Mandate metadata |
+| `testator.identity` | Testierende Person Identität | Notariat | identity_gate, capacity_review |
+| `capacity.flags` | Geschäftsfähigkeit Prüfflaggen | Notariat | legal_review, appointment |
+| `family.structure` | Familie Struktur | testator | drafting, mandatory_share_review |
+| `assets.categories` | Vermögen Kategorien | testator | drafting, tax_or_business_flags |
+| `dispositions.wishes` | Verfügungen Wünsche | testator | drafting, legal_review |
+| `prior.dispositions` | Vorverfügungen Verfügungen | Notariat | legal_review, custody |
+| `executor.choice` | Testamentsvollstrecker Auswahl | testator | drafting |
+| `custody.register` | Verwahrung Register | Notariatsfachkraft | closing |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Draft testament or inheritance contract | Human-reviewed draft. | Synthetic or metadata only. |
-| Prior dispositions reference | Checks revocation and binding effects. | Evidence reference only. |
-| Capacity and instruction evidence | Supports notarial review. | Evidence reference only. |
-| Custody and registration trace | Tracks post-execution handling. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Instrument type: single testament, joint will or inheritance contract.
-- Whether executor provisions are included.
-- Whether prior dispositions are revocable, binding or unclear.
-- Whether special communication, witnesses or support are needed.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Capacity and free-will review | Notary | Execution |
-| Binding effects and revocation review | Notary | Draft release |
-| Draft read, approved and signed | Notary | Custody |
-| Custody and register handling complete | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Regulated intake, review and evidence model. |
+Fachliche Anker im KG-Modell:
 
-## Workflow Dependencies
+- `src.beurkg`
 
-- `workflows/contracts/`: sensitive intake and approval contract.
-- `workflows/python/`: deterministic completeness and red-flag checks.
+## Wie Man Diesen Usecase Prüft
 
-## Delivery Tasks
+```bash
+python scripts/notary_kg.py --repo-root . case testament-erbvertrag
+python scripts/notary_kg.py --repo-root . editor-view testament-erbvertrag
+python scripts/validate_knowledge_graph.py
+```
 
-1. Convert KG nodes into a sensitive estate-intake schema.
-2. Add capacity and free-will red-flag checklist.
-3. Add prior-disposition review placeholder and blocking logic.
-4. Add custody/register state model.
-5. Validate with synthetic family and estate-category fixtures.
+## Nächster Lesepfad
 
-## Acceptance Criteria
-
-- Capacity and prior-disposition gates block draft release where incomplete.
-- Asset information is stored only as category metadata.
-- Custody/register evidence can be tracked without real mandate data.
-- Legacy starter `usecases/testament/` remains as non-canonical starter.
-
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

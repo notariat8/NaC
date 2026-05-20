@@ -3,22 +3,25 @@
 ## Architekturrahmen
 
 Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` als Steuerungsprinzip.
-`NoC` ist die konkrete Auspraegung dieses Rahmens.
+`NaC` ist die konkrete Ausprägung dieses Rahmens.
 
 Referenz: `docs/de/organization-as-code-positioning.md`
+
+Das operative Ausführungsmodell mit Bürooberfläche und prüfbarem Kern steht in
+[ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Schichten
 
 1. `Prompt Frontend`
-   Ein LLM oder Bot nimmt Anfragen in Alltagssprache entgegen und fuellt standardisierte Prozessantraege.
+   Ein LLM oder Bot nimmt Anfragen in Alltagssprache entgegen und füllt standardisierte Prozessanträge.
 2. `Git Control Plane`
-   Branches, Pull Requests, Reviews, Rulesets, Tags und Releases fuehren den offiziellen Lebenszyklus.
+   Branches, Pull Requests, Reviews, Rulesets, Tags und Releases führen den offiziellen Lebenszyklus.
 3. `Python Execution Plane`
-   Die Engine validiert Schemas, prueft Zustandsuebergaenge, berechnet Folgewerte und erzeugt Zusammenfassungen.
+   Die Engine validiert Schemas, prüft Zustandsübergänge, berechnet Folgewerte und erzeugt Zusammenfassungen.
 4. `Automation Plane`
-   GitHub Actions fuehren PR-Checks, periodische Prozesse und Genehmigungsgates aus.
+   GitHub Actions führen PR-Checks, periodische Prozesse und Genehmigungsgates aus.
 
-## NoC-Layer-Mapping
+## NaC-Layer-Mapping
 
 ```mermaid
 flowchart LR
@@ -39,7 +42,7 @@ flowchart TD
     Review --> Runtime["GitHub Actions Runtime"]
     Runtime --> Outputs["Berichte Exporte Artefakte"]
     Runtime --> MainState["Verbindlicher main Stand"]
-    MainState --> Close["Tag oder Release fuer Abschluss"]
+    MainState --> Close["Tag oder Release für Abschluss"]
 ```
 
 ## Fachlicher Zustandsautomat
@@ -51,7 +54,7 @@ stateDiagram-v2
     Validated --> NeedsReview: sensitiver vorgang
     Validated --> Approved: auto-approval erlaubt
     NeedsReview --> Approved: reviewer stimmt zu
-    Approved --> Executed: action oder cli fuehrt aus
+    Approved --> Executed: action oder nac führt aus
     Executed --> Archived: merge tag release
     Approved --> Rejected: reviewer lehnt ab
     Rejected --> Draft: neuer entwurf
@@ -62,31 +65,36 @@ stateDiagram-v2
 ### `validate-process.yml`
 
 - startet auf `pull_request` und `workflow_dispatch`
-- validiert geaenderte Prozessdateien
-- erzeugt eine lesbare Zusammenfassung fuer Reviewer
+- validiert geänderte Prozessdateien
+- erzeugt eine lesbare Zusammenfassung für Reviewer
 
 ### `run-process.yml`
 
-- erlaubt einen gezielten manuellen Lauf fuer einen Vorgang
+- erlaubt einen gezielten manuellen Lauf für einen Vorgang
 - nutzt den Python-CLI-Einstieg
-- eignet sich fuer Bot-Aufrufe aus einem LLM-Frontend
+- eignet sich für Bot-Aufrufe aus einem LLM-Frontend
+
+Die lokale Operator-Webapp ist ein Bedienkanal für Arbeitsplatz-Gates. Sie
+führt NaC nicht remote aus, sondern spricht eine per `nac operator --open`
+gestartete `127.0.0.1`-Bridge an, die freigegebene lokale Prüfskripte im
+Workspace startet und minimierte Readiness-Metadaten zurückgibt.
 
 ### `monthly-close.yml`
 
-- laeuft periodisch oder manuell
-- aggregiert Buchungen und Rechnungen fuer einen Monatsabschluss
+- läuft periodisch oder manuell
+- aggregiert Buchungen und Rechnungen für einen Monatsabschluss
 - erzeugt einen Abschlussbericht als Artefakt
 
 ## Governance-Mapping
 
 - Pull Request: fachlicher Antrag
 - Review: menschliche Freigabe
-- Environment: harter Freigabepunkt fuer sensible Prozesse
+- Environment: harter Freigabepunkt für sensible Prozesse
 - Ruleset: Repository-weite Durchsetzungsregel
 - Tag: versionierter Abschluss
-- Release-Artefakt: extern pruefbare Ableitung
+- Release-Artefakt: extern prüfbare Ableitung
 
-## Referenz, Fork und Rueckfluss
+## Referenz, Fork und Rückfluss
 
 ```mermaid
 flowchart TD
@@ -94,10 +102,10 @@ flowchart TD
     RefModel --> GenericPack["Generische Kernprozesse"]
     GenericPack --> CompanyFork["Unternehmens-Fork"]
     BranchPack --> CompanyFork
-    CompanyFork --> LocalChange["Lokale Aenderung als Change Request"]
+    CompanyFork --> LocalChange["Lokale Änderung als Change Request"]
     LocalChange --> LocalApprove["Lokale Freigabe und Versionierung"]
     LocalApprove --> CompanyRun["Betrieb im Unternehmen"]
-    LocalApprove --> UpstreamProposal["Optionale Rueckgabe an Referenz"]
+    LocalApprove --> UpstreamProposal["Optionale Rückgabe an Referenz"]
     UpstreamProposal --> RefReview["Review im Referenzgremium oder Verband"]
     RefReview --> RefModel
 ```
@@ -114,8 +122,10 @@ Operative Details sind ausgelagert nach:
 
 ## Python-Komponenten
 
-- `models.py`: normalisierte Datenklassen fuer Prozessantraege
-- `registry.py`: Prozessdefinitionen mit erlaubten Zustandsuebergaengen
+- `models.py`: normalisierte Datenklassen für Prozessanträge
+- `registry.py`: Prozessdefinitionen mit erlaubten Zustandsübergaengen
 - `schema_tools.py`: leichtgewichtige Validierung gegen JSON-Schemas
-- `engine.py`: Orchestrierung, Idempotenzpruefung und Monatsabschluss
-- `cli.py`: Kommandozeilenoberflaeche fuer lokale und CI-Laeufe
+- `engine.py`: Orchestrierung, Idempotenzprüfung und Monatsabschluss
+- `cli.py`: Kommandozeilenoberfläche für lokale und CI-Läufe
+- `scripts/nac_hw_bridge.py`: per `nac operator` gestartete Localhost-Bridge
+  für die lokale Operator-Webapp und Hardware-Readiness-Prüfungen

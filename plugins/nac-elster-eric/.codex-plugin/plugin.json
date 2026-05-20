@@ -1,0 +1,45 @@
+{
+  "name": "nac-elster-eric",
+  "version": "0.1.0",
+  "description": "ELSTER- und ERiC-Bereitschaft mit Nachweisen planen.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "elster",
+    "eric",
+    "tax",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ELSTER/ERiC",
+    "shortDescription": "ELSTER/ERiC mit Nachweisen planen.",
+    "longDescription": "Lokaler ELSTER-/ERiC-Arbeitsablaufbegleiter für Einreichungsbereitschaft, lokale Zugangsmittelgrenzen, Nachweisimport und Hersteller-Prüfungen.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "Readiness",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe die NaC ELSTER-ERiC-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für ELSTER und ERiC.",
+      "Prüfe Betriebsdrift für den ELSTER-ERiC-Pfad."
+    ],
+    "brandColor": "#4D6A2F",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

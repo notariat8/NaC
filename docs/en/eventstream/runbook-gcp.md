@@ -1,5 +1,7 @@
 # Runbook: GCP Eventstream For Audit-Proof Evidence
 
+Parity review 2026-05-18: no GCP-specific semantic change; kept in sync with the German typography update.
+
 ## Target State
 
 This target variant implements the audit-proof event journal on GCP:

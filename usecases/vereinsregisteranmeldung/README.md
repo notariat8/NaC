@@ -1,86 +1,72 @@
 # Vereinsregisteranmeldung
 
-Status: KG baseline  
-KG node: `case.vereinsregisteranmeldung`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P1
+KG-Knoten: `case.vereinsregisteranmeldung`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Section 77
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for association-register filings, such
-as board changes, articles amendments, new registrations, dissolution or
-liquidator changes.
+Vereinsregisteranmeldungen für Vorstandswechsel, Satzungsänderungen, Gründung oder Aufloesung mit öffentlicher Beglaubigung, Beschlüssen und Anlagen.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for association, register data, filing type, board signers, resolutions,
-  articles and court route.
-- Public certification of board signatures.
-- Attachment and copy package tracking.
-- Register-court response evidence.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No association-law final assessment by the LLM.
-- No real membership lists, minutes or signatures in Git.
-- No court submission without reviewed signing authority.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `association.identity` | Which e.V., register court and number are affected? | Notary clerk | Association register data |
-| `filing.type` | Which filing type is needed? | Notary | Association data |
-| `board.identity` | Which board members sign and how may they represent? | Notary clerk | Personal data |
-| `resolution.evidence` | Which minutes, election or resolution evidence is needed? | Association | Association data |
-| `articles.current` | Which articles text applies and was it changed? | Association | Association data |
-| `filing.route` | Which court route and copy package applies? | Notary clerk | Technical metadata |
+| `association.identity` | Verein Identität | Notariatsfachkraft | register_review |
+| `filing.type` | Einreichung Art | Notariat | drafting |
+| `board.identity` | Vorstand Identität | Notariatsfachkraft | identity_gate, certification |
+| `resolution.evidence` | Beschluss Nachweis | association | attachments |
+| `articles.current` | Satzung aktueller Stand | association | legal_review |
+| `filing.route` | Einreichung Route | Notariatsfachkraft | submission |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Register application | Certified application package. | Metadata only. |
-| Minutes/election/resolution evidence | Supports filing. | Evidence reference only. |
-| Articles or amended wording | Supports articles amendment. | Evidence reference only. |
-| Court response | Tracks completion or correction. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Paper, electronic or video-certification route.
-- Attachment package complete or special review.
-- Board representation rule.
-- Whether articles amendment needs full wording comparison.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-bnotk-xnp`
+- `nac-idaas`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Board signer authority reviewed | Notary | Certification |
-| Resolution and articles evidence reviewed | Notary | Application release |
-| Register package ready | Notary clerk | Submission |
-| Court response reviewed | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Guardrails and evidence model. |
-| `noc-bnotk-xnp` | Electronic route readiness where used. |
-| `noc-idaas` | Identity support where permitted. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.77`
 
-1. Define filing-type and attachment matrix.
-2. Add board authority and signing checks.
-3. Add articles comparison placeholder.
-4. Add court submission state model.
-5. Validate with synthetic e.V. fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case vereinsregisteranmeldung
+python scripts/notary_kg.py --repo-root . editor-view vereinsregisteranmeldung
+python scripts/validate_knowledge_graph.py
+```
 
-- Signer authority blocks certification.
-- Filing type determines attachments.
-- Court response is tracked.
-- No real association member or board data is committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

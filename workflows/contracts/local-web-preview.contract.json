@@ -1,0 +1,43 @@
+{
+  "contract_id": "workflow.local_web_preview",
+  "version": "0.1.0",
+  "status": "implemented",
+  "purpose": "Lokaler Webserver für grafische NaC-Ausgaben ohne Mandatsdaten und ohne Cloud-Abhängigkeit.",
+  "entrypoints": [
+    "python scripts/nac_web.py --repo-root . --host 127.0.0.1 --port 8765",
+    "nac-web --repo-root ."
+  ],
+  "default_binding": {
+    "host": "127.0.0.1",
+    "port": 8765
+  },
+  "routes": [
+    "/",
+    "/bpmn/<model>",
+    "/kg/<slug>",
+    "/api/bpmn/<model>",
+    "/api/kg/<slug>",
+    "/healthz"
+  ],
+  "source_modules": [
+    "src/nac_web/",
+    "src/notary_kg/"
+  ],
+  "allowed_outputs": [
+    "BPMN-SVG-Vorschau",
+    "BPMN-JSON-Struktur",
+    "KG-Editor-View",
+    "KG-Editor-JSON-Struktur",
+    "lokales Dashboard"
+  ],
+  "blocked_outputs": [
+    "echte Mandatsdaten",
+    "Secrets",
+    "PINs",
+    "Tokens",
+    "produktive Fachsystemaktionen",
+    "automatische Einreichungen"
+  ],
+  "review_model": "Nur lokale Vorschau. Schreibende Änderungen laufen später über Patch, Validierung, Diff, Bestätigung und Pull Request.",
+  "next_step": "bpmn-js in dieselbe lokale Weboberfläche einbetten."
+}

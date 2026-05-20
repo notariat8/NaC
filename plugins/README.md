@@ -1,36 +1,45 @@
-# NoC Regulated Industry Plugins
+# NaC Plugins für regulierte Branchen
 
-This directory contains installable repo-local Codex plugins for NoC regulated-industry workflows. The first suite focuses on lawyers, notaries, tax workflows and cloud evidence operations.
+Dieser Ordner enthält installierbare repo-lokale Codex-Plugins für NaC-
+Arbeitsabläufe in regulierten Branchen. Die erste Suite fokussiert
+Anwaltskanzleien, Notariate, Steuer-Arbeitsabläufe und
+Cloud-Nachweisbetrieb.
 
-## Installable Plugins
+## Installierbare Plugins
 
-- `noc-regulated-core`: Shared regulated-industry workflow guardrails.
-- `noc-idaas`: German eID verification and IAM projection readiness companion.
-- `noc-cyberjack-rfid`: Local card and SAK-lite gate before XNP login.
-- `noc-bnotk-xnp`: Local XNP authentication gate after card readiness.
-- `noc-pkcs7-certbundle`: Local PKCS#7/P7B certificate-bundle evidence without signing.
-- `noc-handelsregister`: HRA-first online register application readiness after mode decision.
-- `noc-bea-portal`: beA workflow and evidence companion.
-- `noc-elster-eric`: ELSTER and ERiC workflow companion.
-- `noc-grundbuch-portal`: Land register access and evidence companion.
-- `noc-oci-evidence`: OCI landing-zone evidence and audit companion.
+- `nac-regulated-core`: gemeinsame Schutzplanken für regulierte Arbeitsabläufe.
+- `nac-idaas`: Begleiter für deutsche eID-Prüfung und IAM-Projektionsbereitschaft.
+- `nac-cyberjack-rfid`: lokale Karten- und SAK-lite-Prüfung vor dem XNP-Login.
+- `nac-bnotk-xnp`: lokale XNP-Authentifizierungsprüfung nach Kartenbereitschaft.
+- `nac-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur.
+- `nac-handelsregister`: HRA-zuerst-Bereitschaft für Online-Registeranmeldungen nach Modusentscheidung.
+- `nac-bea-portal`: beA-Arbeitsablauf- und Nachweisbegleiter.
+- `nac-elster-eric`: ELSTER- und ERiC-Arbeitsablaufbegleiter.
+- `nac-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
+- `nac-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
 
-## Safety Model
+## Sicherheitsmodell
 
-- Plugins default to local companion, dry-run, plan-preview and metadata-only evidence.
-- External write adapters are not enabled in this MVP.
-- Missing accounts or approvals are tracked in `docs/de/plugin-operations/account-and-approval-requests.md` and `docs/en/plugin-operations/account-and-approval-requests.md`.
-- Validate with `python3 scripts/validate_plugins.py` before publishing or installing.
+- Plugins arbeiten standardmäßig lokal, trockenlaufbasiert, mit Planvorschau
+  und ausschließlich Metadaten-Nachweisen.
+- Externe Schreibadapter sind im MVP nicht aktiviert.
+- Fehlende Konten oder Freigaben werden in
+  [docs/de/plugin-operations/account-and-approval-requests.md](../docs/de/plugin-operations/account-and-approval-requests.md)
+  und
+  [docs/en/plugin-operations/account-and-approval-requests.md](../docs/en/plugin-operations/account-and-approval-requests.md)
+  verfolgt.
+- Vor Veröffentlichung oder Installation mit `python3 scripts/validate_plugins.py`
+  validieren.
 
-## Progress Tracking
+## Fortschritt
 
-Plugin progress is tracked in `plugins/GANTT.md` and rolled up into
-`roadmap/GANTT.md`. Every plugin change must update both files before it is
-push-ready.
+Der Plugin-Fortschritt wird in [plugins/GANTT.md](GANTT.md) gepflegt und in
+[roadmap/GANTT.md](../roadmap/GANTT.md) zusammengeführt. Jede Plugin-Änderung
+muss beide Dateien aktualisieren, bevor sie push-ready ist.
 
-## Marketplace Boundary
+## Marktplatz-Grenze
 
-Public GPT Store packages and workspace-only app installations are separate
-release targets. Each plugin must be checked against the current OpenAI
-publishing rules before public release, and actions must retain valid privacy
-and terms URLs.
+Öffentliche GPT-Store-Pakete und arbeitsbereichsinterne App-Installationen sind
+verschiedene Veröffentlichungsziele. Jedes Plugin muss vor öffentlicher Veröffentlichung
+gegen die jeweils aktuellen OpenAI-Veröffentlichungsregeln geprüft werden;
+Aktionen brauchen weiterhin gültige Datenschutz- und Nutzungsbedingungen-URLs.

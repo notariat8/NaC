@@ -4,7 +4,7 @@ Status: `active`
 
 ## Goal
 
-`noc-cyberjack-rfid` is the local Card/SAK gate before XNP and other
+`nac-cyberjack-rfid` is the local `Karte/SAK` before XNP and other
 notary-side workflows. The plugin checks whether the local workstation can see
 the REINER SCT/cyberJack stack and whether the surrounding card-reader
 prerequisites are plausible.
@@ -59,15 +59,15 @@ The local plugin must not:
 - submit notarial actions,
 - bypass XNP or SAK security boundaries.
 
-### NoC SaaS
+### NaC SaaS
 
-NoC SaaS may:
+NaC SaaS may:
 
 - receive redacted readiness status,
 - evaluate policy gates for follow-up workflows,
 - store evidence metadata.
 
-NoC SaaS must not:
+NaC SaaS must not:
 
 - receive card secrets, PINs or private keys,
 - reuse eID/card results for unrelated purposes,
@@ -159,7 +159,7 @@ The MVP includes:
 3. Install morris if the browser-middleware path is chosen.
 4. Run `card.readiness`.
 5. Document redacted evidence.
-6. Proceed to `noc-bnotk-xnp` only when Card/SAK gate is green or explicitly
+6. Proceed to `nac-bnotk-xnp` only when `Karte/SAK` is green or explicitly
    waived for preflight.
 
 ## Implementation Phases
@@ -177,7 +177,7 @@ The MVP includes:
 
 ### Phase 2: XNP Gate Integration
 
-- Feed readiness result into `noc-bnotk-xnp`.
+- Feed readiness result into `nac-bnotk-xnp`.
 - Record approval and evidence references.
 
 ### Phase 3: SaaS Binding

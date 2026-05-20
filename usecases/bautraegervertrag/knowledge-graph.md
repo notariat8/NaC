@@ -1,47 +1,56 @@
-# Bautraegervertrag Knowledge Graph
+# Bauträgervertrag Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `next10`  
-Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.bautraegervertrag`
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
+KG-Knoten: `case.bautraegervertrag`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `developer.identity` | Developer identity and authority | `open` | `notary_clerk` | Who is developer and how are register, authority and representation proven? |
-| `buyer.identity` | Buyer identity and consumer status | `open` | `notary` | Who buys and is consumer-protection handling required? |
-| `object.identity` | Object, unit and land-register state | `open` | `notary_clerk` | Which unit, property, construction phase and land-register state are involved? |
-| `construction.specification` | Construction specification and completion state | `open` | `developer` | Which building description, plans, permits and completion state define performance? |
-| `installment.plan` | Installment and maturity plan | `open` | `notary` | Which installment schedule, security model and maturity prerequisites apply? |
-| `defects.acceptance` | Acceptance, defects and handover model | `open` | `notary` | How are acceptance, defects, common property and handover handled? |
+| `developer.identity` | Bauträger Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Bauträger Identität benötigt? |
+| `buyer.identity` | Käufer Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt? |
+| `object.identity` | Objekt Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Objekt Identität benötigt? |
+| `construction.specification` | Bauleistung Spezifikation | `offen` | Bauträger | Welche Angaben, Nachweise und Prüfpunkte werden für Bauleistung Spezifikation benötigt? |
+| `installment.plan` | Ratenplan Plan | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Ratenplan Plan benötigt? |
+| `defects.acceptance` | Mängel acceptance | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Mängel acceptance benötigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.developer_contract_draft` | Dokument: Bauträger Vertrag Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.specification_package` | Dokument: Spezifikation Paket | `offen` | freigegebener Nachweisspeicher |
+| `doc.land_register_state` | Dokument: Grundbuch Register Stand | `offen` | nac-grundbuch-portal oder manuell geprüfter Upload |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.developer_contract_draft` | Developer contract draft | `open` |
-| `doc.specification_package` | Building specification, plans and permits reference | `open` |
-| `doc.land_register_state` | Land-register and division state reference | `open` |
+| `decision.payment_model` | Entscheidung: Zahlung Modell | `offen` |
+| `decision.object_state` | Entscheidung: Objekt Stand | `offen` |
 
-## Review Gates
+## Prüfgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.consumer_draft_period` | Consumer draft review period checked | `open` |
-| `gate.installment_review` | Installment and security model reviewed | `open` |
+| `gate.consumer_draft_period` | Prüfgate: Verbraucher-Entwurfsfrist | `offen` |
+| `gate.installment_review` | Prüfgate: Ratenplan Prüfung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.consumer_release` | Nachweis: Verbraucher Freigabe | `offen` |
+| `evidence.construction_package` | Nachweis: Bauleistung Paket | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

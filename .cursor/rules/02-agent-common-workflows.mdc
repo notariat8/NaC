@@ -1,5 +1,5 @@
 ---
-description: Gemeinsame Agenten-Workflows fuer Planung, Tests, UI-Nachweis und Command-Approvals
+description: Gemeinsame Agenten-Workflows für Planung, Tests, UI-Nachweis und Command-Approvals
 alwaysApply: true
 ---
 
@@ -7,10 +7,10 @@ alwaysApply: true
 
 Diese Regel spiegelt [policies/process-policy.yaml](../../policies/process-policy.yaml) `agent_workflows`.
 
-- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Loesungswegen zuerst erkunden, Plan mit Zweck/Risiko nennen und Bestaetigung einholen.
-- Bei klar beauftragten, kleinen Aenderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
-- Codeaenderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Pruefziel oder Testluecke festhalten, danach implementieren, iterieren und erneut validieren.
-- UI-, Frontend- und andere visuelle Aenderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis, bevor der Stand als abgeschlossen gemeldet wird.
-- Genehmigungspflichtige Commands muessen Zweck, Umfang und Bezug zur Aufgabe nennen. Unklare Approval-Anfragen werden nicht bestaetigt, sondern neu und konkret gestellt.
+- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Lösungswegen zuerst erkunden, Plan mit Zweck/Risiko nennen und Bestätigung einholen.
+- Bei klar beauftragten, kleinen Änderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
+- Codeänderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder Testlücke festhalten, danach implementieren, iterieren und erneut validieren.
+- UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis, bevor der Stand als abgeschlossen gemeldet wird.
+- Genehmigungspflichtige Commands müssen Zweck, Umfang und Bezug zur Aufgabe nennen. Unklare Approval-Anfragen werden nicht bestätigt, sondern neu und konkret gestellt.
 
 Abschluss bleibt erst nach validiertem, committed, gepushtem und in den Zielbranch gemergtem Stand nach [roadmap/GANTT.md](../../roadmap/GANTT.md) erreichbar.

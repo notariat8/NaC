@@ -29,7 +29,7 @@ platform_features:
     required: optional
     subscription_required: true
     notes:
-      - "Bietet zusaetzliche Security-Funktionen, ist aber fuer SBOM-Erzeugung nicht zwingend."
+      - "Bietet zusätzliche Security-Funktionen, ist aber für SBOM-Erzeugung nicht zwingend."
 
 governance:
   required_on_release: true
@@ -59,7 +59,7 @@ ai_sbom:
     - infrastructure
     - security_properties
     - key_performance_indicators
-  noc_extensions:
+  nac_extensions:
     - privacy_and_avv_dpa_status
     - notary_professional_secret_boundary
     - human_review_and_approval_owner

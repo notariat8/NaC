@@ -7,7 +7,7 @@ are linked across repositories.
 
 ## Repository Types
 
-### Upstream Repository, Central NoC
+### Upstream Repository, Central NaC
 
 Responsible for:
 

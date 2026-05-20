@@ -1,0 +1,41 @@
+# Reifegrad: Was Heute Nutzbar Ist
+
+Diese Seite trennt klar zwischen lauffähigem Kern, Pilotflächen, Planung und
+bewusst gesperrter Automatisierung. Sie soll fachlichen Entscheidern helfen,
+NaC realistisch einzuordnen.
+
+## Reifegrad-Matrix
+
+| Bereich | Stand | Was das bedeutet |
+| --- | --- | --- |
+| Repository klonen und lesen | Heute nutzbar | Die Struktur, Policies, Usecases und Startpfade sind öffentlich nachvollziehbar. |
+| Zentrale `nac`-CLI ausführen | Heute nutzbar | Status, KG, BPMN, Konfiguration, Webserver und Quality Gate haben eine gemeinsame lokale Bedienkante. |
+| Quality Gate lokal ausführen | Heute nutzbar | Tests, Sprachregeln, Datenschutzlint, Plugin-Validierung, KG-Validierung und Gantt-Regel laufen lokal. |
+| Usecase-KGs prüfen | Heute nutzbar | Jeder Usecase hat eine maschinenlesbare KG und eine menschliche Review-Sicht. |
+| KG-Editor-View anzeigen | Heute nutzbar | Fachpersonal kann offene Knoten als sichere Formular-/Checklisten-Sicht ansehen, ohne `value`-Felder zu bearbeiten. |
+| BPMN-js Business Layer | Profil vorhanden | BPMN 2.0 ist fachliche Prozessquelle; ein erstes bpmn-js-taugliches Modell und die Python-Prüfung sind vorhanden. |
+| Lokaler Webserver | Heute nutzbar | BPMN-Modelle und KG-Editor-Views können lokal im Browser geprüft werden. |
+| Privater Betriebs-Fork | Pilotfähig | Ein Notariat kann das Muster in einen privaten Fork übernehmen und Rollen, Freigaben und lokale Speicherorte definieren. |
+| Lokale Karten-/XNP-Readiness | Pilotfähig | Bei installierter Hardware prüfen die Plugin-Pfade echte lokale Kartenleser-, morris-, PC/SC-, SAK-/XNP- und XNP-Erreichbarkeit; Signatur, PIN-Erfassung und produktive Einreichung bleiben gesperrt. |
+| Fachsystem-Connectoren | Geplant / Integrationsarbeit | Schreibende Adapter brauchen gesonderte Freigabe, Datenschutzklärung, Testmodus und Verantwortlichkeitsmodell. |
+| Automatische Register-, Portal- oder Fachsystemeinreichung | Bewusst gesperrt | Keine produktive Schreibaktion ohne geprüften Connector, menschliche Freigabe und privaten Betriebsrahmen. |
+| Echte Mandatsdaten im öffentlichen Repo | Verboten | Personen-, Register-, Finanz-, Gesundheits-, Nachlass- und Familiendaten gehören nicht in dieses Repository. |
+| KI als finale Rechtsentscheidung | Verboten | KI strukturiert und vorbereitet; die fachliche Verantwortung bleibt beim Menschen. |
+
+## Kurzform Für Entscheider
+
+NaC ist heute stark als prüfbares Muster, lokaler Kontrollrahmen und
+Pilotvorbereitung. Der produktive Kanzlei- oder Notariatsbetrieb entsteht erst
+in einem privaten Fork mit lokalen Systemen, Rollen, Datenschutzklärung und
+menschlichen Freigaben.
+
+## Nächste Dokumente
+
+- [docs/de/notar-start.md](notar-start.md)
+- [cli.md](cli.md)
+- [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
+- [bpmn-js-business-layer.md](bpmn-js-business-layer.md)
+- [lokaler-webserver.md](lokaler-webserver.md)
+- [docs/de/betriebsstart.md](betriebsstart.md)
+- [docs/de/integration-start.md](integration-start.md)
+- [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md)

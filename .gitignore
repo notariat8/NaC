@@ -10,3 +10,4 @@ out/
 *.key
 *.p12
 *.pfx
+logs/operator-webapp.*.log

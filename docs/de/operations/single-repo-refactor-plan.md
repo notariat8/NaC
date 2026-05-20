@@ -26,8 +26,8 @@ processes/
 
 ## Mapping von Bestand zu Zielbild
 
-- Bestehende generische Prozessdateien werden nach `processes/core/` ueberfuehrt.
-- Branchenbezogene Inhalte werden in `processes/verticals/<vertical>/` ueberfuehrt.
+- Bestehende generische Prozessdateien werden nach `processes/core/` überführt.
+- Branchenbezogene Inhalte werden in `processes/verticals/<vertical>/` überführt.
 - Gemeinsame Regeln bleiben in `policies/` und `docs/de/`.
 - Branchenaktivierung bleibt zentral in `policies/process-policy.yaml`.
 
@@ -46,23 +46,23 @@ processes/
 6. **Abschluss**
    - Index-/Doku-Referenzen aktualisieren und Release taggen.
 
-## Risiken und Gegenmassnahmen
+## Risiken und Gegenmaßnahmen
 
-- **Risiko:** unklare Zuordnung Core vs. Vertical  
-  **Massnahme:** Abgrenzungsregel aus `docs/de/service-model/core-vertical-blueprint.md` verbindlich anwenden.
+- **Risiko:** unklare Zuordnung Core vs. Vertical
+  **Maßnahme:** Abgrenzungsregel aus `docs/de/service-model/core-vertical-blueprint.md` verbindlich anwenden.
 
-- **Risiko:** Pfadumbrueche brechen Referenzen  
-  **Massnahme:** Migration in kleinen PRs, Referenzpruefung pro PR.
+- **Risiko:** Pfadumbrüche brechen Referenzen
+  **Maßnahme:** Migration in kleinen PRs, Referenzprüfung pro PR.
 
-- **Risiko:** Branchenspezifische Sonderfaelle verwischen Core  
-  **Massnahme:** Vertical-spezifische Regeln nicht in Core mergen ohne Mehrbranchen-Nachweis.
+- **Risiko:** Branchenspezifische Sonderfälle verwischen Core
+  **Maßnahme:** Vertical-spezifische Regeln nicht in Core mergen ohne Mehrbranchen-Nachweis.
 
-## Rueckfallstrategie
+## Rückfallstrategie
 
-- Migration nur ueber kleine, einzeln revertierbare PRs.
+- Migration nur über kleine, einzeln revertierbare PRs.
 - Jeder Migrationsblock wird separat released.
-- Bei Problemen Rollback auf letztes freigegebenes Release fuer neue Vorgaenge.
-- Laufende Vorgaenge behalten gebundene Version.
+- Bei Problemen Rollback auf letztes freigegebenes Release für neue Vorgänge.
+- Laufende Vorgänge behalten gebundene Version.
 
 ## Abnahmekriterien
 
@@ -73,5 +73,5 @@ processes/
 
 ## Umsetzungsgrenze dieser Runde
 
-Dieser Plan beschreibt den Umbau, fuehrt ihn aber nicht automatisch aus.
-Er ist die Arbeitsgrundlage fuer die naechste, kontrollierte Migrationsrunde.
+Dieser Plan beschreibt den Umbau, führt ihn aber nicht automatisch aus.
+Er ist die Arbeitsgrundlage für die nächste, kontrollierte Migrationsrunde.

@@ -1,12 +1,12 @@
-# NoC Build Now
+# NaC Build Now
 
-Status: active development  
-Last update: 2026-05-15  
+Status: active development
+Last update: 2026-05-15
 Branch: `main`
 
 ## What Is Being Built
 
-NoC is now in implementation mode. The first executable development increment is
+NaC is now in implementation mode. The first executable development increment is
 the notarial KG runtime:
 
 ```bash
@@ -43,7 +43,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0005 | No-code KG editor view and patch contract | Done | CLI returns four safe editor tabs, patch actions and blocked `value` fields. |
 | DEV-0006 | Workflow contract generator from KG | Next | Generates a draft contract skeleton for one case without real mandate data. |
 | DEV-0007 | First pilot workflow: GmbH/UG formation | Next | Reads KG node and creates deterministic intake checklist. |
-| DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `noc-bnotk-xnp` readiness evidence. |
+| DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `nac-bnotk-xnp` readiness evidence. |
 | DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
 
 ## Local Developer Commands

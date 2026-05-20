@@ -1,46 +1,55 @@
-# Pflichtteilsverzicht / Erbverzicht Knowledge Graph
+# Pflichtteilsverzicht / Erbverzicht Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `next10`  
-Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.pflichtteilsverzicht_erbverzicht`
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
+KG-Knoten: `case.pflichtteilsverzicht_erbverzicht`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `future_decedent.identity` | Future decedent identity and capacity | `open` | `notary` | Who contracts with the waiving party and how is capacity reviewed? |
-| `waiver_party.identity` | Waiving party identity | `open` | `notary` | Who waives and are representation or approval issues present? |
-| `waiver.scope` | Waiver scope | `open` | `notary` | Is the waiver full inheritance waiver, compulsory-share waiver or limited arrangement? |
-| `descendant.effect` | Effect on descendants | `open` | `notary` | Should or does the waiver extend to descendants? |
-| `compensation.model` | Compensation or settlement | `open` | `client` | Is compensation, settlement, transfer or no consideration intended? |
-| `family.fairness_flags` | Family and fairness flags | `open` | `notary` | Are pressure, dependency, minors, care or imbalance flags present? |
+| `future_decedent.identity` | Künftiger Erblasser Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Künftiger Erblasser Identität benötigt? |
+| `waiver_party.identity` | Verzicht Beteiligter Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Verzicht Beteiligter Identität benötigt? |
+| `waiver.scope` | Verzicht Umfang | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Verzicht Umfang benötigt? |
+| `descendant.effect` | Abkoemmlinge Wirkung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Abkoemmlinge Wirkung benötigt? |
+| `compensation.model` | Abfindung Modell | `offen` | Mandantschaft | Welche Angaben, Nachweise und Prüfpunkte werden für Abfindung Modell benötigt? |
+| `family.fairness_flags` | Familie Fairness Prüfflaggen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Familie Fairness Prüfflaggen benötigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.waiver_contract` | Dokument: Verzicht Vertrag | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.compensation_evidence` | Dokument: Abfindung Nachweis | `offen` | freigegebener Nachweisspeicher |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.waiver_contract` | Inheritance or compulsory-share waiver contract | `open` |
-| `doc.compensation_evidence` | Compensation or settlement evidence reference | `open` |
+| `decision.waiver_type` | Entscheidung: Verzicht Art | `offen` |
+| `decision.compensation` | Entscheidung: Abfindung | `offen` |
 
-## Review Gates
+## Prüfgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.personal_presence_review` | Required personal participation reviewed | `open` |
-| `gate.fairness_review` | Family and fairness review completed | `open` |
+| `gate.personal_presence_review` | Prüfgate: Persoenlich Anwesenheit Prüfung | `offen` |
+| `gate.fairness_review` | Prüfgate: Fairness Prüfung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.fairness_notes` | Nachweis: Fairness Vermerke | `offen` |
+| `evidence.execution_trace` | Nachweis: Vollzug Nachverfolgung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

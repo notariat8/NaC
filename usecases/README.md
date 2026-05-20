@@ -1,61 +1,65 @@
 # Notarielle Usecases
 
-Dieser Ordner enthaelt konkrete notarielle Vorgangsarten nach deutschem Recht.
-Deutsch ist fuer diese Usecases die fuehrende und rechtlich bindende Sprache.
-Englische Fassungen koennen Orientierung oder Uebersetzung sein, ersetzen aber
+Dieser Ordner enthält konkrete notarielle Vorgangsarten nach deutschem Recht.
+Deutsch ist für diese Usecases die führende und rechtlich bindende Sprache.
+Englische Fassungen können Orientierung oder Übersetzung sein, ersetzen aber
 nicht die deutsche fachliche Quelle.
 
 Usecases sind getrennt von installierbaren Plugins und wiederverwendbarer
-Workflow-Ausfuehrungslogik. Der statische Knowledge Graph ist usecase-lokal und
+Workflow-Ausführungslogik. Der statische Knowledge Graph ist usecase-lokal und
 liegt im jeweils passenden Usecase-Ordner.
+
+Jeder Usecase-Ordner hat jetzt zwei Leseebenen:
+
+- `README.md` als kurze fachliche Vorderseite für Menschen.
+- `knowledge-graph.md` und `knowledge-graph.graph.json` als Review- und
+  Maschinenstand für offene Knoten, Dokumente, Entscheidungen und Gates.
+
+Für Nicht-Technik-Leser helfen zusätzlich
+[docs/de/reifegrad.md](../docs/de/reifegrad.md),
+[docs/de/glossar.md](../docs/de/glossar.md) und
+[docs/de/beispiel-immobilienkaufvertrag.md](../docs/de/beispiel-immobilienkaufvertrag.md).
 
 ## Abgrenzung
 
-- [plugins/](../plugins) stellt installierbare Begleitfaehigkeiten bereit.
+- [plugins/](../plugins) stellt installierbare Begleitfähigkeiten bereit.
 - [workflows/](../workflows) stellt wiederverwendbare Skills und deterministische
   Python-Workflowlogik bereit.
 - [usecases/](.) beschreibt konkrete notarielle Vorgangsarten und deren
   Plugin-/Workflow-Bindung.
-- Jeder Ordner `usecases/<slug>/` fuehrt seine eigene statische KG/DB:
-  `knowledge-graph.graph.json` fuer maschinenlesbaren Zustand und
-  `knowledge-graph.md` fuer die menschliche Review-Sicht.
+- Jeder Ordner `usecases/<slug>/` führt seine eigene statische KG/DB:
+  `knowledge-graph.graph.json` für maschinenlesbaren Zustand und
+  `knowledge-graph.md` für die menschliche Review-Sicht.
 
 ## Kanonischer Top-10-Katalog
 
-| Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
+| Usecase | Ordner | Status | Primäre Plugin-Abhängigkeiten |
 | --- | --- | --- | --- |
-| Immobilienkaufvertrag | [immobilienkaufvertrag/](immobilienkaufvertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Grundschuld / Hypothekenbestellung | [grundschuld-hypothekenbestellung/](grundschuld-hypothekenbestellung) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| GmbH-/UG-Gruendung | [online-gmbh-gruendung/](online-gmbh-gruendung) | KG-Basis, aktive Aufnahme | `noc-regulated-core`, `noc-cyberjack-rfid`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
-| Handelsregisteranmeldung | [handelsregisteranmeldung/](handelsregisteranmeldung) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
-| Beglaubigung von Unterschriften | [unterschriftsbeglaubigung/](unterschriftsbeglaubigung) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-bnotk-xnp` |
-| Testament / Erbvertrag | [testament-erbvertrag/](testament-erbvertrag) | KG-Basis | `noc-regulated-core` |
-| Erbscheinsantrag / Nachlassangelegenheiten | [erbscheinsantrag-nachlass/](erbscheinsantrag-nachlass) | KG-Basis | `noc-regulated-core` |
-| Vorsorgevollmacht und Patientenverfuegung | [vorsorgevollmacht-patientenverfuegung/](vorsorgevollmacht-patientenverfuegung) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Schenkungsvertrag / Uebertragungsvertrag | [schenkungsvertrag-uebertragungsvertrag/](schenkungsvertrag-uebertragungsvertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal` |
-| Ehevertrag / Scheidungsfolgenvereinbarung | [ehevertrag-scheidungsfolgenvereinbarung/](ehevertrag-scheidungsfolgenvereinbarung) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal` |
-
-## Zusaetzliche aktive Aufnahmequellen
-
-| Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
-| --- | --- | --- | --- |
-| AO52 gemeinnuetziges Softwareunternehmen | [ao52aas-gemeinnuetzigkeit/](ao52aas-gemeinnuetzigkeit) | Aktive Aufnahme | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-elster-eric` |
-| Steuer-aaS Steuer-Readiness | [steuer-aas/](steuer-aas) | Aktive Aufnahme | `noc-regulated-core`, `noc-elster-eric` |
+| Immobilienkaufvertrag | [immobilienkaufvertrag/](immobilienkaufvertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Grundschuld / Hypothekenbestellung | [grundschuld-hypothekenbestellung/](grundschuld-hypothekenbestellung) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| GmbH-/UG-Gründung | [online-gmbh-gruendung/](online-gmbh-gruendung) | KG-Basis, aktive Aufnahme | `nac-regulated-core`, `nac-cyberjack-rfid`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-idaas` |
+| Handelsregisteranmeldung | [handelsregisteranmeldung/](handelsregisteranmeldung) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-cyberjack-rfid` |
+| Beglaubigung von Unterschriften | [unterschriftsbeglaubigung/](unterschriftsbeglaubigung) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-bnotk-xnp` |
+| Testament / Erbvertrag | [testament-erbvertrag/](testament-erbvertrag) | KG-Basis | `nac-regulated-core` |
+| Erbscheinsantrag / Nachlassangelegenheiten | [erbscheinsantrag-nachlass/](erbscheinsantrag-nachlass) | KG-Basis | `nac-regulated-core` |
+| Vorsorgevollmacht und Patientenverfügung | [vorsorgevollmacht-patientenverfuegung/](vorsorgevollmacht-patientenverfuegung) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Schenkungsvertrag / Übertragungsvertrag | [schenkungsvertrag-uebertragungsvertrag/](schenkungsvertrag-uebertragungsvertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal` |
+| Ehevertrag / Scheidungsfolgenvereinbarung | [ehevertrag-scheidungsfolgenvereinbarung/](ehevertrag-scheidungsfolgenvereinbarung) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-grundbuch-portal` |
 
 ## Kanonischer Next-10-Katalog
 
-| Usecase | Ordner | Status | Primaere Plugin-Abhaengigkeiten |
+| Usecase | Ordner | Status | Primäre Plugin-Abhängigkeiten |
 | --- | --- | --- | --- |
-| Loeschungsbewilligung / Grundbuchloeschung | [loeschungsbewilligung-grundbuchloeschung/](loeschungsbewilligung-grundbuchloeschung) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Teilungserklaerung nach WEG | [teilungserklaerung-weg/](teilungserklaerung-weg) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
-| Bautraegervertrag | [bautraegervertrag/](bautraegervertrag) | KG-Basis | `noc-regulated-core`, `noc-grundbuch-portal`, `noc-bnotk-xnp`, `noc-idaas` |
-| Gesellschafterbeschluss bei GmbH/UG | [gesellschafterbeschluss-gmbh-ug/](gesellschafterbeschluss-gmbh-ug) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-cyberjack-rfid` |
-| Geschaeftsanteilsuebertragung GmbH | [geschaeftsanteilsuebertragung-gmbh/](geschaeftsanteilsuebertragung-gmbh) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-handelsregister`, `noc-idaas` |
-| Vereinsregisteranmeldung | [vereinsregisteranmeldung/](vereinsregisteranmeldung) | KG-Basis | `noc-regulated-core`, `noc-bnotk-xnp`, `noc-idaas` |
-| Erbausschlagung | [erbausschlagung/](erbausschlagung) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Pflichtteilsverzicht / Erbverzicht | [pflichtteilsverzicht-erbverzicht/](pflichtteilsverzicht-erbverzicht) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Adoption / familienrechtliche Erklaerungen | [adoption-familienrechtliche-erklaerungen/](adoption-familienrechtliche-erklaerungen) | KG-Basis | `noc-regulated-core`, `noc-idaas` |
-| Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte | [vollmacht-immobilien-gesellschaftsgeschaefte/](vollmacht-immobilien-gesellschaftsgeschaefte) | KG-Basis | `noc-regulated-core`, `noc-idaas`, `noc-grundbuch-portal`, `noc-bnotk-xnp` |
+| Löschungsbewilligung / Grundbuchlöschung | [loeschungsbewilligung-grundbuchloeschung/](loeschungsbewilligung-grundbuchloeschung) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Teilungserklärung nach WEG | [teilungserklaerung-weg/](teilungserklaerung-weg) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
+| Bauträgervertrag | [bautraegervertrag/](bautraegervertrag) | KG-Basis | `nac-regulated-core`, `nac-grundbuch-portal`, `nac-bnotk-xnp`, `nac-idaas` |
+| Gesellschafterbeschluss bei GmbH/UG | [gesellschafterbeschluss-gmbh-ug/](gesellschafterbeschluss-gmbh-ug) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-cyberjack-rfid` |
+| Geschäftsanteilsübertragung GmbH | [geschaeftsanteilsuebertragung-gmbh/](geschaeftsanteilsuebertragung-gmbh) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-handelsregister`, `nac-idaas` |
+| Vereinsregisteranmeldung | [vereinsregisteranmeldung/](vereinsregisteranmeldung) | KG-Basis | `nac-regulated-core`, `nac-bnotk-xnp`, `nac-idaas` |
+| Erbausschlagung | [erbausschlagung/](erbausschlagung) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Pflichtteilsverzicht / Erbverzicht | [pflichtteilsverzicht-erbverzicht/](pflichtteilsverzicht-erbverzicht) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Adoption / familienrechtliche Erklärungen | [adoption-familienrechtliche-erklaerungen/](adoption-familienrechtliche-erklaerungen) | KG-Basis | `nac-regulated-core`, `nac-idaas` |
+| Vollmacht für Immobilien- oder Gesellschaftsgeschäfte | [vollmacht-immobilien-gesellschaftsgeschaefte/](vollmacht-immobilien-gesellschaftsgeschaefte) | KG-Basis | `nac-regulated-core`, `nac-idaas`, `nac-grundbuch-portal`, `nac-bnotk-xnp` |
 
 ## Knowledge-Graph-Bindung
 
@@ -64,18 +68,16 @@ Der statische KG wird im jeweiligen Usecase-Ordner gepflegt:
 - [immobilienkaufvertrag/knowledge-graph.graph.json](immobilienkaufvertrag/knowledge-graph.graph.json)
 - [online-gmbh-gruendung/knowledge-graph.graph.json](online-gmbh-gruendung/knowledge-graph.graph.json)
 - [bautraegervertrag/knowledge-graph.graph.json](bautraegervertrag/knowledge-graph.graph.json)
-- [ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json](ao52aas-gemeinnuetzigkeit/knowledge-graph.graph.json)
-- [steuer-aas/knowledge-graph.graph.json](steuer-aas/knowledge-graph.graph.json)
 
 Jeder Usecase-Ordner muss genau einen lokalen KG-Graph und eine Markdown-
 Review-Sicht enthalten. Workflows lesen diesen lokalen KG als Status offener
-Fragen und schreiben Aenderungen nur ueber reviewte Git-Aenderungen zurueck.
-Echte Mandatswerte bleiben ausserhalb des Repository.
+Fragen und schreiben Änderungen nur über reviewte Git-Änderungen zurück.
+Echte Mandatswerte bleiben außerhalb des Repository.
 
 Fachpersonal bearbeitet diese Graphen nicht direkt als JSON. Die sichere
 Bearbeitungsschicht ist der KG-Editor-Workstream in
 [docs/de/kg-editor-workstream.md](../docs/de/kg-editor-workstream.md). Die
-ausfuehrbare Editor-View kommt aus
+ausführbare Editor-View kommt aus
 [src/notary_kg/editor.py](../src/notary_kg/editor.py) und sperrt `value`-Felder
 konsequent.
 
@@ -85,28 +87,28 @@ Die folgenden Kandidaten haben noch keinen kanonischen Usecase-Ordner. Sobald
 ein Kandidat als Usecase angelegt wird, braucht er sofort eigene Dateien
 `knowledge-graph.graph.json` und `knowledge-graph.md`:
 
-- Genehmigungserklaerungen
-- Rangruecktritt/Rangaenderung im Grundbuch
+- Genehmigungserklärungen
+- Rangrücktritt/Rangänderung im Grundbuch
 - Dienstbarkeiten
-- Baulasten-bezogene Erklaerungen
+- Baulasten-bezogene Erklärungen
 - Niessbrauchsbestellungen
 - Wohnrechte
-- Auseinandersetzungsvertraege zwischen Erben
-- Scheidungsimmobilien-Uebertragungen
+- Auseinandersetzungsverträge zwischen Erben
+- Scheidungsimmobilien-Übertragungen
 
 ## Aufnahme-Regel
 
-Externe GitHub-Repositories, die tatsaechlich notarielle Usecases sind, werden
+Externe GitHub-Repositories, die tatsächlich notarielle Usecases sind, werden
 hier kanonisiert. Wenn ein externes Repository leer ist, werden nur der
 kanonische Ordner und die Quellenreferenz angelegt; eine leere Historie wird
 nicht importiert.
 
-Siehe [github-repo-intake.md](github-repo-intake.md) fuer den letzten
+Siehe [github-repo-intake.md](github-repo-intake.md) für den letzten
 GitHub-Scan.
 
 ## Legacy-Starter-Aliase
 
 [grundstueckskaufvertrag/](grundstueckskaufvertrag) und
 [testament/](testament) bleiben als aeltere Starterordner erhalten. Die
-kanonischen Top-10-Eintraege sind [immobilienkaufvertrag/](immobilienkaufvertrag)
+kanonischen Top-10-Einträge sind [immobilienkaufvertrag/](immobilienkaufvertrag)
 und [testament-erbvertrag/](testament-erbvertrag).

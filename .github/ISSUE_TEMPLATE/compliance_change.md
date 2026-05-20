@@ -1,6 +1,6 @@
 ---
 name: Compliance Change
-about: Regulatorische oder governance-relevante Aenderung einreichen
+about: Regulatorische oder governance-relevante Änderung einreichen
 title: "[COMPLIANCE] "
 labels: compliance
 assignees: ""
@@ -10,7 +10,7 @@ assignees: ""
 
 ## Betroffene Regel oder Policy
 
-## Vorgeschlagene Aenderung
+## Vorgeschlagene Änderung
 
 ## Risiko bei Nicht-Umsetzung
 

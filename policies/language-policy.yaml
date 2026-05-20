@@ -17,6 +17,8 @@ repository_language:
   conflict_resolution: german_text_prevails
   machine_readable_keys_may_remain_english: true
   stable_identifiers_may_remain_english: true
+  german_human_text_uses_umlauts: true
+  ascii_transliterations_allowed_only_for_technical_identifiers: true
   code_comments_follow_local_file_context: true
 
 legal_domain_language:
@@ -30,6 +32,32 @@ legal_domain_language:
     - usecase_knowledge_graphs
     - notarial_workflow_contracts
     - legal_review_gates
+
+skill_language:
+  scope: codex_skill_files
+  leading_subject_matter_language: de
+  required_english_summary: true
+  english_role: technical_orientation_only
+  conflict_resolution: german_instruction_prevails
+  technical_names_commands_ids_may_remain_english_ascii: true
+  applies_to:
+    - plugins/*/skills/*/SKILL.md
+    - workflows/skills/*/SKILL.md
+
+plugin_manifest_language:
+  scope: codex_plugin_marketplace_and_manifest_text
+  leading_human_language: de
+  require_german_display_names: true
+  require_short_card_display_names: true
+  require_german_descriptions: true
+  require_german_default_prompts: true
+  require_german_plugin_readme_headings: true
+  require_non_placeholder_icons: true
+  require_german_skill_frontmatter_descriptions: true
+  english_role: none_for_human_facing_plugin_ux
+  allow_stable_technical_identifiers: true
+  allow_technical_acronyms_and_product_names: true
+  enforced_by: scripts/validate_plugins.py
 
 localized_surfaces:
   - docs
@@ -45,6 +73,23 @@ domain_surfaces:
     require_german_case_titles: true
     allow_stable_english_identifiers: true
     machine_readable_keys_may_remain_english: true
+  skills:
+    default_subject_matter_language: de
+    require_german_instruction_body: true
+    require_english_summary: true
+    allow_stable_english_identifiers: true
+    allow_english_frontmatter_description: false
+    allow_english_commands_and_output_labels: true
+  plugins:
+    default_human_language: de
+    require_german_manifest_descriptions: true
+    require_german_display_names: true
+    require_short_card_display_names: true
+    require_german_default_prompts: true
+    require_german_readme_headings: true
+    require_non_placeholder_icons: true
+    allow_stable_english_identifiers: true
+    allow_technical_acronyms_and_product_names: true
 
 folder_rules:
   docs:
@@ -64,10 +109,27 @@ maintenance_rules:
   non_localized_human_content_defaults_to_german: true
   github_root_readme_is_human_content: true
 
+localized_navigation:
+  localized_markdown_links_follow_source_language: true
+  cross_language_markdown_links_allowed_in_localized_content: false
+  german_links_prefer:
+    - docs/de
+    - prompts/de
+  english_links_prefer:
+    - docs/en
+    - prompts/en
+  root_language_selector_may_link_all_standard_languages: true
+
 notes:
   - "Deutsch (de) und Englisch (en) sind die verpflichtenden Standardsprachen."
-  - "Die Policy gilt repo-weit fuer alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
-  - "Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung."
-  - "Sprachabhaengige Inhalte liegen unter ISO-639-Sprachordnern."
-  - "Unabhaengig von der Sprache des Prompts muessen alle Standardsprachen gepflegt werden."
-  - "Neue Sprachen duerfen ergaenzt werden, aber de und en bleiben immer Pflicht."
+  - "Die Policy gilt repo-weit für alle menschlich lesbaren Inhalte; der GitHub-Root-README ist keine Ausnahme."
+  - "Für deutsches Recht und notarielle Usecases ist Deutsch die führende und rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung."
+  - "Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt."
+  - "Plugin-Karten müssen lesbare kurze Anzeigenamen und echte Icon-/Logo-Assets statt Platzhalterbildern haben."
+  - "Technische Plugin-IDs, Ordner, Commands, Output-Labels, Akronyme und Produktnamen dürfen englisch/ASCII bleiben."
+  - "Jeder SKILL.md braucht im Body eine kurze englische Summary für technische Anschlussfähigkeit; sie ersetzt keine deutsche Frontmatter- oder UX-Sprache."
+  - "Sprachabhängige Inhalte liegen unter ISO-639-Sprachordnern."
+  - "Markdown-Links in lokalisierten Inhalten bleiben im jeweiligen Sprachpfad; deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch."
+  - "Unabhängig von der Sprache des Prompts müssen alle Standardsprachen gepflegt werden."
+  - "Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen deutscher Umlaute sind nur in technischen Identifiern, Pfaden, URLs, Commands und Code zulässig."
+  - "Neue Sprachen dürfen ergänzt werden, aber de und en bleiben immer Pflicht."

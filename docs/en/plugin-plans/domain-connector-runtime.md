@@ -4,7 +4,7 @@ Status: `draft`
 
 ## Goal
 
-Domain-system connectors should reconcile NoC changes into target systems in a
+Domain-system connectors should reconcile NaC changes into target systems in a
 controlled way:
 
 - IAM,

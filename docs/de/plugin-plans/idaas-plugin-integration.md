@@ -2,34 +2,34 @@
 
 ## Zweck
 
-Dieser Plan migriert `ofunk/IDaaS` in das NoC-Plugin `noc-idaas`.
-Das Plugin ist ein lokaler Companion fuer deutsche eID-Verifikation,
+Dieser Plan migriert `ofunk/IDaaS` in das NaC-Plugin `nac-idaas`.
+Das Plugin ist ein lokaler Companion für deutsche eID-Verifikation,
 datensparsame Claim-Sets, Consent-/Audit-Nachweise und IAM-Projektionsplanung.
 
 ## Day0
 
-- Zweck der Verifikation klaeren.
+- Zweck der Verifikation klären.
 - Tenant, Kundenanwendung, Ziel-IAM und Review-Verantwortliche bestimmen.
 - Claim-Set minimieren.
 - Datenschutzgrundlage, AVV/DPA-Bedarf, Retention und Audit-Anforderungen
   dokumentieren.
-- Klaeren, ob der Kanal Public GPT Store, GPT mit Actions, Workspace-App oder
+- Klären, ob der Kanal Public GPT Store, GPT mit Actions, Workspace-App oder
   lokales Codex-Plugin ist.
 
 ## Day1
 
-- Plan Preview fuer eID-Flow und optionale IAM-Projektion erzeugen.
+- Plan Preview für eID-Flow und optionale IAM-Projektion erzeugen.
 - AusweisApp-, Redirect-, Webhook-/Polling-, Consent- und Evidence-Annahmen
-  pruefen.
-- OpenAPI- und Event-Vertraege trocken validieren.
+  prüfen.
+- OpenAPI- und Event-Verträge trocken validieren.
 - Menschliche Freigabe einholen, bevor echte personenbezogene Daten verarbeitet
   oder Zielsysteme geschrieben werden.
 
 ## Day2
 
-- Abgelaufene Assertions, Widerrufe und fehlgeschlagene Projektionen pruefen.
+- Abgelaufene Assertions, Widerrufe und fehlgeschlagene Projektionen prüfen.
 - Retention-Drift und Zweckbindungsabweichungen sichtbar machen.
-- Connectoren, Mapping-Profile und Reviewer-Zustaendigkeiten rezertifizieren.
+- Connectoren, Mapping-Profile und Reviewer-Zuständigkeiten rezertifizieren.
 
 ## Sicherheitsgrenzen
 
@@ -37,4 +37,4 @@ datensparsame Claim-Sets, Consent-/Audit-Nachweise und IAM-Projektionsplanung.
   Zugangsdaten im Repository.
 - Keine IAM-Schreibaktion ohne reviewed Connector und Freigabe.
 - Keine Verarbeitung personenbezogener Daten ohne dokumentierte Grundlage.
-- Evidence ist standardmaessig metadata-only.
+- Evidence ist standardmäßig metadata-only.

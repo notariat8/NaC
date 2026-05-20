@@ -4,14 +4,14 @@ Status: `proposed`
 
 ## Core Decision
 
-`noc-handelsregister` is focused on preparing online commercial-register
+`nac-handelsregister` is focused on preparing online commercial-register
 filings.
 
 Correction of the development sequence: for a real notary-side filing or
-completion path, the Card/SAK gate (`noc-cyberjack-rfid`) is required first,
+completion path, `Karte/SAK` (`nac-cyberjack-rfid`) is required first,
 because XNP login tests are not robust without card, card reader, SAK lite or
-XNP card path and secureFramework. Then `noc-bnotk-xnp` follows.
-`noc-handelsregister` is then the subject-matter layer for register track,
+XNP card path and secureFramework. Then `nac-bnotk-xnp` follows.
+`nac-handelsregister` is then the subject-matter layer for register track,
 HRA/HRB plausibility and package readiness.
 
 Only a pure citizen or client preflight for `online.notar.de` can start without
@@ -37,8 +37,8 @@ It may:
 - structure the online filing case,
 - check HRA/HRB track, legal form and missing information,
 - ask for prerequisites of the notarial online procedure,
-- for notary-side targets, refer to `noc-cyberjack-rfid` and then
-  `noc-bnotk-xnp` as upstream card/XNP gates,
+- for notary-side targets, refer to `nac-cyberjack-rfid` and then
+  `nac-bnotk-xnp` as upstream card/XNP checks,
 - prepare a filing package as plan preview,
 - capture evidence metadata for package version, approval and later filing.
 
@@ -62,9 +62,9 @@ official ID with eID function and a valid official photo ID.
 ## Day 0
 
 - Clarify operating mode: citizen/client preflight or notary workstation.
-- For notary workstation, complete `noc-cyberjack-rfid` first: card, reader,
+- For notary workstation, complete `nac-cyberjack-rfid` first: card, reader,
   PC/SC, SAK lite or XNP card path and secureFramework.
-- Then complete `noc-bnotk-xnp`: local XNP login, official-capacity context,
+- Then complete `nac-bnotk-xnp`: local XNP login, official-capacity context,
   XNotar module and exchange folder.
 - Clarify register track: HRA, HRB or other register.
 - Clarify legal form.
@@ -79,7 +79,7 @@ official ID with eID function and a valid official photo ID.
 
 The plugin creates a plan preview with:
 
-- operating mode, Card/SAK gate status and auth/XNP gate status,
+- operating mode, `Karte/SAK` status and `XNP-Prüfung` status,
 - register track and plausibility warnings,
 - missing required information,
 - document list for the notary,

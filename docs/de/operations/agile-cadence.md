@@ -2,18 +2,18 @@
 
 ## Ziel
 
-Dieses Dokument legt waehbare Arbeitsmodi fuer den operativen Betrieb im Unternehmens-Fork fest.
-Es enthaelt zwei freigegebene Methoden mit standardisierten Taktoptionen.
+Dieses Dokument legt waehbare Arbeitsmodi für den operativen Betrieb im Unternehmens-Fork fest.
+Es enthält zwei freigegebene Methoden mit standardisierten Taktoptionen.
 
 ## Arbeitsmethoden
 
-- `agile` ist der Startstandard fuer Einfuehrung und kontinuierliche Verbesserung.
-- `kanban` ist als kontinuierlicher Flussmodus zulaessig.
-- Die konkrete Auspraegung kann je Team variieren, muss aber im Repo dokumentiert sein.
+- `agile` ist der Startstandard für Einführung und kontinuierliche Verbesserung.
+- `kanban` ist als kontinuierlicher Flussmodus zulässig.
+- Die konkrete Ausprägung kann je Team variieren, muss aber im Repo dokumentiert sein.
 
 ## Agile: Sprintdauer (Auswahl)
 
-Zulaessige Sprintdauern:
+Zulässige Sprintdauern:
 
 - `1w` (1 Woche)
 - `2w` (2 Wochen)
@@ -21,7 +21,7 @@ Zulaessige Sprintdauern:
 
 ## Agile: Daily-Dauer (Auswahl)
 
-Zulaessige Daily-Dauern:
+Zulässige Daily-Dauern:
 
 - `5m` (5 Minuten)
 - `10m` (10 Minuten)
@@ -30,12 +30,12 @@ Zulaessige Daily-Dauern:
 ## Entscheidungshilfe
 
 - `1w + 5m`: hohe Dynamik, kleine Teams, schneller Feedbackzyklus.
-- `2w + 10m`: Standard fuer gemischte Fach-/Ops-Teams.
-- `4w + 20m`: hohe regulatorische Pruefanteile, laengere Planungsfenster.
+- `2w + 10m`: Standard für gemischte Fach-/Ops-Teams.
+- `4w + 20m`: hohe regulatorische Prüfanteile, längere Planungsfenster.
 
 ## Kanban: Review-Cadence (Auswahl)
 
-Zulaessige Review-Cadences:
+Zulässige Review-Cadences:
 
 - `1w` (woechentlich)
 - `2w` (zweiwoechentlich)
@@ -43,7 +43,7 @@ Zulaessige Review-Cadences:
 
 ## Kanban: Sync-Dauer (Auswahl)
 
-Zulaessige Sync-Dauern:
+Zulässige Sync-Dauern:
 
 - `5m`
 - `10m`
@@ -51,7 +51,7 @@ Zulaessige Sync-Dauern:
 
 Empfehlung:
 
-- taeglicher Kurzsync in `5m|10m|20m`,
+- täglicher Kurzsync in `5m|10m|20m`,
 - Kanban-Review im Takt `1w|2w|4w`,
 - Replenishment zusammen mit dem Review oder als eigener kurzer Termin.
 
@@ -59,14 +59,14 @@ Empfehlung:
 
 Jedes Team dokumentiert im Unternehmens-Fork:
 
-- gewaehlte Arbeitsmethode (`agile` oder `kanban`),
+- gewählte Arbeitsmethode (`agile` oder `kanban`),
 - bei `agile`: Sprintdauer und Daily-Dauer,
 - bei `kanban`: Review-Cadence und Sync-Dauer,
 - Startdatum der Cadence,
-- verantwortliche Rolle fuer Anpassungen.
+- verantwortliche Rolle für Anpassungen.
 
 ## Anpassungsregel
 
-- Wechsel der Cadence erfolgt nur ueber Change Request.
+- Wechsel der Cadence erfolgt nur über Change Request.
 - Wirkung wird nach 1-2 Zyklen bewertet.
-- Nach Freigabe wird die neue Cadence versioniert uebernommen.
+- Nach Freigabe wird die neue Cadence versioniert übernommen.

@@ -1,151 +1,151 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.vorsorgevollmacht-patientenverfuegung",
   "catalog_group": "top10",
-  "title": "NoC usecase knowledge graph: Vorsorgevollmacht und Patientenverfuegung",
+  "title": "NaC Usecase-Wissensgraph: Vorsorgevollmacht und Patientenverfügung",
   "status": "draft",
-  "last_update": "2026-05-15",
-  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
-  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "last_update": "2026-05-17",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Section 1410 for form of marriage contracts",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Section 1750 for adoption consent declarations",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
       "id": "src.bgb.1945",
-      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "label": "BGB Paragraph 1945 zur Form der Erbausschlagung",
       "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
     },
     {
       "id": "src.bgb.2346_2348",
-      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "label": "BGB Paragraphen 2346 und 2348 zu Erb- und Pflichtteilsverzicht",
       "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
     },
     {
       "id": "src.bgb.2353",
-      "label": "BGB Section 2353 for certificate of inheritance application",
+      "label": "BGB Paragraph 2353 zum Erbscheinsantrag",
       "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
       "id": "src.bgb.518",
-      "label": "BGB Section 518 for form of gift promise",
+      "label": "BGB Paragraph 518 zur Form des Schenkungsversprechens",
       "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Section 650u for developer contracts",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Section 77 for association-register applications",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Section 875 for cancellation of rights in land",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Section 53 for form of articles amendments",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identity, capacity and representation reviewed"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarial legal review completed"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
-      "label": "No real mandate data committed to Git"
+      "label": "Keine echten Mandatsdaten in Git gespeichert"
     },
     {
       "id": "gate.evidence",
-      "label": "Evidence metadata linked to approved storage"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
     {
       "id": "case.vorsorgevollmacht_patientenverfuegung",
       "slug": "vorsorgevollmacht-patientenverfuegung",
-      "title": "Vorsorgevollmacht und Patientenverfuegung",
+      "title": "Vorsorgevollmacht und Patientenverfügung",
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/vorsorgevollmacht-patientenverfuegung",
-      "summary": "Precautionary power of attorney, health-care directives and patient directives with scope, agents, effectiveness, register and copy management.",
+      "summary": "Vorsorgevollmacht, Gesundheitsvollmacht und Patientenverfügung mit Umfang, Bevollmaechtigten, Wirksamkeit, Register und Ausfertigungsmanagement.",
       "legal_anchors": [
         "src.beurkg"
       ],
       "required_information": [
         {
           "id": "principal.identity",
-          "label": "Principal identity and capacity",
+          "label": "Vollmachtgeber Identität",
           "status": "open",
           "value": null,
-          "question": "Who grants the power and how is capacity reviewed?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Vollmachtgeber Identität benötigt?",
           "owner_role": "notary",
           "privacy_class": "personal_data",
           "required_for": [
@@ -155,10 +155,10 @@
         },
         {
           "id": "agent.identities",
-          "label": "Agents and substitutes",
+          "label": "Bevollmaechtigter Identitäten",
           "status": "open",
           "value": null,
-          "question": "Who should act as agent, substitute or joint agent?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Bevollmaechtigter Identitäten benötigt?",
           "owner_role": "principal",
           "privacy_class": "personal_data",
           "required_for": [
@@ -167,10 +167,10 @@
         },
         {
           "id": "authority.financial",
-          "label": "Financial and asset authority scope",
+          "label": "Berechtigung Finanzen",
           "status": "open",
           "value": null,
-          "question": "Which financial, banking, property and business powers are intended?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Berechtigung Finanzen benötigt?",
           "owner_role": "principal",
           "privacy_class": "financial_data",
           "required_for": [
@@ -180,10 +180,10 @@
         },
         {
           "id": "authority.health",
-          "label": "Health, residence and care authority scope",
+          "label": "Berechtigung Gesundheit",
           "status": "open",
           "value": null,
-          "question": "Which health, residence, care, communication and authority powers are intended?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Berechtigung Gesundheit benötigt?",
           "owner_role": "principal",
           "privacy_class": "health_or_sensitive_data",
           "required_for": [
@@ -193,10 +193,10 @@
         },
         {
           "id": "patient.directive",
-          "label": "Patient directive decisions",
+          "label": "Patientenverfügung Verfügung",
           "status": "open",
           "value": null,
-          "question": "Which treatment situations and medical wishes should be documented?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Patientenverfügung Verfügung benötigt?",
           "owner_role": "principal",
           "privacy_class": "health_or_sensitive_data",
           "required_for": [
@@ -206,10 +206,10 @@
         },
         {
           "id": "effectiveness.rules",
-          "label": "Effectiveness, revocation and copies",
+          "label": "Wirksamkeit Regeln",
           "status": "open",
           "value": null,
-          "question": "When should the power be usable, how is revocation handled and who receives copies?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Wirksamkeit Regeln benötigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -219,10 +219,10 @@
         },
         {
           "id": "self_dealing.release",
-          "label": "Self-dealing and sub-delegation rules",
+          "label": "Befreiung von Selbstkontrahierung und Untervollmacht",
           "status": "open",
           "value": null,
-          "question": "Should self-dealing, sub-delegation or substitute powers be permitted?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Befreiung von Selbstkontrahierung und Untervollmacht benötigt?",
           "owner_role": "notary",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -231,10 +231,10 @@
         },
         {
           "id": "central_register",
-          "label": "Central register registration",
+          "label": "Zentrales Vorsorgeregister",
           "status": "open",
           "value": null,
-          "question": "Should a registration instruction be prepared for the central precautionary register?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Zentrales Vorsorgeregister benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "personal_data",
           "required_for": [
@@ -245,23 +245,23 @@
       "documents": [
         {
           "id": "doc.power_of_attorney_draft",
-          "label": "Precautionary power of attorney draft",
+          "label": "Dokument: Vollmacht von Vollmacht Entwurf",
           "status": "open",
-          "source": "workflow generated draft after review",
+          "source": "nach Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
           "id": "doc.patient_directive_draft",
-          "label": "Patient directive draft or attachment",
+          "label": "Dokument: Patientenverfügung Verfügung Entwurf",
           "status": "open",
-          "source": "workflow generated draft after review",
+          "source": "nach Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         }
       ],
       "decisions": [
         {
           "id": "decision.instrument_scope",
-          "label": "Power of attorney only or combined patient directive",
+          "label": "Entscheidung: Instrument Umfang",
           "status": "open",
           "options": [
             "power_only",
@@ -272,7 +272,7 @@
         },
         {
           "id": "decision.register",
-          "label": "Central register registration",
+          "label": "Entscheidung: Register",
           "status": "open",
           "options": [
             "register",
@@ -285,20 +285,20 @@
       "gates": [
         {
           "id": "gate.capacity_review",
-          "label": "Capacity and free will reviewed",
+          "label": "Prüfgate: Geschäftsfähigkeit Prüfung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.health_scope_review",
-          "label": "Health-care and patient-directive wording reviewed",
+          "label": "Prüfgate: Gesundheit Umfang Prüfung",
           "status": "open",
           "owner_role": "notary"
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-idaas"
+        "nac-regulated-core",
+        "nac-idaas"
       ],
       "workflow_dependencies": [
         "workflows/contracts",
@@ -307,12 +307,12 @@
       "evidence": [
         {
           "id": "evidence.capacity_and_instruction",
-          "label": "Capacity and instruction evidence reference",
+          "label": "Nachweis: Geschäftsfähigkeit and Anweisung",
           "status": "open"
         },
         {
           "id": "evidence.copy_register_trace",
-          "label": "Copy and register handling trace",
+          "label": "Nachweis: Ausfertigung Register Nachverfolgung",
           "status": "open"
         }
       ],

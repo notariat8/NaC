@@ -2,64 +2,64 @@
 
 ## Ziel
 
-Dieses Dokument definiert, welche Themen in welches Repository gehoeren und wie Issues zwischen Repos verlinkt werden.
+Dieses Dokument definiert, welche Themen in welches Repository gehören und wie Issues zwischen Repos verlinkt werden.
 
 ## Repo-Typen
 
-### Upstream-Repo (zentrales NoC)
+### Upstream-Repo (zentrales NaC)
 
-Zustaendig fuer:
+Zuständig für:
 
 - generische Referenzprozesse,
 - branchenspezifische Musterbausteine,
-- uebergreifende Governance-Standards,
-- oeffentlich nutzbare Verbesserungen aus Rueckfluss.
+- übergreifende Governance-Standards,
+- öffentlich nutzbare Verbesserungen aus Rückfluss.
 
-Nicht zustaendig fuer:
+Nicht zuständig für:
 
-- unternehmensinterne Sonderfaelle,
+- unternehmensinterne Sonderfälle,
 - lokale Betriebsentscheidungen ohne Referenzrelevanz.
 
 ### Unternehmens-Fork
 
-Zustaendig fuer:
+Zuständig für:
 
 - lokale Prozessanpassungen,
-- Release-Uebernahmen aus Upstream,
+- Release-Übernahmen aus Upstream,
 - Compliance- und Rollout-Entscheidungen im Unternehmen,
 - verbindlichen Betriebsstand und Audit-Nachweise.
 
-### Optionale Domaenen-Repos
+### Optionale Domänen-Repos
 
-Zustaendig fuer:
+Zuständig für:
 
-- dichte Fachlogik einzelner Domaenen (z. B. Notariat-Akte),
-- dichte operative Aenderungen mit eigener Release-Taktung,
-- domaenenspezifische Integrationen und Fachnachweise.
+- dichte Fachlogik einzelner Domänen (z. B. Notariat-Akte),
+- dichte operative Änderungen mit eigener Release-Taktung,
+- domänenspezifische Integrationen und Fachnachweise.
 
 ## Issue-Klassen (Mindeststandard)
 
-- `process-change`: fachliche Prozessaenderung.
-- `compliance-change`: regulatorische oder governance-relevante Aenderung.
-- `sync-upstream`: Uebernahme eines Upstream-Releases in den Fork.
-- `incident`: Stoerung, Abweichung oder Regelverletzung im Betrieb.
-- `documentation`: Klarstellung oder Nachweisanpassung ohne Prozesslogik-Aenderung.
+- `process-change`: fachliche Prozessänderung.
+- `compliance-change`: regulatorische oder governance-relevante Änderung.
+- `sync-upstream`: Übernahme eines Upstream-Releases in den Fork.
+- `incident`: Störung, Abweichung oder Regelverletzung im Betrieb.
+- `documentation`: Klarstellung oder Nachweisanpassung ohne Prozesslogik-Änderung.
 
-## Fuehrungsregel pro Thema
+## Führungsregel pro Thema
 
-- Ein Thema hat genau ein fuehrendes Issue in genau einem Repo.
+- Ein Thema hat genau ein führendes Issue in genau einem Repo.
 - Verwandte Issues in anderen Repos werden als abgeleitete Issues verlinkt.
-- Der Status des fuehrenden Issues steuert den Gesamtfortschritt.
+- Der Status des führenden Issues steuert den Gesamtfortschritt.
 
 ## Verlinkungsstandard
 
-Jedes abhaengige Issue enthaelt:
+Jedes abhängige Issue enthält:
 
-- Referenz auf das fuehrende Issue (`upstream`, `fork` oder `domain`),
+- Referenz auf das führende Issue (`upstream`, `fork` oder `domain`),
 - kurze Einordnung der lokalen Auswirkung,
-- benoetigten Entscheidungszeitpunkt.
+- benötigten Entscheidungszeitpunkt.
 
-Empfehlung fuer Titelpraefixe:
+Empfehlung für Titelpraefixe:
 
 - `[UPSTREAM]`
 - `[FORK]`
@@ -69,8 +69,8 @@ Empfehlung fuer Titelpraefixe:
 
 Fall: Neuer Notariatsablauf wird im zentralen Standard angepasst.
 
-1. Upstream-Issue beschreibt Referenzaenderung.
-2. Fork-Issue `sync-upstream` plant lokale Uebernahme.
+1. Upstream-Issue beschreibt Referenzänderung.
+2. Fork-Issue `sync-upstream` plant lokale Übernahme.
 3. Domain-Issue bewertet Notariat-spezifische Auswirkungen.
 4. Nach Freigabe verweist das Fork-Issue auf den produktiven Release-Tag.
 
@@ -84,4 +84,4 @@ Fall: Neuer Notariatsablauf wird im zentralen Standard angepasst.
 - `released`
 - `closed`
 
-Alle Repos nutzen dieselben Statuswerte, damit uebergreifendes Reporting konsistent bleibt.
+Alle Repos nutzen dieselben Statuswerte, damit übergreifendes Reporting konsistent bleibt.

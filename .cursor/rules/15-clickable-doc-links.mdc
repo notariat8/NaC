@@ -8,10 +8,14 @@ alwaysApply: true
 - Folge [policies/process-policy.yaml](../../policies/process-policy.yaml), Abschnitt `documentation_links`.
 - Wenn README-, START_HERE-, Index- oder Agentenregel-Dateien auf andere
   Repo-Bereiche verweisen, muss der Verweis ein Markdown-Link sein.
-- Nutze Code-Formatierung nur fuer Befehle, Konfigurationsschluessel,
+- Lokalisierte Markdown-Links dürfen nicht zwischen [docs/de](../../docs/de)
+  und [docs/en](../../docs/en) oder zwischen [prompts/de](../../prompts/de)
+  und [prompts/en](../../prompts/en) springen; Sprachwechsel gehören in
+  explizite Sprachübersichten.
+- Nutze Code-Formatierung nur für Befehle, Konfigurationsschlüssel,
   Dateimuster und echte Code-Identifier.
 - Beispiele:
   - richtig: [docs/de/eventstream/README.md](../../docs/de/eventstream/README.md)
   - falsch: Repo-Pfade nur als Code-Span zu formatieren.
-- Neue oder verschobene Indexdateien muessen mit
-  `python scripts/validate_doc_links.py` pruefbar bleiben.
+- Neue oder verschobene Indexdateien müssen mit
+  `python scripts/nac.py doctor --profile strict` prüfbar bleiben.

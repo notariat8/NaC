@@ -2,14 +2,14 @@
 
 ## Purpose
 
-This document separates NoC plugin development from the possible OpenAI
+This document separates NaC plugin development from the possible OpenAI
 distribution channels. The repository continues to use `plugins/` for
 installable artifacts, but every release must be assigned to a concrete OpenAI
 channel before publication.
 
 ## Distribution Channels
 
-| Channel | Target | Consequence for NoC |
+| Channel | Target | Consequence for NaC |
 | --- | --- | --- |
 | Public GPT Store | Publicly discoverable GPT for notary offices | Use only when current OpenAI review, builder profile, policy requirements, and privacy URLs are satisfied. |
 | GPT with Actions | GPT calls external APIs through Actions | Every Action needs valid privacy and terms links plus a reviewed data-processing boundary. |
@@ -34,7 +34,7 @@ Current sources:
 - [Sharing and publishing GPTs](https://help.openai.com/en/articles/8793007-getting-your-gpt-featured)
 - [Building and publishing a GPT](https://help.openai.com/en/articles/8798878-building-and-publishing-a-gpt)
 
-## NoC Rule
+## NaC Rule
 
 Every plugin under `plugins/` must be assigned to a distribution channel before
 publication. The assignment is tracked in `plugins/GANTT.md` and in the relevant

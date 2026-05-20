@@ -9,24 +9,33 @@ approved_stack:
       assets: svg_png
     notes:
       - "Markdown ist die einzig manuell gepflegte Quellform."
-      - "AsciiDoc oder andere Formate duerfen nur als generierte Artefakte entstehen."
+      - "AsciiDoc oder andere Formate dürfen nur als generierte Artefakte entstehen."
   process_logic:
     execution_language: python
     approach: model_first
+    operating_surface: nac_cli
+    cli_entrypoint: nac
+    cli_wrapper: scripts/nac.py
     notes:
-      - "Python implementiert Ausfuehrung, Validierung und Integrationen."
-      - "Fachlicher Ablauf wird primaer als BPMN 2.0 modelliert."
+      - "Python implementiert Ausführung, Validierung und Integrationen."
+      - "Fachlicher Ablauf wird primär als BPMN 2.0 modelliert."
+      - "Neue NaC-Funktionalität muss über die zentrale nac-CLI erreichbar sein; direkte Skripte bleiben nur interne oder kompatible Bedienebenen."
   visualization:
     canonical_business_model: bpmn_2_0
     canonical_source_format: bpmn_xml
     canonical_directory: bpmn/
+    visual_editor: bpmn_js
+    model_extension: bpmn/nac-moddle.json
+    validator: scripts/validate_bpmn_models.py
     allowed_overview_format: mermaid
     disallowed_for_bpmn_source:
       - mermaid
       - plantuml
     notes:
-      - "Mermaid ist nur fuer Uebersichtsdiagramme erlaubt."
-      - "PlantUML ist optional fuer technische Architektur, nicht fuer BPMN-Quellen."
+      - "bpmn-js ist die geplante visuelle Bearbeitungsschicht für BPMN-2.0-Modelle."
+      - "Python validiert BPMN-Modelle, NaC-Properties und bpmn-js-taugliche Profilmodelle vor Merge."
+      - "Mermaid ist nur für Übersichtsdiagramme erlaubt."
+      - "PlantUML ist optional für technische Architektur, nicht für BPMN-Quellen."
 
 repository_constraints:
   enforce_cross_ide_sync: true
@@ -42,6 +51,6 @@ repository_constraints:
 exceptions:
   allowed: true
   process:
-    - "Change Request mit Begruendung"
+    - "Change Request mit Begründung"
     - "Bewertung durch Prozessverantwortliche"
     - "Dokumentierte Freigabe mit Versionshinweis"

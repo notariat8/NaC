@@ -98,7 +98,7 @@ def build_editor_view(repo_root: Path, slug: str) -> dict[str, Any]:
     tabs = [_build_tab(case, tab_definition) for tab_definition in TAB_DEFINITIONS]
 
     return {
-        "schema_version": "noc.kg-editor-view/v0.1",
+        "schema_version": "nac.kg-editor-view/v0.1",
         "graph_id": catalog.graph_id,
         "case_id": str(case.get("id", "")),
         "usecase_slug": str(case.get("slug", "")),

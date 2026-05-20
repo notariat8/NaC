@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ofunk/NaC/plugins/nac-cyberjack-rfid/contracts/readiness-evidence.schema.json",
+  "title": "NaC cyberJack RFID readiness evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plugin",
+    "evidence_id",
+    "generated_at",
+    "overall_status",
+    "manual_attestations",
+    "system",
+    "policy",
+    "checks",
+    "next_required_action"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "nac.cyberjack.readiness/v1"
+    },
+    "plugin": {
+      "const": "nac-cyberjack-rfid"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^CJ-[0-9a-fA-F-]{36}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "overall_status": {
+      "enum": [
+        "ready",
+        "manual_review",
+        "blocked"
+      ]
+    },
+    "manual_attestations": {
+      "type": "object",
+      "required": [
+        "bnotk_card_present",
+        "rfid_disabled_for_bnotk_chip_workflow"
+      ],
+      "properties": {
+        "bnotk_card_present": {
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ]
+        },
+        "rfid_disabled_for_bnotk_chip_workflow": {
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "system": {
+      "type": "object",
+      "required": [
+        "os",
+        "os_release",
+        "machine",
+        "python_version"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "pin_captured",
+        "card_data_captured",
+        "xnp_api_key_captured",
+        "external_network_calls",
+        "localhost_only"
+      ],
+      "properties": {
+        "pin_captured": {
+          "const": false
+        },
+        "card_data_captured": {
+          "const": false
+        },
+        "xnp_api_key_captured": {
+          "const": false
+        },
+        "external_network_calls": {
+          "const": false
+        },
+        "localhost_only": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status",
+          "severity",
+          "message",
+          "details"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "manual_review",
+              "unknown"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "manual",
+              "blocker"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "next_required_action": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

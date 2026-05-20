@@ -1,0 +1,58 @@
+{
+  "name": "nac-bnotk-xnp",
+  "version": "0.1.0",
+  "description": "XNP-Prüfung für notarielle Arbeitsplätze.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "bnotk",
+    "xnp",
+    "xnotar",
+    "notar",
+    "notariat",
+    "notary",
+    "online-hra",
+    "authentication",
+    "reader-prompt",
+    "cyberjack",
+    "local-companion"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "XNP-Prüfung",
+    "shortDescription": "XNP lokal und ohne Zugangsdaten prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für Notariatsarbeitsplätze. Es prüft XNP-Bereitschaft, Amtstätigkeitskontext und Nachweisfluss ohne XNP-Zugangsdaten in SaaS oder Git.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "Readiness",
+      "Installable",
+      "Notary",
+      "DependsOnCardGate",
+      "ReaderPrompt",
+      "NotaryAuthGate",
+      "XNotar",
+      "Evidence",
+      "NaCloudControl"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Erstelle eine lokale XNP-Leser-Vorprüfung.",
+      "Plane die lokale XNP-Authentifizierungsprüfung.",
+      "Prüfe die XNotar-Übergabe ohne Zugangsdatenwerte."
+    ],
+    "brandColor": "#62513D",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

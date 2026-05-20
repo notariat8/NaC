@@ -1,5 +1,5 @@
 ---
-description: Unternehmenskultur und Sprachregeln fuer alle Inhalte
+description: Unternehmenskultur und Sprachregeln für alle Inhalte
 alwaysApply: true
 ---
 
@@ -7,14 +7,20 @@ alwaysApply: true
 
 - Wende die Vorgaben aus [policies/culture-policy.yaml](../../policies/culture-policy.yaml) verbindlich an.
 - Wende die Vorgaben aus [policies/language-policy.yaml](../../policies/language-policy.yaml) verbindlich an.
-- Die Sprachpolicy gilt repo-weit fuer alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../../README.md).
-- Sprachabhaengige Inhalte liegen in ISO-639-Ordnern.
-- `de` und `en` sind immer zu pflegen, unabhaengig von der Prompt-Sprache.
-- Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung.
-- Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt; stabile technische Identifier duerfen englisch bleiben.
+- Die Sprachpolicy gilt repo-weit für alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../../README.md).
+- Sprachabhängige Inhalte liegen in ISO-639-Ordnern.
+- `de` und `en` sind immer zu pflegen, unabhängig von der Prompt-Sprache.
+- Lokalisierte Markdown-Links bleiben im Sprachpfad der Quelldatei: deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch.
+- Für deutsches Recht und notarielle Usecases ist Deutsch die führende und rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung.
+- Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch geführt; stabile technische Identifier dürfen englisch bleiben.
+- Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt.
+- Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
+- Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels dürfen englisch/ASCII bleiben.
+- Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
+- Jeder Skill braucht im Body eine kurze englische Summary für technische Anschlussfähigkeit; bei Konflikten gilt die deutsche fachliche Anweisung.
 - Bei Genderfragen gilt die konfigurierte Policy, nicht spontane Einzelfallwahl.
 - Wenn die Policy fehlt, verwende neutrale Formulierungen und frage einmal nach.
-- Rechtstexte und Originalzitate werden unveraendert zitiert.
-- Interne Prozesssprache bleibt konsistent ueber alle Dokumente.
+- Rechtstexte und Originalzitate werden unverändert zitiert.
+- Interne Prozesssprache bleibt konsistent über alle Dokumente.
 
-Konflikte zwischen Stil und Compliance werden immer zugunsten Compliance geloest.
+Konflikte zwischen Stil und Compliance werden immer zugunsten Compliance gelöst.

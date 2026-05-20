@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "plugins" / "noc-cyberjack-rfid" / "scripts" / "check_readiness.py"
+SCRIPT_PATH = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 
 
 def load_readiness_module():
@@ -76,7 +76,7 @@ class CyberJackReadinessTests(unittest.TestCase):
                 readiness.probe_ausweisapp_status,
             ) = original_probes
 
-        self.assertEqual(evidence["plugin"], "noc-cyberjack-rfid")
+        self.assertEqual(evidence["plugin"], "nac-cyberjack-rfid")
         self.assertEqual(evidence["overall_status"], "blocked")
         self.assertFalse(evidence["policy"]["pin_captured"])
         self.assertFalse(evidence["policy"]["card_data_captured"])
@@ -248,6 +248,9 @@ class CyberJackReadinessTests(unittest.TestCase):
         self.assertNotIn("123456#sid456", serialized_details)
         self.assertNotIn("fixture-nonce-value", serialized_details)
         self.assertTrue(any(path == "/system" and params.get("cmd") == "close" for path, params in calls))
+        auth_calls = [params for path, params in calls if path == "/system" and params.get("cmd") == "auth"]
+        self.assertEqual(auth_calls[0]["app_name"], "NaC Hardware Readiness Check")
+        self.assertNotIn("no_always_allow_button", auth_calls[0])
 
 
 if __name__ == "__main__":

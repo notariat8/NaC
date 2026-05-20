@@ -1,48 +1,57 @@
-# Vorsorgevollmacht und Patientenverfuegung Knowledge Graph
+# Vorsorgevollmacht und Patientenverfügung Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `top10`  
-Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.vorsorgevollmacht_patientenverfuegung`
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `top10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
+KG-Knoten: `case.vorsorgevollmacht_patientenverfuegung`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `principal.identity` | Principal identity and capacity | `open` | `notary` | Who grants the power and how is capacity reviewed? |
-| `agent.identities` | Agents and substitutes | `open` | `principal` | Who should act as agent, substitute or joint agent? |
-| `authority.financial` | Financial and asset authority scope | `open` | `principal` | Which financial, banking, property and business powers are intended? |
-| `authority.health` | Health, residence and care authority scope | `open` | `principal` | Which health, residence, care, communication and authority powers are intended? |
-| `patient.directive` | Patient directive decisions | `open` | `principal` | Which treatment situations and medical wishes should be documented? |
-| `effectiveness.rules` | Effectiveness, revocation and copies | `open` | `notary` | When should the power be usable, how is revocation handled and who receives copies? |
-| `self_dealing.release` | Self-dealing and sub-delegation rules | `open` | `notary` | Should self-dealing, sub-delegation or substitute powers be permitted? |
-| `central_register` | Central register registration | `open` | `notary_clerk` | Should a registration instruction be prepared for the central precautionary register? |
+| `principal.identity` | Vollmachtgeber Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Vollmachtgeber Identität benötigt? |
+| `agent.identities` | Bevollmaechtigter Identitäten | `offen` | Vollmachtgeber | Welche Angaben, Nachweise und Prüfpunkte werden für Bevollmaechtigter Identitäten benötigt? |
+| `authority.financial` | Berechtigung Finanzen | `offen` | Vollmachtgeber | Welche Angaben, Nachweise und Prüfpunkte werden für Berechtigung Finanzen benötigt? |
+| `authority.health` | Berechtigung Gesundheit | `offen` | Vollmachtgeber | Welche Angaben, Nachweise und Prüfpunkte werden für Berechtigung Gesundheit benötigt? |
+| `patient.directive` | Patientenverfügung Verfügung | `offen` | Vollmachtgeber | Welche Angaben, Nachweise und Prüfpunkte werden für Patientenverfügung Verfügung benötigt? |
+| `effectiveness.rules` | Wirksamkeit Regeln | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Wirksamkeit Regeln benötigt? |
+| `self_dealing.release` | Befreiung von Selbstkontrahierung und Untervollmacht | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Befreiung von Selbstkontrahierung und Untervollmacht benötigt? |
+| `central_register` | Zentrales Vorsorgeregister | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Zentrales Vorsorgeregister benötigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.power_of_attorney_draft` | Dokument: Vollmacht von Vollmacht Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.patient_directive_draft` | Dokument: Patientenverfügung Verfügung Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.power_of_attorney_draft` | Precautionary power of attorney draft | `open` |
-| `doc.patient_directive_draft` | Patient directive draft or attachment | `open` |
+| `decision.instrument_scope` | Entscheidung: Instrument Umfang | `offen` |
+| `decision.register` | Entscheidung: Register | `offen` |
 
-## Review Gates
+## Prüfgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.capacity_review` | Capacity and free will reviewed | `open` |
-| `gate.health_scope_review` | Health-care and patient-directive wording reviewed | `open` |
+| `gate.capacity_review` | Prüfgate: Geschäftsfähigkeit Prüfung | `offen` |
+| `gate.health_scope_review` | Prüfgate: Gesundheit Umfang Prüfung | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.capacity_and_instruction` | Nachweis: Geschäftsfähigkeit and Anweisung | `offen` |
+| `evidence.copy_register_trace` | Nachweis: Ausfertigung Register Nachverfolgung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

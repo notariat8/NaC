@@ -1,8 +1,8 @@
 # GitHub Copilot Instructions
 
-Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter Betriebsauspraegung.
+Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter Betriebsausprägung.
 
-## Verbindliche Prioritaet
+## Verbindliche Priorität
 
 1. Compliance und rechtliche Pflichten
 2. Prozessgovernance (Review, Freigaben, Nachvollziehbarkeit)
@@ -11,36 +11,46 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 
 ## Arbeitsweise
 
-- Behandle das LLM als Assistent fuer Eingaben, nicht als finale fachliche Autoritaet.
-- Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NoC` ist die konkrete Umsetzung.
-- Schlage keine direkten Aenderungen an `main` vor.
-- Erzwinge Vorschlaege ueber Branch + Pull Request + Review.
+- Behandle das LLM als Assistent für Eingaben, nicht als finale fachliche Autorität.
+- Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
+- Schlage keine direkten Änderungen an `main` vor.
+- Erzwinge Vorschläge über Branch + Pull Request + Review.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
-- Jede Prozessaenderung muss begruendet und versioniert sein.
-- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
-- Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, gepruefter und lokal sauberer Stand fertig.
-- Jeder Push muss [roadmap/GANTT.md](../roadmap/GANTT.md) aktualisieren; Aenderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
-- Trenne installierbare Plugin-Artefakte ([plugins/](../plugins)), ausfuehrbare Notariats-Workflows ([workflows/](../workflows)) und konkrete notarielle Usecases ([usecases/](../usecases)).
-- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulaessig.
-- Konzept- und Regelupdates muessen plattformuebergreifend synchronisiert werden (Cursor und VS Code + Copilot).
-- Onboarding-Updates muessen fuer alle unterstuetzten Plattformen parallel gepflegt werden.
-- README-, START_HERE-, Index- und Agentenregel-Dateien muessen interne Repo-Verweise als klickbare Markdown-Links fuehren; Code-Formatierung ist fuer Befehle, Konfigurationsschluessel, Dateimuster und Code-Identifier reserviert.
-- Access- und Rollenregeln sind nur unter [policies/](../policies) zu aendern; AI-Regelflaechen sind Spiegel dieser Policy.
-- Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](../policies/language-policy.yaml); die Policy gilt fuer alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../README.md).
-- Sprachabhaengige Inhalte liegen in ISO-639-Ordnern; `de` und `en` sind immer zu pflegen.
-- Die Sprache des Prompts begrenzt die Aenderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
-- Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch gefuehrt.
+- Jede Prozessänderung muss begründet und versioniert sein.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
+- Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, geprüfter und lokal sauberer Stand fertig.
+- Jeder Push muss [roadmap/GANTT.md](../roadmap/GANTT.md) aktualisieren; Änderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
+- Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](../policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
+- Attribution nach [NOTICE](../NOTICE), [AUTHORS.md](../AUTHORS.md) und [CITATION.cff](../CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](../TRADEMARK.md) beachten.
+- Trenne installierbare Plugin-Artefakte ([plugins/](../plugins)), ausführbare Notariats-Workflows ([workflows/](../workflows)) und konkrete notarielle Usecases ([usecases/](../usecases)).
+- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
+- Konzept- und Regelupdates müssen plattformübergreifend synchronisiert werden (Cursor und VS Code + Copilot).
+- Onboarding-Updates müssen für alle unterstützten Plattformen parallel gepflegt werden.
+- README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
+- Access- und Rollenregeln sind nur unter [policies/](../policies) zu ändern; AI-Regelflächen sind Spiegel dieser Policy.
+- Neue NaC-Funktionalität braucht eine Bedienkante in der zentralen `nac`-CLI; direkte Skripte dürfen als interne Kompatibilität bleiben, aber Produktdokumentation führt über [docs/de/cli.md](../docs/de/cli.md) und [docs/en/cli.md](../docs/en/cli.md).
+- Mehrsprachigkeit ist repo-weit verbindlich nach [policies/language-policy.yaml](../policies/language-policy.yaml); die Policy gilt für alle menschlich lesbaren Inhalte, inklusive GitHub-Root-[README.md](../README.md).
+- Sprachabhängige Inhalte liegen in ISO-639-Ordnern; `de` und `en` sind immer zu pflegen.
+- Die Sprache des Prompts begrenzt die Änderung nicht: bei lokalisierten Inhalten immer alle Standardsprachen aktualisieren.
+- Lokalisierte Markdown-Links bleiben im Sprachpfad der Quelldatei: deutsche Inhalte verlinken deutsch, englische Inhalte verlinken englisch.
+- Für deutsches Recht und notarielle Usecases ist Deutsch die führende und rechtlich bindende Sprache; Englisch ist nur Übersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deutsch geführt.
+- Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels dürfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
+- Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
+- Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
 - Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
-- Zusaetzlicher MVP-Use-Case: `property_management`.
-- Plugin- und Connector-Plaene liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
+- Zusätzlicher MVP-Use-Case: `property_management`.
+- Plugin- und Connector-Pläne liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
-- Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
-- NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
-- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Loesungswegen zuerst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestaetigung einholen, bevor Code geaendert wird.
-- Bei klar beauftragten, eng abgegrenzten Aenderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
-- Codeaenderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Pruefziel oder Testluecke festhalten, dann implementieren, iterieren und erneut validieren.
-- UI-, Frontend- und andere visuelle Aenderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.
-- Genehmigungspflichtige Commands muessen Zweck, Umfang und Bezug zur Aufgabe nennen; unklare Approval-Anfragen werden abgelehnt und konkret neu gestellt.
+- Mindestvoraussetzungen für Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
+- NaC-Ausführung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht über Omnistation.
+- Repo-lokale Plugins werden für neue Rechner mit `python scripts/nac.py plugins install --mode link`
+  in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
+  neue Session öffnen.
+- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Lösungswegen zuerst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestätigung einholen, bevor Code geändert wird.
+- Bei klar beauftragten, eng abgegrenzten Änderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
+- Codeänderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder Testlücke festhalten, dann implementieren, iterieren und erneut validieren.
+- UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.
+- Genehmigungspflichtige Commands müssen Zweck, Umfang und Bezug zur Aufgabe nennen; unklare Approval-Anfragen werden abgelehnt und konkret neu gestellt.
 
 ## Pflichtquellen im Repository
 
@@ -48,11 +58,14 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - [docs/en/START_HERE.md](../docs/en/START_HERE.md)
 - [docs/de/fachanwender-guide.md](../docs/de/fachanwender-guide.md)
 - [docs/en/fachanwender-guide.md](../docs/en/fachanwender-guide.md)
+- [docs/de/cli.md](../docs/de/cli.md)
+- [docs/en/cli.md](../docs/en/cli.md)
 - [policies/culture-policy.yaml](../policies/culture-policy.yaml)
 - [policies/process-policy.yaml](../policies/process-policy.yaml)
 - [policies/technology-policy.yaml](../policies/technology-policy.yaml)
 - [policies/data-protection-policy.yaml](../policies/data-protection-policy.yaml)
 - [policies/language-policy.yaml](../policies/language-policy.yaml)
+- [policies/license-policy.yaml](../policies/license-policy.yaml)
 - [docs/de/avv-checkliste-eventlock-saas.md](../docs/de/avv-checkliste-eventlock-saas.md)
 - [policies/sbom-policy.yaml](../policies/sbom-policy.yaml)
 - [docs/de/sbom-for-ai.md](../docs/de/sbom-for-ai.md)
@@ -79,7 +92,7 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - [docs/de/operations/release-sync-playbook.md](../docs/de/operations/release-sync-playbook.md)
 - [docs/de/operations/parallelbetrieb-version-binding.md](../docs/de/operations/parallelbetrieb-version-binding.md)
 - [docs/de/issues/taxonomy.md](../docs/de/issues/taxonomy.md)
-- [docs/de/einfuehrung-greenfield-brownfield.md](../docs/de/einfuehrung-greenfield-brownfield.md)
+- [../docs/de/einfuehrung-greenfield-brownfield.md](../docs/de/einfuehrung-greenfield-brownfield.md)
 - [docs/de/service-model/core-vertical-blueprint.md](../docs/de/service-model/core-vertical-blueprint.md)
 - [docs/de/service-model/vertical-starter-process-catalog.md](../docs/de/service-model/vertical-starter-process-catalog.md)
 - [docs/de/operations/single-repo-refactor-plan.md](../docs/de/operations/single-repo-refactor-plan.md)
@@ -91,32 +104,41 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 
 - Folge immer [policies/culture-policy.yaml](../policies/culture-policy.yaml).
 - Folge immer [policies/language-policy.yaml](../policies/language-policy.yaml).
-- Lokal gepflegte Inhalte muessen immer in `de` und `en` aktualisiert werden.
+- Lokal gepflegte Inhalte müssen immer in `de` und `en` aktualisiert werden.
+- Lokalisierte Markdown-Links dürfen nicht in den anderen Sprachpfad springen.
+- Plugins und Skills: deutsche UX- und fachliche Anweisung führt; englische Summary dient nur technischer Orientierung.
 - Bei Genderfragen gilt die konfigurierte Policy.
 - Wenn keine Policy gesetzt ist, nutze neutrale Sprache und bitte einmal um Entscheidung.
 
 ## Datenschutz und Sicherheit
 
-- Keine echten Zugangsdaten, Keys oder Tokens in Vorschlaegen speichern.
+- Keine echten Zugangsdaten, Keys oder Tokens in Vorschlägen speichern.
 - Keine echten personenbezogenen Daten in Prozessbeispielen speichern.
-- Fuer Beispieldaten nur Testdomains und Platzhalter verwenden.
-- AI-SBOM gilt repo-weit fuer AI-faehige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; lokale Runtime-, Hardware- und Middleware-Mindestvoraussetzungen muessen in der AI-SBOM gefuehrt werden; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.
+- Für Beispieldaten nur Testdomains und Platzhalter verwenden.
+- AI-SBOM gilt repo-weit für AI-fähige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; lokale Runtime-, Hardware- und Middleware-Mindestvoraussetzungen müssen in der AI-SBOM geführt werden; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.
 
 ## Technikvorgaben
 
 - Folge [policies/technology-policy.yaml](../policies/technology-policy.yaml) als verbindlichem Stack.
 - Markdown ist die einzige manuell gepflegte Doku-Quelle.
-- BPMN-2.0 ist die fachliche Quellnotation fuer Prozesse.
-- Mermaid darf nur als Uebersicht eingesetzt werden.
+- BPMN-2.0 ist die fachliche Quellnotation für Prozesse.
+- `bpmn-js` ist die geplante visuelle Bearbeitungsschicht für BPMN-Modelle.
+- NaC-BPMN-Properties stehen in [bpmn/nac-moddle.json](../bpmn/nac-moddle.json);
+  BPMN-Modelle müssen mit [scripts/validate_bpmn_models.py](../scripts/validate_bpmn_models.py)
+  validierbar sein.
+- Mermaid darf nur als Übersicht eingesetzt werden.
 
-## Erststart fuer VS Code + Copilot
+## Erststart für VS Code + Copilot
 
 1. Lies [docs/de/vscode-copilot-start.md](../docs/de/vscode-copilot-start.md) oder [docs/en/vscode-copilot-start.md](../docs/en/vscode-copilot-start.md).
-2. Fuehre `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
-   Fuer Plugin-Entwicklung zusaetzlich `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
-   Fuer Kartenleser-, morris- oder XNP-nahe Arbeit zusaetzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
-3. Waehle das passende Branchen-Onboarding unter [prompts/de/onboarding/](../prompts/de/onboarding) oder [prompts/en/onboarding/](../prompts/en/onboarding).
+2. Führe `python scripts/startup_check.py --profile base --ide vscode --run-tests` aus.
+   Für Plugin-Entwicklung zusätzlich `python scripts/nac.py plugins validate`,
+   `python scripts/nac.py plugins install --mode link` und
+   `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
+   Danach Codex neu starten oder eine neue Session öffnen.
+   Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
+3. Wähle das passende Branchen-Onboarding unter [prompts/de/onboarding/](../prompts/de/onboarding) oder [prompts/en/onboarding/](../prompts/en/onboarding).
    Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.
-   Zusaetzlicher MVP-Pfad: `property-management-first-setup.md`.
+   Zusätzlicher MVP-Pfad: `property-management-first-setup.md`.
 4. Beginne mit einem Pilotprozess statt Vollausrollung.
-5. Nutze fuer Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in [docs/de/](../docs/de) und [docs/en/](../docs/en).
+5. Nutze für Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in [docs/de/](../docs/de) und [docs/en/](../docs/en).

@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:nac="https://github.com/ofunk/NaC/bpmn/nac"
+                  id="Definitions_vereinsregisteranmeldung"
+                  targetNamespace="https://github.com/ofunk/NaC/bpmn/notariat/usecases">
+  <bpmn:process id="Process_vereinsregisteranmeldung"
+                name="Vereinsregisteranmeldung"
+                isExecutable="false"
+                nac:profile="nac-bpmn/v0.1"
+                nac:owner="funktion8 / ofunk"
+                nac:binding="Git Pull Request">
+    <bpmn:documentation>Generiert aus usecase-lokalem KG, BNotK-XNP-Onlinehilfe fuer lokale XNP-Schnittstelle und BNotK-Onlineverfahren-Onlinehilfe fuer Vorgangseingang/Videokonferenz. Keine Mandatswerte im Repo.</bpmn:documentation>
+    <bpmn:startEvent id="StartEvent_VorgangAnlegen"
+                     name="Vorgang anlegen"
+                     nac:role="Notariat"
+                     nac:channel="email;phone;register_portal"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="none"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:outgoing>Flow_00</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_AuftragAufnehmen"
+                     name="Auftrag und Beteiligte aufnehmen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="email;phone;register_portal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_00</bpmn:incoming>
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:businessRuleTask id="Task_FormFristenPruefen"
+                     name="Zuständigkeit, Form und Fristen prüfen"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:userTask id="Task_UnterlagenPruefen"
+                     name="Registerstand und Anlagen prüfen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="register_portal;email;internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_XnpArbeitsplatzPruefen"
+                     name="Karte, XNP und Signaturpfad lokal prüfen"
+                     nac:role="IT-Betrieb"
+                     nac:channel="xnp_local"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="required"
+                     nac:plugin="nac-cyberjack-rfid"
+                     nac:localExecution="true"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_EntwurfAbstimmen"
+                     name="Anmeldung und Anlagen entwerfen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="email;register_portal;internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_IdentitaetVertretung"
+                     name="Identität und Vertretung prüfen"
+                     nac:role="Notarin/Notar"
+                     nac:channel="personal;qualified_e_signature;xnp_local"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="Task_Beurkundung"
+                     name="Beglaubigung oder Beurkundung durchführen"
+                     nac:role="Notarin/Notar"
+                     nac:channel="paper_signature;qualified_e_signature;xnp_local"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="four_eyes"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Task_EinreichungVersand"
+                     name="Registereinreichung ausführen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="xnp_local;register_portal;qualified_e_signature"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_NachweiseNachhalten"
+                     name="Nachweis und Fristen nachhalten"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="register_portal;email;internal"
+                     nac:dataClass="confidential_placeholder"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_Abgeschlossen"
+                     name="Vorgang abgeschlossen"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="required"
+                     nac:kgRef="vereinsregisteranmeldung">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_AuftragAufnehmen"/>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Task_AuftragAufnehmen" targetRef="Task_FormFristenPruefen"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_FormFristenPruefen" targetRef="Task_UnterlagenPruefen"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_XnpArbeitsplatzPruefen"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_XnpArbeitsplatzPruefen" targetRef="Task_EntwurfAbstimmen"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Beurkundung" targetRef="Task_EinreichungVersand"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_vereinsregisteranmeldung">
+    <bpmndi:BPMNPlane id="BPMNPlane_vereinsregisteranmeldung" bpmnElement="Process_vereinsregisteranmeldung">
+      <bpmndi:BPMNShape id="Shape_StartEvent_VorgangAnlegen" bpmnElement="StartEvent_VorgangAnlegen">
+        <dc:Bounds x="130" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AuftragAufnehmen" bpmnElement="Task_AuftragAufnehmen">
+        <dc:Bounds x="330" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_FormFristenPruefen" bpmnElement="Task_FormFristenPruefen">
+        <dc:Bounds x="545" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_UnterlagenPruefen" bpmnElement="Task_UnterlagenPruefen">
+        <dc:Bounds x="760" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_XnpArbeitsplatzPruefen" bpmnElement="Task_XnpArbeitsplatzPruefen">
+        <dc:Bounds x="975" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
+        <dc:Bounds x="1190" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_IdentitaetVertretung" bpmnElement="Task_IdentitaetVertretung">
+        <dc:Bounds x="1405" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
+        <dc:Bounds x="1620" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EinreichungVersand" bpmnElement="Task_EinreichungVersand">
+        <dc:Bounds x="1835" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_NachweiseNachhalten" bpmnElement="Task_NachweiseNachhalten">
+        <dc:Bounds x="2050" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Abgeschlossen" bpmnElement="EndEvent_Abgeschlossen">
+        <dc:Bounds x="2280" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_00" bpmnElement="Flow_00">
+        <di:waypoint x="166" y="178"/>
+        <di:waypoint x="330" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="490" y="178"/>
+        <di:waypoint x="545" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="705" y="178"/>
+        <di:waypoint x="760" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_03" bpmnElement="Flow_03">
+        <di:waypoint x="920" y="178"/>
+        <di:waypoint x="975" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_04" bpmnElement="Flow_04">
+        <di:waypoint x="1135" y="178"/>
+        <di:waypoint x="1190" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="1350" y="178"/>
+        <di:waypoint x="1405" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
+        <di:waypoint x="1565" y="178"/>
+        <di:waypoint x="1620" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07" bpmnElement="Flow_07">
+        <di:waypoint x="1780" y="178"/>
+        <di:waypoint x="1835" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
+        <di:waypoint x="1995" y="178"/>
+        <di:waypoint x="2050" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
+        <di:waypoint x="2210" y="178"/>
+        <di:waypoint x="2280" y="178"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

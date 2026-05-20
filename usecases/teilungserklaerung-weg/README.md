@@ -1,87 +1,73 @@
-# Teilungserklaerung nach WEG
+# Teilungserklärung nach WEG
 
-Status: KG baseline  
-KG node: `case.teilungserklaerung_weg`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P0
+KG-Knoten: `case.teilungserklaerung_weg`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, WEG Section 8, GBO
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for division of a property into
-apartment ownership or partial ownership. The package must connect owner
-authority, unit structure, co-ownership shares, plans, certificates, community
-rules, encumbrance handling and land-register implementation.
+Aufteilung eines Gebaeudes in Wohnungs- oder Teileigentum mit Teilungserklärung, Gemeinschaftsordnung, Plänen, Bescheinigungen und Grundbuchumsetzung.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for base property, owner, planned units, co-ownership shares and
-  special-use rights.
-- Review of plans, numbering, separation certificate and community rules.
-- Handling of existing land-register encumbrances across future units.
-- Filing trace for new apartment or partial-ownership registers.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No technical plan verification by the LLM.
-- No real plans, certificate files or owner data in Git.
-- No automated land-register filing without reviewed connector.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `property.identity` | Which base land-register object will be divided? | Notary clerk | Property register data |
-| `owner.identity` | Who owns and is authorized to divide? | Notary | Personal or company data |
-| `unit.structure` | Which units, rooms and special-use areas are planned? | Client | Property metadata |
-| `ownership.shares` | Which co-ownership fractions are assigned? | Client | Property metadata |
-| `plans.certificates` | Are plans and separation certificate available and consistent? | Client | Property metadata |
-| `encumbrance.handling` | How do existing rights affect the future unit registers? | Notary | Property register data |
+| `property.identity` | Grundstück Identität | Notariatsfachkraft | land_register_review |
+| `owner.identity` | Eigentümer Identität | Notariat | identity_gate, drafting |
+| `unit.structure` | Einheit Struktur | Mandantschaft | drafting, plans |
+| `ownership.shares` | Eigentum Anteile | Mandantschaft | declaration |
+| `plans.certificates` | Pläne Bescheinigungen | Mandantschaft | evidence_package, filing |
+| `encumbrance.handling` | Belastung Behandlung | Notariat | legal_review, filing |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Declaration of division | Core notarial declaration and community rules. | Synthetic or metadata only. |
-| Plans and separation certificate | Supports land-register implementation. | Evidence reference only. |
-| Land-register excerpt | Confirms property and encumbrances. | Evidence reference only. |
-| Unit-register application trace | Tracks implementation. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Residential, partial ownership or mixed division.
-- Special-use rights included or not.
-- Existing encumbrances stay global, are allocated or require consents.
-- Whether corrections to plans/certificates are blocking.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-grundbuch-portal`
+- `nac-bnotk-xnp`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Owner and base property reviewed | Notary | Draft release |
-| Plans and certificate reviewed | Notary clerk | Filing |
-| Encumbrance implementation reviewed | Notary | Land-register application |
-| Unit-register package ready | Notary clerk | Submission |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Regulated workflow and evidence model. |
-| `noc-grundbuch-portal` | Base property and encumbrance review. |
-| `noc-bnotk-xnp` | Land-register filing route readiness. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.gbo.19_29_46`
+- `src.weg.8`
 
-1. Define unit and co-ownership-share intake schema.
-2. Add plan/certificate checklist.
-3. Add encumbrance allocation review.
-4. Add unit-register filing state model.
-5. Validate with synthetic multi-unit fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case teilungserklaerung-weg
+python scripts/notary_kg.py --repo-root . editor-view teilungserklaerung-weg
+python scripts/validate_knowledge_graph.py
+```
 
-- Plans and certificate references are mandatory before filing.
-- Encumbrances cannot be ignored.
-- Unit structure and share totals must be internally complete.
-- No real plans or owner data are committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

@@ -4,19 +4,19 @@ Status: `proposed`
 
 ## Ziel
 
-OCI wird lokal aus WSL angebunden und dient fuer NoC als moegliche Infrastruktur- und Evidence-Plattform:
+OCI wird lokal aus WSL angebunden und dient für NaC als mögliche Infrastruktur- und Evidence-Plattform:
 
-- OCI CLI fuer lokale Verwaltung.
-- Resource Manager fuer Terraform/OpenTofu-Stacks.
-- OCI Streaming und Object Storage fuer revisionssichere Eventstreams.
-- Vault fuer Signaturen und Schluesselreferenzen.
+- OCI CLI für lokale Verwaltung.
+- Resource Manager für Terraform/OpenTofu-Stacks.
+- OCI Streaming und Object Storage für revisionssichere Eventstreams.
+- Vault für Signaturen und Schlüsselreferenzen.
 
 ## Day0
 
 - OCI CLI lokal installieren.
 - Lokalen API-Key erzeugen, Public Key in OCI hochladen, Private Key lokal halten.
 - `~/.oci/config` lokal pflegen.
-- Zugriff pruefen:
+- Zugriff prüfen:
 
 ```bash
 oci iam region list
@@ -27,14 +27,14 @@ oci iam region-subscription list --tenancy-id <tenancy_ocid>
 
 ## Day1
 
-- Resource Manager Stack fuer erste IaC-Konfiguration anlegen.
+- Resource Manager Stack für erste IaC-Konfiguration anlegen.
 - OCI Eventstream-Runbook aus `docs/de/eventstream/runbook-oci.md` konkretisieren.
-- Minimalen Plan fuer folgende Komponenten erstellen:
+- Minimalen Plan für folgende Komponenten erstellen:
   - Compartment-Struktur.
-  - IAM-Policies fuer Operator, Audit Reader und Break Glass.
-  - Object Storage Bucket fuer Evidence.
-  - Streaming Stream fuer Event Journal.
-  - Vault Key fuer Daily Anchors.
+  - IAM-Policies für Operator, Audit Reader und Break Glass.
+  - Object Storage Bucket für Evidence.
+  - Streaming Stream für Event Journal.
+  - Vault Key für Daily Anchors.
 - Terraform/OpenTofu-Code erst nach Plan-Review anwenden.
 
 ## Day2
@@ -42,7 +42,7 @@ oci iam region-subscription list --tenancy-id <tenancy_ocid>
 - API-Keys rotieren.
 - Resource Manager Drift Detection oder refresh-only Plan nutzen.
 - Kosten- und Quota-Grenzen dokumentieren.
-- Retention, Legal Hold und Evidence-Read-Pfad pruefen.
+- Retention, Legal Hold und Evidence-Read-Pfad prüfen.
 - Manuelle OCI-Konsoleingriffe in Git reconciled.
 
 ## Connector-Grenzen
@@ -57,8 +57,8 @@ Der OCI-Connector darf:
 Der OCI-Connector darf nicht:
 
 - Private Keys ins Repo schreiben.
-- Resource Manager State manuell veraendern.
-- Retention-/Legal-Hold-Regeln ohne Review aendern.
+- Resource Manager State manuell verändern.
+- Retention-/Legal-Hold-Regeln ohne Review ändern.
 - Omnistation-Keys oder Remote-Keys wiederverwenden.
 
 ## Akzeptanzkriterien
@@ -66,4 +66,4 @@ Der OCI-Connector darf nicht:
 - OCI CLI funktioniert lokal in WSL.
 - Private Keys bleiben lokal.
 - Resource Manager oder Remote State ist vor Teamnutzung entschieden.
-- Eventstream- und Evidence-Komponenten sind mit Runbooks verknuepft.
+- Eventstream- und Evidence-Komponenten sind mit Runbooks verknüpft.

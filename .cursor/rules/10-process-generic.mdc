@@ -1,15 +1,15 @@
 ---
-description: Generische Prozessregeln fuer alle Unternehmensarten
+description: Generische Prozessregeln für alle Unternehmensarten
 alwaysApply: true
 ---
 
 # Generische Prozessregeln
 
 - Trenne Prozessschritte in klare Statuswerte.
-- Nutze idempotente Schluessel gegen Doppelausfuehrung.
+- Nutze idempotente Schlüssel gegen Doppelausführung.
 - Dokumentiere Eingang, Entscheidung, Freigabe und Ergebnis.
-- Halte Rechnungs-, Buchfuehrungs- und Steuerprozesse nachvollziehbar.
-- Leite periodische Abschluesse aus versionierten Prozessdaten ab.
-- Fuer Teamsteuerung nur freigegebene Cadence-Optionen verwenden (`agile|kanban` mit den in Policy freigegebenen Takten).
+- Halte Rechnungs-, Buchführungs- und Steuerprozesse nachvollziehbar.
+- Leite periodische Abschlüsse aus versionierten Prozessdaten ab.
+- Für Teamsteuerung nur freigegebene Cadence-Optionen verwenden (`agile|kanban` mit den in Policy freigegebenen Takten).
 
-Ziel: Wiederholbarkeit, Pruefbarkeit und klare Verantwortlichkeit.
+Ziel: Wiederholbarkeit, Prüfbarkeit und klare Verantwortlichkeit.

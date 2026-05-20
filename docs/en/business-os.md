@@ -1,4 +1,4 @@
-# Subject Concept: Notariat As Code With NoC
+# Subject Concept: Notariat As Code With NaC
 
 ## Guiding Principle
 
@@ -15,7 +15,7 @@ A matter becomes effective only when it:
 
 - `Notariat as Code` describes the overarching target model.
 - `Enterprise GitOps` describes the operational change flow.
-- `NoC` is the concrete operating implementation in this repository.
+- `NaC` is the concrete operating implementation in this repository.
 
 Reference: [docs/en/organization-as-code-positioning.md](organization-as-code-positioning.md)
 

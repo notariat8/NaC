@@ -1,128 +1,128 @@
 {
-  "name": "noc-regulated-industry",
+  "name": "nac-regulierung",
   "interface": {
-    "displayName": "NoC Regulated Industry Plugins"
+    "displayName": "funktion8 - NaC"
   },
   "plugins": [
     {
-      "name": "noc-regulated-core",
+      "name": "nac-regulated-core",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-regulated-core"
+        "path": "./plugins/nac-regulated-core"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-idaas",
+      "name": "nac-idaas",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-idaas"
+        "path": "./plugins/nac-idaas"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-cyberjack-rfid",
+      "name": "nac-cyberjack-rfid",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-cyberjack-rfid"
+        "path": "./plugins/nac-cyberjack-rfid"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-bnotk-xnp",
+      "name": "nac-bnotk-xnp",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-bnotk-xnp"
+        "path": "./plugins/nac-bnotk-xnp"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-pkcs7-certbundle",
+      "name": "nac-pkcs7-certbundle",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-pkcs7-certbundle"
+        "path": "./plugins/nac-pkcs7-certbundle"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-handelsregister",
+      "name": "nac-handelsregister",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-handelsregister"
+        "path": "./plugins/nac-handelsregister"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-bea-portal",
+      "name": "nac-bea-portal",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-bea-portal"
+        "path": "./plugins/nac-bea-portal"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-elster-eric",
+      "name": "nac-elster-eric",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-elster-eric"
+        "path": "./plugins/nac-elster-eric"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-grundbuch-portal",
+      "name": "nac-grundbuch-portal",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-grundbuch-portal"
+        "path": "./plugins/nac-grundbuch-portal"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     },
     {
-      "name": "noc-oci-evidence",
+      "name": "nac-oci-evidence",
       "source": {
         "source": "local",
-        "path": "./plugins/noc-oci-evidence"
+        "path": "./plugins/nac-oci-evidence"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Compliance"
+      "category": "Regulierung"
     }
   ]
 }

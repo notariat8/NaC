@@ -1,15 +1,20 @@
 ---
-description: Local NoC plugin and connector execution rule
+description: Local NaC plugin and connector execution rule
 globs: ["**/*"]
 alwaysApply: true
 ---
 
 # Local Plugin Execution
 
-- NoC work runs locally in the approved workspace.
-- Do not use Omnistation as an execution workspace for NoC.
+- NaC work runs locally in the approved workspace.
+- Do not use Omnistation as an execution workspace for NaC.
 - Remote hosts may be used for non-critical research only.
 - Base, plugin and notary-workstation minimum requirements are defined in [docs/de/minimum-requirements.md](../../docs/de/minimum-requirements.md) and [docs/en/minimum-requirements.md](../../docs/en/minimum-requirements.md).
+- Repo-local plugins must be mirrored into the local Codex discovery with
+  `python scripts/install_local_plugins.py --mode link` before expecting a new
+  Codex session to show them.
+- Restart Codex or open a new session after installing the local plugin mirror;
+  active plugins are loaded at session start.
 - Run `python scripts/startup_check.py --profile plugin-dev --ide auto` before plugin development.
 - Run `python scripts/startup_check.py --profile notary-workstation --ide auto` before card-reader, morris or XNP-adjacent tests.
 - Plugin and connector plans are documented under [docs/de/plugin-plans/](../../docs/de/plugin-plans) and [docs/en/plugin-plans/](../../docs/en/plugin-plans).

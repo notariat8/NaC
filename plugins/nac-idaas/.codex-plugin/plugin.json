@@ -1,0 +1,50 @@
+{
+  "name": "nac-idaas",
+  "version": "0.1.0",
+  "description": "eID-Prüfung und IAM-Projektion mit NaC-Schutzplanken.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "idaas",
+    "eid",
+    "ausweisapp",
+    "iam",
+    "scim",
+    "identity",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "eID-Prüfung",
+    "shortDescription": "eID prüfen, IAM-Projektion planen.",
+    "longDescription": "Lokaler Begleiter für deutsche eID-Prüfung, Datenminimierung, Einwilligung, Audit-Nachweis und IAM-Projektionsbereitschaft.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "EIDReadiness",
+      "IAMProjection",
+      "ConsentAudit",
+      "Evidence",
+      "DryRun"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Erstelle einen Bereitschaftsplan für eine eID-Prüfung.",
+      "Prüfe die IAM-Projektion für diesen Mandanten.",
+      "Erzeuge metadatenbasierten Nachweis für einen IDaaS-Ablauf."
+    ],
+    "brandColor": "#315A8A",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

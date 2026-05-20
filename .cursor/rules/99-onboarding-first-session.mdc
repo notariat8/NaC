@@ -1,5 +1,5 @@
 ---
-description: Erststart-Check fuer neue Nutzer in Cursor
+description: Erststart-Check für neue Nutzer in Cursor
 alwaysApply: true
 ---
 
@@ -9,8 +9,13 @@ Bei erster Nutzung dieses Repositories:
 
 1. Lies [docs/de/START_HERE.md](../../docs/de/START_HERE.md) oder [docs/en/START_HERE.md](../../docs/en/START_HERE.md).
 2. Nutze das passende Onboarding unter [prompts/de/onboarding/](../../prompts/de/onboarding) oder [prompts/en/onboarding/](../../prompts/en/onboarding).
-3. Bestaetige Unternehmensart und gewuenschte Branchenmodule.
-4. Bestaetige Kultur-, Sprach-, Language- und Technologie-Policy.
-5. Starte mit einem Pilotprozess statt mit Vollausrollung.
+3. Bestätige Unternehmensart und gewünschte Branchenmodule.
+4. Bestätige Kultur-, Sprach-, Language- und Technologie-Policy.
+5. Für Plugin-Arbeit führe `python scripts/nac.py plugins validate`,
+   `python scripts/nac.py plugins install --mode link` und danach
+   `python scripts/startup_check.py --profile plugin-dev --ide auto` aus.
+   Öffne Codex anschließend neu, damit die Plugin-Discovery die lokalen
+   Plugins sieht.
+6. Starte mit einem Pilotprozess statt mit Vollausrollung.
 
-Ohne diese Schritte keine produktive Prozessaenderung vorschlagen.
+Ohne diese Schritte keine produktive Prozessänderung vorschlagen.

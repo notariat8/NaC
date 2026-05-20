@@ -31,13 +31,15 @@ The smallest useful end-user flow is:
 The current CLI produces a safe editor view for every usecase slug:
 
 ```bash
-python scripts/notary_kg.py --repo-root . editor-view immobilienkaufvertrag
-python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag
+python scripts/nac.py kg editor-view immobilienkaufvertrag
+python scripts/nac.py kg --format json editor-view immobilienkaufvertrag
 ```
 
 This is not the final web editor yet, but it is an implemented contract for a
 GitHub-backed sidecar editor or a later ChatGPT App. The workflow contract lives
 in [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
+Why the visible editing surface needs a checkable technical core is explained in
+[docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
 ## Tabs
 

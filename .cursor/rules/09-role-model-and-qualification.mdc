@@ -9,6 +9,6 @@ alwaysApply: true
 - Self-Resolve ist nur innerhalb der freigegebenen Kompetenz erlaubt.
 - Fachkritische Schritte brauchen Review/Approval nach Impact.
 - Qualifikationspflichten haben Vorrang vor allgemeinen Rollenrechten.
-- Rolle und Entscheidungstyp muessen in jedem relevanten Workflow dokumentiert sein.
+- Rolle und Entscheidungstyp müssen in jedem relevanten Workflow dokumentiert sein.
 
 Verbindliche Quelle: [policies/role-model-policy.yaml](../../policies/role-model-policy.yaml)

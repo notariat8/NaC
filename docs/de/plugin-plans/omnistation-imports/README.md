@@ -1,21 +1,21 @@
 # Omnistation-Pluginplan-Importe
 
-Dieses Verzeichnis bewahrt die urspruenglichen NoC-Plugin-Integrationsplaene,
+Dieses Verzeichnis bewahrt die ursprünglichen NaC-Plugin-Integrationspläne,
 die in der Omnistation-Agent-Sandbox erzeugt wurden.
 
 Die Dateien bleiben als importierte Quellartefakte erhalten, damit keine
-Planungsarbeit verloren geht, waehrend die NoC-Ausfuehrung in den lokalen
+Planungsarbeit verloren geht, während die NaC-Ausführung in den lokalen
 WSL-Workspace verlagert wird.
 
 ## Quelle
 
-Urspruengliches Quellverzeichnis:
+Ursprüngliches Quellverzeichnis:
 
 ```text
 /home/ofunk/codex/agent-sandbox
 ```
 
-Urspruenglicher Quellhost:
+Ursprünglicher Quellhost:
 
 ```text
 omnistation-omni-lsn-upq77
@@ -23,9 +23,9 @@ omnistation-omni-lsn-upq77
 
 ## Importierte Dateien
 
-Byte-genaue Pruefsummen stehen in [SHA256SUMS](SHA256SUMS).
+Byte-genaue Prüfsummen stehen in [SHA256SUMS](SHA256SUMS).
 
 ## Betriebsentscheidung
 
-NoC wird lokal in WSL unter `~/NoC` ausgefuehrt. Omnistation ist kein
-NoC-Ausfuehrungsworkspace.
+NaC wird lokal in WSL unter `~/NaC` ausgeführt. Omnistation ist kein
+NaC-Ausführungsworkspace.

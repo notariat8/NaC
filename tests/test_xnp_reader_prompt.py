@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "plugins" / "noc-bnotk-xnp" / "scripts" / "reader_prompt.py"
+SCRIPT_PATH = REPO_ROOT / "plugins" / "nac-bnotk-xnp" / "scripts" / "reader_prompt.py"
 
 
 def load_reader_prompt_module():
@@ -34,8 +34,8 @@ def args(prompt: str | None = None) -> argparse.Namespace:
 
 def cyberjack(status: str) -> dict:
     return {
-        "plugin": "noc-cyberjack-rfid",
-        "schema_version": "noc.cyberjack.readiness/v1",
+        "plugin": "nac-cyberjack-rfid",
+        "schema_version": "nac.cyberjack.readiness/v1",
         "evidence_id": "CJ-00000000-0000-0000-0000-000000000000",
         "generated_at": "2026-05-14T00:00:00+00:00",
         "overall_status": status,
@@ -53,7 +53,7 @@ class XnpReaderPromptTests(unittest.TestCase):
         )
 
         self.assertEqual(evidence["overall_status"], "prompted")
-        self.assertEqual(evidence["reader_prompt"]["route"], "noc-bnotk-xnp -> noc-cyberjack-rfid")
+        self.assertEqual(evidence["reader_prompt"]["route"], "nac-bnotk-xnp -> nac-cyberjack-rfid")
         self.assertFalse(evidence["policy"]["pin_captured"])
         self.assertFalse(evidence["policy"]["xnp_api_key_captured"])
         self.assertFalse(evidence["policy"]["xnp_login_performed"])

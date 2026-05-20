@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieses Dokument liefert ein direkt nutzbares Umsetzungsraster fuer revisionssicheren Eventstream-Betrieb mit vier verbindlichen Plattformvarianten:
+Dieses Dokument liefert ein direkt nutzbares Umsetzungsraster für revisionssicheren Eventstream-Betrieb mit vier verbindlichen Plattformvarianten:
 
 - Template A: AWS (Kafka/MSK + S3 Object Lock)
 - Template B: Azure (Event Hubs + Immutable Blob)
@@ -16,11 +16,11 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 ### Pflichtpipeline
 
 1. GitHub Events (Org Audit, Issues, Projects, Approvals)
-2. Ingest Gateway (Webhook Signaturpruefung, AuthN/AuthZ)
+2. Ingest Gateway (Webhook Signaturprüfung, AuthN/AuthZ)
 3. Event Broker (durable stream)
 4. Normalizer (einheitliches Event-Envelope + Hash-Chain)
 5. Immutable Journal Store (WORM)
-6. Evidence Index (Suche/Pruefberichte)
+6. Evidence Index (Suche/Prüfberichte)
 7. Daily Anchor (Signatur + Kettenabschluss)
 
 ### Event Envelope (Minimum)
@@ -45,7 +45,7 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 - Broker: Kafka (mind. 3 Broker)
 - Journal Store: S3 Bucket mit Object Lock `Compliance`
 - Evidence Index: OpenSearch/Elasticsearch oder SQL-Index
-- Signaturdienst: KMS-gestuetzte Signatur des Daily Anchors
+- Signaturdienst: KMS-gestützte Signatur des Daily Anchors
 
 ### Mindestparameter
 
@@ -60,9 +60,9 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 
 - `stream_operator`: betreibt Ingest/Broker
 - `journal_custodian`: verantwortet WORM und Aufbewahrung
-- `security_operator`: Schluessel, Zertifikate, Monitoring
+- `security_operator`: Schlüssel, Zertifikate, Monitoring
 - `audit_reader`: read-only Zugriff auf Evidence Index
-- `compliance_owner`: Freigabe von Retention- und Legal-Hold-Aenderungen
+- `compliance_owner`: Freigabe von Retention- und Legal-Hold-Änderungen
 
 ## Template B: Azure Event Hubs + Immutable Blob
 
@@ -72,11 +72,11 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 - Broker: Azure Event Hubs
 - Journal Store: Azure Blob mit Immutable Policy + optional Legal Hold
 - Evidence Index: Azure Data Explorer / SQL / Search
-- Signaturdienst: Key Vault Sign Operations fuer Daily Anchor
+- Signaturdienst: Key Vault Sign Operations für Daily Anchor
 
 ### Mindestparameter
 
-- Event Hubs Capture optional fuer Rohstrom
+- Event Hubs Capture optional für Rohstrom
 - Blob Immutable Retention: mindestens gem. Policy, z. B. 10 Jahre
 - Legal Hold Prozess: dokumentiert und getestet
 - DLQ/Poison-Handling: verpflichtend
@@ -87,9 +87,9 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 
 - `platform_operator`: betreibt Event Hubs und Ingest
 - `storage_custodian`: verwaltet Immutable Policies
-- `security_operator`: Key Vault und Identitaeten
+- `security_operator`: Key Vault und Identitäten
 - `audit_reader`: read-only Evidence-Zugriff
-- `compliance_owner`: Freigaben fuer Aufbewahrung/Legal Hold
+- `compliance_owner`: Freigaben für Aufbewahrung/Legal Hold
 
 ## Betriebsparameter (alle Templates)
 
@@ -99,19 +99,19 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
   - Event-Lag
   - Daily-Anchor Erfolgsquote
 - Kontrollzyklen:
-  - taegliche Integritaetspruefung (Hash-Chain konsistent)
+  - tägliche Integritaetsprüfung (Hash-Chain konsistent)
   - monatliche Rechte-/Rollenrezertifizierung
   - quartalsweiser Restore-Test
 
 ## Mindest-Sicherheitskontrollen
 
-- Webhook-Signaturpruefung zwingend
-- mTLS/TLS fuer alle Transportwege
+- Webhook-Signaturprüfung zwingend
+- mTLS/TLS für alle Transportwege
 - getrennte Betriebsrollen (SoD)
-- keine Loeschrechte auf Journalobjekte vor Retention-Ende
-- Schluesselrotation und dokumentierte Notfallprozesse
+- keine Löschrechte auf Journalobjekte vor Retention-Ende
+- Schlüsselrotation und dokumentierte Notfallprozesse
 
-## Einfuehrung in 4 Phasen
+## Einführung in 4 Phasen
 
 1. **Pilot**
    - ein Vertical, ein Case-Repo, ein Org-Project
@@ -126,7 +126,7 @@ Grundlage: `policies/revisionssicherheit-eventstream-policy.yaml`
 
 Jedes Unternehmen dokumentiert vor Go-Live:
 
-- gewaehltes Template (`A` oder `B`)
+- gewähltes Template (`A` oder `B`)
 - verantwortliche Rollen (namentlich)
 - Retention-Frist
 - Legal-Hold-Verfahren
@@ -139,7 +139,7 @@ Jedes Unternehmen dokumentiert vor Go-Live:
 - GCP-Zielvariante: `docs/de/eventstream/runbook-gcp.md`
 - OCI-Zielvariante: `docs/de/eventstream/runbook-oci.md`
 
-## Plattform-Paritaet (verbindlich)
+## Plattform-Parität (verbindlich)
 
-- Aenderungen an Eventstream-, Revisionssicherheits- oder Journal-Standards muessen fuer **AWS, Azure, GCP, OCI** synchron gepflegt werden.
-- Einseitige Pflege nur einer Plattform ist nicht zulaessig.
+- Änderungen an Eventstream-, Revisionssicherheits- oder Journal-Standards müssen für **AWS, Azure, GCP, OCI** synchron gepflegt werden.
+- Einseitige Pflege nur einer Plattform ist nicht zulässig.

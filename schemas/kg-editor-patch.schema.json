@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://noc.local/schemas/kg-editor-patch.schema.json",
-  "title": "NoC KG Editor Patch",
+  "$id": "https://nac.local/schemas/kg-editor-patch.schema.json",
+  "title": "NaC KG Editor Patch",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "noc.kg-editor-patch/v0.1"
+      "const": "nac.kg-editor-patch/v0.1"
     },
     "patch_id": {
       "type": "string",

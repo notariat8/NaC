@@ -72,7 +72,7 @@ def main() -> int:
 
 def _validate_schema_file(path: Path, errors: list[str]) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if payload.get("$id") != "https://noc.local/schemas/kg-editor-patch.schema.json":
+    if payload.get("$id") != "https://nac.local/schemas/kg-editor-patch.schema.json":
         errors.append("KG editor patch schema has unexpected $id")
     operations = payload.get("properties", {}).get("operations", {})
     item_properties = operations.get("items", {}).get("properties", {})

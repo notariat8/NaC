@@ -1,29 +1,29 @@
-# Blueprint: Core und Vertical Modules fuer Dienstleistungsunternehmen
+# Blueprint: Core und Vertical Modules für Dienstleistungsunternehmen
 
 ## Ziel
 
-Dieses Blueprint definiert eine einheitliche Struktur fuer ein zentrales `NoC`, das fuer mehrere Dienstleistungsbranchen nutzbar ist:
+Dieses Blueprint definiert eine einheitliche Struktur für ein zentrales `NaC`, das für mehrere Dienstleistungsbranchen nutzbar ist:
 
 - Anwaltskanzlei (`law_firm`)
 - Notariat (`notary`)
 - Steuerberatung (`tax_office`)
 - Hausverwaltung (`property_management`)
 - Softwareunternehmen (`software_company`)
-- Vermoegensverwaltung (`wealth_management`)
+- Vermögensverwaltung (`wealth_management`)
 - Schreinerei (`carpentry`)
 
 Das Modell setzt auf **einen gemeinsamen Core** plus **Vertical Modules** im selben Repository.
 
 ## Leitprinzip
 
-- `core` enthaelt wiederverwendbare Prozessbausteine fuer alle Branchen.
-- `vertical` enthaelt nur branchenspezifische Regeln und Arbeitsschritte.
-- Jede wirksame Prozessaenderung ist versioniert, reviewed und freigegeben.
-- Laufende Vorgaenge bleiben auf der beim Start gebundenen Prozessversion.
+- `core` enthält wiederverwendbare Prozessbausteine für alle Branchen.
+- `vertical` enthält nur branchenspezifische Regeln und Arbeitsschritte.
+- Jede wirksame Prozessänderung ist versioniert, reviewed und freigegeben.
+- Laufende Vorgänge bleiben auf der beim Start gebundenen Prozessversion.
 
 ## Gemeinsame Core-Topics
 
-Diese Topics sind fuer alle Dienstleistungsunternehmen gleich und gehoeren in den Core:
+Diese Topics sind für alle Dienstleistungsunternehmen gleich und gehören in den Core:
 
 1. Rollen, Qualifikation und Freigabepfade
 2. Intake und Auftrags-/Mandatsstart
@@ -37,27 +37,27 @@ Diese Topics sind fuer alle Dienstleistungsunternehmen gleich und gehoeren in de
 
 Jedes Vertical erweitert den Core um branchenspezifisches Wissen:
 
-- `law_firm`: Mandat, Konfliktpruefung, Fristenmanagement, RVG-Bezug
-- `notary`: Aktenanlage, Identitaetspruefung, Urkundenvollzug, Registerkommunikation
-- `tax_office`: Mandantenzyklen, Deklarationsfristen, Plausibilitaetspruefungen
-- `property_management`: Mieteraufnahme, Objektbetrieb, Wartungssteuerung, Nebenkostenkontrollen, Uebergaben
+- `law_firm`: Mandat, Konfliktprüfung, Fristenmanagement, RVG-Bezug
+- `notary`: Aktenanlage, Identitätsprüfung, Urkundenvollzug, Registerkommunikation
+- `tax_office`: Mandantenzyklen, Deklarationsfristen, Plausibilitätsprüfungen
+- `property_management`: Mieteraufnahme, Objektbetrieb, Wartungssteuerung, Nebenkostenkontrollen, Übergaben
 - `software_company`: Release-Governance, Incident-Management, SLA-/Lizenznachweise
-- `wealth_management`: KYC/Client-Intake, Eignungs- und Risikoprofilpruefung, Rebalancing-Kontrollen, Mandatsreporting
-- `carpentry`: Aufmass, Materialplanung, Werkstatt-/Montagekoordination, Gewaehrleistungsfaelle
+- `wealth_management`: KYC/Client-Intake, Eignungs- und Risikoprofilprüfung, Rebalancing-Kontrollen, Mandatsreporting
+- `carpentry`: Aufmass, Materialplanung, Werkstatt-/Montagekoordination, Gewährleistungsfälle
 
 ## Abgrenzungsregel Core vs. Vertical
 
-Eine Regel gehoert in den Core, wenn sie:
+Eine Regel gehört in den Core, wenn sie:
 
 - in mindestens drei Verticals gleich gilt,
-- keine branchenspezifische Rechts- oder Fachpflicht enthaelt,
+- keine branchenspezifische Rechts- oder Fachpflicht enthält,
 - ohne Fachjargon branchenneutral formuliert werden kann.
 
-Eine Regel gehoert ins Vertical, wenn sie:
+Eine Regel gehört ins Vertical, wenn sie:
 
 - rechtlich oder fachlich branchenspezifisch ist,
 - eigene Nachweisartefakte oder Fachfreigaben braucht,
-- nur fuer ein oder zwei Verticals relevant ist.
+- nur für ein oder zwei Verticals relevant ist.
 
 ## Strukturmodell (fachlich)
 
@@ -77,17 +77,17 @@ flowchart LR
 
 - Core und Vertical werden gemeinsam als Release im Unternehmens-Fork freigegeben.
 - Beim Vorgangsstart wird ein `process_version` gebunden.
-- Neue Releases gelten nur fuer neue Vorgaenge.
-- Laufende Vorgaenge laufen auf gebundener Version zu Ende.
+- Neue Releases gelten nur für neue Vorgänge.
+- Laufende Vorgänge laufen auf gebundener Version zu Ende.
 
 Details: `docs/de/operations/parallelbetrieb-version-binding.md`
 
-## Entscheidungslogik fuer Erweiterungen
+## Entscheidungslogik für Erweiterungen
 
 Wenn ein neues Thema aufkommt:
 
-1. Pruefen, ob Core-Regel erweitert werden kann.
+1. Prüfen, ob Core-Regel erweitert werden kann.
 2. Falls nein, als Vertical-Regel dokumentieren.
-3. Impact-Assessment durchfuehren.
-4. Versionierte Uebernahme ueber PR + Review + Release.
-5. Optional Rueckfluss in den Referenzstandard.
+3. Impact-Assessment durchführen.
+4. Versionierte Übernahme über PR + Review + Release.
+5. Optional Rückfluss in den Referenzstandard.

@@ -1,4 +1,4 @@
-# NoC Quality Gate
+# NaC Quality Gate
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Principle:
 Local:
 
 ```bash
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 CI:
@@ -29,8 +29,9 @@ CI:
 
 - `minimal`: process validation and unit tests
 - `standard`: `minimal` plus privacy lint
-- `strict`: `standard` plus governance policy sync, language parity,
-  documentation links, cloud runbook parity, Gantt, AI-SBOM and knowledge graph
+- `strict`: `standard` plus governance policy sync, language parity including
+  skill language markers, documentation links, BPMN model validation, cloud
+  runbook parity, Gantt, AI-SBOM and knowledge graph
 
 ## Fixed Order
 
@@ -41,10 +42,11 @@ CI:
 5. `governance_sync` only in `strict`
 6. `language_parity` only in `strict`
 7. `doc_links` only in `strict`
-8. `gantt_progress` only in `strict`
-9. `cloud_runbook_parity` only in `strict`
-10. `ai_sbom` only in `strict`
-11. `knowledge_graph` only in `strict`
+8. `bpmn_models` only in `strict`
+9. `gantt_progress` only in `strict`
+10. `cloud_runbook_parity` only in `strict`
+11. `ai_sbom` only in `strict`
+12. `knowledge_graph` only in `strict`
 
 ## Artifacts
 

@@ -2,18 +2,18 @@
 
 ## Purpose
 
-This directory describes the local plugin and connector plans for NoC. The
+This directory describes the local plugin and connector plans for NaC. The
 plans are deliberately maintained as Markdown sources so they remain reviewable,
 versioned and readable without a proprietary runtime.
 
 ## Basic Decision
 
-NoC runs locally:
+NaC runs locally:
 
-- Workspace: `~/NoC` in Ubuntu WSL.
-- Git source: `https://github.com/ofunk/NoC.git`.
+- Workspace: `~/NaC` in Ubuntu WSL.
+- Git source: `https://github.com/ofunk/NaC.git`.
 - Codex, OCI CLI, GitHub CLI and domain integrations are installed locally.
-- Omnistation is not an execution location for NoC.
+- Omnistation is not an execution location for NaC.
 - Remote hosts may only be used for non-critical research.
 
 This decision avoids breaks around GitHub authentication, browser callbacks, OCI
@@ -30,24 +30,24 @@ configuration and local domain integrations.
 | [domain-connector-runtime.md](domain-connector-runtime.md) | Domain-system connectors | Contract model | Plan/apply/reconcile | Monitoring, replays, exit |
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first online commercial-register filing | Register track, legal form, eID/app and notary route | Filing-package plan and evidence checklist | Rejections, signature/identity errors, package versions |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated commercial-register retrieval spike, not the current plugin path | Usage and license check | Dry-run research plan | Rate limits, source switch, audit |
-| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/notary-software local companion | Card/SAK gate, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
+| [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | `XNP-Prüfung` local companion | `Karte/SAK`, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
 | [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA portal and client-security companion | Local beA prerequisites | Send/receive/eEB workflow | Incidents, versions, evidence |
 | [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC developer and local companion | Manufacturer/tooling check | Dry-run filing and evidence plans | ERiC versions, evidence, deadlines |
-| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | Card/SAK gate before XNP login | Card, reader, PC/SC, SAK lite, secureFramework | Card/SAK readiness for XNP test | Firmware, driver, card path, evidence |
+| [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `Karte/SAK` before XNP login | Card, reader, PC/SC, SAK lite, secureFramework | Card/SAK readiness for XNP test | Firmware, driver, card path, evidence |
 | [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Land-register portal workflow and evidence companion | Authorization and legitimate interest | Retrieval plan and evidence import | Federal-state drift, logs, fees |
 
 ## Sequence For Commercial Register / HRA Workflows
 
 The first technical building block depends on the operating mode:
 
-- Citizen or client preflight: `noc-handelsregister` may only structure
+- Citizen or client preflight: `nac-handelsregister` may only structure
   readiness, missing information and notary appointment preparation.
-- Notary-side execution or filing-adjacent workflow: `noc-cyberjack-rfid` comes
+- Notary-side execution or filing-adjacent workflow: `nac-cyberjack-rfid` comes
   first, because XNP login cannot be tested without card, reader, SAK lite or
   XNP card path and secureFramework.
-- Then `noc-bnotk-xnp` follows. Only after local XNP login, official-capacity
+- Then `nac-bnotk-xnp` follows. Only after local XNP login, official-capacity
   context, XNotar module and exchange folder are clarified may
-  `noc-handelsregister` build the domain register layer on top.
+  `nac-handelsregister` build the domain register layer on top.
 
 Therefore HRA is not the first technical integration point. It is the first
 domain layer above the card/SAK gate and the notary/XNP gate.
@@ -87,7 +87,7 @@ Plugin plans use these status values:
 ## Local Regeneration Flow
 
 ```bash
-cd ~/NoC
+cd ~/NaC
 git pull
 python3 scripts/startup_check.py --ide auto --run-tests
 ```

@@ -11,7 +11,7 @@ from .editor import build_editor_view
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="notary-kg",
-        description="Executable status tooling for NoC notarial knowledge graphs.",
+        description="Executable status tooling for NaC notarial knowledge graphs.",
     )
     parser.add_argument(
         "--repo-root",
@@ -106,7 +106,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
 
     if "totals" in payload:
         totals = payload["totals"]
-        print("NoC KG development status")
+        print("NaC KG development status")
         print(f"- catalogs: {totals['catalogs']}")
         print(f"- cases: {totals['cases']}")
         print(f"- P0 cases: {totals['p0_cases']}")
@@ -118,7 +118,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
             print(f"- {item['slug']}: {item['open_required_information']} open nodes")
         return
 
-    if payload.get("schema_version") == "noc.kg-editor-view/v0.1":
+    if payload.get("schema_version") == "nac.kg-editor-view/v0.1":
         print(f"KG editor view: {payload['usecase_slug']} ({payload['graph_id']})")
         print(f"- title: {payload['title']}")
         print(f"- json role: {payload['editor_model']['json_role']}")

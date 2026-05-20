@@ -1,0 +1,45 @@
+{
+  "name": "nac-regulated-core",
+  "version": "0.1.0",
+  "description": "Schutzplanken und Freigaben für regulierte NaC-Arbeit.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "regulated",
+    "governance",
+    "evidence",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Regulierung",
+    "shortDescription": "Schutzplanken, Freigaben und Nachweise.",
+    "longDescription": "Lokaler Begleiter für Schutzplanken, Planvorschau, Freigabegrenzen und Nachweisführung in regulierten NaC-Arbeitsabläufen.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "Governance",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe die NaC-Schutzplanken für diesen regulierten Ablauf.",
+      "Erstelle einen Einrichtungsplan mit Freigabe- und Nachweispunkten.",
+      "Prüfe Betriebsdrift für diesen regulierten NaC-Ablauf."
+    ],
+    "brandColor": "#245C4F",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

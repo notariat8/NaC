@@ -1,38 +1,71 @@
 # Testament
 
-Status: legacy starter alias
-
-Canonical Top-10 usecase: `usecases/testament-erbvertrag/`  
-KG node: `case.testament_erbvertrag`
+Status: legacy_alias
+Reifegrad: Legacy-Starteralias, P2
+KG-Knoten: `case.testament`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
 
-This folder is kept as a compatibility starter. New work should use
-`usecases/testament-erbvertrag/`.
+## Worum Es Geht
 
-## Goal
+Legacy-Starter-Alias für usecases/testament-erbvertrag; bleibt aus Kompatibilitätsgründen bestehen, während neue Workflow-Arbeit den kanonischen Usecase nutzt.
 
-Prepare a notary-office usecase package for testament intake, preparation,
-execution tracking, and evidence metadata.
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-## Boundaries
+## Was Heute Im Muster Enthalten Ist
 
-- The LLM is an intake and drafting assistant, not the legal authority.
-- Capacity, identity, interpretation, and execution require human notarial
-  review.
-- No real personal data or sensitive estate information is stored in Git.
-
-## Initial Dependencies
-
-| Layer | Dependency | Purpose |
+| Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Plugin | `noc-regulated-core` | Shared regulated workflow guardrails. |
-| Workflow | `workflows/contracts/` | Intake, approval, and evidence contract. |
-| Workflow | `workflows/python/` | Deterministic checks and plan preview. |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-## Delivery Plan
+## Offene Angaben
 
-1. Define intake contract for person, family situation, assets as categories,
-   wishes, capacity flags, and approvals.
-2. Define review gates for sensitive legal interpretation and execution.
-3. Create evidence metadata for intake, review, appointment, execution, and
-   retention.
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
+| --- | --- | --- | --- |
+| `testator.identity` | Testierende Person Identität | Notariat | identity_gate, capacity_review |
+| `capacity.flags` | Geschäftsfähigkeit Prüfflaggen | Notariat | legal_review, appointment |
+| `family.structure` | Familie Struktur | testator | drafting, mandatory_share_review |
+| `assets.categories` | Vermögen Kategorien | testator | drafting, tax_or_business_flags |
+| `dispositions.wishes` | Verfügungen Wünsche | testator | drafting, legal_review |
+| `prior.dispositions` | Vorverfügungen Verfügungen | Notariat | legal_review, custody |
+| `executor.choice` | Testamentsvollstrecker Auswahl | testator | drafting |
+| `custody.register` | Verwahrung Register | Notariatsfachkraft | closing |
+
+## Grenzen Für Den Betrieb
+
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
+
+## Plugin- Und Workflow-Bindung
+
+Primäre Plugins:
+
+- `nac-regulated-core`
+
+Workflow-Bezug:
+
+- `workflows/contracts`
+- `workflows/python`
+
+Fachliche Anker im KG-Modell:
+
+- `src.beurkg`
+
+## Wie Man Diesen Usecase Prüft
+
+```bash
+python scripts/notary_kg.py --repo-root . case testament
+python scripts/notary_kg.py --repo-root . editor-view testament
+python scripts/validate_knowledge_graph.py
+```
+
+## Nächster Lesepfad
+
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

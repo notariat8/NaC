@@ -1,0 +1,55 @@
+{
+  "name": "nac-cyberjack-rfid",
+  "version": "0.1.0",
+  "description": "Kartenleser- und SAK-Prüfung vor XNP-Login.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "cyberjack",
+    "rfid",
+    "pcsc",
+    "bnotk",
+    "sak-lite",
+    "secureframework",
+    "signature-card",
+    "xnp-login",
+    "online-hra",
+    "local-companion"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Karte/SAK",
+    "shortDescription": "Karte und Leser vor XNP prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für notarielle Kartenbereitschaft vor XNP-Login und Online-HRA ohne PIN-, API-Key- oder Kartendatenerfassung.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "DeviceReadiness",
+      "Installable",
+      "NotaryCardGate",
+      "SakLite",
+      "XnpPrerequisite",
+      "Evidence",
+      "NoPIN"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Erzeuge lokale cyberJack-Bereitschaft vor dem XNP-Login.",
+      "Erstelle einen Kartenprüfplan für Online-HRA.",
+      "Prüfe Kartenleser-Drift vor dem XNP-Test."
+    ],
+    "brandColor": "#7A4D2D",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

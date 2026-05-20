@@ -4,28 +4,28 @@ Status: `proposed`
 
 ## Core Decision
 
-`noc-bnotk-xnp` is the local companion for XNP and notary-software readiness. It
+`nac-bnotk-xnp` is the local companion for XNP and notary-software readiness. It
 does not replace XNP, does not authenticate as a notary and does not control
 protected notary software without an approved interface.
 
 The plugin checks whether the local workstation is ready for an XNP-oriented
-workflow and turns a NoC intent into a human-readable plan with approval and
+workflow and turns a NaC intent into a human-readable plan with approval and
 evidence gates.
 
 ## Sequence For Commercial Register Online Filings
 
 For a notary-side online commercial-register filing, the sequence is:
 
-1. `noc-cyberjack-rfid`
+1. `nac-cyberjack-rfid`
    - checks card, reader, PC/SC, SAK lite or XNP card path and secureFramework.
-2. `noc-bnotk-xnp`
+2. `nac-bnotk-xnp`
    - checks local XNP login, official-capacity context, XNotar/register module
      or exchange-folder route.
-3. `noc-handelsregister`
+3. `nac-handelsregister`
    - handles register track, HRA/HRB plausibility, package readiness and
      evidence metadata.
 
-`noc-bnotk-xnp` therefore starts only after the card/SAK gate is sufficiently
+`nac-bnotk-xnp` therefore starts only after the card/SAK gate is sufficiently
 clear.
 
 ## Goal
@@ -50,7 +50,7 @@ The plugin should:
 ## Day 0
 
 - Confirm operating system and local workstation profile.
-- Confirm `noc-cyberjack-rfid` readiness result.
+- Confirm `nac-cyberjack-rfid` readiness result.
 - Confirm XNP installation and supported version.
 - Confirm access route: local XNP login, official-capacity context, XNotar
   module or exchange folder.
@@ -71,7 +71,7 @@ The plugin creates a plan preview with:
 
 Typical tasks:
 
-- translate NoC intent into a human-readable XNP plan,
+- translate NaC intent into a human-readable XNP plan,
 - check whether a register package can be prepared,
 - identify missing data or documents,
 - prepare handoff without executing protected actions.
@@ -108,5 +108,5 @@ formal interface contract and security review approve a deeper adapter.
 ## Sources
 
 - BNotK/XNP online help and notary-software vendor integration documentation.
-- Local NoC card-gate plan:
+- Local NaC card-gate plan:
   [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md)

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This plan migrates `ofunk/IDaaS` into the NoC plugin `noc-idaas`.
+This plan migrates `ofunk/IDaaS` into the NaC plugin `nac-idaas`.
 The plugin is a local companion for German eID verification, minimal claim
 sets, consent and audit evidence, and IAM projection planning.
 

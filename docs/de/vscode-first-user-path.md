@@ -2,7 +2,7 @@
 
 ## Muss ich alles lesen?
 
-Nein. Sie muessen nicht alle Markdown-Dateien lesen.
+Nein. Sie müssen nicht alle Markdown-Dateien lesen.
 
 Empfohlener Minimalpfad:
 
@@ -10,11 +10,11 @@ Empfohlener Minimalpfad:
 2. `docs/de/vscode-copilot-start.md`
 3. Start mit Formular-Wizard statt Volllektuere
 
-## Schritt 1: Startfrage klaeren
+## Schritt 1: Startfrage klären
 
-Sie klaeren zuerst:
+Sie klären zuerst:
 
-- Gruendung (`founding`) oder Bestandsunternehmen (`existing`)?
+- Gründung (`founding`) oder Bestandsunternehmen (`existing`)?
 
 Diese Entscheidung steuert den restlichen Fragepfad.
 
@@ -26,7 +26,7 @@ Starten Sie den Wizard:
 python scripts/onboarding_wizard.py start --session out/onboarding/session.json --actor-name "Max Beispiel" --actor-role "prozessverantwortung" --github-login "ofunk-nvidia" --mode existing
 ```
 
-Fortschritt pruefen:
+Fortschritt prüfen:
 
 ```bash
 python scripts/onboarding_wizard.py status --session out/onboarding/session.json
@@ -44,10 +44,10 @@ Audit-Bundle finalisieren (immutable Nachweise mit Hash):
 python scripts/onboarding_wizard.py finalize --session out/onboarding/session.json --output-dir out/onboarding/final --export-pdf
 ```
 
-## Schritt 3: Zusammenarbeit ueber mehrere Tage
+## Schritt 3: Zusammenarbeit über mehrere Tage
 
 - Jeder Beitrag wird mit Rolle, Name und Zeitstempel gespeichert.
-- Mehrere Personen koennen dieselbe Session-Datei fortsetzen.
+- Mehrere Personen können dieselbe Session-Datei fortsetzen.
 - Rollen- und Qualifikationsmodell bleibt verbindlich.
 
 ## Schritt 4: Von Analyse zu Pilot
@@ -56,4 +56,4 @@ Wenn alle Fragen beantwortet sind:
 
 1. Pilotprozesse festlegen
 2. Rollen/Qualifikationen finalisieren
-3. ersten Pull Request fuer den Pilot anlegen
+3. ersten Pull Request für den Pilot anlegen

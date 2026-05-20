@@ -1,9 +1,11 @@
-# NoC Global Gantt
+# NaC Globaler Gantt
 
-Last update: 2026-05-20
+Letzte Aktualisierung: 2026-05-20
 
-Every push must update this global Gantt. Changes under `plugins/`,
-`workflows/`, or `usecases/` must also update the matching area Gantt:
+Jedes Change-Set mit repo-relevanten Dateien muss diesen globalen Gantt
+mitpflegen. Repo-relevant sind alle Änderungen außer generierten Artefakten
+unter `out/` und Git-Interna. Änderungen unter `plugins/`, `workflows/` oder
+`usecases/` müssen zusätzlich den passenden Themen-Gantt mitpflegen:
 
 - `plugins/GANTT.md`
 - `workflows/GANTT.md`
@@ -11,64 +13,131 @@ Every push must update this global Gantt. Changes under `plugins/`,
 
 ```mermaid
 gantt
-    title NoC global delivery plan
+    title NaC globaler Lieferplan
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
 
-    section A: Plugins and marketplace readiness
-    Plugin inventory and installability gate     :done,    a1, 2026-04-01, 2026-05-14
-    GPT Store and workspace packaging split      :active,  a2, 2026-05-14, 21d
-    IDaaS plugin migration                       :active,  a3, 2026-05-14, 14d
-    Repository consolidation ledger              :active,  a4, 2026-05-14, 7d
-    PKCS7 local certificate-bundle evidence      :active,  a4a, 2026-05-15, 14d
-    SBOM for AI governance baseline              :active,  a4b, 2026-05-15, 21d
-    Runtime and HW minimum requirements SBOM     :active,  a4c, 2026-05-15, 14d
-    Notary pilot plugin readiness                :         a5, after a4, 35d
-    Publication and support operations           :         a6, after a5, 28d
+    section A: Plugins und Marktplatz-Bereitschaft
+    Plugin-Inventar und Installierbarkeitsprüfung :done, a1, 2026-04-01, 2026-05-14
+    GPT-Store-/Arbeitsbereich-Paketierung trennen :active, a2, 2026-05-14, 21d
+    IDaaS-Plugin-Migration                       :active,  a3, 2026-05-14, 14d
+    Repository-Konsolidierungsledger             :active,  a4, 2026-05-14, 7d
+    Lokaler PKCS7-Zertifikatsbündel-Nachweis    :active,  a4a, 2026-05-15, 14d
+    SBOM für AI-Governance-Basis                :active,  a4b, 2026-05-15, 21d
+    Runtime-/HW-Mindestanforderungs-SBOM         :active,  a4c, 2026-05-15, 14d
+    Deutsche Plugin-MD-Sprachführung            :done,    a4d, 2026-05-17, 1d
+    Deutsch geführte Plugin-Skills              :done,    a4e, 2026-05-17, 1d
+    Lokaler Plugin-Erkennungsbootstrap           :done,    a4f, 2026-05-17, 1d
+    Deutsche Plugin-UX dauerhaft erzwingen       :done,    a4g, 2026-05-17, 1d
+    Plugin-Karten und Icons lesbar machen        :done,    a4h, 2026-05-17, 1d
+    Funktion8-Marktplatznamen setzen             :done,    a4i, 2026-05-18, 1d
+    Plugin-Kartennamen ohne NaC-Präfix setzen    :done,    a4j, 2026-05-18, 1d
+    Plugin-Fachprüfungen über nac-CLI            :done,    a4k, 2026-05-19, 1d
+    Echte Hardware-Readiness dokumentieren       :done,    a4l, 2026-05-19, 1d
+    Notariats-Pilot-Plugin-Bereitschaft          :         a5, after a4, 35d
+    Veröffentlichung und Supportbetrieb         :         a6, after a5, 28d
 
-    section B: Notary workflows
-    Workflow layer separation                    :active,  b1, 2026-05-14, 14d
-    KG runtime status CLI MVP                    :done,    b1a, 2026-05-15, 1d
-    Project voice and active-build docs cleanup  :done,    b1b, 2026-05-15, 1d
-    START_HERE operational entry cleanup         :done,    b1c, 2026-05-15, 1d
-    Documentation folder taxonomy cleanup        :done,    b1d, 2026-05-15, 1d
-    Clickable documentation links rule           :done,    b1e, 2026-05-15, 1d
-    Manual-only PDF export during development    :done,    b1f, 2026-05-15, 1d
-    Main-merge completion reporting rule         :done,    b1g, 2026-05-15, 1d
-    Repo-wide German-leading language rule       :done,    b1h, 2026-05-15, 1d
-    Root README language-pair link cleanup       :done,    b1i, 2026-05-15, 1d
-    Localized docs translation cleanup           :done,    b1j, 2026-05-15, 1d
-    No-code KG editor contract MVP              :done,    b1k, 2026-05-15, 1d
-    Agent workflow rule sync                    :done,    b1l, 2026-05-20, 1d
-    Skill plus Python workflow contracts         :active,  b2, 2026-05-15, 28d
-    Deterministic workflow runner MVP            :active,  b3, 2026-05-15, 35d
-    Day2 evidence and drift operations           :         b4, after b3, 28d
+    section B: Notarielle Arbeitsabläufe
+    Arbeitsablauf-Schichten trennen              :active,  b1, 2026-05-14, 14d
+    KG-Runtime-Status-CLI-MVP                    :done,    b1a, 2026-05-15, 1d
+    Projektstimme und Aktivbau-Doku bereinigen   :done,    b1b, 2026-05-15, 1d
+    START_HERE-Betriebseinstieg bereinigen       :done,    b1c, 2026-05-15, 1d
+    Dokumentationsordner-Taxonomie bereinigen    :done,    b1d, 2026-05-15, 1d
+    Regel für klickbare Dokumentationslinks     :done,    b1e, 2026-05-15, 1d
+    PDF-Export im Aufbau nur manuell             :done,    b1f, 2026-05-15, 1d
+    Fertigmeldung nach Main-Merge                :done,    b1g, 2026-05-15, 1d
+    Repo-weite deutsch führende Sprachregel     :done,    b1h, 2026-05-15, 1d
+    Root-README-Sprachpaar-Links bereinigen      :done,    b1i, 2026-05-15, 1d
+    Lokalisierte Doku-Übersetzung bereinigen    :done,    b1j, 2026-05-15, 1d
+    No-code-KG-Editor-Vertrag-MVP                :done,    b1k, 2026-05-15, 1d
+    Deutsche Arbeitsablauf-MD-Sprachführung     :done,    b1l, 2026-05-17, 1d
+    Skill-Sprachregel und EN-Kurzfassung         :done,    b1m, 2026-05-17, 1d
+    Deutsche Umlautpflicht validieren            :done,    b1n, 2026-05-18, 1d
+    Sprachgleiche lokalisierte Links erzwingen   :done,    b1na, 2026-05-19, 1d
+    BPMN-js Business-Layer-Profil                :done,    b1o, 2026-05-19, 1d
+    Lokalen Webserver für Grafikflächen bauen   :done,    b1p, 2026-05-19, 1d
+    Zentrale NaC-CLI-Bedienkante                 :done,    b1q, 2026-05-19, 1d
+    Lokale Operator-HW-Bridge                    :done,    b1r, 2026-05-19, 1d
+    BPMN-Editor-Speicherfläche                   :done,    b1s, 2026-05-19, 1d
+    BPMN-Editor-Menü und Eigenschaftenpanel      :done,    b1t, 2026-05-19, 1d
+    Getrennte Datenrepo-Tenant-CLI               :done,    b1u, 2026-05-19, 1d
+    Akten-Datenmodell mit ID-Pointern            :done,    b1v, 2026-05-19, 1d
+    Agenten-Workflow-Regel synchronisieren       :done,    b1y, 2026-05-20, 1d
+    NaC-MCP-Chat-Integrationsschicht planen      :         b1w, after b3, 14d
+    Kanzlei-Workflow-Freigaberegister bauen      :         b1x, after b1w, 14d
+    Skill- und Python-Arbeitsablauf-Verträge    :active,  b2, 2026-05-15, 28d
+    Deterministischer Arbeitsablauf-Runner-MVP   :active,  b3, 2026-05-15, 35d
+    BPMN-Modellvalidierung im Quality Gate       :done,    b3a, 2026-05-19, 1d
+    Day2-Nachweis- und Driftbetrieb              :         b4, after b3, 28d
 
-    section C: Notary usecases
-    GitHub usecase intake                        :done,    c1, 2026-05-14, 1d
-    Top-10 notarial KG baseline                  :done,    c2, 2026-05-15, 1d
-    Next-10 notarial KG baseline                 :done,    c3, 2026-05-15, 1d
-    Case-local KG folder migration               :done,    c3a, 2026-05-15, 1d
-    German-leading usecase language rule         :done,    c3b, 2026-05-15, 1d
-    KG editor binding for usecase KGs            :done,    c3c, 2026-05-15, 1d
-    GmbH formation canonicalization              :active,  c4, 2026-05-14, 21d
-    AO52 nonprofit formation intake              :active,  c5, 2026-05-14, 21d
-    Steuer-aaS tax usecase intake                :active,  c6, 2026-05-14, 21d
-    Static KG-fed workflow state model           :active,  c7, 2026-05-15, 28d
-    Pilot-ready usecase packages                 :         c8, after c7, 35d
+    section C: Notarielle Usecases
+    GitHub-Usecase-Aufnahme                      :done,    c1, 2026-05-14, 1d
+    Top-10 notarielle KG-Basis                   :done,    c2, 2026-05-15, 1d
+    Nächste-10 notarielle KG-Basis              :done,    c3, 2026-05-15, 1d
+    Usecase-lokale KG-Ordner-Migration           :done,    c3a, 2026-05-15, 1d
+    Deutsch führende Usecase-Sprachregel        :done,    c3b, 2026-05-15, 1d
+    KG-Editor-Bindung für Usecase-KGs           :done,    c3c, 2026-05-15, 1d
+    Deutscher KG-Inhalt und Sprachgate           :done,    c3d, 2026-05-17, 1d
+    Deutsche Usecase-Vorderseiten                :done,    c3e, 2026-05-17, 1d
+    Usecase-BPMN-Basismodelle                    :done,    c3f, 2026-05-19, 1d
+    GmbH-Gründung kanonisieren                  :active,  c4, 2026-05-14, 21d
+    Usecase-Katalog bereinigen                 :done,    c5, 2026-05-17, 1d
+    Steuer-aaS-Usecase aus Katalog entfernen     :done,    c6, 2026-05-19, 1d
+    Statisches KG-gestütztes Arbeitsablauf-Modell :active, c7, 2026-05-15, 28d
+    Pilotfähige Usecase-Pakete                  :         c8, after c7, 35d
+
+    section D: Produktkommunikation und Adoption
+    Zielgruppenpfade und Owner-Sichtbarkeit      :done,    d1, 2026-05-17, 1d
+    Reifegrad Glossar und Beispielpfad           :done,    d1a, 2026-05-17, 1d
+    Bürobedienung und prüfbaren Kern erklären  :done,    d1b, 2026-05-17, 1d
+    Regel zur Gantt-Pflege präzisieren         :done,    d1c, 2026-05-17, 1d
+    AGPL-/CC-BY-Lizenzmodell setzen              :done,    d1d, 2026-05-18, 1d
+    Codex-Logo-Assets importieren                :done,    d1e, 2026-05-19, 1d
+    Operator-Webapp-n8-Logo setzen               :done,    d1f, 2026-05-19, 1d
+    Operator-BPMN-Menü sichtbar machen           :done,    d1g, 2026-05-19, 1d
+    Operator-Webapp auf Büroarbeit trennen       :done,    d1h, 2026-05-19, 1d
+    Operator-Usecase-Routen vollständig prüfen   :done,    d1i, 2026-05-19, 1d
+    KG-Arbeitsansicht deutsch beschriften        :done,    d1j, 2026-05-19, 1d
+    BPMN-Modellansicht responsiv machen          :done,    d1k, 2026-05-19, 1d
+    Operator-Webapp ohne Zugriff erklären        :done,    d1l, 2026-05-19, 1d
+    Operator-Vorgangsliste vollständig machen    :done,    d1m, 2026-05-19, 1d
+    Bürooberfläche-vor-CLI-Modell schärfen       :done,    d1n, 2026-05-19, 1d
+    Operator-Rechtsgebiets-Navigation bauen      :done,    d1o, 2026-05-19, 1d
+    Operator-Viewport-Scroll bereinigen          :done,    d1p, 2026-05-19, 1d
+    Operator-Viewport-Scroll nach Merge prüfen   :done,    d1q, 2026-05-19, 1d
+    Operator-Menü und Footer bereinigen          :done,    d1r, 2026-05-19, 1d
+    Operator-Konfig für getrennte Git-Ziele      :done,    d1s, 2026-05-19, 1d
+    Operator-Konfig nach Merge prüfen            :done,    d1t, 2026-05-19, 1d
+    Operator-Aktenstart und Status bauen         :done,    d1u, 2026-05-19, 1d
+    QMS-ISO-9001-Dokumentationskern              :done,    d1v, 2026-05-19, 1d
+    ISO-9001 auf Hauptseite sichtbar machen      :done,    d1w, 2026-05-19, 1d
+    Operator-Eingang und Importvorschläge bauen  :done,    d1x, 2026-05-19, 1d
+    Operator-Eingang Upload-Sync bauen           :done,    d1z, 2026-05-20, 1d
+    Operator-Aktensuche und Rückweg bauen         :done,    d1aa, 2026-05-20, 1d
+    Operator-Styleguide und Workflowbindung       :done,    d1ab, 2026-05-20, 1d
+    Operator-Aktenchecklisten binden              :done,    d1ac, 2026-05-20, 1d
+    Operator-Endnutzer-Launcher paketieren       :         d1y, after d2, 14d
+    Notariats-Startseite weiter schärfen        :active,  d2, 2026-05-17, 14d
 ```
 
-## Progress Snapshot
+## Fortschrittsbild
 
-| Track | Scope | Status | Progress | Current gate |
+| Arbeitsstrang | Umfang | Status | Fortschritt | Aktueller Prüfpunkt |
 | --- | --- | --- | --- | --- |
-| A | Installable plugins for notary offices | Active | 67% | `noc-cyberjack-rfid` now detects REINER SCT DriverPackage, morris browser middleware and the optional morris loopback API/PCSC path locally; `noc-pkcs7-certbundle` adds a separate local certificate-bundle evidence track without signing; OpenAI-backed processing has an AVV/DPA governance section; and SBOM for AI now has a repo-wide baseline, minimum-requirements inventory and strict validator. |
-| B | Installable skills and deterministic Python workflows | Active | 41% | First executable KG runtime package and CLI are implemented with unit tests; `START_HERE` is now the operational entry path distinct from the README overview, startup verification has environment profiles for base, plugin-dev and notary-workstation setups, docs are grouped into `eventstream/`, `issues/`, `operations/` and `service-model/`, README/index references now have clickable-link validation, PDF export is manual-only during active development, `fertig` means merged to `main` plus clean local `main`, the GitHub root README uses a Deutsch/English start table, language parity now blocks copied identical localized Markdown/text mirrors, the KG editor exposes a safe no-code form/checklist view plus patch contract, and agent workflows now require plan-confirm for open scope, test/validation evidence for code, visual evidence for UI and clear command-approval purpose. |
-| C | Notarial usecases such as property, register, company, association, estate, family and power-of-attorney matters | Active | 56% | Every usecase now owns a case-local static KG; German is explicit as the leading and legally binding language for German-law notarial usecases; Fachpersonal edits those KGs through the no-code editor view instead of raw JSON. |
+| A | Installierbare Plugins für Notariate | Aktiv | 79% | `nac-cyberjack-rfid` erkennt lokal REINER-SCT-DriverPackage, morris-Browser-Middleware und den optionalen morris-Loopback-API-/PCSC-Pfad und ist über `nac plugins card-readiness` aufrufbar; bei installierter echter Hardware sind reale lokale Kartenleser-/SAK-Readiness-Tests vorgesehen, ohne PINs oder Kartenrohdaten zu speichern; `nac-bnotk-xnp` ist über `nac plugins xnp-reader-prompt` an das Karten-Gate gebunden und kann lokale XNP-Workstation-Validierung vorbereiten; `nac-pkcs7-certbundle` führt über `nac plugins pkcs7-inspect` einen getrennten lokalen Zertifikatsbündel-Nachweistrack ohne Signatur; OpenAI-gestützte Verarbeitung hat einen AVV/DPA-Governance-Abschnitt; die AI-SBOM hat eine repo-weite Basis, Mindestanforderungsinventar, strikten Validator, deutsche Plugin-MD-Führung, deutsch geführte Skill-Anweisungen mit englischer Kurzfassung, kurzen deutschen Plugin-Anzeigenamen ohne `NaC`-Präfix, knappen Kurzbeschreibungen, echten Icon-/Logo-Assets, sichtbarem Marktplatznamen `funktion8 - NaC` und einen lokalen Codex-Erkennungsbootstrap für neue Rechner. |
+| B | Installierbare Skills und deterministische Python-Arbeitsabläufe | Aktiv | 62% | Das erste ausführbare KG-Runtime-Paket ist unter der zentralen `nac`-CLI erreichbar; `nac status`, `nac kg`, `nac bpmn`, `nac config`, `nac plugins`, `nac process`, `nac web`, `nac operator`, `nac tenant` und `nac doctor` bilden die gemeinsame Bedienkante für Runtime, Konfiguration, Webserver, lokale Operator-Bridge, getrennte Datenrepos und Quality Gate; `nac tenant write-sample-akte` erzeugt ein Aktenmodell mit kleinen JSON-Datensätzen, stabilen ID-Pointern, Dokumentmetadaten, Platzhaltern für PDF/JPG-Binärdateien, Ereignisjournal und Webapp-/Codex-Indizes; `START_HERE` ist der operative Einstieg getrennt vom README-Überblick; Startprüfungen haben Profile für Basis-, Plugin-Dev- und Notariats-Arbeitsplatz-Setups; README-/Index-Referenzen haben klickbare-Link-Validierung; PDF-Export bleibt im aktiven Aufbau manuell; `fertig` bedeutet Merge nach `main` plus sauberer lokaler `main`; Sprachparität blockiert kopierte lokalisierte Markdown-/Textspiegel, prüft SKILL.md-Sprachmarker, erzwingt echte Umlaute in deutscher Menschensprache und hält lokalisierte Markdown-Links im jeweiligen Sprachpfad; der KG-Editor stellt sichere No-code-Formular-/Checklisten-Sichten plus Patch-Vertrag bereit; Agenten-Workflows verlangen Planbestätigung bei offenem Scope, Test-/Validierungsnachweis für Code, visuellen Nachweis für UI und klare Zweckangabe für Command-Approvals; der BPMN-js Business Layer hat ein NaC-Modellprofil, Usecase-BPMN-Modelle, `nac:channel`, eine Python-Validierung im strikten Quality Gate und einen lokalen Webserver mit BPMN-XML/Editierfläche, sichtbarem Editor-Menü, Schritt-Navigation, bpmn-js-Palette und NaC-Eigenschaftenpanel; die ChatGPT-/Codex-Anbindung wird als `nac-mcp`-Schicht geplant, wobei Custom-GPT-Actions mit HTTPS-Tunnel nur für synthetische Demos zulässig sind und Apps SDK/MCP die Zielarchitektur bildet. |
+| C | Notarielle Usecases für Immobilien, Register, Gesellschaften, Vereine, Nachlass, Familie und Vollmachten | Aktiv | 67% | Jeder aktive Usecase besitzt eine usecase-lokale statische KG und ein bpmn-js-taugliches BPMN-Basismodell mit Rolle, Ausführungskanal, Freigabe, Nachweis und KG-Referenz; die Kanäle unterscheiden persönliche, E-Mail-, Fax-/Post-, Portal-, XNP- und digital signierte Schritte; Deutsch ist explizit die führende und rechtlich bindende Sprache für deutschrechtliche notarielle Usecases; KG-JSON-Reviewtexte, Markdown-Review-Sichten und kurze Usecase-Vorderseiten sind deutsch geführt und durch den Sprachvalidator abgedeckt; nicht passende aktive Aufnahmequellen, darunter `Steuer-aaS`, wurden aus NaC entfernt und sind nicht mehr Teil des Katalogs. |
+| D | Produktkommunikation, Adoption und externe Bewertung | Aktiv | 58% | Root-README führt jetzt mit Nutzen, Grenzen, Owner-Sichtbarkeit, vier Zielgruppenpfaden plus Maintainer-Pfad und sichtbarer Attribution; ISO 9001 ist auf der Hauptseite im Einstieg, in der Zielgruppentabelle, in der Nicht-Technik-Orientierung, in `Was Dieses Repo Leistet` und in der Produktstruktur sichtbar; separate Startseiten erklären Notariatsentscheidung, Betrieb, Integration sowie Prüfung und Standardisierung; Reifegrad, Glossar, Ausführungsmodell für Bürooberfläche und prüfbaren Kern, präzisierte Gantt-Regel, AGPL-/CC-BY-Lizenzmodell, ein durchgehender Immobilienkaufvertrag-Pfad und ein repo-lokaler Codex-Logo-Assetbestand machen den Stand für Nicht-Technik-Leser greifbarer; die neue QMS-/ISO-9001-Schicht ordnet Qualitätspolitik, Qualitätsziele, Prozesslandkarte, RACI, ISO-Mapping, internes Auditprogramm, Abweichungsschema und Managementbewertung den NaC-Nachweisen zu und ist über `nac qms` erreichbar; die lokale Operator-Webapp ist als Büroarbeitsfläche von Handbuch-/Doku-Inhalten getrennt, startet usecase-zentriert, führt alle 22 Vorgänge als gleichartige Arbeitskarten mit Aktenverwaltung, Kontrolle und eingeklappter Kanzlei-Workflow-Führung, bindet Aktenanlage, Aktenliste und Statuswechsel über `/api/matters` an das konfigurierte Demo-Datenrepo, schreibt beim Anlegen einer Akte ein `workflow_binding` mit Workflow-Version, BPMN-/Checklisten-Artefakt-Hashes und Bindungszeitpunkt, erzeugt pro Akte einen eingefrorenen Checklistenstand `checkliste.json` aus der Usecase-KG-Vorlage und zeigt daraus den nächsten offenen Schritt, ergänzt einen `Eingang` für Prompt-, Scan-, E-Mail- und Fax-Importvorschläge über `/api/import-proposals` mit expliziter Übernahme in eine Demo-Akte, synthetischem Browser-Bildupload, Mustermann-Testprofil-Metadatenvorschau, Base64-Dateistaging im Datenrepo, Fokus-/Intervall-Aktualisierung ohne Seitenreload, gemeinsamer Suche über Akten und offene Eingänge sowie sichtbarer `← Zurück`-/`Übersicht`-Navigation in Arbeitsbereichen, filtert die Vorgangsliste über alphabetische obere App-Tabs nach allgemeinem Zivilrecht, Erbrecht, Familienrecht/Vorsorge, Gesellschaft/Register und Immobilienrecht, verschiebt Tests, Anbindungen, Konfig und Handbuch in den sichtbaren Footer, speichert lokale Git-Ziele für NaC-Fork und getrennten Datenrepo-Ordner über eine Benutzerkonfiguration mit `funktion8/demo8notariat` als aktuellem Demo-Datenrepo, vermeidet künstlichen Viewport-Scroll durch entfernte Arbeitsflächen-Mindesthöhe und no-store lokale Asset-Auslieferung, zeigt KG-Status/Rollen in deutschen Büro-Bezeichnungen statt technischer Roh-IDs, hält BPMN-Diagramme sowie Schritt-Tabellen auf schmalen Breiten lesbar, ist mit Screenshots für Leser ohne Webapp-Zugriff erklärt und hat einen Styleguide für konsistente Menü- und Aktionshierarchie; als offener Endnutzer-TODO ist die Paketierung als installierter NaC-Operator-Launcher mit gebündelter Laufzeit, internen Healthchecks, Startmenü-Einstieg und Konfig-/Datenrepo-Assistent vermerkt, damit Standardnutzer keine Shell-, Python-, Curl- oder Codex-Freigaben sehen; README und CLI-Doku stellen `nac` als prüfbaren Kern hinter der verständlichen Bürobedienung dar, nicht als reine Kommandozeilenbedienung. |
 
-## Rule
+## Regel
 
-The strict quality gate includes `scripts/validate_gantt_progress.py`. A change
-set that does not update `roadmap/GANTT.md` is not push-ready. A change set that
-touches `plugins/`, `workflows/`, or `usecases/` must update the matching area
-Gantt as well.
+Die strikte Qualitätsprüfung umfasst `scripts/validate_gantt_progress.py` und setzt
+diese Regel technisch durch:
+
+1. Sobald ein Change-Set repo-relevante Dateien ändert, muss
+   `roadmap/GANTT.md` Teil desselben Change-Sets sein.
+2. Änderungen unter `plugins/`, `workflows/` oder `usecases/` müssen
+   zusätzlich das jeweilige `GANTT.md` im selben Root mitpflegen.
+3. Reine Änderungen am jeweiligen Themen-Gantt zählen bereits als
+   Themen-Gantt-Pflege.
+4. Generierte Quality-Artefakte unter `out/` und Git-Interna werden ignoriert.

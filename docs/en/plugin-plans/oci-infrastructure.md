@@ -4,7 +4,7 @@ Status: `proposed`
 
 ## Goal
 
-OCI is connected locally from WSL and can serve NoC as infrastructure and
+OCI is connected locally from WSL and can serve NaC as infrastructure and
 evidence platform:
 
 - OCI CLI for local administration,

@@ -1,0 +1,56 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "nac-bnotk-xnp",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/bnotk-xnp-notariatssoftware.md",
+  "runtime_mode": "local-xnp-auth-gate",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "xnp_authentication_or_context_change",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Document local XNP Bereitschaft, current local authentication and interface status.",
+    "Create a local dry-run reader prompt that routes to the Karte/SAK without performing XNP login or productive XNP writes.",
+    "Optionally pass through the Karte/SAK morris localhost API and PC/SC list-readers probe without XNP login or productive XNP writes.",
+    "Require completed Karte/SAK Bereitschaft before XNP login testing.",
+    "Record boolean presence of local configuration without values.",
+    "Prepare local-only XNotar/register handoff steps for notarial software."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass local XNP authentication, Amtstätigkeitskontext validation, human review, register, mailbox, or notarial action controls.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm target mode: citizen preflight or notary-side workstation workflow.",
+    "Confirm completed Karte/SAK Bereitschaft for card, security-class-3 reader, SAK lite/XNP card path and secureFramework.",
+    "Confirm XNP installed on the same workstation/user context.",
+    "Confirm local XNP login, user role and Amtstätigkeitskontext are available without storing values.",
+    "Confirm XNotar/register module or exchange-folder route.",
+    "Confirm notarial software vendor support and local admin ownership."
+  ],
+  "day1": [
+    "Create local reader-prompt evidence, authentication gate, XNotar handoff Bereitschaft plan and evidence shell without credential values."
+  ],
+  "day2": [
+    "Recertify local interface status after XNP or notarial software updates."
+  ],
+  "required_accounts_or_approvals": [
+    "BNotK/XNP access for the notary office",
+    "Completed Karte/SAK Bereitschaft",
+    "Local XNP login and active Amtstätigkeitskontext",
+    "XNotar/register module or exchange-folder route",
+    "Notarial software vendor interface approval",
+    "Local workstation admin approval"
+  ]
+}

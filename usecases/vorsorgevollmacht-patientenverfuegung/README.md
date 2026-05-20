@@ -1,87 +1,72 @@
-# Vorsorgevollmacht und Patientenverfuegung
+# Vorsorgevollmacht und Patientenverfügung
 
-Status: KG baseline  
-KG node: `case.vorsorgevollmacht_patientenverfuegung`  
+Status: offen
+Reifegrad: Top-10-Usecase, P0
+KG-Knoten: `case.vorsorgevollmacht_patientenverfuegung`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB care and patient-directive context
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for precautionary powers of attorney,
-health-care powers and patient directives. The workflow must capture principal,
-agents, scope, effectiveness, health-care instructions, central register route
-and copy handling.
+Vorsorgevollmacht, Gesundheitsvollmacht und Patientenverfügung mit Umfang, Bevollmaechtigten, Wirksamkeit, Register und Ausfertigungsmanagement.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for principal identity, capacity, agents, substitutes, financial scope,
-  health-care scope, patient directive wishes and effectiveness rules.
-- Draft support for power of attorney and patient directive instruments.
-- Copy, revocation and register evidence metadata.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No medical advice or automated final wording decisions.
-- No real health, care, family or address data in Git.
-- No registration or copy distribution without reviewed instruction.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `principal.identity` | Who grants the power and how is capacity reviewed? | Notary | Personal data |
-| `agent.identities` | Who should act as agent or substitute? | Principal | Personal data |
-| `authority.financial` | Which financial, banking, property or business powers are intended? | Principal | Financial data |
-| `authority.health` | Which health, care, residence and communication powers apply? | Principal | Health or sensitive data |
-| `patient.directive` | Which treatment situations and wishes should be documented? | Principal | Health or sensitive data |
-| `effectiveness.rules` | When can the power be used and how are copies handled? | Notary | Mandate metadata |
-| `self_dealing.release` | Should self-dealing or sub-delegation be allowed? | Notary | Mandate metadata |
-| `central_register` | Should central register registration be prepared? | Notary clerk | Personal data |
+| `principal.identity` | Vollmachtgeber Identität | Notariat | identity_gate, capacity_review |
+| `agent.identities` | Bevollmaechtigter Identitäten | Vollmachtgebende Person | drafting |
+| `authority.financial` | Berechtigung Finanzen | Vollmachtgebende Person | drafting, legal_review |
+| `authority.health` | Berechtigung Gesundheit | Vollmachtgebende Person | drafting, legal_review |
+| `patient.directive` | Patientenverfügung Verfügung | Vollmachtgebende Person | drafting, appointment |
+| `effectiveness.rules` | Wirksamkeit Regeln | Notariat | legal_review, closing |
+| `self_dealing.release` | Befreiung von Selbstkontrahierung und Untervollmacht | Notariat | legal_review |
+| `central_register` | Zentrales Vorsorgeregister | Notariatsfachkraft | closing |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Power of attorney draft | Defines agent scope. | Synthetic or metadata only. |
-| Patient directive draft | Captures reviewed health-care wishes. | Synthetic or metadata only. |
-| Capacity and instruction reference | Supports notarial review. | Evidence reference only. |
-| Copy and register trace | Tracks copies and central register state. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Instrument scope: power only, patient directive only or combined.
-- Register route: register, do not register, needs review or unknown.
-- Agent model: single, joint, substitute or conditional powers.
-- Whether financial/property powers need additional form or review.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-idaas`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Capacity and free-will review | Notary | Execution |
-| Health-care and patient-directive wording reviewed | Notary | Draft release |
-| Copy and revocation model confirmed | Notary clerk | Closing |
-| Register route confirmed | Notary clerk | Post-execution |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Sensitive intake and evidence guardrails. |
-| `noc-idaas` | Identity support where permitted. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
 
-1. Create intake schema for power, health and patient-directive scopes.
-2. Add capacity and health-sensitivity warning gates.
-3. Add copy, revocation and register state model.
-4. Add deterministic missing-information report.
-5. Validate with synthetic principal and agent fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case vorsorgevollmacht-patientenverfuegung
+python scripts/notary_kg.py --repo-root . editor-view vorsorgevollmacht-patientenverfuegung
+python scripts/validate_knowledge_graph.py
+```
 
-- Principal identity and capacity gate are mandatory.
-- Health-care scope cannot be completed without review.
-- Register decision is explicit.
-- No real health or family data is committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

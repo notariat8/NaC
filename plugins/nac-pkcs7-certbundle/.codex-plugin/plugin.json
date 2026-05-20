@@ -1,0 +1,55 @@
+{
+  "name": "nac-pkcs7-certbundle",
+  "version": "0.1.0",
+  "description": "PKCS7-Zertifikatsbündel als lokaler Nachweis.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/plugins/nac-pkcs7-certbundle",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "noc",
+    "pkcs7",
+    "p7b",
+    "p7c",
+    "certificate-bundle",
+    "certificate-chain",
+    "local-companion",
+    "evidence",
+    "no-signature",
+    "no-private-key"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PKCS7-Nachweis",
+    "shortDescription": "Zertifikatsbündel ohne Signatur prüfen.",
+    "longDescription": "Installierbares lokales Codex-Plugin für die Prüfung von PKCS7-, P7B- und P7C-Zertifikatsbündeln als metadatenbasierter Nachweis ohne Signatur- oder Private-Key-Zugriff.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "CertificateEvidence",
+      "Installable",
+      "Pkcs7",
+      "MetadataOnly",
+      "NoSignature",
+      "NoPrivateKey",
+      "NoPIN"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/plugins/nac-pkcs7-certbundle",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe ein lokales PKCS7-Zertifikatsbündel ohne Signatur.",
+      "Erzeuge metadatenbasierten Nachweis für eine P7B-Kette.",
+      "Prüfe die lokale PKCS7-Werkzeugverfügbarkeit."
+    ],
+    "brandColor": "#355E3B",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

@@ -18,7 +18,7 @@ assignees: ""
 
 ## Erwartetes Ergebnis
 
-## Tatsaechliches Ergebnis
+## Tatsächliches Ergebnis
 
 ## Kontext
 

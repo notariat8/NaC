@@ -1,87 +1,74 @@
-# Geschaeftsanteilsuebertragung GmbH
+# Geschäftsanteilsübertragung GmbH
 
-Status: KG baseline  
-KG node: `case.geschaeftsanteilsuebertragung_gmbh`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P0
+KG-Knoten: `case.geschaeftsanteilsuebertragung_gmbh`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, GmbHG Section 15, HGB Section 12
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for sale, gift or other transfer of
-GmbH shares. The workflow must capture share identity, chain of title, parties,
-consent restrictions, AML/beneficial-owner flags, consideration, updated
-shareholder list and submission evidence.
+Kauf, Schenkung oder sonstige Übertragung von GmbH-Geschäftsanteilen mit Beteiligten, Anteilskette, Zustimmungsvorbehalten, Kaufpreis, Gesellschafterliste und Register-Nachweisen.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for company, shares, seller, buyer, price/gift route and consents.
-- Review of articles restrictions, pre-emption rights and authority.
-- Preparation of transfer deed and shareholder list.
-- Filing/submission trace for register-relevant documents.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No tax advice as final truth.
-- No real shareholder, price or AML data in Git.
-- No register submission without reviewed notarial execution.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `company.identity` | Which GmbH and register data define the target? | Notary clerk | Company register data |
-| `share.identity` | Which shares and chain of title are transferred? | Notary | Company financial data |
-| `seller.identity` | Who transfers and how is authority proven? | Notary clerk | Personal or company data |
-| `buyer.identity` | Who acquires and which AML flags apply? | Notary | Compliance data |
-| `consents.restrictions` | Are consent restrictions or pre-emption rights triggered? | Notary | Company data |
-| `consideration.tax` | Is this sale, gift, mixed transfer or other route? | Notary | Financial data |
+| `company.identity` | Gesellschaft Identität | Notariatsfachkraft | register_review |
+| `share.identity` | Geschäftsanteil Identität | Notariat | legal_review, shareholder_list |
+| `seller.identity` | Verkäufer Identität | Notariatsfachkraft | identity_gate, drafting |
+| `buyer.identity` | Käufer Identität | Notariat | aml_review, shareholder_list |
+| `consents.restrictions` | Zustimmungen Beschraenkungen | Notariat | legal_review |
+| `consideration.tax` | Gegenleistung Steuer | Notariat | drafting, closing |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Share transfer agreement | Human-reviewed notarial deed. | Synthetic or metadata only. |
-| Updated shareholder list | Register-relevant follow-up artifact. | Evidence reference only. |
-| Consent/waiver evidence | Confirms restrictions are handled. | Evidence reference only. |
-| AML/beneficial-owner review | Compliance gate evidence. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Sale, gift, mixed transfer, pool/trust or other route.
-- Consent or waiver needed.
-- Shareholder list ready or blocked.
-- Whether post-closing register or transparency-register work is triggered.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-bnotk-xnp`
+- `nac-handelsregister`
+- `nac-idaas`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Chain of title and restrictions reviewed | Notary | Deed release |
-| Seller/buyer identity and authority reviewed | Notary | Execution |
-| AML and beneficial-owner flags reviewed | Notary | Closing |
-| Updated shareholder list ready | Notary clerk | Submission |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Company workflow guardrails and evidence model. |
-| `noc-bnotk-xnp` | Notary filing route readiness. |
-| `noc-handelsregister` | Shareholder-list submission route. |
-| `noc-idaas` | Identity support where permitted. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.gmbhg.15`
+- `src.hgb.12`
 
-1. Build share-transfer intake schema.
-2. Add share chain and consent checklist.
-3. Add shareholder-list generation/review workflow.
-4. Add AML red-flag metadata.
-5. Validate with synthetic shareholder fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case geschaeftsanteilsuebertragung-gmbh
+python scripts/notary_kg.py --repo-root . editor-view geschaeftsanteilsuebertragung-gmbh
+python scripts/validate_knowledge_graph.py
+```
 
-- Chain of title and consent review block execution.
-- Updated shareholder list cannot be marked ready before transfer review.
-- AML flags are explicit.
-- No real price, identity or ownership data is committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

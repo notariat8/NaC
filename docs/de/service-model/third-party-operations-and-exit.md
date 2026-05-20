@@ -2,12 +2,12 @@
 
 ## Ziel
 
-Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne Function8 als SaaS-Betreiber sicher weiterfuehren oder zu einem Drittanbieter migrieren koennen.
+Dieses Dokument beschreibt, wie Kunden `NaC` und zugehörige Services auch ohne Function8 als SaaS-Betreiber sicher weiterführen oder zu einem Drittanbieter migrieren können.
 
 ## Grundsatz
 
 - Function8 ist ein Angebot, kein technischer Zwang.
-- Alle relevanten Betriebsinformationen muessen in diesem Repo liegen.
+- Alle relevanten Betriebsinformationen müssen in diesem Repo liegen.
 - Jede Leistung muss durch Kundenbetrieb oder Drittbetrieb ersetzbar sein.
 
 ## Betriebsoptionen
@@ -17,9 +17,9 @@ Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne 
 2. `customer_self_operated`
    - Kunde betreibt auf eigener Infrastruktur/Tenant.
 3. `third_party_operated`
-   - ein anderer Dienstleister uebernimmt Betrieb auf Basis derselben Doku.
+   - ein anderer Dienstleister übernimmt Betrieb auf Basis derselben Doku.
 
-## Pflichtartefakte fuer Ersetzbarkeit
+## Pflichtartefakte für Ersetzbarkeit
 
 - Servicekatalog: `docs/de/service-model/function8-service-catalog.md`
 - Tenant-Modell: `docs/de/service-model/tenant-ownership-and-eventlock-service.md`
@@ -27,19 +27,19 @@ Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne 
 - Cloud-Runbooks: AWS/Azure/GCP/OCI
 - AVV-Checkliste: `docs/de/avv-checkliste-eventlock-saas.md`
 
-## Uebergabe an Dritte (Standardablauf)
+## Übergabe an Dritte (Standardablauf)
 
 1. Scope und Zielmodell (`self` oder `third_party`) festlegen.
-2. Rollen- und Zugriffsmatrix uebergeben.
-3. Event-Schema und Journal-Integritaetsverfahren uebergeben.
-4. Laufende Retention- und Legal-Hold-Zustaende uebergeben.
-5. Betriebsschluessel und Zertifikatsverantwortung geordnet migrieren.
-6. Parallelbetrieb und Abnahmetest durchfuehren.
+2. Rollen- und Zugriffsmatrix übergeben.
+3. Event-Schema und Journal-Integritaetsverfahren übergeben.
+4. Laufende Retention- und Legal-Hold-Zustände übergeben.
+5. Betriebsschlüssel und Zertifikatsverantwortung geordnet migrieren.
+6. Parallelbetrieb und Abnahmetest durchführen.
 7. Altbetrieb geordnet abschalten.
 
-## Mindestkriterien fuer risikoarmen Exit
+## Mindestkriterien für risikoarmen Exit
 
-- keine proprietaeren, undokumentierten Datenformate
+- keine proprietären, undokumentierten Datenformate
 - event_schema und hash-chain dokumentiert
 - tenant-spezifische Daten klar isoliert
 - Restore-Test unter neuem Betreiber erfolgreich
@@ -47,11 +47,11 @@ Dieses Dokument beschreibt, wie Kunden `NoC` und zugehoerige Services auch ohne 
 
 ## Verbotene Muster
 
-- versteckte Betriebsabhaengigkeiten ohne Repo-Dokumentation
-- ungeklaerte Schluesselhoheit bei Betreiberwechsel
-- fehlende Nachweisfaehigkeit waehrend Migration
+- versteckte Betriebsabhängigkeiten ohne Repo-Dokumentation
+- ungeklärte Schlüsselhoheit bei Betreiberwechsel
+- fehlende Nachweisfähigkeit während Migration
 
 ## Governance
 
-- Aenderungen an Exit-/Drittbetriebsregeln nur per PR + Review.
-- Bei SaaS-Leistungen mit personenbezogenen Daten ist AVV-Pflicht zu pruefen und zu dokumentieren.
+- Änderungen an Exit-/Drittbetriebsregeln nur per PR + Review.
+- Bei SaaS-Leistungen mit personenbezogenen Daten ist AVV-Pflicht zu prüfen und zu dokumentieren.

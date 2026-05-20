@@ -1,22 +1,22 @@
 # Startup Verification
 
-## Was geprueft wird
+## Was geprüft wird
 
-Der Startup-Check prueft lokal:
+Der Startup-Check prüft lokal:
 
-- benoetigte Commands (`git`, `python`, `gh`)
-- profilabhaengige Commands (`node`, `npm`)
+- benötigte Commands (`git`, `python`, `gh`)
+- profilabhängige Commands (`node`, `npm`)
 - empfohlene Commands (`pandoc`, `code`)
 - Mindest-Python-Version
-- Mindest-Node-Version fuer Plugin-Arbeit, sofern das Profil sie verlangt
+- Mindest-Node-Version für Plugin-Arbeit, sofern das Profil sie verlangt
 - Pflichtdateien und Policies
 - optional VS-Code-Copilot-Extensions
 - optional Prozessvalidierung und Tests
-- lokale Windows-/morris-/Treiber-Indikatoren fuer den Notariatsarbeitsplatz
+- lokale Windows-/morris-/Treiber-Indikatoren für den Notariatsarbeitsplatz
 
-## So fuehrst du den Check aus
+## So führst du den Check aus
 
-Base-Setup pruefen:
+Base-Setup prüfen:
 
 ```bash
 python scripts/startup_check.py --profile base --ide auto
@@ -28,29 +28,40 @@ Base-Setup plus Fach- und Testlauf:
 python scripts/startup_check.py --profile base --ide auto --run-tests
 ```
 
-Fuer VS Code strikt (inkl. Copilot Extensions):
+Für VS Code strikt (inkl. Copilot Extensions):
 
 ```bash
 python scripts/startup_check.py --profile base --ide vscode --run-tests
 ```
 
-Fuer Plugin-Entwicklung:
+Für Plugin-Entwicklung:
 
 ```bash
 python scripts/startup_check.py --profile plugin-dev --ide auto
 ```
 
-Fuer Notariatsarbeitsplatz, Kartenleser, morris und XNP-Pfad:
+Für Notariatsarbeitsplatz, Kartenleser, morris und XNP-Pfad:
 
 ```bash
 python scripts/startup_check.py --profile notary-workstation --ide auto
+python scripts/nac.py plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+python scripts/nac.py operator --open
 ```
+
+Die Operator-Webapp ist nur ein lokaler Bedienkanal. Sie spricht die per CLI
+gestartete Bridge auf `127.0.0.1` an; die Bridge startet freigegebene
+Prüfskripte im NaC-Workspace.
 
 ## Grenzen
 
-- Der Check sieht nur lokal verfuegbare Informationen.
+- Der Check sieht nur lokal verfügbare Informationen.
 - Er ersetzt keine GitHub-Servereinstellungen (z. B. Branch Protection).
-- Er ersetzt keine echte Fachsystemfreigabe und keine Kartenaktion.
-- Eine morris-Antwort wie `NoReader` oder `NoCard` reicht fuer die technische
-  Middleware-Anbindungspruefung, aber nicht fuer einen produktiven Kartenlauf.
-- Fuer Forks muss der Check ebenfalls uebernommen und aktiv genutzt werden.
+- Er ersetzt keine echte Fachsystemfreigabe.
+- Bei installierter Hardware sind echte lokale Kartenleser-, morris-, PC/SC-,
+  SAK-/XNP- und XNP-Readiness-Tests möglich. Produktive Kartenläufe,
+  Signaturen, PIN-Erfassung und Einreichungen bleiben gesondert freizugeben.
+- Eine morris-Antwort wie `NoReader` oder `NaCard` reicht ohne eingelegte oder
+  angeschlossene Karte für die technische Middleware-Anbindungsprüfung, aber
+  nicht für einen produktiven Kartenlauf.
+- Für Forks muss der Check ebenfalls übernommen und aktiv genutzt werden.

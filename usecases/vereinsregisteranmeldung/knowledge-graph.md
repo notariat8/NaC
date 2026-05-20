@@ -1,47 +1,56 @@
-# Vereinsregisteranmeldung Knowledge Graph
+# Vereinsregisteranmeldung Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `next10`  
-Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.vereinsregisteranmeldung`
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `next10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
+KG-Knoten: `case.vereinsregisteranmeldung`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `association.identity` | Association and register identity | `open` | `notary_clerk` | Which e.V., register court and register number are affected? |
-| `filing.type` | Filing type | `open` | `notary` | Is this board change, articles amendment, formation, dissolution or another filing? |
-| `board.identity` | Board signers and authority | `open` | `notary_clerk` | Which board members must sign and what representation rule applies? |
-| `resolution.evidence` | Meeting and resolution evidence | `open` | `association` | Which minutes, election records or articles amendment resolutions are needed? |
-| `articles.current` | Current articles and changed wording | `open` | `association` | What is the current articles text and which changes are registered? |
-| `filing.route` | Court filing route and copies | `open` | `notary_clerk` | Which paper or electronic route and copy package does the register court require? |
+| `association.identity` | Verein Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verein Identität benötigt? |
+| `filing.type` | Einreichung Art | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Art benötigt? |
+| `board.identity` | Vorstand Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Vorstand Identität benötigt? |
+| `resolution.evidence` | Beschluss Nachweis | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Beschluss Nachweis benötigt? |
+| `articles.current` | Satzung aktueller Stand | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Satzung aktueller Stand benötigt? |
+| `filing.route` | Einreichung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Route benötigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.register_application` | Dokument: Register Antrag | `offen` | notarielles Beglaubigungspaket |
+| `doc.minutes_resolution` | Dokument: Protokoll Beschluss | `offen` | Nachweispaket des Vereins |
+| `doc.articles` | Dokument: Satzung | `offen` | Nachweispaket des Vereins |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.register_application` | Association-register application | `open` |
-| `doc.minutes_resolution` | Minutes, election or resolution evidence | `open` |
-| `doc.articles` | Articles or amended articles wording | `open` |
+| `decision.certification_route` | Entscheidung: Beglaubigung Route | `offen` |
+| `decision.attachment_complete` | Entscheidung: Anlage Vollständigkeit | `offen` |
 
-## Review Gates
+## Prüfgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.signer_authority` | Board signer authority reviewed | `open` |
-| `gate.register_package_ready` | Association-register package ready | `open` |
+| `gate.signer_authority` | Prüfgate: Unterzeichner Berechtigung | `offen` |
+| `gate.register_package_ready` | Prüfgate: Register Paket bereit | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.certification_trace` | Nachweis: Beglaubigung Nachverfolgung | `offen` |
+| `evidence.court_submission` | Nachweis: Gericht Einreichung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

@@ -1,87 +1,75 @@
-# Schenkungsvertrag / Uebertragungsvertrag
+# Schenkungsvertrag / Übertragungsvertrag
 
-Status: KG baseline  
-KG node: `case.schenkungsvertrag_uebertragung`  
+Status: offen
+Reifegrad: Top-10-Usecase, P0
+KG-Knoten: `case.schenkungsvertrag_uebertragung`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Sections 518 and 311b, GBO
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for gift and transfer agreements,
-especially family real-estate transfers and anticipated succession. The package
-must capture asset, parties, reserved rights, reversion, obligations, approvals,
-tax flags and land-register execution metadata.
+Schenkung oder Übertragungsvertrag, häufig innerhalb der Familie und oft grundstücksbezogen, mit Vorbehaltsrechten, Rückforderung, Pflegepflichten, Steuer- und Grundbuchvollzug.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for transferor, transferee, transferred asset, consideration,
-  reserved rights, reversion rights, approvals and tax/family flags.
-- Draft support for gift, mixed gift or transfer with obligations.
-- Land-register, tax notification and follow-up evidence references.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No tax advice as automated truth.
-- No real family, asset, value or property data in Git.
-- No filing before ownership and reserved rights are reviewed.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `transferor.identity` | Who transfers and are identity, capacity and ownership verified? | Notary clerk | Personal data |
-| `transferee.identity` | Who receives and what family or tax relation is relevant? | Notary clerk | Personal or family data |
-| `asset.identity` | Which property, share, business interest or asset is transferred? | Notary clerk | Property or financial data |
-| `reserved.rights` | Are usufruct, residential, care or usage rights reserved? | Notary | Family or financial data |
-| `reversion.rights` | Which retransfer events, revocation grounds or notices apply? | Notary | Sensitive legal data |
-| `consideration.obligations` | Is the transfer gratuitous, mixed or obligation-based? | Notary | Financial data |
-| `consents.approvals` | Which spouse, court, bank or public approvals are needed? | Notary clerk | Mandate metadata |
-| `tax.family.flags` | Which gift tax, succession or mandatory-share flags apply? | Notary | Sensitive family-financial data |
+| `transferor.identity` | Übertragender Identität | Notariatsfachkraft | identity_gate, drafting |
+| `transferee.identity` | Erwerber Identität | Notariatsfachkraft | drafting, tax_notifications |
+| `asset.identity` | Vermögen Identität | Notariatsfachkraft | land_register_review, drafting |
+| `reserved.rights` | Vorbehaltsrechte Rechte | Notariat | drafting, legal_review |
+| `reversion.rights` | Rückforderungsrechte Rechte | Notariat | drafting, land_register_filing |
+| `consideration.obligations` | Gegenleistung Pflichten | Notariat | tax_review, drafting |
+| `consents.approvals` | Zustimmungen Genehmigungen | Notariatsfachkraft | execution |
+| `tax.family.flags` | Steuer Familie Prüfflaggen | Notariat | legal_review |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Transfer agreement draft | Human-reviewed deed. | Synthetic or metadata only. |
-| Land-register excerpt | Ownership and rights review for real estate. | Evidence reference only. |
-| Approval and consent evidence | Tracks spouse, court, administrator, bank or public approvals. | External reviewed evidence store. |
-| Tax and filing trace | Tracks notifications and execution. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Transfer type: gift, mixed gift or transfer with obligations.
-- Reserved rights: none, usufruct, residential right, reversion, mixed.
-- Whether care, maintenance or equalization obligations are included.
-- Whether family/tax flags require specialist review.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-grundbuch-portal`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Asset and ownership review | Notary | Draft release |
-| Reserved rights and reversion review | Notary | Execution |
-| Family, tax and succession flags reviewed | Notary | Closing decision |
-| Filing and tax notification package ready | Notary clerk | Post-execution |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Regulated workflow and evidence model. |
-| `noc-grundbuch-portal` | Land-register readiness for real-estate transfers. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.518`
+- `src.bgb.311b`
+- `src.gbo`
 
-1. Define transfer-intake schema with asset-type branches.
-2. Add reserved-rights and reversion decision model.
-3. Add approval and consent checklist.
-4. Add land-register and tax-notification evidence model.
-5. Validate with synthetic family-transfer fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case schenkungsvertrag-uebertragungsvertrag
+python scripts/notary_kg.py --repo-root . editor-view schenkungsvertrag-uebertragungsvertrag
+python scripts/validate_knowledge_graph.py
+```
 
-- Ownership and asset review block draft release until complete.
-- Reserved rights are explicit and evidenced.
-- Tax and family flags cannot be silently ignored.
-- No real asset values or family details are committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

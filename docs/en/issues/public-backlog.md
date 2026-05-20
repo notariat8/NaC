@@ -8,7 +8,7 @@ This list is intended as a template for GitHub issues.
 
 - **Type:** governance
 - **Status:** completed
-- **Implementation:** [LICENSE](../../../LICENSE), GPL-3.0
+- **Implementation:** `AGPL-3.0-or-later` for software and `CC-BY-4.0` for documentation
 - **Acceptance criteria:**
   - license decision documented,
   - `LICENSE` in repository,

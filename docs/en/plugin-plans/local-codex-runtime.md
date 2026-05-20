@@ -4,23 +4,23 @@ Status: `proposed`
 
 ## Goal
 
-Codex should edit NoC locally in the real workspace `~/NoC`. The local session
+Codex should edit NaC locally in the real workspace `~/NaC`. The local session
 is the execution location for plan generation, Git operations, tests and later
 domain integrations.
 
 ## Non-Goals
 
-- No NoC execution from Omnistation.
+- No NaC execution from Omnistation.
 - No copying of local secrets to remote hosts.
 - No bypassing GitHub, browser or OCI callbacks through SSH bridges.
 
 ## Day 0
 
-- Start Codex Desktop with workspace `\\wsl$\\Ubuntu\\home\\ofunk\\NoC`.
+- Start Codex Desktop with workspace `\\wsl$\\Ubuntu\\home\\ofunk\\NaC`.
 - Update repository:
 
 ```bash
-cd ~/NoC
+cd ~/NaC
 git pull
 ```
 
@@ -59,7 +59,7 @@ python3 scripts/startup_check.py --ide auto --run-tests
 
 ## Acceptance Criteria
 
-- Codex sees `/home/ofunk/NoC` as working directory.
+- Codex sees `/home/ofunk/NaC` as working directory.
 - `git status --short --branch` runs locally.
 - Startup check is run locally and its result is known.
 - Plugin plans can be edited, committed and pushed locally.

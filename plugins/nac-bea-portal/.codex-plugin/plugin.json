@@ -1,0 +1,45 @@
+{
+  "name": "nac-bea-portal",
+  "version": "0.1.0",
+  "description": "beA-Postfachaufgaben und Nachweise planen.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "bea",
+    "law-firm",
+    "mailbox",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "beA-Postfach",
+    "shortDescription": "beA-Aufgaben und Nachweise planen.",
+    "longDescription": "Lokaler beA-Arbeitsablaufbegleiter für Bereitschaft, Postfach- und eEB-Aufgabenplanung, Client-Security-Prüfungen und Nachweiserfassung.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "Readiness",
+      "Workflow",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe die NaC beA-Portal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für das beA-Portal.",
+      "Prüfe Betriebsdrift für den beA-Portal-Pfad."
+    ],
+    "brandColor": "#6B3F5F",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

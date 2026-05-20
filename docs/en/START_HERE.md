@@ -1,12 +1,12 @@
-# START HERE: Operational Entry Into NoC
+# START HERE: Operational Entry Into NaC
 
 Status: binding start path
-Last content update: 2026-05-15
+Last content update: 2026-05-19
 
 ## Why This Document Exists Next To The README
 
 [README.md](../../README.md) and [docs/en/README.md](README.md) are project overview and index files. This
-document is the operational start sequence for working in the active NoC project.
+document is the operational start sequence for working in the active NaC project.
 
 [START_HERE.md](START_HERE.md) remains necessary, but it has a different job than the README:
 
@@ -16,7 +16,7 @@ document is the operational start sequence for working in the active NoC project
 | [docs/en/README.md](README.md) | English business orientation and documentation index. |
 | [docs/en/START_HERE.md](START_HERE.md) | Binding work-start sequence for new sessions, contributors and agents. |
 
-This repository is the active project state for `Notariat as Code` with `NoC`
+This repository is the active project state for `Notariat as Code` with `NaC`
 as the concrete Enterprise Control Plane.
 
 ## When To Use START_HERE
@@ -51,26 +51,32 @@ Use this document:
 4. Check the active runtime:
 
    ```bash
-   python scripts/notary_kg.py --repo-root . status
+   python scripts/nac.py status
    ```
 
 5. Run the strict local gate before treating a state as push-ready:
 
    ```bash
    python scripts/startup_check.py --profile base --ide auto --run-tests
-   python scripts/quality_gate.py --profile strict
+   python scripts/nac.py doctor --profile strict
    ```
 
 For plugin or notary-workstation work, also run the matching profile:
 
 ```bash
+python scripts/nac.py plugins validate
+python scripts/nac.py plugins install --mode link
 python scripts/startup_check.py --profile plugin-dev --ide auto
 python scripts/startup_check.py --profile notary-workstation --ide auto
 ```
 
+After `nac plugins install --mode link`, reopen Codex. The running session reads
+plugins at startup and sees repo-local plugins only after the local mirror and a
+restart.
+
 ## Working Mode
 
-NoC is developed as software. Concept work is complete only when it also updates
+NaC is developed as software. Concept work is complete only when it also updates
 at least one matching implementation surface:
 
 - runtime code under [src/](../../src)
@@ -101,11 +107,14 @@ at least one matching implementation surface:
 ## Current Developer Commands
 
 ```bash
-python scripts/notary_kg.py --repo-root . status
-python scripts/notary_kg.py --repo-root . case bautraegervertrag
+python scripts/nac.py status
+python scripts/nac.py kg case bautraegervertrag
+python scripts/nac.py bpmn validate
+python scripts/nac.py config validate
 python scripts/validate_knowledge_graph.py
+python scripts/nac.py plugins validate
 python scripts/startup_check.py --profile base --ide auto --run-tests
-python scripts/quality_gate.py --profile strict
+python scripts/nac.py doctor --profile strict
 ```
 
 ## Push Rule
@@ -122,12 +131,13 @@ Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes below
 German and English are standard languages. Changes to localized content must
 always maintain both language paths:
 
-- [docs/de/](../de)
 - [docs/en/](.)
-- [prompts/de/](../../prompts/de)
 - [prompts/en/](../../prompts/en)
 
-Parity is checked with [scripts/validate_language_parity.py](../../scripts/validate_language_parity.py).
+The German counterparts are maintained in parallel, but they are not linked as
+navigation targets from English subject-matter documents.
+
+Parity is checked with `python scripts/nac.py doctor --profile strict`.
 
 ## Completion Rule
 

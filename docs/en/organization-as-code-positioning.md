@@ -4,7 +4,7 @@
 
 This document defines the project terminology:
 
-- `NoC` is the concrete product and operating implementation in this
+- `NaC` is the concrete product and operating implementation in this
   repository.
 - The overarching architecture model is `Notariat as Code`.
 - The operational control principle is `Enterprise GitOps`.
@@ -30,9 +30,9 @@ Changes to organizational and notarial process logic are controlled through:
 - review and approval,
 - automated policy and compliance checks.
 
-### NoC
+### NaC
 
-`NoC` is the concrete implementation of Notariat as Code plus Enterprise GitOps
+`NaC` is the concrete implementation of Notariat as Code plus Enterprise GitOps
 in this repository.
 
 ## Why The Separation Matters
@@ -53,7 +53,7 @@ in this repository.
 ## Project Decision
 
 This repository maintains the positioning as an active project decision. The
-following terms are the binding terminology for NoC.
+following terms are the binding terminology for NaC.
 
 Term:
 

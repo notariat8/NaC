@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This section defines when NoC needs a German AVV or Data Processing Addendum
+This section defines when NaC needs a German AVV or Data Processing Addendum
 (DPA) for OpenAI-backed functions and which evidence must exist before pilot or
 production use.
 
@@ -34,7 +34,7 @@ path. The page's final "execute data processing agreement" step is the
 agreement/AVV path to review. Resulting documents, organization IDs and account
 data are not stored in this repository.
 
-## NoC Principle
+## NaC Principle
 
 - Local plugins and local workflows are the default path until AVV/DPA approval
   is documented.
@@ -49,9 +49,9 @@ data are not stored in this repository.
 
 ## License And Channel Decision
 
-| Channel | AVV/DPA rule | NoC approval |
+| Channel | AVV/DPA rule | NaC approval |
 | --- | --- | --- |
-| Free or Pro | Do not use for personal NoC/notary-office data. | Not approved. |
+| Free or Pro | Do not use for personal NaC/notary-office data. | Not approved. |
 | Team, Enterprise or API | Review DPA/AVV, configuration and purpose limitation. | Only after documented approval. |
 | Public GPT Store | Check privacy URL, terms, Action boundary and DPA need per Action. | Separate release approval. |
 | Workspace GPT/App | Review tenant, roles, retention, training/data sharing and DPA. | Pilot approval required. |
@@ -73,7 +73,7 @@ data are not stored in this repository.
 - incident, data-subject-rights, return and deletion process
 - review by privacy owner, business owner and technical owner
 
-## NoC PR Gate
+## NaC PR Gate
 
 A PR that enables OpenAI-backed processing of personal data is merge-ready only
 when:
@@ -84,7 +84,7 @@ when:
 3. This AVV/DPA section is linked as checklist reference.
 4. No real contract document, organization ID or account secret is in the diff.
 5. An issue or PR comment documents the approval decision.
-6. `python scripts/quality_gate.py --profile strict` passes.
+6. `python scripts/nac.py doctor --profile strict` passes.
 
 ## Minimum Decision Per Plugin Or Workflow
 
@@ -100,7 +100,7 @@ personal data:
 | Which minimization measure applies? | IDs/placeholders/synthetic/redaction |
 | Where is the external contract evidence stored? | Reference only, no document in repo |
 
-## Relationship To Existing NoC Documents
+## Relationship To Existing NaC Documents
 
 - `docs/en/security-and-dsgvo.md`: general repository protection rules.
 - `docs/en/avv-checkliste-eventlock-saas.md`: Function8/EventLock-specific

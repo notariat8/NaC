@@ -1,0 +1,45 @@
+{
+  "name": "nac-grundbuch-portal",
+  "version": "0.1.0",
+  "description": "Grundbuch-Berechtigung und Abrufplanung prüfen.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "grundbuch",
+    "land-register",
+    "notary",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Grundbuch",
+    "shortDescription": "Berechtigung und Abrufplanung prüfen.",
+    "longDescription": "Lokaler Grundbuchportal-Begleiter für Zulassung, berechtigtes Interesse, Abrufplanung und Nachweisimport.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "Local",
+      "Authorization",
+      "DryRun",
+      "Evidence"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe die Grundbuchportal-Bereitschaft.",
+      "Erstelle einen Einrichtungsplan für den Grundbuchportal-Pfad.",
+      "Prüfe Betriebsdrift für Grundbuchportal-Nachweise."
+    ],
+    "brandColor": "#395C73",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

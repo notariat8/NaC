@@ -2,7 +2,7 @@ version: 1
 positioning:
   model: notariat_as_code
   operating_principle: enterprise_gitops
-  implementation_label: noc
+  implementation_label: nac
 baseline:
   generic_modules:
     - formation
@@ -116,8 +116,13 @@ knowledge_graph:
   enforced_by: scripts/validate_knowledge_graph.py
 
 plugin_execution:
-  local_workspace: ~/NoC
+  local_workspace: ~/NaC
   omnistation_execution_allowed: false
+  local_plugin_mirror:
+    marketplace: ~/.agents/plugins/marketplace.json
+    plugin_root: ~/plugins
+    install_command: python scripts/install_local_plugins.py --mode link
+    restart_required: true
   require_plan_preview: true
   require_human_review_before_execution: true
   require_audit_evidence: true

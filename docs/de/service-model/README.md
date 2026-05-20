@@ -1,10 +1,10 @@
 # Service Model
 
-Dieser Ordner buendelt Dienstleister-, Provider- und Vertical-Struktur.
+Dieser Ordner bündelt Dienstleister-, Provider- und Vertical-Struktur.
 
 ## Dokumente
 
-- [core-vertical-blueprint.md](core-vertical-blueprint.md): Core-und-Vertical-Struktur fuer Dienstleister.
+- [core-vertical-blueprint.md](core-vertical-blueprint.md): Core-und-Vertical-Struktur für Dienstleister.
 - [vertical-starter-process-catalog.md](vertical-starter-process-catalog.md): Starter-Prozesse je Vertical.
 - [function8-service-catalog.md](function8-service-catalog.md): transparente Function8-Leistungen.
 - [tenant-ownership-and-eventlock-service.md](tenant-ownership-and-eventlock-service.md): Tenant-Owner- und Service-Modell.

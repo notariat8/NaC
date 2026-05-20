@@ -1,0 +1,34 @@
+license_policy:
+  source_of_truth: LICENSES/README.md
+  effective_date: "2026-05-18"
+  copyright_holder: "funktion8 / ofunk"
+  canonical_repository: "https://github.com/ofunk/NaC"
+  software:
+    spdx: AGPL-3.0-or-later
+    applies_to:
+      - src
+      - scripts
+      - schemas
+      - bpmn
+      - processes
+      - plugins
+      - workflows
+    rule: "Ausführbarer Code, Plugins, Workflow-Runtime, Schemas, Verträge, Validatoren und technische Beispiele bleiben unter AGPL-3.0-or-later."
+  documentation:
+    spdx: CC-BY-4.0
+    applies_to:
+      - docs
+      - prompts
+      - roadmap
+      - policies
+      - usecases
+    rule: "Dokumentation, Diagramme, Policies, Roadmap, fachliche Usecases und Knowledge-Graph-Reviewtexte bleiben unter CC-BY-4.0, sofern eine Datei nichts Abweichendes sagt."
+  attribution:
+    required_notice: "Based on NaC: Notariat as Code by funktion8 / ofunk (https://github.com/ofunk/NaC)."
+    files:
+      - NOTICE
+      - AUTHORS.md
+      - CITATION.cff
+  trademark:
+    source_of_truth: TRADEMARK.md
+    rule: "Die Lizenzen gewähren keine Markenrechte; Forks müssen eigene Herkunft und Verantwortung klar benennen."

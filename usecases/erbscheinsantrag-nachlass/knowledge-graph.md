@@ -1,49 +1,58 @@
-# Erbscheinsantrag / Nachlassangelegenheiten Knowledge Graph
+# Erbscheinsantrag / Nachlassangelegenheiten Wissensgraph
 
-Status: case-local static KG baseline  
-Last update: 2026-05-15  
-Catalog group: `top10`  
-Usecase: [README.md](README.md)  
-Machine-readable KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)  
-KG node: `case.erbscheinsantrag_nachlass`
+Status: usecase-lokale statische KG-Basis
+Letzte Aktualisierung: 2026-05-17
+Kataloggruppe: `top10`
+Usecase: [README.md](README.md)
+Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
+KG-Knoten: `case.erbscheinsantrag_nachlass`
 
-## Operating Model
+## Betriebsmodell
 
-This file is the human review view for the case-local static KG. The JSON
-file next to it is the machine-readable workflow state. Workflows may update
-status and evidence references through reviewed Git changes, but real mandate
-values must stay outside the repository.
+Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen Wissensgraphen. Die danebenliegende JSON-Datei ist der maschinenlesbare Workflow-Stand. Workflows dürfen Status und Nachweisreferenzen nur über geprüfte Git-Änderungen aktualisieren; echte Mandatswerte bleiben außerhalb des Repository.
 
-## Open Information Nodes
+## Offene Angabenknoten
 
-| ID | Label | Status | Owner | Open question |
+| ID | Bezeichnung | Status | Verantwortliche Rolle | Offene Frage |
 | --- | --- | --- | --- | --- |
-| `decedent.identity` | Decedent identity and death metadata | `open` | `applicant` | Who died, when and where, and which evidence confirms this? |
-| `residence.jurisdiction` | Last habitual residence and jurisdiction | `open` | `notary_clerk` | Which estate court has jurisdiction based on last habitual residence or other route? |
-| `applicants.identity` | Applicant identities and application authority | `open` | `notary_clerk` | Who applies and in which legal position? |
-| `heirship.basis` | Heirship basis | `open` | `notary` | Is heirship based on statutory succession, will, inheritance contract or European certificate context? |
-| `family.evidence` | Family and civil-status evidence | `open` | `applicant` | Which birth, marriage, divorce, adoption or death evidence is required? |
-| `dispositions.evidence` | Wills, inheritance contracts and opening records | `open` | `notary_clerk` | Which dispositions and opening records exist and where are they referenced? |
-| `renunciations.disclaimers` | Renunciations, disclaimers and contests | `open` | `notary` | Are there renunciations, disclaimers, contests, disinheritance or mandatory-share issues? |
-| `oath.statement` | Eidesstattliche Versicherung statement scope | `open` | `notary` | Which facts must be declared under oath and by whom? |
+| `decedent.identity` | Erblasser Identität | `offen` | Antragsteller | Welche Angaben, Nachweise und Prüfpunkte werden für Erblasser Identität benötigt? |
+| `residence.jurisdiction` | Wohnsitz Zuständigkeit | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Wohnsitz Zuständigkeit benötigt? |
+| `applicants.identity` | Antragsteller Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Antragsteller Identität benötigt? |
+| `heirship.basis` | Erbenstellung Grundlage | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Erbenstellung Grundlage benötigt? |
+| `family.evidence` | Familie Nachweis | `offen` | Antragsteller | Welche Angaben, Nachweise und Prüfpunkte werden für Familie Nachweis benötigt? |
+| `dispositions.evidence` | Verfügungen Nachweis | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verfügungen Nachweis benötigt? |
+| `renunciations.disclaimers` | Ausschlagungen Ausschlagungen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Ausschlagungen Ausschlagungen benötigt? |
+| `oath.statement` | Eidesstattliche Versicherung Erklärung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Eidesstattliche Versicherung Erklärung benötigt? |
 
-## Documents
+## Dokumente
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status | Quelle |
+| --- | --- | --- | --- |
+| `doc.death_certificate_reference` | Dokument: Sterbefall Bescheinigung Referenz | `offen` | manuell geprüfter Nachweisspeicher |
+| `doc.application_draft` | Dokument: Antrag Entwurf | `offen` | nach Prüfung erzeugter Workflow-Entwurf |
+| `doc.family_evidence` | Dokument: Familie Nachweis | `offen` | manuell geprüfter Nachweisspeicher |
+
+## Entscheidungen
+
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `doc.death_certificate_reference` | Death certificate or official death evidence reference | `open` |
-| `doc.application_draft` | Certificate of inheritance application draft | `open` |
-| `doc.family_evidence` | Civil-status evidence package | `open` |
+| `decision.certificate_type` | Entscheidung: Bescheinigung Art | `offen` |
+| `decision.oath_required` | Entscheidung: Eidesstattliche Versicherung erforderlich | `offen` |
 
-## Review Gates
+## Prüfgates
 
-| ID | Label | Status |
+| ID | Bezeichnung | Status |
 | --- | --- | --- |
-| `gate.heirship_review` | Heirship and evidence reviewed by notary | `open` |
-| `gate.oath_readiness` | Oath statement and appointment readiness checked | `open` |
+| `gate.heirship_review` | Prüfgate: Erbenstellung Prüfung | `offen` |
+| `gate.oath_readiness` | Prüfgate: Eidesstattliche Versicherung Bereitschaft | `offen` |
 
-## Privacy Rule
+## Nachweise
 
-All `value` fields remain empty in Git. The KG stores workflow state, open
-questions and evidence references only; it does not store real mandate data,
-secrets or personal data.
+| ID | Bezeichnung | Status |
+| --- | --- | --- |
+| `evidence.evidence_package` | Nachweis: Nachweis Paket | `offen` |
+| `evidence.court_submission` | Nachweis: Gericht Einreichung | `offen` |
+
+## Datenschutzregel
+
+Alle `value`-Felder bleiben in Git leer. Die KG speichert nur Workflow-Stand, offene Fragen und Nachweisreferenzen; sie speichert keine echten Mandatsdaten, keine Secrets und keine personenbezogenen Daten.

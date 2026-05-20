@@ -1,0 +1,45 @@
+{
+  "name": "nac-oci-evidence",
+  "version": "0.1.0",
+  "description": "OCI-Landing-Zone, Audit und Drift nachweisen.",
+  "author": {
+    "name": "funktion8 / ofunk",
+    "email": "security@example.com",
+    "url": "https://github.com/ofunk/NaC"
+  },
+  "homepage": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+  "repository": "https://github.com/ofunk/NaC",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "oac",
+    "oci",
+    "landing-zone",
+    "audit",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OCI-Nachweis",
+    "shortDescription": "Cloud-Audit und Drift nachweisen.",
+    "longDescription": "Lokaler OCI-Nachweisbegleiter für Landing-Zone-Prüfungen, Planreview, Audit-Journal-Design, Vault-Grenzen sowie Day2-Drift- und Kostenkontrollen.",
+    "developerName": "funktion8 / ofunk",
+    "category": "Regulierung",
+    "capabilities": [
+      "CloudReadiness",
+      "DryRun",
+      "Evidence",
+      "Drift"
+    ],
+    "websiteURL": "https://github.com/ofunk/NaC/tree/main/docs/plugin-plans",
+    "privacyPolicyURL": "https://github.com/ofunk/NaC/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/ofunk/NaC/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Prüfe die OCI-Nachweisbereitschaft.",
+      "Erstelle einen Einrichtungsplan für OCI-Nachweise.",
+      "Prüfe Betriebsdrift für den OCI-Nachweisbetrieb."
+    ],
+    "brandColor": "#7A3E34",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

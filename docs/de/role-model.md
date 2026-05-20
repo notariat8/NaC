@@ -8,7 +8,7 @@ Dieses Modell stellt sicher, dass:
 - nur qualifizierte Rollen fachkritische Schritte final entscheiden,
 - Freigaben nachvollziehbar und revisionsfest dokumentiert sind.
 
-## 1) Grundprinzip fuer alle Unternehmen
+## 1) Grundprinzip für alle Unternehmen
 
 - Beobachten darf jede Rolle.
 - Ein Ticket aufmachen darf jede Rolle.
@@ -20,19 +20,19 @@ Beispiel: Wenn Kopierpapier fehlt, muss niemand Notar sein, um das zu melden.
 ## 2) Generische Mindestrollen
 
 - `mitarbeiter`: darf melden, kommentieren, Status aktualisieren.
-- `sachbearbeitung`: darf operative Tickets bearbeiten und abschliessen, sofern kein fachkritischer Impact.
+- `sachbearbeitung`: darf operative Tickets bearbeiten und abschließen, sofern kein fachkritischer Impact.
 - `prozessverantwortung`: darf Arbeitsregeln im Fachprozess freigeben.
 - `freigabeverantwortung`: darf approval-pflichtige Schritte final freigeben.
-- `revision_audit`: darf pruefen, aber nicht operativ entscheiden.
-- `automation`: fuehrt technische Standardaufgaben aus, entscheidet nicht fachlich.
+- `revision_audit`: darf prüfen, aber nicht operativ entscheiden.
+- `automation`: führt technische Standardaufgaben aus, entscheidet nicht fachlich.
 
 ## 3) Fachspezifische Rollen (Beispiel Kanzlei)
 
 - `anwalt_fachlich`: fachliche Entscheidung in Mandats-/RVG-relevanten Schritten.
 - `reno`: operativer Ablauf, Fristen, Aktenkoordination.
-- `refa`: organisationsnahe Sachbearbeitung und Ablaufunterstuetzung.
+- `refa`: organisationsnahe Sachbearbeitung und Ablaufunterstützung.
 - `notar_fachlich` (nur Notariat): notarielle Freigaben.
-- `steuerfachkraft` (nur Steuerbuero): deklarationsnahe Freigaben.
+- `steuerfachkraft` (nur Steuerbüro): deklarationsnahe Freigaben.
 
 ## 4) Qualifikation statt Titel
 
@@ -40,7 +40,7 @@ Entscheidend ist nicht nur die Stellenbezeichnung, sondern die dokumentierte Qua
 
 Beispiel:
 
-- `rechnung_rvg_erstellen`: erlaubt nur fuer Rollen mit `qualification: rvg_billing_trained`.
+- `rechnung_rvg_erstellen`: erlaubt nur für Rollen mit `qualification: rvg_billing_trained`.
 
 ## 5) Entscheidungsmatrix (Self-Resolve vs Approval)
 
@@ -52,12 +52,12 @@ Beispiel:
 
 ```mermaid
 flowchart TD
-    Event[Ticket oder Anfrage] --> RoleCheck[Rolle und Qualifikation pruefen]
-    RoleCheck --> ImpactCheck[Impact und Compliance pruefen]
+    Event[Ticket oder Anfrage] --> RoleCheck[Rolle und Qualifikation prüfen]
+    RoleCheck --> ImpactCheck[Impact und Compliance prüfen]
     ImpactCheck --> SelfResolve{Self-Resolve erlaubt}
     SelfResolve -->|ja| Done[Ticket abgeschlossen]
-    SelfResolve -->|nein| Review[Review durch zustaendige Rolle]
-    Review --> Approval{Finale Freigabe noetig}
+    SelfResolve -->|nein| Review[Review durch zuständige Rolle]
+    Review --> Approval{Finale Freigabe nötig}
     Approval -->|ja| Approver[Freigabeverantwortung oder Fachrolle]
     Approval -->|nein| Done
     Approver --> Done
@@ -82,4 +82,4 @@ Empfehlung:
 
 - Technische IDs: neutral/stabil
 - Sichttexte: je nach Policy (neutral, Paarform, etc.)
-- Gleiche Rechte fuer alle Schreibformen
+- Gleiche Rechte für alle Schreibformen

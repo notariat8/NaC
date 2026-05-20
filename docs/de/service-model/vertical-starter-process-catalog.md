@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sieben Verticals auf Basis desselben Core-Modells.
+Dieser Katalog definiert ein erstes, vergleichbares Starterset für sieben Verticals auf Basis desselben Core-Modells.
 
 ## Einheitliche Statuswerte
 
@@ -22,9 +22,9 @@ Dieser Katalog definiert ein erstes, vergleichbares Starterset fuer sieben Verti
 ## Starterset: Anwaltskanzlei (`law_firm`)
 
 1. Mandatsannahme
-2. Konfliktpruefung
+2. Konfliktprüfung
 3. Fristensteuerung
-4. Aktenfuehrung und Dokumentation
+4. Aktenführung und Dokumentation
 5. RVG-/Leistungsabrechnung
 
 Core-Mapping:
@@ -36,8 +36,8 @@ Core-Mapping:
 
 ## Starterset: Notariat (`notary`)
 
-1. Aktenanlage fuer Mandant
-2. Identitaetspruefung und Unterlagencheck
+1. Aktenanlage für Mandant
+2. Identitätsprüfung und Unterlagencheck
 3. Urkundenvorbereitung
 4. Vollzug und Registerkommunikation
 5. Abrechnung und Abschlussnachweis
@@ -54,8 +54,8 @@ Core-Mapping:
 1. Mandanten-Onboarding
 2. Belegaufnahme und Strukturierung
 3. Deklarationszyklus (periodisch)
-4. Plausibilitaetspruefung und Rueckfrage
-5. Freigabe und Uebermittlungsvorbereitung
+4. Plausibilitätsprüfung und Rückfrage
+5. Freigabe und Übermittlungsvorbereitung
 
 Core-Mapping:
 
@@ -85,7 +85,7 @@ Core-Mapping:
 2. Vertrags- und Fristenanlage
 3. Wartungsticket und Dienstleistersteuerung
 4. Rollen- und Zugriffswechsel im Objektteam
-5. Uebergabe-/Schadensdokumentation mit Abschlussnachweis
+5. Übergabe-/Schadensdokumentation mit Abschlussnachweis
 
 Core-Mapping:
 
@@ -94,12 +94,12 @@ Core-Mapping:
 - Incident- und Abweichungsbehandlung
 - Nachweis/Audit
 
-## Starterset: Vermoegensverwaltung (`wealth_management`)
+## Starterset: Vermögensverwaltung (`wealth_management`)
 
-1. Mandatsaufnahme und KYC-Pruefung
+1. Mandatsaufnahme und KYC-Prüfung
 2. Eignungs- und Risikoprofilfreigabe
-3. Portfolio-Aenderung mit Rebalancing-Kontrolle
-4. Rollen- und Zugriffswechsel fuer Mandatsteams
+3. Portfolio-Änderung mit Rebalancing-Kontrolle
+4. Rollen- und Zugriffswechsel für Mandatsteams
 5. Mandatsreporting mit Audit-Nachweis
 
 Core-Mapping:
@@ -115,7 +115,7 @@ Core-Mapping:
 2. Aufmass und Angebotskalkulation
 3. Auftrag und Materialplanung
 4. Werkstatt-/Montagekoordination
-5. Rechnungsstellung und Gewaehrleistungsnachweis
+5. Rechnungsstellung und Gewährleistungsnachweis
 
 Core-Mapping:
 
@@ -124,9 +124,9 @@ Core-Mapping:
 - Freigaben und Rollen
 - Abschluss und Archivierung
 
-## Hinweise fuer den Pilot
+## Hinweise für den Pilot
 
 - Pro Vertical zuerst nur 1-2 Prozesse produktiv pilotieren.
-- Alle Prozesse laufen ueber Branch + PR + Review.
+- Alle Prozesse laufen über Branch + PR + Review.
 - Release-Binding je Vorgangsstart ist verpflichtend.
 - Abweichungen werden als Change Request dokumentiert.

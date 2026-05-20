@@ -1,16 +1,16 @@
 ---
-description: Einfuehrung immer fuer alle Plattformen pflegen
+description: Einführung immer für alle Plattformen pflegen
 alwaysApply: true
 ---
 
 # All-Platform Onboarding (MUSS)
 
-- Onboarding-Inhalte sind plattformuebergreifend verpflichtend.
-- Bei neuen Branchenmodulen muessen die Einfuehrungspfade fuer alle Plattformen aktualisiert werden.
-- Plattformtexte duerfen im Stil variieren, aber nicht im fachlichen Kern.
-- Jede Plattform muss einen klaren Erststartpfad fuer Nicht-IT-Nutzer haben.
+- Onboarding-Inhalte sind plattformübergreifend verpflichtend.
+- Bei neuen Branchenmodulen müssen die Einführungspfade für alle Plattformen aktualisiert werden.
+- Plattformtexte dürfen im Stil variieren, aber nicht im fachlichen Kern.
+- Jede Plattform muss einen klaren Erststartpfad für Nicht-IT-Nutzer haben.
 
-Pflichtabgleich bei Onboarding-Aenderungen:
+Pflichtabgleich bei Onboarding-Änderungen:
 
 - Cursor-Regeln unter [.cursor/rules/](.)
 - Copilot-Anweisungen unter [.github/copilot-instructions.md](../../.github/copilot-instructions.md)

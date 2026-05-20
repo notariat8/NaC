@@ -1,86 +1,74 @@
 # Gesellschafterbeschluss bei GmbH/UG
 
-Status: KG baseline  
-KG node: `case.gesellschafterbeschluss_gmbh_ug`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P0
+KG-Knoten: `case.gesellschafterbeschluss_gmbh_ug`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, GmbHG Section 53, HGB Section 12
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for GmbH/UG shareholder resolutions,
-including articles amendments, capital increases, managing-director
-appointments, consent to share transfers and other register-relevant decisions.
+Gesellschafterbeschlüsse bei GmbH/UG zu Satzungsänderungen, Kapitalmaßnahmen, Geschäftsführerbestellung, Anteilszustimmungen oder sonstigen Gesellschaftsentscheidungen.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for company, register data, resolution type, shareholders, votes,
-  representation, majority requirements and articles wording.
-- Notarial deed or certification route selection.
-- Register filing and notary certificate evidence.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No automated company-law final assessment.
-- No real shareholder lists, minutes or articles in Git.
-- No register filing without XNP/Handelsregister review.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `company.identity` | Which GmbH/UG and register data are affected? | Notary clerk | Company register data |
-| `resolution.type` | Which resolution type and legal basis apply? | Notary | Company data |
-| `shareholders.present` | Who participates and who represents whom? | Notary clerk | Personal or company data |
-| `majority.requirement` | Which statutory and articles majority rules apply? | Notary | Company data |
-| `articles.wording` | Which current text changes and what is the new wording? | Notary | Company data |
-| `register.filing` | Which register application and XNP route are needed? | Notary clerk | Technical metadata |
+| `company.identity` | Gesellschaft Identität | Notariatsfachkraft | register_review |
+| `resolution.type` | Beschluss Art | Notariat | drafting, legal_review |
+| `shareholders.present` | Gesellschafter anwesend | Notariatsfachkraft | quorum_review, identity_gate |
+| `majority.requirement` | Mehrheit Anforderung | Notariat | legal_review |
+| `articles.wording` | Satzung Wortlaut | Notariat | drafting, register_application |
+| `register.filing` | Register Einreichung | Notariatsfachkraft | submission |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Resolution minutes or deed | Captures decision and votes. | Synthetic or metadata only. |
-| Current and amended articles | Supports notary certificate and register filing. | Evidence reference only. |
-| Register application | Filing package. | Metadata only. |
-| Voting/authority evidence | Supports quorum and majority gate. | Evidence reference only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Notarial deed, certified signature or private resolution only.
-- Register filing required or not.
-- Majority/unanimity threshold and special consent rules.
-- Whether current articles wording is sufficient.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-bnotk-xnp`
+- `nac-handelsregister`
+- `nac-cyberjack-rfid`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Quorum, votes and majority reviewed | Notary | Deed release |
-| Authority and representation reviewed | Notary | Execution |
-| Articles wording certified | Notary | Register filing |
-| Register package ready | Notary clerk | Submission |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Regulated company workflow guardrails. |
-| `noc-bnotk-xnp` | Notary filing route readiness. |
-| `noc-handelsregister` | Register package and response handling. |
-| `noc-cyberjack-rfid` | Card/signature readiness. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.gmbhg.53`
+- `src.hgb.12`
 
-1. Create resolution-type taxonomy.
-2. Add vote and majority completeness checks.
-3. Bind articles wording to notary certificate package.
-4. Add register filing state model.
-5. Validate with synthetic GmbH/UG fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case gesellschafterbeschluss-gmbh-ug
+python scripts/notary_kg.py --repo-root . editor-view gesellschafterbeschluss-gmbh-ug
+python scripts/validate_knowledge_graph.py
+```
 
-- Majority and representation review blocks execution.
-- Articles wording must be available for amendments.
-- Register relevance is explicit.
-- No real company minutes or shareholder data are committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

@@ -1,0 +1,5 @@
+[console_scripts]
+business-os = business_os.cli:main
+nac = nac_cli.cli:main
+nac-web = nac_web.cli:main
+notary-kg = notary_kg.cli:main

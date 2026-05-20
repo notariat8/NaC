@@ -4,20 +4,21 @@ Status: `proposed`
 
 ## Kernentscheidung
 
-`noc-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
+`nac-handelsregister` wird auf die Vorbereitung von Online-Handelsregisteranmeldungen ausgerichtet.
 
-Korrektur der Entwicklungsreihenfolge: Fuer einen echten notariatsseitigen
-Anmelde- oder Vollzugspfad ist zuerst das Card/SAK-Gate (`noc-cyberjack-rfid`)
+Korrektur der Entwicklungsreihenfolge: Für einen echten notariatsseitigen
+Anmelde- oder Vollzugspfad ist zuerst die `Karte/SAK`
+(`nac-cyberjack-rfid`)
 erforderlich, weil XNP-Login-Tests ohne Karte/Kartenleser/SAK-lite bzw.
 XNP-Kartenpfad und secureFramework nicht belastbar sind. Danach kommt
-`noc-bnotk-xnp`; `noc-handelsregister` ist dann der fachliche Layer fuer
-Registerspur, HRA-/HRB-Plausibilitaet und Paket-Readiness.
+`nac-bnotk-xnp`; `nac-handelsregister` ist dann der fachliche Layer für
+Registerspur, HRA-/HRB-Plausibilität und Paketbereitschaft.
 
-Nur ein reiner Buerger-/Mandanten-Preflight fuer `online.notar.de` kann ohne
-Notar-/XNP-Authentifizierung starten. Dieser Preflight darf keine Einreichung,
-keine Notariatssoftware-Steuerung und keine notarielle Erklaerung ausloesen.
+Nur eine reine Bürger-/Mandanten-Vorprüfung für `online.notar.de` kann ohne
+Notar-/XNP-Authentifizierung starten. Diese Vorprüfung darf keine Einreichung,
+keine Notariatssoftware-Steuerung und keine notarielle Erklärung ausloesen.
 
-Der Fokus ist HRA-first, weil der Nutzer konkrete HRA-Anmeldungen vorbereiten koennen soll. Das Plugin muss aber jede Eingabe zuerst gegen die Registerspur pruefen:
+Der Fokus ist HRA-first, weil der Nutzer konkrete HRA-Anmeldungen vorbereiten können soll. Das Plugin muss aber jede Eingabe zuerst gegen die Registerspur prüfen:
 
 - HRA: typischerweise e.K., OHG, KG und verwandte Personengesellschaften.
 - HRB: typischerweise GmbH, UG und AG.
@@ -31,64 +32,64 @@ Das Plugin ist kein Registerabruf- oder Scraping-Plugin.
 Es darf:
 
 - den Online-Anmeldefall strukturieren,
-- HRA/HRB-Track, Rechtsform und fehlende Angaben pruefen,
-- Voraussetzungen fuer das notarielle Online-Verfahren abfragen,
-- bei notariatsseitigem Ziel auf `noc-cyberjack-rfid` und danach `noc-bnotk-xnp` als vorgelagerte Card-/XNP-Gates verweisen,
-- ein Anmeldepaket als Plan Preview vorbereiten,
-- Evidence-Metadaten fuer Paketversion, Freigabe und spaetere Einreichung erfassen.
+- HRA/HRB-Track, Rechtsform und fehlende Angaben prüfen,
+- Voraussetzungen für das notarielle Online-Verfahren abfragen,
+- bei notariatsseitigem Ziel auf `nac-cyberjack-rfid` und danach `nac-bnotk-xnp` als vorgelagerte Karten-/XNP-Prüfungen verweisen,
+- ein Anmeldepaket als Planvorschau vorbereiten,
+- Nachweis-Metadaten für Paketversion, Freigabe und spätere Einreichung erfassen.
 
 Es darf nicht:
 
 - Registerdaten abrufen,
-- geschuetzte Portale automatisieren,
-- notariell relevante Erklaerungen abgeben,
+- geschützte Portale automatisieren,
+- notariell relevante Erklärungen abgeben,
 - Unterschriften, Identifizierung oder Einreichung ersetzen,
 - echte Ausweis-, PIN-, Zertifikats- oder Mandatsdaten im Repo speichern.
 
 ## Grundlage
 
-Nach der IHK Muenchen koennen GmbHs und UGs seit 01.08.2022 online gegruendet werden; zunaechst Bargruendungen, seit 01.08.2023 auch Sach- oder gemischte Gruendungen. Ebenfalls ist die Beglaubigung von Handelsregister-Anmeldungen aller Rechtsformen mit Ausnahme von Vereinen seit 01.08.2022 online zulaessig. Fuer das Verfahren werden die App der Bundesnotarkammer, ein amtlicher Ausweis mit eID-Funktion und ein gueltiger amtlicher Lichtbildausweis benoetigt.
+Nach der IHK Muenchen können GmbHs und UGs seit 01.08.2022 online gegründet werden; zunächst Bargründungen, seit 01.08.2023 auch Sach- oder gemischte Gründungen. Ebenfalls ist die Beglaubigung von Handelsregister-Anmeldungen aller Rechtsformen mit Ausnahme von Vereinen seit 01.08.2022 online zulässig. Für das Verfahren werden die App der Bundesnotarkammer, ein amtlicher Ausweis mit eID-Funktion und ein gültiger amtlicher Lichtbildausweis benötigt.
 
 ## Day0
 
-- Betriebsmodus klaeren: Buerger-/Mandanten-Preflight oder Notariatsarbeitsplatz.
-- Bei Notariatsarbeitsplatz zuerst `noc-cyberjack-rfid` abschliessen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
-- Danach `noc-bnotk-xnp` abschliessen: lokale XNP-Anmeldung, Amtstaetigkeitskontext, XNotar-Modul und Austauschordner.
-- Registerspur klaeren: HRA, HRB oder anderes Register.
-- Rechtsform klaeren.
+- Betriebsmodus klären: Bürger-/Mandanten-Vorprüfung oder Notariatsarbeitsplatz.
+- Bei Notariatsarbeitsplatz zuerst `nac-cyberjack-rfid` abschließen: Karte, Kartenleser, PC/SC, SAK lite oder XNP-Kartenpfad und secureFramework.
+- Danach `nac-bnotk-xnp` abschließen: lokale XNP-Anmeldung, Amtstätigkeitskontext, XNotar-Modul und Austauschordner.
+- Registerspur klären: HRA, HRB oder anderes Register.
+- Rechtsform klären.
 - Firma, Sitz, Registergericht, Beteiligte und Vertretungsbefugnis erfassen.
-- Notarroute klaeren: Online-Verfahren oder Praesenztermin.
+- Notarroute klären: Online-Verfahren oder Praesenztermin.
 - Bundesnotarkammer-App, eID-Funktion, PIN und Ausweisdokumente als Bereitschaft abfragen, ohne Werte zu speichern.
 - Reviewer und Freigabeinhaber festlegen.
 
 ## Day1
 
-Das Plugin erzeugt eine Plan Preview mit:
+Das Plugin erzeugt eine Planvorschau mit:
 
-- Betriebsmodus, Card/SAK-Gate-Status und Auth-/XNP-Gate-Status,
-- Registerspur und Plausibilitaetswarnungen,
+- Betriebsmodus, Karten-/SAK-Prüfstatus und Auth-/XNP-Prüfstatus,
+- Registerspur und Plausibilitätswarnungen,
 - fehlenden Pflichtangaben,
-- Unterlagenliste fuer den Notar,
+- Unterlagenliste für den Notar,
 - Fragen an Antragsteller oder Rechtsberatung,
-- Approval-Checkpoint vor notarieller Videokommunikation,
-- Evidence-Metadatenmodell fuer Hashes und Paketversionen.
+- Freigabepunkt vor notarieller Videokommunikation,
+- Nachweis-Metadatenmodell für Hashes und Paketversionen.
 
 ## Day2
 
-- Abgelehnte oder zurueckgestellte Anmeldungen nachfassen.
+- Abgelehnte oder zurückgestellte Anmeldungen nachfassen.
 - Fehlende Anlagen, Identifizierungsfehler, Signaturfehler und Notarhinweise dokumentieren.
-- Paketversion und Evidence-Metadaten aktualisieren.
+- Paketversion und Nachweis-Metadaten aktualisieren.
 - Wiederverwendbare Vorlagen nur ohne Echtdaten im Repo halten.
 
-## Output Shape
+## Ausgabeform
 
 Das Plugin gibt immer diese Abschnitte aus:
 
-1. `Readiness`
-2. `Application Package`
-3. `Approval Needed`
-4. `Evidence`
-5. `Day2 Follow-up`
+1. `Bereitschaft`
+2. `Anmeldepaket`
+3. `Freigabe Erforderlich`
+4. `Nachweis`
+5. `Day2-Nachfassen`
 
 ## Quellen
 

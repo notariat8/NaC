@@ -1,13 +1,13 @@
 # Issue Backlog: Public Release
 
-Diese Liste ist als Vorlage fuer GitHub Issues gedacht.
+Diese Liste ist als Vorlage für GitHub Issues gedacht.
 
 ## P0 (Blocker, erledigt)
 
-### 1) Lizenz fuer Public Nutzung festlegen - erledigt
+### 1) Lizenz für Public Nutzung festlegen - erledigt
 - **Typ:** Governance
 - **Status:** erledigt
-- **Umsetzung:** `LICENSE` (GPL-3.0) angelegt
+- **Umsetzung:** `AGPL-3.0-or-later` für Software und `CC-BY-4.0` für Dokumentation festgelegt
 - **Akzeptanzkriterien:**
   - Lizenzentscheidung dokumentiert
   - `LICENSE` im Repo
@@ -30,31 +30,31 @@ Diese Liste ist als Vorlage fuer GitHub Issues gedacht.
   - Mindestens `invoice.bpmn` und `bookkeeping.bpmn`
   - Bezug aus Doku und Python-Engine dokumentiert
 
-### 4) PDF Export fuer Unternehmensdokumentation automatisieren - erledigt
+### 4) PDF Export für Unternehmensdokumentation automatisieren - erledigt
 - **Typ:** DevEx
 - **Status:** erledigt
 - **Umsetzung:** `.github/workflows/docs-pdf-export.yml` angelegt
 - **Akzeptanzkriterien:**
-  - Workflow fuer Markdown -> PDF
+  - Workflow für Markdown -> PDF
   - PDFs als Artefakt
   - Exportdoku in `docs/de/`
 
 ## P1 (wichtige Verbesserungen, offen)
 
-### 5) CI Check fuer Technology Policy
+### 5) CI Check für Technology Policy
 - **Typ:** Compliance Automation
 - **Akzeptanzkriterien:**
   - Check blockiert nicht erlaubte Technikpfade
-  - Check prueft Cross-IDE Sync Dokumente
+  - Check prüft Cross-IDE Sync Dokumente
 
-### 6) Release Checklist fuer Prozessversionen
+### 6) Release Checklist für Prozessversionen
 - **Typ:** Release Governance
 - **Akzeptanzkriterien:**
-  - Checkliste fuer Tag/Release
+  - Checkliste für Tag/Release
   - Verweis auf Audit-/Nachweisartefakte
 
 ### 7) Branchensets erweitern
 - **Typ:** Fachinhalt
 - **Akzeptanzkriterien:**
-  - Onboarding fuer Softwareunternehmen
-  - Beispielprozesse fuer Notariat/Steuerbuero
+  - Onboarding für Softwareunternehmen
+  - Beispielprozesse für Notariat/Steuerbüro

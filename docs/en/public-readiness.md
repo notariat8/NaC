@@ -19,6 +19,8 @@ perspective of this checklist, a public go-live is possible.
   [bpmn/bookkeeping-process.bpmn](../../bpmn/bookkeeping-process.bpmn)).
 - Green: PDF export is available as a manual/generated artifact path, not as a
   development prerequisite.
+- Green: audience paths, maturity matrix, glossary and a full example path are
+  available for non-technical readers.
 
 ## Recommendation
 
@@ -34,3 +36,5 @@ All previous blockers have been implemented.
 2. Add a release checklist for versioned process packages.
 3. Create the first public reference releases with a changelog-based attestation
    process.
+4. Add more concrete subject-matter examples beyond the real-estate purchase
+   contract.

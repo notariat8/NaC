@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import platform
 import shutil
@@ -12,6 +13,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQ_FILE = REPO_ROOT / "policies" / "startup-requirements.yaml"
+PLUGIN_MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -211,7 +213,7 @@ def check_notary_workstation() -> tuple[list[str], list[str], list[str]]:
         warnings.append("PC/SC-Dienst konnte auf diesem System nicht geprueft werden.")
 
     warnings.append("XNP-Installation und SAK-lite/XNP-Kartenpfad muessen manuell oder per Plugin-Check bestaetigt werden.")
-    warnings.append("morris-Loopback bitte mit `plugins/noc-cyberjack-rfid/scripts/check_readiness.py --json --probe-morris-api` pruefen.")
+    warnings.append("morris-Loopback bitte mit `plugins/nac-cyberjack-rfid/scripts/check_readiness.py --json --probe-morris-api` pruefen.")
 
     return ok, warnings, errors
 
@@ -260,6 +262,59 @@ def build_python_env() -> dict[str, str]:
     return env
 
 
+def default_plugin_home() -> Path:
+    return Path(os.environ.get("NAC_PLUGIN_HOME", Path.home())).expanduser()
+
+
+def check_local_plugin_mirror() -> tuple[list[str], list[str], list[str]]:
+    ok: list[str] = []
+    warnings: list[str] = []
+    errors: list[str] = []
+
+    if not PLUGIN_MARKETPLACE.is_file():
+        errors.append("Repo-lokaler Plugin-Marketplace fehlt: .agents/plugins/marketplace.json")
+        return ok, warnings, errors
+
+    try:
+        marketplace = json.loads(PLUGIN_MARKETPLACE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"Repo-lokaler Plugin-Marketplace ist kein gueltiges JSON: {exc}")
+        return ok, warnings, errors
+
+    plugin_names = [
+        entry.get("name")
+        for entry in marketplace.get("plugins", [])
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    ]
+    if plugin_names:
+        ok.append(f"Repo-lokaler Plugin-Marketplace gefunden: {len(plugin_names)} Plugins")
+    else:
+        errors.append("Repo-lokaler Plugin-Marketplace enthaelt keine Plugin-Eintraege.")
+        return ok, warnings, errors
+
+    plugin_home = default_plugin_home()
+    mirror_marketplace = plugin_home / ".agents" / "plugins" / "marketplace.json"
+    mirror_root = plugin_home / "plugins"
+    if not mirror_marketplace.is_file():
+        warnings.append(
+            "Lokale Codex-Plugin-Spiegelung fehlt. "
+            "Einmal `python scripts/install_local_plugins.py --mode link` ausfuehren "
+            "und Codex danach neu starten. Erwartet wird ~/.agents/plugins/marketplace.json "
+            "plus ~/plugins/<plugin>."
+        )
+        return ok, warnings, errors
+
+    ok.append(f"Lokaler Plugin-Marketplace gespiegelt: {mirror_marketplace}")
+    missing = [name for name in plugin_names if not (mirror_root / name).exists()]
+    if missing:
+        warnings.append(
+            "Lokale Plugin-Ordner fehlen in der Codex-Spiegelung: " + ", ".join(missing)
+        )
+    else:
+        ok.append(f"Lokale Plugin-Ordner gespiegelt: {mirror_root}")
+    return ok, warnings, errors
+
+
 def main() -> int:
     args = parse_args()
     requirements = parse_simple_yaml(REQ_FILE)
@@ -294,6 +349,10 @@ def main() -> int:
         node_ok, node_errors = check_node_runtime(requirements)
         ok.extend(node_ok)
         errors.extend(node_errors)
+        plugin_ok, plugin_warnings, plugin_errors = check_local_plugin_mirror()
+        ok.extend(plugin_ok)
+        warnings.extend(plugin_warnings)
+        errors.extend(plugin_errors)
 
     if args.profile == "notary-workstation":
         workstation_ok, workstation_warnings, workstation_errors = check_notary_workstation()

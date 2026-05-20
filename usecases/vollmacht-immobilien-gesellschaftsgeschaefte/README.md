@@ -1,89 +1,75 @@
-# Vollmacht fuer Immobilien- oder Gesellschaftsgeschaefte
+# Vollmacht für Immobilien- oder Gesellschaftsgeschäfte
 
-Status: KG baseline  
-KG node: `case.vollmacht_immobilien_gesellschaft`  
+Status: offen
+Reifegrad: Nächste-10-Usecase, P0
+KG-Knoten: `case.vollmacht_immobilien_gesellschaft`
 KG: [knowledge-graph.graph.json](knowledge-graph.graph.json) / [knowledge-graph.md](knowledge-graph.md)
-Primary source anchors: BeurkG, BGB Sections 167 and 129, BGB Section 311b, HGB Section 12
 
-## Goal
+## Worum Es Geht
 
-Prepare a notary-office usecase package for notarized or publicly certified
-powers of attorney used in real-estate contracts, company-register filings,
-shareholder meetings or share transfers. The workflow must control scope, form,
-limitations, original/copy handling and evidence.
+Notarielle oder öffentlich beglaubigte Vollmachten für Immobilienverträge, Registeranmeldungen, Gesellschafterversammlungen oder Anteilsübertragungen mit Umfang, Form und Nachweisen.
 
-## Scope
+Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenlesbare Stand liegt in [knowledge-graph.graph.json](knowledge-graph.graph.json); die Review-Sicht für offene Fragen, Dokumente, Entscheidungen und Gates liegt in [knowledge-graph.md](knowledge-graph.md).
 
-- Intake for principal, agent, transaction scope, form requirement,
-  limitations, self-dealing release, substitution and expiry.
-- Form decision: notarial deed, public certification or electronic
-  certification.
-- Delivery and copy control for originals and certified copies.
+## Was Heute Im Muster Enthalten Ist
 
-## Out of Scope
+| Bereich | Anzahl | Lesbarer Einstieg |
+| --- | --- | --- |
+| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 4 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
 
-- No generic blanket power without scope review.
-- No real identity documents, signatures or transaction documents in Git.
-- No assumption that one form works for all target transactions.
+## Offene Angaben
 
-## Required Information Nodes
-
-| Node | Open question | Owner | Privacy class |
+| Knoten | Bedeutung | Verantwortlich | Warum wichtig |
 | --- | --- | --- | --- |
-| `principal.identity` | Who grants the power and is capacity verified? | Notary | Personal or company data |
-| `agent.identity` | Who is authorized and are conflicts present? | Principal | Personal data |
-| `transaction.scope` | Which real-estate or company acts are covered? | Notary | Mandate metadata |
-| `form.requirement` | Is public certification enough or is a deed required? | Notary | Legal metadata |
-| `limitations.expiry` | Which limits, self-dealing, substitution or expiry rules apply? | Notary | Mandate metadata |
-| `delivery.evidence` | Who receives originals or certified copies? | Notary clerk | Mandate metadata |
+| `principal.identity` | Vollmachtgeber Identität | Notariat | identity_gate |
+| `agent.identity` | Bevollmaechtigter Identität | Vollmachtgebende Person | drafting |
+| `transaction.scope` | Geschäft Umfang | Notariat | legal_review, drafting |
+| `form.requirement` | Form Anforderung | Notariat | form_review |
+| `limitations.expiry` | Beschraenkungen Ablauf | Notariat | drafting |
+| `delivery.evidence` | Zustellung Nachweis | Notariatsfachkraft | closing |
 
-## Documents and Evidence
+## Grenzen Für Den Betrieb
 
-| Artifact | Purpose | Storage rule |
-| --- | --- | --- |
-| Power of attorney deed/certification | Core instrument. | Synthetic or metadata only. |
-| Transaction scope reference | Explains target use. | Evidence reference only. |
-| Identity and capacity evidence | Supports review. | Evidence reference only. |
-| Copy and delivery trace | Controls originals/certified copies. | Metadata only. |
+- Keine echte Mandatsakte, keine echten personenbezogenen Daten und keine Secrets in Git.
+- KI darf strukturieren und vorbereiten, aber keine finale notarielle Entscheidung ersetzen.
+- Produktiver Betrieb gehört in einen privaten Fork mit Rollen, Freigaben und geprüftem Arbeitsplatz.
+- Schreibende Portal-, Register- oder Fachsystemadapter brauchen gesonderte Freigabe.
 
-## Decisions
+## Plugin- Und Workflow-Bindung
 
-- Notarial deed, public certification, electronic certification or blocked.
-- Scope type: real estate, company register, shareholder resolution, share
-  transfer or mixed.
-- Whether self-dealing or substitution is allowed.
-- Whether original must remain controlled by the notary office.
+Primäre Plugins:
 
-## Gates
+- `nac-regulated-core`
+- `nac-idaas`
+- `nac-grundbuch-portal`
+- `nac-bnotk-xnp`
 
-| Gate | Review owner | Blocks |
-| --- | --- | --- |
-| Principal identity and capacity reviewed | Notary | Execution |
-| Form and scope reviewed | Notary | Draft release |
-| Limitations and self-dealing reviewed | Notary | Execution |
-| Original and copy handling controlled | Notary clerk | Closing |
+Workflow-Bezug:
 
-## Plugin Dependencies
+- `workflows/contracts`
+- `workflows/python`
 
-| Plugin | Purpose |
-| --- | --- |
-| `noc-regulated-core` | Guardrails and evidence model. |
-| `noc-idaas` | Identity support where permitted. |
-| `noc-grundbuch-portal` | Real-estate scope context where needed. |
-| `noc-bnotk-xnp` | Electronic/register route readiness. |
+Fachliche Anker im KG-Modell:
 
-## Delivery Tasks
+- `src.beurkg`
+- `src.bgb.167_129`
+- `src.bgb.311b`
+- `src.hgb.12`
 
-1. Define scope-specific power-of-attorney intake schema.
-2. Add form requirement decision model.
-3. Add self-dealing/substitution checklist.
-4. Add copy/original control state model.
-5. Validate with synthetic real-estate and company fixtures.
+## Wie Man Diesen Usecase Prüft
 
-## Acceptance Criteria
+```bash
+python scripts/notary_kg.py --repo-root . case vollmacht-immobilien-gesellschaftsgeschaefte
+python scripts/notary_kg.py --repo-root . editor-view vollmacht-immobilien-gesellschaftsgeschaefte
+python scripts/validate_knowledge_graph.py
+```
 
-- Form route is explicit before execution.
-- Scope cannot remain generic for register or real-estate transactions.
-- Original/copy handling is tracked.
-- No real identity or transaction data is committed.
+## Nächster Lesepfad
 
+- [docs/de/reifegrad.md](../../docs/de/reifegrad.md)
+- [docs/de/glossar.md](../../docs/de/glossar.md)
+- [docs/de/beispiel-immobilienkaufvertrag.md](../../docs/de/beispiel-immobilienkaufvertrag.md)
+- [usecases/README.md](../README.md)

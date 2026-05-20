@@ -1,141 +1,141 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.teilungserklaerung-weg",
   "catalog_group": "next10",
-  "title": "NoC usecase knowledge graph: Teilungserklaerung nach WEG",
+  "title": "NaC Usecase-Wissensgraph: Teilungserklärung nach WEG",
   "status": "draft",
-  "last_update": "2026-05-15",
-  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
-  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "last_update": "2026-05-17",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Section 1410 for form of marriage contracts",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Section 1750 for adoption consent declarations",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
       "id": "src.bgb.1945",
-      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "label": "BGB Paragraph 1945 zur Form der Erbausschlagung",
       "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
     },
     {
       "id": "src.bgb.2346_2348",
-      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "label": "BGB Paragraphen 2346 und 2348 zu Erb- und Pflichtteilsverzicht",
       "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
     },
     {
       "id": "src.bgb.2353",
-      "label": "BGB Section 2353 for certificate of inheritance application",
+      "label": "BGB Paragraph 2353 zum Erbscheinsantrag",
       "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
       "id": "src.bgb.518",
-      "label": "BGB Section 518 for form of gift promise",
+      "label": "BGB Paragraph 518 zur Form des Schenkungsversprechens",
       "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Section 650u for developer contracts",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Section 77 for association-register applications",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Section 875 for cancellation of rights in land",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Section 53 for form of articles amendments",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identity, capacity and representation reviewed"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarial legal review completed"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
-      "label": "No real mandate data committed to Git"
+      "label": "Keine echten Mandatsdaten in Git gespeichert"
     },
     {
       "id": "gate.evidence",
-      "label": "Evidence metadata linked to approved storage"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
     {
       "id": "case.teilungserklaerung_weg",
       "slug": "teilungserklaerung-weg",
-      "title": "Teilungserklaerung nach WEG",
+      "title": "Teilungserklärung nach WEG",
       "status": "open",
       "priority": "P0",
       "usecase_path": "usecases/teilungserklaerung-weg",
-      "summary": "Division of a building into apartment or partial ownership with declaration of division, community rules, plans, certificates and land-register implementation.",
+      "summary": "Aufteilung eines Gebaeudes in Wohnungs- oder Teileigentum mit Teilungserklärung, Gemeinschaftsordnung, Plänen, Bescheinigungen und Grundbuchumsetzung.",
       "legal_anchors": [
         "src.beurkg",
         "src.gbo.19_29_46",
@@ -144,10 +144,10 @@
       "required_information": [
         {
           "id": "property.identity",
-          "label": "Base property identity",
+          "label": "Grundstück Identität",
           "status": "open",
           "value": null,
-          "question": "Which land register sheet and cadastral object will be divided?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Identität benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -156,10 +156,10 @@
         },
         {
           "id": "owner.identity",
-          "label": "Owner and authority",
+          "label": "Eigentümer Identität",
           "status": "open",
           "value": null,
-          "question": "Who owns the property and is the owner authorized to divide?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Eigentümer Identität benötigt?",
           "owner_role": "notary",
           "privacy_class": "personal_or_company_data",
           "required_for": [
@@ -169,10 +169,10 @@
         },
         {
           "id": "unit.structure",
-          "label": "Unit structure and allocation",
+          "label": "Einheit Struktur",
           "status": "open",
           "value": null,
-          "question": "Which apartment, partial ownership, rooms and special-use rights are planned?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Einheit Struktur benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -182,10 +182,10 @@
         },
         {
           "id": "ownership.shares",
-          "label": "Co-ownership shares",
+          "label": "Eigentum Anteile",
           "status": "open",
           "value": null,
-          "question": "Which co-ownership fractions are assigned to each unit?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Eigentum Anteile benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -194,10 +194,10 @@
         },
         {
           "id": "plans.certificates",
-          "label": "Plans and separation certificate",
+          "label": "Pläne Bescheinigungen",
           "status": "open",
           "value": null,
-          "question": "Are plans, numbering, completion state and authority certificate available?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Pläne Bescheinigungen benötigt?",
           "owner_role": "client",
           "privacy_class": "property_metadata",
           "required_for": [
@@ -207,10 +207,10 @@
         },
         {
           "id": "encumbrance.handling",
-          "label": "Existing encumbrance allocation",
+          "label": "Belastung Behandlung",
           "status": "open",
           "value": null,
-          "question": "How do existing rights, land charges, easements or restrictions affect the future unit registers?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Belastung Behandlung benötigt?",
           "owner_role": "notary",
           "privacy_class": "property_register_data",
           "required_for": [
@@ -222,30 +222,30 @@
       "documents": [
         {
           "id": "doc.division_declaration",
-          "label": "Declaration of division and community rules",
+          "label": "Dokument: Teilung Erklärung",
           "status": "open",
-          "source": "workflow generated draft after review",
+          "source": "nach Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
           "id": "doc.plans_certificate",
-          "label": "Plans and separation certificate reference",
+          "label": "Dokument: Pläne Bescheinigung",
           "status": "open",
-          "source": "approved evidence store",
+          "source": "freigegebener Nachweisspeicher",
           "contains_personal_data": false
         },
         {
           "id": "doc.land_register_excerpt",
-          "label": "Current land register excerpt",
+          "label": "Dokument: aktueller Grundbuchauszug",
           "status": "open",
-          "source": "noc-grundbuch-portal or manual reviewed upload",
+          "source": "nac-grundbuch-portal oder manuell geprüfter Upload",
           "contains_personal_data": true
         }
       ],
       "decisions": [
         {
           "id": "decision.use_case",
-          "label": "Residential ownership, partial ownership or mixed scheme",
+          "label": "Entscheidung: Nutzung Fall",
           "status": "open",
           "options": [
             "residential",
@@ -256,7 +256,7 @@
         },
         {
           "id": "decision.special_use_rights",
-          "label": "Special-use rights included",
+          "label": "Entscheidung: Sonderfall Nutzung Rechte",
           "status": "open",
           "options": [
             "yes",
@@ -269,21 +269,21 @@
       "gates": [
         {
           "id": "gate.plan_certificate_review",
-          "label": "Plans and certificate reviewed",
+          "label": "Prüfgate: Plan Bescheinigung Prüfung",
           "status": "open",
           "owner_role": "notary_clerk"
         },
         {
           "id": "gate.land_register_implementation",
-          "label": "Unit-register implementation package ready",
+          "label": "Prüfgate: Grundbuch Register Umsetzung",
           "status": "open",
           "owner_role": "notary"
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core",
-        "noc-grundbuch-portal",
-        "noc-bnotk-xnp"
+        "nac-regulated-core",
+        "nac-grundbuch-portal",
+        "nac-bnotk-xnp"
       ],
       "workflow_dependencies": [
         "workflows/contracts",
@@ -292,12 +292,12 @@
       "evidence": [
         {
           "id": "evidence.plan_package",
-          "label": "Plans and certificate evidence package",
+          "label": "Nachweis: Plan Paket",
           "status": "open"
         },
         {
           "id": "evidence.unit_register_trace",
-          "label": "Land-register implementation trace",
+          "label": "Nachweis: Einheit Register Nachverfolgung",
           "status": "open"
         }
       ],

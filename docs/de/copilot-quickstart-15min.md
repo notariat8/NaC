@@ -2,13 +2,13 @@
 
 ## Zielgruppe
 
-Fuer Entscheider ohne IT-Spezialwissen, die mit VS Code und GitHub Copilot starten wollen.
+Für Entscheider ohne IT-Spezialwissen, die mit VS Code und GitHub Copilot starten wollen.
 
-## Minute 0-3: Basis pruefen
+## Minute 0-3: Basis prüfen
 
 - VS Code ist installiert.
 - GitHub Copilot ist aktiviert.
-- Das Unternehmens-Repository ist in VS Code geoeffnet.
+- Das Unternehmens-Repository ist in VS Code geöffnet.
 
 ## Minute 3-6: Pflichtdokumente lesen
 
@@ -20,7 +20,7 @@ Lesen Sie nacheinander:
 4. `policies/culture-policy.yaml`
 5. `policies/technology-policy.yaml`
 
-Ziel: gleiche Ausgangsbasis fuer Rollen, Prozesse und Sprache.
+Ziel: gleiche Ausgangsbasis für Rollen, Prozesse und Sprache.
 
 ## Minute 6-9: Copilot mit Startprompt initialisieren
 
@@ -35,20 +35,20 @@ Lies diese Dateien:
 
 Erklaere mir dann ohne IT-Fachsprache:
 1) Welche 3 Pilotprozesse ich zuerst starten sollte.
-2) Welche Freigaben fuer diese Prozesse verpflichtend sind.
+2) Welche Freigaben für diese Prozesse verpflichtend sind.
 3) Welche offenen Entscheidungen ich heute treffen muss.
 ```
 
-## Minute 9-12: Branchenpfad waehlen
+## Minute 9-12: Branchenpfad wählen
 
-Waehlen Sie den passenden Onboarding-Prompt:
+Wählen Sie den passenden Onboarding-Prompt:
 
 - Kanzlei: `prompts/de/onboarding/law-firm-first-setup.md`
 - Notariat: `prompts/de/onboarding/notary-first-setup.md`
 - Hausverwaltung: `prompts/de/onboarding/property-management-first-setup.md`
 - Softwareunternehmen: `prompts/de/onboarding/software-company-first-setup.md`
-- Steuerbuero: `prompts/de/onboarding/tax-office-first-setup.md`
-- Vermoegensverwaltung: `prompts/de/onboarding/wealth-management-first-setup.md`
+- Steuerbüro: `prompts/de/onboarding/tax-office-first-setup.md`
+- Vermögensverwaltung: `prompts/de/onboarding/wealth-management-first-setup.md`
 
 Synchroner MVP-Default im Referenzrepo:
 
@@ -56,7 +56,7 @@ Synchroner MVP-Default im Referenzrepo:
 - `notary`
 - `wealth_management`
 
-Zusaetzlicher MVP-Use-Case:
+Zusätzlicher MVP-Use-Case:
 
 - `property_management`
 
@@ -72,4 +72,4 @@ Sie haben:
 
 - einen konkreten Pilotfokus,
 - klare Freigaberegeln,
-- einen dokumentierten Startpunkt fuer den weiteren Rollout.
+- einen dokumentierten Startpunkt für den weiteren Rollout.

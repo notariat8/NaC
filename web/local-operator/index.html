@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NaC Büroworkbench</title>
+    <meta name="description" content="Lokale NaC Büroworkbench für Vorgangsauswahl, Arbeitsplatztests, XNP-Prüfung und GitHub-Handbuch.">
+    <meta name="theme-color" content="#f5f7f4">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/site.css?v=20260520-checklist-state">
+    <script src="assets/site.js?v=20260520-checklist-state" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Zum Inhalt springen</a>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="NaC Büroworkbench">
+        <img class="brand-logo" src="assets/n8.svg" alt="" aria-hidden="true">
+        <span>
+          <strong>NaC Büro</strong>
+          <small>Vorgänge und Arbeitsplatztests</small>
+        </span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Navigation öffnen" aria-expanded="false" aria-controls="site-nav">☰</button>
+      <nav class="site-nav" id="site-nav" aria-label="Arbeitsbereiche">
+        <button class="nav-tab is-active" type="button" data-area-tab="allgemeines-zivilrecht" aria-pressed="true">Allg. Zivilrecht</button>
+        <button class="nav-tab" type="button" data-area-tab="erbrecht" aria-pressed="false">Erbrecht</button>
+        <button class="nav-tab" type="button" data-area-tab="familienrecht-vorsorge" aria-pressed="false">Familienrecht &amp; Vorsorge</button>
+        <button class="nav-tab" type="button" data-area-tab="gesellschaft-register" aria-pressed="false">Gesellschaft &amp; Register</button>
+        <button class="nav-tab" type="button" data-area-tab="immobilienrecht" aria-pressed="false">Immobilienrecht</button>
+      </nav>
+    </header>
+
+    <main id="content">
+      <section class="workbench app-panel" id="bpmn-modelle" aria-labelledby="workbench-title" data-app-panel="cases">
+        <div class="workbench-head">
+          <div>
+            <p class="section-kicker">Rechtsgebiet</p>
+            <h1 id="workbench-title" data-area-title>Allgemeines Zivilrecht</h1>
+            <p class="workbench-summary" data-area-summary>Beglaubigungen und weitere zivilrechtliche Büroprozesse ohne eigenes Spezialgebiet.</p>
+          </div>
+        </div>
+
+        <div class="case-toolbar">
+          <label for="case-search">Vorgang suchen</label>
+          <input id="case-search" type="search" placeholder="z.B. Immobilien, Register, Testament, Vollmacht" data-case-search>
+          <output class="case-count" data-area-count for="case-search">0 Vorgänge</output>
+          <button class="button secondary" type="button" data-open-panel="imports">Eingang <span data-import-count>0</span></button>
+        </div>
+
+        <div class="case-list" data-case-list>
+          <article class="case-row" data-area="immobilienrecht" data-case="immobilienkaufvertrag immobilien kauf grundbuch xnp">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Immobilienkaufvertrag</h2>
+              <p>Grundbuchstand, Entwurf, Beurkundung, Vollzug und XNP-/Grundbuchkanal.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/immobilienkaufvertrag">Checkliste</a>
+              <a href="/bpmn/immobilienkaufvertrag">Ablauf</a>
+              <a href="/bpmn/immobilienkaufvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="gesellschaft-register" data-case="handelsregisteranmeldung register gesellschaft xnp signatur">
+            <div>
+              <span class="case-group">Register</span>
+              <h2>Handelsregisteranmeldung</h2>
+              <p>Anmeldung, Anlagen, lokale XNP-Prüfung und digitale Registereinreichung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/handelsregisteranmeldung">Checkliste</a>
+              <a href="/bpmn/handelsregisteranmeldung">Ablauf</a>
+              <a href="/bpmn/handelsregisteranmeldung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="gesellschaft-register" data-case="online gmbh ug gruendung gesellschaft video signatur">
+            <div>
+              <span class="case-group">Gesellschaft</span>
+              <h2>Online-GmbH-/UG-Gründung</h2>
+              <p>Gründerdaten, Kapital, Videokonferenz, Signatur und Registerpaket.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/online-gmbh-gruendung">Checkliste</a>
+              <a href="/bpmn/online-gmbh-gruendung">Ablauf</a>
+              <a href="/bpmn/online-gmbh-gruendung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="grundschuld hypothek finanzierung grundbuch">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Grundschuld / Hypothek</h2>
+              <p>Finanzierungsunterlagen, Grundbuchvollzug und Nachweise.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/grundschuld-hypothekenbestellung">Checkliste</a>
+              <a href="/bpmn/grundschuld-hypothekenbestellung">Ablauf</a>
+              <a href="/bpmn/grundschuld-hypothekenbestellung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="allgemeines-zivilrecht" data-case="unterschriftsbeglaubigung identitaet beglaubigung">
+            <div>
+              <span class="case-group">Beglaubigung</span>
+              <h2>Unterschriftsbeglaubigung</h2>
+              <p>Identität, Vertretung, Signaturpfad und Versand.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/unterschriftsbeglaubigung">Checkliste</a>
+              <a href="/bpmn/unterschriftsbeglaubigung">Ablauf</a>
+              <a href="/bpmn/unterschriftsbeglaubigung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="erbrecht" data-case="testament erbvertrag nachlass verwahrung">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Testament / Erbvertrag</h2>
+              <p>Verfügung, Beurkundung, Verwahrung und Benachrichtigung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/testament-erbvertrag">Checkliste</a>
+              <a href="/bpmn/testament-erbvertrag">Ablauf</a>
+              <a href="/bpmn/testament-erbvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="erbrecht" data-case="erbschein nachlass erbe gericht">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Erbscheinsantrag / Nachlass</h2>
+              <p>Nachlassangaben, Nachweise, Antrag und Gerichtskommunikation.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/erbscheinsantrag-nachlass">Checkliste</a>
+              <a href="/bpmn/erbscheinsantrag-nachlass">Ablauf</a>
+              <a href="/bpmn/erbscheinsantrag-nachlass/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="familienrecht-vorsorge" data-case="vorsorgevollmacht patientenverfuegung vollmacht vorsorge">
+            <div>
+              <span class="case-group">Vollmacht</span>
+              <h2>Vorsorgevollmacht / Patientenverfügung</h2>
+              <p>Auftrag, Identität, Erklärung, Registrierung oder Versand.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/vorsorgevollmacht-patientenverfuegung">Checkliste</a>
+              <a href="/bpmn/vorsorgevollmacht-patientenverfuegung">Ablauf</a>
+              <a href="/bpmn/vorsorgevollmacht-patientenverfuegung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="bautraeger bauträger immobilien kauf bau grundbuch">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Bauträgervertrag</h2>
+              <p>Bauvertrag, Kaufpreisraten, Sicherungen, Abnahme und Vollzug.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/bautraegervertrag">Checkliste</a>
+              <a href="/bpmn/bautraegervertrag">Ablauf</a>
+              <a href="/bpmn/bautraegervertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="grundstueck grundstück kaufvertrag immobilien grundbuch">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Grundstückskaufvertrag</h2>
+              <p>Grundstücksdaten, Beteiligte, Kaufpreis, Genehmigungen und Grundbuchvollzug.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/grundstueckskaufvertrag">Checkliste</a>
+              <a href="/bpmn/grundstueckskaufvertrag">Ablauf</a>
+              <a href="/bpmn/grundstueckskaufvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="teilungserklaerung teilungserklärung weg eigentum immobilien">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Teilungserklärung nach WEG</h2>
+              <p>Aufteilung, Gemeinschaftsordnung, Pläne, Genehmigungen und Grundbuchvollzug.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/teilungserklaerung-weg">Checkliste</a>
+              <a href="/bpmn/teilungserklaerung-weg">Ablauf</a>
+              <a href="/bpmn/teilungserklaerung-weg/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="loeschung löschung grundbuch bewilligung immobilien">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Löschungsbewilligung / Grundbuchlöschung</h2>
+              <p>Bewilligung, Berechtigung, Nachweisform und Grundbucheinreichung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/loeschungsbewilligung-grundbuchloeschung">Checkliste</a>
+              <a href="/bpmn/loeschungsbewilligung-grundbuchloeschung">Ablauf</a>
+              <a href="/bpmn/loeschungsbewilligung-grundbuchloeschung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="immobilienrecht" data-case="schenkung uebertragung übertragung immobilien familie">
+            <div>
+              <span class="case-group">Immobilien</span>
+              <h2>Schenkungsvertrag / Übertragungsvertrag</h2>
+              <p>Übergeber, Erwerber, Gegenleistungen, Vorbehalte und Vollzug.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/schenkungsvertrag-uebertragungsvertrag">Checkliste</a>
+              <a href="/bpmn/schenkungsvertrag-uebertragungsvertrag">Ablauf</a>
+              <a href="/bpmn/schenkungsvertrag-uebertragungsvertrag/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="gesellschaft-register" data-case="gmbh ug beschluss gesellschaft gesellschafter">
+            <div>
+              <span class="case-group">Gesellschaft</span>
+              <h2>Gesellschafterbeschluss bei GmbH/UG</h2>
+              <p>Beschlussgegenstand, Vertretung, Niederschrift, Registerweg und Nachweise.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/gesellschafterbeschluss-gmbh-ug">Checkliste</a>
+              <a href="/bpmn/gesellschafterbeschluss-gmbh-ug">Ablauf</a>
+              <a href="/bpmn/gesellschafterbeschluss-gmbh-ug/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="gesellschaft-register" data-case="geschaeftsanteile geschäftsanteile gmbh uebertragung übertragung gesellschaft">
+            <div>
+              <span class="case-group">Gesellschaft</span>
+              <h2>Geschäftsanteilsübertragung GmbH</h2>
+              <p>Anteile, Beteiligte, Zustimmung, Kaufpreis, Liste und Registerfolge.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/geschaeftsanteilsuebertragung-gmbh">Checkliste</a>
+              <a href="/bpmn/geschaeftsanteilsuebertragung-gmbh">Ablauf</a>
+              <a href="/bpmn/geschaeftsanteilsuebertragung-gmbh/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="gesellschaft-register" data-case="verein vereinsregister anmeldung register">
+            <div>
+              <span class="case-group">Register</span>
+              <h2>Vereinsregisteranmeldung</h2>
+              <p>Beschluss, Vorstand, Satzung, Beglaubigung und Registereinreichung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/vereinsregisteranmeldung">Checkliste</a>
+              <a href="/bpmn/vereinsregisteranmeldung">Ablauf</a>
+              <a href="/bpmn/vereinsregisteranmeldung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="familienrecht-vorsorge" data-case="ehevertrag scheidung folgen vereinbarung familie">
+            <div>
+              <span class="case-group">Familie</span>
+              <h2>Ehevertrag / Scheidungsfolgenvereinbarung</h2>
+              <p>Vermögen, Versorgungsausgleich, Unterhalt, Entwurf und Beurkundung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/ehevertrag-scheidungsfolgenvereinbarung">Checkliste</a>
+              <a href="/bpmn/ehevertrag-scheidungsfolgenvereinbarung">Ablauf</a>
+              <a href="/bpmn/ehevertrag-scheidungsfolgenvereinbarung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="familienrecht-vorsorge" data-case="adoption familienrecht erklaerungen erklärungen familie">
+            <div>
+              <span class="case-group">Familie</span>
+              <h2>Adoption / familienrechtliche Erklärungen</h2>
+              <p>Beteiligte, Einwilligungen, Belehrung, Beurkundung und Gerichtskommunikation.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/adoption-familienrechtliche-erklaerungen">Checkliste</a>
+              <a href="/bpmn/adoption-familienrechtliche-erklaerungen">Ablauf</a>
+              <a href="/bpmn/adoption-familienrechtliche-erklaerungen/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="erbrecht" data-case="erbausschlagung nachlass erbe gericht">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Erbausschlagung</h2>
+              <p>Frist, Erbenstellung, Erklärung, Beglaubigung und Nachlassgericht.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/erbausschlagung">Checkliste</a>
+              <a href="/bpmn/erbausschlagung">Ablauf</a>
+              <a href="/bpmn/erbausschlagung/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="erbrecht" data-case="pflichtteil erbverzicht verzicht nachlass">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Pflichtteilsverzicht / Erbverzicht</h2>
+              <p>Beteiligte, Ausgleich, Belehrung, Beurkundung und Nachweise.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/pflichtteilsverzicht-erbverzicht">Checkliste</a>
+              <a href="/bpmn/pflichtteilsverzicht-erbverzicht">Ablauf</a>
+              <a href="/bpmn/pflichtteilsverzicht-erbverzicht/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="erbrecht" data-case="testament nachlass verwahrung">
+            <div>
+              <span class="case-group">Nachlass</span>
+              <h2>Testament</h2>
+              <p>Testierfähigkeit, Verfügung, Beurkundung, Verwahrung und Registermeldung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/testament">Checkliste</a>
+              <a href="/bpmn/testament">Ablauf</a>
+              <a href="/bpmn/testament/edit">Bearbeiten</a>
+            </div>
+          </article>
+          <article class="case-row" data-area="familienrecht-vorsorge" data-case="vollmacht immobilien gesellschaft geschaefte geschäfte">
+            <div>
+              <span class="case-group">Vollmacht</span>
+              <h2>Vollmacht für Immobilien- oder Gesellschaftsgeschäfte</h2>
+              <p>Vollmachtgeber, Umfang, Form, Beglaubigung und Nachweisverwendung.</p>
+            </div>
+            <div class="case-actions">
+              <a href="/kg/vollmacht-immobilien-gesellschaftsgeschaefte">Checkliste</a>
+              <a href="/bpmn/vollmacht-immobilien-gesellschaftsgeschaefte">Ablauf</a>
+              <a href="/bpmn/vollmacht-immobilien-gesellschaftsgeschaefte/edit">Bearbeiten</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section diagnostics app-panel is-hidden" id="tests" aria-labelledby="tests-title" data-app-panel="tests" data-hardware-test data-running-label="Test läuft lokal." data-ready-label="Lokaler Adapter bereit." data-unavailable-label="Lokaler Adapter nicht erreichbar." data-error-label="Test fehlgeschlagen." data-empty-label="Keine Detailchecks empfangen.">
+        <div class="section-heading">
+          <p class="section-kicker">Probleme prüfen</p>
+          <h2 id="tests-title">Arbeitsplatztests starten</h2>
+        </div>
+        <div class="diagnostic-grid">
+          <article>
+            <h3>HW-Test</h3>
+            <p>Kartenleser, PC/SC, morris und lokale Treiber prüfen.</p>
+            <button class="button primary" type="button" data-hardware-test-trigger data-requested-by="hardware-test">HW-Test starten</button>
+          </article>
+          <article>
+            <h3>XNP-Anbindung</h3>
+            <p>XNP-Localhost-Pfad, Signaturpfad und Karten-Gate prüfen.</p>
+            <button class="button primary" type="button" data-hardware-test-trigger data-requested-by="xnp-check">XNP prüfen</button>
+          </article>
+          <article>
+            <h3>Systemstatus</h3>
+            <p>Prüft, ob der lokale Adapter für diese Webapp antwortet.</p>
+            <a class="button secondary" href="/api/healthz">Status ansehen</a>
+          </article>
+        </div>
+        <div class="hardware-result" data-hardware-test-result role="status" aria-live="polite">
+          <p>Falls die Tests nicht starten: lokalen Adapter mit <code>python scripts\nac.py operator --open</code> neu starten.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="anbindungen" aria-labelledby="anbindungen-title" data-app-panel="anbindungen">
+        <div class="section-heading">
+          <p class="section-kicker">Anbindungen</p>
+          <h2 id="anbindungen-title">Lokale Verbindungen verwalten</h2>
+        </div>
+        <div class="connection-list">
+          <article>
+            <h3>Kartenleser / morris</h3>
+            <p>Status über HW-Test prüfen; keine PINs oder Kartendaten speichern.</p>
+            <button class="text-button" type="button" data-open-panel="tests">Test starten</button>
+          </article>
+          <article>
+            <h3>XNP</h3>
+            <p>Localhost-Schnittstelle und Signaturpfad über XNP-Prüfung validieren.</p>
+            <button class="text-button" type="button" data-open-panel="tests">XNP prüfen</button>
+          </article>
+          <article>
+            <h3>Register / Grundbuch</h3>
+            <p>Aktuell als Prozesskanal modelliert; produktive Zugangsdaten bleiben außerhalb des Repos.</p>
+            <a href="/bpmn/handelsregisteranmeldung">Registerablauf ansehen</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="section handbook app-panel is-hidden" id="handbuch" aria-labelledby="handbuch-title" data-app-panel="handbuch">
+        <div class="section-heading">
+          <p class="section-kicker">Handbuch</p>
+          <h2 id="handbuch-title">Dokumentation getrennt auf GitHub lesen</h2>
+        </div>
+        <div class="handbook-actions">
+          <a class="button primary" href="https://github.com/ofunk/NaC">Repository öffnen</a>
+          <a class="button secondary" href="https://github.com/ofunk/NaC/tree/main/docs/de">Deutsche Doku</a>
+          <a class="button secondary" href="https://github.com/ofunk/NaC/tree/main/usecases">Usecase-Doku</a>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="konfig" aria-labelledby="konfig-title" data-app-panel="konfig">
+        <div class="section-heading">
+          <p class="section-kicker">Konfiguration</p>
+          <h2 id="konfig-title">Git-Ziele für Produkt und Daten setzen</h2>
+        </div>
+        <form class="config-form" data-config-form>
+          <label>
+            <span>NaC Fork-Git URL</span>
+            <input name="nac_fork_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="nac_fork_git_url" placeholder="https://github.com/funktion8/NaC.git">
+          </label>
+          <label>
+            <span>Daten-Git URL</span>
+            <input name="data_git_url" type="text" autocomplete="off" spellcheck="false" data-config-field="data_git_url" placeholder="https://github.com/funktion8/demo8notariat.git">
+          </label>
+          <label>
+            <span>Lokaler Datenrepo-Ordner</span>
+            <input name="data_repo_path" type="text" autocomplete="off" spellcheck="false" data-config-field="data_repo_path" placeholder="C:\Users\ofunk\Documents\Projects\funktion8-demo8notariat">
+          </label>
+          <div class="config-actions">
+            <button class="button primary" type="submit">Speichern</button>
+            <button class="button secondary" type="button" data-config-reload>Neu laden</button>
+          </div>
+        </form>
+        <div class="config-status" data-config-status role="status" aria-live="polite">
+          <p>Lokale Konfiguration wird geladen.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="neue-akte" aria-labelledby="matter-new-title" data-app-panel="matter-new">
+        <div class="section-heading">
+          <p class="section-kicker">Neue Akte</p>
+          <h2 id="matter-new-title" data-matter-form-title>Vorgang starten</h2>
+        </div>
+        <form class="matter-form" data-matter-form>
+          <input type="hidden" name="usecase_slug" data-matter-field="usecase_slug">
+          <input type="hidden" name="usecase_title" data-matter-field="usecase_title">
+          <label>
+            <span>Aktenbetreff</span>
+            <input name="title" type="text" autocomplete="off" data-matter-field="title" placeholder="z.B. Unterschriftsbeglaubigung Muster GmbH">
+          </label>
+          <label>
+            <span>Mandant / Auftraggeber</span>
+            <input name="client_name" type="text" autocomplete="off" data-matter-field="client_name" placeholder="synthetischer Name im Demo-Datenrepo">
+          </label>
+          <label>
+            <span>Beteiligte Person</span>
+            <input name="participant_name" type="text" autocomplete="off" data-matter-field="participant_name" placeholder="synthetischer Name im Demo-Datenrepo">
+          </label>
+          <label>
+            <span>Dokument / Unterlage</span>
+            <input name="document_title" type="text" autocomplete="off" data-matter-field="document_title" placeholder="z.B. Vollmacht zur Beglaubigung">
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status" data-matter-field="status">
+              <option value="open">offen</option>
+              <option value="waiting">warten</option>
+              <option value="completed">abgeschlossen</option>
+            </select>
+          </label>
+          <label>
+            <span>Statusgrund</span>
+            <input name="status_reason" type="text" autocomplete="off" data-matter-field="status_reason" placeholder="z.B. wartet auf Ausweis oder Unterlage">
+          </label>
+          <div class="matter-actions">
+            <button class="button primary" type="submit">Akte speichern</button>
+            <button class="button secondary" type="button" data-open-panel="cases">Abbrechen</button>
+          </div>
+        </form>
+        <div class="matter-status" data-matter-form-status role="status" aria-live="polite">
+          <p>Neue Akten werden in das konfigurierte Demo-Datenrepo geschrieben.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="akten" aria-labelledby="matters-title" data-app-panel="matters">
+        <div class="section-heading">
+          <p class="section-kicker">Akten</p>
+          <h2 id="matters-title" data-matter-list-title>Vorhandene Akten</h2>
+        </div>
+        <div class="matter-toolbar">
+          <label>
+            <span>Akten und Eingang suchen</span>
+            <input type="search" autocomplete="off" data-matter-search placeholder="z.B. Mustermann, UVZ, Ausweis oder Dokumentnummer">
+          </label>
+          <button class="button secondary" type="button" data-open-panel="imports">Eingang prüfen</button>
+        </div>
+        <div class="matter-list" data-matter-list role="status" aria-live="polite">
+          <p>Akten werden aus dem konfigurierten Datenrepo geladen.</p>
+        </div>
+      </section>
+
+      <section class="section app-panel is-hidden" id="eingang" aria-labelledby="imports-title" data-app-panel="imports">
+        <div class="section-heading">
+          <p class="section-kicker">Eingang</p>
+          <h2 id="imports-title">Import-Vorschläge prüfen</h2>
+        </div>
+        <form class="import-upload-form" data-import-upload-form>
+          <div class="import-upload-grid">
+            <label>
+              <span>Bilddateien</span>
+              <input name="source_files" type="file" accept="image/*" multiple data-import-upload-files>
+            </label>
+            <label>
+              <span>Person</span>
+              <input name="person_name" type="text" autocomplete="off" data-import-upload-field="person_name" placeholder="z.B. Erika Mustermann">
+            </label>
+            <label>
+              <span>Aktenbetreff</span>
+              <input name="title" type="text" autocomplete="off" data-import-upload-field="title" placeholder="wird aus Person und Dokument vorgeschlagen">
+            </label>
+            <label>
+              <span>Dokument</span>
+              <input name="document_title" type="text" autocomplete="off" data-import-upload-field="document_title" placeholder="z.B. Personalausweis zur Identitätsprüfung">
+            </label>
+          </div>
+          <div class="import-actions">
+            <button class="button secondary" type="button" data-import-extract>Metadaten extrahieren</button>
+            <button class="button primary" type="submit">Import-Vorschlag speichern</button>
+          </div>
+          <div class="import-upload-status" data-import-upload-status role="status" aria-live="polite">
+            <p>Nur synthetische Demo-Bilder hochladen. Echte Ausweise und Mandatsunterlagen bleiben außerhalb öffentlicher Repos.</p>
+          </div>
+        </form>
+        <div class="import-list" data-import-list role="status" aria-live="polite">
+          <p>Import-Vorschläge werden aus dem konfigurierten Datenrepo geladen.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2026 Funktion8. Lokale NaC-Büroworkbench.</p>
+      <nav aria-label="Systembereiche">
+        <button type="button" data-open-panel="imports">Eingang</button>
+        <button type="button" data-open-panel="tests">Tests</button>
+        <button type="button" data-open-panel="anbindungen">Anbindungen</button>
+        <button type="button" data-open-panel="konfig">Konfig</button>
+        <button type="button" data-open-panel="handbuch">Handbuch</button>
+      </nav>
+    </footer>
+  </body>
+</html>

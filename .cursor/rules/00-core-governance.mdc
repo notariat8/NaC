@@ -1,25 +1,27 @@
 ---
-description: Verbindliche Governance fuer alle Prozessaenderungen
+description: Verbindliche Governance für alle Prozessänderungen
 alwaysApply: true
 ---
 
 # Core Governance (MUSS)
 
-- Rahmen ist `Notariat as Code (NoC)` mit `Enterprise GitOps`.
-- Aenderungen an Prozessen nur ueber Branch + Pull Request.
-- Direkte Aenderungen am Hauptstand sind nicht erlaubt.
-- Jede Aenderung braucht Zweck, Risiko und Verantwortliche.
-- Ein Update gilt erst als abgeschlossen, wenn die Aenderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
-- Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, gepruefter und lokal sauberer Stand fertig.
+- Rahmen ist `Notariat as Code (NaC)` mit `Enterprise GitOps`.
+- Änderungen an Prozessen nur über Branch + Pull Request.
+- Direkte Änderungen am Hauptstand sind nicht erlaubt.
+- Jede Änderung braucht Zweck, Risiko und Verantwortliche.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und in den Zielbranch gemerged wurde.
+- Wenn nach `fertig` gefragt wird, ist nur ein in `main` gemergter, geprüfter und lokal sauberer Stand fertig.
 - Jeder Push muss [roadmap/GANTT.md](../../roadmap/GANTT.md) aktualisieren.
-- Aenderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) muessen zusaetzlich das jeweilige Themen-Gantt aktualisieren.
-- Das Repo trennt installierbare Plugin-Artefakte ([plugins/](../../plugins)), ausfuehrbare Notariats-Workflows ([workflows/](../../workflows)) und konkrete notarielle Usecases ([usecases/](../../usecases)).
-- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulaessig.
+- Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
+- Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](../../policies/license-policy.yaml): Software, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
+- Attribution nach [NOTICE](../../NOTICE), [AUTHORS.md](../../AUTHORS.md) und [CITATION.cff](../../CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](../../TRADEMARK.md) beachten.
+- Das Repo trennt installierbare Plugin-Artefakte ([plugins/](../../plugins)), ausführbare Notariats-Workflows ([workflows/](../../workflows)) und konkrete notarielle Usecases ([usecases/](../../usecases)).
+- Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
 - Sensible Prozesse brauchen fachliche Freigabe.
-- Abschlussstaende werden versioniert markiert.
-- Keine vertraulichen Daten ungeschuetzt in Prozessdateien.
-- Upstream-Aenderungen in Unternehmens-Forks nur per dokumentiertem Sync-PR.
-- Laufende Vorgaenge bleiben im Mischbetrieb auf der beim Start gebundenen Version.
+- Abschlussstände werden versioniert markiert.
+- Keine vertraulichen Daten ungeschützt in Prozessdateien.
+- Upstream-Änderungen in Unternehmens-Forks nur per dokumentiertem Sync-PR.
+- Laufende Vorgänge bleiben im Mischbetrieb auf der beim Start gebundenen Version.
 - Rollen-/Rechtevorgaben werden nur in [policies/](../../policies) gepflegt; Rule-Texte sind nur abgeleitete Spiegel.
 
-Wenn unklar ist, ob eine Aenderung sensibel ist, gilt sie als sensibel.
+Wenn unklar ist, ob eine Änderung sensibel ist, gilt sie als sensibel.

@@ -1,0 +1,45 @@
+{
+  "schema_version": "oac.plugin.contract/v1",
+  "plugin": "nac-grundbuch-portal",
+  "status": "installable-mvp",
+  "source_plan": "docs/plugin-plans/grundbuch-portal-plugin-integration.md",
+  "runtime_mode": "local-portal-evidence-companion",
+  "data_boundary": {
+    "secrets_in_git": false,
+    "client_content_in_git": false,
+    "llm_receives_secret_values": false,
+    "evidence_is_metadata_only_by_default": true
+  },
+  "human_approval_required_for": [
+    "regulated_external_submission",
+    "portal_retrieval_or_mailbox_action",
+    "notarial_action",
+    "cloud_apply_or_policy_change"
+  ],
+  "allowed_work": [
+    "Prepare authorization and legitimate-interest checklists.",
+    "Create retrieval plan previews and evidence shells.",
+    "Track state-specific portal differences and fee/cost ownership."
+  ],
+  "prohibited_work": [
+    "Store passwords, PINs, private keys, certificate material, session cookies, or one-time codes in Git.",
+    "Bypass human review for regulated filing, register, mailbox, or notarial actions.",
+    "Upload client or mandate content to an LLM unless an explicit approved data-processing basis exists.",
+    "Scrape protected portals or exceed published usage limits."
+  ],
+  "day0": [
+    "Confirm authorized user, state portal scope, cost center and legitimate-interest basis."
+  ],
+  "day1": [
+    "Create human-approved retrieval plan and evidence import checklist."
+  ],
+  "day2": [
+    "Review access recertification, state drift, fees, failed retrievals and retention."
+  ],
+  "required_accounts_or_approvals": [
+    "State-specific Grundbuchportal access",
+    "Authorized professional role confirmation",
+    "Cost-center approval",
+    "Retention/DMS decision"
+  ]
+}

@@ -1,130 +1,130 @@
 {
-  "schema_version": "noc.knowledge-graph/v0.1",
+  "schema_version": "nac.knowledge-graph/v0.1",
   "graph_id": "usecase.testament",
   "catalog_group": "legacy-alias",
-  "title": "NoC usecase knowledge graph: Testament",
+  "title": "NaC Usecase-Wissensgraph: Testament",
   "status": "legacy_alias",
-  "last_update": "2026-05-15",
-  "purpose": "Track open information, documents, decisions, review gates and evidence for this individual usecase without storing real mandate data in Git.",
-  "privacy_rule": "All value fields are intentionally empty. Real personal, property, health, estate, family or company data belongs in approved local evidence stores, not in this repository.",
+  "last_update": "2026-05-17",
+  "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
+  "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
     {
       "id": "src.abschlagsv",
-      "label": "AbschlagsV for installment-payment arrangements in developer contracts",
+      "label": "AbschlagsV für Abschlagszahlungsregelungen in Bauträgerverträgen",
       "url": "https://www.gesetze-im-internet.de/abschlagsv/"
     },
     {
       "id": "src.beurkg",
-      "label": "Beurkundungsgesetz, especially general notarial duties and evidence of identity, capacity, representation, reading and electronic certificates",
+      "label": "Beurkundungsgesetz, insbesondere allgemeine notarielle Amtspflichten sowie Identität, Geschäftsfähigkeit, Vertretung, Verlesen und elektronische Zeugnisse",
       "url": "https://www.gesetze-im-internet.de/beurkg/"
     },
     {
       "id": "src.bgb.1410",
-      "label": "BGB Section 1410 for form of marriage contracts",
+      "label": "BGB Paragraph 1410 zur Form von Eheverträgen",
       "url": "https://www.gesetze-im-internet.de/bgb/__1410.html"
     },
     {
       "id": "src.bgb.167_129",
-      "label": "BGB Sections 167 and 129 for powers of attorney and public certification",
+      "label": "BGB Paragraphen 167 und 129 zu Vollmachten und öffentlicher Beglaubigung",
       "url": "https://www.gesetze-im-internet.de/bgb/__167.html"
     },
     {
       "id": "src.bgb.1750",
-      "label": "BGB Section 1750 for adoption consent declarations",
+      "label": "BGB Paragraph 1750 für Einwilligungserklärungen bei Adoption",
       "url": "https://www.gesetze-im-internet.de/bgb/__1750.html"
     },
     {
       "id": "src.bgb.1945",
-      "label": "BGB Section 1945 for form of inheritance renunciation",
+      "label": "BGB Paragraph 1945 zur Form der Erbausschlagung",
       "url": "https://www.gesetze-im-internet.de/bgb/__1945.html"
     },
     {
       "id": "src.bgb.2346_2348",
-      "label": "BGB Sections 2346 and 2348 for inheritance and compulsory-share waivers",
+      "label": "BGB Paragraphen 2346 und 2348 zu Erb- und Pflichtteilsverzicht",
       "url": "https://www.gesetze-im-internet.de/bgb/__2346.html"
     },
     {
       "id": "src.bgb.2353",
-      "label": "BGB Section 2353 for certificate of inheritance application",
+      "label": "BGB Paragraph 2353 zum Erbscheinsantrag",
       "url": "https://www.gesetze-im-internet.de/bgb/__2353.html"
     },
     {
       "id": "src.bgb.311b",
-      "label": "BGB Section 311b for contracts concerning real estate, assets and estates",
+      "label": "BGB Paragraph 311b für Verträge über Grundstücke, Vermögen und Nachlässe",
       "url": "https://www.gesetze-im-internet.de/bgb/__311b.html"
     },
     {
       "id": "src.bgb.518",
-      "label": "BGB Section 518 for form of gift promise",
+      "label": "BGB Paragraph 518 zur Form des Schenkungsversprechens",
       "url": "https://www.gesetze-im-internet.de/bgb/__518.html"
     },
     {
       "id": "src.bgb.650u",
-      "label": "BGB Section 650u for developer contracts",
+      "label": "BGB Paragraph 650u für Bauträgerverträge",
       "url": "https://www.gesetze-im-internet.de/bgb/__650u.html"
     },
     {
       "id": "src.bgb.77",
-      "label": "BGB Section 77 for association-register applications",
+      "label": "BGB Paragraph 77 für Vereinsregisteranmeldungen",
       "url": "https://www.gesetze-im-internet.de/bgb/__77.html"
     },
     {
       "id": "src.bgb.875",
-      "label": "BGB Section 875 for cancellation of rights in land",
+      "label": "BGB Paragraph 875 zur Aufhebung von Rechten an Grundstücken",
       "url": "https://www.gesetze-im-internet.de/bgb/__875.html"
     },
     {
       "id": "src.gbo",
-      "label": "Grundbuchordnung for land register applications, authorization evidence and inheritance evidence",
+      "label": "Grundbuchordnung für Grundbuchanträge, Bewilligungsnachweise und Erbnachweise",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gbo.19_29_46",
-      "label": "GBO Sections 19, 29 and 46 for land-register authorization, evidence form and deletion notation",
+      "label": "GBO Paragraphen 19, 29 und 46 zu Grundbuchbewilligung, Nachweisform und Löschungsvermerk",
       "url": "https://www.gesetze-im-internet.de/gbo/"
     },
     {
       "id": "src.gmbhg",
-      "label": "GmbHG for GmbH formation, registration and managing director details",
+      "label": "GmbHG für GmbH-Gründung, Anmeldung und Geschäftsführerdaten",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.15",
-      "label": "GmbHG Section 15 for transfer of GmbH shares",
+      "label": "GmbHG Paragraph 15 zur Übertragung von GmbH-Geschäftsanteilen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/"
     },
     {
       "id": "src.gmbhg.53",
-      "label": "GmbHG Section 53 for form of articles amendments",
+      "label": "GmbHG Paragraph 53 zur Form von Satzungsänderungen",
       "url": "https://www.gesetze-im-internet.de/gmbhg/__53.html"
     },
     {
       "id": "src.hgb.12",
-      "label": "HGB Section 12 for electronic commercial register applications in publicly certified form",
+      "label": "HGB Paragraph 12 für elektronische Handelsregisteranmeldungen in öffentlich beglaubigter Form",
       "url": "https://www.gesetze-im-internet.de/hgb/__12.html"
     },
     {
       "id": "src.weg.8",
-      "label": "WEG Section 8 for division by the owner into apartment or partial ownership",
+      "label": "WEG Paragraph 8 zur Teilung durch den Eigentümer in Wohnungs- oder Teileigentum",
       "url": "https://www.gesetze-im-internet.de/woeigg/__8.html"
     }
   ],
   "common_gates": [
     {
       "id": "gate.identity",
-      "label": "Identity, capacity and representation reviewed"
+      "label": "Identität, Geschäftsfähigkeit und Vertretung geprüft"
     },
     {
       "id": "gate.legal_review",
-      "label": "Notarial legal review completed"
+      "label": "Notarielle Rechtsprüfung abgeschlossen"
     },
     {
       "id": "gate.data_minimization",
-      "label": "No real mandate data committed to Git"
+      "label": "Keine echten Mandatsdaten in Git gespeichert"
     },
     {
       "id": "gate.evidence",
-      "label": "Evidence metadata linked to approved storage"
+      "label": "Nachweis-Metadaten mit freigegebenem Speicher verknüpft"
     }
   ],
   "cases": [
@@ -135,17 +135,17 @@
       "status": "legacy_alias",
       "priority": "P2",
       "usecase_path": "usecases/testament",
-      "summary": "Legacy starter alias for usecases/testament-erbvertrag; kept for compatibility while new workflow work uses the canonical usecase.",
+      "summary": "Legacy-Starter-Alias für usecases/testament-erbvertrag; bleibt aus Kompatibilitätsgründen bestehen, waehrend neue Workflow-Arbeit den kanonischen Usecase nutzt.",
       "legal_anchors": [
         "src.beurkg"
       ],
       "required_information": [
         {
           "id": "testator.identity",
-          "label": "Testator identities",
+          "label": "Testierende Person Identität",
           "status": "open",
           "value": null,
-          "question": "Who makes the disposition and how are identity and capacity reviewed?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Testierende Person Identität benötigt?",
           "owner_role": "notary",
           "privacy_class": "personal_data",
           "required_for": [
@@ -155,10 +155,10 @@
         },
         {
           "id": "capacity.flags",
-          "label": "Capacity and communication flags",
+          "label": "Geschäftsfähigkeit Prüfflaggen",
           "status": "open",
           "value": null,
-          "question": "Are there capacity, language, hearing, sight, illness or support flags?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Geschäftsfähigkeit Prüfflaggen benötigt?",
           "owner_role": "notary",
           "privacy_class": "sensitive_personal_data",
           "required_for": [
@@ -168,10 +168,10 @@
         },
         {
           "id": "family.structure",
-          "label": "Family and heirship situation",
+          "label": "Familie Struktur",
           "status": "open",
           "value": null,
-          "question": "Which spouse, children, relatives, prior marriages or relevant dependents exist?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Familie Struktur benötigt?",
           "owner_role": "testator",
           "privacy_class": "family_data",
           "required_for": [
@@ -181,10 +181,10 @@
         },
         {
           "id": "assets.categories",
-          "label": "Estate asset categories",
+          "label": "Vermögen Kategorien",
           "status": "open",
           "value": null,
-          "question": "Which relevant asset categories exist without storing detailed values in Git?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Vermögen Kategorien benötigt?",
           "owner_role": "testator",
           "privacy_class": "financial_data",
           "required_for": [
@@ -194,10 +194,10 @@
         },
         {
           "id": "dispositions.wishes",
-          "label": "Desired dispositions",
+          "label": "Verfügungen Wünsche",
           "status": "open",
           "value": null,
-          "question": "Who should inherit, receive legacies, be executor or be subject to conditions?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Verfügungen Wünsche benötigt?",
           "owner_role": "testator",
           "privacy_class": "sensitive_personal_data",
           "required_for": [
@@ -207,10 +207,10 @@
         },
         {
           "id": "prior.dispositions",
-          "label": "Prior wills, inheritance contracts and revocation needs",
+          "label": "Vorverfügungen Verfügungen",
           "status": "open",
           "value": null,
-          "question": "Do earlier dispositions exist and are they revocable or binding?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Vorverfügungen Verfügungen benötigt?",
           "owner_role": "notary",
           "privacy_class": "sensitive_legal_data",
           "required_for": [
@@ -220,10 +220,10 @@
         },
         {
           "id": "executor.choice",
-          "label": "Executor and substitute arrangements",
+          "label": "Testamentsvollstrecker Auswahl",
           "status": "open",
           "value": null,
-          "question": "Should an executor, substitute heirs, guardianship wishes or administration rules be included?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Testamentsvollstrecker Auswahl benötigt?",
           "owner_role": "testator",
           "privacy_class": "sensitive_personal_data",
           "required_for": [
@@ -232,10 +232,10 @@
         },
         {
           "id": "custody.register",
-          "label": "Custody and central register route",
+          "label": "Verwahrung Register",
           "status": "open",
           "value": null,
-          "question": "Which custody and registration steps are required after execution?",
+          "question": "Welche Angaben, Nachweise und Prüfpunkte werden für Verwahrung Register benötigt?",
           "owner_role": "notary_clerk",
           "privacy_class": "mandate_metadata",
           "required_for": [
@@ -246,23 +246,23 @@
       "documents": [
         {
           "id": "doc.disposition_draft",
-          "label": "Draft testament or inheritance contract",
+          "label": "Dokument: Disposition Entwurf",
           "status": "open",
-          "source": "workflow generated draft after notarial review",
+          "source": "nach notarieller Prüfung erzeugter Workflow-Entwurf",
           "contains_personal_data": true
         },
         {
           "id": "doc.prior_dispositions",
-          "label": "Prior dispositions evidence reference",
+          "label": "Dokument: Vorverfügungen Verfügungen",
           "status": "open",
-          "source": "manual reviewed upload or client-provided original",
+          "source": "manuell geprüfter Upload oder vorgelegtes Original",
           "contains_personal_data": true
         }
       ],
       "decisions": [
         {
           "id": "decision.instrument_type",
-          "label": "Testament, joint will or inheritance contract",
+          "label": "Entscheidung: Instrument Art",
           "status": "open",
           "options": [
             "single_testament",
@@ -273,7 +273,7 @@
         },
         {
           "id": "decision.executor",
-          "label": "Include executor provisions",
+          "label": "Entscheidung: Testamentsvollstrecker",
           "status": "open",
           "options": [
             "yes",
@@ -286,19 +286,19 @@
       "gates": [
         {
           "id": "gate.capacity_review",
-          "label": "Capacity and free will reviewed by notary",
+          "label": "Prüfgate: Geschäftsfähigkeit Prüfung",
           "status": "open",
           "owner_role": "notary"
         },
         {
           "id": "gate.binding_effect_review",
-          "label": "Binding effects and revocations reviewed",
+          "label": "Prüfgate: Bindungswirkung Wirkung Prüfung",
           "status": "open",
           "owner_role": "notary"
         }
       ],
       "plugin_dependencies": [
-        "noc-regulated-core"
+        "nac-regulated-core"
       ],
       "workflow_dependencies": [
         "workflows/contracts",
@@ -307,12 +307,12 @@
       "evidence": [
         {
           "id": "evidence.capacity_notes",
-          "label": "Capacity and instruction evidence reference",
+          "label": "Nachweis: Geschäftsfähigkeit Vermerke",
           "status": "open"
         },
         {
           "id": "evidence.custody_registration",
-          "label": "Custody and registration trace",
+          "label": "Nachweis: Verwahrung Registrierung",
           "status": "open"
         }
       ],

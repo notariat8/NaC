@@ -24,11 +24,11 @@ The BSI/G7 line focuses on transparency across the AI supply chain. AI-SBOM
 extends classic SBOMs because AI systems include not only software components
 but also models, datasets, infrastructure, security and operational properties.
 
-## NoC Minimum Clusters
+## NaC Minimum Clusters
 
 NaC introduces the following minimum clusters as the working baseline:
 
-| Cluster | NoC content |
+| Cluster | NaC content |
 | --- | --- |
 | `metadata` | Name, version, owner, lifecycle, release binding |
 | `system_level_properties` | System boundaries, purpose, autonomy level, human approval |
@@ -38,7 +38,7 @@ NaC introduces the following minimum clusters as the working baseline:
 | `security_properties` | Controls against data leakage, prompt injection and supply-chain risk |
 | `key_performance_indicators` | Coverage, drift, error rates, review and incident metrics |
 
-NoC additionally tracks privacy/AVV-DPA status, professional-secret boundaries,
+NaC additionally tracks privacy/AVV-DPA status, professional-secret boundaries,
 human-review ownership, local runtime/hardware minimum requirements and
 release/evidence binding.
 
@@ -86,4 +86,4 @@ An AI-enabled plugin, workflow or usecase is release-ready only when:
 3. runtime, middleware and hardware minimum requirements are documented,
 4. privacy/AVV-DPA status is documented,
 5. a human-review owner is named,
-6. `python scripts/quality_gate.py --profile strict` passes.
+6. `python scripts/nac.py doctor --profile strict` passes.

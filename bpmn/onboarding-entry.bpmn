@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   id="Definitions_OnboardingEntry"
-                  targetNamespace="https://github.com/ofunk-nvidia/NoC/bpmn">
+                  targetNamespace="https://github.com/ofunk/NaC/bpmn">
   <bpmn:process id="OnboardingEntryProcess" name="Onboarding Entry Process" isExecutable="false">
     <bpmn:startEvent id="StartEvent_Onboarding" name="Onboarding Start">
       <bpmn:outgoing>Flow_O1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:task id="Task_ModeGateway" name="Modus waehlen (Gruendung/Bestand)">
+    <bpmn:task id="Task_ModeGateway" name="Modus wählen (Gründung/Bestand)">
       <bpmn:incoming>Flow_O1</bpmn:incoming>
       <bpmn:outgoing>Flow_O2</bpmn:outgoing>
     </bpmn:task>

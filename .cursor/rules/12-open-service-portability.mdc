@@ -5,10 +5,10 @@ alwaysApply: true
 
 # Open Service Portability (MUSS)
 
-- Alle Function8-Leistungen im Kontext `NoC` muessen in [docs/de/service-model/function8-service-catalog.md](../../docs/de/service-model/function8-service-catalog.md) und [docs/en/service-model/function8-service-catalog.md](../../docs/en/service-model/function8-service-catalog.md) dokumentiert sein.
-- Leistungen mit AVV-Pflicht muessen verlinkte AVV-Artefakte besitzen.
-- Fuer jede Leistung muss ein Drittbetriebs- und Exit-Pfad dokumentiert sein.
-- Hidden Dependencies ausserhalb des Repos sind nicht zulaessig.
+- Alle Function8-Leistungen im Kontext `NaC` müssen in [docs/de/service-model/function8-service-catalog.md](../../docs/de/service-model/function8-service-catalog.md) und [docs/en/service-model/function8-service-catalog.md](../../docs/en/service-model/function8-service-catalog.md) dokumentiert sein.
+- Leistungen mit AVV-Pflicht müssen verlinkte AVV-Artefakte besitzen.
+- Für jede Leistung muss ein Drittbetriebs- und Exit-Pfad dokumentiert sein.
+- Hidden Dependencies außerhalb des Repos sind nicht zulässig.
 - Verbindliche Quellen:
   - [policies/provider-open-services-policy.yaml](../../policies/provider-open-services-policy.yaml)
   - [docs/de/service-model/function8-service-catalog.md](../../docs/de/service-model/function8-service-catalog.md)
