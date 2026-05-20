@@ -114,3 +114,18 @@ recognized metadata and files. Only the explicit `Übernehmen` action creates a
 demo matter and journal event from it. For real production data, raw document
 storage must stay outside public Git repositories; demo mode only permits
 synthetic test data.
+
+## Planned End-User Packaging
+
+The current developer start through `python scripts/nac.py operator --open` is
+not the target state for standard users. The open roadmap item
+`Operator-Endnutzer-Launcher paketieren` packages the local operator web app as
+an installed `NaC Operator` with its own runtime, Start-menu entry, internal
+health check and guided selection of the separate data repository. Users should
+not see a shell, Python commands, Curl checks or Codex sandbox approvals.
+
+Implementation is scheduled after the notary start page has been sharpened
+further and before broader pilot distribution. The launcher must still bind
+only to `127.0.0.1`, write logs into the user environment, manage operator
+configuration under `%LOCALAPPDATA%\NaC`, and keep product code, configuration
+and demo or mandate data separate.

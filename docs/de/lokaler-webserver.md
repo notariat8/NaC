@@ -116,3 +116,19 @@ diesen Vorschlag mit erkannten Metadaten und Dateien an. Erst die explizite
 Aktion `Übernehmen` erzeugt daraus eine Demo-Akte mit Journalereignis. Für
 echte Produktivdaten bleibt Rohdokumentablage außerhalb öffentlicher Git-Repos
 verpflichtend; im Demo-Modus sind nur synthetische Testdaten zulässig.
+
+## Geplante Endnutzer-Paketierung
+
+Der aktuelle Entwicklerstart über `python scripts/nac.py operator --open` ist
+nicht der Zielzustand für Standardnutzer. Der offene Roadmap-Punkt
+`Operator-Endnutzer-Launcher paketieren` bündelt die lokale Operator-Webapp als
+installierten `NaC Operator` mit eigener Laufzeit, Startmenü-Einstieg,
+internem Healthcheck und geführter Auswahl des getrennten Datenrepos. Nutzer
+sollen dabei keine Shell, keine Python-Kommandos, keine Curl-Tests und keine
+Codex-Sandbox-Freigaben sehen.
+
+Die Umsetzung erfolgt nach der weiteren Schärfung der Notariats-Startseite und
+vor einer breiteren Pilotverteilung. Der Launcher darf weiterhin nur lokal an
+`127.0.0.1` binden, schreibt Logs in die Benutzerumgebung, verwaltet die
+Operator-Konfiguration unter `%LOCALAPPDATA%\NaC` und hält Produktcode,
+Konfiguration und Demo-/Mandatsdaten getrennt.
