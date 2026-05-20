@@ -449,6 +449,7 @@ h3 {
 .matter-form,
 .matter-status,
 .matter-list,
+.import-upload-form,
 .import-list {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -458,23 +459,27 @@ h3 {
   padding: 1.25rem;
 }
 
-.matter-form {
+.matter-form,
+.import-upload-form {
   display: grid;
   gap: 1rem;
 }
 
-.matter-form label {
+.matter-form label,
+.import-upload-form label {
   display: grid;
   gap: 0.35rem;
 }
 
-.matter-form span {
+.matter-form span,
+.import-upload-form span {
   color: var(--muted);
   font-weight: 700;
 }
 
 .matter-form input,
-.matter-form select {
+.matter-form select,
+.import-upload-form input {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
@@ -482,6 +487,12 @@ h3 {
   min-height: 44px;
   padding: 0.55rem 0.75rem;
   width: 100%;
+}
+
+.import-upload-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .matter-actions,
@@ -494,6 +505,7 @@ h3 {
 
 .matter-status,
 .matter-list,
+.import-upload-status,
 .import-list {
   border-left: 6px solid var(--green);
   color: var(--muted);
@@ -501,8 +513,13 @@ h3 {
 
 .matter-status[data-status="error"],
 .matter-list[data-status="error"],
+.import-upload-status[data-status="error"],
 .import-list[data-status="error"] {
   border-left-color: #a53535;
+}
+
+.import-upload-status[data-status="running"] {
+  border-left-color: #9a7624;
 }
 
 .matter-card,
@@ -1071,6 +1088,7 @@ h3 {
   .diagnostic-grid,
   .connection-list,
   .governance-list,
+  .import-upload-grid,
   .artifact-layout {
     grid-template-columns: 1fr;
   }

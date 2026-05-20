@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import mimetypes
 import os
@@ -38,6 +40,7 @@ LOCAL_NO_STORE_HEADERS = (
     ("Cache-Control", "no-store, max-age=0"),
     ("Pragma", "no-cache"),
 )
+MAX_UPLOAD_FILE_BYTES = 5 * 1024 * 1024
 ALLOWED_ORIGINS = {
     "https://funktion8.de",
     "https://www.funktion8.de",
@@ -88,7 +91,7 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 
         def do_GET(self) -> None:  # noqa: N802
             route = unquote(urlparse(self.path).path)
-            if route == "/api/healthz":
+            if route in {"/api/healthz", "/healthz"}:
                 self._send_json({"status": "ok", "localhost_only": True})
                 return
             if route == "/api/operator-config":
@@ -107,6 +110,10 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 
         def do_HEAD(self) -> None:  # noqa: N802
             route = unquote(urlparse(self.path).path)
+            if route in {"/api/healthz", "/healthz"}:
+                body = json.dumps({"status": "ok", "localhost_only": True}, ensure_ascii=False).encode("utf-8")
+                self._send_bytes(HTTPStatus.OK, "application/json; charset=utf-8", body, include_body=False)
+                return
             if is_local_web_route(route):
                 self._send_local_web_response(local_web_app.handle(self.path), include_body=False)
                 return
@@ -763,8 +770,43 @@ def stage_import_source_files(repo: Path, proposal_id: str, source_files: Any, s
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source_path, target)
             staged["staged_path"] = relative_to_repo(repo, target)
+        else:
+            uploaded = uploaded_file_bytes(file)
+            if uploaded is not None:
+                if not bool(synthetic_test_data):
+                    raise ValueError("Browser-Uploads dürfen nur für ausdrücklich synthetische Testdaten übernommen werden.")
+                target = repo / "eingang" / "dateien" / proposal_id / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(uploaded)
+                staged["staged_path"] = relative_to_repo(repo, target)
+                staged["size_bytes"] = len(uploaded)
         staged_files.append(staged)
     return staged_files
+
+
+def uploaded_file_bytes(file: dict[str, Any]) -> bytes | None:
+    content = file.get("content_base64")
+    data_url = file.get("data_url")
+    if content is None and data_url is None:
+        return None
+
+    encoded = str(content or "")
+    if data_url is not None:
+        data_url_text = str(data_url)
+        if "," not in data_url_text:
+            raise ValueError("Ungültige Data-URL für Upload.")
+        encoded = data_url_text.split(",", maxsplit=1)[1]
+
+    encoded = "".join(encoded.split())
+    if not encoded:
+        raise ValueError("Upload-Datei ist leer.")
+    try:
+        decoded = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("Upload-Datei ist nicht gültig base64-kodiert.") from exc
+    if len(decoded) > MAX_UPLOAD_FILE_BYTES:
+        raise ValueError(f"Upload-Datei ist größer als {MAX_UPLOAD_FILE_BYTES // (1024 * 1024)} MB.")
+    return decoded
 
 
 def attach_document_files(

@@ -19,10 +19,16 @@ const matterList = document.querySelector("[data-matter-list]");
 const matterListTitle = document.querySelector("[data-matter-list-title]");
 const importList = document.querySelector("[data-import-list]");
 const importCount = document.querySelector("[data-import-count]");
+const importUploadForm = document.querySelector("[data-import-upload-form]");
+const importUploadStatus = document.querySelector("[data-import-upload-status]");
+const importExtractButton = document.querySelector("[data-import-extract]");
+const importUploadFileInput = document.querySelector("[data-import-upload-files]");
 let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
+let activePanel = "cases";
 let activeMatterUsecase = "";
 let matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
 let importState = { counts: { pending: 0 }, proposals: [], status_labels: { pending: "neu", accepted: "übernommen", rejected: "abgelehnt" } };
+let importExtractState = { metadata: {} };
 
 const areaCopy = {
   immobilienrecht: {
@@ -89,6 +95,28 @@ if (matterForm) {
   matterForm.addEventListener("submit", saveMatter);
 }
 
+if (importUploadForm) {
+  importUploadForm.addEventListener("submit", saveImportUpload);
+}
+
+if (importExtractButton) {
+  importExtractButton.addEventListener("click", extractImportUploadMetadata);
+}
+
+if (importUploadFileInput) {
+  importUploadFileInput.addEventListener("change", resetImportExtractState);
+}
+
+importUploadForm?.querySelector('[data-import-upload-field="person_name"]')?.addEventListener("input", resetImportExtractState);
+
+window.addEventListener("focus", refreshVisibleData);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    refreshVisibleData();
+  }
+});
+setInterval(refreshVisibleData, 5000);
+
 showPanel("cases");
 filterCases();
 loadOperatorConfig();
@@ -96,6 +124,7 @@ loadMatters();
 loadImportProposals();
 
 function showPanel(panelName) {
+  activePanel = panelName;
   panels.forEach((panel) => {
     panel.classList.toggle("is-hidden", panel.dataset.appPanel !== panelName);
   });
@@ -122,6 +151,25 @@ function showPanel(panelName) {
 
   if (panelName === "imports") {
     loadImportProposals().then(renderImportList);
+  }
+}
+
+async function refreshVisibleData() {
+  if (document.hidden) {
+    return;
+  }
+  if (activePanel === "imports") {
+    await loadImportProposals();
+    renderImportList();
+    return;
+  }
+  if (activePanel === "matters") {
+    await loadMatters();
+    renderMatterList(activeMatterUsecase);
+    return;
+  }
+  if (activePanel === "cases") {
+    await Promise.all([loadMatters(), loadImportProposals()]);
   }
 }
 
@@ -495,6 +543,187 @@ async function saveMatterStatus(matterId) {
     matterList.dataset.status = "error";
     matterList.insertAdjacentHTML("afterbegin", `<p>Status konnte nicht gespeichert werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`);
   }
+}
+
+function importUploadFiles() {
+  return Array.from(importUploadFileInput?.files || []);
+}
+
+function resetImportExtractState() {
+  importExtractState = { metadata: {} };
+}
+
+function readImportUploadFields() {
+  const values = {};
+  importUploadForm?.querySelectorAll("[data-import-upload-field]").forEach((field) => {
+    values[field.dataset.importUploadField] = field.value.trim();
+  });
+  return values;
+}
+
+function setImportUploadField(name, value) {
+  const field = importUploadForm?.querySelector(`[data-import-upload-field="${name}"]`);
+  if (field && !field.value.trim()) {
+    field.value = value;
+  }
+}
+
+function extractImportUploadMetadata() {
+  if (!importUploadStatus) {
+    return {};
+  }
+  const files = importUploadFiles();
+  if (!files.length) {
+    importUploadStatus.dataset.status = "error";
+    importUploadStatus.innerHTML = "<p>Bitte zuerst ein synthetisches Demo-Bild auswählen.</p>";
+    return {};
+  }
+
+  const fields = readImportUploadFields();
+  const inferred = inferImportMetadata(files, fields.person_name);
+  importExtractState = { metadata: inferred.metadata };
+  setImportUploadField("person_name", inferred.personName);
+  setImportUploadField("document_title", inferred.documentTitle);
+  setImportUploadField("title", `${inferred.usecaseTitle} ${inferred.personName}`);
+  importUploadStatus.dataset.status = "ready";
+  importUploadStatus.innerHTML = `
+    <h3>Metadaten vorbereitet</h3>
+    <p>${escapeHtml(inferred.personName)} · ${escapeHtml(inferred.documentTitle)} · ${files.length} Datei${files.length === 1 ? "" : "en"}</p>
+  `;
+  return inferred.metadata;
+}
+
+function inferImportMetadata(files, personName) {
+  const personText = String(personName || "").trim();
+  const haystack = files.map((file) => file.name).join(" ").toLowerCase();
+  const isErika = haystack.includes("erika") || haystack.includes("mustermann") || personText.toLowerCase().includes("mustermann");
+  const inferredPerson = personText || (isErika ? "Erika Mustermann" : "Demo Person");
+  const documentTitle = haystack.includes("ausweis") || isErika
+    ? "Personalausweis zur Identitätsprüfung"
+    : "Eingangsdokument zur Prüfung";
+  const metadata = {
+    document_kind: documentTitle.startsWith("Personalausweis") ? "Personalausweis" : "Eingangsdokument",
+    uploaded_file_names: files.map((file) => file.name),
+    uploaded_file_count: files.length,
+    manual_review_required: true,
+  };
+  if (isErika) {
+    Object.assign(metadata, {
+      document_number: "LZ6311T47",
+      family_name: "Mustermann",
+      birth_name: "Gabler",
+      given_names: "Erika",
+      date_of_birth: "1983-08-12",
+      place_of_birth: "Berlin",
+      nationality: "Deutsch",
+      valid_until: "2034-05-01",
+      address: "Heidestrasse, 51147 Köln",
+      height_cm: 160,
+      eye_color: "grün",
+      issuing_authority: "Stadt Köln",
+      issue_or_reference_date: "2024-05-02",
+      mrz_document_code: "IDD",
+      mrz_lines_present: true,
+      extraction_source: "synthetic_demo_profile",
+    });
+  } else {
+    metadata.extraction_source = "browser_file_metadata_only";
+  }
+  return {
+    metadata,
+    personName: inferredPerson,
+    documentTitle,
+    usecaseTitle: "Unterschriftsbeglaubigung",
+  };
+}
+
+async function saveImportUpload(event) {
+  event.preventDefault();
+  if (!importUploadForm || !importUploadStatus) {
+    return;
+  }
+  const files = importUploadFiles();
+  if (!files.length) {
+    importUploadStatus.dataset.status = "error";
+    importUploadStatus.innerHTML = "<p>Bitte mindestens ein synthetisches Demo-Bild auswählen.</p>";
+    return;
+  }
+  const tooLarge = files.find((file) => file.size > 5 * 1024 * 1024);
+  if (tooLarge) {
+    importUploadStatus.dataset.status = "error";
+    importUploadStatus.innerHTML = `<p>${escapeHtml(tooLarge.name)} ist größer als 5 MB.</p>`;
+    return;
+  }
+
+  importUploadStatus.dataset.status = "running";
+  importUploadStatus.innerHTML = "<p>Import-Vorschlag wird im Demo-Datenrepo gespeichert.</p>";
+
+  try {
+    const fields = readImportUploadFields();
+    const inferred = inferImportMetadata(files, fields.person_name);
+    const metadata = Object.keys(importExtractState.metadata || {}).length
+      ? importExtractState.metadata
+      : inferred.metadata;
+    const personName = fields.person_name || inferred.personName;
+    const documentTitle = fields.document_title || inferred.documentTitle;
+    const sourceFiles = await Promise.all(files.map((file, index) => fileToImportSource(file, index)));
+    const title = fields.title || `Unterschriftsbeglaubigung ${personName}`;
+    const response = await fetch(hardwareBridgeUrl("/api/import-proposals"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        values: {
+          title,
+          usecase_slug: "unterschriftsbeglaubigung",
+          usecase_title: "Unterschriftsbeglaubigung",
+          client_name: personName,
+          participant_name: personName,
+          document_title: documentTitle,
+          document_type: documentTitle.startsWith("Personalausweis") ? "id_document_scan" : "input_document",
+          media_type: files[0]?.type || "application/octet-stream",
+          data_classification: "synthetic_identity_document",
+          status: "open",
+          status_reason: "Ausweisdaten aus synthetischem Demo-Bildupload übernommen, manuelle Prüfung offen",
+          source: "operator_upload",
+          source_type: "scan_image",
+          summary: `${documentTitle} für ${personName}`,
+          synthetic_test_data: true,
+          metadata,
+          source_files: sourceFiles,
+        },
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    importUploadStatus.dataset.status = "ready";
+    importUploadStatus.innerHTML = `<h3>Import-Vorschlag gespeichert</h3><p>${escapeHtml(payload.proposal?.proposal_id || title)} ist sofort unten sichtbar.</p>`;
+    await loadImportProposals();
+    renderImportList();
+  } catch (error) {
+    importUploadStatus.dataset.status = "error";
+    importUploadStatus.innerHTML = `<h3>Upload fehlgeschlagen</h3><p>${escapeHtml(error.message || "Unbekannter Fehler")}</p>`;
+  }
+}
+
+function fileToImportSource(file, index) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      const dataUrl = String(reader.result || "");
+      resolve({
+        label: index === 0 ? "Vorderseite" : `Datei ${index + 1}`,
+        filename: file.name,
+        media_type: file.type || "application/octet-stream",
+        data_url: dataUrl,
+      });
+    });
+    reader.addEventListener("error", () => reject(reader.error || new Error("Datei konnte nicht gelesen werden.")));
+    reader.readAsDataURL(file);
+  });
 }
 
 function renderImportList() {

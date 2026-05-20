@@ -117,6 +117,13 @@ Aktion `Übernehmen` erzeugt daraus eine Demo-Akte mit Journalereignis. Für
 echte Produktivdaten bleibt Rohdokumentablage außerhalb öffentlicher Git-Repos
 verpflichtend; im Demo-Modus sind nur synthetische Testdaten zulässig.
 
+Für den Demo-Betrieb kann die Oberfläche synthetische Bilddateien direkt im
+Browser auswählen, eine kleine Metadatenvorschau vorbereiten und den
+Import-Vorschlag ohne Seitenreload im getrennten Datenrepo speichern. Die
+sichtbaren Akten- und Eingangsdaten werden bei Fokuswechseln und periodisch
+nachgeladen, damit Codex-Schreibaktionen, Uploads und die rechts geöffnete
+Webapp denselben Stand zeigen.
+
 ## Geplante Endnutzer-Paketierung
 
 Der aktuelle Entwicklerstart über `python scripts/nac.py operator --open` ist

@@ -468,6 +468,33 @@
           <p class="section-kicker">Eingang</p>
           <h2 id="imports-title">Import-Vorschläge prüfen</h2>
         </div>
+        <form class="import-upload-form" data-import-upload-form>
+          <div class="import-upload-grid">
+            <label>
+              <span>Bilddateien</span>
+              <input name="source_files" type="file" accept="image/*" multiple data-import-upload-files>
+            </label>
+            <label>
+              <span>Person</span>
+              <input name="person_name" type="text" autocomplete="off" data-import-upload-field="person_name" placeholder="z.B. Erika Mustermann">
+            </label>
+            <label>
+              <span>Aktenbetreff</span>
+              <input name="title" type="text" autocomplete="off" data-import-upload-field="title" placeholder="wird aus Person und Dokument vorgeschlagen">
+            </label>
+            <label>
+              <span>Dokument</span>
+              <input name="document_title" type="text" autocomplete="off" data-import-upload-field="document_title" placeholder="z.B. Personalausweis zur Identitätsprüfung">
+            </label>
+          </div>
+          <div class="import-actions">
+            <button class="button secondary" type="button" data-import-extract>Metadaten extrahieren</button>
+            <button class="button primary" type="submit">Import-Vorschlag speichern</button>
+          </div>
+          <div class="import-upload-status" data-import-upload-status role="status" aria-live="polite">
+            <p>Nur synthetische Demo-Bilder hochladen. Echte Ausweise und Mandatsunterlagen bleiben außerhalb öffentlicher Repos.</p>
+          </div>
+        </form>
         <div class="import-list" data-import-list role="status" aria-live="polite">
           <p>Import-Vorschläge werden aus dem konfigurierten Datenrepo geladen.</p>
         </div>

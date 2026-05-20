@@ -115,6 +115,12 @@ demo matter and journal event from it. For real production data, raw document
 storage must stay outside public Git repositories; demo mode only permits
 synthetic test data.
 
+For demo operation, the surface can select synthetic image files directly in
+the browser, prepare a small metadata preview and save the import proposal into
+the separate data repository without a page reload. Visible matter and inbox
+data are reloaded on focus changes and periodically, so Codex write actions,
+uploads and the web app opened on the side show the same state.
+
 ## Planned End-User Packaging
 
 The current developer start through `python scripts/nac.py operator --open` is
