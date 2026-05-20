@@ -24,6 +24,7 @@ def load_bridge_module():
 
 
 bridge = load_bridge_module()
+from nac_cli.tenant import init_tenant_repo, write_sample_matter  # noqa: E402
 
 
 class NaCHardwareBridgeTests(unittest.TestCase):
@@ -106,7 +107,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('data-matter-field="client_name"', html)
         self.assertIn('data-matter-field="participant_name"', html)
         self.assertIn('data-matter-field="status"', html)
-        self.assertIn("https://github.com/funktion8/demo8notariat.git", html)
+        self.assertIn("https://github.com/ofunk/demo8notariat.git", html)
         self.assertNotIn('href="#bpmn-modelle"', html)
         self.assertNotIn('href="#tests"', html)
         self.assertNotIn('href="#anbindungen"', html)
@@ -211,7 +212,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -274,6 +275,37 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["waiting"], 1)
             self.assertEqual(relisted["counts"]["unterschriftsbeglaubigung"]["open"], 0)
 
+    def test_operator_lists_cli_sample_matter_with_task_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tenant_repo = Path(temp_dir) / "tenant"
+            init_tenant_repo(tenant_repo, name="tenant", mode="demo", remote_url=None)
+            write_sample_matter(tenant_repo=tenant_repo, matter_id="UVZ-2026-0001", force=True)
+            config_path = Path(temp_dir) / "operator-config.json"
+            bridge.save_operator_config(
+                {
+                    "values": {
+                        "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
+                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
+                        "data_repo_path": str(tenant_repo),
+                    }
+                },
+                config_path=config_path,
+            )
+
+            listed = bridge.list_operator_matters(config_path=config_path)
+
+            self.assertEqual(listed["counts"]["immobilienkaufvertrag"]["open"], 1)
+            matter = listed["matters"][0]
+            self.assertEqual(matter["matter_id"], "UVZ-2026-0001")
+            self.assertEqual(matter["usecase_slug"], "immobilienkaufvertrag")
+            self.assertEqual(matter["participants"], ["Anna Berger", "Ben Lange"])
+            self.assertEqual(matter["document_count"], 3)
+            self.assertEqual(matter["evidence_count"], 2)
+            self.assertEqual(matter["side_file_label"], "Nebenakten-Export: vorbereitet")
+            self.assertEqual(matter["checklist_summary"]["total_count"], 5)
+            self.assertEqual(matter["checklist_summary"]["next_step"]["label"], "Grundbuchauszug prüfen")
+            self.assertEqual(matter["checklist_summary"]["next_step"]["section"], "Aufgaben")
+
     def test_operator_import_proposal_accepts_into_matter_with_staged_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tenant_repo = Path(temp_dir) / "tenant"
@@ -293,7 +325,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -366,7 +398,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -459,8 +491,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         payload = bridge.build_operator_config_payload(config_path=Path("missing-operator-config.json"))
 
         self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
-        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/funktion8/demo8notariat.git")
-        self.assertTrue(payload["values"]["data_repo_path"].endswith("funktion8-demo8notariat"))
+        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")
+        self.assertTrue(payload["values"]["data_repo_path"].endswith("demo8notariat"))
 
     def test_operator_bridge_disables_local_cache(self) -> None:
         self.assertIn(("Cache-Control", "no-store, max-age=0"), bridge.LOCAL_NO_STORE_HEADERS)

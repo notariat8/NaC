@@ -663,6 +663,8 @@ function matterCardHtml(matter) {
     ? matter.participants.join(", ")
     : "keine Beteiligten";
   const reason = matter.status_reason ? ` · ${matter.status_reason}` : "";
+  const evidenceText = matter.evidence_count ? ` · ${matter.evidence_count} Nachweise` : "";
+  const sideFileText = matter.side_file_label ? `<p class="matter-workflow">${escapeHtml(matter.side_file_label)}</p>` : "";
   const workflow = matter.workflow_binding || {};
   const workflowVersion = workflow.workflow_version || "v1";
   const workflowRevision = workflow.workflow_revision_hash ? ` · Rev ${workflow.workflow_revision_hash}` : "";
@@ -677,8 +679,9 @@ function matterCardHtml(matter) {
     <article class="matter-card">
       <div>
         <h3>${escapeHtml(matter.aktenzeichen || matter.matter_id)} · ${escapeHtml(matter.title)}</h3>
-        <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente</p>
+        <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente${escapeHtml(evidenceText)}</p>
         <p class="matter-workflow">Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden</p>
+        ${sideFileText}
         <div class="matter-checklist">
           <p><strong>Nächster Schritt:</strong> ${escapeHtml(nextStepText)}${nextStepContext ? ` <span>${escapeHtml(nextStepContext)}</span>` : ""}</p>
           <p>Akten-Checkliste: ${escapeHtml(checklistText)}</p>

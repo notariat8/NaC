@@ -103,6 +103,11 @@ nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 Dokumente, Aufgaben und Nachweise. Damit bleibt die Webapp hilfreich, aber die
 prüfbare Bedienkante liegt weiterhin in der `nac`-CLI.
 
+Die lokale Operator-Webapp liest dieselben Dateien über `/api/matters`. Für
+Musterakten ohne separate `checkliste.json` nutzt sie `aufgaben.json` als
+sichtbare Akten-Checkliste und zeigt so den nächsten offenen Schritt auch in
+der Bürooberfläche.
+
 Der ältere Befehl `tenant write-demo` bleibt als KG-basierter Demo-Export
 erhalten:
 

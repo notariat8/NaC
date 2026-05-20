@@ -117,9 +117,12 @@ nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 ```
 
-Die CLI zeigt Akte, Aktenzeichen, Status, Beteiligtenzahl, Dokumentzahl,
-Aufgaben, Nachweise und den Nebenakten-Exportstatus. Damit ist die Webapp eine
-komfortable Bedienfläche, aber nicht die einzige Erklärung des Systems.
+Die Operator-Webapp lädt denselben Datenbestand über `/api/matters`. Für
+Akten aus `nac tenant write-sample-akte` bildet sie `aufgaben.json` als
+Akten-Checkliste ab und zeigt Beteiligte, Dokumente, Nachweise, nächsten
+offenen Schritt und Nebenakten-Exportstatus in Bürobegriffen. Die CLI zeigt
+dieselben Kerninformationen in Textform. Damit ist die Webapp eine komfortable
+Bedienfläche, aber nicht die einzige Erklärung des Systems.
 
 ## Warum Das Für Nicht-Techniker Verständlich Ist
 

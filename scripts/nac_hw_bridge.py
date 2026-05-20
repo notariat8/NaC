@@ -34,8 +34,8 @@ SITE_ROOT = REPO_ROOT / "web" / "local-operator"
 READINESS_SCRIPT = REPO_ROOT / "plugins" / "nac-cyberjack-rfid" / "scripts" / "check_readiness.py"
 STARTUP_SCRIPT = REPO_ROOT / "scripts" / "startup_check.py"
 TEST_LOG = REPO_ROOT / "logs" / "test-log.jsonl"
-DEFAULT_DATA_REPO = REPO_ROOT.parent / "funktion8-demo8notariat"
-DEFAULT_DATA_REPO_URL = "https://github.com/funktion8/demo8notariat.git"
+DEFAULT_DATA_REPO = REPO_ROOT.parent / "demo8notariat"
+DEFAULT_DATA_REPO_URL = "https://github.com/ofunk/demo8notariat.git"
 OPERATOR_CONFIG = (Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".nac") / "NaC" / "operator-config.json")
 LOCAL_NO_STORE_HEADERS = (
     ("Cache-Control", "no-store, max-age=0"),
@@ -903,7 +903,9 @@ def read_operator_matter_summaries(repo: Path) -> list[dict[str, Any]]:
 def summarize_matter(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
     person_ids = [str(value) for value in matter.get("participant_person_ids", []) if value]
     document_ids = [str(value) for value in matter.get("document_ids", []) if value]
-    checklist_state = load_matter_checklist_state(repo, matter)
+    checklist_state = load_matter_checklist_state(repo, matter) or load_matter_tasks_as_checklist_state(repo, matter)
+    evidence_items = load_matter_evidence_items(repo, matter)
+    side_file = matter.get("electronic_side_file") if isinstance(matter.get("electronic_side_file"), dict) else {}
     return {
         "matter_id": str(matter.get("matter_id") or ""),
         "aktenzeichen": str(matter.get("aktenzeichen") or matter.get("matter_id") or ""),
@@ -916,6 +918,8 @@ def summarize_matter(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
         "updated_at": str(matter.get("updated_at") or ""),
         "participants": load_person_display_names(repo, person_ids),
         "document_count": len(document_ids),
+        "evidence_count": len(evidence_items),
+        "side_file_label": clean_text(side_file.get("label") or ""),
         "workflow_binding": matter.get("workflow_binding") if isinstance(matter.get("workflow_binding"), dict) else {},
         "checklist_summary": summarize_checklist_state(checklist_state),
         "data_classification": str(matter.get("data_classification") or ""),
@@ -1100,6 +1104,70 @@ def load_matter_checklist_state(repo: Path, matter: dict[str, Any]) -> dict[str,
     except (OSError, json.JSONDecodeError):
         return {}
     return checklist_state if isinstance(checklist_state, dict) else {}
+
+
+def load_matter_tasks_as_checklist_state(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
+    task_file = resolve_matter_related_file(repo, matter, "tasks", "aufgaben.json")
+    if task_file is None or not task_file.is_file():
+        return {}
+    try:
+        task_payload = read_json(task_file)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    tasks = task_payload.get("tasks") if isinstance(task_payload.get("tasks"), list) else []
+    items = []
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        task_id = clean_text(task.get("task_id") or task.get("id") or "")
+        items.append(
+            {
+                "id": task_id,
+                "label": clean_text(task.get("label") or task_id or "Aufgabe"),
+                "status": normalize_checklist_status(task.get("status") or "open"),
+                "owner_role": clean_text(task.get("assigned_role") or task.get("owner_role") or ""),
+            }
+        )
+    if not items:
+        return {}
+    return {
+        "schema_version": "nac.matter-checklist/v0.1",
+        "workflow_version": clean_text(matter.get("schema_version") or ""),
+        "bound_at": clean_text(matter.get("opened_at") or ""),
+        "sections": [
+            {
+                "id": "tenant_tasks",
+                "label": "Aufgaben",
+                "items": items,
+            }
+        ],
+    }
+
+
+def load_matter_evidence_items(repo: Path, matter: dict[str, Any]) -> list[dict[str, Any]]:
+    evidence_file = resolve_matter_related_file(repo, matter, "evidence", "nachweise.json")
+    if evidence_file is None or not evidence_file.is_file():
+        return []
+    try:
+        evidence_payload = read_json(evidence_file)
+    except (OSError, json.JSONDecodeError):
+        return []
+    items = evidence_payload.get("items") if isinstance(evidence_payload.get("items"), list) else []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def resolve_matter_related_file(repo: Path, matter: dict[str, Any], pointer_key: str, fallback_name: str) -> Path | None:
+    pointers = matter.get("pointers") if isinstance(matter.get("pointers"), dict) else {}
+    pointer = clean_text(pointers.get(pointer_key) or "")
+    if pointer:
+        try:
+            return resolve_repo_relative(repo, pointer)
+        except ValueError:
+            return None
+    matter_file = find_matter_file(repo, clean_text(matter.get("matter_id") or ""))
+    if matter_file is None:
+        return None
+    return matter_file.parent / fallback_name
 
 
 def summarize_checklist_state(checklist_state: dict[str, Any]) -> dict[str, Any]:

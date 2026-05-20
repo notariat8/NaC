@@ -116,9 +116,12 @@ nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 ```
 
-The CLI shows matter, file number, status, participant count, document count,
-tasks, evidence and side-file export status. The web app is a convenient office
-surface, but not the only explanation of the system.
+The operator web app loads the same data set through `/api/matters`. For
+matters produced by `nac tenant write-sample-akte`, it maps `aufgaben.json`
+into the matter checklist and shows participants, documents, evidence, next
+open step and side-file export status in office terms. The CLI shows the same
+core information as text. The web app is a convenient office surface, but not
+the only explanation of the system.
 
 ## Why This Is Understandable For Non-Technical Readers
 

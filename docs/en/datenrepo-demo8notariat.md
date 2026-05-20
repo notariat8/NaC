@@ -103,6 +103,11 @@ resolves the main ID pointers and counts participants, documents, tasks and
 evidence. The web app remains useful, but the checkable operating edge remains
 the `nac` CLI.
 
+The local operator web app reads the same files through `/api/matters`. For
+sample matters without a separate `checkliste.json`, it uses `aufgaben.json`
+as the visible matter checklist and therefore shows the next open step in the
+office surface too.
+
 The older `tenant write-demo` command remains available as a KG-based demo
 export:
 
