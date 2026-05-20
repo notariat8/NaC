@@ -446,6 +446,56 @@ h3 {
   width: 100%;
 }
 
+.panel-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.panel-navigation button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0.45rem 0.75rem;
+}
+
+.matter-toolbar {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0 auto 1rem;
+  max-width: 960px;
+}
+
+.matter-toolbar label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.matter-toolbar span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.matter-toolbar input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
 .matter-form,
 .matter-status,
 .matter-list,
@@ -546,6 +596,17 @@ h3 {
 .import-card h3 {
   color: var(--ink);
   margin-bottom: 0.35rem;
+}
+
+.matter-related {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.matter-related h3 {
+  color: var(--ink);
+  margin-bottom: 0.5rem;
 }
 
 .matter-meta {
@@ -1089,6 +1150,7 @@ h3 {
   .connection-list,
   .governance-list,
   .import-upload-grid,
+  .matter-toolbar,
   .artifact-layout {
     grid-template-columns: 1fr;
   }

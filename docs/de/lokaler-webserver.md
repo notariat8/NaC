@@ -124,6 +124,13 @@ sichtbaren Akten- und Eingangsdaten werden bei Fokuswechseln und periodisch
 nachgeladen, damit Codex-Schreibaktionen, Uploads und die rechts geöffnete
 Webapp denselben Stand zeigen.
 
+Die Aktenansicht sucht Akten und offene Import-Vorschläge gemeinsam. Wenn für
+eine Person wie `Mustermann` noch keine Akte existiert, aber ein passender
+Eingang vorliegt, zeigt die Oberfläche diesen Eingang direkt im Aktenbereich
+und bietet die explizite Übernahme an. Arbeitsbereiche außerhalb der
+Vorgangsliste erhalten außerdem `Zurück` und `Vorgänge`, damit jede UI-Aktion
+einen sichtbaren Rückweg hat.
+
 ## Geplante Endnutzer-Paketierung
 
 Der aktuelle Entwicklerstart über `python scripts/nac.py operator --open` ist

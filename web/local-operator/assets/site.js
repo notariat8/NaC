@@ -15,6 +15,7 @@ const configStatus = document.querySelector("[data-config-status]");
 const matterForm = document.querySelector("[data-matter-form]");
 const matterFormTitle = document.querySelector("[data-matter-form-title]");
 const matterFormStatus = document.querySelector("[data-matter-form-status]");
+const matterSearch = document.querySelector("[data-matter-search]");
 const matterList = document.querySelector("[data-matter-list]");
 const matterListTitle = document.querySelector("[data-matter-list-title]");
 const importList = document.querySelector("[data-import-list]");
@@ -26,6 +27,7 @@ const importUploadFileInput = document.querySelector("[data-import-upload-files]
 let activeArea = document.querySelector("[data-area-tab].is-active")?.dataset.areaTab || "allgemeines-zivilrecht";
 let activePanel = "cases";
 let activeMatterUsecase = "";
+let panelBackStack = [];
 let matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
 let importState = { counts: { pending: 0 }, proposals: [], status_labels: { pending: "neu", accepted: "übernommen", rejected: "abgelehnt" } };
 let importExtractState = { metadata: {} };
@@ -66,6 +68,7 @@ if (caseSearch && caseRows.length) {
 
 sortCaseRows();
 enhanceCaseRows();
+installPanelNavigation();
 
 areaTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -95,6 +98,10 @@ if (matterForm) {
   matterForm.addEventListener("submit", saveMatter);
 }
 
+if (matterSearch) {
+  matterSearch.addEventListener("input", () => renderMatterList(activeMatterUsecase));
+}
+
 if (importUploadForm) {
   importUploadForm.addEventListener("submit", saveImportUpload);
 }
@@ -117,13 +124,17 @@ document.addEventListener("visibilitychange", () => {
 });
 setInterval(refreshVisibleData, 5000);
 
-showPanel("cases");
+showPanel("cases", { pushHistory: false });
 filterCases();
 loadOperatorConfig();
 loadMatters();
 loadImportProposals();
 
-function showPanel(panelName) {
+function showPanel(panelName, options = {}) {
+  if (options.pushHistory !== false && panelName !== activePanel) {
+    panelBackStack.push(activePanel);
+    panelBackStack = panelBackStack.slice(-12);
+  }
   activePanel = panelName;
   panels.forEach((panel) => {
     panel.classList.toggle("is-hidden", panel.dataset.appPanel !== panelName);
@@ -146,12 +157,48 @@ function showPanel(panelName) {
   }
 
   if (panelName === "matters") {
-    loadMatters().then(() => renderMatterList(activeMatterUsecase));
+    Promise.all([loadMatters(), loadImportProposals()]).then(() => renderMatterList(activeMatterUsecase));
   }
 
   if (panelName === "imports") {
     loadImportProposals().then(renderImportList);
   }
+}
+
+function installPanelNavigation() {
+  panels.forEach((panel) => {
+    if (panel.dataset.appPanel === "cases") {
+      return;
+    }
+    const heading = panel.querySelector(".section-heading");
+    if (!heading || heading.querySelector(".panel-navigation")) {
+      return;
+    }
+    const navigation = document.createElement("div");
+    navigation.className = "panel-navigation";
+    navigation.innerHTML = `
+      <button type="button" data-panel-back>Zurück</button>
+      <button type="button" data-panel-home>Vorgänge</button>
+    `;
+    navigation.querySelector("[data-panel-back]")?.addEventListener("click", goBackPanel);
+    navigation.querySelector("[data-panel-home]")?.addEventListener("click", goCasesPanel);
+    heading.appendChild(navigation);
+  });
+}
+
+function goBackPanel() {
+  const previous = panelBackStack.pop() || "cases";
+  showPanel(previous, { pushHistory: false });
+  if (previous === "cases") {
+    filterCases();
+  }
+}
+
+function goCasesPanel() {
+  panelBackStack = [];
+  activeMatterUsecase = "";
+  showPanel("cases", { pushHistory: false });
+  filterCases();
 }
 
 async function refreshVisibleData() {
@@ -164,7 +211,7 @@ async function refreshVisibleData() {
     return;
   }
   if (activePanel === "matters") {
-    await loadMatters();
+    await Promise.all([loadMatters(), loadImportProposals()]);
     renderMatterList(activeMatterUsecase);
     return;
   }
@@ -461,6 +508,7 @@ async function saveMatter(event) {
     matterFormStatus.innerHTML = `<h3>Akte angelegt</h3><p>${escapeHtml(payload.matter?.aktenzeichen || payload.matter?.matter_id || "Neue Akte")} wurde im Datenrepo gespeichert.</p>`;
     activeMatterUsecase = payload.matter?.usecase_slug || activeMatterUsecase;
     await loadMatters();
+    await loadImportProposals();
     renderMatterList(activeMatterUsecase);
     showPanel("matters");
   } catch (error) {
@@ -482,19 +530,82 @@ function renderMatterList(slug = "") {
     return;
   }
   const title = slug ? usecaseTitleBySlug(slug) : "Alle Akten";
+  const query = (matterSearch?.value || "").trim();
   if (matterListTitle) {
     matterListTitle.textContent = slug ? `${title}: vorhandene Akten` : "Vorhandene Akten";
   }
-  const matters = (matterState.matters || []).filter((matter) => !slug || matter.usecase_slug === slug);
+  const matters = (matterState.matters || [])
+    .filter((matter) => !slug || matter.usecase_slug === slug)
+    .filter((matter) => !query || searchableMatterText(matter).includes(query.toLowerCase()));
+  const relatedImports = (importState.proposals || [])
+    .filter((proposal) => proposal.status === "pending")
+    .filter((proposal) => !slug || proposal.matter_values?.usecase_slug === slug)
+    .filter((proposal) => !query || searchableImportText(proposal).includes(query.toLowerCase()));
   matterList.dataset.status = "ready";
-  if (!matters.length) {
-    matterList.innerHTML = `<p>Keine Akten für ${escapeHtml(title)} vorhanden.</p>`;
-    return;
+  const html = [];
+  if (matters.length) {
+    html.push(matters.map((matter) => matterCardHtml(matter)).join(""));
+  } else if (relatedImports.length) {
+    html.push(`<p>Keine Akte für ${escapeHtml(title)}${query ? ` mit „${escapeHtml(query)}“` : ""} vorhanden. Im Eingang liegt aber ein passender Import-Vorschlag.</p>`);
+  } else {
+    html.push(`<p>Keine Akten für ${escapeHtml(title)}${query ? ` mit „${escapeHtml(query)}“` : ""} vorhanden.</p>`);
   }
-  matterList.innerHTML = matters.map((matter) => matterCardHtml(matter)).join("");
-  matterList.querySelectorAll("[data-matter-status-save]").forEach((button) => {
+  if (relatedImports.length) {
+    html.push(`
+      <section class="matter-related" aria-label="Passende Eingangsvorschläge">
+        <h3>${matters.length ? "Offene Eingangsvorschläge" : "Passender Eingang"}</h3>
+        ${relatedImports.map((proposal) => importCardHtml(proposal)).join("")}
+      </section>
+    `);
+  }
+  matterList.innerHTML = html.join("");
+  bindMatterStatusButtons(matterList);
+  bindImportAcceptButtons(matterList);
+}
+
+function bindMatterStatusButtons(scope) {
+  scope.querySelectorAll("[data-matter-status-save]").forEach((button) => {
     button.addEventListener("click", () => saveMatterStatus(button.dataset.matterStatusSave || ""));
   });
+}
+
+function bindImportAcceptButtons(scope) {
+  scope.querySelectorAll("[data-import-accept]").forEach((button) => {
+    button.addEventListener("click", () => acceptImportProposal(button.dataset.importAccept || ""));
+  });
+}
+
+function searchableMatterText(matter) {
+  return [
+    matter.matter_id,
+    matter.aktenzeichen,
+    matter.title,
+    matter.usecase_slug,
+    matter.status,
+    matter.status_label,
+    matter.status_reason,
+    ...(Array.isArray(matter.participants) ? matter.participants : []),
+  ].join(" ").toLowerCase();
+}
+
+function searchableImportText(proposal) {
+  const values = proposal.matter_values || {};
+  const metadata = values.metadata || {};
+  const files = proposal.source_files || [];
+  return [
+    proposal.proposal_id,
+    proposal.status,
+    proposal.status_label,
+    proposal.summary,
+    values.title,
+    values.client_name,
+    values.participant_name,
+    values.document_title,
+    values.usecase_slug,
+    values.usecase_title,
+    ...Object.values(metadata),
+    ...files.map((file) => `${file.label || ""} ${file.filename || ""}`),
+  ].join(" ").toLowerCase();
 }
 
 function matterCardHtml(matter) {
@@ -737,9 +848,7 @@ function renderImportList() {
     return;
   }
   importList.innerHTML = proposals.map((proposal) => importCardHtml(proposal)).join("");
-  importList.querySelectorAll("[data-import-accept]").forEach((button) => {
-    button.addEventListener("click", () => acceptImportProposal(button.dataset.importAccept || ""));
-  });
+  bindImportAcceptButtons(importList);
 }
 
 function importCardHtml(proposal) {

@@ -121,6 +121,12 @@ the separate data repository without a page reload. Visible matter and inbox
 data are reloaded on focus changes and periodically, so Codex write actions,
 uploads and the web app opened on the side show the same state.
 
+The matter view searches matters and pending import proposals together. If no
+matter exists yet for a person such as `Mustermann`, but a matching inbox item
+does exist, the surface shows that inbox item directly in the matter area and
+offers the explicit accept action. Work areas outside the case list also get
+`Zurück` and `Vorgänge` navigation, so every UI action has a visible way back.
+
 ## Planned End-User Packaging
 
 The current developer start through `python scripts/nac.py operator --open` is
