@@ -45,6 +45,7 @@
           <label for="case-search">Vorgang suchen</label>
           <input id="case-search" type="search" placeholder="z.B. Immobilien, Register, Testament, Vollmacht" data-case-search>
           <output class="case-count" data-area-count for="case-search">0 Vorgänge</output>
+          <button class="button secondary" type="button" data-open-panel="matters">Akten <span data-matter-count>0</span></button>
           <button class="button secondary" type="button" data-open-panel="imports">Eingang <span data-import-count>0</span></button>
         </div>
 
@@ -511,6 +512,7 @@
     <footer class="site-footer">
       <p>© 2026 Funktion8. Lokale NaC-Büroworkbench.</p>
       <nav aria-label="Systembereiche">
+        <button type="button" data-open-panel="matters">Akten</button>
         <button type="button" data-open-panel="imports">Eingang</button>
         <button type="button" data-open-panel="tests">Tests</button>
         <button type="button" data-open-panel="anbindungen">Anbindungen</button>

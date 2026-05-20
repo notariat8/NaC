@@ -613,6 +613,11 @@ h3 {
   gap: 0.6rem;
 }
 
+.matter-card-actions {
+  align-items: flex-start;
+  min-width: 16rem;
+}
+
 .matter-status,
 .matter-list,
 .import-upload-status,
@@ -1256,6 +1261,11 @@ h3 {
   .import-card,
   .import-fields div {
     grid-template-columns: 1fr;
+  }
+
+  .matter-card-actions {
+    min-width: 0;
+    width: 100%;
   }
 
   .case-actions {

@@ -18,6 +18,7 @@ const matterFormStatus = document.querySelector("[data-matter-form-status]");
 const matterSearch = document.querySelector("[data-matter-search]");
 const matterList = document.querySelector("[data-matter-list]");
 const matterListTitle = document.querySelector("[data-matter-list-title]");
+const matterCount = document.querySelector("[data-matter-count]");
 const importList = document.querySelector("[data-import-list]");
 const importCount = document.querySelector("[data-import-count]");
 const importUploadForm = document.querySelector("[data-import-upload-form]");
@@ -81,6 +82,9 @@ areaTabs.forEach((tab) => {
 
 panelButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.openPanel === "matters") {
+      activeMatterUsecase = "";
+    }
     showPanel(button.dataset.openPanel || "cases");
     closeNavigation();
   });
@@ -449,9 +453,11 @@ async function loadMatters() {
     }
     matterState = await response.json();
     updateMatterBadges();
+    updateMatterCount();
   } catch (error) {
     matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
     updateMatterBadges();
+    updateMatterCount();
     if (matterList) {
       matterList.dataset.status = "error";
       matterList.innerHTML = `<p>Akten konnten nicht geladen werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`;
@@ -480,6 +486,12 @@ async function loadImportProposals() {
 function updateImportCount() {
   if (importCount) {
     importCount.textContent = String(importState.counts?.pending || 0);
+  }
+}
+
+function updateMatterCount() {
+  if (matterCount) {
+    matterCount.textContent = String((matterState.matters || []).length);
   }
 }
 
@@ -666,8 +678,12 @@ function matterCardHtml(matter) {
   const evidenceText = matter.evidence_count ? ` · ${matter.evidence_count} Nachweise` : "";
   const sideFileText = matter.side_file_label ? `<p class="matter-workflow">${escapeHtml(matter.side_file_label)}</p>` : "";
   const workflow = matter.workflow_binding || {};
+  const hasWorkflowBinding = Boolean(workflow.workflow_id || workflow.workflow_version || workflow.workflow_revision_hash);
   const workflowVersion = workflow.workflow_version || "v1";
   const workflowRevision = workflow.workflow_revision_hash ? ` · Rev ${workflow.workflow_revision_hash}` : "";
+  const workflowText = hasWorkflowBinding
+    ? `Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden`
+    : "CLI-Musterakte · Aufgaben aus dem Datenrepo";
   const checklist = matter.checklist_summary || {};
   const nextStep = checklist.next_step || {};
   const nextStepText = nextStep.label || "Checkliste prüfen";
@@ -680,10 +696,10 @@ function matterCardHtml(matter) {
       <div>
         <h3>${escapeHtml(matter.aktenzeichen || matter.matter_id)} · ${escapeHtml(matter.title)}</h3>
         <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente${escapeHtml(evidenceText)}</p>
-        <p class="matter-workflow">Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden</p>
+        <p class="matter-workflow">${workflowText}</p>
         ${sideFileText}
         <div class="matter-checklist">
-          <p><strong>Nächster Schritt:</strong> ${escapeHtml(nextStepText)}${nextStepContext ? ` <span>${escapeHtml(nextStepContext)}</span>` : ""}</p>
+          <p><strong>Nächster Schritt:</strong> ${escapeHtml(nextStepText)}${nextStepContext ? ` <span>· ${escapeHtml(nextStepContext)}</span>` : ""}</p>
           <p>Akten-Checkliste: ${escapeHtml(checklistText)}</p>
         </div>
       </div>
