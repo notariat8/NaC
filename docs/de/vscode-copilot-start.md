@@ -37,7 +37,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefüh
 10. Führen Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
 11. Definieren Sie Fork/Synchronisierung/Mischbetrieb über die Betriebsdokumente in `docs/de/`.
 12. Prüfen Sie die Produktstruktur: `plugins/` für installierbare Artefakte, `workflows/` für Skills und Python-Workflows, `usecases/` für konkrete notarielle Usecases.
-13. Aktualisieren Sie vor jedem Push `roadmap/GANTT.md`; bei Änderungen an `plugins/`, `workflows/` oder `usecases/` auch das jeweilige Themen-Gantt.
+13. Aktualisieren Sie `roadmap/GANTT.md` nur bei Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Wirkung; bei Änderungen an `plugins/`, `workflows/` oder `usecases/` aktualisieren Sie das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung.
 14. Prüfen Sie bei AI-fähigen Änderungen `docs/de/sbom-for-ai.md` und aktualisieren Sie `sbom/ai/nac-ai-sbom-draft.json`.
 
 ## Empfohlener Copilot-Startprompt
@@ -66,7 +66,7 @@ Danach:
 - Codeänderungen brauchen Test- oder Validierungsnachweis; bei nichttrivialem Verhalten zuerst Test, Prüfziel oder Testlücke festhalten, danach implementieren, iterieren und erneut validieren.
 - UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.
 - Genehmigungspflichtige Commands müssen Zweck, Umfang und Bezug zur Aufgabe nennen; unklare Approval-Anfragen werden abgelehnt und konkret neu gestellt.
-- Jeder Push braucht ein aktualisiertes globales Gantt; Themenänderungen brauchen zusätzlich das jeweilige Themen-Gantt.
+- Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Änderungen brauchen ein aktualisiertes globales Gantt; Themenbereiche brauchen das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung.
 - AI-fähige Plugins, Workflows, Usecases, Prompts oder externe Modellaufrufe brauchen eine AI-SBOM-Entscheidung.
 - Lokale Runtime-, Hardware- und Middleware-Abhängigkeiten müssen nach `docs/de/minimum-requirements.md` in der SBOM/AI-SBOM gepflegt werden.
 - Kultur- und Sprachregeln aus `policies/culture-policy.yaml` verbindlich einhalten.

@@ -119,26 +119,50 @@ def validate_required_files() -> list[str]:
 
 
 def validate_changed_files(files: set[str]) -> list[str]:
-    errors: list[str] = []
+    return []
+
+
+def gantt_update_guidance(files: set[str]) -> list[str]:
     if not files:
-        return errors
+        return []
 
-    if GLOBAL_GANTT not in files:
-        errors.append(
-            f"Jeder Push oder Change-Set muss {GLOBAL_GANTT} aktualisieren."
-        )
+    touched_gantts = {
+        path
+        for path in files
+        if path == GLOBAL_GANTT or path in AREA_GANTTS.values()
+    }
+    if touched_gantts:
+        return [
+            "INFO: Gantt-Dateien sind Teil dieses Change-Sets; Mermaid-Render-Sicherheit wird geprueft."
+        ]
 
-    for area, gantt_path in AREA_GANTTS.items():
-        prefix = f"{area}/"
-        area_changed = any(
-            path.startswith(prefix) and path != gantt_path
-            for path in files
+    roadmap_relevant = any(
+        path.startswith("roadmap/")
+        or path in {
+            "AGENTS.md",
+            ".github/copilot-instructions.md",
+            "policies/process-policy.yaml",
+            "docs/de/START_HERE.md",
+            "docs/en/START_HERE.md",
+        }
+        or path.startswith(".cursor/rules/")
+        for path in files
+    )
+    area_relevant = any(
+        path.startswith(("plugins/", "workflows/", "usecases/"))
+        for path in files
+    )
+
+    guidance: list[str] = []
+    if roadmap_relevant:
+        guidance.append(
+            f"INFO: Pruefe fachlich, ob {GLOBAL_GANTT} aktualisiert werden muss, weil Roadmap, Scope oder Status betroffen sein koennen."
         )
-        if area_changed and gantt_path not in files:
-            errors.append(
-                f"Aenderungen unter {area}/ muessen {gantt_path} aktualisieren."
-            )
-    return errors
+    if area_relevant:
+        guidance.append(
+            "INFO: Pruefe fachlich, ob ein Themen-Gantt aktualisiert werden muss, weil Plugins, Workflows oder Usecases betroffen sein koennen."
+        )
+    return guidance
 
 
 def validate_mermaid_render_safety() -> list[str]:
@@ -191,7 +215,11 @@ def main() -> int:
         return 1
 
     print("STATUS: PASSED")
-    print("OK: Gantt-Pflege fuer globalen und thematischen Fortschritt ist eingehalten.")
+    print("OK: Pflicht-Gantts existieren und Mermaid-Render-Sicherheit ist eingehalten.")
+    for entry in gantt_update_guidance(files):
+        print(entry)
+    if not files:
+        print("INFO: Kein geaendertes Change-Set fuer Gantt-Hinweise erkannt.")
     return 0
 
 

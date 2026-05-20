@@ -34,8 +34,11 @@ Cloud-Nachweisbetrieb.
 ## Fortschritt
 
 Der Plugin-Fortschritt wird in [plugins/GANTT.md](GANTT.md) gepflegt und in
-[roadmap/GANTT.md](../roadmap/GANTT.md) zusammengeführt. Jede Plugin-Änderung
-muss beide Dateien aktualisieren, bevor sie push-ready ist.
+[roadmap/GANTT.md](../roadmap/GANTT.md) zusammengeführt. Plugin-Änderungen
+aktualisieren diese Gantts nur, wenn Scope, Status, Meilenstein oder
+Pilotbereitschaft betroffen sind; kleine Bugfixes, Textkorrekturen oder
+Validator-/Test-Fixes ohne Roadmap-Wirkung erzeugen keine künstliche
+Gantt-Änderung.
 
 ## Marktplatz-Grenze
 

@@ -119,15 +119,22 @@ python scripts/startup_check.py --profile base --ide auto --run-tests
 python scripts/nac.py doctor --profile strict
 ```
 
-## Push-Regel
+## Roadmap- und Gantt-Regel
 
-Jeder Push muss [roadmap/GANTT.md](../../roadmap/GANTT.md) aktualisieren. Änderungen unter
-[plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) müssen zusätzlich das jeweilige
-Themen-Gantt aktualisieren:
+[roadmap/GANTT.md](../../roadmap/GANTT.md) wird aktualisiert, wenn Roadmap,
+Scope, Status, Meilenstein oder das aktive Build-Board betroffen sind.
+Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder
+[usecases/](../../usecases) aktualisieren das jeweilige Themen-Gantt nur bei
+fachlicher Scope-, Status- oder Meilensteinwirkung:
 
 - [plugins/GANTT.md](../../plugins/GANTT.md)
 - [workflows/GANTT.md](../../workflows/GANTT.md)
 - [usecases/GANTT.md](../../usecases/GANTT.md)
+
+Kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen,
+Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine
+künstliche Gantt-Änderung. Das strikte Gate prüft weiter, dass die
+Pflicht-Gantts existieren und Mermaid-renderfähig bleiben.
 
 ## Lokalisierungsregel
 

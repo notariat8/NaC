@@ -13,4 +13,4 @@ Diese Regel spiegelt [policies/process-policy.yaml](../../policies/process-polic
 - UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis, bevor der Stand als abgeschlossen gemeldet wird.
 - Genehmigungspflichtige Commands müssen Zweck, Umfang und Bezug zur Aufgabe nennen. Unklare Approval-Anfragen werden nicht bestätigt, sondern neu und konkret gestellt.
 
-Abschluss bleibt erst nach validiertem, committed, gepushtem und in den Zielbranch gemergtem Stand nach [roadmap/GANTT.md](../../roadmap/GANTT.md) erreichbar.
+Abschluss bleibt erst nach validiertem, committed, gepushtem und in den Zielbranch gemergtem Stand erreichbar; [roadmap/GANTT.md](../../roadmap/GANTT.md) wird nur bei Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Wirkung mitgepflegt.

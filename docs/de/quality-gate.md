@@ -42,7 +42,9 @@ CI:
 6. `language_parity` (nur `strict`)
 7. `doc_links` (nur `strict`)
 8. `bpmn_models` (nur `strict`)
-9. `gantt_progress` (nur `strict`)
+9. `gantt_progress` (nur `strict`; prüft Pflicht-Gantts und
+   Mermaid-Render-Sicherheit, gibt aber nur Hinweise für fachliche
+   Roadmap-/Scope-/Statusupdates)
 10. `cloud_runbook_parity` (nur `strict`)
 11. `ai_sbom` (nur `strict`)
 12. `knowledge_graph` (nur `strict`)

@@ -121,8 +121,10 @@ For a full local gate:
 python scripts/nac.py doctor --profile strict
 ```
 
-Every push must update [roadmap/GANTT.md](../../roadmap/GANTT.md). Changes under [plugins/](../../plugins),
-[workflows/](../../workflows), or [usecases/](../../usecases) must also update the matching area Gantt.
+[roadmap/GANTT.md](../../roadmap/GANTT.md) is updated for roadmap, scope, status,
+milestone or build-board changes. Changes under [plugins/](../../plugins),
+[workflows/](../../workflows), or [usecases/](../../usecases) update the
+matching area Gantt only when area scope, status or milestones are affected.
 
 ## License And Attribution
 

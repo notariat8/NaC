@@ -125,4 +125,5 @@ Bei jeder neuen Plugin-, Workflow- oder Usecase-Abhängigkeit gilt:
 1. Mindestvoraussetzung dokumentieren.
 2. SBOM-/AI-SBOM-Eintrag ergänzen.
 3. lokalen Check oder manuelle Prüfnotiz angeben.
-4. `roadmap/GANTT.md` aktualisieren.
+4. `roadmap/GANTT.md` aktualisieren, wenn dadurch Roadmap, Scope, Status,
+   Meilenstein oder aktives Build-Board betroffen sind.

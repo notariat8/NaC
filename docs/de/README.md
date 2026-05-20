@@ -153,7 +153,7 @@ python scripts/nac.py process monthly-close --year 2026 --month 3
 ## Governance
 
 - `main` ist geschützt und wird nur per Pull Request aktualisiert.
-- Jeder Push muss [roadmap/GANTT.md](../../roadmap/GANTT.md) aktualisieren; Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) müssen zusätzlich das jeweilige Themen-Gantt aktualisieren.
+- [roadmap/GANTT.md](../../roadmap/GANTT.md) wird bei Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Änderungen aktualisiert; Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung.
 - Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
 - Tags und Releases repräsentieren Monats- oder Quartalsabschlüsse.
 - Erzeugte Artefakte können als Actions-Artefakte archiviert werden.

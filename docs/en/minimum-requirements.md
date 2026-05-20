@@ -124,4 +124,5 @@ For every new plugin, workflow or usecase dependency:
 1. document the minimum requirement,
 2. add the SBOM/AI-SBOM entry,
 3. provide a local check or manual verification note,
-4. update `roadmap/GANTT.md`.
+4. update `roadmap/GANTT.md` when roadmap, scope, status, milestone or active
+   build-board state is affected.

@@ -43,7 +43,9 @@ CI:
 6. `language_parity` only in `strict`
 7. `doc_links` only in `strict`
 8. `bpmn_models` only in `strict`
-9. `gantt_progress` only in `strict`
+9. `gantt_progress` only in `strict`; checks required Gantt files and
+   Mermaid render safety, and emits guidance for business roadmap/scope/status
+   updates
 10. `cloud_runbook_parity` only in `strict`
 11. `ai_sbom` only in `strict`
 12. `knowledge_graph` only in `strict`

@@ -102,9 +102,30 @@ portfolio_structure:
 
 progress_tracking:
   global_gantt: roadmap/GANTT.md
-  require_global_gantt_update_for_every_push: true
-  require_area_gantt_update_for_area_changes: true
+  require_global_gantt_update_for_every_push: false
+  require_global_gantt_update_for_roadmap_scope_or_status_changes: true
+  require_area_gantt_update_for_area_scope_or_status_changes: true
+  no_gantt_required_for_small_fixes_without_roadmap_impact: true
+  trigger_examples:
+    global_gantt:
+      - new_or_removed_product_area
+      - milestone_or_delivery_date_change
+      - roadmap_status_or_progress_change
+      - active_build_board_change
+    area_gantt:
+      - new_or_removed_plugin_workflow_or_usecase
+      - area_status_or_progress_change
+      - pilot_readiness_or_milestone_change
+    no_gantt_required:
+      - typo_fix
+      - local_documentation_clarification_without_scope_change
+      - validator_or_test_fix_without_scope_change
+      - ui_detail_fix_without_status_change
   enforced_by: scripts/validate_gantt_progress.py
+  validator_scope:
+    - required_gantt_files_exist
+    - mermaid_gantt_render_safety
+    - guidance_for_possible_roadmap_or_area_updates
 
 knowledge_graph:
   location: usecase_local

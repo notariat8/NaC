@@ -86,6 +86,7 @@ Jeder Usecase besitzt seine KG unter
 `usecases/<slug>/knowledge-graph.md`. Das strikte Quality Gate lehnt einen
 zentralen `knowledge-graph/`-Ordner und jeden Usecase-Ordner ohne lokale KG ab.
 Jede KG-Änderung muss alle fallbezogenen `value`-Felder in Git leer halten und
-bei Push diesen Gantt plus den globalen Gantt aktualisieren. Fachpersonalnahe
-Änderungen laufen über die KG-Editor-View und den Patch-Workflow; direkte
-Roh-JSON-Bearbeitung bleibt geprüfter Entwicklerwartung vorbehalten.
+bei Scope-, Status-, Meilenstein- oder Pilotbereitschaftswirkung diesen Gantt
+plus den globalen Gantt aktualisieren. Fachpersonalnahe Änderungen laufen über
+die KG-Editor-View und den Patch-Workflow; direkte Roh-JSON-Bearbeitung bleibt
+geprüfter Entwicklerwartung vorbehalten.

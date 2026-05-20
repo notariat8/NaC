@@ -42,8 +42,10 @@ guided path:
 12. Review the product structure: `plugins/` for installable artifacts,
     `workflows/` for skills and Python workflows, and `usecases/` for concrete
     notarial usecases.
-13. Before every push, update `roadmap/GANTT.md`; when changing `plugins/`,
-    `workflows/`, or `usecases/`, update the matching area Gantt as well.
+13. Update `roadmap/GANTT.md` only when roadmap, scope, status, milestone or
+    build-board state changes; when changing `plugins/`, `workflows/`, or
+    `usecases/`, update the matching area Gantt only when area scope, status or
+    milestones are affected.
 14. For AI-enabled changes, review `docs/en/sbom-for-ai.md` and update
     `sbom/ai/nac-ai-sbom-draft.json`.
 
@@ -73,8 +75,9 @@ Then:
 - Code changes need test or validation evidence; for non-trivial behavior, record the test, check objective or known test gap first, then implement, iterate and validate again.
 - UI, frontend and other visual changes need a screenshot or comparable visual evidence before completion.
 - Approval-required commands must state purpose, scope and task relevance; unclear approval requests are declined and restated concretely.
-- Every push needs an updated global Gantt; area changes also need the matching
-  area Gantt.
+- Roadmap, scope, status, milestone or build-board changes need an updated
+  global Gantt; area Gantts are needed only when area scope, status or
+  milestones are affected.
 - AI-enabled plugins, workflows, usecases, prompts or external model calls need
   an AI-SBOM decision.
 - Local runtime, hardware and middleware dependencies must be maintained in the
