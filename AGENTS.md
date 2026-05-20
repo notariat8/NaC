@@ -53,6 +53,14 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
 - Unabhaengig von der Sprache des Prompts muessen Aenderungen an lokalisierten Inhalten immer alle Standardsprachen pflegen.
 - Fuer deutsches Recht und notarielle Usecases ist Deutsch die fuehrende und rechtlich bindende Sprache; Englisch ist nur Uebersetzung oder Orientierung. Usecase-Indizes und fachliche Usecase-Inhalte werden deshalb deutsch gefuehrt, waehrend stabile technische Identifier englisch bleiben duerfen.
 
+## Gemeinsame Agenten-Workflows
+
+- Wenn Aufgaben offen formuliert sind, aus einem Issue abgeleitet werden oder mehrere fachlich relevante Loesungswege haben, erst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestaetigung einholen, bevor Code geaendert wird.
+- Bei klar beauftragten, eng abgegrenzten Aenderungen darf direkt umgesetzt werden; Annahmen und Validierung werden trotzdem dokumentiert.
+- Codeaenderungen brauchen vor Abschluss Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Pruefziel oder bestehende Testluecke festhalten, dann implementieren, iterieren und erneut validieren.
+- UI-, Frontend- und andere visuelle Aenderungen brauchen vor Abschluss Screenshot oder vergleichbaren visuellen Nachweis und Iteration, bis das Ergebnis zur Anforderung passt.
+- Genehmigungspflichtige Commands duerfen nur mit erkennbarem Zweck und Umfang angefragt werden. Unklare Approval-Anfragen werden abgelehnt und mit konkreter Begruendung neu gestellt.
+
 ## Erststart fuer neue Nutzer
 
 1. [docs/de/START_HERE.md](docs/de/START_HERE.md) oder [docs/en/START_HERE.md](docs/en/START_HERE.md) lesen.

@@ -74,6 +74,16 @@ change_management:
   report_finished_only_after_target_branch_merge: true
   finished_status_requires_clean_target_branch_workspace: true
 
+agent_workflows:
+  require_plan_before_code_when_scope_is_open: true
+  require_user_confirmation_before_code_for_ambiguous_requests: true
+  allow_direct_implementation_for_clear_small_changes: true
+  require_tests_or_validation_evidence_for_code_changes: true
+  prefer_test_checkpoint_before_non_trivial_implementation: true
+  require_iteration_until_validation_passes: true
+  require_visual_evidence_for_ui_changes: true
+  require_clear_purpose_for_elevated_command_approval: true
+
 portfolio_structure:
   plugin_root: plugins
   workflow_root: workflows

@@ -68,6 +68,11 @@ Then:
 - Process changes only through pull requests.
 - Always include review for sensitive steps.
 - Document every change with purpose, risk, and owner.
+- For open-scope, issue-driven work or multiple relevant solution paths, explore first, provide a short plan with purpose and risk, and ask for confirmation before editing code.
+- For clear, narrowly scoped changes, direct implementation is allowed; assumptions and validation must still remain visible.
+- Code changes need test or validation evidence; for non-trivial behavior, record the test, check objective or known test gap first, then implement, iterate and validate again.
+- UI, frontend and other visual changes need a screenshot or comparable visual evidence before completion.
+- Approval-required commands must state purpose, scope and task relevance; unclear approval requests are declined and restated concretely.
 - Every push needs an updated global Gantt; area changes also need the matching
   area Gantt.
 - AI-enabled plugins, workflows, usecases, prompts or external model calls need

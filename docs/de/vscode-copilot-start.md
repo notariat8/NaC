@@ -61,6 +61,11 @@ Danach:
 - Prozessaenderungen nur als Pull Request.
 - Bei sensiblen Schritten immer Review einplanen.
 - Jede Aenderung mit Zweck, Risiko und Verantwortlichem dokumentieren.
+- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Loesungswegen zuerst erkunden, Plan mit Zweck/Risiko nennen und Bestaetigung einholen.
+- Bei klar beauftragten, eng abgegrenzten Aenderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
+- Codeaenderungen brauchen Test- oder Validierungsnachweis; bei nichttrivialem Verhalten zuerst Test, Pruefziel oder Testluecke festhalten, danach implementieren, iterieren und erneut validieren.
+- UI-, Frontend- und andere visuelle Aenderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.
+- Genehmigungspflichtige Commands muessen Zweck, Umfang und Bezug zur Aufgabe nennen; unklare Approval-Anfragen werden abgelehnt und konkret neu gestellt.
 - Jeder Push braucht ein aktualisiertes globales Gantt; Themenaenderungen brauchen zusaetzlich das jeweilige Themen-Gantt.
 - AI-faehige Plugins, Workflows, Usecases, Prompts oder externe Modellaufrufe brauchen eine AI-SBOM-Entscheidung.
 - Lokale Runtime-, Hardware- und Middleware-Abhaengigkeiten muessen nach `docs/de/minimum-requirements.md` in der SBOM/AI-SBOM gepflegt werden.

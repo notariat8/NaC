@@ -36,6 +36,11 @@ Dieses Repository ist ein Muster fuer `Notariat as Code` mit `NoC` als konkreter
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
 - Mindestvoraussetzungen fuer Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
 - NoC-Ausfuehrung und Plugin-Regeneration erfolgen lokal im genehmigten Workspace, nicht ueber Omnistation.
+- Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Loesungswegen zuerst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestaetigung einholen, bevor Code geaendert wird.
+- Bei klar beauftragten, eng abgegrenzten Aenderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
+- Codeaenderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Pruefziel oder Testluecke festhalten, dann implementieren, iterieren und erneut validieren.
+- UI-, Frontend- und andere visuelle Aenderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.
+- Genehmigungspflichtige Commands muessen Zweck, Umfang und Bezug zur Aufgabe nennen; unklare Approval-Anfragen werden abgelehnt und konkret neu gestellt.
 
 ## Pflichtquellen im Repository
 
