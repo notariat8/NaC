@@ -95,7 +95,8 @@ verbindlich. Git und Review entscheiden, nicht der Browser.
 
 Neben `nac web` gibt es `nac operator --open`. Diese Oberfläche ist
 usecase-zentriert: Sie startet mit Vorgangskarten, Suchfeld,
-Checklisten-/Ablauf-/Bearbeiten-Links, Arbeitsplatztests und Handbuchpfad.
+Aktenverwaltung, Kontrollansicht, Kanzlei-Workflow-Bereich,
+Arbeitsplatztests und Handbuchpfad.
 
 Technisch dient [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) die
 statische Oberfläche aus [web/local-operator/](../../web/local-operator) aus
@@ -105,9 +106,11 @@ laufen, ohne Mandatsdaten oder Zugangsdaten ins Repo zu schreiben. Das
 Footer-Menü `Konfig` speichert nur lokale Arbeitsstationswerte wie
 NaC-Fork-Git-URL, Daten-Git-URL und Datenrepo-Ordner in der Benutzerkonfiguration;
 es ändert weder Git-Remotes noch klont es Repositories automatisch. Die
-Vorgangskarten bieten zusätzlich `Neu` und `Akten öffnen`; diese Funktionen
-schreiben ausschließlich in das konfigurierte Demo-Datenrepo und führen die
-Status `offen`, `warten` und `abgeschlossen`.
+Vorgangskarten bieten die primäre Tagesaktion `Akten öffnen`, die sekundäre
+Aktion `Neu`, die Kontrollaktion `Checkliste prüfen` und den eingeklappten
+Bereich `Kanzlei-Workflow`; Demo-Aktenfunktionen schreiben ausschließlich in
+das konfigurierte Demo-Datenrepo und führen die Status `offen`, `warten` und
+`abgeschlossen`.
 
 Der Bereich `Eingang` verbindet Prompt-/Scan-/E-Mail-/Fax-Erfassung mit der
 Webapp: Codex oder ein lokaler Importer schreibt zunächst nur einen
@@ -128,8 +131,16 @@ Die Aktenansicht sucht Akten und offene Import-Vorschläge gemeinsam. Wenn für
 eine Person wie `Mustermann` noch keine Akte existiert, aber ein passender
 Eingang vorliegt, zeigt die Oberfläche diesen Eingang direkt im Aktenbereich
 und bietet die explizite Übernahme an. Arbeitsbereiche außerhalb der
-Vorgangsliste erhalten außerdem `Zurück` und `Vorgänge`, damit jede UI-Aktion
+Vorgangsliste erhalten außerdem `← Zurück` und `Übersicht`, damit jede UI-Aktion
 einen sichtbaren Rückweg hat.
+
+Für die Menüführung gilt der [Operator Styleguide](operator-styleguide.md):
+Vorgangskarten trennen `Aktenverwaltung`, `Kontrolle` und
+`Kanzlei-Workflow`. Aktenverwaltung ist die sichtbare Tagesarbeit, Checklisten
+sind Kontrollansichten, und Ablauf-/Bearbeitungsfunktionen sind
+freigaberelevante Kanzlei-Stammdaten. Beim Anlegen einer Akte schreibt die
+Operator-Bridge deshalb ein `workflow_binding` mit Workflow-Version,
+Artefakt-Hashes und Bindungszeitpunkt in die Akte.
 
 ## Geplante Endnutzer-Paketierung
 

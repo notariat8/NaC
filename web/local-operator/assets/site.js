@@ -177,8 +177,8 @@ function installPanelNavigation() {
     const navigation = document.createElement("div");
     navigation.className = "panel-navigation";
     navigation.innerHTML = `
-      <button type="button" data-panel-back>Zurück</button>
-      <button type="button" data-panel-home>Vorgänge</button>
+      <button type="button" data-panel-back>← Zurück</button>
+      <button type="button" data-panel-home>Übersicht</button>
     `;
     navigation.querySelector("[data-panel-back]")?.addEventListener("click", goBackPanel);
     navigation.querySelector("[data-panel-home]")?.addEventListener("click", goCasesPanel);
@@ -268,24 +268,21 @@ function enhanceCaseRows() {
   caseRows.forEach((row) => {
     const actions = row.querySelector(".case-actions");
     const slug = caseSlug(row);
-    if (!actions || !slug || actions.querySelector("[data-new-matter]")) {
+    if (!actions || !slug || actions.dataset.enhanced === "true") {
       return;
     }
+    actions.dataset.enhanced = "true";
+    const title = caseTitle(row);
 
     const badges = document.createElement("div");
     badges.className = "matter-badges";
     badges.dataset.matterBadges = slug;
     badges.innerHTML = "<span>0 offen</span><span>0 warten</span><span>0 abgeschlossen</span>";
 
-    const newButton = document.createElement("button");
-    newButton.type = "button";
-    newButton.textContent = "Neu";
-    newButton.dataset.newMatter = slug;
-    newButton.addEventListener("click", () => openMatterForm(slug, caseTitle(row)));
-
     const openButton = document.createElement("button");
     openButton.type = "button";
     openButton.textContent = "Akten öffnen";
+    openButton.className = "action-button primary";
     openButton.dataset.openMatters = slug;
     openButton.addEventListener("click", () => {
       activeMatterUsecase = slug;
@@ -293,10 +290,51 @@ function enhanceCaseRows() {
       showPanel("matters");
     });
 
-    actions.prepend(openButton);
-    actions.prepend(newButton);
-    actions.prepend(badges);
+    const newButton = document.createElement("button");
+    newButton.type = "button";
+    newButton.textContent = "Neu";
+    newButton.className = "action-button secondary";
+    newButton.dataset.newMatter = slug;
+    newButton.addEventListener("click", () => openMatterForm(slug, title));
+
+    const dailyActions = document.createElement("div");
+    dailyActions.className = "case-action-group case-action-group-daily";
+    dailyActions.innerHTML = '<span class="case-action-label">Aktenverwaltung</span>';
+    const dailyButtons = document.createElement("div");
+    dailyButtons.className = "case-action-buttons";
+    dailyButtons.append(openButton, newButton);
+    dailyActions.append(badges, dailyButtons);
+
+    const reviewActions = document.createElement("div");
+    reviewActions.className = "case-action-group case-action-group-review";
+    reviewActions.innerHTML = '<span class="case-action-label">Kontrolle</span>';
+    const checklistLink = caseActionLink(`/kg/${slug}`, "Checkliste prüfen", "action-button secondary");
+    reviewActions.append(checklistLink);
+
+    const workflowActions = document.createElement("details");
+    workflowActions.className = "case-workflow-actions";
+    workflowActions.innerHTML = `
+      <summary>Kanzlei-Workflow</summary>
+      <p>Ablauf und Bearbeitung sind freigegebene Stammdaten des Notariats.</p>
+    `;
+    const workflowButtons = document.createElement("div");
+    workflowButtons.className = "case-action-buttons";
+    workflowButtons.append(
+      caseActionLink(`/bpmn/${slug}`, "Ablauf ansehen", "action-button subtle"),
+      caseActionLink(`/bpmn/${slug}/edit`, "Änderung vorschlagen", "action-button subtle"),
+    );
+    workflowActions.append(workflowButtons);
+
+    actions.replaceChildren(dailyActions, reviewActions, workflowActions);
   });
+}
+
+function caseActionLink(href, label, className) {
+  const link = document.createElement("a");
+  link.href = href;
+  link.textContent = label;
+  link.className = className;
+  return link;
 }
 
 function caseSlug(row) {
@@ -473,7 +511,10 @@ function openMatterForm(slug, title) {
   }
   if (matterFormStatus) {
     matterFormStatus.dataset.status = "ready";
-    matterFormStatus.innerHTML = "<p>Nur Demo- oder Testdaten in das öffentliche Datenrepo eintragen.</p>";
+    matterFormStatus.innerHTML = `
+      <p>Nur Demo- oder Testdaten in das öffentliche Datenrepo eintragen.</p>
+      <p>Diese Akte wird beim Anlegen an die aktuell freigegebene Kanzlei-Workflow-Version gebunden.</p>
+    `;
   }
   showPanel("matter-new");
 }
@@ -576,6 +617,7 @@ function bindImportAcceptButtons(scope) {
 }
 
 function searchableMatterText(matter) {
+  const workflow = matter.workflow_binding || {};
   return [
     matter.matter_id,
     matter.aktenzeichen,
@@ -584,6 +626,9 @@ function searchableMatterText(matter) {
     matter.status,
     matter.status_label,
     matter.status_reason,
+    workflow.workflow_id,
+    workflow.workflow_version,
+    workflow.workflow_revision_hash,
     ...(Array.isArray(matter.participants) ? matter.participants : []),
   ].join(" ").toLowerCase();
 }
@@ -613,11 +658,15 @@ function matterCardHtml(matter) {
     ? matter.participants.join(", ")
     : "keine Beteiligten";
   const reason = matter.status_reason ? ` · ${matter.status_reason}` : "";
+  const workflow = matter.workflow_binding || {};
+  const workflowVersion = workflow.workflow_version || "v1";
+  const workflowRevision = workflow.workflow_revision_hash ? ` · Rev ${workflow.workflow_revision_hash}` : "";
   return `
     <article class="matter-card">
       <div>
         <h3>${escapeHtml(matter.aktenzeichen || matter.matter_id)} · ${escapeHtml(matter.title)}</h3>
         <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente</p>
+        <p class="matter-workflow">Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden</p>
       </div>
       <div class="matter-card-actions">
         <select data-matter-status="${escapeHtml(matter.matter_id)}">

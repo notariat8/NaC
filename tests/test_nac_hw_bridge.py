@@ -149,6 +149,12 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("installPanelNavigation", js)
         self.assertIn("goBackPanel", js)
         self.assertIn("goCasesPanel", js)
+        self.assertIn("Aktenverwaltung", js)
+        self.assertIn("Kontrolle", js)
+        self.assertIn("Kanzlei-Workflow", js)
+        self.assertIn("Änderung vorschlagen", js)
+        self.assertIn("← Zurück", js)
+        self.assertIn("Übersicht", js)
         self.assertIn("searchableMatterText", js)
         self.assertIn("searchableImportText", js)
         self.assertIn("Passender Eingang", js)
@@ -178,6 +184,8 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn(".panel-navigation", css)
         self.assertIn(".matter-toolbar", css)
         self.assertIn(".matter-related", css)
+        self.assertIn(".case-action-group-daily", css)
+        self.assertIn(".case-workflow-actions", css)
         self.assertNotIn(">Bridge<", html)
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
@@ -222,14 +230,26 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             )
 
             matter_id = created["matter"]["matter_id"]
+            workflow_binding = created["matter"]["workflow_binding"]
             self.assertEqual(created["matter"]["usecase_slug"], "unterschriftsbeglaubigung")
             self.assertEqual(created["matter"]["status"], "open")
+            self.assertEqual(workflow_binding["workflow_version"], "v1")
+            self.assertEqual(workflow_binding["usecase_slug"], "unterschriftsbeglaubigung")
+            self.assertEqual(workflow_binding["workflow_id"], "unterschriftsbeglaubigung:kanzlei-standard")
+            self.assertEqual(workflow_binding["approval_state"], "approved_for_demo")
+            self.assertTrue(workflow_binding["workflow_revision_hash"])
+            self.assertIn("Akte bleibt auf dieser Workflow-Version", workflow_binding["binding_policy"])
+            self.assertIn("bpmn", {artifact["type"] for artifact in workflow_binding["artifacts"]})
+            self.assertIn("checklist", {artifact["type"] for artifact in workflow_binding["artifacts"]})
             self.assertTrue((tenant_repo / "akten" / "2026" / matter_id / "akte.json").is_file())
             self.assertTrue((tenant_repo / "index" / "akten.json").is_file())
+            persisted_matter = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "akte.json")
+            self.assertEqual(persisted_matter["workflow_binding"]["workflow_revision_hash"], workflow_binding["workflow_revision_hash"])
 
             listed = bridge.list_operator_matters(config_path=config_path)
             self.assertEqual(listed["counts"]["unterschriftsbeglaubigung"]["open"], 1)
             self.assertEqual(listed["matters"][0]["participants"], ["Mara Muster", "Timo Test"])
+            self.assertEqual(listed["matters"][0]["workflow_binding"]["workflow_version"], "v1")
 
             updated = bridge.update_operator_matter_status(
                 {"matter_id": matter_id, "status": "waiting", "status_reason": "wartet auf Unterlage"},
@@ -304,7 +324,9 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             matter_id = accepted["matter"]["matter_id"]
             self.assertEqual(accepted["proposal"]["status"], "accepted")
             self.assertEqual(accepted["matter"]["participants"], ["Erika Mustermann", "Erika Mustermann"])
+            self.assertEqual(accepted["matter"]["workflow_binding"]["workflow_version"], "v1")
             matter = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "akte.json")
+            self.assertEqual(matter["workflow_binding"]["workflow_id"], "unterschriftsbeglaubigung:kanzlei-standard")
             document_id = matter["document_ids"][0]
             document = bridge.read_json(tenant_repo / "dokumente" / document_id / "metadata.json")
             self.assertEqual(document["document_type"], "id_document_scan")

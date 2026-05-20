@@ -11,6 +11,10 @@ screen, and what each click triggers.
 The web app is not a production case-management system. It is a local reading,
 review and editing surface for BPMN flows, KG checklists and workstation tests.
 
+The operating logic follows the [operator style guide](operator-styleguide.md).
+The surface separates daily matter work from approval-relevant office workflow
+master data.
+
 ## Entry Point
 
 The intended operating edge is the central NaC CLI:
@@ -29,7 +33,8 @@ and the repository files.
 
 | Area | What the user sees | What backs it |
 | --- | --- | --- |
-| Case selection | Search field and case cards, for example real-estate purchase contract, commercial-register filing and online GmbH/UG formation. | Static surface in [web/local-operator/](../../web/local-operator) plus usecase-local KG and BPMN routes. |
+| Case selection | Search field and case cards with the blocks `Aktenverwaltung`, `Kontrolle` and `Kanzlei-Workflow`. | Static surface in [web/local-operator/](../../web/local-operator) plus usecase-local KG and BPMN routes. |
+| Matter management | Open matters, create a new demo matter and see status counters per use case. | Demo data repository via `/api/matters`; new matters receive a `workflow_binding`. |
 | Checklist | Safe KG view without mandate values. | [usecases/](../../usecases) with `knowledge-graph.graph.json`, rendered through `notary_kg.editor.build_editor_view`. |
 | Flow | BPMN flow as a readable SVG view. | [bpmn/](../../bpmn) and [src/nac_web/bpmn.py](../../src/nac_web/bpmn.py). |
 | Edit | BPMN editor surface with bpmn-js loading path and XML fallback. | `/api/bpmn/<slug>/xml` returns XML plus SHA-256; saving writes only when the base hash still matches. |
@@ -81,11 +86,21 @@ flowchart TD
 
 | Click | Result | Deliberate boundary |
 | --- | --- | --- |
-| `Checkliste` | Opens a KG review view. | No real `value` fields, no mandate data. |
-| `Ablauf` | Renders a BPMN model as SVG. | No execution in a production system. |
-| `Bearbeiten` | Shows BPMN XML and optional bpmn-js. | No merge, no approval, no filing. |
+| `Akten öffnen` | Opens existing matters and matching pending inbox items. | No change to the office workflow. |
+| `Neu` | Creates a demo matter with a bound workflow version. | No real mandate data, demo data repository only. |
+| `Checkliste prüfen` | Opens a KG review view. | No real `value` fields, no mandate data. |
+| `Ablauf ansehen` | Renders a BPMN model as SVG. | No execution in a production system. |
+| `Änderung vorschlagen` | Shows BPMN XML and optional bpmn-js as a change path. | No merge, no approval, no filing; office master data needs review. |
 | `HW-Test starten` | Checks local readiness where the workstation allows it. | No PINs, no raw card data, no login. |
 | `XNP prüfen` | Checks local XNP/card-path readiness. | No productive register or land-register filing. |
+
+## Version Binding Per Matter
+
+When a matter is created, the operator bridge binds it to the current workflow
+version of the use case. `akte.json` stores this as `workflow_binding` with
+version, artifact hashes and binding timestamp. New approved workflow versions
+apply only to new matters. Running matters stay on their bound version until a
+documented version migration is recorded.
 
 ## Why This Is Understandable For Non-Technical Readers
 

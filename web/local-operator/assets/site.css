@@ -328,14 +328,60 @@ h3 {
 }
 
 .case-actions {
+  align-items: stretch;
+  display: grid;
+  gap: 0.65rem;
+  justify-content: stretch;
+  min-width: min(430px, 42vw);
+}
+
+.case-action-group,
+.case-workflow-actions {
+  background: #fbfcfb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem;
+}
+
+.case-action-group-daily {
+  border-left: 4px solid var(--green);
+}
+
+.case-action-group-review {
+  border-left: 4px solid var(--blue);
+}
+
+.case-action-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.case-action-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  justify-content: flex-end;
 }
 
-.case-actions a,
-.case-actions button,
+.case-workflow-actions {
+  border-left: 4px solid #8b7a3c;
+}
+
+.case-workflow-actions summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.case-workflow-actions p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.action-button,
 .connection-list a,
 .text-button {
   background: #f4f7f4;
@@ -352,10 +398,19 @@ h3 {
   text-decoration: none;
 }
 
-.case-actions a:hover,
-.case-actions a:focus-visible,
-.case-actions button:hover,
-.case-actions button:focus-visible,
+.action-button.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.action-button.subtle {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.action-button:hover,
+.action-button:focus-visible,
 .connection-list a:hover,
 .connection-list a:focus-visible,
 .text-button:hover,
@@ -363,8 +418,9 @@ h3 {
   background: #e8eee9;
 }
 
-.case-actions button {
-  min-height: 0;
+.action-button.primary:hover,
+.action-button.primary:focus-visible {
+  background: #0e5d55;
 }
 
 .matter-badges {
@@ -449,22 +505,26 @@ h3 {
 .panel-navigation {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 0.9rem;
+  gap: 1rem;
+  margin-top: 0.45rem;
 }
 
 .panel-navigation button {
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--ink);
+  background: transparent;
+  border: 0;
+  color: var(--blue);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
   font-weight: 800;
-  min-height: 38px;
-  padding: 0.45rem 0.75rem;
+  min-height: 32px;
+  padding: 0;
+}
+
+.panel-navigation button:hover,
+.panel-navigation button:focus-visible {
+  text-decoration: underline;
 }
 
 .matter-toolbar {
@@ -612,6 +672,13 @@ h3 {
 .matter-meta {
   color: var(--muted);
   margin: 0;
+}
+
+.matter-workflow {
+  color: var(--blue);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0.35rem 0 0;
 }
 
 .matter-card select {
@@ -1173,6 +1240,8 @@ h3 {
 
   .case-actions {
     justify-content: flex-start;
+    min-width: 0;
+    width: 100%;
   }
 
   .bpmn-link-grid {
@@ -1207,7 +1276,7 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .case-actions a {
+  .action-button {
     width: 100%;
   }
 

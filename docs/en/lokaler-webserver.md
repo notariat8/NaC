@@ -92,8 +92,8 @@ remains mandatory. Git and review decide, not the browser.
 ## Operator Web App For The Office
 
 In addition to `nac web`, there is `nac operator --open`. This surface is
-usecase-first: it starts with case cards, search, checklist/flow/edit links,
-workstation tests and a handbook path.
+usecase-first: it starts with case cards, search, matter management, control
+views, an office workflow area, workstation tests and a handbook path.
 
 Technically, [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) serves
 the static surface from [web/local-operator/](../../web/local-operator) and
@@ -102,8 +102,10 @@ This lets the office surface and model views run through the same local port
 without writing mandate data or credentials into the repository. The footer
 menu `Konfig` stores only local workstation values such as the NaC fork Git URL,
 data Git URL and data repository folder in the user configuration; it does not
-change Git remotes or clone repositories automatically. The use case cards also
-provide `Neu` and `Akten öffnen`; these functions write only to the configured
+change Git remotes or clone repositories automatically. The use case cards make
+`Akten öffnen` the primary daily action, `Neu` the secondary action,
+`Checkliste prüfen` the control action and `Kanzlei-Workflow` the collapsed
+office-master-data area; demo matter functions write only to the configured
 demo data repository and track the statuses `offen`, `warten` and
 `abgeschlossen`.
 
@@ -125,7 +127,15 @@ The matter view searches matters and pending import proposals together. If no
 matter exists yet for a person such as `Mustermann`, but a matching inbox item
 does exist, the surface shows that inbox item directly in the matter area and
 offers the explicit accept action. Work areas outside the case list also get
-`Zurück` and `Vorgänge` navigation, so every UI action has a visible way back.
+`← Zurück` and `Übersicht` navigation, so every UI action has a visible way
+back.
+
+Navigation follows the [operator style guide](operator-styleguide.md): case
+cards separate `Aktenverwaltung`, `Kontrolle` and `Kanzlei-Workflow`. Matter
+management is the visible daily work, checklists are control views, and flow or
+editing functions are approval-relevant office master data. When a matter is
+created, the operator bridge therefore writes a `workflow_binding` with
+workflow version, artifact hashes and binding timestamp into the matter.
 
 ## Planned End-User Packaging
 

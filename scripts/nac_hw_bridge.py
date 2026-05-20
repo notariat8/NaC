@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import hashlib
 import json
 import mimetypes
 import os
@@ -543,6 +544,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
     status_reason = clean_text(values.get("status_reason") or "")
 
     now = _now_utc()
+    workflow_binding = build_workflow_binding(usecase_slug, usecase_title, now, values)
     year = now[:4]
     matter_id = next_matter_id(repo, year)
     sequence = int(matter_id.rsplit("-", maxsplit=1)[1])
@@ -596,6 +598,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
         "owner_role": "notary_clerk",
         "opened_at": now,
         "updated_at": now,
+        "workflow_binding": workflow_binding,
         "participant_person_ids": [client_person_id, participant_person_id],
         "document_ids": [document_id],
         "event_log": f"akten/{year}/{matter_id}/ereignisse.jsonl",
@@ -633,6 +636,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
         "event_type": "matter_created",
         "summary": f"Demo-Akte für {usecase_title} angelegt.",
         "status": status,
+        "workflow_binding": workflow_binding,
         "affected_ids": {"person_ids": matter["participant_person_ids"], "document_ids": matter["document_ids"]},
     }
 
@@ -907,8 +911,67 @@ def summarize_matter(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
         "updated_at": str(matter.get("updated_at") or ""),
         "participants": load_person_display_names(repo, person_ids),
         "document_count": len(document_ids),
+        "workflow_binding": matter.get("workflow_binding") if isinstance(matter.get("workflow_binding"), dict) else {},
         "data_classification": str(matter.get("data_classification") or ""),
     }
+
+
+def build_workflow_binding(
+    usecase_slug: str,
+    usecase_title: str,
+    timestamp: str,
+    values: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    workflow_version = clean_text((values or {}).get("workflow_version") or "v1", max_length=64)
+    artifacts = workflow_binding_artifacts(usecase_slug)
+    revision_source = "|".join(
+        f"{artifact['path']}:{artifact['sha256']}" for artifact in artifacts if artifact.get("sha256")
+    )
+    revision_hash = hashlib.sha256(revision_source.encode("utf-8")).hexdigest()[:16] if revision_source else "untracked"
+    return {
+        "schema_version": "nac.workflow-binding/v0.1",
+        "workflow_id": f"{usecase_slug}:kanzlei-standard",
+        "usecase_slug": usecase_slug,
+        "usecase_title": usecase_title,
+        "workflow_version": workflow_version,
+        "workflow_revision_hash": revision_hash,
+        "bound_at": timestamp,
+        "approval_state": "approved_for_demo",
+        "binding_policy": "Akte bleibt auf dieser Workflow-Version, bis ein dokumentierter Versionswechsel erfasst wird.",
+        "new_matter_policy": "Neue Akten nutzen die aktuell freigegebene Kanzlei-Workflow-Version.",
+        "artifacts": artifacts,
+    }
+
+
+def workflow_binding_artifacts(usecase_slug: str) -> list[dict[str, str]]:
+    candidates = [
+        ("bpmn", REPO_ROOT / "bpmn" / "usecases" / f"{usecase_slug}.bpmn"),
+        ("bpmn", REPO_ROOT / "bpmn" / f"{usecase_slug}.bpmn"),
+        ("checklist", REPO_ROOT / "usecases" / usecase_slug / "knowledge-graph.graph.json"),
+    ]
+    artifacts: list[dict[str, str]] = []
+    seen: set[Path] = set()
+    for artifact_type, path in candidates:
+        resolved = path.resolve()
+        if resolved in seen or not resolved.is_file():
+            continue
+        seen.add(resolved)
+        artifacts.append(
+            {
+                "type": artifact_type,
+                "path": relative_to_repo(REPO_ROOT, resolved),
+                "sha256": sha256_file(resolved),
+            }
+        )
+    return artifacts
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def load_person_display_names(repo: Path, person_ids: list[str]) -> list[str]:
