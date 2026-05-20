@@ -18,7 +18,14 @@ from notary_kg.cli import main as notary_kg_main
 
 from . import __version__
 from .qms import qms_status, read_qms_text
-from .tenant import init_tenant_repo, tenant_status, write_demo_case, write_sample_matter
+from .tenant import (
+    describe_matter,
+    init_tenant_repo,
+    list_matter_summaries,
+    tenant_status,
+    write_demo_case,
+    write_sample_matter,
+)
 
 
 DEFAULT_PORT = 8765
@@ -149,6 +156,13 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_status_parser = tenant_sub.add_parser("status", help="Prüft ein NaC-Datenrepo.")
     tenant_status_parser.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
     tenant_status_parser.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_list = tenant_sub.add_parser("list-akten", help="Listet Akten aus dem Datenrepo.")
+    tenant_list.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
+    tenant_list.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_show = tenant_sub.add_parser("show-akte", help="Zeigt eine Akte mit aufgelösten ID-Pointern.")
+    tenant_show.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
+    tenant_show.add_argument("--akten-id", required=True, help="Akte oder Aktenzeichen, z.B. UVZ-2026-0001.")
+    tenant_show.add_argument("--format", choices=["text", "json"], default="text")
     tenant_write_demo = tenant_sub.add_parser("write-demo", help="Schreibt synthetische Demo-Vorgangsdaten.")
     tenant_write_demo.add_argument("slug", help="NaC-Usecase-Slug, zum Beispiel immobilienkaufvertrag.")
     tenant_write_demo.add_argument("--repo", type=Path, required=True, help="Pfad zum Datenrepo.")
@@ -575,6 +589,43 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Akten: {status.matters}")
             print(f"- Personen: {status.persons}")
             print(f"- Dokumente: {status.documents}")
+            return 0
+
+        if args.tenant_command == "list-akten":
+            summaries = list_matter_summaries(args.repo)
+            if args.format == "json":
+                print_json({"schema_version": "nac.tenant-matter-list/v1", "matters": summaries})
+                return 0
+            print("NaC-Aktenliste")
+            if not summaries:
+                print("- Keine Akten gefunden.")
+                return 0
+            for summary in summaries:
+                next_task = summary["next_task"] or "kein offener Schritt"
+                print(
+                    f"- {summary['matter_id']} | {summary['aktenzeichen']} | "
+                    f"{summary['title']} | Status: {summary['status']} | Nächster Schritt: {next_task}"
+                )
+            return 0
+
+        if args.tenant_command == "show-akte":
+            description = describe_matter(args.repo, args.akten_id)
+            if args.format == "json":
+                print_json({"schema_version": "nac.tenant-matter-description/v1", **description})
+                return 0
+            matter = description["matter"]
+            side_file = matter.get("electronic_side_file") if isinstance(matter.get("electronic_side_file"), dict) else {}
+            print("NaC-Akte")
+            print(f"- Akte: {matter.get('matter_id')}")
+            print(f"- Aktenzeichen: {matter.get('aktenzeichen')}")
+            print(f"- Titel: {matter.get('title')}")
+            print(f"- Status: {matter.get('status')}")
+            print(f"- Beteiligte: {len(description['participants'])}")
+            print(f"- Dokumente: {len(description['documents'])}")
+            print(f"- Aufgaben: {len(description['tasks'])}")
+            print(f"- Nachweise: {len(description['evidence'])}")
+            if side_file.get("label"):
+                print(f"- {side_file['label']}")
             return 0
 
         if args.tenant_command == "write-demo":

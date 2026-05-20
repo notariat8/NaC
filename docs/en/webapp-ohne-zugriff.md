@@ -107,6 +107,19 @@ case state of the use-case checklist with open information, documents,
 decisions, gates and evidence. The matter overview shows the next open step
 from this state.
 
+## CLI Mirror Of The Matter View
+
+Readers without web-app access can use the same demo data through the CLI:
+
+```bash
+nac tenant list-akten --repo ../demo8notariat
+nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
+```
+
+The CLI shows matter, file number, status, participant count, document count,
+tasks, evidence and side-file export status. The web app is a convenient office
+surface, but not the only explanation of the system.
+
 ## Why This Is Understandable For Non-Technical Readers
 
 The web app translates repository structure into office terms:

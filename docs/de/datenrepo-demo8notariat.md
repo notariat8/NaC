@@ -9,6 +9,9 @@ Für die Demo werden synthetische Daten geschrieben. Das Modell ist aber so
 angelegt, dass es später auch personenbezogene, fallbezogene und dokumentnahe
 Daten abbilden kann.
 
+Die fachliche Herleitung steht in
+[docs/de/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
+
 ## Ordnerlage
 
 Der lokale Clone soll neben NaC liegen:
@@ -32,6 +35,11 @@ Dateien erhalten.
 | Person oder Organisation | `personen/<person_id>.json` | Stammdaten, Rollen, Anzeigename und Klassifikation. |
 | Dokument | `dokumente/<document_id>/metadata.json` | Titel, Typ, Aktenbezug, Dateipfade, Klassifikation. |
 | Binärdatei | `dokumente/<document_id>/original/*` | PDF, JPG, Scan oder andere Originaldatei. |
+| Eingang | `akten/<jahr>/<akten_id>/eingang.json` | Scan-, E-Mail-, Fax-, Portal- oder Prompt-Zuordnung. |
+| Aufgaben | `akten/<jahr>/<akten_id>/aufgaben.json` | Zuständigkeit, Status, nächster Schritt und Fristlogik. |
+| Grundstück/Register | `akten/<jahr>/<akten_id>/grundbuch.json` | Strukturierte Grundbuch- und Registerinformationen. |
+| Kosten | `akten/<jahr>/<akten_id>/kosten.json` | Kostenansätze, Kostenschuldner und Abrechnungsstatus. |
+| Nachweise | `akten/<jahr>/<akten_id>/nachweise.json` | GwG, Identität, Signatur, Register, QMS und Nebenakten-Export. |
 | Aktenereignis | `akten/<jahr>/<akten_id>/ereignisse.jsonl` | Chronologie innerhalb einer Akte. |
 | Journal | `journal/<jahr>/<monat>/<datum>.jsonl` | Repo-weite Ereignisfolge. |
 | Index | `index/*.json` | Leselisten für Webapp, Suche und Codex. |
@@ -53,7 +61,7 @@ auch nach vielen Bearbeitergenerationen lesbar.
 ## Initialisierung
 
 ```bash
-python scripts/nac.py tenant init \
+nac tenant init \
   --repo ../demo8notariat \
   --name demo8notariat \
   --remote-url https://github.com/ofunk/demo8notariat.git
@@ -65,7 +73,7 @@ Hinweisdateien an.
 ## Status Prüfen
 
 ```bash
-python scripts/nac.py tenant status --repo ../demo8notariat
+nac tenant status --repo ../demo8notariat
 ```
 
 Die Prüfung zeigt Manifest, Git-Status, Remote, Demo-Vorgänge, Akten, Personen
@@ -74,19 +82,32 @@ und Dokumente.
 ## Musterakte Schreiben
 
 ```bash
-python scripts/nac.py tenant write-sample-akte \
+nac tenant write-sample-akte \
   --repo ../demo8notariat \
   --akten-id UVZ-2026-0001
 ```
 
 NaC erzeugt eine synthetische Immobilienkaufvertragsakte mit Akte, Beteiligten,
-Dokumentmetadaten, Platzhaltern für PDF/JPG-Dateien, Ereignislog und Indizes.
+Dokumentmetadaten, Platzhaltern für PDF/JPG/Word-Dateien, Eingang, Aufgaben,
+Grundbuchobjekt, Kosten, Nachweisen, Ereignislog und Indizes.
+
+## Akte Ohne Webapp Lesen
+
+```bash
+nac tenant list-akten --repo ../demo8notariat
+nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
+```
+
+`list-akten` zeigt die vorhandenen Akten und den nächsten offenen Schritt.
+`show-akte` löst die wichtigsten ID-Pointer auf und zählt Beteiligte,
+Dokumente, Aufgaben und Nachweise. Damit bleibt die Webapp hilfreich, aber die
+prüfbare Bedienkante liegt weiterhin in der `nac`-CLI.
 
 Der ältere Befehl `tenant write-demo` bleibt als KG-basierter Demo-Export
 erhalten:
 
 ```bash
-python scripts/nac.py tenant write-demo immobilienkaufvertrag \
+nac tenant write-demo immobilienkaufvertrag \
   --repo ../demo8notariat \
   --case-id DEMO-2026-0001
 ```

@@ -54,6 +54,10 @@ or active build-board state changes. Small bug fixes, typo fixes, local
 documentation clarifications, test/validator fixes or UI details without
 roadmap impact do not need artificial Gantt changes.
 
+A weekly update is enough for the progress picture. During the week, the Gantt
+changes only when roadmap, scope, status, milestone, pilot readiness or active
+build-board state actually moves.
+
 The strict gate still checks:
 
 - required Gantts exist,

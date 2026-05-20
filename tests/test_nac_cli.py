@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 import unittest
@@ -158,13 +159,49 @@ class NaCCliTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("Akten: 1", output)
             self.assertIn("Personen: 3", output)
-            self.assertIn("Dokumente: 2", output)
+            self.assertIn("Dokumente: 3", output)
+
+            rc, output = run_cli("tenant", "list-akten", "--repo", str(tenant_repo))
+            self.assertEqual(rc, 0)
+            self.assertIn("UVZ-2026-0001", output)
+            self.assertIn("Immobilienkaufvertrag Berger/Lange", output)
+            self.assertIn("Grundbuchauszug prüfen", output)
+
+            rc, output = run_cli(
+                "tenant",
+                "show-akte",
+                "--repo",
+                str(tenant_repo),
+                "--akten-id",
+                "UVZ-2026-0001",
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("NaC-Akte", output)
+            self.assertIn("Beteiligte: 2", output)
+            self.assertIn("Dokumente: 3", output)
+            self.assertIn("Aufgaben: 5", output)
+            self.assertIn("Nebenakten-Export: vorbereitet", output)
+
+            enriched_matter = json.loads(matter_file.read_text(encoding="utf-8"))
+            self.assertEqual(enriched_matter["schema_version"], "nac.matter/v0.3")
+            self.assertIn("notary_software_layers", enriched_matter)
+            self.assertIn("contacts", enriched_matter["notary_software_layers"])
+            self.assertIn("electronic_side_file", enriched_matter["notary_software_layers"])
+            self.assertTrue((tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "aufgaben.json").is_file())
+            self.assertTrue((tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "grundbuch.json").is_file())
+            self.assertTrue((tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "kosten.json").is_file())
+            self.assertTrue((tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "nachweise.json").is_file())
+            document_links = json.loads(
+                (tenant_repo / "akten" / "2026" / "UVZ-2026-0001" / "dokumente.json").read_text(encoding="utf-8")
+            )
+            document_roles = {item["document_id"]: item["role"] for item in document_links["documents"]}
+            self.assertEqual(document_roles["DOC-DEMO-2026-0001-ENTWURF"], "draft_document")
 
             rc, output = run_cli("qms", "evidence", "--repo", str(tenant_repo))
             self.assertEqual(rc, 0)
             self.assertIn("NaC-QMS Nachweisbild", output)
             self.assertIn("Akten: 1", output)
-            self.assertIn("Dokumente: 2", output)
+            self.assertIn("Dokumente: 3", output)
 
 
 if __name__ == "__main__":

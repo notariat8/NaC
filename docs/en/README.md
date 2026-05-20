@@ -93,6 +93,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   patch principle and sidecar-editor path for subject-matter staff.
 - [docs/en/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md) defines the
   separate demo data repository for synthetic NaC cases and a later sovereign Git move.
+- [docs/en/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md) derives
+  the open matter model from common notary-software building blocks.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
   quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.

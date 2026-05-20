@@ -113,6 +113,8 @@ Demo-Daten gibt es ein getrenntes Datenrepo, zum Beispiel `../demo8notariat`:
 ```bash
 nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
 nac tenant write-sample-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
+nac tenant list-akten --repo ../demo8notariat
+nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
 ```
 
@@ -121,6 +123,8 @@ Personen, Dokumente, Ereignisse und Indizes. PDF-, JPG- und andere
 Binärdateien liegen als Dateien neben ihren Metadaten. Die Trennung ist
 dokumentiert in
 [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
+Die fachliche Herleitung aus üblichen Notarsoftware-Bausteinen steht in
+[notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
 
 ## Plugin-Befehle
 

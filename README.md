@@ -103,6 +103,7 @@ Weitere Dokumentation:
 - AI-SBOM: [docs/de/sbom-for-ai.md](docs/de/sbom-for-ai.md)
 - KG-Editor-Workstream: [docs/de/kg-editor-workstream.md](docs/de/kg-editor-workstream.md)
 - Demo-Datenrepo: [docs/de/datenrepo-demo8notariat.md](docs/de/datenrepo-demo8notariat.md)
+- Notarsoftware-Datenmodell: [docs/de/notarsoftware-datenmodell.md](docs/de/notarsoftware-datenmodell.md)
 - QMS-/ISO-9001-Schicht: [qms/README.md](qms/README.md)
 - Globale Roadmap: [roadmap/GANTT.md](roadmap/GANTT.md)
 
@@ -135,7 +136,7 @@ Prüfschicht dahinter heißt `nac`.
 | Ich will prüfen, ob das Repo gesund ist. | `python scripts/nac.py doctor --profile strict` |
 | Ich will wissen, welche Modelle und Usecases vorhanden sind. | `python scripts/nac.py status` |
 | Ich will BPMN, KG oder Plugins automatisiert prüfen. | `python scripts/nac.py bpmn validate`, `python scripts/nac.py kg status`, `python scripts/nac.py plugins actions` |
-| Ich will Akten-/Demo-Daten getrennt vom Produktrepo schreiben. | `python scripts/nac.py tenant status --repo ../demo8notariat`, `python scripts/nac.py tenant write-sample-akte --repo ../demo8notariat` |
+| Ich will Akten-/Demo-Daten getrennt vom Produktrepo schreiben und lesen. | `nac tenant status --repo ../demo8notariat`, `nac tenant write-sample-akte --repo ../demo8notariat`, `nac tenant list-akten --repo ../demo8notariat`, `nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001` |
 | Ich will ISO-9001/QMS-Nachweise vorbereiten. | `python scripts/nac.py qms status`, `python scripts/nac.py qms evidence --repo ../demo8notariat` |
 
 Nach einer lokalen Installation aus dem Repo kann statt `python scripts/nac.py`

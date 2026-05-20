@@ -266,6 +266,31 @@ def write_sample_matter(
         },
         {
             "schema_version": "nac.document/v0.1",
+            "document_id": "DOC-DEMO-2026-0001-ENTWURF",
+            "matter_id": akten_id,
+            "title": "Kaufvertragsentwurf Demo",
+            "document_type": "deed_draft",
+            "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "data_classification": "synthetic_deed_draft",
+            "subject_person_ids": [
+                "PER-DEMO-VERKAEUFER-ANNA-BERGER",
+                "PER-DEMO-KAEUFER-BEN-LANGE",
+            ],
+            "versions": [
+                {
+                    "version": "v1",
+                    "created_at": now,
+                    "author_person_id": "PER-DEMO-NOTAR-OFUNK",
+                    "summary": "Erster synthetischer Entwurf aus NaC-Vorlage.",
+                }
+            ],
+            "storage": {
+                "original": "dokumente/DOC-DEMO-2026-0001-ENTWURF/original/kaufvertragsentwurf-demo.docx.placeholder.txt"
+            },
+            "created_at": now,
+        },
+        {
+            "schema_version": "nac.document/v0.1",
             "document_id": "DOC-DEMO-2026-0001-AUSWEIS-VERKAEUFER",
             "matter_id": akten_id,
             "title": "Ausweiskopie Verkäuferin Demo",
@@ -280,7 +305,7 @@ def write_sample_matter(
         },
     ]
     matter = {
-        "schema_version": "nac.matter/v0.1",
+        "schema_version": "nac.matter/v0.3",
         "matter_id": akten_id,
         "aktenzeichen": "UVZ 1/2026",
         "title": "Immobilienkaufvertrag Berger/Lange",
@@ -295,10 +320,33 @@ def write_sample_matter(
         "document_ids": [document["document_id"] for document in documents],
         "event_log": f"akten/{year}/{akten_id}/ereignisse.jsonl",
         "data_classification": "synthetic_full_case",
+        "notary_software_layers": [
+            "contacts",
+            "real_estate_register",
+            "electronic_side_file",
+            "incoming_mail",
+            "document_versions",
+            "tasks_and_deadlines",
+            "cost_accounting",
+            "compliance_evidence",
+            "xnp_and_register_interfaces",
+        ],
+        "electronic_side_file": {
+            "status": "prepared_for_export",
+            "label": "Nebenakten-Export: vorbereitet",
+            "structure_dataset_required": True,
+            "export_target": "NotAktVV §43 strukturierter Datensatz",
+            "weekly_local_mirror_required": True,
+        },
         "pointers": {
             "persons": "personen/<person_id>.json",
             "documents": "dokumente/<document_id>/metadata.json",
             "binary_files": "dokumente/<document_id>/original/*",
+            "tasks": f"akten/{year}/{akten_id}/aufgaben.json",
+            "inbox": f"akten/{year}/{akten_id}/eingang.json",
+            "real_estate": f"akten/{year}/{akten_id}/grundbuch.json",
+            "costs": f"akten/{year}/{akten_id}/kosten.json",
+            "evidence": f"akten/{year}/{akten_id}/nachweise.json",
         },
     }
     relationships = {
@@ -310,16 +358,130 @@ def write_sample_matter(
             {"person_id": "PER-DEMO-KAEUFER-BEN-LANGE", "role": "buyer", "signing_required": True},
         ],
     }
+    document_roles = {
+        "grundbuchauszug": "source_document",
+        "deed_draft": "draft_document",
+    }
     matter_documents = {
         "schema_version": "nac.matter-documents/v0.1",
         "matter_id": akten_id,
         "documents": [
             {
                 "document_id": document["document_id"],
-                "role": "source_document" if document["document_type"] == "grundbuchauszug" else "identity_evidence",
+                "role": document_roles.get(document["document_type"], "identity_evidence"),
                 "status": "received",
             }
             for document in documents
+        ],
+    }
+    tasks = {
+        "schema_version": "nac.matter-tasks/v0.1",
+        "matter_id": akten_id,
+        "tasks": [
+            {
+                "task_id": "TASK-DEMO-001",
+                "label": "Grundbuchauszug prüfen",
+                "status": "open",
+                "assigned_role": "notary_clerk",
+                "due_policy": "vor Entwurf",
+                "source_document_id": "DOC-DEMO-2026-0001-GRUNDBUCH",
+            },
+            {
+                "task_id": "TASK-DEMO-002",
+                "label": "Beteiligte und Ausweise prüfen",
+                "status": "open",
+                "assigned_role": "notary",
+                "due_policy": "vor Beurkundung",
+                "source_document_id": "DOC-DEMO-2026-0001-AUSWEIS-VERKAEUFER",
+            },
+            {
+                "task_id": "TASK-DEMO-003",
+                "label": "Kaufvertragsentwurf freigeben",
+                "status": "waiting",
+                "assigned_role": "notary",
+                "due_policy": "nach Datenergänzung",
+                "source_document_id": "DOC-DEMO-2026-0001-ENTWURF",
+            },
+            {
+                "task_id": "TASK-DEMO-004",
+                "label": "XNP-/Grundbuch-Vollzug vorbereiten",
+                "status": "waiting",
+                "assigned_role": "notary_clerk",
+                "due_policy": "nach Beurkundung",
+            },
+            {
+                "task_id": "TASK-DEMO-005",
+                "label": "Kostenrechnung vorbereiten",
+                "status": "waiting",
+                "assigned_role": "accounting",
+                "due_policy": "nach Vollzugsschritt",
+            },
+        ],
+    }
+    inbox = {
+        "schema_version": "nac.matter-inbox/v0.1",
+        "matter_id": akten_id,
+        "items": [
+            {
+                "inbox_id": "IN-DEMO-001",
+                "source": "scan",
+                "assignment_status": "assigned_to_matter",
+                "document_id": "DOC-DEMO-2026-0001-GRUNDBUCH",
+                "assignment_reason": "Aktenzeichen und Grundbuchbezug im synthetischen Scan erkannt.",
+                "ocr_status": "synthetic_preview",
+            },
+            {
+                "inbox_id": "IN-DEMO-002",
+                "source": "email",
+                "assignment_status": "assigned_to_matter",
+                "document_id": "DOC-DEMO-2026-0001-ENTWURF",
+                "assignment_reason": "Entwurf wurde aus der Akte heraus erzeugt.",
+            },
+        ],
+    }
+    real_estate = {
+        "schema_version": "nac.real-estate/v0.1",
+        "matter_id": akten_id,
+        "land_register": {
+            "district": "Demo-Grundbuchbezirk",
+            "folio": "Blatt 12345",
+            "properties": [
+                {
+                    "property_id": "GB-DEMO-001",
+                    "inventory_number": "1",
+                    "description": "Wohnungseigentum Musterstraße 8, 3. Obergeschoss",
+                    "registry_source_document_id": "DOC-DEMO-2026-0001-GRUNDBUCH",
+                }
+            ],
+        },
+    }
+    costs = {
+        "schema_version": "nac.costs/v0.1",
+        "matter_id": akten_id,
+        "billing_status": "draft",
+        "cost_debtors": [
+            {"person_id": "PER-DEMO-KAEUFER-BEN-LANGE", "share": "100%"}
+        ],
+        "cost_keys": [
+            {"key": "demo_gnotkg_kaufvertrag", "label": "Kaufvertragsentwurf und Beurkundung"}
+        ],
+    }
+    evidence = {
+        "schema_version": "nac.evidence/v0.1",
+        "matter_id": akten_id,
+        "items": [
+            {
+                "evidence_id": "EV-DEMO-NOTAKTVV-EXPORT",
+                "label": "Nebenakten-Export: vorbereitet",
+                "status": "prepared",
+                "purpose": "Strukturierter Datensatz und Dokumentpointer bleiben exportierbar.",
+            },
+            {
+                "evidence_id": "EV-DEMO-GWG",
+                "label": "GwG-Prüfung: offen",
+                "status": "open",
+                "purpose": "KYC-, PeP- und Sanktionslistenprüfung sind als Nachweisplatzhalter modelliert.",
+            },
         ],
     }
     event = {
@@ -347,6 +509,11 @@ def write_sample_matter(
     _write_json(matter_file, matter)
     _write_json(matter_dir / "beteiligte.json", relationships)
     _write_json(matter_dir / "dokumente.json", matter_documents)
+    _write_json(matter_dir / "aufgaben.json", tasks)
+    _write_json(matter_dir / "eingang.json", inbox)
+    _write_json(matter_dir / "grundbuch.json", real_estate)
+    _write_json(matter_dir / "kosten.json", costs)
+    _write_json(matter_dir / "nachweise.json", evidence)
     _write_json(repo / INDEX_ROOT / "akten.json", {"schema_version": "nac.index-matters/v0.1", "matters": [matter]})
     _write_json(
         repo / INDEX_ROOT / "personen.json",
@@ -384,6 +551,79 @@ def write_sample_matter(
         "document_count": len(documents),
         "data_classification": matter["data_classification"],
     }
+
+
+def list_matter_summaries(tenant_repo: Path) -> list[dict[str, Any]]:
+    repo = tenant_repo.expanduser().resolve()
+    summaries: list[dict[str, Any]] = []
+    for matter_file in sorted((repo / MATTER_ROOT).glob("*/*/akte.json")):
+        matter = json.loads(matter_file.read_text(encoding="utf-8"))
+        tasks = _read_json_if_exists(matter_file.parent / "aufgaben.json")
+        task_items = tasks.get("tasks", []) if isinstance(tasks.get("tasks"), list) else []
+        next_task = next((task for task in task_items if task.get("status") != "completed"), None)
+        summaries.append(
+            {
+                "matter_id": str(matter.get("matter_id") or ""),
+                "aktenzeichen": str(matter.get("aktenzeichen") or ""),
+                "title": str(matter.get("title") or ""),
+                "case_type": str(matter.get("case_type") or matter.get("usecase_slug") or ""),
+                "status": str(matter.get("status") or ""),
+                "participant_count": len(matter.get("participant_person_ids", [])),
+                "document_count": len(matter.get("document_ids", [])),
+                "next_task": str(next_task.get("label") if isinstance(next_task, dict) else ""),
+            }
+        )
+    summaries.sort(key=lambda item: (item["aktenzeichen"], item["matter_id"]))
+    return summaries
+
+
+def describe_matter(tenant_repo: Path, matter_id: str) -> dict[str, Any]:
+    repo = tenant_repo.expanduser().resolve()
+    matter_file = _find_matter_file(repo, matter_id)
+    if matter_file is None:
+        raise ValueError(f"Akte nicht gefunden: {matter_id}")
+    matter = json.loads(matter_file.read_text(encoding="utf-8"))
+    participants = [
+        _read_json_if_exists(repo / PERSON_ROOT / f"{person_id}.json")
+        for person_id in matter.get("participant_person_ids", [])
+    ]
+    documents = [
+        _read_json_if_exists(repo / DOCUMENT_ROOT / str(document_id) / "metadata.json")
+        for document_id in matter.get("document_ids", [])
+    ]
+    tasks = _read_json_if_exists(matter_file.parent / "aufgaben.json")
+    evidence = _read_json_if_exists(matter_file.parent / "nachweise.json")
+    real_estate = _read_json_if_exists(matter_file.parent / "grundbuch.json")
+    return {
+        "matter": matter,
+        "participants": [item for item in participants if item],
+        "documents": [item for item in documents if item],
+        "tasks": tasks.get("tasks", []) if isinstance(tasks.get("tasks"), list) else [],
+        "evidence": evidence.get("items", []) if isinstance(evidence.get("items"), list) else [],
+        "real_estate": real_estate,
+        "matter_file": matter_file.relative_to(repo).as_posix(),
+    }
+
+
+def _find_matter_file(repo: Path, matter_id: str) -> Path | None:
+    for matter_file in sorted((repo / MATTER_ROOT).glob("*/*/akte.json")):
+        try:
+            matter = json.loads(matter_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if matter.get("matter_id") == matter_id or matter.get("aktenzeichen") == matter_id:
+            return matter_file
+    return None
+
+
+def _read_json_if_exists(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _load_manifest(repo: Path) -> dict[str, Any]:

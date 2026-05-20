@@ -112,6 +112,8 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
   für Fachpersonal, Patch-Prinzip und Sidecar-Editor-Pfad.
 - [docs/de/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md): getrenntes
   Demo-Datenrepo für synthetische NaC-Vorgänge und späteren Sovereign-Git-Wechsel.
+- [docs/de/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md): Herleitung
+  des offenen Aktenmodells aus typischen Notarsoftware-Bausteinen.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 

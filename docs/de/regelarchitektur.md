@@ -54,6 +54,10 @@ Meilenstein, Pilotbereitschaft oder aktives Build-Board ändern. Kleine
 Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder
 UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 
+Für das Fortschrittsbild reicht ein wöchentliches Update. Unter der Woche wird
+der Gantt nur geändert, wenn sich wirklich Roadmap, Scope, Status,
+Meilenstein, Pilotbereitschaft oder aktives Build-Board verschieben.
+
 Das strikte Gate prüft trotzdem:
 
 - Pflicht-Gantts existieren.

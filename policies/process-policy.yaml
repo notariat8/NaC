@@ -116,6 +116,14 @@ rule_architecture:
       active_reference_repo_default: owner_direct_main
     roadmap_and_gantt:
       hardness: guidance_plus_render_gate
+      progress_picture_update_cadence: weekly
+      immediate_update_when:
+        - roadmap_changes
+        - scope_changes
+        - status_changes
+        - milestone_changes
+        - pilot_readiness_changes
+        - active_build_board_changes
       enforced_by:
         - scripts/validate_gantt_progress.py
     language_and_localization:

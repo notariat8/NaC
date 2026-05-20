@@ -107,6 +107,20 @@ den Fallstand der Usecase-Checkliste mit offenen Angaben, Dokumenten,
 Entscheidungen, Prüfgates und Nachweisen. Die Aktenübersicht zeigt daraus den
 nächsten offenen Schritt.
 
+## CLI-Spiegel Der Aktenansicht
+
+Wer die Webapp nicht öffnen kann, nutzt denselben Demo-Datenbestand über die
+CLI:
+
+```bash
+nac tenant list-akten --repo ../demo8notariat
+nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
+```
+
+Die CLI zeigt Akte, Aktenzeichen, Status, Beteiligtenzahl, Dokumentzahl,
+Aufgaben, Nachweise und den Nebenakten-Exportstatus. Damit ist die Webapp eine
+komfortable Bedienfläche, aber nicht die einzige Erklärung des Systems.
+
 ## Warum Das Für Nicht-Techniker Verständlich Ist
 
 Die Webapp übersetzt Repo-Struktur in Bürobegriffe:
