@@ -153,6 +153,9 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("Kontrolle", js)
         self.assertIn("Kanzlei-Workflow", js)
         self.assertIn("Änderung vorschlagen", js)
+        self.assertIn("Nächster Schritt", js)
+        self.assertIn("Akten-Checkliste", js)
+        self.assertIn("ownerRoleLabel", js)
         self.assertIn("← Zurück", js)
         self.assertIn("Übersicht", js)
         self.assertIn("searchableMatterText", js)
@@ -184,6 +187,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn(".panel-navigation", css)
         self.assertIn(".matter-toolbar", css)
         self.assertIn(".matter-related", css)
+        self.assertIn(".matter-checklist", css)
         self.assertIn(".case-action-group-daily", css)
         self.assertIn(".case-workflow-actions", css)
         self.assertNotIn(">Bridge<", html)
@@ -231,6 +235,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
 
             matter_id = created["matter"]["matter_id"]
             workflow_binding = created["matter"]["workflow_binding"]
+            checklist_summary = created["matter"]["checklist_summary"]
             self.assertEqual(created["matter"]["usecase_slug"], "unterschriftsbeglaubigung")
             self.assertEqual(created["matter"]["status"], "open")
             self.assertEqual(workflow_binding["workflow_version"], "v1")
@@ -241,15 +246,24 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             self.assertIn("Akte bleibt auf dieser Workflow-Version", workflow_binding["binding_policy"])
             self.assertIn("bpmn", {artifact["type"] for artifact in workflow_binding["artifacts"]})
             self.assertIn("checklist", {artifact["type"] for artifact in workflow_binding["artifacts"]})
+            self.assertGreater(checklist_summary["open_count"], 0)
+            self.assertGreater(checklist_summary["total_count"], 0)
+            self.assertEqual(checklist_summary["next_step"]["label"], "Unterzeichner Identität")
+            self.assertEqual(checklist_summary["next_step"]["section"], "Offene Angaben")
             self.assertTrue((tenant_repo / "akten" / "2026" / matter_id / "akte.json").is_file())
+            self.assertTrue((tenant_repo / "akten" / "2026" / matter_id / "checkliste.json").is_file())
             self.assertTrue((tenant_repo / "index" / "akten.json").is_file())
             persisted_matter = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "akte.json")
             self.assertEqual(persisted_matter["workflow_binding"]["workflow_revision_hash"], workflow_binding["workflow_revision_hash"])
+            persisted_checklist = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "checkliste.json")
+            self.assertEqual(persisted_checklist["workflow_version"], "v1")
+            self.assertEqual(persisted_checklist["sections"][0]["id"], "required_information")
 
             listed = bridge.list_operator_matters(config_path=config_path)
             self.assertEqual(listed["counts"]["unterschriftsbeglaubigung"]["open"], 1)
             self.assertEqual(listed["matters"][0]["participants"], ["Mara Muster", "Timo Test"])
             self.assertEqual(listed["matters"][0]["workflow_binding"]["workflow_version"], "v1")
+            self.assertEqual(listed["matters"][0]["checklist_summary"]["next_step"]["label"], "Unterzeichner Identität")
 
             updated = bridge.update_operator_matter_status(
                 {"matter_id": matter_id, "status": "waiting", "status_reason": "wartet auf Unterlage"},
@@ -325,6 +339,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             self.assertEqual(accepted["proposal"]["status"], "accepted")
             self.assertEqual(accepted["matter"]["participants"], ["Erika Mustermann", "Erika Mustermann"])
             self.assertEqual(accepted["matter"]["workflow_binding"]["workflow_version"], "v1")
+            self.assertEqual(accepted["matter"]["checklist_summary"]["next_step"]["label"], "Unterzeichner Identität")
             matter = bridge.read_json(tenant_repo / "akten" / "2026" / matter_id / "akte.json")
             self.assertEqual(matter["workflow_binding"]["workflow_id"], "unterschriftsbeglaubigung:kanzlei-standard")
             document_id = matter["document_ids"][0]
@@ -396,6 +411,27 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             document = bridge.read_json(tenant_repo / "dokumente" / matter["document_ids"][0] / "metadata.json")
             self.assertEqual(document["extracted_metadata"]["document_number"], "LZ6311T47")
             self.assertEqual((tenant_repo / document["storage"]["originals"][0]["path"]).read_bytes(), b"synthetic-browser-upload")
+
+    def test_operator_checklist_state_is_available_for_all_usecases(self) -> None:
+        for graph_path in sorted((REPO_ROOT / "usecases").glob("*/knowledge-graph.graph.json")):
+            slug = graph_path.parent.name
+            checklist = bridge.build_checklist_state(
+                slug,
+                slug,
+                "2026-05-20T00:00:00Z",
+                {
+                    "workflow_id": f"{slug}:kanzlei-standard",
+                    "workflow_version": "v1",
+                    "workflow_revision_hash": "test",
+                },
+            )
+            summary = bridge.summarize_checklist_state(checklist)
+            with self.subTest(slug=slug):
+                self.assertEqual(checklist["usecase_slug"], slug)
+                self.assertEqual(checklist["workflow_version"], "v1")
+                self.assertTrue(checklist["source"]["path"].endswith("knowledge-graph.graph.json"))
+                self.assertGreater(summary["total_count"], 0)
+                self.assertTrue(summary["next_step"]["label"])
 
     def test_operator_config_allows_arbitrary_git_and_data_repo_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

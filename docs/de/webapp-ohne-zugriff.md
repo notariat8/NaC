@@ -34,7 +34,7 @@ Funktion über diese Doku, die Screenshots und die Repo-Dateien nachvollziehen.
 | Bereich | Was man sieht | Was dahinterliegt |
 | --- | --- | --- |
 | Vorgang auswählen | Suchfeld und Vorgangskarten mit den Blöcken `Aktenverwaltung`, `Kontrolle` und `Kanzlei-Workflow`. | Statische Oberfläche unter [web/local-operator/](../../web/local-operator) plus usecase-lokale KG- und BPMN-Routen. |
-| Aktenverwaltung | Akten öffnen, neue Demo-Akte anlegen und Statuszähler je Usecase sehen. | Demo-Datenrepo über `/api/matters`; neue Akten erhalten ein `workflow_binding`. |
+| Aktenverwaltung | Akten öffnen, neue Demo-Akte anlegen, Statuszähler und nächsten Schritt sehen. | Demo-Datenrepo über `/api/matters`; neue Akten erhalten `workflow_binding` und `checkliste.json`. |
 | Checkliste | Sichere KG-Ansicht ohne Mandatswerte. | [usecases/](../../usecases) mit `knowledge-graph.graph.json`; gerendert über `notary_kg.editor.build_editor_view`. |
 | Ablauf | BPMN-Ablauf als lesbare SVG-Ansicht. | [bpmn/](../../bpmn) und [src/nac_web/bpmn.py](../../src/nac_web/bpmn.py). |
 | Bearbeiten | BPMN-Editorfläche mit bpmn-js-Ladepfad und XML-Fallback. | `/api/bpmn/<slug>/xml` liefert XML plus SHA-256; Speichern schreibt nur bei unverändertem Basis-Hash. |
@@ -101,6 +101,11 @@ Workflow-Version des Usecases. In `akte.json` steht dafür `workflow_binding`
 mit Version, Artefakt-Hashes und Bindungszeitpunkt. Neue freigegebene
 Workflow-Versionen gelten nur für neue Akten. Laufende Akten bleiben auf ihrer
 gebundenen Version, bis ein dokumentierter Versionswechsel erfasst wird.
+
+Zusätzlich schreibt die Bridge pro Akte `checkliste.json`. Diese Datei enthält
+den Fallstand der Usecase-Checkliste mit offenen Angaben, Dokumenten,
+Entscheidungen, Prüfgates und Nachweisen. Die Aktenübersicht zeigt daraus den
+nächsten offenen Schritt.
 
 ## Warum Das Für Nicht-Techniker Verständlich Ist
 

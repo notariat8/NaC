@@ -140,7 +140,9 @@ Vorgangskarten trennen `Aktenverwaltung`, `Kontrolle` und
 sind Kontrollansichten, und Ablauf-/Bearbeitungsfunktionen sind
 freigaberelevante Kanzlei-Stammdaten. Beim Anlegen einer Akte schreibt die
 Operator-Bridge deshalb ein `workflow_binding` mit Workflow-Version,
-Artefakt-Hashes und Bindungszeitpunkt in die Akte.
+Artefakt-Hashes und Bindungszeitpunkt in die Akte. Zusätzlich erzeugt sie pro
+Akte `checkliste.json` als eingefrorenen Fallstand der Usecase-Checkliste und
+liefert daraus den nächsten offenen Schritt an die Aktenübersicht.
 
 ## Geplante Endnutzer-Paketierung
 

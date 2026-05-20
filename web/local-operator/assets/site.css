@@ -681,6 +681,26 @@ h3 {
   margin: 0.35rem 0 0;
 }
 
+.matter-checklist {
+  background: #f7faf8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+}
+
+.matter-checklist p {
+  color: var(--ink);
+  margin: 0;
+}
+
+.matter-checklist span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .matter-card select {
   border: 1px solid var(--line);
   border-radius: 8px;

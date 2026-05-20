@@ -46,6 +46,12 @@ geklärt werden soll, ob bereits eine Akte oder ein Eingang existiert.
 Büroalltag sichtbar. `Ablauf ansehen` und `Änderung vorschlagen` sind keine
 täglichen Aktenaktionen; sie betreffen die freigegebenen Kanzlei-Stammdaten.
 
+Die Checkliste ist deshalb keine reine Usecase-Vorlage. Die Usecase-Vorlage
+definiert, welche Prüfpunkte es gibt. Beim Aktenstart wird daraus ein
+aktenbezogener Checklistenstand erzeugt. Die Aktenansicht zeigt den nächsten
+offenen Schritt, offene Punkte und erledigte Punkte aus genau diesem
+aktenbezogenen Stand.
+
 ## Workflow Als Kanzlei-Stammdatum
 
 Ein Workflow gehört nicht zur einzelnen Akte, sondern zum freigegebenen
@@ -89,6 +95,22 @@ ein Freigaberegister je Kanzlei und Usecase mit Version, Freigabezeitpunkt,
 Freigaberolle, freigebender Person, Gültigkeitsbeginn und Ablösungsregel.
 Dieser Baustein ist im globalen Gantt als `Kanzlei-Workflow-Freigaberegister
 bauen` vorgemerkt.
+
+## Aktenbezogene Checkliste
+
+Jede Akte erhält zusätzlich eine Datei `checkliste.json`. Diese Datei ist der
+Fallstand der Checkliste, nicht nur ein Link auf die Vorlage. Sie enthält:
+
+- die gebundene Workflow-Version,
+- den Hash der KG-Checklisten-Vorlage,
+- die Abschnitte `Offene Angaben`, `Dokumente`, `Entscheidungen`, `Prüfgates`
+  und `Nachweise`,
+- Status je Prüfschritt,
+- den nächsten offenen Schritt für die Aktenübersicht.
+
+Spätere Änderungen an der Kanzlei-Vorlage ändern diese Akten-Checkliste nicht
+automatisch. Ein Wechsel auf eine neue Version braucht ein eigenes
+Aktenereignis.
 
 ## Button-Regeln
 

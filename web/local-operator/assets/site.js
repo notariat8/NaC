@@ -618,6 +618,8 @@ function bindImportAcceptButtons(scope) {
 
 function searchableMatterText(matter) {
   const workflow = matter.workflow_binding || {};
+  const checklist = matter.checklist_summary || {};
+  const nextStep = checklist.next_step || {};
   return [
     matter.matter_id,
     matter.aktenzeichen,
@@ -629,6 +631,9 @@ function searchableMatterText(matter) {
     workflow.workflow_id,
     workflow.workflow_version,
     workflow.workflow_revision_hash,
+    nextStep.label,
+    nextStep.section,
+    nextStep.owner_role,
     ...(Array.isArray(matter.participants) ? matter.participants : []),
   ].join(" ").toLowerCase();
 }
@@ -661,12 +666,23 @@ function matterCardHtml(matter) {
   const workflow = matter.workflow_binding || {};
   const workflowVersion = workflow.workflow_version || "v1";
   const workflowRevision = workflow.workflow_revision_hash ? ` · Rev ${workflow.workflow_revision_hash}` : "";
+  const checklist = matter.checklist_summary || {};
+  const nextStep = checklist.next_step || {};
+  const nextStepText = nextStep.label || "Checkliste prüfen";
+  const nextStepContext = [nextStep.section, nextStep.owner_role ? ownerRoleLabel(nextStep.owner_role) : ""].filter(Boolean).join(" · ");
+  const checklistText = checklist.total_count
+    ? `${checklist.open_count || 0} offen · ${checklist.completed_count || 0} erledigt · ${checklist.total_count} gesamt`
+    : "Checklistenstand wird aus dem Kanzlei-Workflow gebildet";
   return `
     <article class="matter-card">
       <div>
         <h3>${escapeHtml(matter.aktenzeichen || matter.matter_id)} · ${escapeHtml(matter.title)}</h3>
         <p class="matter-meta">${escapeHtml(statusLabelForMatter(matter.status))}${escapeHtml(reason)} · ${escapeHtml(participants)} · ${matter.document_count || 0} Dokumente</p>
         <p class="matter-workflow">Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden</p>
+        <div class="matter-checklist">
+          <p><strong>Nächster Schritt:</strong> ${escapeHtml(nextStepText)}${nextStepContext ? ` <span>${escapeHtml(nextStepContext)}</span>` : ""}</p>
+          <p>Akten-Checkliste: ${escapeHtml(checklistText)}</p>
+        </div>
       </div>
       <div class="matter-card-actions">
         <select data-matter-status="${escapeHtml(matter.matter_id)}">
@@ -678,6 +694,15 @@ function matterCardHtml(matter) {
       </div>
     </article>
   `;
+}
+
+function ownerRoleLabel(role) {
+  return {
+    notary: "Notar",
+    notary_clerk: "Sachbearbeitung",
+    assistant: "Assistenz",
+    client: "Mandant",
+  }[role] || role;
 }
 
 async function saveMatterStatus(matterId) {

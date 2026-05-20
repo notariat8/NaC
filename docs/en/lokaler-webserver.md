@@ -135,7 +135,9 @@ cards separate `Aktenverwaltung`, `Kontrolle` and `Kanzlei-Workflow`. Matter
 management is the visible daily work, checklists are control views, and flow or
 editing functions are approval-relevant office master data. When a matter is
 created, the operator bridge therefore writes a `workflow_binding` with
-workflow version, artifact hashes and binding timestamp into the matter.
+workflow version, artifact hashes and binding timestamp into the matter. It
+also creates `checkliste.json` per matter as the frozen case state of the
+use-case checklist and returns the next open step to the matter overview.
 
 ## Planned End-User Packaging
 

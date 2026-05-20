@@ -44,6 +44,11 @@ prüfen` is visible in daily office work but is not equal to matter management.
 `Ablauf ansehen` and `Änderung vorschlagen` are not daily matter actions; they
 affect approved office master data.
 
+The checklist is therefore not just a use-case template. The use-case template
+defines the control points. When a matter starts, a matter-specific checklist
+state is created from that template. The matter view shows the next open step,
+open items and completed items from exactly that matter-specific state.
+
 ## Workflow As Office Master Data
 
 A workflow does not belong to one matter. It belongs to the approved office
@@ -86,6 +91,22 @@ checklist artifacts. Productive office operation additionally needs an
 approval registry per office and use case with version, approval timestamp,
 approval role, approving person, effective date and replacement rule. This is
 tracked in the global Gantt as `Kanzlei-Workflow-Freigaberegister bauen`.
+
+## Matter-Specific Checklist
+
+Every matter additionally receives a `checkliste.json` file. This file is the
+case state of the checklist, not only a link to the template. It contains:
+
+- the bound workflow version,
+- the hash of the KG checklist template,
+- the sections `Offene Angaben`, `Dokumente`, `Entscheidungen`, `Prüfgates`
+  and `Nachweise`,
+- status per control step,
+- the next open step for the matter overview.
+
+Later changes to the office template do not change this matter checklist
+automatically. Moving a matter to a newer version requires its own matter
+event.
 
 ## Button Rules
 

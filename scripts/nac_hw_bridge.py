@@ -545,6 +545,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
 
     now = _now_utc()
     workflow_binding = build_workflow_binding(usecase_slug, usecase_title, now, values)
+    checklist_state = build_checklist_state(usecase_slug, usecase_title, now, workflow_binding)
     year = now[:4]
     matter_id = next_matter_id(repo, year)
     sequence = int(matter_id.rsplit("-", maxsplit=1)[1])
@@ -599,6 +600,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
         "opened_at": now,
         "updated_at": now,
         "workflow_binding": workflow_binding,
+        "checklist_state_path": f"akten/{year}/{matter_id}/checkliste.json",
         "participant_person_ids": [client_person_id, participant_person_id],
         "document_ids": [document_id],
         "event_log": f"akten/{year}/{matter_id}/ereignisse.jsonl",
@@ -637,6 +639,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
         "summary": f"Demo-Akte für {usecase_title} angelegt.",
         "status": status,
         "workflow_binding": workflow_binding,
+        "checklist_summary": summarize_checklist_state(checklist_state),
         "affected_ids": {"person_ids": matter["participant_person_ids"], "document_ids": matter["document_ids"]},
     }
 
@@ -645,6 +648,7 @@ def create_operator_matter(payload: dict[str, Any], config_path: Path = OPERATOR
     attach_document_files(repo, document_id, document, document_title, document_files)
     write_json(repo / "dokumente" / document_id / "metadata.json", document)
     write_json(matter_dir / "akte.json", matter)
+    write_json(matter_dir / "checkliste.json", checklist_state)
     write_json(matter_dir / "beteiligte.json", participants)
     write_json(matter_dir / "dokumente.json", matter_documents)
     append_jsonl(matter_dir / "ereignisse.jsonl", event)
@@ -899,6 +903,7 @@ def read_operator_matter_summaries(repo: Path) -> list[dict[str, Any]]:
 def summarize_matter(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
     person_ids = [str(value) for value in matter.get("participant_person_ids", []) if value]
     document_ids = [str(value) for value in matter.get("document_ids", []) if value]
+    checklist_state = load_matter_checklist_state(repo, matter)
     return {
         "matter_id": str(matter.get("matter_id") or ""),
         "aktenzeichen": str(matter.get("aktenzeichen") or matter.get("matter_id") or ""),
@@ -912,6 +917,7 @@ def summarize_matter(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
         "participants": load_person_display_names(repo, person_ids),
         "document_count": len(document_ids),
         "workflow_binding": matter.get("workflow_binding") if isinstance(matter.get("workflow_binding"), dict) else {},
+        "checklist_summary": summarize_checklist_state(checklist_state),
         "data_classification": str(matter.get("data_classification") or ""),
     }
 
@@ -972,6 +978,170 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+CHECKLIST_SECTIONS = (
+    ("required_information", "Offene Angaben", "information"),
+    ("documents", "Dokumente", "document"),
+    ("decisions", "Entscheidungen", "decision"),
+    ("gates", "Prüfgates", "gate"),
+    ("evidence", "Nachweise", "evidence"),
+)
+
+
+def build_checklist_state(
+    usecase_slug: str,
+    usecase_title: str,
+    timestamp: str,
+    workflow_binding: dict[str, Any],
+) -> dict[str, Any]:
+    graph_path = usecase_knowledge_graph_path(usecase_slug)
+    sections: list[dict[str, Any]] = []
+    source_sha256 = ""
+    source_path = ""
+    if graph_path is not None:
+        source_sha256 = sha256_file(graph_path)
+        source_path = relative_to_repo(REPO_ROOT, graph_path)
+        graph = read_json(graph_path)
+        case = find_usecase_case(graph, usecase_slug)
+        if case is not None:
+            for source_key, label, item_type in CHECKLIST_SECTIONS:
+                items = build_checklist_items(case.get(source_key), source_key, item_type)
+                if items:
+                    sections.append({"id": source_key, "label": label, "items": items})
+    return {
+        "schema_version": "nac.matter-checklist-state/v0.1",
+        "usecase_slug": usecase_slug,
+        "usecase_title": usecase_title,
+        "status": "open",
+        "bound_at": timestamp,
+        "workflow_id": workflow_binding.get("workflow_id", ""),
+        "workflow_version": workflow_binding.get("workflow_version", ""),
+        "workflow_revision_hash": workflow_binding.get("workflow_revision_hash", ""),
+        "source": {
+            "type": "knowledge_graph",
+            "path": source_path,
+            "sha256": source_sha256,
+        },
+        "version_policy": "Dieser Checklistenstand ist aktenbezogen eingefroren und folgt nicht automatisch späteren Kanzlei-Workflow-Versionen.",
+        "sections": sections,
+    }
+
+
+def usecase_knowledge_graph_path(usecase_slug: str) -> Path | None:
+    candidate = REPO_ROOT / "usecases" / usecase_slug / "knowledge-graph.graph.json"
+    return candidate if candidate.is_file() else None
+
+
+def find_usecase_case(graph: dict[str, Any], usecase_slug: str) -> dict[str, Any] | None:
+    cases = graph.get("cases")
+    if not isinstance(cases, list):
+        return None
+    for candidate in cases:
+        if isinstance(candidate, dict) and candidate.get("slug") == usecase_slug:
+            return candidate
+    for candidate in cases:
+        if isinstance(candidate, dict):
+            return candidate
+    return None
+
+
+def build_checklist_items(raw_items: Any, source_key: str, item_type: str) -> list[dict[str, Any]]:
+    if not isinstance(raw_items, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for index, raw_item in enumerate(raw_items, start=1):
+        if not isinstance(raw_item, dict):
+            continue
+        item_id = clean_text(raw_item.get("id") or f"{source_key}.{index}", max_length=128)
+        status = normalize_checklist_status(raw_item.get("status") or "open")
+        item = {
+            "id": item_id,
+            "label": clean_text(raw_item.get("label") or item_id),
+            "type": item_type,
+            "source_key": source_key,
+            "status": status,
+            "owner_role": clean_text(raw_item.get("owner_role") or ""),
+        }
+        question = clean_text(raw_item.get("question") or "")
+        if question:
+            item["question"] = question
+        required_for = raw_item.get("required_for")
+        if isinstance(required_for, list):
+            item["required_for"] = [clean_text(value, max_length=128) for value in required_for if clean_text(value, max_length=128)]
+        options = raw_item.get("options")
+        if isinstance(options, list):
+            item["options"] = [clean_text(value, max_length=128) for value in options if clean_text(value, max_length=128)]
+        items.append(item)
+    return items
+
+
+def normalize_checklist_status(value: Any) -> str:
+    status = str(value or "open").strip().lower()
+    if status in {"done", "complete", "completed", "closed", "erledigt", "abgeschlossen"}:
+        return "completed"
+    if status in {"waiting", "blocked", "warten", "wartet"}:
+        return "waiting"
+    return "open"
+
+
+def load_matter_checklist_state(repo: Path, matter: dict[str, Any]) -> dict[str, Any]:
+    path_text = clean_text(matter.get("checklist_state_path") or "")
+    if not path_text:
+        return {}
+    try:
+        checklist_path = resolve_repo_relative(repo, path_text)
+    except ValueError:
+        return {}
+    if not checklist_path.is_file():
+        return {}
+    try:
+        checklist_state = read_json(checklist_path)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return checklist_state if isinstance(checklist_state, dict) else {}
+
+
+def summarize_checklist_state(checklist_state: dict[str, Any]) -> dict[str, Any]:
+    sections = checklist_state.get("sections") if isinstance(checklist_state.get("sections"), list) else []
+    total_count = 0
+    open_count = 0
+    completed_count = 0
+    next_step: dict[str, Any] = {}
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_label = clean_text(section.get("label") or section.get("id") or "")
+        items = section.get("items") if isinstance(section.get("items"), list) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            total_count += 1
+            status = normalize_checklist_status(item.get("status") or "open")
+            if status == "completed":
+                completed_count += 1
+                continue
+            open_count += 1
+            if not next_step:
+                next_step = {
+                    "id": clean_text(item.get("id") or ""),
+                    "label": clean_text(item.get("label") or item.get("id") or "Nächster Schritt"),
+                    "status": status,
+                    "section": section_label,
+                    "owner_role": clean_text(item.get("owner_role") or ""),
+                }
+    return {
+        "schema_version": "nac.matter-checklist-summary/v0.1",
+        "status": "completed" if total_count and completed_count == total_count else "open",
+        "open_count": open_count,
+        "completed_count": completed_count,
+        "total_count": total_count,
+        "next_step": next_step,
+        "bound_at": clean_text(checklist_state.get("bound_at") or ""),
+        "workflow_version": clean_text(checklist_state.get("workflow_version") or ""),
+        "workflow_revision_hash": clean_text(checklist_state.get("workflow_revision_hash") or ""),
+        "source_sha256": clean_text((checklist_state.get("source") or {}).get("sha256") if isinstance(checklist_state.get("source"), dict) else ""),
+    }
 
 
 def load_person_display_names(repo: Path, person_ids: list[str]) -> list[str]:
