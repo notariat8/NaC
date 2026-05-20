@@ -85,7 +85,7 @@ behind it explicitly checkable.
 | BPMN-js business layer | First profile present | Visual BPMN editing for subject-matter flows; Python validates the model before merge. |
 | Local web server | Usable today | Shows BPMN and KG views locally in the browser, without cloud use or real mandate data. |
 | Sidecar editor | Planned | Graphical operation for KG forms and checklists. |
-| ChatGPT app or workspace app | Planned | Comfortable operating surface for authorized users. |
+| ChatGPT app or workspace app | Planned | Comfortable operating surface for authorized users based on a reviewed `nac-mcp` tool layer; Custom GPT Actions with a tunnel remain a demo path for synthetic data. |
 | Standalone NaC web app | Possible | Useful once runtime, roles, permissions and gates are stable enough for broader use. |
 
 ## Rule Of Thumb

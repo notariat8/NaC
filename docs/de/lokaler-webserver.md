@@ -132,3 +132,30 @@ vor einer breiteren Pilotverteilung. Der Launcher darf weiterhin nur lokal an
 `127.0.0.1` binden, schreibt Logs in die Benutzerumgebung, verwaltet die
 Operator-Konfiguration unter `%LOCALAPPDATA%\NaC` und hält Produktcode,
 Konfiguration und Demo-/Mandatsdaten getrennt.
+
+## Geplante ChatGPT- und Codex-Anbindung
+
+Für die spätere direkte Arbeit mit ChatGPT oder Codex wird nicht die
+Browseroberfläche selbst zur fachlichen Wahrheit. Die Webapp bleibt die lokale
+Bürooberfläche; die Chat-Integration spricht eine kleine, geprüfte
+Werkzeugschicht an.
+
+Die drei technischen Wege sind getrennt zu behandeln:
+
+1. `Custom GPT` mit Action und HTTPS-Tunnel ist nur ein Demo-Pfad für
+   synthetische Daten. Ein Tunnel zu `localhost` macht eine lokale API faktisch
+   öffentlich erreichbar und ist deshalb nicht der Produktpfad für echte
+   Mandatsdaten.
+2. `nac-mcp` ist die Zielarchitektur. Ein lokaler oder tenantfähiger MCP-Server
+   stellt geprüfte Tools wie Vorgänge lesen, Importvorschlag anlegen,
+   Importvorschlag übernehmen, BPMN-Änderung vorschlagen und Quality Gate
+   starten bereit. Codex kann diesen MCP-Server lokal nutzen; ChatGPT Apps SDK
+   kann denselben Tool-Vertrag später mit UI-Komponenten verwenden.
+3. Ein Chat direkt in der Operator-Webapp ist ein optionaler zusätzlicher
+   Bedienkanal. Dann ruft ein lokaler Backend-Endpunkt die OpenAI API auf; der
+   API-Schlüssel bleibt serverseitig und die lokalen Tools bleiben dieselben.
+
+Für NaC gilt daher: Actions mit OpenAPI und Tunnel dürfen kurze Demos
+ermöglichen, aber die regulierte Zielarchitektur ist MCP/App SDK mit expliziter
+Authentifizierung, minimalen Tool-Rechten, Auditlog, menschlicher Bestätigung
+für Schreibaktionen und strikter Trennung zwischen Produktcode und Datenrepo.
