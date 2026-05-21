@@ -59,6 +59,7 @@ python scripts/nac.py kg status
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
+python scripts/nac.py import jobs status --repo ../demo8notariat
 ```
 
 After installation:
@@ -72,6 +73,7 @@ nac bpmn validate
 nac config list
 nac plugins actions
 nac tenant status --repo ../demo8notariat
+nac import jobs status --repo ../demo8notariat
 nac qms status
 ```
 
@@ -86,6 +88,7 @@ nac qms status
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
+| Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
 | Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
@@ -123,6 +126,27 @@ ordinary files next to their metadata. The separation is documented in
 [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 The subject-matter derivation from common notary-software building blocks is in
 [notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
+
+## Import Jobs For Codex And OCR
+
+The inbox channel separates upload, machine extraction and subject-matter
+acceptance. The web app first creates an import proposal with staged test files
+in the data repository. It then creates a bounded import job under
+`eingang/jobs/`. Codex or the CLI processes that job metadata-only and writes a
+reviewable result to `eingang/extraktionen/`.
+
+```bash
+nac import jobs create --repo ../demo8notariat --proposal-id IMP-20260521-BEISPIEL
+nac import jobs status --repo ../demo8notariat
+nac import jobs process --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL --format json
+nac import jobs apply-result --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+```
+
+`apply-result` only merges the extraction result back into the import proposal
+and marks it for human review. Only the visible `Übernehmen` action in the
+operator web app creates a demo matter from it. For real OCR, AI or SaaS
+processing with personal data, DPA, role, permission and data-storage
+boundaries remain mandatory.
 
 ## Plugin Commands
 

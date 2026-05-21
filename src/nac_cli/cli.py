@@ -17,6 +17,7 @@ from notary_kg.catalog import all_case_summaries, load_catalogs
 from notary_kg.cli import main as notary_kg_main
 
 from . import __version__
+from .import_jobs import apply_import_job_result, create_import_job, import_job_status, process_import_job
 from .qms import qms_status, read_qms_text
 from .tenant import (
     describe_matter,
@@ -126,6 +127,32 @@ def build_parser() -> argparse.ArgumentParser:
     process_close.add_argument("--year", required=True, type=int)
     process_close.add_argument("--month", required=True, type=int)
     process.set_defaults(func=command_process)
+
+    import_parser = subparsers.add_parser("import", help="Steuert Eingang, OCR-/Extraktionsjobs und Import-Vorschläge.")
+    import_sub = import_parser.add_subparsers(dest="import_command", required=True)
+    import_jobs = import_sub.add_parser("jobs", help="Steuert begrenzte Import-Jobs für Codex.")
+    import_jobs_sub = import_jobs.add_subparsers(dest="jobs_command", required=True)
+    import_jobs_create = import_jobs_sub.add_parser("create", help="Legt einen Import-Job für einen Vorschlag an.")
+    import_jobs_create.add_argument("--repo", type=Path, required=True, help="Pfad zum getrennten NaC-Datenrepo.")
+    import_jobs_create.add_argument("--proposal-id", required=True, help="Import-Vorschlag, der verarbeitet werden soll.")
+    import_jobs_create.add_argument("--requested-by", default="codex", help="Anfordernde lokale Bedienkante.")
+    import_jobs_create.add_argument("--action", default="ocr_metadata_extract", choices=["ocr_metadata_extract"])
+    import_jobs_create.add_argument("--format", choices=["text", "json"], default="text")
+    import_jobs_status = import_jobs_sub.add_parser("status", help="Listet Import-Jobs und Extraktionsstände.")
+    import_jobs_status.add_argument("--repo", type=Path, required=True, help="Pfad zum getrennten NaC-Datenrepo.")
+    import_jobs_status.add_argument("--job-id", help="Optionaler einzelner Import-Job.")
+    import_jobs_status.add_argument("--format", choices=["text", "json"], default="text")
+    import_jobs_process = import_jobs_sub.add_parser("process", help="Verarbeitet einen Import-Job metadata-only.")
+    import_jobs_process.add_argument("--repo", type=Path, required=True, help="Pfad zum getrennten NaC-Datenrepo.")
+    import_jobs_process.add_argument("--job-id", required=True, help="Import-Job-ID.")
+    import_jobs_process.add_argument("--processed-by", default="codex", help="Lokaler Ausführer.")
+    import_jobs_process.add_argument("--format", choices=["text", "json"], default="text")
+    import_jobs_apply = import_jobs_sub.add_parser("apply-result", help="Übernimmt ein Extraktionsergebnis in den Import-Vorschlag.")
+    import_jobs_apply.add_argument("--repo", type=Path, required=True, help="Pfad zum getrennten NaC-Datenrepo.")
+    import_jobs_apply.add_argument("--job-id", required=True, help="Import-Job-ID.")
+    import_jobs_apply.add_argument("--applied-by", default="nac-local-operator-webapp", help="Lokale Bedienkante für die Übernahme.")
+    import_jobs_apply.add_argument("--format", choices=["text", "json"], default="text")
+    import_parser.set_defaults(func=command_import)
 
     plugins = subparsers.add_parser("plugins", help="Steuert lokale NaC-Plugins.")
     plugins_sub = plugins.add_subparsers(dest="plugins_command", required=True)
@@ -405,6 +432,67 @@ def command_process(args: argparse.Namespace) -> int:
         return 0
 
     raise AssertionError(f"Unknown process command: {args.process_command}")
+
+
+def command_import(args: argparse.Namespace) -> int:
+    try:
+        if args.import_command == "jobs":
+            if args.jobs_command == "create":
+                payload = create_import_job(
+                    args.repo,
+                    proposal_id=args.proposal_id,
+                    requested_by=args.requested_by,
+                    action=args.action,
+                )
+                if args.format == "json":
+                    print_json(payload)
+                    return 0
+                print("NaC-Import-Job angelegt")
+                print(f"- Job: {payload['job_id']}")
+                print(f"- Vorschlag: {payload['proposal_id']}")
+                print(f"- Status: {payload['status']}")
+                return 0
+
+            if args.jobs_command == "status":
+                payload = import_job_status(args.repo, job_id=args.job_id)
+                if args.format == "json":
+                    print_json(payload)
+                    return 0
+                print("NaC-Import-Jobs")
+                print(f"- Repo: {payload['repo']}")
+                print(f"- Gesamt: {payload['counts']['total']}")
+                for job in payload["jobs"]:
+                    extraction = job.get("extraction") if isinstance(job.get("extraction"), dict) else {}
+                    suffix = f" · Extraktion: {extraction.get('status')}" if extraction else ""
+                    print(f"- {job['job_id']}: {job['status']} ({job['proposal_id']}){suffix}")
+                return 0
+
+            if args.jobs_command == "process":
+                payload = process_import_job(args.repo, job_id=args.job_id, processed_by=args.processed_by)
+                if args.format == "json":
+                    print_json(payload)
+                    return 0
+                print("NaC-Import-Job verarbeitet")
+                print(f"- Job: {payload['job']['job_id']}")
+                print(f"- Status: {payload['job']['status']}")
+                print(f"- Extraktion: {payload['extraction']['status']}")
+                return 0
+
+            if args.jobs_command == "apply-result":
+                payload = apply_import_job_result(args.repo, job_id=args.job_id, applied_by=args.applied_by)
+                if args.format == "json":
+                    print_json(payload)
+                    return 0
+                print("NaC-Import-Extraktion übernommen")
+                print(f"- Job: {payload['job']['job_id']}")
+                print(f"- Vorschlag: {payload['proposal']['proposal_id']}")
+                print(f"- Status: {payload['job']['status']}")
+                return 0
+    except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    raise AssertionError(f"Unknown import command: {args.import_command}")
 
 
 def command_plugins(args: argparse.Namespace) -> int:

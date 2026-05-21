@@ -31,6 +31,7 @@ let activeMatterUsecase = "";
 let panelBackStack = [];
 let matterState = { counts: {}, matters: [], status_labels: { open: "offen", waiting: "warten", completed: "abgeschlossen" } };
 let importState = { counts: { pending: 0 }, proposals: [], status_labels: { pending: "neu", accepted: "übernommen", rejected: "abgelehnt" } };
+let importJobState = { counts: {}, jobs: [] };
 let importExtractState = { metadata: {} };
 
 const areaCopy = {
@@ -133,6 +134,7 @@ filterCases();
 loadOperatorConfig();
 loadMatters();
 loadImportProposals();
+loadImportJobs();
 
 function showPanel(panelName, options = {}) {
   if (options.pushHistory !== false && panelName !== activePanel) {
@@ -161,11 +163,11 @@ function showPanel(panelName, options = {}) {
   }
 
   if (panelName === "matters") {
-    Promise.all([loadMatters(), loadImportProposals()]).then(() => renderMatterList(activeMatterUsecase));
+    Promise.all([loadMatters(), loadImportProposals(), loadImportJobs()]).then(() => renderMatterList(activeMatterUsecase));
   }
 
   if (panelName === "imports") {
-    loadImportProposals().then(renderImportList);
+    Promise.all([loadImportProposals(), loadImportJobs()]).then(renderImportList);
   }
 }
 
@@ -210,17 +212,17 @@ async function refreshVisibleData() {
     return;
   }
   if (activePanel === "imports") {
-    await loadImportProposals();
+    await Promise.all([loadImportProposals(), loadImportJobs()]);
     renderImportList();
     return;
   }
   if (activePanel === "matters") {
-    await Promise.all([loadMatters(), loadImportProposals()]);
+    await Promise.all([loadMatters(), loadImportProposals(), loadImportJobs()]);
     renderMatterList(activeMatterUsecase);
     return;
   }
   if (activePanel === "cases") {
-    await Promise.all([loadMatters(), loadImportProposals()]);
+    await Promise.all([loadMatters(), loadImportProposals(), loadImportJobs()]);
   }
 }
 
@@ -483,6 +485,18 @@ async function loadImportProposals() {
   }
 }
 
+async function loadImportJobs() {
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/import-jobs"));
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    importJobState = await response.json();
+  } catch (_error) {
+    importJobState = { counts: {}, jobs: [] };
+  }
+}
+
 function updateImportCount() {
   if (importCount) {
     importCount.textContent = String(importState.counts?.pending || 0);
@@ -625,6 +639,9 @@ function bindMatterStatusButtons(scope) {
 function bindImportAcceptButtons(scope) {
   scope.querySelectorAll("[data-import-accept]").forEach((button) => {
     button.addEventListener("click", () => acceptImportProposal(button.dataset.importAccept || ""));
+  });
+  scope.querySelectorAll("[data-import-apply-result]").forEach((button) => {
+    button.addEventListener("click", () => applyImportJobResult(button.dataset.importApplyResult || ""));
   });
 }
 
@@ -903,14 +920,43 @@ async function saveImportUpload(event) {
     if (!response.ok) {
       throw new Error(payload?.error || `${response.status} ${response.statusText}`);
     }
+    let jobText = "Codex-Extraktionsauftrag konnte nicht angelegt werden.";
+    try {
+      const job = await createImportJob(payload.proposal?.proposal_id);
+      jobText = `Codex-Extraktionsauftrag ${job.job_id || ""} ist bereit.`;
+    } catch (jobError) {
+      jobText = jobError.message || jobText;
+    }
     importUploadStatus.dataset.status = "ready";
-    importUploadStatus.innerHTML = `<h3>Import-Vorschlag gespeichert</h3><p>${escapeHtml(payload.proposal?.proposal_id || title)} ist sofort unten sichtbar.</p>`;
-    await loadImportProposals();
+    importUploadStatus.innerHTML = `<h3>Import-Vorschlag gespeichert</h3><p>${escapeHtml(payload.proposal?.proposal_id || title)} ist sofort unten sichtbar.</p><p>${escapeHtml(jobText)}</p>`;
+    await Promise.all([loadImportProposals(), loadImportJobs()]);
     renderImportList();
   } catch (error) {
     importUploadStatus.dataset.status = "error";
     importUploadStatus.innerHTML = `<h3>Upload fehlgeschlagen</h3><p>${escapeHtml(error.message || "Unbekannter Fehler")}</p>`;
   }
+}
+
+async function createImportJob(proposalId) {
+  if (!proposalId) {
+    throw new Error("Kein Import-Vorschlag für den Codex-Extraktionsauftrag erhalten.");
+  }
+  const response = await fetch(hardwareBridgeUrl("/api/import-jobs"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      proposal_id: proposalId,
+      requested_by: "nac-local-operator-webapp",
+      action: "ocr_metadata_extract",
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+  }
+  return payload;
 }
 
 function fileToImportSource(file, index) {
@@ -948,18 +994,25 @@ function importCardHtml(proposal) {
   const values = proposal.matter_values || {};
   const metadata = values.metadata || {};
   const files = proposal.source_files || [];
+  const job = importJobForProposal(proposal.proposal_id);
+  const extraction = job?.extraction || {};
   const fileText = files.length ? `${files.length} Datei${files.length === 1 ? "" : "en"}` : "keine Datei";
   const accepted = proposal.status !== "pending";
+  const canApplyExtraction = !accepted && job?.status === "completed" && extraction.status === "ready_for_review";
   const identityLine = [
     metadata.document_number ? `Ausweis ${metadata.document_number}` : "",
     metadata.date_of_birth ? `Geboren ${metadata.date_of_birth}` : "",
     metadata.valid_until ? `Gültig bis ${metadata.valid_until}` : "",
   ].filter(Boolean).join(" · ");
+  const jobLine = job
+    ? `Codex-Extraktion: ${importJobStatusLabel(job.status)}${extraction.status ? ` · ${extraction.status}` : ""}`
+    : "Codex-Extraktion: noch kein Auftrag";
   return `
     <article class="import-card">
       <div>
         <h3>${escapeHtml(proposal.summary || values.title || proposal.proposal_id)}</h3>
         <p class="matter-meta">${escapeHtml(importStatusLabel(proposal.status))} · ${escapeHtml(values.usecase_title || values.usecase_slug || "Vorgang")} · ${escapeHtml(fileText)}</p>
+        <p class="import-job">${escapeHtml(jobLine)}</p>
         <dl class="import-fields">
           <div><dt>Aktenbetreff</dt><dd>${escapeHtml(values.title || "")}</dd></div>
           <div><dt>Person</dt><dd>${escapeHtml(values.participant_name || values.client_name || "")}</dd></div>
@@ -968,10 +1021,51 @@ function importCardHtml(proposal) {
         </dl>
       </div>
       <div class="import-actions">
+        ${canApplyExtraction ? `<button class="button secondary" type="button" data-import-apply-result="${escapeHtml(job.job_id)}">Extraktion übernehmen</button>` : ""}
         <button class="button primary" type="button" data-import-accept="${escapeHtml(proposal.proposal_id)}"${accepted ? " disabled" : ""}>Übernehmen</button>
       </div>
     </article>
   `;
+}
+
+function importJobForProposal(proposalId) {
+  const jobs = Array.isArray(importJobState.jobs) ? importJobState.jobs : [];
+  return jobs.find((job) => job.proposal_id === proposalId) || null;
+}
+
+function importJobStatusLabel(status) {
+  return {
+    queued: "wartet auf Codex",
+    processing: "läuft",
+    completed: "bereit zur Prüfung",
+    applied: "in Vorschlag übernommen",
+    failed: "fehlgeschlagen",
+  }[status] || status || "unbekannt";
+}
+
+async function applyImportJobResult(jobId) {
+  if (!jobId || !importList) {
+    return;
+  }
+  importList.dataset.status = "running";
+  try {
+    const response = await fetch(hardwareBridgeUrl("/api/import-jobs/apply-result"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ job_id: jobId, applied_by: "nac-local-operator-webapp" }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `${response.status} ${response.statusText}`);
+    }
+    await Promise.all([loadImportProposals(), loadImportJobs()]);
+    renderImportList();
+  } catch (error) {
+    importList.dataset.status = "error";
+    importList.insertAdjacentHTML("afterbegin", `<p>Extraktion konnte nicht übernommen werden: ${escapeHtml(error.message || "unbekannter Fehler")}</p>`);
+  }
 }
 
 async function acceptImportProposal(proposalId) {
@@ -992,8 +1086,7 @@ async function acceptImportProposal(proposalId) {
       throw new Error(payload?.error || `${response.status} ${response.statusText}`);
     }
     activeMatterUsecase = payload.matter?.usecase_slug || activeMatterUsecase;
-    await loadImportProposals();
-    await loadMatters();
+    await Promise.all([loadImportProposals(), loadImportJobs(), loadMatters()]);
     renderMatterList(activeMatterUsecase);
     showPanel("matters");
   } catch (error) {

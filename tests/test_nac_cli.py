@@ -263,6 +263,92 @@ class NaCCliTests(unittest.TestCase):
             self.assertIn("Akten: 1", output)
             self.assertIn("Dokumente: 3", output)
 
+    def test_import_job_cli_creates_processes_and_applies_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tenant_repo = Path(temp_dir) / "tenant"
+            proposal_id = "IMP-20260521-UNTERSCHRIFTSBEGLAUBIGUNG-ERIKA"
+            source = tenant_repo / "eingang" / "dateien" / proposal_id / "personalausweis-erika.jpg"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(b"synthetic-image")
+            (tenant_repo / "eingang" / "import-vorschlaege").mkdir(parents=True, exist_ok=True)
+            (tenant_repo / ".nac-tenant.json").write_text(
+                json.dumps({"schema_version": "nac.tenant/v0.2", "name": "tenant", "mode": "demo"}) + "\n",
+                encoding="utf-8",
+            )
+            (tenant_repo / "eingang" / "import-vorschlaege" / f"{proposal_id}.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "nac.import-proposal/v0.1",
+                        "proposal_id": proposal_id,
+                        "status": "pending",
+                        "synthetic_test_data": True,
+                        "matter_values": {
+                            "participant_name": "Erika Mustermann",
+                            "document_title": "Personalausweis zur Identitätsprüfung",
+                            "metadata": {"document_number": "LZ6311T47"},
+                        },
+                        "source_files": [
+                            {
+                                "label": "Vorderseite",
+                                "filename": "personalausweis-erika.jpg",
+                                "media_type": "image/jpeg",
+                                "staged_path": f"eingang/dateien/{proposal_id}/personalausweis-erika.jpg",
+                            }
+                        ],
+                        "review": {"requires_human_confirmation": True},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            rc, output = run_cli(
+                "import",
+                "jobs",
+                "create",
+                "--repo",
+                str(tenant_repo),
+                "--proposal-id",
+                proposal_id,
+                "--format",
+                "json",
+            )
+            self.assertEqual(rc, 0)
+            created = json.loads(output)
+            self.assertEqual(created["status"], "queued")
+
+            rc, output = run_cli(
+                "import",
+                "jobs",
+                "process",
+                "--repo",
+                str(tenant_repo),
+                "--job-id",
+                created["job_id"],
+                "--format",
+                "json",
+            )
+            self.assertEqual(rc, 0)
+            processed = json.loads(output)
+            self.assertEqual(processed["job"]["status"], "completed")
+            self.assertEqual(processed["extraction"]["metadata"]["document_number"], "LZ6311T47")
+
+            rc, output = run_cli(
+                "import",
+                "jobs",
+                "apply-result",
+                "--repo",
+                str(tenant_repo),
+                "--job-id",
+                created["job_id"],
+                "--format",
+                "json",
+            )
+            self.assertEqual(rc, 0)
+            applied = json.loads(output)
+            self.assertEqual(applied["job"]["status"], "applied")
+            self.assertEqual(applied["proposal"]["matter_values"]["metadata"]["ocr_review_status"], "ready_for_human_review")
+
 
 if __name__ == "__main__":
     unittest.main()

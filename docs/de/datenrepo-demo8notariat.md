@@ -40,6 +40,9 @@ Dateien erhalten.
 | Grundstück/Register | `akten/<jahr>/<akten_id>/grundbuch.json` | Strukturierte Grundbuch- und Registerinformationen. |
 | Kosten | `akten/<jahr>/<akten_id>/kosten.json` | Kostenansätze, Kostenschuldner und Abrechnungsstatus. |
 | Nachweise | `akten/<jahr>/<akten_id>/nachweise.json` | GwG, Identität, Signatur, Register, QMS und Nebenakten-Export. |
+| Importvorschlag | `eingang/import-vorschlaege/<proposal_id>.json` | Vorprüfung aus Prompt, Scan, E-Mail, Fax oder Webapp-Upload. |
+| Import-Job | `eingang/jobs/<job_id>.json` | Begrenzter Auftrag für Codex-/OCR-Metadatenextraktion. |
+| Extraktion | `eingang/extraktionen/<job_id>.json` | Prüffähiges Ergebnis vor menschlicher Übernahme. |
 | Aktenereignis | `akten/<jahr>/<akten_id>/ereignisse.jsonl` | Chronologie innerhalb einer Akte. |
 | Journal | `journal/<jahr>/<monat>/<datum>.jsonl` | Repo-weite Ereignisfolge. |
 | Index | `index/*.json` | Leselisten für Webapp, Suche und Codex. |
@@ -116,6 +119,22 @@ nac tenant write-demo immobilienkaufvertrag \
   --repo ../demo8notariat \
   --case-id DEMO-2026-0001
 ```
+
+## Eingang Und Import-Jobs
+
+Uploads, Scans oder andere Eingangsquellen werden nicht direkt zu Akten. Der
+erste Stand liegt als Import-Vorschlag unter `eingang/import-vorschlaege/`.
+Danach kann ein begrenzter Codex-/OCR-Auftrag angelegt und metadata-only
+verarbeitet werden:
+
+```bash
+python scripts/nac.py import jobs status --repo ../demo8notariat
+python scripts/nac.py import jobs process --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+python scripts/nac.py import jobs apply-result --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+```
+
+`apply-result` schreibt nur in den Import-Vorschlag zurück. Die Akte entsteht
+erst durch die sichtbare Übernahme in der Operator-Webapp.
 
 ## GitHub Heute, Sovereign Git Später
 

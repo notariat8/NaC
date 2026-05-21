@@ -71,7 +71,13 @@ def init_tenant_repo(
         "data_policy": "synthetic_full_case_model" if mode == "demo" else "production_full_case_model",
         "created_at": _now_utc(),
         "nac_contract": {
-            "writes_allowed_from": ["nac tenant write-demo", "nac tenant write-sample-akte"],
+            "writes_allowed_from": [
+                "nac tenant write-demo",
+                "nac tenant write-sample-akte",
+                "nac import jobs create",
+                "nac import jobs process",
+                "nac import jobs apply-result",
+            ],
             "source_of_truth": "NaC product repository",
             "record_layout": "id_pointer_json_plus_binary_blobs",
             "no_real_mandate_data_in_demo_mode": True,
@@ -82,6 +88,9 @@ def init_tenant_repo(
             "documents": "dokumente/<document_id>/metadata.json",
             "binary_files": "dokumente/<document_id>/original/*",
             "events": "akten/<jahr>/<akten_id>/ereignisse.jsonl",
+            "import_proposals": "eingang/import-vorschlaege/<proposal_id>.json",
+            "import_jobs": "eingang/jobs/<job_id>.json",
+            "import_extractions": "eingang/extraktionen/<job_id>.json",
             "global_journal": "journal/<jahr>/<monat>/<datum>.jsonl",
             "indices": "index/*.json",
         },
@@ -742,6 +751,7 @@ Dokumente, Ereignisse und Exporte.
 - `akten/`: eine Akte pro Ordner mit `akte.json`, Beteiligten, Dokumentliste und Ereignissen.
 - `personen/`: eine JSON-Datei pro Person oder Organisation.
 - `dokumente/`: Metadaten plus Binärdateien wie PDF, JPG oder Scans.
+- `eingang/`: Importvorschläge, gestagte Testdateien und begrenzte Codex-Extraktionsjobs.
 - `journal/`: chronologische Ereignisse als JSONL.
 - `index/`: kleine Leselisten für Suche, Webapp und Codex.
 
@@ -753,6 +763,7 @@ Details stehen in [MODELL.md](MODELL.md).
 python scripts/nac.py tenant status --repo ../{name}
 python scripts/nac.py tenant write-demo immobilienkaufvertrag --repo ../{name}
 python scripts/nac.py tenant write-sample-akte --repo ../{name}
+python scripts/nac.py import jobs status --repo ../{name}
 ```
 """
 
@@ -769,6 +780,7 @@ Metadaten.
 - JSON hält die fachliche Struktur lesbar.
 - IDs verbinden Akte, Personen, Dokumente und Ereignisse.
 - Binärdateien wie PDF, JPG oder Scans bleiben als Dateien erhalten.
+- Eingangsdokumente durchlaufen erst Importvorschläge und begrenzte Extraktionsjobs.
 - Indizes sind Ableitungen für Webapp, Suche und Codex.
 - Ereignisse werden zusätzlich als JSONL journalisiert.
 
@@ -780,6 +792,9 @@ Metadaten.
 | Beteiligte | `personen/<person_id>.json` | Person, Organisation, Rollen und Stammdaten. |
 | Dokument | `dokumente/<document_id>/metadata.json` | Titel, Typ, Aktenbezug, Dateipfade, Klassifikation. |
 | Binärdatei | `dokumente/<document_id>/original/*` | PDF, JPG, Scan oder andere Originaldatei. |
+| Importvorschlag | `eingang/import-vorschlaege/<proposal_id>.json` | Vorprüfung aus Prompt, Scan, E-Mail oder Fax. |
+| Import-Job | `eingang/jobs/<job_id>.json` | Begrenzter Auftrag für Codex/OCR/Metadatenextraktion. |
+| Extraktion | `eingang/extraktionen/<job_id>.json` | Prüffähiges Extraktionsergebnis vor menschlicher Übernahme. |
 | Aktenereignis | `akten/<jahr>/<akten_id>/ereignisse.jsonl` | Chronologie innerhalb einer Akte. |
 | Journal | `journal/<jahr>/<monat>/<datum>.jsonl` | Repo-weite Ereignisfolge. |
 | Index | `index/*.json` | Leselisten für Webapp, Suche und Codex. |

@@ -40,6 +40,9 @@ files.
 | Property/register | `akten/<year>/<matter_id>/grundbuch.json` | Structured land-register and register information. |
 | Costs | `akten/<year>/<matter_id>/kosten.json` | Cost keys, cost debtors and billing status. |
 | Evidence | `akten/<year>/<matter_id>/nachweise.json` | AML, identity, signature, register, QMS and side-file export. |
+| Import proposal | `eingang/import-vorschlaege/<proposal_id>.json` | Pre-check from prompt, scan, email, fax or web-app upload. |
+| Import job | `eingang/jobs/<job_id>.json` | Bounded Codex/OCR metadata extraction request. |
+| Extraction | `eingang/extraktionen/<job_id>.json` | Reviewable result before human acceptance. |
 | Matter event | `akten/<year>/<matter_id>/ereignisse.jsonl` | Timeline within one matter. |
 | Journal | `journal/<year>/<month>/<date>.jsonl` | Repository-wide event stream. |
 | Index | `index/*.json` | Read lists for the web app, search and Codex. |
@@ -116,6 +119,21 @@ nac tenant write-demo immobilienkaufvertrag \
   --repo ../demo8notariat \
   --case-id DEMO-2026-0001
 ```
+
+## Inbox And Import Jobs
+
+Uploads, scans or other inbox sources do not become matters directly. Their
+first state is an import proposal under `eingang/import-vorschlaege/`. A
+bounded Codex/OCR job can then be created and processed metadata-only:
+
+```bash
+python scripts/nac.py import jobs status --repo ../demo8notariat
+python scripts/nac.py import jobs process --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+python scripts/nac.py import jobs apply-result --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+```
+
+`apply-result` only writes back to the import proposal. The matter is created
+only through the visible acceptance action in the operator web app.
 
 ## GitHub Today, Sovereign Git Later
 

@@ -146,7 +146,10 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("/api/matters", js)
         self.assertIn("/api/matters/status", js)
         self.assertIn("loadImportProposals", js)
+        self.assertIn("loadImportJobs", js)
         self.assertIn("saveImportUpload", js)
+        self.assertIn("createImportJob", js)
+        self.assertIn("applyImportJobResult", js)
         self.assertIn("extractImportUploadMetadata", js)
         self.assertIn("refreshVisibleData", js)
         self.assertIn("installPanelNavigation", js)
@@ -167,11 +170,15 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn("searchableImportText", js)
         self.assertIn("Passender Eingang", js)
         self.assertIn("Import-Vorschlag", js)
+        self.assertIn("Codex-Extraktion", js)
+        self.assertIn("Extraktion übernehmen", js)
         self.assertIn("FileReader", js)
         self.assertIn("synthetic_demo_profile", js)
         self.assertIn("acceptImportProposal", js)
         self.assertIn("/api/import-proposals", js)
         self.assertIn("/api/import-proposals/accept", js)
+        self.assertIn("/api/import-jobs", js)
+        self.assertIn("/api/import-jobs/apply-result", js)
         self.assertNotIn("Steuer-Readiness", js)
         self.assertNotIn("Alle Usecases", html)
         self.assertNotIn("Katalog", html)
@@ -445,10 +452,26 @@ class NaCHardwareBridgeTests(unittest.TestCase):
             self.assertEqual(staged.read_bytes(), b"synthetic-browser-upload")
             self.assertEqual(created["proposal"]["source_files"][0]["staged_path"], staged.relative_to(tenant_repo).as_posix())
 
+            job = bridge.create_import_job({"proposal_id": proposal_id, "requested_by": "nac-local-operator-webapp"}, config_path=config_path)
+            self.assertEqual(job["status"], "queued")
+            self.assertEqual(job["proposal_id"], proposal_id)
+            jobs = bridge.list_import_jobs(config_path=config_path)
+            self.assertEqual(jobs["counts"]["queued"], 1)
+            processed = bridge.process_import_job({"job_id": job["job_id"], "processed_by": "codex"}, config_path=config_path)
+            self.assertEqual(processed["job"]["status"], "completed")
+            self.assertEqual(processed["extraction"]["metadata"]["document_number"], "LZ6311T47")
+            applied = bridge.apply_import_job_result(
+                {"job_id": job["job_id"], "applied_by": "nac-local-operator-webapp"},
+                config_path=config_path,
+            )
+            self.assertEqual(applied["job"]["status"], "applied")
+            self.assertEqual(applied["proposal"]["matter_values"]["metadata"]["ocr_review_status"], "ready_for_human_review")
+
             accepted = bridge.accept_import_proposal({"proposal_id": proposal_id}, config_path=config_path)
             matter = bridge.read_json(tenant_repo / "akten" / "2026" / accepted["matter"]["matter_id"] / "akte.json")
             document = bridge.read_json(tenant_repo / "dokumente" / matter["document_ids"][0] / "metadata.json")
             self.assertEqual(document["extracted_metadata"]["document_number"], "LZ6311T47")
+            self.assertEqual(document["extracted_metadata"]["ocr_review_status"], "ready_for_human_review")
             self.assertEqual((tenant_repo / document["storage"]["originals"][0]["path"]).read_bytes(), b"synthetic-browser-upload")
 
     def test_operator_checklist_state_is_available_for_all_usecases(self) -> None:
@@ -508,6 +531,27 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
         self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")
         self.assertTrue(payload["values"]["data_repo_path"].endswith("demo8notariat"))
+
+    def test_import_job_listing_is_empty_without_configured_demo_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "operator-config.json"
+            missing_repo = Path(temp_dir) / "missing-data-repo"
+            bridge.save_operator_config(
+                {
+                    "values": {
+                        "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
+                        "data_git_url": "https://github.com/funktion8/demo8notariat.git",
+                        "data_repo_path": str(missing_repo),
+                    }
+                },
+                config_path=config_path,
+            )
+
+            payload = bridge.list_import_jobs(config_path=config_path)
+
+            self.assertEqual(payload["counts"]["total"], 0)
+            self.assertEqual(payload["jobs"], [])
+            self.assertFalse(payload["data_repo_exists"])
 
     def test_operator_bridge_disables_local_cache(self) -> None:
         self.assertIn(("Cache-Control", "no-store, max-age=0"), bridge.LOCAL_NO_STORE_HEADERS)

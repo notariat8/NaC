@@ -686,6 +686,13 @@ h3 {
   margin: 0.35rem 0 0;
 }
 
+.import-job {
+  color: var(--blue);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0.35rem 0 0;
+}
+
 .matter-checklist {
   background: #f7faf8;
   border: 1px solid var(--line);

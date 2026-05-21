@@ -65,6 +65,10 @@ can open the models directly.
 | `/api/import-proposals` | Reads import proposals from the data-repository inbox, e.g. from prompt, scan, email or fax extraction. |
 | `POST /api/import-proposals` | Creates a synthetic import proposal, including optional staged test files, in the data-repository inbox. |
 | `POST /api/import-proposals/accept` | Accepts a reviewed import proposal as a demo matter and copies staged test files into the document area. |
+| `/api/import-jobs` | Lists bounded Codex/OCR import jobs and extraction states from the data repository. |
+| `POST /api/import-jobs` | Creates a bounded extraction job under `eingang/jobs/` for an import proposal. |
+| `POST /api/import-jobs/process` | Processes an import job metadata-only and writes a result to `eingang/extraktionen/`. |
+| `POST /api/import-jobs/apply-result` | Applies a finished extraction result back to the import proposal without creating a matter yet. |
 | `/healthz` | Simple health check. |
 
 ## Safety Boundaries
@@ -116,6 +120,14 @@ recognized metadata and files. Only the explicit `Übernehmen` action creates a
 demo matter and journal event from it. For real production data, raw document
 storage must stay outside public Git repositories; demo mode only permits
 synthetic test data.
+
+Uploads from the web app now also create a bounded Codex extraction job under
+`eingang/jobs/`. Codex or the central CLI can process it with
+`nac import jobs process --repo <data-repo> --job-id <job>` and writes the
+result under `eingang/extraktionen/`. The web app shows the status on the
+import proposal and can apply the result back into the proposal metadata via
+`Extraktion übernehmen`. Subject-matter acceptance remains separate even then:
+only `Übernehmen` creates the demo matter.
 
 For demo operation, the surface can select synthetic image files directly in
 the browser, prepare a small metadata preview and save the import proposal into

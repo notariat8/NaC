@@ -65,6 +65,10 @@ Operator-Webapp die Modelle direkt öffnen kann.
 | `/api/import-proposals` | Liest Import-Vorschläge aus dem Datenrepo-Eingang, z.B. aus Prompt-, Scan-, E-Mail- oder Fax-Auswertungen. |
 | `POST /api/import-proposals` | Legt einen synthetischen Import-Vorschlag samt optional gestagten Testdateien im Datenrepo-Eingang an. |
 | `POST /api/import-proposals/accept` | Übernimmt einen geprüften Import-Vorschlag als Demo-Akte und kopiert gestagte Testdateien in den Dokumentbereich. |
+| `/api/import-jobs` | Listet begrenzte Codex-/OCR-Import-Jobs und Extraktionsstände aus dem Datenrepo. |
+| `POST /api/import-jobs` | Legt zu einem Import-Vorschlag einen begrenzten Extraktionsauftrag unter `eingang/jobs/` an. |
+| `POST /api/import-jobs/process` | Verarbeitet einen Import-Job metadata-only und schreibt ein Ergebnis nach `eingang/extraktionen/`. |
+| `POST /api/import-jobs/apply-result` | Übernimmt ein fertiges Extraktionsergebnis in den Import-Vorschlag, ohne daraus schon eine Akte zu erzeugen. |
 | `/healthz` | einfacher Gesundheitscheck. |
 
 ## Sicherheitsgrenzen
@@ -119,6 +123,14 @@ diesen Vorschlag mit erkannten Metadaten und Dateien an. Erst die explizite
 Aktion `Übernehmen` erzeugt daraus eine Demo-Akte mit Journalereignis. Für
 echte Produktivdaten bleibt Rohdokumentablage außerhalb öffentlicher Git-Repos
 verpflichtend; im Demo-Modus sind nur synthetische Testdaten zulässig.
+
+Bei Uploads aus der Webapp entsteht zusätzlich ein begrenzter
+Codex-Extraktionsauftrag unter `eingang/jobs/`. Codex oder die zentrale CLI kann
+ihn mit `nac import jobs process --repo <datenrepo> --job-id <job>` verarbeiten
+und legt das Ergebnis unter `eingang/extraktionen/` ab. Die Webapp zeigt den
+Status am Import-Vorschlag und kann das Ergebnis über `Extraktion übernehmen`
+in die Vorschlagsmetadaten zurückführen. Auch danach bleibt die fachliche
+Übernahme getrennt: Erst `Übernehmen` legt die Demo-Akte an.
 
 Für den Demo-Betrieb kann die Oberfläche synthetische Bilddateien direkt im
 Browser auswählen, eine kleine Metadatenvorschau vorbereiten und den

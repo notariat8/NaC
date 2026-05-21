@@ -28,6 +28,12 @@ if SRC_ROOT_TEXT in sys.path:
     sys.path.remove(SRC_ROOT_TEXT)
 sys.path.insert(0, SRC_ROOT_TEXT)
 
+from nac_cli.import_jobs import (  # noqa: E402
+    apply_import_job_result as apply_import_job_result_core,
+    create_import_job as create_import_job_core,
+    import_job_status,
+    process_import_job as process_import_job_core,
+)
 from nac_web.server import NaCLocalWebApp  # noqa: E402
 
 SITE_ROOT = REPO_ROOT / "web" / "local-operator"
@@ -104,6 +110,9 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/import-proposals":
                 self._send_json(list_import_proposals())
                 return
+            if route == "/api/import-jobs":
+                self._send_json(list_import_jobs())
+                return
             if is_local_web_route(route):
                 self._send_local_web_response(local_web_app.handle(self.path))
                 return
@@ -163,6 +172,30 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
             if route == "/api/import-proposals/accept":
                 try:
                     payload = accept_import_proposal_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload)
+                return
+            if route == "/api/import-jobs":
+                try:
+                    payload = create_import_job_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload, HTTPStatus.CREATED)
+                return
+            if route == "/api/import-jobs/process":
+                try:
+                    payload = process_import_job_from_body(self._read_request_body())
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                    return
+                self._send_json(payload)
+                return
+            if route == "/api/import-jobs/apply-result":
+                try:
+                    payload = apply_import_job_result_from_body(self._read_request_body())
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                     return
@@ -498,6 +531,65 @@ def accept_import_proposal(payload: dict[str, Any], config_path: Path = OPERATOR
         "proposal": summarize_import_proposal(proposal),
         "matter": matter,
     }
+
+
+def list_import_jobs(config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    try:
+        return import_job_status(repo)
+    except ValueError as exc:
+        return {
+            "schema_version": "nac.import-job-status/v0.1",
+            "repo": str(repo),
+            "data_repo_exists": repo.exists(),
+            "counts": {
+                "queued": 0,
+                "processing": 0,
+                "completed": 0,
+                "failed": 0,
+                "applied": 0,
+                "total": 0,
+            },
+            "jobs": [],
+            "error": str(exc),
+        }
+
+
+def create_import_job_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    payload = parse_request_json(body)
+    return create_import_job(payload, config_path=config_path)
+
+
+def create_import_job(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    proposal_id = required_text(payload, "proposal_id")
+    requested_by = clean_text(payload.get("requested_by") or "nac-local-operator-webapp")
+    action = clean_text(payload.get("action") or "ocr_metadata_extract")
+    return create_import_job_core(repo, proposal_id=proposal_id, requested_by=requested_by, action=action)
+
+
+def process_import_job_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    payload = parse_request_json(body)
+    return process_import_job(payload, config_path=config_path)
+
+
+def process_import_job(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    job_id = required_text(payload, "job_id")
+    processed_by = clean_text(payload.get("processed_by") or "codex")
+    return process_import_job_core(repo, job_id=job_id, processed_by=processed_by)
+
+
+def apply_import_job_result_from_body(body: bytes, config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    payload = parse_request_json(body)
+    return apply_import_job_result(payload, config_path=config_path)
+
+
+def apply_import_job_result(payload: dict[str, Any], config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:
+    repo = operator_data_repo(config_path)
+    job_id = required_text(payload, "job_id")
+    applied_by = clean_text(payload.get("applied_by") or "nac-local-operator-webapp")
+    return apply_import_job_result_core(repo, job_id=job_id, applied_by=applied_by)
 
 
 def list_operator_matters(config_path: Path = OPERATOR_CONFIG) -> dict[str, Any]:

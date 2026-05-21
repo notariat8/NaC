@@ -60,6 +60,7 @@ python scripts/nac.py kg status
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
+python scripts/nac.py import jobs status --repo ../demo8notariat
 ```
 
 Nach Installation entsprechend:
@@ -73,6 +74,7 @@ nac bpmn validate
 nac config list
 nac plugins actions
 nac tenant status --repo ../demo8notariat
+nac import jobs status --repo ../demo8notariat
 nac qms status
 ```
 
@@ -87,6 +89,7 @@ nac qms status
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
+| Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
@@ -125,6 +128,28 @@ dokumentiert in
 [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 Die fachliche Herleitung aus üblichen Notarsoftware-Bausteinen steht in
 [notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
+
+## Import-Jobs Für Codex Und OCR
+
+Der Eingangskanal trennt Upload, maschinelle Extraktion und fachliche
+Übernahme. Die Webapp legt zunächst einen Import-Vorschlag mit gestagten
+Testdateien im Datenrepo an. Danach erzeugt sie einen begrenzten Import-Job
+unter `eingang/jobs/`. Codex oder die CLI verarbeitet diesen Auftrag
+metadata-only und schreibt ein prüfbares Ergebnis nach
+`eingang/extraktionen/`.
+
+```bash
+nac import jobs create --repo ../demo8notariat --proposal-id IMP-20260521-BEISPIEL
+nac import jobs status --repo ../demo8notariat
+nac import jobs process --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL --format json
+nac import jobs apply-result --repo ../demo8notariat --job-id JOB-20260521-BEISPIEL
+```
+
+`apply-result` führt das Extraktionsergebnis nur in den Import-Vorschlag zurück
+und markiert es für menschliche Prüfung. Erst die sichtbare Aktion `Übernehmen`
+in der Operator-Webapp erzeugt daraus eine Demo-Akte. Für echte OCR-,
+KI- oder SaaS-Verarbeitung mit personenbezogenen Daten bleiben AVV, Rollen-,
+Rechte- und Datenablagegrenzen verpflichtend.
 
 ## Plugin-Befehle
 
