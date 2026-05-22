@@ -22,6 +22,8 @@ Nachweisschichten. Das öffentliche Repository modelliert:
 - Evidence-Metadaten statt echter Dokumentinhalte,
 - sichere Upload- und Leselinks für mobile App-, Object-Store-,
   Datenbank-Blob- oder OneDrive-Pfade,
+- juristische Recherche-Connectoren zunächst nur als metadata-only Kandidaten
+  mit Lizenz-, AVV-, AI-SBOM- und Human-Review-Gates,
 - Trockenlauf und Planvorschau vor produktiven Schreibaktionen,
 - explizite menschliche Freigabe für sensible Schritte.
 
@@ -65,6 +67,7 @@ Freigabestatus, Malware-/Dateitypprüfung und Auditereignis.
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/de/plugin-plans/README.md](plugin-plans/README.md)
+- [docs/de/plugin-plans/legal-research-connectors.md](plugin-plans/legal-research-connectors.md)
 - [docs/de/plugin-operations/README.md](plugin-operations/README.md)
 - [docs/de/sbom-for-ai.md](sbom-for-ai.md)
 

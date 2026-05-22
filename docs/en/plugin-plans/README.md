@@ -28,6 +28,7 @@ configuration and local domain integrations.
 | [idaas-plugin-integration.md](idaas-plugin-integration.md) | German eID verification and IAM projection planning | Purpose, tenant, claim set, privacy basis | eID/IAM plan preview and contract check | Assertions, revocations, retention drift, connector recertification |
 | [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP and Resource Manager | API key and CLI | Stacks, eventstream, evidence | Drift, rotation, cost control |
 | [domain-connector-runtime.md](domain-connector-runtime.md) | Domain-system connectors | Contract model | Plan/apply/reconcile | Monitoring, replays, exit |
+| [legal-research-connectors.md](legal-research-connectors.md) | Legal research, MCP and publisher-database candidates | Source and license review | Metadata-only backlog and review gates | Recertification, AI-SBOM, provider switch |
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first online commercial-register filing | Register track, legal form, eID/app and notary route | Filing-package plan and evidence checklist | Rejections, signature/identity errors, package versions |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Deprecated commercial-register retrieval spike, not the current plugin path | Usage and license check | Dry-run research plan | Rate limits, source switch, audit |
 | [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | `XNP-Prüfung` local companion | `Karte/SAK`, workstation and interface check | Local plan/apply companion | Local logs, evidence, update maintenance |
@@ -64,6 +65,11 @@ Each plugin or connector plan follows this flow:
 6. Write audit evidence.
 7. Make drift visible.
 8. Document exit and replacement path.
+
+External legal research sources first pass through the
+[Legal Research Connector backlog](legal-research-connectors.md). They are
+recorded as candidates there and become real connector plans only after
+license, privacy, AI-SBOM, security and human-review checks.
 
 ## Security Boundaries
 

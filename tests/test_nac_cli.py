@@ -71,6 +71,7 @@ class NaCCliTests(unittest.TestCase):
 
         self.assertEqual(rc, 0, output)
         self.assertIn("Secure Document Link", output)
+        self.assertIn("Legal Research Connectors", output)
         self.assertIn("STATUS: PASSED", output)
 
     def test_kg_status_is_available_through_nac_cli(self) -> None:

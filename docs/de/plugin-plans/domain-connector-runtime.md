@@ -11,6 +11,8 @@ Fachsystem-Connectoren sollen NaC-Änderungen kontrolliert in Zielsysteme reconc
 - Jira oder vergleichbare Ticket-Systeme
 - Slack oder Teams für Benachrichtigungen
 - spätere Branchen- oder Kundensysteme
+- juristische Recherche- und Verlagsdatenquellen nach gesonderter
+  Kandidatenprüfung
 
 ## Leitprinzip
 
@@ -29,6 +31,13 @@ Jeder Connector braucht:
 - Audit-Event-Schema.
 - Drift-Check.
 - Exit- und Ersatzpfad.
+
+Juristische Recherchequellen starten nicht direkt als Connector. Sie werden
+zuerst im
+[Legal-Research-Connector-Backlog](legal-research-connectors.md) als
+Kandidaten geführt. Ein Kandidat darf erst nach Lizenz-, AVV-/DPA-,
+AI-SBOM-, Sicherheits- und Human-Review-Prüfung in dieses allgemeine
+Connector-Modell übernommen werden.
 
 ## Day0
 

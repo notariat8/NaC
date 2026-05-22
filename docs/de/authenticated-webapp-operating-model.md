@@ -44,6 +44,12 @@ Die statische Seite kann auf die authentifizierte Webapp verlinken. Sie darf
 aber keine Tokens, geheimen Uploadlinks, Rohdokumente, Ausweisdaten,
 Zertifikatsmaterialien oder Mandatsinhalte ausliefern.
 
+Für externe juristische Recherche- und MCP-Anbindungen darf die Webapp zunächst
+nur einen Status- und Prüfbacklog anzeigen. Der
+[Legal-Research-Connector-Backlog](plugin-plans/legal-research-connectors.md)
+trennt Quelle, Lizenzstatus, AVV-/AI-SBOM-Prüfung, Sicherheitsgrenze und
+nächsten Review-Schritt, ohne daraus schon eine Produktintegration zu machen.
+
 ## Identität Und Autorisierung
 
 Entra ID ist als erste Unternehmens-Identitätsschicht sinnvoll. Für

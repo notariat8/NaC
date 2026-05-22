@@ -31,3 +31,7 @@ Jeder Vertrag soll definieren:
   Vertrag für mobile Mandanten-/Beteiligten-Apps und sichere Upload- oder
   Leselinks auf Object Store, Datenbank-Blob oder OneDrive mit Zweckbindung,
   Ablauf, Aktenbindung, Widerruf und Auditnachweis.
+- [workflows/contracts/legal-research-connectors.contract.json](legal-research-connectors.contract.json):
+  Kandidateninventar für juristische Recherche-, MCP- und Verlagsdatenbank-
+  Connectoren ohne Produktintegration, Credentials oder Mandatsdaten, mit
+  Lizenz-, AVV-, AI-SBOM- und Review-Gates.

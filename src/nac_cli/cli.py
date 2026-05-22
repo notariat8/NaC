@@ -130,7 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     contracts = subparsers.add_parser("contracts", help="Prüft NaC-Workflow-Verträge.")
     contracts_sub = contracts.add_subparsers(dest="contracts_command", required=True)
-    contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge und Secure-Link-Grenzen.")
+    contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge, Secure-Link- und Connector-Grenzen.")
     contracts.set_defaults(func=command_contracts)
 
     import_parser = subparsers.add_parser("import", help="Steuert Eingang, OCR-/Extraktionsjobs und Import-Vorschläge.")
@@ -443,19 +443,27 @@ def command_process(args: argparse.Namespace) -> int:
 def command_contracts(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.contracts_command == "validate":
-        print("Secure Document Link Contract")
-        result = subprocess.run(
-            [sys.executable, str(repo_root / "scripts" / "validate_secure_document_links.py")],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if result.stdout:
-            print(result.stdout.rstrip())
-        if result.stderr:
-            print(result.stderr.rstrip())
-        return result.returncode
+        validators = [
+            ("Secure Document Link Contract", "validate_secure_document_links.py"),
+            ("Legal Research Connectors", "validate_legal_research_connectors.py"),
+        ]
+        overall_rc = 0
+        for title, script_name in validators:
+            print(title)
+            result = subprocess.run(
+                [sys.executable, str(repo_root / "scripts" / script_name)],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if result.stdout:
+                print(result.stdout.rstrip())
+            if result.stderr:
+                print(result.stderr.rstrip())
+            if result.returncode != 0:
+                overall_rc = result.returncode
+        return overall_rc
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
 
@@ -652,6 +660,7 @@ def command_config(args: argparse.Namespace) -> int:
             "scripts/validate_bpmn_models.py",
             "scripts/validate_kg_editor.py",
             "scripts/validate_secure_document_links.py",
+            "scripts/validate_legal_research_connectors.py",
         ]
         failed = False
         for script in checks:

@@ -22,6 +22,8 @@ public repository models:
 - evidence metadata instead of real document content,
 - secure upload and read links for mobile app, object-store, database-blob or
   OneDrive paths,
+- legal research connectors first as metadata-only candidates with license,
+  DPA, AI-SBOM and human-review gates,
 - dry-run and plan preview before productive write actions,
 - explicit human approval for sensitive steps.
 
@@ -63,6 +65,7 @@ check and audit event.
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
 - [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/en/plugin-plans/README.md](plugin-plans/README.md)
+- [docs/en/plugin-plans/legal-research-connectors.md](plugin-plans/legal-research-connectors.md)
 - [docs/en/plugin-operations/README.md](plugin-operations/README.md)
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md)
 

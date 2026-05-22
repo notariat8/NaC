@@ -44,6 +44,12 @@ The static site may link to the authenticated web app. It must not serve
 tokens, secret upload links, raw documents, identity-card data, certificate
 materials or mandate content.
 
+For external legal research and MCP connections, the web app may initially show
+only a status and review backlog. The
+[Legal Research Connector backlog](plugin-plans/legal-research-connectors.md)
+separates source, license state, DPA/AI-SBOM review, security boundary and next
+review step without turning the source into a product integration.
+
 ## Identity And Authorization
 
 Entra ID is a sensible first enterprise identity layer. For office and internal

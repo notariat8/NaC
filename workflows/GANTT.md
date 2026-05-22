@@ -1,6 +1,6 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-05-19
+Letzte Aktualisierung: 2026-05-22
 
 ```mermaid
 gantt
@@ -24,6 +24,7 @@ gantt
     Plugin-Fachprüfungen in nac-CLI             :done,   w4i, 2026-05-19, 1d
     BPMN-Editor-Speichervertrag                 :done,   w4j, 2026-05-19, 1d
     Workflow-Vertragsformat ergänzen          :active, w4, 2026-05-15, 21d
+    Legal-Research-Kandidatenvertrag           :done,   w4k, 2026-05-22, 1d
 
     section Ausführung
     Skill-Scaffolds für Notariatsworkflows    :        w5, 2026-06-01, 28d
@@ -44,7 +45,7 @@ gantt
 | Python-Workflows | `workflows/python/` plus `src/notary_kg/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien und ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-Fachprüfungs-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Nutzbarer MVP | BPMN ist fachliche Prozessquelle; alle Usecases haben bpmn-js-taugliche Basismodelle mit `nac:channel`, Python validiert NaC-Properties, Sequenzflüsse und Diagrammflächen. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, BPMN-XML/Editierfläche, KG-Editor-Views und KG-JSON lokal im Browser; BPMN-Speichern nutzt SHA-256-Konfliktprüfung. |
-| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor- und lokaler Webpreview-Vertrag. |
+| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, lokaler Webpreview-, Secure-Document-Link- und Legal-Research-Connector-Kandidatenvertrag. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr

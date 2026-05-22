@@ -11,7 +11,8 @@ controlled way:
 - GitHub,
 - Jira or comparable ticket systems,
 - Slack or Teams for notifications,
-- later domain or customer systems.
+- later domain or customer systems,
+- legal research and publisher-data sources after separate candidate review.
 
 ## Guiding Principle
 
@@ -29,6 +30,12 @@ Every connector needs:
 - audit-event schema,
 - drift check,
 - exit and replacement path.
+
+Legal research sources do not start as connectors directly. They are first
+recorded as candidates in the
+[Legal Research Connector backlog](legal-research-connectors.md). A candidate
+may move into this general connector model only after license, DPA, AI-SBOM,
+security and human-review checks.
 
 ## Day 0
 

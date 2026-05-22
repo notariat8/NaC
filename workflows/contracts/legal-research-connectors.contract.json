@@ -1,0 +1,302 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_research_connectors",
+  "title": "Legal Research Connector Candidates",
+  "status": "candidate_backlog",
+  "last_update": "2026-05-22",
+  "purpose": "Record external German-law research connector candidates as a reviewed watchlist without creating product integrations, credentials, automated queries or real mandate-data processing.",
+  "candidate_policy": {
+    "credentials_allowed_in_repo": false,
+    "production_mandate_data_allowed": false,
+    "requires_terms_review": true,
+    "requires_avv_review_for_personal_data": true,
+    "requires_human_legal_review": true,
+    "requires_source_attribution": true,
+    "requires_ai_sbom_decision_for_ai_or_mcp": true,
+    "requires_security_boundary_before_activation": true
+  },
+  "allowed_backlog_actions": [
+    "document_candidate",
+    "record_research_metadata",
+    "record_license_status",
+    "open_provider_page",
+    "plan_manual_review"
+  ],
+  "blocked_actions": [
+    "store_credentials",
+    "store_secret_material",
+    "send_mandate_data_to_external_ai",
+    "scrape_protected_portal",
+    "automated_provider_query_without_contract",
+    "treat_ai_answer_as_legal_truth",
+    "store_provider_full_text_in_product_repo"
+  ],
+  "required_evidence_fields": [
+    "source_url",
+    "checked_at",
+    "checked_by",
+    "license_basis",
+    "data_classes",
+    "notes"
+  ],
+  "candidates": [
+    {
+      "id": "connector-reference-kloetzkette-claude-recht",
+      "display_name": "Klotzkette Connector Reference",
+      "provider": "Klotzkette",
+      "source_type": "reference_list",
+      "status": "watchlist",
+      "integration_level": "none",
+      "canonical_url": "https://github.com/Klotzkette/claude-fuer-deutsches-recht/blob/main/CONNECTORS.md",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "not_applicable",
+      "license_review_required": false,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "not_applicable",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "mcp_use",
+        "personal_data_processing"
+      ],
+      "notes": "External reference list for legal, tax, authority and office connectors; NaC treats it only as a candidate source."
+    },
+    {
+      "id": "ansvar-german-law-mcp-lobehub",
+      "display_name": "German Law MCP on LobeHub",
+      "provider": "Ansvar Systems",
+      "source_type": "mcp_server_listing",
+      "status": "candidate",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://lobehub.com/mcp/ansvar-systems-german-law-mcp",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "source_claim_public_law",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page",
+        "record_license_status"
+      ],
+      "blocked_actions": [
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "treat_ai_answer_as_legal_truth"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "mcp_use",
+        "personal_data_processing"
+      ],
+      "notes": "Listing describes German federal statutes, case law and preparatory works through MCP; not approved for NaC use beyond metadata review."
+    },
+    {
+      "id": "ansvar-german-law-mcp-elasticflow",
+      "display_name": "German Law MCP on ElasticFlow",
+      "provider": "Ansvar Systems / ElasticFlow",
+      "source_type": "mcp_server_listing",
+      "status": "candidate_duplicate_listing",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp",
+      "duplicate_of": "ansvar-german-law-mcp-lobehub",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "source_claim_public_law",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page",
+        "record_license_status"
+      ],
+      "blocked_actions": [
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "treat_ai_answer_as_legal_truth"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "mcp_use",
+        "personal_data_processing"
+      ],
+      "notes": "Secondary listing for the same German Law MCP candidate; kept to preserve the discovered source."
+    },
+    {
+      "id": "beck-online-mcp-market",
+      "display_name": "beck-online MCP Market listing",
+      "provider": "speydril / beck-online subscription context",
+      "source_type": "publisher_database_mcp_listing",
+      "status": "needs_license_review",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://mcpmarket.com/server/beck-online",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": true,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "unknown",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page",
+        "record_license_status"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "store_secret_material",
+        "send_mandate_data_to_external_ai",
+        "scrape_protected_portal",
+        "automated_provider_query_without_contract",
+        "store_provider_full_text_in_product_repo"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "api_use",
+        "mcp_use",
+        "personal_data_processing"
+      ],
+      "notes": "Marketplace listing claims programmatic access using subscription credentials; NaC blocks integration until terms, license, security and provider boundaries are reviewed."
+    },
+    {
+      "id": "otto-schmidt-answers-taxandbytes",
+      "display_name": "Otto Schmidt Answers alternatives overview",
+      "provider": "tax & bytes / Verlag Dr. Otto Schmidt KG context",
+      "source_type": "market_landscape",
+      "status": "watchlist",
+      "integration_level": "none",
+      "canonical_url": "https://www.taxandbytes.de/tools/ki-recherche-assistenz/otto-schmidt-answers/alternativen",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": true,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "unknown",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page",
+        "record_license_status"
+      ],
+      "blocked_actions": [
+        "automated_provider_query_without_contract",
+        "send_mandate_data_to_external_ai",
+        "store_provider_full_text_in_product_repo"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "api_use",
+        "personal_data_processing"
+      ],
+      "notes": "Market overview for AI research assistants and alternatives; useful for product landscape only, not a connector approval."
+    },
+    {
+      "id": "lto-ki-kanzlei-sponsored",
+      "display_name": "LTO sponsored KI in Kanzlei reference",
+      "provider": "Legal Tribune Online / sponsored source",
+      "source_type": "market_signal",
+      "status": "pending_manual_verification",
+      "integration_level": "none",
+      "canonical_url": "https://www.lto.de/recht/sponsored/s/ki-einsatz-in-der-kanzlei-mehr-zeit-fuer-das-wesentliche-anzeige",
+      "source_seen_at": "2026-05-22",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "unknown",
+      "license_review_required": false,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "not_applicable",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page"
+      ],
+      "blocked_actions": [
+        "treat_ai_answer_as_legal_truth",
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "personal_data_processing"
+      ],
+      "notes": "User-provided market signal; content must be manually rechecked before being used as product evidence."
+    }
+  ]
+}

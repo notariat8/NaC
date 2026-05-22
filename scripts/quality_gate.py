@@ -130,6 +130,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "Secure Document Link Contract",
                     [sys.executable, "scripts/validate_secure_document_links.py"],
                 ),
+                (
+                    "legal_research_connectors",
+                    "Legal Research Connector Candidates",
+                    [sys.executable, "scripts/validate_legal_research_connectors.py"],
+                ),
             ]
         )
     return checks

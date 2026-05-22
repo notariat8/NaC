@@ -26,6 +26,7 @@ Diese Entscheidung verhindert Brüche bei GitHub-Authentifizierung, Browser-Call
 | [idaas-plugin-integration.md](idaas-plugin-integration.md) | Deutsche eID-Verifikation und IAM-Projektionsplanung | Zweck, Tenant, Claim-Set, Datenschutzgrundlage | eID-/IAM-Planvorschau und Vertragscheck | Assertions, Widerrufe, Retention-Drift, Connector-Rezertifizierung |
 | [oci-infrastructure.md](oci-infrastructure.md) | OCI CLI/MCP und Resource Manager | API-Key und CLI | Stacks, Eventstream, Nachweise | Drift, Rotation, Kostenkontrolle |
 | [domain-connector-runtime.md](domain-connector-runtime.md) | Fachsystem-Connectoren | Vertragsmodell | Planen, ausführen, abgleichen | Beobachtung, Wiederholung, Ersatzpfad |
+| [legal-research-connectors.md](legal-research-connectors.md) | Juristische Recherche-, MCP- und Verlagsdatenbank-Kandidaten | Quellen- und Lizenzprüfung | Metadata-only Backlog und Review-Gates | Rezertifizierung, AI-SBOM, Anbieterwechsel |
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurückweisungen, Signatur-/Identfehler, Paketversionen |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzprüfung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
 | [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `Karte/SAK`, Arbeitsplatz- und Schnittstellenprüfung | lokale Plan-/Ausführungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
@@ -56,6 +57,11 @@ Jeder Plugin- oder Connector-Plan folgt diesem Ablauf:
 6. Audit-Nachweis schreiben.
 7. Drift sichtbar machen.
 8. Exit- und Ersatzpfad dokumentieren.
+
+Externe juristische Recherchequellen durchlaufen zuerst den
+[Legal-Research-Connector-Backlog](legal-research-connectors.md). Sie werden
+dort als Kandidaten geführt und erst nach Lizenz-, Datenschutz-, AI-SBOM-,
+Sicherheits- und Human-Review-Prüfung in echte Connector-Pläne überführt.
 
 ## Sicherheitsgrenzen
 
