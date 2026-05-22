@@ -31,6 +31,7 @@ erneut auf den offiziellen OpenAI-Seiten und im konkreten Order Form zu prüfen.
 | --- | --- |
 | Genügt ein Team- oder Business-Abo für echte NaC-/Notariatsdaten? | Nein. Business kann für Demos, Doku, Code und synthetische Daten nützlich sein, ist aber allein kein ausreichender Nachweis für EU-Datenresidenz und notarielle Verarbeitung. |
 | Kann `eu.api.openai.com` im Team-/Business-Abo genutzt werden? | Nicht als bloße Abo-Annahme. Für API-Datenresidenz braucht es eine berechtigte API-Organisation, projektweise Regionenkonfiguration, Domain-Präfix und zusätzliche Freigaben wie Modified Abuse Monitoring oder Zero Data Retention. |
+| Darf Consumer-ChatGPT als Gateway für Mandanten-Uploads dienen? | Nein. Ein nicht bezahlter oder nicht EU-residenter Consumer-ChatGPT-Account darf keine Ausweisfotos, Mandatsdokumente oder sonstige echten NaC-Daten in den Enterprise Workspace schleusen. |
 | Wie kommt man zu Enterprise? | Über das OpenAI-Sales-Kontaktformular mit Arbeits-E-Mail, Firma, Land/Region, Sitzanzahl, Zeitplan, Rechnungsanforderungen und Compliance-Anforderungen. |
 | Was kosten Enterprise und Codex? | Enterprise ist Custom Pricing. Business ChatGPT & Codex ist öffentlich mit Listenpreis ausgewiesen. Codex wird laut Rate Card durchschnittlich mit etwa 100 bis 200 USD pro Entwickler und Monat beschrieben, variiert aber nach Modell, Instanzen, Automationen und Fast Mode. |
 | Was ist der sichere Zielpfad für NaC? | Enterprise- oder API-Vertrag mit AVV/DPA, EU-Datenresidenz im Order Form bzw. Projekt, geklärter Retention, Subprocessor-/TIA-Prüfung, Tool-Grenzen und NaC-Review-Gate. |
@@ -74,6 +75,35 @@ verlangt mindestens:
 Systemdaten, Metadaten, Abrechnung, Supportdaten und Drittanbieterpfade können
 außerhalb der gewählten Region liegen. Diese Grenze muss im
 Datenschutzreview ausdrücklich berücksichtigt werden.
+
+## Mandanten-Gateway für Ausweisfoto und Dokumente
+
+Mandanten, Beteiligte oder externe Berater werden nicht über Consumer-ChatGPT
+an den NaC-Workspace angebunden. Auch ein späterer Enterprise Workspace ist
+nicht der erste Eingang für Ausweisfotos oder Rohdokumente. Der sichere
+Eingang ist ein NaC-kontrollierter Uploadpfad:
+
+1. NaC erzeugt einen kurzlebigen, akten-, mandanten- und zweckgebundenen Link.
+2. Der Mandant öffnet eine mobile Web-App, PWA oder später eine native
+   `n8-demonotariat`-App.
+3. Das Ausweisfoto oder Dokument wird zuerst in einen EU-kontrollierten
+   Speicher hochgeladen, etwa Object Store, Datenbank-Blob oder OneDrive.
+4. NaC speichert im Produktrepo nur Metadaten, Hash, Speicherzielklasse,
+   Ablauf, Widerruf, Aktenbindung und Auditereignis.
+5. Optional ruft ein serverseitiges NaC-Backend die OpenAI API Europe mit
+   `https://eu.api.openai.com` auf, wenn AVV/DPA, EU-Datenresidenz,
+   ZDR/MAM, Endpunktfreigabe und Tool-Grenzen dokumentiert sind.
+
+Die mobile App oder PWA spricht die OpenAI API nicht direkt an. API-Keys,
+Projekt-IDs und Workspace-Geheimnisse bleiben serverseitig. Für den ersten
+Produktpfad reicht eine mobile Web-App oder PWA; native iOS-/Android-Apps sind
+erst erforderlich, wenn NFC-eID, Push, Device Binding, Liveness-Prüfung,
+Offline-Fähigkeit oder App-Store-Vertrauen fachlich gebraucht werden.
+
+ChatGPT Enterprise bleibt die interne Bedien- und Prüfoberfläche für Notariat,
+Sachbearbeitung und berechtigte Workspace-Benutzer. Mandanten erhalten keinen
+pauschalen Workspace-Zugang, sondern nur freigegebene, nachweisbare und
+widerrufbare Vorgangsaktionen.
 
 ## ChatGPT Enterprise
 
@@ -138,7 +168,9 @@ mindestens vorliegen:
 | Kanal | Geeignet für | Nicht geeignet für | NaC-Status |
 | --- | --- | --- | --- |
 | ChatGPT Business bzw. frühere Team-Ebene | Doku, Code, synthetische Demos, nicht-sensitive Planung | Echte Mandatsdaten ohne zusätzliche AVV/DPA-, Residency- und Tool-Freigabe | Nur eingeschränkt |
+| Consumer-ChatGPT | allgemeine öffentliche Orientierung ohne Mandatsdaten | Ausweisfoto, Dokumentupload, Aktenzugriff oder Weiterleitung in einen Enterprise Workspace | Nicht freigegeben |
 | ChatGPT Enterprise | angemeldete Benutzer, SSO, Admin-Kontrollen, vertragliche Enterprise-Grenzen | pauschale Verarbeitung ohne konkrete Workspace- und Tool-Prüfung | Zielpfad für ChatGPT-Oberfläche |
 | OpenAI API Europe | serverseitige NaC-Funktionen mit regionalem Projekt und `eu.api.openai.com` | Nutzung ohne berechtigte API-Organisation, ZDR/MAM-Entscheidung und Endpunktprüfung | Zielpfad für API-Integration |
+| NaC Secure Link / PWA / App | Mandanten-Upload, Leselink und aktengebundene externe Vorgangsaktionen | Direktzugriff auf Workspace-Secrets oder OpenAI API aus dem Mobilgerät | Zielpfad für Mandanten-Gateway |
 | Codex | Entwicklung, Reviews, Tests, synthetische Vorgänge, Repo-Automation | Speicherung echter Mandatsdaten oder Secrets im Repo/Workspace | Entwicklungs- und Operationspfad |
 | Lokale NaC-Workstation | XNP, eID, Kartenleser, morris, lokale Gates | externe KI-Verarbeitung ohne Freigabe | Standardpfad für sensible Gates |

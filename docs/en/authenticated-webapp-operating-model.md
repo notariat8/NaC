@@ -77,6 +77,26 @@ A mobile app such as `n8-demonotariat` can serve as a client or participant
 app. After login and approval, the user does not receive blanket NaC access,
 but only a tightly bounded secure link.
 
+Consumer ChatGPT, free accounts or non-EU-resident ChatGPT access are not a
+client gateway. A client must not send an identity-card photo, mandate document
+or other raw document to such a chat so it can then be forwarded into an
+Enterprise workspace. That detour is not matter-bound, not reliably revocable
+and not checkable as a NaC audit path.
+
+The first product path is therefore:
+
+1. The NaC backend creates a secure link with purpose, expiry, matter binding
+   and revocation.
+2. The client opens a mobile web app or PWA; a native iOS/Android app is added
+   only for NFC eID, push, device binding, liveness checks, offline operation
+   or app-store trust.
+3. The file or photo first lands in an EU-controlled storage target.
+4. Optionally, a server-side backend processes metadata or extraction through
+   approved services such as OpenAI API Europe with
+   `https://eu.api.openai.com`; mobile devices do not receive API keys.
+5. Internal users review the inbox through the NaC web app or an approved
+   Enterprise workspace connector.
+
 Allowed link targets are:
 
 - upload into an object store,
@@ -114,10 +134,11 @@ from a product idea into a checkable NaC artifact path.
    demos.
 2. Design the internal authenticated web app for notary-office users through
    Entra ID and the NaC role gate.
-3. Check card-reader, XNP and eID paths only locally through the
+3. Explicitly disallow consumer ChatGPT as a client-upload gateway.
+4. Check card-reader, XNP and eID paths only locally through the
    `notary-workstation` profile.
-4. Connect the mobile app to storage targets only through short-lived secure
-   links.
-5. Treat uploads as inbox items or import proposals first.
-6. Make contract, validator, audit and human approval mandatory before
+5. Connect the mobile web app or PWA to storage targets first through
+   short-lived secure links; build native apps only for concrete device needs.
+6. Treat uploads as inbox items or import proposals first.
+7. Make contract, validator, audit and human approval mandatory before
    productive links.

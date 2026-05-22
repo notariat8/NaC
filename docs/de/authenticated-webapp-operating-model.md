@@ -79,6 +79,27 @@ Eine mobile App wie `n8-demonotariat` kann als Beteiligten- oder
 Mandanten-App dienen. Nach Anmeldung und Freigabe erhält der Benutzer keinen
 pauschalen Zugriff auf NaC, sondern nur einen eng begrenzten sicheren Link.
 
+Consumer-ChatGPT, nicht bezahlte Accounts oder nicht EU-residente
+ChatGPT-Zugänge sind kein Mandanten-Gateway. Ein Mandant darf sein
+Personalausweisfoto, Mandatsdokument oder sonstiges Rohdokument nicht an einen
+solchen Chat schicken, damit es anschließend in einen Enterprise Workspace
+weitergereicht wird. Dieser Umweg wäre nicht aktengebunden, nicht zuverlässig
+widerrufbar und nicht als NaC-Auditpfad prüffähig.
+
+Der erste Produktpfad ist deshalb:
+
+1. NaC-Backend erzeugt einen sicheren Link mit Zweck, Ablauf,
+   Aktenbindung und Widerruf.
+2. Mandant öffnet eine mobile Web-App oder PWA; eine native iOS-/Android-App
+   kommt erst für NFC-eID, Push, Device Binding, Liveness-Prüfung,
+   Offline-Fähigkeit oder App-Store-Vertrauen hinzu.
+3. Datei oder Foto landet zuerst in einem EU-kontrollierten Speicherziel.
+4. Optional verarbeitet ein serverseitiges Backend Metadaten oder Extraktionen
+   über freigegebene Dienste, etwa OpenAI API Europe mit
+   `https://eu.api.openai.com`; Mobilgeräte erhalten dabei keine API-Keys.
+5. Interne Benutzer prüfen den Eingang über die NaC-Webapp oder einen
+   freigegebenen Enterprise-Workspace-Connector.
+
 Zulässige Linkziele sind:
 
 - Upload in einen Object Store,
@@ -117,9 +138,11 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
    Demos weiter nutzen.
 2. Interne authentifizierte Webapp für Notariatsbenutzer über Entra ID und
    NaC-Rollen-Gate entwerfen.
-3. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
+3. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
+4. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
    `notary-workstation` prüfen.
-4. Mobile App nur über kurzlebige sichere Links an Speicherziele anbinden.
-5. Uploads immer erst als Eingang oder Importvorschlag behandeln.
-6. Vertrag, Validator, Audit und menschliche Freigabe vor produktiven Links
+5. Mobile Web-App oder PWA zuerst über kurzlebige sichere Links an
+   Speicherziele anbinden; native Apps nur bei konkretem Gerätebedarf bauen.
+6. Uploads immer erst als Eingang oder Importvorschlag behandeln.
+7. Vertrag, Validator, Audit und menschliche Freigabe vor produktiven Links
    verpflichtend machen.

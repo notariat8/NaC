@@ -30,6 +30,7 @@ the official OpenAI pages and in the concrete order form before signing.
 | --- | --- |
 | Is a Team or Business subscription sufficient for real NaC/notary-office data? | No. Business can be useful for demos, documentation, code and synthetic data, but by itself it is not sufficient evidence for EU data residency and notarial processing. |
 | Can `eu.api.openai.com` be used under a Team/Business subscription? | Not as a subscription assumption. API data residency needs an eligible API organization, per-project region configuration, the regional domain prefix and additional approvals such as Modified Abuse Monitoring or Zero Data Retention. |
+| May consumer ChatGPT act as the gateway for client uploads? | No. A free or non-EU-resident consumer ChatGPT account must not shuttle identity-card photos, mandate documents or other real NaC data into the Enterprise workspace. |
 | How do we get Enterprise? | Through the OpenAI sales contact form with work email, company, country/region, seat estimate, timeline, billing needs and compliance requirements. |
 | What do Enterprise and Codex cost? | Enterprise is custom pricing. Business ChatGPT & Codex has a public list price. The Codex rate card describes average Codex cost at about USD 100 to 200 per developer per month, varying by model, instances, automations and fast mode. |
 | What is the safe target path for NaC? | Enterprise or API contract with DPA/AVV, EU data residency in the order form or project, clarified retention, subprocessor/TIA review, tool boundaries and NaC review gate. |
@@ -73,6 +74,34 @@ requires at least:
 System data, metadata, billing, support data and third-party paths may be
 outside the selected region. This boundary must be expressly considered in the
 privacy review.
+
+## Client Gateway For Identity Photos And Documents
+
+Clients, participants or external advisors are not connected to the NaC
+workspace through consumer ChatGPT. Even a later Enterprise workspace is not
+the first entry point for identity-card photos or raw documents. The safe entry
+point is a NaC-controlled upload path:
+
+1. NaC creates a short-lived link bound to client, matter and purpose.
+2. The client opens a mobile web app, PWA or later a native
+   `n8-demonotariat` app.
+3. The identity photo or document is first uploaded to EU-controlled storage,
+   such as object store, database blob or OneDrive.
+4. NaC stores only metadata, hash, storage target class, expiry, revocation,
+   matter binding and audit event in the product repository.
+5. Optionally, a server-side NaC backend calls the OpenAI API Europe through
+   `https://eu.api.openai.com` when DPA/AVV, EU data residency, ZDR/MAM,
+   endpoint approval and tool boundaries are documented.
+
+The mobile app or PWA does not call the OpenAI API directly. API keys, project
+IDs and workspace secrets remain server-side. The first product path can be a
+mobile web app or PWA; native iOS/Android apps are required only once NFC eID,
+push, device binding, liveness checks, offline operation or app-store trust are
+needed for the case.
+
+ChatGPT Enterprise remains the internal operating and review surface for the
+notary office, staff and authorized workspace users. Clients receive no blanket
+workspace access, only approved, auditable and revocable case actions.
 
 ## ChatGPT Enterprise
 
@@ -134,7 +163,9 @@ exist:
 | Channel | Suitable for | Not suitable for | NaC status |
 | --- | --- | --- | --- |
 | ChatGPT Business or earlier Team tier | documentation, code, synthetic demos, non-sensitive planning | real mandate data without additional DPA/AVV, residency and tool approval | limited only |
+| Consumer ChatGPT | general public orientation without mandate data | identity photo, document upload, matter access or transfer into an Enterprise workspace | not approved |
 | ChatGPT Enterprise | authenticated users, SSO, admin controls, contractual Enterprise boundaries | blanket processing without concrete workspace and tool review | target path for ChatGPT UI |
 | OpenAI API Europe | server-side NaC functions with regional project and `eu.api.openai.com` | use without eligible API organization, ZDR/MAM decision and endpoint review | target path for API integration |
+| NaC secure link / PWA / app | client upload, read link and matter-bound external case actions | direct access to workspace secrets or OpenAI API from the mobile device | target path for client gateway |
 | Codex | development, reviews, tests, synthetic cases, repository automation | storing real mandate data or secrets in repo/workspace | development and operations path |
 | Local NaC workstation | XNP, eID, card reader, morris, local gates | external AI processing without approval | default path for sensitive gates |
