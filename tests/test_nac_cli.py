@@ -66,6 +66,13 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("Auftrag und Beteiligte", output)
         self.assertIn("xnp_local", output)
 
+    def test_contracts_validate_secure_document_links(self) -> None:
+        rc, output = run_cli("contracts", "validate")
+
+        self.assertEqual(rc, 0, output)
+        self.assertIn("Secure Document Link", output)
+        self.assertIn("STATUS: PASSED", output)
+
     def test_kg_status_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli("kg", "status")
 

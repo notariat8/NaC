@@ -1,0 +1,100 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.secure_document_link",
+  "title": "Secure Document Link for mobile client and participant access",
+  "status": "planned_mvp",
+  "last_update": "2026-05-22",
+  "purpose": "Define the minimum control boundary for mobile upload and read links that connect authenticated users to matter-bound document storage without storing secret links or raw mandate content in the product repository.",
+  "client_surfaces": [
+    "n8-demonotariat",
+    "authenticated_webapp",
+    "mobile_client_app"
+  ],
+  "actors": [
+    "notary",
+    "notary_clerk",
+    "client_guest_user",
+    "external_participant"
+  ],
+  "identity_sources": [
+    "entra_id",
+    "entra_certificate_based_authentication",
+    "german_eid_bridge",
+    "nac_role_gate"
+  ],
+  "storage_targets": [
+    "object_store",
+    "database_blob",
+    "onedrive"
+  ],
+  "allowed_actions": [
+    "upload_document",
+    "read_current_matter",
+    "read_document_metadata"
+  ],
+  "blocked_actions": [
+    "store_secret_link_in_product_repo",
+    "store_access_token_in_product_repo",
+    "store_raw_document_content_in_product_repo",
+    "attach_upload_to_matter_without_human_review",
+    "bypass_nac_role_gate"
+  ],
+  "link_policy": {
+    "secret_link_stored_in_product_repo": false,
+    "requires_matter_binding": true,
+    "requires_purpose": true,
+    "requires_expiry": true,
+    "requires_revocation": true,
+    "requires_audit_event": true,
+    "requires_tenant_binding": true,
+    "requires_human_review_for_upload": true,
+    "requires_step_up_for_sensitive_read": true
+  },
+  "evidence_schema": {
+    "schema_version": "nac.secure-document-link-evidence/v0.1",
+    "required": [
+      "evidence_id",
+      "purpose",
+      "expires_at",
+      "matter_binding",
+      "storage_target",
+      "revocation",
+      "audit_event"
+    ],
+    "properties": {
+      "evidence_id": "Stable evidence identifier without secret material.",
+      "purpose": "Specific action purpose such as upload_document or read_current_matter.",
+      "expires_at": "UTC timestamp after which the issued link must no longer be accepted.",
+      "matter_binding": "Tenant, case and optional document binding for the issued link.",
+      "storage_target": "One of object_store, database_blob or onedrive.",
+      "revocation": "Revocation handle, status and reason metadata.",
+      "audit_event": "Append-only audit event reference for issuance, use, expiry or revocation.",
+      "content_hash": "Hash of uploaded content when content exists and can be hashed.",
+      "file_type_check": "Result of file type, malware and size checks.",
+      "issued_by_role": "NaC role that issued or approved the link.",
+      "identity_assurance": "Authentication source and assurance metadata without raw eID or certificate material."
+    }
+  },
+  "write_flow": [
+    "authenticated_user_requests_link",
+    "nac_checks_identity_role_case_and_purpose",
+    "storage_service_issues_short_lived_link",
+    "user_uploads_to_bounded_storage_target",
+    "nac_records_evidence_without_secret_link",
+    "human_review_before_matter_attachment"
+  ],
+  "read_flow": [
+    "authenticated_user_requests_matter_view",
+    "nac_checks_identity_role_case_and_purpose",
+    "nac_returns_read_only_current_matter_view",
+    "nac_records_audit_event"
+  ],
+  "guardrails": {
+    "real_mandate_data_in_product_repo": false,
+    "secret_links_in_git": false,
+    "raw_eid_data_in_git": false,
+    "certificate_material_in_git": false,
+    "mobile_link_replaces_authorization": false,
+    "human_review_required_before_attachment": true
+  }
+}

@@ -81,6 +81,9 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 - [pruefung-standardisierung-start.md](pruefung-standardisierung-start.md): Nachvollziehbarkeit für Prüfung und Standardisierung.
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md): wie Bürooberfläche und
   prüfbarer NaC-Kern zusammenspielen.
+- [authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md):
+  Zielbild für GitHub Pages als statische Leseschicht, authentifizierte Webapp,
+  Entra-ID-/Karten-Gates und mobile sichere Dokumentlinks.
 - [cli.md](cli.md): technische `nac`-Steuerfläche hinter der Bürooberfläche,
   erste Befehle und Architekturregel für neue Funktionen.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
@@ -133,6 +136,9 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json)
   beschreibt den implementierten KG-Editor-Vertrag für die usecase-lokalen
   Knowledge Graphs.
+- [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
+  beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
+  Store, Datenbank-Blob oder OneDrive.
 - [.github/workflows/](../../.github/workflows) enthält Governance-, Runtime-, SBOM- und
   Cloud-Parity-Workflows.
 

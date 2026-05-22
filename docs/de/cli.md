@@ -89,6 +89,7 @@ nac qms status
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
+| Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge und die Secure-Link-Grenze für mobile Upload- und Lesepfade. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
@@ -128,6 +129,23 @@ dokumentiert in
 [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 Die fachliche Herleitung aus üblichen Notarsoftware-Bausteinen steht in
 [notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
+
+## Workflow-Verträge Und Sichere Dokumentlinks
+
+Workflow-Verträge beschreiben, welche Bedienkante welche fachlichen Aktionen
+auslösen darf und welche Nachweise zwingend sind. Der
+Secure-Document-Link-Vertrag begrenzt mobile Apps und authentifizierte Webapps
+auf kurzlebige, widerrufbare, akten- und zweckgebundene Upload- oder
+Leselinks.
+
+```bash
+nac contracts validate
+```
+
+Die Prüfung stellt sicher, dass der Vertrag Zweck, Ablauf, Aktenbindung,
+Speicherziel, Widerruf und Auditnachweis fordert. Details zum Zielbild stehen
+im
+[Authenticated-Webapp-Betriebsmodell](authenticated-webapp-operating-model.md).
 
 ## Import-Jobs Für Codex Und OCR
 

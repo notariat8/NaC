@@ -27,3 +27,7 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/local-web-preview.contract.json](local-web-preview.contract.json):
   lokaler Webserver-Vertrag für grafische BPMN- und KG-Ausgaben ohne Cloud-
   oder Mandatsdatenpflicht.
+- [workflows/contracts/secure-document-link.contract.json](secure-document-link.contract.json):
+  Vertrag für mobile Mandanten-/Beteiligten-Apps und sichere Upload- oder
+  Leselinks auf Object Store, Datenbank-Blob oder OneDrive mit Zweckbindung,
+  Ablauf, Aktenbindung, Widerruf und Auditnachweis.

@@ -68,6 +68,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/pruefung-standardisierung-start.md](pruefung-standardisierung-start.md) covers review and standardization traceability.
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md) explains how the
   office UI and the checkable NaC core work together.
+- [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
+  defines the target model for GitHub Pages as a static reading layer, the
+  authenticated web app, Entra ID/card gates and mobile secure document links.
 - [docs/en/cli.md](cli.md) explains the technical `nac` control surface behind
   the office UI, first commands and the architecture rule for new functionality.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
@@ -104,6 +107,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
+- [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
 - [processes/](../../processes) contains example business process instances.
 - [src/business_os/](../../src/business_os) contains the Python engine.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.

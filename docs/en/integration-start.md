@@ -61,6 +61,7 @@ check and audit event.
 - [workflows/README.md](../../workflows/README.md)
 - [workflows/contracts/README.md](../../workflows/contracts/README.md)
 - [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md)
+- [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/en/plugin-plans/README.md](plugin-plans/README.md)
 - [docs/en/plugin-operations/README.md](plugin-operations/README.md)
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md)

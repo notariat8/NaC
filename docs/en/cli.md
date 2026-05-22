@@ -88,6 +88,7 @@ nac qms status
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
+| Workflow contracts | `nac contracts validate` | Validates workflow contracts and the secure-link boundary for mobile upload and read paths. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -126,6 +127,22 @@ ordinary files next to their metadata. The separation is documented in
 [datenrepo-demo8notariat.md](datenrepo-demo8notariat.md).
 The subject-matter derivation from common notary-software building blocks is in
 [notarsoftware-datenmodell.md](notarsoftware-datenmodell.md).
+
+## Workflow Contracts And Secure Document Links
+
+Workflow contracts describe which operating edge may trigger which
+subject-matter actions and which evidence is mandatory. The Secure Document
+Link contract bounds mobile apps and authenticated web apps to short-lived,
+revocable, matter- and purpose-bound upload or read links.
+
+```bash
+nac contracts validate
+```
+
+The check ensures that the contract requires purpose, expiry, matter binding,
+storage target, revocation and audit evidence. The target model is described in
+the
+[Authenticated Web-App Operating Model](authenticated-webapp-operating-model.md).
 
 ## Import Jobs For Codex And OCR
 

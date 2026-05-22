@@ -87,7 +87,8 @@ case-bound, revocable and purpose-bound. Depending on the operating model, the
 technical target can be an object store, a database blob or OneDrive. NaC does
 not store the secret link or raw content in the product repository. It stores
 only metadata, hash, purpose, expiry, case binding, approval state and audit
-event.
+event. The detailed target model is documented in the
+[Authenticated Web-App Operating Model](authenticated-webapp-operating-model.md).
 
 Uploads from the app first land in an inbox or import proposal. They are linked
 to a matter only after human review, role checks and, where required,
@@ -125,6 +126,7 @@ documentation should show the understandable NaC path.
 - [docs/en/cli.md](cli.md)
 - [docs/en/betriebsstart.md](betriebsstart.md)
 - [docs/en/integration-start.md](integration-start.md)
+- [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md)
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md)

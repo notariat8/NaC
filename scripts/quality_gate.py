@@ -125,6 +125,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "Knowledge Graph Editor Contract",
                     [sys.executable, "scripts/validate_kg_editor.py"],
                 ),
+                (
+                    "secure_document_links",
+                    "Secure Document Link Contract",
+                    [sys.executable, "scripts/validate_secure_document_links.py"],
+                ),
             ]
         )
     return checks

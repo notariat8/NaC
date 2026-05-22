@@ -90,7 +90,9 @@ Link darf nur kurzlebig, mandanten- und aktengebunden, widerrufbar und
 zweckgebunden sein. Als technische Zielorte kommen je nach Betriebsmodell ein
 Object Store, ein Datenbank-Blob oder OneDrive in Betracht. NaC speichert dazu
 nicht den geheimen Link oder Rohinhalt im Produktrepo, sondern nur Metadaten,
-Hash, Zweck, Ablaufzeit, Aktenbezug, Freigabestatus und Auditereignis.
+Hash, Zweck, Ablaufzeit, Aktenbezug, Freigabestatus und Auditereignis. Das
+detaillierte Zielbild steht im
+[Authenticated-Webapp-Betriebsmodell](authenticated-webapp-operating-model.md).
 
 Uploads aus der App landen zuerst in einem Eingang oder Importvorschlag. Erst
 nach menschlicher Prüfung, Rollenprüfung und gegebenenfalls Vier-Augen-Freigabe
@@ -129,6 +131,7 @@ die Produktdokumentation soll den verständlichen NaC-Weg zeigen.
 - [docs/de/cli.md](cli.md)
 - [docs/de/betriebsstart.md](betriebsstart.md)
 - [docs/de/integration-start.md](integration-start.md)
+- [docs/de/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md)
 - [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [docs/de/lokaler-webserver.md](lokaler-webserver.md)

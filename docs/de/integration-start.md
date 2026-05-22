@@ -63,6 +63,7 @@ Freigabestatus, Malware-/Dateitypprüfung und Auditereignis.
 - [workflows/README.md](../../workflows/README.md)
 - [workflows/contracts/README.md](../../workflows/contracts/README.md)
 - [ausfuehrungsmodell.md](ausfuehrungsmodell.md)
+- [authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/de/plugin-plans/README.md](plugin-plans/README.md)
 - [docs/de/plugin-operations/README.md](plugin-operations/README.md)
 - [docs/de/sbom-for-ai.md](sbom-for-ai.md)

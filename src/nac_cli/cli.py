@@ -128,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
     process_close.add_argument("--month", required=True, type=int)
     process.set_defaults(func=command_process)
 
+    contracts = subparsers.add_parser("contracts", help="Prüft NaC-Workflow-Verträge.")
+    contracts_sub = contracts.add_subparsers(dest="contracts_command", required=True)
+    contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge und Secure-Link-Grenzen.")
+    contracts.set_defaults(func=command_contracts)
+
     import_parser = subparsers.add_parser("import", help="Steuert Eingang, OCR-/Extraktionsjobs und Import-Vorschläge.")
     import_sub = import_parser.add_subparsers(dest="import_command", required=True)
     import_jobs = import_sub.add_parser("jobs", help="Steuert begrenzte Import-Jobs für Codex.")
@@ -299,6 +304,7 @@ def command_status(args: argparse.Namespace) -> int:
             "local_operator": "nac operator --open",
             "kg_status": "nac kg status",
             "bpmn_validate": "nac bpmn validate",
+            "contracts_validate": "nac contracts validate",
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
             "tenant_status": "nac tenant status --repo ../demo8notariat",
@@ -432,6 +438,26 @@ def command_process(args: argparse.Namespace) -> int:
         return 0
 
     raise AssertionError(f"Unknown process command: {args.process_command}")
+
+
+def command_contracts(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    if args.contracts_command == "validate":
+        print("Secure Document Link Contract")
+        result = subprocess.run(
+            [sys.executable, str(repo_root / "scripts" / "validate_secure_document_links.py")],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.stdout:
+            print(result.stdout.rstrip())
+        if result.stderr:
+            print(result.stderr.rstrip())
+        return result.returncode
+
+    raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
 
 
 def command_import(args: argparse.Namespace) -> int:
@@ -625,6 +651,7 @@ def command_config(args: argparse.Namespace) -> int:
             "scripts/validate_plugins.py",
             "scripts/validate_bpmn_models.py",
             "scripts/validate_kg_editor.py",
+            "scripts/validate_secure_document_links.py",
         ]
         failed = False
         for script in checks:
