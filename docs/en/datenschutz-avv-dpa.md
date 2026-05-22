@@ -11,7 +11,8 @@ advice.
 
 ## Source State
 
-Reviewed on 2026-05-15:
+DPA/AVV baseline reviewed on 2026-05-15, OpenAI Enterprise and EU data
+residency addition reviewed on 2026-05-22:
 
 - OpenAI Data Processing Addendum v.010126:
   `https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf`
@@ -21,6 +22,9 @@ Reviewed on 2026-05-15:
 - Gesellschaft fuer Datenschutz, "ChatGPT, Datenschutz und
   Auftragsverarbeitungsvertrag":
   `https://gesellschaft-datenschutz.de/chatgpt-und-auftragsverarbeitung/`
+- NaC procurement and approval path for ChatGPT Enterprise, API EU data
+  residency and Codex:
+  [docs/en/openai-enterprise-eu-residency.md](openai-enterprise-eu-residency.md)
 
 The OpenAI DPA describes OpenAI as processor for the covered service scope and
 covers instructions, subprocessors, return/deletion, international transfers
@@ -52,7 +56,8 @@ data are not stored in this repository.
 | Channel | AVV/DPA rule | NaC approval |
 | --- | --- | --- |
 | Free or Pro | Do not use for personal NaC/notary-office data. | Not approved. |
-| Team, Enterprise or API | Review DPA/AVV, configuration and purpose limitation. | Only after documented approval. |
+| Team or Business | Only for documentation, code, synthetic demos and non-sensitive planning; not evidence for EU data residency or notarial processing. | Not approved for real NaC/notary-office data. |
+| Enterprise or API Europe | Review DPA/AVV, EU data residency, purpose limitation, retention, subprocessors/TIA, ZDR/MAM and tool boundaries. | Only after documented approval. |
 | Public GPT Store | Check privacy URL, terms, Action boundary and DPA need per Action. | Separate release approval. |
 | Workspace GPT/App | Review tenant, roles, retention, training/data sharing and DPA. | Pilot approval required. |
 | Local plugin | No external AI transfer if fully local. | Default path for sensitive gates. |
@@ -107,4 +112,6 @@ personal data:
   AVV checklist.
 - `docs/en/gpt-marketplace-operating-model.md`: channel decision for GPT Store,
   Actions, workspace apps and local plugins.
+- `docs/en/openai-enterprise-eu-residency.md`: procurement, price orientation,
+  EU data residency and Codex cost path.
 - `policies/data-protection-policy.yaml`: binding privacy and secret rules.

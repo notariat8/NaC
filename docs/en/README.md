@@ -91,6 +91,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/gpt-marketplace-operating-model.md](gpt-marketplace-operating-model.md) separates public GPT Store, Actions, workspace app, and local plugin channels.
 - [docs/en/minimum-requirements.md](minimum-requirements.md) defines minimum requirements for the base workspace, plugin development and local notary workstation.
 - [docs/en/datenschutz-avv-dpa.md](datenschutz-avv-dpa.md) defines the AVV/DPA section for OpenAI-backed processing.
+- [docs/en/openai-enterprise-eu-residency.md](openai-enterprise-eu-residency.md)
+  defines the procurement and approval path for ChatGPT Enterprise, API EU data
+  residency and Codex costs.
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md) defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md) defines the no-code KG editor,
   patch principle and sidecar-editor path for subject-matter staff.

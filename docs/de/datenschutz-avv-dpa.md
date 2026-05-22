@@ -11,7 +11,8 @@ Rechtsberatung.
 
 ## Quellenstand
 
-Geprüft am 2026-05-15:
+DPA-/AVV-Grundlage geprüft am 2026-05-15, OpenAI-Enterprise- und
+EU-Datenresidenz-Ergänzung geprüft am 2026-05-22:
 
 - OpenAI Data Processing Addendum v.010126:
   `https://cdn.openai.com/pdf/openai-data-processing-addendum.pdf`
@@ -21,6 +22,9 @@ Geprüft am 2026-05-15:
 - Gesellschaft für Datenschutz, "ChatGPT, Datenschutz und
   Auftragsverarbeitungsvertrag":
   `https://gesellschaft-datenschutz.de/chatgpt-und-auftragsverarbeitung/`
+- NaC-Beschaffungs- und Freigabepfad für ChatGPT Enterprise,
+  API-EU-Datenresidenz und Codex:
+  [docs/de/openai-enterprise-eu-residency.md](openai-enterprise-eu-residency.md)
 
 Die OpenAI-DPA beschreibt OpenAI für den betroffenen Leistungsrahmen als
 Processor/Auftragsverarbeiter, regelt Weisungen, Unterauftragsverarbeiter,
@@ -54,7 +58,8 @@ Accountdaten werden nicht in diesem Repository gespeichert.
 | Kanal | AVV/DPA-Regel | NaC-Freigabe |
 | --- | --- | --- |
 | Free oder Pro | Nicht für personenbezogene NaC-/Notariatsdaten verwenden. | Nicht freigegeben. |
-| Team, Enterprise oder API | DPA/AVV, Konfiguration und Zweckbindung prüfen. | Nur nach documented approval. |
+| Team oder Business | Nur für Doku, Code, synthetische Demos und nicht-sensitive Planung; nicht als Nachweis für EU-Datenresidenz oder notarielle Verarbeitung. | Nicht für echte NaC-/Notariatsdaten freigegeben. |
+| Enterprise oder API Europe | DPA/AVV, EU-Datenresidenz, Zweckbindung, Retention, Subprocessor/TIA, ZDR/MAM und Tool-Grenzen prüfen. | Nur nach dokumentierter Freigabe. |
 | Public GPT Store | Datenschutzlink, Terms, Action-Boundary und DPA-Bedarf je Action prüfen. | Separate Release-Freigabe. |
 | Workspace GPT/App | Tenant, Rollen, Retention, Training/Data-Sharing und DPA prüfen. | Pilot-Freigabe erforderlich. |
 | Lokales Plugin | Kein externer KI-Transfer, sofern rein lokal. | Standardpfad für sensible Gates. |
@@ -110,5 +115,7 @@ personenbezogenen Daten eine kurze Entscheidung enthalten:
   AVV-Checkliste.
 - `docs/de/gpt-marketplace-operating-model.md`: Kanalentscheidung für GPT
   Store, Actions, Workspace Apps und lokale Plugins.
+- `docs/de/openai-enterprise-eu-residency.md`: Beschaffung, Preiseinschätzung,
+  EU-Datenresidenz und Codex-Kostenpfad.
 - `policies/data-protection-policy.yaml`: verbindliche Datenschutz- und
   Secret-Regeln.
