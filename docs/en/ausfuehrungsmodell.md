@@ -74,6 +74,26 @@ logic in click paths. NaC must also be able to explain and prove:
 The visible UI guides people through these questions. `nac` makes the execution
 behind it explicitly checkable.
 
+## Mobile Client App And Secure Links
+
+For authenticated participants, NaC should also allow a mobile app, for example
+as a demo app named `n8-demonotariat` in the iOS App Store. The app is not a
+subject-matter source of truth. It is a secure operating edge for individual
+approved cases.
+
+After authentication and approval, a user can receive a secure link to upload
+documents or view current matters. The link must be short-lived, tenant- and
+case-bound, revocable and purpose-bound. Depending on the operating model, the
+technical target can be an object store, a database blob or OneDrive. NaC does
+not store the secret link or raw content in the product repository. It stores
+only metadata, hash, purpose, expiry, case binding, approval state and audit
+event.
+
+Uploads from the app first land in an inbox or import proposal. They are linked
+to a matter only after human review, role checks and, where required,
+four-eyes approval. Matter read access remains governed by role, case and tenant
+rules; a mobile link does not replace NaC authorization.
+
 ## Today, Pilot, Later
 
 | Layer | State | Role |
@@ -86,6 +106,7 @@ behind it explicitly checkable.
 | Local web server | Usable today | Shows BPMN and KG views locally in the browser, without cloud use or real mandate data. |
 | Sidecar editor | Planned | Graphical operation for KG forms and checklists. |
 | ChatGPT app or workspace app | Planned | Comfortable operating surface for authorized users based on a reviewed `nac-mcp` tool layer; Custom GPT Actions with a tunnel remain a demo path for synthetic data. |
+| Mobile client/participant app | Planned | Allows secure upload or matter-read links to an object store, database blob or OneDrive after authentication, with NaC audit and downstream subject-matter approval. |
 | Standalone NaC web app | Possible | Useful once runtime, roles, permissions and gates are stable enough for broader use. |
 
 ## Rule Of Thumb

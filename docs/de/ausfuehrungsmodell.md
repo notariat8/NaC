@@ -77,6 +77,27 @@ Klickwegen verstecken. NaC muss auch erklären und beweisen können:
 Die sichtbare Oberfläche führt durch diese Fragen. `nac` macht die Ausführung
 dahinter eindeutig prüfbar.
 
+## Mobile Mandanten-App Und Sichere Links
+
+Für angemeldete Beteiligte soll zusätzlich eine mobile App möglich sein, zum
+Beispiel als Demo-App `n8-demonotariat` im iOS-App-Store. Die App ist keine
+fachliche Wahrheitsschicht, sondern eine sichere Bedienkante für einzelne
+freigegebene Vorgänge.
+
+Ein Nutzer kann nach Authentifizierung und Freigabe einen sicheren Link
+erhalten, um Dokumente hochzuladen oder seine aktuellen Akten zu sehen. Der
+Link darf nur kurzlebig, mandanten- und aktengebunden, widerrufbar und
+zweckgebunden sein. Als technische Zielorte kommen je nach Betriebsmodell ein
+Object Store, ein Datenbank-Blob oder OneDrive in Betracht. NaC speichert dazu
+nicht den geheimen Link oder Rohinhalt im Produktrepo, sondern nur Metadaten,
+Hash, Zweck, Ablaufzeit, Aktenbezug, Freigabestatus und Auditereignis.
+
+Uploads aus der App landen zuerst in einem Eingang oder Importvorschlag. Erst
+nach menschlicher Prüfung, Rollenprüfung und gegebenenfalls Vier-Augen-Freigabe
+werden sie einer Akte zugeordnet. Leserechte auf Akten bleiben Rollen-,
+Vorgangs- und Mandantenregeln unterworfen; ein mobiler Link ersetzt keine
+NaC-Autorisierung.
+
 ## Heute, Pilot, Später
 
 | Ebene | Stand | Rolle |
@@ -89,6 +110,7 @@ dahinter eindeutig prüfbar.
 | Lokaler Webserver | Heute nutzbar | Zeigt BPMN- und KG-Ansichten lokal im Browser, ohne Cloud und ohne echte Mandatsdaten. |
 | Sidecar-Editor | Geplant | Grafische Bedienung für KG-Formulare und Checklisten. |
 | ChatGPT-App oder Workspace-App | Geplant | Komfortable Bedienoberfläche für berechtigte Nutzer auf Basis einer geprüften `nac-mcp`-Werkzeugschicht; Custom-GPT-Actions mit Tunnel bleiben ein Demo-Pfad für synthetische Daten. |
+| Mobile Mandanten-/Beteiligten-App | Geplant | Ermöglicht nach Authentifizierung sichere Upload- oder Aktenlese-Links auf Object Store, Datenbank-Blob oder OneDrive, mit NaC-Audit und nachgelagerter fachlicher Freigabe. |
 | Eigenständige NaC-Web-App | Möglich | Sinnvoll, sobald Runtime, Rollen, Rechte und Gates stabil genug für breitere Nutzung sind. |
 
 ## Merksatz

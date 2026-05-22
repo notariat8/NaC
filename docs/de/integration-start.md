@@ -20,8 +20,32 @@ Nachweisschichten. Das öffentliche Repository modelliert:
 - lokaler Readiness-Check für Arbeitsplatz, Middleware und Kartenpfade,
 - Connector-Vertrag für strukturierte Eingaben und Ausgaben,
 - Evidence-Metadaten statt echter Dokumentinhalte,
+- sichere Upload- und Leselinks für mobile App-, Object-Store-,
+  Datenbank-Blob- oder OneDrive-Pfade,
 - Trockenlauf und Planvorschau vor produktiven Schreibaktionen,
 - explizite menschliche Freigabe für sensible Schritte.
+
+## Mobile App Und Sichere Dokumentlinks
+
+Eine Integration darf auch eine mobile Mandanten- oder Beteiligten-App
+vorsehen, etwa als Demo-App `n8-demonotariat` im iOS-App-Store. Die App erhält
+keinen pauschalen Zugriff auf NaC. Sie bekommt nur akten- und zweckgebundene
+Links, nachdem Identität, Rolle, Vorgangsbezug und Freigabestatus geprüft
+wurden.
+
+Zulässige Zielmuster sind:
+
+- Upload-Link in einen Object Store,
+- Upload-Link in einen Datenbank-Blob,
+- Upload- oder Leselink in OneDrive,
+- read-only Link auf aktuelle Akteninformationen, soweit der Vorgang dies
+  zulässt.
+
+Die Links müssen kurzlebig, widerrufbar, protokolliert, mandantengebunden und
+auf konkrete Aktionen begrenzt sein. Das Produktrepo speichert keine geheimen
+Links, Zugangstoken oder Dokumentrohdaten. NaC hält nur Nachweise wie Hash,
+Speicherzielklasse, Aktenbezug, Ablaufzeit, ausstellende Rolle,
+Freigabestatus, Malware-/Dateitypprüfung und Auditereignis.
 
 ## Was Ein Integrationspartner Liefern Sollte
 
@@ -31,6 +55,7 @@ Nachweisschichten. Das öffentliche Repository modelliert:
 4. Versionierung und Kompatibilitätsfenster.
 5. Testmodus mit synthetischen Daten.
 6. Nachweis, welche Aktion lokal, extern oder manuell ausgeführt wird.
+7. Sicherheitsmodell für mobile Links, Widerruf, Ablauf und Speicherziel.
 
 ## Relevante Repository-Bereiche
 
