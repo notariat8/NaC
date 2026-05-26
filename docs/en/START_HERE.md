@@ -160,3 +160,8 @@ when the owner explicitly asks for direct delivery.
 --profile strict` pass, `HEAD` equals the GitHub target state and the local
 working tree is clean. Local changes and unmerged PR branches are intermediate
 states.
+
+For versioned process packages, the
+[release checklist](operations/release-checklist.md) must additionally be
+completed before tag and GitHub Release, or be traceably referenced from the
+leading issue or pull request.

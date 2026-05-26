@@ -57,6 +57,8 @@ This list is intended as a template for GitHub issues.
 ### 6. Release Checklist For Process Versions
 
 - **Type:** release governance
+- **Status:** implemented as [release checklist](../operations/release-checklist.md); first
+  reference releases remain follow-up work.
 - **Acceptance criteria:**
   - checklist for tag/release,
   - reference to audit/evidence artifacts.

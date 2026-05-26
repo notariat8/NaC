@@ -28,8 +28,10 @@ new versions from the central upstream.
 5. Execute tests and validation.
 6. Open sync PR with evidence.
 7. Review and approve according to role model.
-8. Merge into organization `main`.
-9. Tag organization release `v*` and start rollout.
+8. Complete the release checklist:
+   [release-checklist.md](release-checklist.md).
+9. Merge into organization `main`.
+10. Tag organization release `v*` and start rollout.
 
 ## Mandatory Contents Of A Sync PR
 
@@ -37,6 +39,8 @@ new versions from the central upstream.
 - Summary of relevant changes.
 - Impact classification: `low`, `medium`, `high`.
 - Test evidence: validation, relevant regressions, pilot case.
+- Checklist state from [release-checklist.md](release-checklist.md) with audit
+  and evidence artifacts.
 - Rollout decision:
   - immediately active for new matters,
   - active only after pilot,
@@ -67,5 +71,6 @@ Every adoption creates at least:
 
 - sync PR with approval history,
 - release tag in the organization fork,
+- completed release checklist or link to the checklist state,
 - SBOM artifact where required by policy,
 - decision entry for rollout and start of applicability.
