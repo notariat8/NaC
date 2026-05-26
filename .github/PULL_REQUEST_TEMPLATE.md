@@ -7,6 +7,16 @@
 - Entscheidungstyp (`self_resolve|requires_review|requires_approval`):
 - Qualifikation erforderlich (falls ja, welche):
 
+## GitHub-first Steuerung
+
+- Führendes Issue:
+- Project: `NaC Control Plane`
+- Delivery Mode: `Owner Direct | Protected PR | Sync PR`
+- Risk Gate: `None | Privacy | Secrets | Workflow | Policy | External Service | Human Approval`
+- Project-Status:
+- Blocker:
+- Secrets/Mandatsdaten: keine Secrets, PINs, Tokens, privaten Dokumentinhalte oder echten Mandatsdaten enthalten
+
 ## Validierung
 
 - [ ] Prozessdatei liegt unter `processes/`

@@ -6,6 +6,15 @@ labels: compliance
 assignees: ""
 ---
 
+## GitHub-first Steuerung
+
+- Project: `NaC Control Plane`
+- Delivery Mode: `Owner Direct | Protected PR | Sync PR`
+- Risk Gate: `None | Privacy | Secrets | Workflow | Policy | External Service | Human Approval`
+- Track: `Governance | Runtime | KG | BPMN | Operator | Plugins | Security | Docs | CI | Release`
+- Validierung:
+- Secrets/Mandatsdaten: keine Secrets, PINs, Tokens, privaten Dokumentinhalte oder echten Mandatsdaten enthalten
+
 ## Regulatorischer Anlass
 
 ## Betroffene Regel oder Policy

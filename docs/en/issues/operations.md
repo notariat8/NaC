@@ -99,6 +99,36 @@ Important:
 - The project shows only issues from repositories the user can already access.
 - This creates a central overview without permission leakage.
 
+## GitHub-first Agentic Work
+
+Non-trivial agentic work is controlled through a leading issue and the
+organization Project `NaC Control Plane`. The issue records task, scope,
+acceptance criteria, `Risk Gate`, `Delivery Mode` and validation. The Project
+shows only issues from repositories the user can already access; issues, pull
+requests, Project fields and comments contain no secrets, private document
+content or real matter data.
+
+Required fields for agentic issues:
+
+- `Status`
+- `Track`
+- `Work Type`
+- `Risk Gate`
+- `Delivery Mode`
+- `Priority`
+- `Size`
+- `Iteration`
+- `Due Date`
+
+Recommended views:
+
+- `Now`: currently active agentic work.
+- `Blocked`: blocked issues with visible blocker context.
+- `Governance And Security`: governance, security and compliance work.
+- `Release Readiness`: work related to completion, PR or release gates.
+- `My Agent Work`: personal view of assigned agentic issues.
+- `Owner Board`: owner view of accountable agentic issues.
+
 ## Standard Flow: Create New File
 
 1. Create `case-repo` according to naming standard, for example

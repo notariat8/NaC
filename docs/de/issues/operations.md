@@ -91,6 +91,36 @@ Wichtig:
 - Das Project zeigt nur Issues aus Repos, auf die der Nutzer bereits Zugriff hat.
 - So entsteht eine zentrale Übersicht ohne Rechtebruch.
 
+## GitHub-first agentische Arbeit
+
+Nichttriviale agentische Arbeit wird über ein führendes Issue und das
+Organization Project `NaC Control Plane` gesteuert. Das Issue beschreibt
+Auftrag, Scope, Akzeptanzkriterien, `Risk Gate`, `Delivery Mode` und
+Validierung. Das Project zeigt nur Issues aus Repos, auf die der Nutzer bereits
+Zugriff hat; Issues, Pull Requests, Project-Felder und Kommentare enthalten
+keine Secrets, privaten Dokumentinhalte oder echten Mandatsdaten.
+
+Pflichtfelder für agentische Issues:
+
+- `Status`
+- `Track`
+- `Work Type`
+- `Risk Gate`
+- `Delivery Mode`
+- `Priority`
+- `Size`
+- `Iteration`
+- `Due Date`
+
+Empfohlene Views:
+
+- `Now`: aktuell aktive agentische Arbeit.
+- `Blocked`: blockierte Issues mit sichtbarer Blocker-Beschreibung.
+- `Governance And Security`: Governance-, Security- und Compliance-Arbeit.
+- `Release Readiness`: Arbeit, die Abschluss-, PR- oder Release-Gates betrifft.
+- `My Agent Work`: persönliche Sicht auf zugewiesene agentische Issues.
+- `Owner Board`: Owner-Sicht auf zu verantwortende agentische Issues.
+
 ## Standardablauf: Neue Akte anlegen
 
 1. `case-repo` nach Namensstandard anlegen (z. B. `case-notary-2026-0042`).

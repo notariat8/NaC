@@ -40,6 +40,7 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                     "  delivery_modes:",
                     "    protected_pr:",
                     "    owner_direct_main:",
+                    "github_first_operating_model:",
                     "rule_architecture:",
                     "  human_explanation_de: docs/de/regelarchitektur.md",
                     "  human_explanation_en: docs/en/regelarchitektur.md",
@@ -58,6 +59,7 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                     "change_management:",
                     "  delivery_modes:",
                     "    protected_pr:",
+                    "github_first_operating_model:",
                     "rule_architecture:",
                     "  human_explanation_de: docs/de/regelarchitektur.md",
                     "  human_explanation_en: docs/en/regelarchitektur.md",
@@ -69,6 +71,30 @@ class GovernanceSyncValidationTest(unittest.TestCase):
             errors = validate_governance_sync.validate_process_policy_file()
 
         self.assertIn("Pflichtabschnitt fehlt in process-policy: owner_direct_main:", errors)
+
+    def test_process_policy_reports_missing_github_first_operating_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = "\n".join(
+                (
+                    "change_management:",
+                    "  delivery_modes:",
+                    "    protected_pr:",
+                    "    owner_direct_main:",
+                    "rule_architecture:",
+                    "  human_explanation_de: docs/de/regelarchitektur.md",
+                    "  human_explanation_en: docs/en/regelarchitektur.md",
+                )
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtabschnitt fehlt in process-policy: github_first_operating_model:",
+            errors,
+        )
 
 
 if __name__ == "__main__":

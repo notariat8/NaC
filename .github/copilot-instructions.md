@@ -15,6 +15,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
 - Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](../docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](../docs/en/regelarchitektur.md).
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
+- GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
 - Jede Prozessänderung muss begründet und versioniert sein.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.

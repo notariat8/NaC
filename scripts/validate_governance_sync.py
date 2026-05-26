@@ -48,6 +48,7 @@ MANDATORY_LANGUAGE_POLICY_KEYS = (
 
 MANDATORY_PROCESS_POLICY_KEYS = (
     "delivery_modes:",
+    "github_first_operating_model:",
     "protected_pr:",
     "owner_direct_main:",
     "rule_architecture:",
