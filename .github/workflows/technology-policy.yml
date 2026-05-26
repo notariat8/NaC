@@ -1,0 +1,44 @@
+name: Technology Policy
+
+on:
+  pull_request:
+    paths:
+      - "policies/technology-policy.yaml"
+      - "policies/language-policy.yaml"
+      - "scripts/validate_technology_policy.py"
+      - "scripts/quality_gate.py"
+      - "tests/test_technology_policy.py"
+      - ".github/workflows/technology-policy.yml"
+      - ".cursor/rules/*.mdc"
+      - ".cursor/rules/**/*.mdc"
+      - ".github/copilot-instructions.md"
+      - "docs/de/START_HERE.md"
+      - "docs/en/START_HERE.md"
+      - "docs/de/vscode-copilot-start.md"
+      - "docs/en/vscode-copilot-start.md"
+      - "bpmn/**"
+      - "**/*.adoc"
+      - "**/*.asciidoc"
+  workflow_dispatch:
+
+jobs:
+  technology-policy:
+    name: technology-policy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate technology policy
+        run: python scripts/validate_technology_policy.py
+
+      - name: Run technology policy tests
+        run: python -m unittest tests.test_technology_policy
