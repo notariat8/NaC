@@ -121,6 +121,21 @@ Empfohlene Views:
 - `My Agent Work`: persönliche Sicht auf zugewiesene agentische Issues.
 - `Owner Board`: Owner-Sicht auf zu verantwortende agentische Issues.
 
+Autonomie-Voraussetzungen:
+
+- GitHub CLI- oder App-Autorisierung enthält `repo`, `workflow`, `project` und `read:org`
+  für den vereinbarten Organisations-Scope.
+- Project-Owner: `notariat8`; Project-URL oder Project-Nummer: die freigegebene
+  URL oder Nummer von `NaC Control Plane` in den Setup-Notizen des führenden
+  Issues dokumentieren.
+- Der Agent darf im vereinbarten Scope Issues, Labels, Branches, Draft Pull
+  Requests, PR-Kommentare und Project-Felder erstellen oder aktualisieren.
+- Delivery-Mode-Regel: jedes Repo nutzt `Protected PR`, `Owner Direct` oder
+  `Sync PR`; Owner-Direct ist nur im aktiven Referenzrepo bei ausdrücklicher
+  Beauftragung erlaubt.
+- Blocker-Eskalation: Status `Blocked` setzen, einen kurzen Kommentar für die
+  fehlende Entscheidung ergänzen und kein stilles Abweichen von Policy.
+
 ## Standardablauf: Neue Akte anlegen
 
 1. `case-repo` nach Namensstandard anlegen (z. B. `case-notary-2026-0042`).

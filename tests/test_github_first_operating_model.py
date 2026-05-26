@@ -3,6 +3,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from scripts import validate_governance_sync
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,24 +21,60 @@ class GitHubFirstOperatingModelGovernanceTest(unittest.TestCase):
             with self.subTest(file=relative_path, marker=marker):
                 self.assertIn(marker, text)
 
-    def test_process_policy_contains_github_first_operating_model_markers(self) -> None:
-        self.assert_file_contains(
-            "policies/process-policy.yaml",
-            (
-                "github_first_operating_model:",
-                "project_owner: notariat8",
-                "project_title: NaC Control Plane",
-                "require_leading_issue_for_nontrivial_work: true",
-                "project_required_for_nontrivial_work: true",
-                "allow_owner_direct_with_issue_project_trail: true",
-                "completion_requires_remote_ci_checks: true",
-                "forbid_secrets_and_matter_data_in_github_surfaces: true",
-                "- Status",
-                "- Track",
-                "- Work Type",
-                "- Risk Gate",
-                "- Delivery Mode",
-            ),
+    def test_process_policy_structurally_defines_github_first_operating_model(self) -> None:
+        policy = validate_governance_sync.load_simple_yaml_mapping(
+            REPO_ROOT / "policies" / "process-policy.yaml"
+        )
+        model = policy["github_first_operating_model"]
+
+        self.assertEqual(model["project_owner"], "notariat8")
+        self.assertEqual(model["project_title"], "NaC Control Plane")
+        self.assertTrue(model["require_leading_issue_for_nontrivial_work"])
+        self.assertTrue(model["project_required_for_nontrivial_work"])
+        self.assertTrue(model["allow_owner_direct_with_issue_project_trail"])
+        self.assertTrue(model["completion_requires_remote_ci_checks"])
+        self.assertTrue(model["forbid_secrets_and_matter_data_in_github_surfaces"])
+
+        self.assertEqual(
+            model["required_project_fields"],
+            [
+                "Status",
+                "Track",
+                "Work Type",
+                "Risk Gate",
+                "Delivery Mode",
+                "Priority",
+                "Size",
+                "Iteration",
+                "Due Date",
+            ],
+        )
+        self.assertEqual(
+            model["required_statuses"],
+            ["Inbox", "Ready", "In Progress", "Review", "Blocked", "Done"],
+        )
+        self.assertEqual(
+            model["required_views"],
+            [
+                "Owner Board",
+                "Now",
+                "Blocked",
+                "Governance And Security",
+                "Release Readiness",
+                "My Agent Work",
+            ],
+        )
+        self.assertEqual(
+            model["delivery_modes"],
+            ["Owner Direct", "Protected PR", "Sync PR"],
+        )
+        self.assertEqual(
+            model["branch_prefixes"],
+            {
+                "agent": "agent/<issue-number>-<short-slug>",
+                "sync": "sync/<issue-number>-<short-slug>",
+                "hotfix": "hotfix/<issue-number>-<short-slug>",
+            },
         )
 
     def test_agent_instruction_surfaces_contain_github_first_markers(self) -> None:
@@ -74,6 +112,35 @@ class GitHubFirstOperatingModelGovernanceTest(unittest.TestCase):
                 ),
             )
 
+    def test_operations_issue_docs_document_autonomy_prerequisites_and_blocker_escalation(
+        self,
+    ) -> None:
+        expectations = {
+            "docs/en/issues/operations.md": (
+                "Autonomy prerequisites",
+                "`repo`, `workflow`, `project` and `read:org`",
+                "Project owner: `notariat8`",
+                "Project URL or number",
+                "Delivery-mode rule",
+                "Status `Blocked`",
+                "missing decision",
+                "no silent policy deviation",
+            ),
+            "docs/de/issues/operations.md": (
+                "Autonomie-Voraussetzungen",
+                "`repo`, `workflow`, `project` und `read:org`",
+                "Project-Owner: `notariat8`",
+                "Project-URL oder Project-Nummer",
+                "Delivery-Mode-Regel",
+                "Status `Blocked`",
+                "fehlende Entscheidung",
+                "kein stilles Abweichen",
+            ),
+        }
+
+        for relative_path, markers in expectations.items():
+            self.assert_file_contains(relative_path, markers)
+
     def test_issue_and_pull_request_templates_contain_github_first_markers(self) -> None:
         for relative_path in (
             ".github/ISSUE_TEMPLATE/bug_report.md",
@@ -93,15 +160,15 @@ class GitHubFirstOperatingModelGovernanceTest(unittest.TestCase):
             )
 
     def test_data_protection_policy_contains_github_surface_markers(self) -> None:
-        self.assert_file_contains(
-            "policies/data-protection-policy.yaml",
-            (
-                "github_surfaces:",
-                "forbid_secrets_and_matter_data: true",
-                "- issues",
-                "- pull_requests",
-                "- projects",
-            ),
+        policy = validate_governance_sync.load_simple_yaml_mapping(
+            REPO_ROOT / "policies" / "data-protection-policy.yaml"
+        )
+        github_surfaces = policy["github_surfaces"]
+
+        self.assertTrue(github_surfaces["forbid_secrets_and_matter_data"])
+        self.assertEqual(
+            github_surfaces["applies_to"],
+            ["issues", "pull_requests", "projects", "project_fields", "comments"],
         )
 
 
