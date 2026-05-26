@@ -86,6 +86,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_governance_sync.py"],
                 ),
                 (
+                    "technology_policy",
+                    "Technology Policy",
+                    [sys.executable, "scripts/validate_technology_policy.py"],
+                ),
+                (
                     "language_parity",
                     "Language Parity",
                     [sys.executable, "scripts/validate_language_parity.py"],
