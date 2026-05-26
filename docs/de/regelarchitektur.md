@@ -25,7 +25,7 @@ Doku-Regel geführt.
 
 | Gruppe | Warum | Härte | Führende Prüfung |
 | --- | --- | --- | --- |
-| Abschluss und Fertigmeldung | Verhindert, dass lokale Zwischenstände als fertig gelten. | hart | `nac doctor --profile strict`, `git status`, Abgleich `HEAD` gegen `origin/main` |
+| Abschluss und Fertigmeldung | Verhindert, dass lokale Zwischenstände als fertig gelten. | hart | `nac doctor --profile strict`, `git status`, Abgleich `HEAD` gegen `origin/main`, `remote_ci_checks` |
 | Git-Auslieferung | Trennt produktive PR-Freigabe von Owner-Direct-Arbeit im aktiven Referenzrepo. | modusabhängig | Branchschutz/PR im Produktivmodus, Push+Clean-Check im Referenzmodus |
 | Roadmap und Gantt | Hält Lieferplan und Status sichtbar, ohne kleine Fixes zu blockieren. | Hinweis plus Render-Gate | `scripts/validate_gantt_progress.py` |
 | Sprache und Lokalisierung | Deutsch führt fachlich, Englisch ist Übersetzung/Orientierung. | hart | `scripts/validate_language_parity.py` |
@@ -41,11 +41,17 @@ NaC unterscheidet zwei Modi:
 | Modus | Nutzung | Fertig bedeutet |
 | --- | --- | --- |
 | Geschützter PR-Modus | Produktive Forks, sensible Prozessänderungen, externe Mitwirkung. | Branch ist per PR reviewed, validiert und in `main` gemerged. |
-| Owner-Direct-Modus | Aktives Referenzrepo, wenn der Owner direkte Lieferung ausdrücklich beauftragt. | `main` ist validiert, zu GitHub gepusht, `HEAD` entspricht `origin/main`, und der Arbeitsbaum ist sauber. |
+| Owner-Direct-Modus | Aktives Referenzrepo, wenn der Owner direkte Lieferung ausdrücklich beauftragt. | `main` ist validiert, zu GitHub gepusht, `HEAD` entspricht `origin/main`, der Arbeitsbaum ist sauber, und `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` sowie `NaC Quality Gate / quality-gate` sind erfolgreich. |
 
 Für produktive Notariats- oder Organisations-Forks ist der geschützte PR-Modus
 das Zielbild. Der Owner-Direct-Modus ist kein Freibrief für produktive
 Mandatsdaten oder sensible Fachänderungen.
+
+`remote_ci_checks` sind Teil der Abschlussregel, weil lokale Validierung nicht
+beweist, dass GitHub nach dem Push dieselben Schutzgates ausführt. Mindestens
+erforderlich sind `Privacy and Secrets Guard / secret-scan`,
+`Privacy and Secrets Guard / privacy-lint` und
+`NaC Quality Gate / quality-gate`.
 
 ## Gantt-Regel
 

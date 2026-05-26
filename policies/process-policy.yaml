@@ -74,6 +74,11 @@ change_management:
   report_finished_only_after_target_branch_merge: false
   report_finished_only_after_target_branch_reaches_head: true
   finished_status_requires_clean_target_branch_workspace: true
+  completion_requires_remote_ci_checks: true
+  required_remote_ci_checks:
+    - "Privacy and Secrets Guard / secret-scan"
+    - "Privacy and Secrets Guard / privacy-lint"
+    - "NaC Quality Gate / quality-gate"
   delivery_modes:
     protected_pr:
       target: production_forks_and_sensitive_process_changes
@@ -81,6 +86,7 @@ change_management:
       require_pull_request: true
       require_review: true
       completion_requires_merge_to_target_branch: true
+      completion_requires_remote_ci_checks: true
     owner_direct_main:
       target: active_reference_repo_when_owner_explicitly_requests_direct_delivery
       require_branch: false
@@ -89,6 +95,7 @@ change_management:
       completion_requires_push_to_target_branch: true
       completion_requires_strict_validation: true
       completion_requires_clean_workspace: true
+      completion_requires_remote_ci_checks: true
   default_delivery_mode_for_production: protected_pr
   current_reference_repo_delivery_mode: owner_direct_main
 
@@ -109,6 +116,7 @@ rule_architecture:
         - git status
         - git rev-parse HEAD
         - git rev-parse origin/main
+        - remote_ci_checks
         - nac doctor --profile strict
     git_delivery:
       hardness: mode_dependent
@@ -139,6 +147,7 @@ rule_architecture:
       hardness: hard
       enforced_by:
         - scripts/privacy_lint.py
+        - "Privacy and Secrets Guard / secret-scan"
         - policies/data-protection-policy.yaml
     plugins_skills_and_agent_method:
       hardness: mixed

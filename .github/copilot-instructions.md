@@ -17,8 +17,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
 - Jede Prozessänderung muss begründet und versioniert sein.
-- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist.
-- Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
+- Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig, wenn zusätzlich `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate` erfolgreich sind.
 - [roadmap/GANTT.md](../roadmap/GANTT.md) wird aktualisiert, wenn Roadmap, Scope, Status, Meilenstein oder aktives Build-Board betroffen sind; Änderungen unter [plugins/](../plugins), [workflows/](../workflows) oder [usecases/](../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung. Kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 - Für das Fortschrittsbild genügt ein wöchentliches Gantt-Update; unter der Woche wird nur bei echter Roadmap-, Scope-, Status-, Meilenstein-, Pilotbereitschafts- oder Build-Board-Wirkung aktualisiert.
 - Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](../policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
@@ -114,6 +114,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 ## Datenschutz und Sicherheit
 
 - Keine echten Zugangsdaten, Keys oder Tokens in Vorschlägen speichern.
+- Secret-Scanning-CI muss ohne unkonfigurierte kommerzielle Lizenz lauffähig sein oder die erforderliche Lizenz als GitHub-Secret dokumentiert erzwingen.
 - Keine echten personenbezogenen Daten in Prozessbeispielen speichern.
 - Für Beispieldaten nur Testdomains und Platzhalter verwenden.
 - AI-SBOM gilt repo-weit für AI-fähige Plugins, Workflows, Usecases, Prompts und externe Modellaufrufe; lokale Runtime-, Hardware- und Middleware-Mindestvoraussetzungen müssen in der AI-SBOM geführt werden; keine Mandatsinhalte, Secrets oder personenbezogenen Daten in AI-SBOM-Artefakten speichern.

@@ -25,7 +25,7 @@ documentation rule.
 
 | Group | Why | Hardness | Leading Check |
 | --- | --- | --- | --- |
-| Completion and finished state | Prevents local intermediate states from being called finished. | hard | `nac doctor --profile strict`, `git status`, `HEAD` versus `origin/main` |
+| Completion and finished state | Prevents local intermediate states from being called finished. | hard | `nac doctor --profile strict`, `git status`, `HEAD` versus `origin/main`, `remote_ci_checks` |
 | Git delivery | Separates production PR approval from owner-direct work in the active reference repo. | mode-dependent | branch protection/PR in production mode, push+clean check in reference mode |
 | Roadmap and Gantt | Keeps delivery plan and status visible without blocking small fixes. | guidance plus render gate | `scripts/validate_gantt_progress.py` |
 | Language and localization | German leads for subject matter, English is translation/orientation. | hard | `scripts/validate_language_parity.py` |
@@ -41,11 +41,17 @@ NaC distinguishes two modes:
 | Mode | Use | Finished Means |
 | --- | --- | --- |
 | Protected PR mode | Production forks, sensitive process changes, external contribution. | Branch is reviewed through PR, validated and merged into `main`. |
-| Owner-direct mode | Active reference repo when the owner explicitly asks for direct delivery. | `main` is validated, pushed to GitHub, `HEAD` equals `origin/main`, and the working tree is clean. |
+| Owner-direct mode | Active reference repo when the owner explicitly asks for direct delivery. | `main` is validated, pushed to GitHub, `HEAD` equals `origin/main`, the working tree is clean, and `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` and `NaC Quality Gate / quality-gate` are successful. |
 
 For production notary or organization forks, protected PR mode is the target
 state. Owner-direct mode is not permission to store production matter data or
 make sensitive subject-matter changes without review.
+
+`remote_ci_checks` are part of the completion rule because local validation
+does not prove that GitHub has run the same protection gates after the push.
+The minimum required checks are `Privacy and Secrets Guard / secret-scan`,
+`Privacy and Secrets Guard / privacy-lint` and
+`NaC Quality Gate / quality-gate`.
 
 ## Gantt Rule
 

@@ -10,8 +10,8 @@ alwaysApply: true
 - Produktive Forks und sensible Prozessänderungen laufen über Branch + Pull Request + Review.
 - Im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - Jede Änderung braucht Zweck, Risiko und Verantwortliche.
-- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht und je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist.
-- Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig.
+- Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
+- Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig, wenn zusätzlich `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate` erfolgreich sind.
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) wird aktualisiert, wenn Roadmap, Scope, Status, Meilenstein oder aktives Build-Board betroffen sind.
 - Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung; kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 - Für das Fortschrittsbild genügt ein wöchentliches Gantt-Update; unter der Woche wird nur bei echter Roadmap-, Scope-, Status-, Meilenstein-, Pilotbereitschafts- oder Build-Board-Wirkung aktualisiert.

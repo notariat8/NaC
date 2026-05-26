@@ -42,6 +42,14 @@ required_controls:
   - incident_response_documented
   - dpa_avv_required_for_saas_processing
 
+secret_scanning_ci:
+  must_run_without_unconfigured_commercial_license: true
+  default_implementation: pinned_gitleaks_cli
+  require_checksum_for_downloaded_binary: true
+  if_license_gated_action_used:
+    required_repo_or_org_secret: GITLEAKS_LICENSE
+    fail_closed_when_secret_missing: true
+
 incident_response:
   immediate_actions:
     - revoke_exposed_secret
