@@ -15,3 +15,4 @@ model and repository consolidation.
   repositories.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): target structure and migration into one
   repository.
+- [../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md](../superpowers/specs/2026-05-26-github-first-agentic-operating-model-design.md): GitHub-first work control for agentic issues, pull requests and Projects.

@@ -13,6 +13,20 @@ repository_rules:
   allow_real_customer_records: false
   sample_data_only: true
 
+github_surfaces:
+  forbid_secrets_and_matter_data: true
+  applies_to:
+    - issues
+    - pull_requests
+    - projects
+    - project_fields
+    - comments
+  allowed_content:
+    - synthetic_examples
+    - policy_references
+    - validation_evidence_without_secret_values
+    - links_to_authorized_evidence_without_private_payload
+
 sample_data_constraints:
   emails:
     allowed_domains:

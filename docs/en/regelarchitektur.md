@@ -27,6 +27,7 @@ documentation rule.
 | --- | --- | --- | --- |
 | Completion and finished state | Prevents local intermediate states from being called finished. | hard | `nac doctor --profile strict`, `git status`, `HEAD` versus `origin/main`, `remote_ci_checks` |
 | Git delivery | Separates production PR approval from owner-direct work in the active reference repo. | mode-dependent | branch protection/PR in production mode, push+clean check in reference mode |
+| GitHub-first work control | Ties non-trivial agentic work to a leading issue and visible Project board. | working rule plus completion gate | issue trail, `NaC Control Plane`, Delivery Mode, `remote_ci_checks` |
 | Roadmap and Gantt | Keeps delivery plan and status visible without blocking small fixes. | guidance plus render gate | `scripts/validate_gantt_progress.py` |
 | Language and localization | German leads for subject matter, English is translation/orientation. | hard | `scripts/validate_language_parity.py` |
 | CLI and office surface | New NaC functionality needs a verifiable operating surface. | hard for new functionality | tests, CLI call, `nac doctor --profile strict` |
@@ -52,6 +53,18 @@ does not prove that GitHub has run the same protection gates after the push.
 The minimum required checks are `Privacy and Secrets Guard / secret-scan`,
 `Privacy and Secrets Guard / privacy-lint` and
 `NaC Quality Gate / quality-gate`.
+
+## GitHub-first Work Control
+
+Non-trivial agentic work is GitHub-first. A leading issue records the task,
+scope, acceptance criteria, Risk Gate, Delivery Mode and validation. The
+organization Project `NaC Control Plane` shows status, blockers and ownership
+across the repositories each user is allowed to see.
+
+An update is finished only when the Delivery Mode documented in the issue is
+satisfied and the required `remote_ci_checks` are successful. The Project does
+not bypass repository permissions: users see only issues from repositories
+they can already access.
 
 ## Gantt Rule
 

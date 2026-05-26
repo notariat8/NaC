@@ -18,6 +18,7 @@ POLICY_FILES = {
     "policies/provider-open-services-policy.yaml",
     "policies/language-policy.yaml",
     "policies/license-policy.yaml",
+    "policies/data-protection-policy.yaml",
     "policies/sbom-policy.yaml",
     "policies/technology-policy.yaml",
 }
@@ -48,12 +49,192 @@ MANDATORY_LANGUAGE_POLICY_KEYS = (
 
 MANDATORY_PROCESS_POLICY_KEYS = (
     "delivery_modes:",
+    "github_first_operating_model:",
     "protected_pr:",
     "owner_direct_main:",
     "rule_architecture:",
     "human_explanation_de: docs/de/regelarchitektur.md",
     "human_explanation_en: docs/en/regelarchitektur.md",
 )
+
+EXPECTED_GITHUB_FIRST_SCALARS = {
+    "project_owner": "notariat8",
+    "project_title": "NaC Control Plane",
+    "project_scope": "organization",
+}
+
+EXPECTED_GITHUB_FIRST_TRUE_KEYS = (
+    "project_required_for_nontrivial_work",
+    "require_leading_issue_for_nontrivial_work",
+    "require_project_fields_for_nontrivial_work",
+    "allow_owner_direct_with_issue_project_trail",
+    "completion_requires_remote_ci_checks",
+    "forbid_secrets_and_matter_data_in_github_surfaces",
+)
+
+EXPECTED_GITHUB_FIRST_LISTS = {
+    "required_project_fields": (
+        "Status",
+        "Track",
+        "Work Type",
+        "Risk Gate",
+        "Delivery Mode",
+        "Priority",
+        "Size",
+        "Iteration",
+        "Due Date",
+    ),
+    "required_statuses": (
+        "Inbox",
+        "Ready",
+        "In Progress",
+        "Review",
+        "Blocked",
+        "Done",
+    ),
+    "required_views": (
+        "Owner Board",
+        "Now",
+        "Blocked",
+        "Governance And Security",
+        "Release Readiness",
+        "My Agent Work",
+    ),
+    "delivery_modes": (
+        "Owner Direct",
+        "Protected PR",
+        "Sync PR",
+    ),
+}
+
+EXPECTED_GITHUB_FIRST_BRANCH_PREFIXES = {
+    "agent": "agent/<issue-number>-<short-slug>",
+    "sync": "sync/<issue-number>-<short-slug>",
+    "hotfix": "hotfix/<issue-number>-<short-slug>",
+}
+
+EXPECTED_GITHUB_SURFACES = (
+    "issues",
+    "pull_requests",
+    "projects",
+    "project_fields",
+    "comments",
+)
+
+
+def strip_yaml_inline_comment(value: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and quote == '"':
+            escaped = True
+            continue
+        if char in {'"', "'"}:
+            if quote == char:
+                quote = None
+            elif quote is None:
+                quote = char
+            continue
+        if char == "#" and quote is None and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+    return value
+
+
+def parse_simple_yaml_scalar(value: str) -> object:
+    value = strip_yaml_inline_comment(value).strip()
+    if value in {"true", "false"}:
+        return value == "true"
+    if (
+        len(value) >= 2
+        and value[0] == value[-1]
+        and value[0] in {'"', "'"}
+    ):
+        return value[1:-1]
+    return value
+
+
+def parse_simple_yaml_block(
+    lines: list[tuple[int, str]], index: int, indent: int
+) -> tuple[object, int]:
+    if index >= len(lines):
+        return {}, index
+
+    if lines[index][1].startswith("- "):
+        items: list[object] = []
+        while index < len(lines):
+            line_indent, content = lines[index]
+            if line_indent != indent or not content.startswith("- "):
+                break
+            items.append(parse_simple_yaml_scalar(content[2:]))
+            index += 1
+        return items, index
+
+    mapping: dict[str, object] = {}
+    while index < len(lines):
+        line_indent, content = lines[index]
+        if line_indent < indent:
+            break
+        if line_indent > indent:
+            index += 1
+            continue
+        if content.startswith("- "):
+            break
+        if ":" not in content:
+            index += 1
+            continue
+
+        key, value = content.split(":", 1)
+        key = key.strip()
+        value = strip_yaml_inline_comment(value).strip()
+        index += 1
+        if value:
+            mapping[key] = parse_simple_yaml_scalar(value)
+            continue
+
+        if index < len(lines) and lines[index][0] > line_indent:
+            child, index = parse_simple_yaml_block(lines, index, lines[index][0])
+            mapping[key] = child
+        else:
+            mapping[key] = {}
+
+    return mapping, index
+
+
+def load_simple_yaml_mapping(path: Path) -> dict[str, object]:
+    lines: list[tuple[int, str]] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        lines.append((indent, raw_line.strip()))
+
+    parsed, _ = parse_simple_yaml_block(lines, 0, lines[0][0] if lines else 0)
+    if isinstance(parsed, dict):
+        return parsed
+    return {}
+
+
+def validate_required_list(
+    *,
+    errors: list[str],
+    policy_name: str,
+    section_name: str,
+    key: str,
+    actual: object,
+    expected_values: tuple[str, ...],
+) -> None:
+    if not isinstance(actual, list):
+        errors.append(f"Pflichtabschnitt fehlt in {policy_name}: {section_name}.{key}")
+        return
+
+    for expected in expected_values:
+        if expected not in actual:
+            errors.append(
+                f"Pflichtwert fehlt in {policy_name}: {section_name}.{key}.{expected}"
+            )
 
 
 def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -142,9 +323,87 @@ def validate_process_policy_file() -> list[str]:
         if key not in text:
             errors.append(f"Pflichtabschnitt fehlt in process-policy: {key}")
 
+    policy = load_simple_yaml_mapping(policy_path)
+    model = policy.get("github_first_operating_model")
+    if not isinstance(model, dict):
+        errors.append(
+            "Pflichtabschnitt fehlt in process-policy: "
+            "github_first_operating_model must be a mapping"
+        )
+    else:
+        for key, expected in EXPECTED_GITHUB_FIRST_SCALARS.items():
+            if model.get(key) != expected:
+                errors.append(
+                    "Pflichtwert fehlt in process-policy: "
+                    f"github_first_operating_model.{key}.{expected}"
+                )
+
+        for key in EXPECTED_GITHUB_FIRST_TRUE_KEYS:
+            if model.get(key) is not True:
+                errors.append(
+                    "Pflichtwert fehlt in process-policy: "
+                    f"github_first_operating_model.{key}.true"
+                )
+
+        for key, expected_values in EXPECTED_GITHUB_FIRST_LISTS.items():
+            validate_required_list(
+                errors=errors,
+                policy_name="process-policy",
+                section_name="github_first_operating_model",
+                key=key,
+                actual=model.get(key),
+                expected_values=expected_values,
+            )
+
+        branch_prefixes = model.get("branch_prefixes")
+        if not isinstance(branch_prefixes, dict):
+            errors.append(
+                "Pflichtabschnitt fehlt in process-policy: "
+                "github_first_operating_model.branch_prefixes"
+            )
+        else:
+            for key, expected in EXPECTED_GITHUB_FIRST_BRANCH_PREFIXES.items():
+                if branch_prefixes.get(key) != expected:
+                    errors.append(
+                        "Pflichtwert fehlt in process-policy: "
+                        f"github_first_operating_model.branch_prefixes.{key}"
+                    )
+
     for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
         if not (REPO_ROOT / rel_path).exists():
             errors.append(f"Pflichtdokument zur Regelarchitektur fehlt: {rel_path}")
+    return errors
+
+
+def validate_data_protection_policy_file() -> list[str]:
+    errors: list[str] = []
+    policy_path = REPO_ROOT / "policies" / "data-protection-policy.yaml"
+    if not policy_path.exists():
+        errors.append("Pflichtdatei fehlt: policies/data-protection-policy.yaml")
+        return errors
+
+    policy = load_simple_yaml_mapping(policy_path)
+    github_surfaces = policy.get("github_surfaces")
+    if not isinstance(github_surfaces, dict):
+        errors.append(
+            "Pflichtabschnitt fehlt in data-protection-policy: github_surfaces"
+        )
+        return errors
+
+    if github_surfaces.get("forbid_secrets_and_matter_data") is not True:
+        errors.append(
+            "Pflichtwert fehlt in data-protection-policy: "
+            "github_surfaces.forbid_secrets_and_matter_data.true"
+        )
+
+    validate_required_list(
+        errors=errors,
+        policy_name="data-protection-policy",
+        section_name="github_surfaces",
+        key="applies_to",
+        actual=github_surfaces.get("applies_to"),
+        expected_values=EXPECTED_GITHUB_SURFACES,
+    )
     return errors
 
 
@@ -160,6 +419,7 @@ def main() -> int:
     errors = validate_access_policy_file()
     errors.extend(validate_language_policy_file())
     errors.extend(validate_process_policy_file())
+    errors.extend(validate_data_protection_policy_file())
 
     if mirror_changed and not policy_changed:
         errors.append(

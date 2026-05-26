@@ -27,6 +27,7 @@ Doku-Regel geführt.
 | --- | --- | --- | --- |
 | Abschluss und Fertigmeldung | Verhindert, dass lokale Zwischenstände als fertig gelten. | hart | `nac doctor --profile strict`, `git status`, Abgleich `HEAD` gegen `origin/main`, `remote_ci_checks` |
 | Git-Auslieferung | Trennt produktive PR-Freigabe von Owner-Direct-Arbeit im aktiven Referenzrepo. | modusabhängig | Branchschutz/PR im Produktivmodus, Push+Clean-Check im Referenzmodus |
+| GitHub-first Arbeitssteuerung | Bindet nichttriviale agentische Arbeit an ein führendes Issue und ein sichtbares Project-Board. | Arbeitsregel plus Abschluss-Gate | Issue-Trail, `NaC Control Plane`, Delivery Mode, `remote_ci_checks` |
 | Roadmap und Gantt | Hält Lieferplan und Status sichtbar, ohne kleine Fixes zu blockieren. | Hinweis plus Render-Gate | `scripts/validate_gantt_progress.py` |
 | Sprache und Lokalisierung | Deutsch führt fachlich, Englisch ist Übersetzung/Orientierung. | hart | `scripts/validate_language_parity.py` |
 | CLI und Bürooberfläche | Neue NaC-Funktionalität braucht eine prüfbare Bedienkante. | hart für neue Funktionalität | Tests, CLI-Aufruf, `nac doctor --profile strict` |
@@ -52,6 +53,18 @@ beweist, dass GitHub nach dem Push dieselben Schutzgates ausführt. Mindestens
 erforderlich sind `Privacy and Secrets Guard / secret-scan`,
 `Privacy and Secrets Guard / privacy-lint` und
 `NaC Quality Gate / quality-gate`.
+
+## GitHub-first Arbeitssteuerung
+
+Nichttriviale agentische Arbeit läuft GitHub-first. Ein führendes Issue hält
+Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung
+fest. Das Organization Project `NaC Control Plane` zeigt Status, Blocker und
+Zuständigkeit über die jeweils sichtbaren Repos hinweg.
+
+Fertig ist ein Update erst, wenn der im Issue dokumentierte Delivery Mode
+erfüllt ist und die verpflichtenden `remote_ci_checks` erfolgreich sind. Das
+Project ersetzt keine Repo-Rechte: Nutzer sehen nur Issues aus Repos, auf die
+sie bereits Zugriff haben.
 
 ## Gantt-Regel
 

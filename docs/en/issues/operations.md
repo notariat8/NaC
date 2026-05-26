@@ -99,6 +99,50 @@ Important:
 - The project shows only issues from repositories the user can already access.
 - This creates a central overview without permission leakage.
 
+## GitHub-first Agentic Work
+
+Non-trivial agentic work is controlled through a leading issue and the
+organization Project `NaC Control Plane`. The issue records task, scope,
+acceptance criteria, `Risk Gate`, `Delivery Mode` and validation. The Project
+shows only issues from repositories the user can already access; issues, pull
+requests, Project fields and comments contain no secrets, private document
+content or real matter data.
+
+Required fields for agentic issues:
+
+- `Status`
+- `Track`
+- `Work Type`
+- `Risk Gate`
+- `Delivery Mode`
+- `Priority`
+- `Size`
+- `Iteration`
+- `Due Date`
+
+Recommended views:
+
+- `Now`: currently active agentic work.
+- `Blocked`: blocked issues with visible blocker context.
+- `Governance And Security`: governance, security and compliance work.
+- `Release Readiness`: work related to completion, PR or release gates.
+- `My Agent Work`: personal view of assigned agentic issues.
+- `Owner Board`: owner view of accountable agentic issues.
+
+Autonomy prerequisites:
+
+- GitHub CLI or app authorization includes `repo`, `workflow`, `project` and `read:org`
+  for the agreed organization scope.
+- Project owner: `notariat8`; Project URL or number: record the approved
+  `NaC Control Plane` URL or Project number in the leading issue setup notes.
+- The agent may create or update issues, labels, branches, draft pull requests,
+  pull-request comments and Project fields within the agreed scope.
+- Delivery-mode rule: each repository uses `Protected PR`, `Owner Direct` or
+  `Sync PR`; owner-direct delivery is allowed only in the active reference repo
+  when explicitly requested.
+- Blocker escalation: set Status `Blocked`, add a short comment with the
+  missing decision, and make no silent policy deviation.
+
 ## Standard Flow: Create New File
 
 1. Create `case-repo` according to naming standard, for example

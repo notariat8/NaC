@@ -9,6 +9,7 @@ Diese Regel spiegelt [policies/process-policy.yaml](../../policies/process-polic
 
 - Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Lösungswegen zuerst erkunden, Plan mit Zweck/Risiko nennen und Bestätigung einholen.
 - Bei klar beauftragten, kleinen Änderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
+- GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
 - Codeänderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder Testlücke festhalten, danach implementieren, iterieren und erneut validieren.
 - UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis, bevor der Stand als abgeschlossen gemeldet wird.
 - Genehmigungspflichtige Commands müssen Zweck, Umfang und Bezug zur Aufgabe nennen. Unklare Approval-Anfragen werden nicht bestätigt, sondern neu und konkret gestellt.
