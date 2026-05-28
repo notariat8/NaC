@@ -1,3 +1,4 @@
+from .customer_onboarding import build_customer_tenant_plan
 from .oci_login import DEFAULT_OIDC_SCOPES, build_login_intent
 from .oci_tenant import NAC_TENANT_ROLES, build_admin_provisioning_plan, build_apply_request, check_domain_ready
 
@@ -6,6 +7,7 @@ __all__ = [
     "NAC_TENANT_ROLES",
     "build_admin_provisioning_plan",
     "build_apply_request",
+    "build_customer_tenant_plan",
     "build_login_intent",
     "check_domain_ready",
 ]

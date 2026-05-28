@@ -25,6 +25,28 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertIn("saas_admin_review_queue", contract["saas_admin_journey"])
         self.assertFalse(contract["guardrails"]["customer_oci_console_required"])
 
+    def test_customer_tenant_plan_uses_compartment_and_shared_atp_mapping(self) -> None:
+        from nac_identity.customer_onboarding import build_customer_tenant_plan
+
+        plan = build_customer_tenant_plan(
+            domain="kanzlei-notariat.example",
+            tenant_slug="kanzlei-notariat",
+            admin_email="admin@kanzlei-notariat.example",
+            saas_admin_email="saas-owner@example.com",
+        )
+        serialized = json.dumps(plan, sort_keys=True).lower()
+
+        self.assertEqual(plan["schema_version"], "nac.customer-tenant-plan/v0.1")
+        self.assertEqual(plan["tenant"]["domain"], "kanzlei-notariat.example")
+        self.assertEqual(plan["admin_user"]["email"], "admin@kanzlei-notariat.example")
+        self.assertEqual(plan["oci"]["identity"]["customer_domain_strategy"], "single_secondary_domain")
+        self.assertEqual(plan["oci"]["resource_isolation"]["compartment_strategy"], "one_compartment_per_customer_domain")
+        self.assertEqual(plan["atp"]["strategy"], "shared_atp_with_tenant_id")
+        self.assertIn("tenant_id", plan["atp"]["required_controls"])
+        self.assertTrue(plan["requires_owner_apply"])
+        self.assertNotIn("private_key", serialized)
+        self.assertNotIn("client_secret", serialized)
+
 
 if __name__ == "__main__":
     unittest.main()
