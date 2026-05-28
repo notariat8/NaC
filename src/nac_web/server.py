@@ -59,6 +59,9 @@ class NaCLocalWebApp:
         route = unquote(parsed.path)
         try:
             if route == "/" or route == "":
+                handoff_page = build_www_n8_handoff_page(parsed.query)
+                if handoff_page is not None:
+                    return _html_response(handoff_page)
                 return _html_response(build_home_page(self.repo_root))
             if route == "/healthz":
                 return _json_response({"status": "ok"})
@@ -268,6 +271,68 @@ def build_home_page(repo_root: Path) -> str:
     </div>
     """
     return _layout("NaC Lokaler Webserver", body)
+
+
+def build_www_n8_handoff_page(query: str) -> str | None:
+    params = parse_qs(query, keep_blank_values=True)
+    if _optional_query_text(params, "source") != "www-n8":
+        return None
+    entry = _optional_query_text(params, "entry")
+    if entry == "customer":
+        tenant_hint = _optional_query_text(params, "tenant_hint", max_length=120)
+        hint = html.escape(tenant_hint) if tenant_hint else "nicht übergeben"
+        body = f"""
+        <nav class="topline"><a href="/">← Übersicht</a><span><a href="/healthz">Health</a></span></nav>
+        <section class="hero">
+          <p class="eyebrow">NaC App-Einstieg</p>
+          <h1>Bestandskunde</h1>
+          <p>Der Übergang von <code>www-n8</code> wurde empfangen. Der Tenant-Hinweis ist nur eine Vorsortierung
+          und kein Tenant-Autorisierungsnachweis; die eigentliche Anmeldung bleibt am OCI-IdP-Login.</p>
+        </section>
+        <div class="grid">
+          <section class="notice">
+            <h2>Tenant-Kontext</h2>
+            <p><strong>Tenant-Hinweis:</strong> {hint}</p>
+            <p><strong>Nächster Gate:</strong> OCI-IdP-Login mit serverseitiger Tenant-Zuordnung.</p>
+          </section>
+          <section>
+            <h2>Guardrails</h2>
+            <ul class="link-list">
+              <li><span>Keine Mandatsdaten, keine Zugangsdaten, keine Secrets aus Query-Parametern.</span></li>
+              <li><span>Der Hinweis darf keine Rollen, Gruppen oder OCI-Schreiboperationen auslösen.</span></li>
+            </ul>
+          </section>
+        </div>
+        """
+        return _layout("NaC App-Einstieg", body)
+    if entry == "prospect":
+        domain_hint = _optional_query_text(params, "domain_hint", max_length=120)
+        hint = html.escape(domain_hint) if domain_hint else "nicht übergeben"
+        body = f"""
+        <nav class="topline"><a href="/">← Übersicht</a><span><a href="/api/tenant/domain-check">Domain API</a></span></nav>
+        <section class="hero">
+          <p class="eyebrow">NaC App-Einstieg</p>
+          <h1>Neukunde</h1>
+          <p>Der Domain-Hinweis aus <code>www-n8</code> wurde empfangen. Die Domain-Readiness wird erst
+          serverseitig mit Tenant-Slug und bestätigter Admin-Adresse geprüft.</p>
+        </section>
+        <div class="grid">
+          <section class="notice">
+            <h2>Domain-Readiness</h2>
+            <p><strong>Domain-Hinweis:</strong> {hint}</p>
+            <p><strong>API-Kante:</strong> <code>/api/tenant/domain-check</code></p>
+          </section>
+          <section>
+            <h2>Guardrails</h2>
+            <ul class="link-list">
+              <li><span>Der Hinweis bleibt unverbindlich, bis DNS- und Owner-Freigaben geprüft sind.</span></li>
+              <li><span>OCI-Identity-Schreiboperationen bleiben an Owner-Review und Apply-Gates gebunden.</span></li>
+            </ul>
+          </section>
+        </div>
+        """
+        return _layout("NaC App-Einstieg", body)
+    return None
 
 
 def build_bpmn_page(model) -> str:
@@ -950,6 +1015,14 @@ def _query_text(params: dict[str, list[str]], key: str) -> str:
     if value:
         return value
     raise ValueError(f"{key} fehlt")
+
+
+def _optional_query_text(params: dict[str, list[str]], key: str, *, max_length: int | None = None) -> str:
+    values = params.get(key) or []
+    value = values[0].strip() if values else ""
+    if max_length is not None:
+        return value[:max_length]
+    return value
 
 
 def _layout(title: str, body: str, head_extra: str = "") -> str:
