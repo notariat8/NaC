@@ -206,6 +206,16 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertNotIn("Betriebsmodell ansehen", html)
         self.assertNotIn("alles läuft über CLI", html.lower())
 
+    def test_operator_logo_uses_canonical_bild8_n8_asset(self) -> None:
+        logo = (bridge.SITE_ROOT / "assets" / "n8.svg").read_text(encoding="utf-8")
+
+        self.assertIn("<title>n8</title>", logo)
+        self.assertIn('fill="#5E35B1"', logo)
+        self.assertIn("Hanken Grotesk", logo)
+        self.assertIn('M0 76 H94', logo)
+        self.assertIn('M143 76 H166', logo)
+        self.assertNotIn("Arial Rounded MT Bold", logo)
+
     def test_operator_matter_api_creates_lists_and_updates_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tenant_repo = Path(temp_dir) / "tenant"
