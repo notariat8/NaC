@@ -1,0 +1,57 @@
+{
+  "schema_version": "nac.customer-tenant-onboarding/v0.1",
+  "contract_id": "workflow.customer_tenant_onboarding",
+  "title": "Customer-Centric Tenant Onboarding",
+  "status": "planned_mvp",
+  "last_update": "2026-05-28",
+  "purpose": "Definiert die sichtbare Neukundenreise von www-n8 bis zum initialen Kundenadmin in NaC. NaC fuehrt Domain-Readiness, DNS-Challenge, SaaS-Admin-Review, Owner-Apply-Plan und Tenant Registry.",
+  "public_entry_surface": "www-n8",
+  "app_surface": "app.notariat8.de",
+  "customer_journey": [
+    "customer_domain_readiness",
+    "admin_email_capture",
+    "dns_txt_challenge",
+    "dns_status_check",
+    "return_later_resume",
+    "saas_admin_review",
+    "customer_admin_invitation"
+  ],
+  "saas_admin_journey": [
+    "saas_admin_review_queue",
+    "domain_readiness_review",
+    "tenant_registry_plan_review",
+    "owner_apply_approval",
+    "oci_identity_apply_plan",
+    "invitation_audit_record"
+  ],
+  "oci_target_model": {
+    "saas_admin_domain": "Default",
+    "customer_identity_domain_strategy": "single_secondary_domain",
+    "resource_isolation": "one_compartment_per_customer_domain",
+    "customer_console_required": false,
+    "productive_write_gate": "owner_apply_approval"
+  },
+  "atp_target_model": {
+    "strategy": "shared_atp_with_tenant_id",
+    "required_controls": [
+      "tenant_registry",
+      "tenant_id",
+      "row_level_tenant_scope",
+      "audit_tenant_context"
+    ]
+  },
+  "apply_gates": [
+    "domain_ready",
+    "dns_txt_verified",
+    "saas_admin_reviewed",
+    "owner_apply_approved",
+    "audit_event_prepared",
+    "rollback_plan_prepared"
+  ],
+  "guardrails": {
+    "customer_oci_console_required": false,
+    "www_n8_accepts_mandate_data": false,
+    "productive_oci_write_without_owner_apply": false,
+    "github_contains_secrets": false
+  }
+}
