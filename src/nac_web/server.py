@@ -494,6 +494,13 @@ def build_customer_readiness_page(query: str) -> str:
             "admin_email": readiness["admin_email"],
         }
     )
+    resume_query = urlencode(
+        {
+            "domain_hint": readiness["domain"],
+            "tenant_slug": readiness["tenant_slug"],
+            "admin_email": readiness["admin_email"],
+        }
+    )
     body = f"""
     <nav class="topline"><a href="/">← Übersicht</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
     <section class="hero">
@@ -516,7 +523,7 @@ def build_customer_readiness_page(query: str) -> str:
         <p><strong>Wert:</strong> <code>{html.escape(verification["dns_record_value"])}</code></p>
         <div class="toolbar">
           <a class="button-link" href="/api/tenant/domain-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>
-          <a class="inline-link" href="/onboarding/readiness?{html.escape(urlencode({'domain_hint': readiness['domain']}), quote=True)}">später erneut öffnen</a>
+          <a class="inline-link" href="/onboarding/readiness?{html.escape(resume_query, quote=True)}">später erneut öffnen</a>
         </div>
       </section>
     </div>

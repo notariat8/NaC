@@ -191,6 +191,23 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("propagation", html)
         self.assertNotIn("OCI Console", html)
 
+    def test_customer_readiness_return_later_preserves_customer_context(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/onboarding/readiness"
+            "?domain_hint=kanzlei-notariat.example"
+            "&tenant_slug=notariat-2026"
+            "&admin_email=verwaltung@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "/onboarding/readiness?domain_hint=kanzlei-notariat.example&amp;tenant_slug=notariat-2026&amp;admin_email=verwaltung%40kanzlei-notariat.example",
+            html,
+        )
+
     def test_app_receives_www_n8_customer_handoff_without_tenant_decision(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
