@@ -13,6 +13,7 @@ from typing import Any
 
 from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
+from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -244,6 +245,20 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_sample.add_argument("--akten-id", help="Optionale technische Akten-ID. Standard: UVZ-2026-0001.")
     tenant_sample.add_argument("--force", action="store_true", help="Bestehende Musterakte überschreiben.")
     tenant_sample.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_domain = tenant_sub.add_parser("domain-check", help="Prüft Domain-Readiness für NaC-SaaS-Tenant-Onboarding.")
+    tenant_domain.add_argument("--domain", required=True, help="Kundendomain, z.B. kanzlei-notariat.example.")
+    tenant_domain.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug, keine Secrets.")
+    tenant_domain.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
+    tenant_domain.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_admin = tenant_sub.add_parser("provision-admin", help="Erzeugt einen OCI-Identity-Admin-Dry-run-Plan.")
+    tenant_admin.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
+    tenant_admin.add_argument("--domain", required=True, help="Kundendomain.")
+    tenant_admin.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
+    tenant_admin.add_argument("--admin-display-name", required=True, help="Anzeigename des initialen Tenant-Admins.")
+    tenant_admin.add_argument("--identity-domain-url", required=True, help="OCI Identity Domain URL ohne /admin/v1.")
+    tenant_admin.add_argument("--identity-domain-id", required=True, help="OCI Identity Domain OCID.")
+    tenant_admin.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Plan erzeugen, keine OCI-Schreiboperation.")
+    tenant_admin.add_argument("--format", choices=["text", "json"], default="text")
     tenant.set_defaults(func=command_tenant)
 
     return parser
@@ -490,6 +505,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("GNotKG Cost Review Contract", "validate_gnotkg_costs.py"),
             ("Secure Document Link Contract", "validate_secure_document_links.py"),
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
+            ("OCI Tenant Identity Contract", "validate_oci_tenant_identity.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -786,6 +802,49 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Modus: {payload['mode']}")
             if payload["remote_origin"]:
                 print(f"- Remote: {payload['remote_origin']}")
+            return 0
+
+        if args.tenant_command == "domain-check":
+            payload = check_domain_ready(
+                domain=args.domain,
+                tenant_slug=args.tenant_slug,
+                admin_email=args.admin_email,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0 if payload["ready"] else 1
+            print("NaC Tenant-Domain-Readiness")
+            print(f"- Domain: {payload['domain']}")
+            print(f"- Tenant: {payload['tenant_slug']}")
+            print(f"- Status: {'bereit' if payload['ready'] else 'blockiert'}")
+            print(f"- DNS-TXT: {payload['verification']['dns_record_name']}")
+            print(f"- Wert: {payload['verification']['dns_record_value']}")
+            for finding in payload["blocking_findings"]:
+                print(f"- Blocker: {finding}")
+            return 0 if payload["ready"] else 1
+
+        if args.tenant_command == "provision-admin":
+            if not args.dry_run:
+                print("ERROR: OCI-Admin-Provisioning ist in diesem Track nur mit --dry-run zulässig.")
+                return 1
+            payload = build_admin_provisioning_plan(
+                tenant_slug=args.tenant_slug,
+                domain=args.domain,
+                admin_email=args.admin_email,
+                admin_display_name=args.admin_display_name,
+                identity_domain_url=args.identity_domain_url,
+                identity_domain_id=args.identity_domain_id,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("OCI-Identity-Admin-Provisioning-Plan")
+            print("- Modus: dry_run")
+            print(f"- Tenant: {payload['tenant_slug']}")
+            print(f"- Admin: {payload['admin_user']['user_name']}")
+            print(f"- Benutzer-Endpunkt: {payload['target']['users_endpoint']}")
+            print(f"- Gruppen-Endpunkt: {payload['target']['groups_endpoint']}")
+            print("- Owner-Freigabe vor Apply: erforderlich")
             return 0
 
         if args.tenant_command == "status":

@@ -39,3 +39,7 @@ Jeder Vertrag soll definieren:
   Kandidateninventar für juristische Recherche-, MCP- und Verlagsdatenbank-
   Connectoren ohne Produktintegration, Credentials oder Mandatsdaten, mit
   Lizenz-, AVV-, AI-SBOM- und Review-Gates.
+- [workflows/contracts/oci-tenant-identity.contract.json](oci-tenant-identity.contract.json):
+  Vertrag für tenant-aware NaC-SaaS-Onboarding mit Oracle OCI Identity Domains,
+  Domain-Readiness, Admin-Provisioning-Dry-run und Owner-Apply-Gate vor jedem
+  produktiven Identity-Write.

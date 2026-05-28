@@ -22,7 +22,7 @@
   "allowed_work": [
     "Prepare German eID and AusweisApp readiness plans.",
     "Define minimal verified-claim sets and consent evidence.",
-    "Review IAM projection readiness for Entra ID, Oracle IAM and SCIM targets.",
+    "Review IAM projection readiness for Oracle IAM, SCIM targets and optional Microsoft Entra ID.",
     "Prepare metadata-only evidence templates and Day2 follow-up plans."
   ],
   "prohibited_work": [

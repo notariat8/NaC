@@ -120,6 +120,45 @@ class NaCLocalWebTests(unittest.TestCase):
         quote_payload = json.loads(quote_body.decode("utf-8"))
         self.assertEqual(quote_payload["fee_amount"], "4138.00")
 
+    def test_app_serves_tenant_domain_check_api(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/api/tenant/domain-check"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        payload = json.loads(body.decode("utf-8"))
+        self.assertTrue(payload["ready"])
+        self.assertEqual(payload["tenant_slug"], "kanzlei-notariat")
+
+    def test_app_serves_tenant_provision_admin_preview_api(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle_post(
+            "/api/tenant/provision-admin/preview",
+            json.dumps(
+                {
+                    "tenant_slug": "kanzlei-notariat",
+                    "domain": "kanzlei-notariat.example",
+                    "admin_email": "admin@kanzlei-notariat.example",
+                    "admin_display_name": "Admin Notariat",
+                    "identity_domain_url": "https://idcs.example.identity.oraclecloud.com:443",
+                    "identity_domain_id": "ocid1.domain.oc1.example",
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        payload = json.loads(body.decode("utf-8"))
+        self.assertEqual(payload["mode"], "dry_run")
+        self.assertTrue(payload["requires_human_approval"])
+
     def test_gnotkg_quote_rejects_get_query_to_avoid_logged_values(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 

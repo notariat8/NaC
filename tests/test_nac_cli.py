@@ -112,6 +112,52 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["base_fee"], "4138.00")
         self.assertEqual(payload["fee_amount"], "4138.00")
 
+    def test_tenant_domain_check_cli_returns_json(self) -> None:
+        rc, output = run_cli(
+            "tenant",
+            "domain-check",
+            "--domain",
+            "kanzlei-notariat.example",
+            "--tenant-slug",
+            "kanzlei-notariat",
+            "--admin-email",
+            "admin@kanzlei-notariat.example",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertTrue(payload["ready"])
+        self.assertEqual(payload["verification"]["dns_record_name"], "_nac.kanzlei-notariat.example")
+
+    def test_tenant_provision_admin_cli_is_dry_run(self) -> None:
+        rc, output = run_cli(
+            "tenant",
+            "provision-admin",
+            "--tenant-slug",
+            "kanzlei-notariat",
+            "--domain",
+            "kanzlei-notariat.example",
+            "--admin-email",
+            "admin@kanzlei-notariat.example",
+            "--admin-display-name",
+            "Admin Notariat",
+            "--identity-domain-url",
+            "https://idcs.example.identity.oraclecloud.com:443",
+            "--identity-domain-id",
+            "ocid1.domain.oc1.example",
+            "--dry-run",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertEqual(payload["mode"], "dry_run")
+        self.assertTrue(payload["requires_human_approval"])
+        self.assertFalse(payload["console_access_required_for_end_users"])
+
     def test_plugin_actions_are_listed(self) -> None:
         rc, output = run_cli("plugins", "actions")
 

@@ -2,7 +2,7 @@
 
 This specification describes the first real SaaS transition from the public
 `www-n8` surface into the NaC platform. For this track, it replaces the earlier
-"Entra ID first" assumption with Oracle OCI Identity Domains.
+Microsoft-IdP assumption with Oracle OCI Identity Domains.
 
 ## Goal
 
@@ -106,7 +106,7 @@ Disallowed work is:
   `requires_human_approval: true`.
 - Web API routes return the same payloads.
 - `nac contracts validate` validates the new contract.
-- `docs/de` and `docs/en` reflect the operating model without an Entra-first
+- `docs/de` and `docs/en` reflect the operating model without a Microsoft-IdP-first
   assumption.
 - `www-n8` contains a tenant-aware transition to the NaC app and no mandate-data
   path.

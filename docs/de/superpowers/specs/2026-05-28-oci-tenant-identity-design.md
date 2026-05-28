@@ -2,7 +2,7 @@
 
 Diese Spezifikation beschreibt den ersten echten SaaS-Übergang von der
 öffentlichen `www-n8`-Welt in die NaC-Plattform. Sie ersetzt die bisherige
-Annahme "Entra ID zuerst" für diesen Track durch Oracle OCI Identity Domains.
+Microsoft-IdP-Annahme für diesen Track durch Oracle OCI Identity Domains.
 
 ## Ziel
 
@@ -106,7 +106,7 @@ Nicht zulässig sind:
   `requires_human_approval: true`.
 - Web-API-Routen liefern dieselben Payloads.
 - `nac contracts validate` prüft den neuen Vertrag mit.
-- `docs/de` und `docs/en` spiegeln das Betriebsmodell ohne Entra-First-Annahme.
+- `docs/de` und `docs/en` spiegeln das Betriebsmodell ohne Microsoft-IdP-First-Annahme.
 - `www-n8` enthält einen tenant-aware Übergang zur NaC-App und keinen
   Mandatsdatenpfad.
 - Quality Gate läuft im strikten Profil.

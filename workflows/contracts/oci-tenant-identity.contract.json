@@ -1,0 +1,75 @@
+{
+  "schema_version": "nac.oci-tenant-identity-contract/v0.1",
+  "contract_id": "workflow.oci_tenant_identity",
+  "title": "OCI Identity Domains Tenant-Onboarding",
+  "status": "planned_mvp",
+  "last_update": "2026-05-28",
+  "purpose": "Definiert die prüfbare Grenze für tenant-aware NaC-SaaS-Onboarding mit Oracle OCI Identity Domains als IdP. Der erste Stand erzeugt Domain-Readiness und Admin-Provisioning-Pläne ohne produktive Identity-Writes.",
+  "idp": "oracle_oci_identity_domains",
+  "productive_identity_writes_allowed": false,
+  "end_user_console_work_allowed": false,
+  "oci_identity_domain_endpoints": [
+    "/admin/v1/Users",
+    "/admin/v1/Groups"
+  ],
+  "required_gates": [
+    "domain_ready",
+    "dns_txt_verification",
+    "dry_run_plan",
+    "owner_review",
+    "owner_apply_approval"
+  ],
+  "nac_roles": [
+    "nac-tenant-admin",
+    "nac-notary",
+    "nac-case-worker",
+    "nac-auditor",
+    "nac-billing-viewer"
+  ],
+  "allowed_operations": [
+    "domain_readiness_preview",
+    "oci_admin_provisioning_dry_run",
+    "role_mapping_preview",
+    "read_only_oci_diagnostics"
+  ],
+  "blocked_operations": [
+    "create_oci_user_without_owner_apply_approval",
+    "create_oci_group_without_owner_apply_approval",
+    "store_client_credential_material_in_product_repo",
+    "store_api_key_material_in_product_repo",
+    "require_end_user_oci_console_work",
+    "store_mandate_data_in_public_site"
+  ],
+  "domain_readiness_schema": {
+    "schema_version": "nac.tenant-domain-readiness/v0.1",
+    "required": [
+      "domain",
+      "tenant_slug",
+      "admin_email",
+      "ready",
+      "blocking_findings",
+      "verification"
+    ]
+  },
+  "admin_provisioning_schema": {
+    "schema_version": "nac.oci-admin-provisioning-plan/v0.1",
+    "required": [
+      "mode",
+      "tenant_slug",
+      "domain",
+      "requires_human_approval",
+      "target",
+      "admin_user",
+      "groups",
+      "planned_writes"
+    ]
+  },
+  "guardrails": {
+    "real_mandate_data_in_git": false,
+    "credential_material_in_git": false,
+    "productive_writes_in_first_track": false,
+    "human_approval_required_for_apply": true,
+    "static_site_stores_identity_material": false,
+    "nac_role_gate_required_after_idp_login": true
+  }
+}

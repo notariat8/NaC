@@ -46,7 +46,7 @@ flowchart TD
     C --> D[Plan preview in PR]
     D --> E[Review and merge]
     E --> F[Local or approved reconciler]
-    F --> G[GitHub Entra ID XNP workstation gate]
+    F --> G[GitHub OCI Identity XNP workstation gate]
     G --> H[Target actual comparison and audit events]
     H --> I[Drift or error as event]
 ```
@@ -81,7 +81,7 @@ flowchart TD
 
 ### Month 4: Stabilize Integrations
 
-- GitHub, Entra ID and notary-workstation paths are documented.
+- GitHub, OCI Identity and notary-workstation paths are documented.
 - Retry, error classification and idempotency path are stable.
 
 ### Month 5: Observability And Drift

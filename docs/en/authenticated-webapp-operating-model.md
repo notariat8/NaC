@@ -30,8 +30,8 @@ roles, contracts and `nac` validation.
 flowchart TD
     Static["GitHub Pages / Jekyll: static content"] --> Public["public orientation"]
     User["authenticated user"] --> AuthApp["authenticated web app or mobile app"]
-    AuthApp --> Entra["Entra ID, CBA, Conditional Access"]
-    Entra --> NacRole["NaC role and case gate"]
+    AuthApp --> OciIdp["OCI Identity Domains, OIDC/SCIM, group anchors"]
+    OciIdp --> NacRole["NaC role and case gate"]
     NacRole --> Runtime["NaC runtime / backend"]
     Runtime --> DataRepo["separate data repository"]
     Runtime --> Storage["object store, database blob or OneDrive"]
@@ -52,11 +52,18 @@ review step without turning the source into a product integration.
 
 ## Identity And Authorization
 
-Entra ID is a sensible first enterprise identity layer. For office and internal
-users, NaC should check whether Entra ID with Certificate-Based Authentication,
-Conditional Access and KeyCards or smartcards can secure login.
+Oracle OCI Identity Domains is the productive identity layer for this SaaS
+path. The public transition from `www-n8` into the NaC app is tenant-aware:
+existing customers pass a tenant hint, while new customers first run through a
+domain-readiness check. NaC then creates a reviewable admin-provisioning plan
+for OCI Identity Domains.
 
-This check only answers whether a person or device is trusted for login. The
+End users do not work in the OCI Console. NaC operates Identity Domains through
+reviewed API and CLI contracts; productive writes to users, groups or
+memberships require a separate owner review and explicit approval before
+apply.
+
+The IdP login only answers whether a person is trusted for login. The
 subject-matter permission is decided afterwards by the NaC role and case gate:
 
 - role in the notary office,
@@ -67,9 +74,9 @@ subject-matter permission is decided afterwards by the NaC role and case gate:
 - four-eyes requirement for sensitive steps.
 
 XNP and German eID paths with card readers remain local workstation gates. They
-can provide identity or readiness evidence, but they do not replace NaC
-authorization and they do not store PINs, raw card data, raw eID data or
-certificate secrets in the repository.
+can provide identity or readiness evidence, but they replace neither OCI login
+nor NaC authorization and they do not store PINs, raw card data, raw eID data
+or certificate material in the repository.
 
 ## Mobile App And Secure Links
 
@@ -133,7 +140,7 @@ from a product idea into a checkable NaC artifact path.
 1. Keep using the static GitHub Pages layer for public content and synthetic
    demos.
 2. Design the internal authenticated web app for notary-office users through
-   Entra ID and the NaC role gate.
+   OCI Identity Domains and the NaC role gate.
 3. Explicitly disallow consumer ChatGPT as a client-upload gateway.
 4. Check card-reader, XNP and eID paths only locally through the
    `notary-workstation` profile.

@@ -17,8 +17,8 @@
     "external_participant"
   ],
   "identity_sources": [
-    "entra_id",
-    "entra_certificate_based_authentication",
+    "oracle_oci_identity_domains",
+    "oci_identity_domain_groups",
     "german_eid_bridge",
     "nac_role_gate"
   ],

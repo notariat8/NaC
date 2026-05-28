@@ -62,6 +62,7 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
+python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
 ```
 
@@ -77,6 +78,8 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac plugins actions
+nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
@@ -94,11 +97,12 @@ nac qms status
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
-| Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Secure-Link-Grenzen und Legal-Research-Connector-Kandidaten. |
+| Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Secure-Link-Grenzen, OCI-Tenant-Identity und Legal-Research-Connector-Kandidaten. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
+| Tenant-Identity | `nac tenant domain-check` und `nac tenant provision-admin --dry-run` | Prüft Neukunden-Domains und erzeugt OCI-Identity-Dry-run-Pläne ohne produktive Schreiboperation. |
 | QMS | `nac qms status` und `nac qms evidence --repo ../demo8notariat` | Zeigt ISO-9001/QMS-Artefakte und Nachweiszahlen aus dem Datenrepo. |
 
 ## QMS- und ISO-9001-Schicht
@@ -126,6 +130,25 @@ nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
 ```
+
+## Tenant-Identity Und OCI-Dry-run
+
+Neukunden starten nicht in der OCI Console. NaC prüft zuerst, ob die
+Kundendomain und die initiale Admin-E-Mail zusammenpassen:
+
+```bash
+nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+```
+
+Erst danach erzeugt NaC einen Admin-Provisioning-Plan für OCI Identity
+Domains. Dieser Befehl schreibt nicht gegen OCI und enthält keine Credentials:
+
+```bash
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run --format json
+```
+
+Produktive Identity-Writes brauchen einen separaten Owner-Review und eine
+ausdrückliche Apply-Freigabe.
 
 Das führende Aktenmodell nutzt kleine JSON-Dateien mit stabilen IDs für Akten,
 Personen, Dokumente, Ereignisse und Indizes. PDF-, JPG- und andere

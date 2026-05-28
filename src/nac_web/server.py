@@ -9,9 +9,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from nac_gnotkg.costs import quote_fee
+from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
@@ -61,6 +62,8 @@ class NaCLocalWebApp:
                 return _html_response(build_home_page(self.repo_root))
             if route == "/healthz":
                 return _json_response({"status": "ok"})
+            if route == "/api/tenant/domain-check":
+                return self._tenant_domain_check_api(parsed.query)
             if route == "/api/bpmn-moddle":
                 return _json_text_response((self.repo_root / "bpmn" / "nac-moddle.json").read_text(encoding="utf-8"))
             if route.startswith("/bpmn/"):
@@ -91,6 +94,8 @@ class NaCLocalWebApp:
                 return self._bpmn_api_post(route.removeprefix("/api/bpmn/"), body)
             if route == "/api/gnotkg/quote":
                 return self._gnotkg_quote_api_post(body)
+            if route == "/api/tenant/provision-admin/preview":
+                return self._tenant_provision_admin_preview_api_post(body)
         except KeyError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.NOT_FOUND)
         except BpmnSaveConflict as exc:
@@ -142,6 +147,35 @@ class NaCLocalWebApp:
     def _cost_api_route(self, slug: str) -> tuple[int, str, bytes]:
         view = build_cost_review_view(self.repo_root, _safe_segment(slug))
         return _json_response(view)
+
+    def _tenant_domain_check_api(self, query: str) -> tuple[int, str, bytes]:
+        try:
+            params = parse_qs(query, keep_blank_values=True)
+            payload = check_domain_ready(
+                domain=_query_text(params, "domain"),
+                tenant_slug=_query_text(params, "tenant_slug"),
+                admin_email=_query_text(params, "admin_email"),
+            )
+        except ValueError as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        return _json_response(payload)
+
+    def _tenant_provision_admin_preview_api_post(self, body: bytes) -> tuple[int, str, bytes]:
+        try:
+            payload = json.loads(body.decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("Request Body muss ein JSON-Objekt sein")
+            plan = build_admin_provisioning_plan(
+                tenant_slug=_payload_text(payload, "tenant_slug"),
+                domain=_payload_text(payload, "domain"),
+                admin_email=_payload_text(payload, "admin_email"),
+                admin_display_name=_payload_text(payload, "admin_display_name"),
+                identity_domain_url=_payload_text(payload, "identity_domain_url"),
+                identity_domain_id=_payload_text(payload, "identity_domain_id"),
+            )
+        except (ValueError, json.JSONDecodeError) as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        return _json_response(plan)
 
     def _gnotkg_quote_api_post(self, body: bytes) -> tuple[int, str, bytes]:
         try:
@@ -907,6 +941,14 @@ def _payload_text(payload: dict[str, Any], key: str, default: str | None = None)
         return str(value)
     if default is not None:
         return default
+    raise ValueError(f"{key} fehlt")
+
+
+def _query_text(params: dict[str, list[str]], key: str) -> str:
+    values = params.get(key) or []
+    value = values[0] if values else ""
+    if value:
+        return value
     raise ValueError(f"{key} fehlt")
 
 

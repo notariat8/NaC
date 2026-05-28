@@ -92,7 +92,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   prüfbarer NaC-Kern zusammenspielen.
 - [authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md):
   Zielbild für GitHub Pages als statische Leseschicht, authentifizierte Webapp,
-  Entra-ID-/Karten-Gates und mobile sichere Dokumentlinks.
+  OCI-Identity-Domains, Karten-Gates und mobile sichere Dokumentlinks.
 - [cli.md](cli.md): technische `nac`-Steuerfläche hinter der Bürooberfläche,
   erste Befehle und Architekturregel für neue Funktionen.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business

@@ -1,6 +1,6 @@
 ---
 name: nac-idaas
-description: Nutzen, wenn deutsche eID-Prüfungsbereitschaft, AusweisApp-orientierte Identitätsprüfung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft für Entra ID, Oracle IAM oder SCIM-Ziele in regulierten NaC-Ablaufen geplant werden.
+description: Nutzen, wenn deutsche eID-Prüfungsbereitschaft, AusweisApp-orientierte Identitätsprüfung, Datenminimierung verifizierter Angaben, Einwilligungs-/Auditnachweise oder IAM-Projektionsbereitschaft für Oracle IAM, SCIM-Ziele oder optionale Microsoft Entra ID in regulierten NaC-Abläufen geplant werden.
 ---
 
 # eID-Prüfung
@@ -12,8 +12,8 @@ Commands und IDs bleiben englisch/ASCII.
 
 English summary: Plan German eID readiness, AusweisApp-oriented checks,
 verified-claim minimization, consent/audit evidence and IAM projection readiness
-for Entra ID, Oracle IAM and SCIM targets. Do not execute production eID or IAM
-writes without reviewed connector code and approval.
+for Oracle IAM, SCIM targets and optional Microsoft Entra ID. Do not execute
+production eID or IAM writes without reviewed connector code and approval.
 
 ## Einsatzgrenze
 
@@ -34,8 +34,8 @@ externen oder personenbezogenen Verarbeitung.
   `ageOverX`, `verificationLevel`, `verificationSource`, `verifiedAt` und
   `consentPurpose`.
 - Deutsche eID- und AusweisApp-Readiness-Checklisten vorbereiten.
-- IAM-Projektions-Readiness für Entra ID, Oracle IAM und SCIM-Ziele
-  vorbereiten.
+- IAM-Projektions-Readiness für Oracle IAM, SCIM-Ziele und optionale Microsoft
+  Entra ID vorbereiten.
 - API- und Event-Verträge in Trockenlauf-Form prüfen.
 - Metadatenbasierte Evidence-Vorlagen für Consent, Verifikation, Projektion,
   Widerruf und Day2-Follow-up erstellen.
@@ -60,8 +60,8 @@ externen oder personenbezogenen Verarbeitung.
    definieren.
 3. Readiness für AusweisApp, Client-App-Redirects, Webhook- oder Polling-Modus,
    Consent-Text, Audit-Speicher und Tenant-Isolation prüfen.
-4. Wenn IAM-Projektion gewünscht ist, Zieltyp einordnen: `entra`, `oracle`
-   oder `scim`.
+4. Wenn IAM-Projektion gewünscht ist, Zieltyp einordnen: `oracle`, `scim`
+   oder optional `entra`.
 5. Vor jeder externen oder personenbezogenen Verarbeitung eine Planvorschau
    erstellen.
 6. Vor produktiven eID-, IAM- oder API-Aktionen ausdrückliche menschliche
