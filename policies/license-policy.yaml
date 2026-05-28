@@ -32,3 +32,11 @@ license_policy:
   trademark:
     source_of_truth: TRADEMARK.md
     rule: "Die Lizenzen gewähren keine Markenrechte; Forks müssen eigene Herkunft und Verantwortung klar benennen."
+    brand_assets:
+      canonical_catalog: "bild8/www-b8"
+      public_base_url: "https://bild8.de/assets/8/"
+      local_copies_allowed_for:
+        - offline_operator_surfaces
+        - tests
+      sync_required: true
+      rule: "8-Brand-Assets für n8 und künftige *8-Repos stammen aus dem kanonischen Katalog; lokale Kopien müssen mit dieser Quelle synchron bleiben."

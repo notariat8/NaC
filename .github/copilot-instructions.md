@@ -40,6 +40,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels dürfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
 - Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
 - Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
+- 8-Brand-Assets für `n8` und künftige `*8`-Repos stammen kanonisch aus `bild8/www-b8` und den veröffentlichten Pfaden unter `https://bild8.de/assets/8/`. Lokale Kopien sind nur für Offline-Oberflächen oder Tests zulässig und müssen mit dieser Quelle synchron bleiben.
 - Der synchrone MVP-Scope im Referenzrepo ist `notary`.
 - Produktbeispiele kommen ausschließlich aus [usecases/](../usecases), zum Beispiel Immobilienkaufvertrag, Unterschriftsbeglaubigung, Online-GmbH-Gründung oder Handelsregisteranmeldung.
 - Plugin- und Connector-Pläne liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
