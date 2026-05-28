@@ -1,27 +1,28 @@
-# NaC Enterprise Control Plane MVP, 6 Months
+# NaC Enterprise Control Plane MVP For Notary Offices, 6 Months
 
 ## Goal And Frame
 
 This document makes a realistic MVP for `Notariat as Code` concrete within the
-existing `NaC + Enterprise GitOps + NaC` model.
+`NaC + Enterprise GitOps` model.
 
 The MVP closes a small but complete end-to-end loop:
 
 - declarative change in Git,
 - policy and approval check,
-- reconciliation into target systems,
+- local or approved reconciliation into target systems,
 - audit and drift visibility.
 
-The default synchronous pilot paths are `software_company`, `notary` and
-`wealth_management`. Domain modules remain switchable through
-[policies/process-policy.yaml](../../policies/process-policy.yaml).
+The synchronous pilot path is `notary`. Non-notarial domain sets are not part
+of the MVP.
 
 ## MVP Scope
 
-Focus domain:
+Focus:
 
-- organization, access and tooling onboarding,
-- additional domain path as MVP usecase: `property_management`.
+- notary-office roles, workstation readiness and access,
+- first subject-matter usecase from [usecases/](../../usecases), preferably
+  real-estate purchase contract or signature certification,
+- technical change types for team, role and local access coordination.
 
 Included change types, schema v1:
 
@@ -31,59 +32,56 @@ Included change types, schema v1:
 
 Not in the MVP:
 
-- compensation,
-- performance management,
-- complex financial planning,
-- autonomous AI approvals for sensitive topics.
+- autonomous notarial approvals,
+- real matter data in the public repository,
+- non-notarial domain modules,
+- write-capable specialist-system adapters without separate approval.
 
 ## Reference Flow
 
 ```mermaid
 flowchart TD
-    A[PR with team or role change] --> B[Schema validation]
+    A[PR with role team or usecase change] --> B[Schema validation]
     B --> C[Policy check]
     C --> D[Plan preview in PR]
-    D --> E[Merge to main]
-    E --> F[Reconciler starts connector tasks]
-    F --> G[IAM GitHub Jira Slack]
-    G --> H[Target/actual comparison and audit events]
+    D --> E[Review and merge]
+    E --> F[Local or approved reconciler]
+    F --> G[GitHub Entra ID XNP workstation gate]
+    G --> H[Target actual comparison and audit events]
     H --> I[Drift or error as event]
 ```
 
 ## Repository Shape For The Pilot
 
-- `org-model` remains implemented in the current repository as modeling process
-  artifacts under [processes/](../../processes) plus new change types.
-- `policy-repo` corresponds to the existing rules under
-  [policies/](../../policies).
-- `connector-config` initially appears as configuration files under `docs/en/`
-  and later becomes its own directory.
-- [schemas/](../../schemas) contains the machine-checkable contract
-  definitions.
+- [usecases/](../../usecases) contains the subject-matter pilot.
+- [policies/](../../policies) contains binding rules.
+- [plugins/](../../plugins) and [workflows/](../../workflows) contain planned or
+  implemented notary-office integrations.
+- [schemas/](../../schemas) contains machine-checkable contract definitions.
 
 ## Six-Month Plan
 
 ### Month 1: Fix The Model
 
-- Make core objects and change types binding.
-- Define target systems for the pilot, for example IAM, GitHub and Jira.
-- Make the minimum policy for approvals and segregation of duties checkable.
+- Make the notarial scope binding.
+- Select the pilot usecase.
+- Make role and approval minimums checkable.
 
 ### Month 2: Validation And Policy
 
-- CI validates the new schemas.
+- CI validates affected schemas.
 - Policy checks provide PR-ready feedback.
-- Plan preview becomes a human-readable change sequence.
+- Plan preview becomes human-readable.
 
-### Month 3: Reconciler Plus First Connector
+### Month 3: Local Reconciler And Workstation Gate
 
-- Merge event starts reconciliation.
-- First real target-system change is reproducible and idempotent.
+- Merge event or local request starts reconciliation.
+- Workstation, card, XNP or register readiness is checked metadata-only.
 - Audit trail exists for every execution.
 
-### Month 4: Two Additional Connectors
+### Month 4: Stabilize Integrations
 
-- IAM, GitHub and Jira are integrated.
+- GitHub, Entra ID and notary-workstation paths are documented.
 - Retry, error classification and idempotency path are stable.
 
 ### Month 5: Observability And Drift
@@ -93,16 +91,16 @@ flowchart TD
 
 ### Month 6: Pilot Operation
 
-- One real area works productively through the flow.
-- `joiner_mover`, `team` and `role_change` run end to end.
+- One notary-office area works productively through the approved flow.
+- One notarial usecase runs end to end with synthetic or private data.
 - KPI review with scaling decision.
 
 ## KPI Set For The MVP
 
 Delivery:
 
-- lead time per team or role change,
-- automation rate compared with manual tickets.
+- lead time per usecase or role change,
+- share of validated changes compared with manual tickets.
 
 Governance:
 
@@ -111,25 +109,5 @@ Governance:
 
 User value:
 
-- time to access for new employees,
-- time to team setup for new teams.
-
-Platform health:
-
-- drift rate,
-- reconciliation latency,
-- connector failure rate.
-
-## AI Use In The MVP
-
-Allowed:
-
-- plan suggestions, policy explanation and prioritization support.
-
-Not allowed:
-
-- final approvals in sensitive HR, finance or security steps.
-
-Principle:
-
-- AI proposes, humans decide.
+- time to readiness for new staff,
+- time to pilot for one notarial usecase.

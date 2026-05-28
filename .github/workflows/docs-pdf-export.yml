@@ -16,14 +16,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pandoc texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-xetex
 
-      - name: Build German business handbook PDF
+      - name: Build German NaC handbook PDF
         run: |
           mkdir -p out/de
           pandoc \
             README.md \
             docs/de/START_HERE.md \
             docs/de/fachanwender-guide.md \
-            docs/de/business-os.md \
+            docs/de/notariat-as-code.md \
             docs/de/governance.md \
             docs/de/technology-decision.md \
             docs/de/vscode-copilot-start.md \
@@ -33,16 +33,16 @@ jobs:
             --toc \
             --number-sections \
             --pdf-engine=xelatex \
-            -o out/de/business-os-handbook.pdf
+            -o out/de/nac-notariat-handbook.pdf
 
-      - name: Build English business handbook PDF
+      - name: Build English NaC handbook PDF
         run: |
           mkdir -p out/en
           pandoc \
             README.md \
             docs/en/START_HERE.md \
             docs/en/fachanwender-guide.md \
-            docs/en/business-os.md \
+            docs/en/notariat-as-code.md \
             docs/en/governance.md \
             docs/en/technology-decision.md \
             docs/en/vscode-copilot-start.md \
@@ -52,10 +52,10 @@ jobs:
             --toc \
             --number-sections \
             --pdf-engine=xelatex \
-            -o out/en/business-os-handbook.pdf
+            -o out/en/nac-notariat-handbook.pdf
 
       - name: Upload PDF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: business-os-handbook-pdf
+          name: nac-notariat-handbook-pdf
           path: out/

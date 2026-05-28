@@ -63,9 +63,10 @@ This list is intended as a template for GitHub issues.
   - checklist for tag/release,
   - reference to audit/evidence artifacts.
 
-### 7. Extend Domain Sets
+### 7. Sharpen Notarial Example Processes
 
 - **Type:** subject content
 - **Acceptance criteria:**
-  - onboarding for software company,
-  - example processes for notary office and tax office.
+  - onboarding refers only to the notary-office scope,
+  - example processes come only from [usecases/](../../../usecases),
+  - real-estate purchase contract and signature certification are visible entry paths.

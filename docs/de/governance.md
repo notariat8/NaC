@@ -6,7 +6,7 @@ Empfohlenes Zielbild für produktive Forks und sensible Prozessänderungen:
 
 - Pushes direkt auf `main` verbieten
 - Pull Requests verpflichtend machen
-- Status-Checks aus `Validate Business Processes` verlangen
+- Status-Checks aus `Validate NaC Runtime Fixtures` und `NaC Quality Gate` verlangen
 - Review durch mindestens eine fachlich verantwortliche Person verlangen
 - Signierte Tags für Abschlüsse wie `close/2026-03` verwenden
 
@@ -25,9 +25,9 @@ Empfehlung für Unternehmens-Forks:
 
 ## Environment-Mapping
 
-- `business-operations`: sensible manuelle Ausführung einzelner Prozesse
+- `nac-operations`: sensible manuelle Ausführung einzelner NaC-Prozessfixtures
 - `month-close`: Monatsabschluss und periodische Aggregation
-- optional `tax-submission`: letzte Freigabestufe vor externer Steuerabgabe
+- optionale Notariats-Umgebungen für freigegebene Fachsystem- oder Registergates
 
 ## Fachliches Mapping
 
@@ -43,26 +43,26 @@ Empfehlung für Unternehmens-Forks:
 
 ## Praktische Regeln pro Domäne
 
-### Gründung
+### Notarielle Gründungsvorgänge
 
 - Schritte können in einem Sammelvorgang oder als einzelne Prozessdateien geführt werden.
 - Status `needs_review` sollte mit manuellem Review gekoppelt werden.
 
-### Rechnungsstellung
+### Notarielle Kostenrechnung
 
 - `draft -> approved` nur über Pull Request.
 - `approved -> issued` nur in einer gesicherten Runtime oder nach dokumentierter Freigabe.
-- RVG-bezogene Rechnungen nur mit dokumentierter Qualifikation und Freigabe.
+- notarielle Kostenprüfungen nur mit dokumentierter Qualifikation und Freigabe.
 
 ### Buchführung
 
 - Buchungssätze müssen ausgeglichen sein.
 - Idempotenzschlüssel und Belegreferenzen verhindern Doppelbuchungen.
 
-### Steuer
+### Notarielle Anzeigen Mit Steuerbezug
 
 - `prepared -> approved` immer mit Vier-Augen-Prinzip.
-- `submitted` sollte nur nach manueller Freigabe und möglichem externen Filing gesetzt werden.
+- `submitted` sollte nur nach manueller Freigabe und möglicher externer Anzeige gesetzt werden.
 
 ## Rollenbasierte Entscheidungslogik
 

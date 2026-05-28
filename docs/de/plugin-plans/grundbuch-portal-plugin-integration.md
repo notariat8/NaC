@@ -54,7 +54,7 @@ NaC sollte in drei Stufen vorgehen:
 
 ```text
 Kundenorganisation
-  berechtigter Nutzer / Notariat / Bank / Kanzlei / Behoerde
+  berechtigter Nutzer im Notariat
   offizielles Landes-Grundbuchportal
   lokale Dokumentablage oder DMS
   nac-grundbuch-local-plugin
@@ -185,7 +185,7 @@ Vorgeschlagene Commands:
     "parcel_reference": "redacted-or-known-reference"
   },
   "legitimate_interest": {
-    "category": "notary|authority|enforcement|secured_right|owner_authorization|bank|lawyer|utility|other",
+    "category": "notary|authority|owner_authorization|other",
     "description": "short non-sensitive reason",
     "supporting_document_sha256": "hex",
     "review_required": true,
@@ -311,7 +311,7 @@ Nicht im MVP:
 
 1. Rolle klären: NaC als Prozessbegleiter, technischer Dienstleister oder selbst zugelassene Stelle.
 2. Pro Zielbundesland Zulassungsprozess und Stelle identifizieren.
-3. Kundengruppen und Nutzergruppen bestimmen: Notariat, Kanzlei, Bank, Behörde, Versorger, sonstige.
+3. Notariatsrollen und berechtigte Nutzergruppen bestimmen.
 4. Zulassungsnachweise und Genehmigungsumfang als NaC-Objekte modellieren.
 5. TOMs für ordnungsgemaesse Datenverarbeitung und Missbrauchsschutz dokumentieren.
 6. Portal-Domain-Allowlist und Phishing-Hinweise einrichten.
@@ -337,7 +337,7 @@ Nicht im MVP:
 
 - Soll NaC selbst jemals als zugelassene abrufende Stelle auftreten oder nur Kundenprozesse begleiten?
 - Welche Bundesländer sind für die ersten Kunden relevant?
-- Welche Nutzergruppen sind Zielkunden: Kanzleien, Notariate, Banken, Immobilienunternehmen, Versorger, Behörden?
+- Welche Notariatsrollen sind Zielnutzer und welche externen Rollen liefern nur Nachweise?
 - Welche Abrufgründe sollen im MVP erlaubt sein?
 - Sollen Grundbuchauszüge überhaupt in NaC gespeichert werden oder nur im Kundensystem?
 - Welche Retention gilt für Evidence und importierte Dokumente?

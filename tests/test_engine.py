@@ -22,7 +22,7 @@ class EngineTests(unittest.TestCase):
 
     def test_invoice_summary_contains_customer(self) -> None:
         summary = self.engine.render_summary(Path("processes/invoices/2026/REQ-2026-0001.json"))
-        self.assertIn("Acme GmbH", summary)
+        self.assertIn("Muster Beteiligte GmbH", summary)
         self.assertIn("brutto=1428.00", summary)
 
     def test_monthly_close_aggregates_sample_data(self) -> None:
@@ -45,10 +45,10 @@ class EngineTests(unittest.TestCase):
             self.assertFalse(result.ok)
             self.assertTrue(any("requires_approval erfordert approver_role" in e for e in result.errors))
 
-    def test_rvg_requires_rvg_qualification(self) -> None:
+    def test_notarial_costs_require_qualification(self) -> None:
         source_file = REPO_ROOT / "processes" / "invoices" / "2026" / "REQ-2026-0001.json"
         payload = json.loads(source_file.read_text(encoding="utf-8"))
-        payload["metadata"]["billing_regime"] = "rvg"
+        payload["metadata"]["billing_regime"] = "notarial_costs"
         payload["actor_context"]["requested_qualification"] = []
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -56,7 +56,7 @@ class EngineTests(unittest.TestCase):
             temp_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
             result = self.engine.validate_document(temp_file)
             self.assertFalse(result.ok)
-            self.assertTrue(any("RVG-Rechnung erfordert Qualifikation" in e for e in result.errors))
+            self.assertTrue(any("Notarielle Kostenprüfung erfordert Qualifikation" in e for e in result.errors))
 
 
 if __name__ == "__main__":

@@ -1,15 +1,15 @@
 ---
-description: Generische Prozessregeln für alle Unternehmensarten
+description: Notarielle Prozessregeln für NaC
 alwaysApply: true
 ---
 
-# Generische Prozessregeln
+# Notarielle Prozessregeln
 
 - Trenne Prozessschritte in klare Statuswerte.
 - Nutze idempotente Schlüssel gegen Doppelausführung.
 - Dokumentiere Eingang, Entscheidung, Freigabe und Ergebnis.
-- Halte Rechnungs-, Buchführungs- und Steuerprozesse nachvollziehbar.
-- Leite periodische Abschlüsse aus versionierten Prozessdaten ab.
+- Halte notarielle Kostengates, Registerkommunikation, Vollzugsschritte und Nachweise nachvollziehbar.
+- Leite periodische Kontroll- und QMS-Nachweise aus versionierten Vorgangsdaten ab.
 - Für Teamsteuerung nur freigegebene Cadence-Optionen verwenden (`agile|kanban` mit den in Policy freigegebenen Takten).
 
-Ziel: Wiederholbarkeit, Prüfbarkeit und klare Verantwortlichkeit.
+Ziel: Wiederholbarkeit, Prüfbarkeit und klare Verantwortlichkeit im Notariatsbetrieb.

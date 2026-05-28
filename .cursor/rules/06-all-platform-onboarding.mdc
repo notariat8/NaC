@@ -6,9 +6,10 @@ alwaysApply: true
 # All-Platform Onboarding (MUSS)
 
 - Onboarding-Inhalte sind plattformübergreifend verpflichtend.
-- Bei neuen Branchenmodulen müssen die Einführungspfade für alle Plattformen aktualisiert werden.
+- NaC-Onboarding ist Notariats-Onboarding. Neue nicht-notarielle Branchenmodule sind kein gültiger NaC-Pfad.
 - Plattformtexte dürfen im Stil variieren, aber nicht im fachlichen Kern.
 - Jede Plattform muss einen klaren Erststartpfad für Nicht-IT-Nutzer haben.
+- Fachliche Beispiele kommen ausschließlich aus [usecases/](../../usecases).
 
 Pflichtabgleich bei Onboarding-Änderungen:
 

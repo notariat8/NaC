@@ -14,7 +14,7 @@ Arbeitsplatztests.
 
 Die Bedienlogik folgt dem [Operator Styleguide](operator-styleguide.md). Die
 Oberfläche unterscheidet Tagesarbeit an Akten von freigaberelevanten
-Kanzlei-Workflow-Stammdaten.
+Notariats-Workflow-Stammdaten.
 
 ## Startpunkt
 
@@ -33,7 +33,7 @@ Funktion über diese Doku, die Screenshots und die Repo-Dateien nachvollziehen.
 
 | Bereich | Was man sieht | Was dahinterliegt |
 | --- | --- | --- |
-| Vorgang auswählen | Suchfeld und Vorgangskarten mit den Blöcken `Aktenverwaltung`, `Kontrolle` und `Kanzlei-Workflow`. | Statische Oberfläche unter [web/local-operator/](../../web/local-operator) plus usecase-lokale KG- und BPMN-Routen. |
+| Vorgang auswählen | Suchfeld und Vorgangskarten mit den Blöcken `Aktenverwaltung`, `Kontrolle` und `Notariats-Workflow`. | Statische Oberfläche unter [web/local-operator/](../../web/local-operator) plus usecase-lokale KG- und BPMN-Routen. |
 | Aktenverwaltung | Akten öffnen, neue Demo-Akte anlegen, Statuszähler und nächsten Schritt sehen. | Demo-Datenrepo über `/api/matters`; neue Akten erhalten `workflow_binding` und `checkliste.json`. |
 | Checkliste | Sichere KG-Ansicht ohne Mandatswerte. | [usecases/](../../usecases) mit `knowledge-graph.graph.json`; gerendert über `notary_kg.editor.build_editor_view`. |
 | Ablauf | BPMN-Ablauf als lesbare SVG-Ansicht. | [bpmn/](../../bpmn) und [src/nac_web/bpmn.py](../../src/nac_web/bpmn.py). |
@@ -86,11 +86,11 @@ flowchart TD
 
 | Klick | Ergebnis | Bewusste Grenze |
 | --- | --- | --- |
-| `Akten öffnen` | Öffnet vorhandene Akten und passende offene Eingänge. | Keine Änderung am Kanzlei-Workflow. |
+| `Akten öffnen` | Öffnet vorhandene Akten und passende offene Eingänge. | Keine Änderung am Notariats-Workflow. |
 | `Neu` | Legt eine Demo-Akte mit gebundener Workflow-Version an. | Keine echten Mandatsdaten, nur Demo-Datenrepo. |
 | `Checkliste prüfen` | Öffnet eine KG-Reviewansicht. | Keine echten `value`-Felder, keine Mandatsdaten. |
 | `Ablauf ansehen` | Rendert ein BPMN-Modell als SVG. | Keine Ausführung im Fachsystem. |
-| `Änderung vorschlagen` | Zeigt BPMN-XML und optional bpmn-js als Änderungspfad. | Kein Merge, keine Freigabe, keine Einreichung; Kanzlei-Stammdaten brauchen Review. |
+| `Änderung vorschlagen` | Zeigt BPMN-XML und optional bpmn-js als Änderungspfad. | Kein Merge, keine Freigabe, keine Einreichung; Notariats-Stammdaten brauchen Review. |
 | `HW-Test starten` | Prüft lokale Bereitschaft, soweit die Workstation es erlaubt. | Keine PINs, keine Kartenrohdaten, kein Login. |
 | `XNP prüfen` | Prüft lokale XNP-/Kartenpfad-Bereitschaft. | Keine produktive Register- oder Grundbucheinreichung. |
 

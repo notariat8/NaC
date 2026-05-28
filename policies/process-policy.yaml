@@ -4,11 +4,14 @@ positioning:
   operating_principle: enterprise_gitops
   implementation_label: nac
 baseline:
-  generic_modules:
-    - formation
-    - invoice
-    - bookkeeping
-    - tax
+  product_scope: notariat_only
+  canonical_example_source: usecases
+  legacy_process_fixtures_are_product_examples: false
+  notarial_usecase_examples:
+    - Immobilienkaufvertrag
+    - Unterschriftsbeglaubigung
+    - Online-GmbH-Gründung
+    - Handelsregisteranmeldung
   required_controls:
     - pull_request
     - review
@@ -16,52 +19,17 @@ baseline:
     - periodic_close
     - role_based_permissions
     - qualification_gates
-branch_modules:
-  law_firm:
-    enabled: false
-    includes:
-      - mandate_intake
-      - conflict_check
-      - deadline_control
-  notary:
-    enabled: true
-    includes:
-      - deed_preparation
-      - identity_verification
-      - execution_tracking
-  tax_office:
-    enabled: false
-    includes:
-      - client_onboarding
-      - declaration_cycle
-      - plausibility_checks
-  software_company:
-    enabled: true
-    includes:
-      - release_governance
-      - incident_management
-      - service_level_reporting
-  wealth_management:
-    enabled: true
-    includes:
-      - client_intake_and_kyc
-      - portfolio_rebalancing_control
-      - suitability_and_risk_profile_review
-      - mandate_reporting_and_audit
-  property_management:
-    enabled: true
-    includes:
-      - tenant_intake_and_contract_setup
-      - maintenance_ticket_and_vendor_dispatch
-      - service_charge_and_budget_control
-      - handover_and_damage_documentation
-  carpentry:
-    enabled: false
-    includes:
-      - customer_intake
-      - quoting_and_measurement
-      - workshop_and_installation
-      - warranty_tracking
+notariat_scope:
+  enabled: true
+  prohibit_non_notarial_domain_sets: true
+  canonical_usecase_catalog: usecases/README.md
+  includes:
+    - deed_preparation
+    - identity_verification
+    - execution_tracking
+    - register_communication
+    - signature_certification
+    - notarial_cost_note_review
 change_management:
   require_change_request: true
   require_impact_assessment: true

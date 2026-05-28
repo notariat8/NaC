@@ -108,7 +108,7 @@ menu `Konfig` stores only local workstation values such as the NaC fork Git URL,
 data Git URL and data repository folder in the user configuration; it does not
 change Git remotes or clone repositories automatically. The use case cards make
 `Akten öffnen` the primary daily action, `Neu` the secondary action,
-`Checkliste prüfen` the control action and `Kanzlei-Workflow` the collapsed
+`Checkliste prüfen` the control action and `Notariats-Workflow` the collapsed
 office-master-data area; demo matter functions write only to the configured
 demo data repository and track the statuses `offen`, `warten` and
 `abgeschlossen`.
@@ -143,7 +143,7 @@ offers the explicit accept action. Work areas outside the case list also get
 back.
 
 Navigation follows the [operator style guide](operator-styleguide.md): case
-cards separate `Aktenverwaltung`, `Kontrolle` and `Kanzlei-Workflow`. Matter
+cards separate `Aktenverwaltung`, `Kontrolle` and `Notariats-Workflow`. Matter
 management is the visible daily work, checklists are control views, and flow or
 editing functions are approval-relevant office master data. When a matter is
 created, the operator bridge therefore writes a `workflow_binding` with

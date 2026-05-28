@@ -13,7 +13,7 @@ Der cyberJack wird nicht als Cloud-Gerät behandelt. Er bleibt am Arbeitsplatz d
 Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrationsanker:
 
 - Der cyberJack RFID standard ist ein USB-Kartenleser für kontaktbehaftete und kontaktlose RFID-Chipkarten.
-- Er unterstützt nPA/eID, Secoder-Funktion, beA/BRAK/BNotK, D-Trust Card 4.x/5.x und elektronischen Aufenthaltstitel.
+- Er unterstützt nPA/eID, Secoder-Funktion, BNotK-nahe Kartenpfade, D-Trust Card 4.x/5.x und elektronischen Aufenthaltstitel.
 - Der Leser nutzt PC/SC 2.0 und CT-API als lokale Schnittstellen.
 - Der Leser bietet sichere PIN-Eingabe am Gerät; PIN-Eingabe darf nicht in NaC oder ein LLM wandern.
 - REINER SCT nennt BSI-/TUEV-IT-Zertifizierung und Sicherheitsklasse 3.
@@ -104,8 +104,8 @@ Das Plugin sollte als lokaler MCP- oder HTTP-Adapter startbar sein. MCP ist für
   - für Karten-/Signaturfälle außerhalb des eID-MVP.
 - `cyberjack.check_certificate`
   - prüft Zertifikatsmetadaten, ohne private Schlüssel oder PINs offenzulegen.
-- `cyberjack.bea_precheck`
-  - späterer Preflight für beA/BNotK-Szenarien, nicht im MVP.
+- `cyberjack.bnotk_precheck`
+  - späterer Preflight für BNotK-Szenarien, nicht im MVP.
 
 ## Datenmodell für Evidenz
 
@@ -149,7 +149,7 @@ Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit ein
 
 - Direkte APDU-Kommunikation mit dem nPA.
 - Eigene eID-Implementierung außerhalb der AusweisApp.
-- beA/BNotK produktiv.
+- BNotK-produktive Anmeldung oder XNP-Login-Automation.
 - D-Trust/QES produktiv.
 - Gesundheitskartenproduktivbetrieb.
 - Cloud-Zugriff auf USB-Geräte.
@@ -171,7 +171,7 @@ Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit ein
 
 1. Produkt-Use-Case auswählen:
    - eID-Identitätsnachweis,
-   - beA/BNotK Precheck,
+   - BNotK/XNP-Precheck,
    - D-Trust-Signatur,
    - anderer Kartenprozess.
 2. Mandantenfähige Evidence-Policy definieren.
@@ -231,12 +231,12 @@ Der MVP umfasst nur den sicheren Nachweis, dass ein lokaler eID-Workflow mit ein
 ### Phase 4: Erweiterte Kartenfälle
 
 - D-Trust- und Signaturpfade prüfen.
-- beA/BNotK-Fälle separat rechtlich und technisch bewerten.
+- BNotK- und Signaturfälle separat rechtlich und technisch bewerten.
 - Gesundheitskarten nur nach eigener Compliance-Prüfung.
 
 ## Offene Entscheidungen
 
-- Erster produktiver Use Case: eID, beA/BNotK, D-Trust oder interner Karten-Precheck?
+- Erster produktiver Use Case: XNP/BNotK, eID, D-Trust oder interner Karten-Precheck?
 - Erstplattform: Windows nativ oder zusätzlich Linux/macOS?
 - Plugin-Form: MCP-only, lokaler HTTP-Service oder beides?
 - Evidence-Retention je Tenant?

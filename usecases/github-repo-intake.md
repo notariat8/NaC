@@ -14,7 +14,7 @@ Authenticated GitHub user: `ofunk-nvidia`
 | `ofunk/oci-landing-zone` | Do not move to usecases | This is infrastructure/evidence work and is already represented by the `nac-oci-evidence` plugin track. |
 | `ofunk/PaaS` | Do not move to usecases | This is a VS Code extension/orchestrator integration repository, not a notarial business usecase. |
 | `ofunk/1gem8` | Do not move to usecases | This is a startup workspace concept, not a notarial business usecase. |
-| `ofunk/Steuer-aaS` | Removed from the NaC usecase catalog | The tax-readiness concept is not a concrete notarial office proceeding for this repository. It remains external unless a reviewed plugin or workflow decision reclassifies it. |
+| non-notarial readiness repository | Removed from the NaC usecase catalog | The concept is not a concrete notarial office proceeding for this repository and remains outside NaC scope. |
 
 ## Follow-up
 

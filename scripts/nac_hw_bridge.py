@@ -1040,7 +1040,7 @@ def build_workflow_binding(
         "bound_at": timestamp,
         "approval_state": "approved_for_demo",
         "binding_policy": "Akte bleibt auf dieser Workflow-Version, bis ein dokumentierter Versionswechsel erfasst wird.",
-        "new_matter_policy": "Neue Akten nutzen die aktuell freigegebene Kanzlei-Workflow-Version.",
+        "new_matter_policy": "Neue Akten nutzen die aktuell freigegebene Notariats-Workflow-Version.",
         "artifacts": artifacts,
     }
 
@@ -1119,7 +1119,7 @@ def build_checklist_state(
             "path": source_path,
             "sha256": source_sha256,
         },
-        "version_policy": "Dieser Checklistenstand ist aktenbezogen eingefroren und folgt nicht automatisch späteren Kanzlei-Workflow-Versionen.",
+        "version_policy": "Dieser Checklistenstand ist aktenbezogen eingefroren und folgt nicht automatisch späteren Notariats-Workflow-Versionen.",
         "sections": sections,
     }
 

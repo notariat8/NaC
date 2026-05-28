@@ -53,8 +53,8 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
     checks: list[tuple[str, str, list[str]]] = [
         (
             "process_validate",
-            "Process Validation",
-            [sys.executable, "-m", "business_os", "validate-all", "--repo-root", "."],
+            "NaC Process Validation",
+            [sys.executable, "scripts/nac.py", "process", "validate-all"],
         ),
         (
             "unit_tests",

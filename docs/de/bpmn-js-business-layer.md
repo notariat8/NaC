@@ -84,5 +84,5 @@ Detailfragen im KG kontrolliert bleiben.
 
 1. bpmn-js-Palette und NaC-Properties-Panel weiter einschränken.
 2. BPMN-Diff und Validierungsbericht in Pull Requests sichtbar machen.
-3. Fachliche Reviewrunden je Usecase gegen echte Kanzleipraxis durchführen.
+3. Fachliche Reviewrunden je Usecase gegen echte Notariatspraxis durchführen.
 4. Aus BPMN und KG gemeinsam sichere Formular- und Checklisten-Sichten erzeugen.

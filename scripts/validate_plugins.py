@@ -39,8 +39,6 @@ GERMAN_UX_MARKERS = (
     "zertifikat",
     "karte",
     "karten",
-    "postfach",
-    "elster",
     "oci",
 )
 ENGLISH_UX_MARKERS = (

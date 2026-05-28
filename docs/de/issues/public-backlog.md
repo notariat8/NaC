@@ -55,8 +55,9 @@ Diese Liste ist als Vorlage für GitHub Issues gedacht.
   - Checkliste für Tag/Release
   - Verweis auf Audit-/Nachweisartefakte
 
-### 7) Branchensets erweitern
+### 7) Notarielle Beispielprozesse schärfen
 - **Typ:** Fachinhalt
 - **Akzeptanzkriterien:**
-  - Onboarding für Softwareunternehmen
-  - Beispielprozesse für Notariat/Steuerbüro
+  - Onboarding verweist ausschließlich auf Notariat
+  - Beispielprozesse kommen nur aus [usecases/](../../../usecases)
+  - Immobilienkaufvertrag und Unterschriftsbeglaubigung sind als Einstiegspfade sichtbar

@@ -33,7 +33,7 @@ and the repository files.
 
 | Area | What the user sees | What backs it |
 | --- | --- | --- |
-| Case selection | Search field and case cards with the blocks `Aktenverwaltung`, `Kontrolle` and `Kanzlei-Workflow`. | Static surface in [web/local-operator/](../../web/local-operator) plus usecase-local KG and BPMN routes. |
+| Case selection | Search field and case cards with the blocks `Aktenverwaltung`, `Kontrolle` and `Notariats-Workflow`. | Static surface in [web/local-operator/](../../web/local-operator) plus usecase-local KG and BPMN routes. |
 | Matter management | Open matters, create a new demo matter and see status counters plus next step per use case. | Demo data repository via `/api/matters`; new matters receive `workflow_binding` and `checkliste.json`. |
 | Checklist | Safe KG view without mandate values. | [usecases/](../../usecases) with `knowledge-graph.graph.json`, rendered through `notary_kg.editor.build_editor_view`. |
 | Flow | BPMN flow as a readable SVG view. | [bpmn/](../../bpmn) and [src/nac_web/bpmn.py](../../src/nac_web/bpmn.py). |

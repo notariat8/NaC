@@ -1,7 +1,7 @@
 {
   "process_type": "joiner_mover",
   "request_id": "REQ-2026-0007",
-  "idempotency_key": "joiner-maria-model-eval-2026",
+  "idempotency_key": "joiner-maria-notariat-readiness-2026",
   "actor_context": {
     "actor_role": "hr_operations",
     "requested_decision_type": "requires_approval",
@@ -16,15 +16,15 @@
   "person_position": {
     "action": "joiner",
     "person_ref": "person-maria.mustermann@example.com",
-    "position_id": "pos-ml-eval-01",
-    "target_team": "model-eval",
-    "access_profile": "ml-standard",
+    "position_id": "pos-notariat-readiness-01",
+    "target_team": "notariat-readiness",
+    "access_profile": "notary-standard",
     "effective_date": "2026-04-15",
     "cost_center": "CC-2041",
-    "required_trainings": ["security-basics", "ml-governance"],
+    "required_trainings": ["security-basics", "notariat-governance"],
     "required_assets": ["laptop-standard", "yubikey"]
   },
   "metadata": {
-    "pilot_domain": "software_company"
+    "pilot_domain": "notary"
   }
 }

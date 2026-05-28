@@ -378,7 +378,7 @@ def main() -> int:
     if args.run_tests:
         python_env = build_python_env()
         validate = subprocess.run(
-            [sys.executable, "-m", "business_os", "validate-all", "--repo-root", "."],
+            [sys.executable, "scripts/nac.py", "process", "validate-all"],
             cwd=REPO_ROOT,
             env=python_env,
             check=False,
@@ -390,9 +390,9 @@ def main() -> int:
             check=False,
         )
         if validate.returncode == 0:
-            ok.append("Process validation erfolgreich.")
+            ok.append("NaC-Prozessvalidierung erfolgreich.")
         else:
-            errors.append("Process validation fehlgeschlagen.")
+            errors.append("NaC-Prozessvalidierung fehlgeschlagen.")
         if tests.returncode == 0:
             ok.append("Unit tests erfolgreich.")
         else:

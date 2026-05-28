@@ -1,24 +1,24 @@
 {
   "process_type": "tax",
   "request_id": "REQ-2026-0003",
-  "idempotency_key": "ustva-2026-03",
+  "idempotency_key": "grunderwerbsteueranzeige-2026-03",
   "actor_context": {
-    "actor_role": "steuerfachkraft",
-    "actor_display": "Tax Team",
+    "actor_role": "notariatsfachkraft",
+    "actor_display": "Notariat Vollzug",
     "requested_decision_type": "requires_review",
     "impact_level": "high",
     "compliance_impact": true,
     "requested_qualification": [
-      "tax_professional"
+      "notarial_office_training"
     ],
     "qualification_evidence": [
-      "CERT-TAX-TEAM-001"
+      "CERT-NOTARIAT-OPS-001"
     ],
-    "approver_role": "freigabeverantwortung"
+    "approver_role": "notar_fachlich"
   },
   "status": "prepared",
   "year": 2026,
-  "tax_type": "ustva",
+  "tax_type": "grunderwerbsteueranzeige",
   "period": "2026-03",
   "source_refs": [
     "REQ-2026-0001",
@@ -31,6 +31,6 @@
     "gross_amount": 1428.0
   },
   "metadata": {
-    "owner": "finance"
+    "owner": "notariat-vollzug"
   }
 }

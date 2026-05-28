@@ -12,7 +12,7 @@ Dieses Dokument schärft den Begriffsrahmen:
 
 ### Notariat as Code (NaC)
 
-Unternehmen wird deklarativ und versioniert beschrieben:
+Notariatsbetrieb wird deklarativ und versioniert beschrieben:
 
 - Policies
 - Rollen und Rechte
@@ -22,7 +22,7 @@ Unternehmen wird deklarativ und versioniert beschrieben:
 
 ### Enterprise GitOps
 
-Änderungen an Organisationslogik laufen kontrolliert über:
+Änderungen an Organisations- und Notariatsprozesslogik laufen kontrolliert über:
 
 - Branch
 - Pull Request
@@ -36,7 +36,7 @@ Unternehmen wird deklarativ und versioniert beschrieben:
 ## Warum diese Trennung wichtig ist
 
 - reduziert Missverständnisse zwischen Tooling und Zielmodell,
-- macht das Konzept anschlussfähig für Fachseite, Audit und Betriebsverantwortung,
+- macht das Konzept anschlussfähig für Notariat, Audit und Betriebsverantwortung,
 - erlaubt Drittbetrieb und Ersetzbarkeit ohne Begriffskonflikte.
 
 ## Architekturzuordnung

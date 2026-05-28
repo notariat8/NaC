@@ -30,8 +30,6 @@ Diese Entscheidung verhindert Brüche bei GitHub-Authentifizierung, Browser-Call
 | [handelsregister-online-anmeldung.md](handelsregister-online-anmeldung.md) | HRA-first Online-Handelsregisteranmeldung | Registerspur, Rechtsform, eID/App und Notarroute | Anmeldepaket-Plan und Nachweis-Checkliste | Zurückweisungen, Signatur-/Identfehler, Paketversionen |
 | [handelsregister-bundesapi.md](handelsregister-bundesapi.md) | Veralteter Handelsregister-Abruf-Spike, nicht aktueller Pluginpfad | Nutzungs- und Lizenzprüfung | Trockenlauf-Rechercheplan | Rate-Limits, Quellenwechsel, Audit |
 | [bnotk-xnp-notariatssoftware.md](bnotk-xnp-notariatssoftware.md) | XNP/Notariatssoftware lokaler Begleiter | `Karte/SAK`, Arbeitsplatz- und Schnittstellenprüfung | lokale Plan-/Ausführungsbegleitung | lokale Protokolle, Nachweise, Updatepflege |
-| [bea-portal-plugin-integration.md](bea-portal-plugin-integration.md) | beA-Portal und Client-Security-Begleiter | lokale beA-Voraussetzungen | Versand-/Empfangs-/eEB-Arbeitsablauf | Störungen, Versionen, Nachweise |
-| [elster-developer-plugin-integration.md](elster-developer-plugin-integration.md) | ELSTER/ERiC-Entwickler- und lokaler Begleiter | Hersteller-/Tooling-Prüfung | Trockenlauf-Abgabe- und Nachweispläne | ERiC-Versionen, Nachweise, Fristen |
 | [cyberjack-rfid-plugin-integration.md](cyberjack-rfid-plugin-integration.md) | `Karte/SAK` vor XNP-Login | Karte, Kartenleser, PC/SC, SAK lite, secureFramework | Karten-/SAK-Bereitschaft für XNP-Test | Firmware, Treiber, Kartenpfad, Nachweise |
 | [grundbuch-portal-plugin-integration.md](grundbuch-portal-plugin-integration.md) | Grundbuchportal Arbeitsablauf- und Nachweisbegleiter | Zulassung und berechtigtes Interesse | Abrufplan und Nachweisimport | Bundesland-Drift, Protokolle, Gebühren |
 
@@ -99,7 +97,7 @@ Der aktuelle lokale Startcheck erwartet noch:
 - `python` als Alias oder Command neben `python3`.
 - `gh` für GitHub-Operationen.
 - VS-Code-Extensions `github.copilot` und `github.copilot-chat`, falls VS Code als Ziel-IDE genutzt wird.
-- Paketinstallation oder `PYTHONPATH=src`, damit `business_os` in Tests gefunden wird.
+- Paketinstallation oder `PYTHONPATH=src`, damit das interne Legacy-Modul `business_os` in Tests gefunden wird.
 - Optional `pandoc` für PDF-Exporte.
 
 Diese Punkte sind lokale Tooling-Aufgaben, keine Omnistation-Aufgaben.

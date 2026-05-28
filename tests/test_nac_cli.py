@@ -105,8 +105,6 @@ class NaCCliTests(unittest.TestCase):
                 "nac-bnotk-xnp",
                 "nac-pkcs7-certbundle",
                 "nac-handelsregister",
-                "nac-bea-portal",
-                "nac-elster-eric",
                 "nac-grundbuch-portal",
                 "nac-oci-evidence",
             },

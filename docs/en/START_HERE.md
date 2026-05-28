@@ -99,7 +99,7 @@ at least one matching implementation surface:
 | [docs/en/eventstream/](eventstream) | Event journal, EventLock and cloud runbooks. |
 | [docs/en/issues/](issues) | Issue taxonomy, issue operations and public backlog. |
 | [docs/en/operations/](operations) | Fork/release, upstream sync, version binding, work model and repository consolidation. |
-| [docs/en/service-model/](service-model) | Core/vertical structure, provider services, tenant ownership and exit. |
+| [docs/en/service-model/](service-model) | Notarial scope, provider services, tenant ownership and exit. |
 | [src/](../../src) | Executable Python runtime. |
 | [scripts/](../../scripts) | Local and CI-adjacent developer tooling. |
 | [policies/](../../policies) | Binding governance, role, technology, privacy and SBOM rules. |

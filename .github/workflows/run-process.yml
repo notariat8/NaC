@@ -1,4 +1,4 @@
-name: Run Business Process
+name: Run NaC Process Fixture
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
 jobs:
   run-process:
     runs-on: ubuntu-latest
-    environment: business-operations
+    environment: nac-operations
 
     steps:
       - name: Checkout
@@ -26,7 +26,7 @@ jobs:
         run: pip install -e .
 
       - name: Validate selected process
-        run: python -m business_os validate "${{ inputs.process_path }}"
+        run: python scripts/nac.py process validate "${{ inputs.process_path }}"
 
-      - name: Render business summary
-        run: python -m business_os render-summary "${{ inputs.process_path }}"
+      - name: Render process summary
+        run: python scripts/nac.py process render-summary "${{ inputs.process_path }}"

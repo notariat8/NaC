@@ -22,8 +22,8 @@ Prozesswirkung oder lokale Testläufe ohne Freigabecharakter.
 Vor dem Tag müssen diese Angaben im führenden Issue, PR oder Release-Entwurf
 stehen:
 
-- Prozesspaket oder Scope, zum Beispiel `notary`, `software_company` oder ein
-  konkreter Usecase.
+- Prozesspaket oder Scope, zum Beispiel `notary`,
+  `immobilienkaufvertrag` oder `unterschriftsbeglaubigung`.
 - Zielversion oder Tag, zum Beispiel `v*`.
 - Geltungsbeginn für neue Vorgänge.
 - Rollout-Modus:

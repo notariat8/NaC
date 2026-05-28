@@ -20,7 +20,7 @@ Lesen Sie nacheinander:
 4. `policies/culture-policy.yaml`
 5. `policies/technology-policy.yaml`
 
-Ziel: gleiche Ausgangsbasis für Rollen, Prozesse und Sprache.
+Ziel: gleiche Ausgangsbasis für Rollen, notarielle Usecases und Sprache.
 
 ## Minute 6-9: Copilot mit Startprompt initialisieren
 
@@ -34,35 +34,25 @@ Lies diese Dateien:
 - policies/culture-policy.yaml
 
 Erklaere mir dann ohne IT-Fachsprache:
-1) Welche 3 Pilotprozesse ich zuerst starten sollte.
+1) Welche 3 notariellen Usecases ich zuerst starten sollte.
 2) Welche Freigaben für diese Prozesse verpflichtend sind.
 3) Welche offenen Entscheidungen ich heute treffen muss.
 ```
 
-## Minute 9-12: Branchenpfad wählen
+## Minute 9-12: Notariatspfad wählen
 
-Wählen Sie den passenden Onboarding-Prompt:
+Wählen Sie den Notariats-Onboarding-Prompt:
 
-- Kanzlei: `prompts/de/onboarding/law-firm-first-setup.md`
 - Notariat: `prompts/de/onboarding/notary-first-setup.md`
-- Hausverwaltung: `prompts/de/onboarding/property-management-first-setup.md`
-- Softwareunternehmen: `prompts/de/onboarding/software-company-first-setup.md`
-- Steuerbüro: `prompts/de/onboarding/tax-office-first-setup.md`
-- Vermögensverwaltung: `prompts/de/onboarding/wealth-management-first-setup.md`
 
-Synchroner MVP-Default im Referenzrepo:
-
-- `software_company`
-- `notary`
-- `wealth_management`
-
-Zusätzlicher MVP-Use-Case:
-
-- `property_management`
+Synchroner MVP-Default im Referenzrepo: `notary`.
+Beispiele werden nur aus `usecases/` abgeleitet, zum Beispiel
+Immobilienkaufvertrag oder Unterschriftsbeglaubigung.
 
 ## Minute 12-15: Pilot verbindlich starten
 
-- Legen Sie einen Pilotprozess fest (z. B. Rechnung + Buchung).
+- Legen Sie einen Pilot-Usecase fest, zum Beispiel Immobilienkaufvertrag oder
+  Unterschriftsbeglaubigung.
 - Definieren Sie Reviewer und Freigabepunkte.
 - Starten Sie den ersten Change Request als Pull Request.
 

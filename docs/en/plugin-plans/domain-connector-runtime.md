@@ -1,4 +1,4 @@
-# Plugin Plan: Domain Connector Runtime
+# Plugin Plan: Notary-Office Connector Runtime
 
 Status: `draft`
 
@@ -11,7 +11,7 @@ controlled way:
 - GitHub,
 - Jira or comparable ticket systems,
 - Slack or Teams for notifications,
-- later domain or customer systems,
+- later notary-office or tenant systems,
 - legal research and publisher-data sources after separate candidate review.
 
 ## Guiding Principle

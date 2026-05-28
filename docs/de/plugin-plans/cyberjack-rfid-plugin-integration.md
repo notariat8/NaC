@@ -15,7 +15,7 @@ Der cyberJack wird nicht als Cloud-Gerät behandelt. Er bleibt am Arbeitsplatz d
 Aus der Hersteller- und AusweisApp-Dokumentation ergeben sich folgende Integrationsanker:
 
 - Der cyberJack RFID standard ist ein USB-Kartenleser für kontaktbehaftete und kontaktlose RFID-Chipkarten.
-- Er unterstützt nPA/eID, Secoder-Funktion, beA/BRAK/BNotK, D-Trust Card 4.x/5.x und elektronischen Aufenthaltstitel.
+- Er unterstützt nPA/eID, Secoder-Funktion, BNotK-nahe Kartenpfade, D-Trust Card 4.x/5.x und elektronischen Aufenthaltstitel.
 - Die BNotK nennt `cyberJack RFID komfort (USB)`, `cyberJack RFID standard (USB)` und `cyberJack one (USB)` als kompatibel getestete Kartenleser für Kartenverwaltungsprozesse; weitere Geräte müssen mindestens Sicherheitsklasse 3, Display und eigenes PIN-Pad haben.
 - Für BNotK-Chipkartenprozesse ist RFID nicht der fachliche Zielpfad. Wenn ein Reiner-SCT-Leser eine RFID-Funktion hat, soll sie für diese Workflows ausgeschaltet bleiben, sofern kein expliziter kontaktloser Use Case vorliegt.
 - Reiner SCT e-com/e-com plus und weitere nicht kompatible oder nicht mehr unterstützte Leser sind als Blocker zu behandeln.
@@ -127,8 +127,8 @@ Das Plugin sollte als lokaler MCP- oder HTTP-Adapter startbar sein. MCP ist für
   - für Karten-/Signaturfälle außerhalb des eID-MVP.
 - `cyberjack.check_certificate`
   - prüft Zertifikatsmetadaten, ohne private Schlüssel oder PINs offenzulegen.
-- `cyberjack.bea_precheck`
-  - späterer Preflight für beA/BNotK-Szenarien, nicht im MVP.
+- `cyberjack.bnotk_precheck`
+  - späterer Preflight für BNotK-Szenarien, nicht im MVP.
 
 ## Datenmodell für Evidenz
 
@@ -185,7 +185,7 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NaC-Ausführung
 
 - Direkte APDU-Kommunikation mit dem nPA.
 - Eigene eID-Implementierung außerhalb der AusweisApp.
-- beA/BNotK produktive Anmeldung oder XNP-Login-Automation.
+- BNotK-produktive Anmeldung oder XNP-Login-Automation.
 - Speicherung oder Synchronisation von XNP-API-Keys.
 - D-Trust/QES produktiv.
 - Gesundheitskartenproduktivbetrieb.
@@ -209,7 +209,7 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NaC-Ausführung
 
 1. Produkt-Use-Case auswählen:
    - eID-Identitätsnachweis,
-   - beA/BNotK Precheck,
+   - BNotK/XNP-Precheck,
    - D-Trust-Signatur,
    - anderer Kartenprozess.
 2. Mandantenfähige Evidence-Policy definieren.
@@ -275,12 +275,12 @@ Omnistation darf nach aktueller Repo-Regel nicht als allgemeiner NaC-Ausführung
 ### Phase 4: Erweiterte Kartenfälle
 
 - D-Trust- und Signaturpfade prüfen.
-- beA/BNotK-Fälle separat rechtlich und technisch bewerten.
+- BNotK- und Signaturfälle separat rechtlich und technisch bewerten.
 - Gesundheitskarten nur nach eigener Compliance-Prüfung.
 
 ## Offene Entscheidungen
 
-- Erster produktiver Use Case: eID, beA/BNotK, D-Trust oder interner Karten-Precheck?
+- Erster produktiver Use Case: XNP/BNotK, eID, D-Trust oder interner Karten-Precheck?
 - Erstplattform: Windows nativ oder zusätzlich Linux/macOS?
 - Plugin-Form: MCP-only, lokaler HTTP-Service oder beides?
 - Evidence-Retention je Tenant?

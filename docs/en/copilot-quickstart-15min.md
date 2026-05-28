@@ -21,7 +21,7 @@ Read in this order:
 4. [policies/culture-policy.yaml](../../policies/culture-policy.yaml)
 5. [policies/technology-policy.yaml](../../policies/technology-policy.yaml)
 
-Goal: a shared baseline for roles, processes and language.
+Goal: a shared baseline for roles, notarial usecases and language.
 
 ## Minute 6-9: Initialize Copilot With The Start Prompt
 
@@ -35,35 +35,25 @@ Read these files:
 - policies/culture-policy.yaml
 
 Then explain without IT jargon:
-1. Which three pilot processes I should start first.
+1. Which three notarial usecases I should start first.
 2. Which approvals are mandatory for those processes.
 3. Which open decisions I need to make today.
 ```
 
-## Minute 9-12: Choose The Domain Path
+## Minute 9-12: Choose The Notary-Office Path
 
-Choose the matching onboarding prompt:
+Choose the notary-office onboarding prompt:
 
-- Law firm: [prompts/en/onboarding/law-firm-first-setup.md](../../prompts/en/onboarding/law-firm-first-setup.md)
 - Notary office: [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
-- Property management: [prompts/en/onboarding/property-management-first-setup.md](../../prompts/en/onboarding/property-management-first-setup.md)
-- Software company: [prompts/en/onboarding/software-company-first-setup.md](../../prompts/en/onboarding/software-company-first-setup.md)
-- Tax office: [prompts/en/onboarding/tax-office-first-setup.md](../../prompts/en/onboarding/tax-office-first-setup.md)
-- Wealth management: [prompts/en/onboarding/wealth-management-first-setup.md](../../prompts/en/onboarding/wealth-management-first-setup.md)
 
-Synchronous MVP defaults in the reference repository:
-
-- `software_company`
-- `notary`
-- `wealth_management`
-
-Additional MVP usecase:
-
-- `property_management`
+Synchronous MVP default in the reference repository: `notary`. Examples are
+derived only from [usecases/](../../usecases), for example real-estate purchase
+contract or signature certification.
 
 ## Minute 12-15: Start The Pilot Bindingly
 
-- Define one pilot process, for example invoice plus booking.
+- Define one pilot usecase, for example real-estate purchase contract or
+  signature certification.
 - Define reviewers and approval points.
 - Start the first change request as a pull request.
 

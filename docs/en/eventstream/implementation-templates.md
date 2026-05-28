@@ -115,7 +115,7 @@ Basis: [policies/revisionssicherheit-eventstream-policy.yaml](../../../policies/
 ## Introduction In Four Phases
 
 1. **Pilot**
-   - one vertical, one case repository, one organization project.
+   - one notarial usecase, one case repository, one organization project.
 2. **Stabilization**
    - DLQ handling, observability, anchor reports.
 3. **Rollout**

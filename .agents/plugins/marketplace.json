@@ -77,30 +77,6 @@
       "category": "Regulierung"
     },
     {
-      "name": "nac-bea-portal",
-      "source": {
-        "source": "local",
-        "path": "./plugins/nac-bea-portal"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Regulierung"
-    },
-    {
-      "name": "nac-elster-eric",
-      "source": {
-        "source": "local",
-        "path": "./plugins/nac-elster-eric"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Regulierung"
-    },
-    {
       "name": "nac-grundbuch-portal",
       "source": {
         "source": "local",

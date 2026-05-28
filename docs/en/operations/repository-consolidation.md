@@ -21,7 +21,7 @@ Retirement is a separate step.
 | --- | --- | --- | --- | --- |
 | `notariat8/NaC` | Target repository | Target system | open | Merge PR #6. |
 | `ofunk/Online-GmbH-Gruendung` | `usecases/online-gmbh-gruendung/` | canonicalized in PR #6 | old repo visible, empty | After merge, add redirect README or archive. |
-| `ofunk/Steuer-aaS` | no NaC usecase target | removed from the NaC usecase catalog | old repo visible, empty | Keep external or re-evaluate later as a plugin/workflow idea. |
+| non-notarial intake source | no NaC usecase target | removed from the NaC usecase catalog | external | Do not move into NaC. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migrated in PR #6 | old repo visible | After merge, add redirect README or archive. |
 | `ofunk/NaaS` | `usecases/` and `workflows/` | not migrated yet | old repo visible | Decompose instead of moving wholesale: usecases, workflow contracts, and backlog separately. |
 | `ofunk/oci-landing-zone` | `plugins/nac-oci-evidence/` and cloud/evidence docs | partly covered conceptually | old repo visible | Check whether runbooks or infra contracts are missing in NaC; migrate or keep as external infrastructure source. |

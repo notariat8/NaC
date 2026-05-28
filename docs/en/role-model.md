@@ -1,59 +1,56 @@
-# Role Model: Generic And Domain-Specific
+# Role Model: Notary Office
 
 ## Goal
 
 This model ensures that:
 
-- every person can create tickets,
+- every authorized person can create tickets within the allowed scope,
 - only qualified roles can make final decisions in subject-critical steps,
-- approvals are documented in a traceable and audit-proof way.
+- notarial approvals are documented in a traceable and audit-proof way.
 
-## 1. Basic Principle For All Organizations
+## 1. Basic Principle In The Notary Office
 
-- Every role may observe.
-- Every role may open a ticket.
+- Every authorized role may observe.
+- Every authorized role may open a ticket.
 - Every role may self-resolve only within its approved competence.
 - Subject-critical decisions require qualified roles and, where necessary,
-  approval.
+  four-eyes approval.
 
-Example: if copy paper is missing, nobody has to be a notary to report it.
+Example: if a workstation gate fails, nobody has to be a notary to report it.
+A notarial approval still remains with the qualified subject-matter role.
 
-## 2. Generic Minimum Roles
+## 2. Minimum Roles
 
 - `mitarbeiter`: may report, comment and update status.
 - `sachbearbeitung`: may process and close operational tickets when there is no
   subject-critical impact.
+- `notariatsfachkraft`: may prepare matter data, open information and evidence.
+- `notar_fachlich`: may make notarial subject-matter decisions.
+- `kostenverantwortung`: may review cost and fee questions where qualified.
 - `prozessverantwortung`: may approve working rules in the subject process.
 - `freigabeverantwortung`: may finally approve approval-required steps.
 - `revision_audit`: may review, but not decide operationally.
 - `automation`: executes technical standard tasks and does not decide on
   subject matter.
 
-## 3. Domain-Specific Roles, Example Law Office
-
-- `anwalt_fachlich`: subject-matter decision in mandate or RVG-relevant steps.
-- `reno`: operational flow, deadlines and file coordination.
-- `refa`: organization-adjacent case handling and process support.
-- `notar_fachlich` for notary offices only: notarial approvals.
-- `steuerfachkraft` for tax offices only: declaration-adjacent approvals.
-
-## 4. Qualification Instead Of Title
+## 3. Qualification Instead Of Title
 
 The decisive factor is not only the job title, but the documented
 qualification.
 
 Example:
 
-- `rechnung_rvg_erstellen`: allowed only for roles with
-  `qualification: rvg_billing_trained`.
+- `notarial_cost_note_review`: allowed only for roles with
+  `qualification: notarial_costs_training`.
 
-## 5. Decision Matrix, Self-Resolve vs Approval
+## 4. Decision Matrix
 
 - `impact=low` and `compliance=none`: self-resolve allowed.
-- `impact=medium` or `financial=true`: review by process owner.
-- `impact=high` or `legal=true`: approval by an authorized specialist role.
+- `impact=medium` or `financial=true`: review by process owner or cost owner.
+- `impact=high`, `legal=true` or notarial subject-matter decision: approval by
+  a qualified specialist role.
 
-## 6. Workflow Integration
+## 5. Workflow Integration
 
 ```mermaid
 flowchart TD
@@ -63,7 +60,7 @@ flowchart TD
     SelfResolve -->|yes| Done[Ticket closed]
     SelfResolve -->|no| Review[Review by responsible role]
     Review --> Approval{Final approval required}
-    Approval -->|yes| Approver[Approval owner or specialist role]
+    Approval -->|yes| Approver[Notarial specialist role or approval owner]
     Approval -->|no| Done
     Approver --> Done
 ```
@@ -78,14 +75,8 @@ Required technical fields per process request:
 - optional `actor_context.qualification_evidence`
 - depending on the decision, `actor_context.approver_role`
 
-## 7. Gender And Role Names
+## 6. Gender And Role Names
 
 The internal role ID remains neutral and stable, for example
-`anwalt_fachlich` as a technical identifier. Visible wording follows
+`notar_fachlich` as a technical identifier. Visible wording follows
 [policies/culture-policy.yaml](../../policies/culture-policy.yaml).
-
-Recommendation:
-
-- Technical IDs: neutral and stable.
-- Display texts: according to policy, for example neutral or paired forms.
-- Same rights for all wording variants.

@@ -101,7 +101,7 @@ sie mindestens eine passende Umsetzungsfläche mitpflegt:
 | [docs/de/eventstream/](eventstream) | Event-Journal, EventLock und Cloud-Runbooks. |
 | [docs/de/issues/](issues) | Issue-Taxonomie, Issue-Betrieb und Public-Backlog. |
 | [docs/de/operations/](operations) | Fork/Release, Upstream-Sync, Version-Binding, Arbeitsmodell und Repo-Konsolidierung. |
-| [docs/de/service-model/](service-model) | Core/Vertical-Struktur, Provider-Leistungen, Tenant-Ownership und Exit. |
+| [docs/de/service-model/](service-model) | Notariats-Scope, Provider-Leistungen, Tenant-Ownership und Exit. |
 | [src/](../../src) | Ausführbare Python-Runtime. |
 | [scripts/](../../scripts) | Lokale und CI-nahe Entwicklerwerkzeuge. |
 | [policies/](../../policies) | Verbindliche Governance-, Rollen-, Technik-, Datenschutz- und SBOM-Regeln. |

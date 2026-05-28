@@ -28,8 +28,6 @@ class LegalResearchConnectorsContractTests(unittest.TestCase):
                 "ansvar-german-law-mcp-lobehub",
                 "ansvar-german-law-mcp-elasticflow",
                 "beck-online-mcp-market",
-                "otto-schmidt-answers-taxandbytes",
-                "lto-ki-kanzlei-sponsored",
             },
         )
         for candidate in candidates.values():

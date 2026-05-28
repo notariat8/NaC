@@ -187,7 +187,7 @@ The MVP includes:
 
 ### Phase 4: Extended Card Cases
 
-- Evaluate beA/BNotK and signature cases separately.
+- Evaluate BNotK and signature cases separately.
 - Add only after legal, security and vendor review.
 
 ## Open Decisions

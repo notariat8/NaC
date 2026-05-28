@@ -29,7 +29,7 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Stateful onboarding wizard for Business-OS.")
+    parser = argparse.ArgumentParser(description="Stateful onboarding wizard for Notariat as Code.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     start = sub.add_parser("start", help="Start or continue an onboarding session.")

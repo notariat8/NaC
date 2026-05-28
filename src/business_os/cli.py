@@ -8,8 +8,8 @@ from .engine import BusinessProcessEngine
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="business-os",
-        description="Git-driven reference runtime for business processes.",
+        prog="nac-process-legacy",
+        description="Legacy deterministic runtime behind Notariat as Code.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

@@ -35,11 +35,11 @@ Mit der vorliegenden Policy wird das geschlossen.
 
 Damit werden Kollaboration und PDF-Fähigkeit kombiniert.
 
-## b) Python code-first für Geschäftsprozesse unter BPMN-2.0-Vorgabe
+## b) Python code-first für notarielle Prozesse unter BPMN-2.0-Vorgabe
 
 ### Bewertung
 
-Reines code-first ist für Fachbereiche langfristig nicht optimal, weil:
+Reines code-first ist für Notariatsteams langfristig nicht optimal, weil:
 
 - Fachlogik in Code für Nicht-IT schwer prüfbar wird,
 - Abweichungen zwischen Sollprozess und Implementierung spät sichtbar werden.
@@ -50,7 +50,7 @@ Reines code-first ist für Fachbereiche langfristig nicht optimal, weil:
 - `Python` als Ausführungs- und Integrationsschicht.
 - Python muss sich am BPMN-Modell orientieren, nicht umgekehrt.
 
-Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Fachbereich.
+Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Notariatsteam.
 
 ## c) BPMN-2.0-Visualisierung: bpmn-js, Mermaid oder Alternativen
 
@@ -72,8 +72,8 @@ Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Fachberei
 
 ## Was Fachbereiche davon haben
 
-- Das Unternehmen kann Prozesse primär über visuelle BPMN-Modelle verstehen.
-- IT und Fachbereich arbeiten auf derselben Prozesswahrheit.
+- Das Notariat kann Prozesse primär über visuelle BPMN-Modelle verstehen.
+- IT und fachlich Verantwortliche arbeiten auf derselben Prozesswahrheit.
 - Dokumentation ist versioniert, exportierbar und revisionsfähig.
 - [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md) beschreibt den
   NaC-Pfad vom visuellen Editor zum geprüften Pull Request.

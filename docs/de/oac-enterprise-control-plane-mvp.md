@@ -1,27 +1,30 @@
-# NaC Enterprise Control Plane MVP (6 Monate)
+# NaC Enterprise Control Plane MVP Für Notariate (6 Monate)
 
-## Ziel und Rahmen
+## Ziel Und Rahmen
 
-Dieses Dokument konkretisiert ein realistisches MVP für `Notariat as Code` im bestehenden Modell `NaC + Enterprise GitOps + NaC`.
+Dieses Dokument konkretisiert ein realistisches MVP für `Notariat as Code` im
+Modell `NaC + Enterprise GitOps`.
 
 Das MVP schließt einen kleinen, aber vollständigen End-to-End-Kreis:
 
 - deklarative Änderung in Git,
 - Policy- und Freigabeprüfung,
-- Reconciliation in Zielsysteme,
+- lokale oder freigegebene Reconciliation in Zielsysteme,
 - Audit- und Drift-Sichtbarkeit.
 
-Default für synchrone Pilotpfade sind `software_company`, `notary` und `wealth_management`.
-Branchenmodule bleiben über `policies/process-policy.yaml` umstellbar.
+Der synchrone Pilotpfad ist `notary`. Nicht-notarielle Produktpfade sind nicht
+Teil des MVP.
 
 ## MVP-Scope
 
-Fokusdomäne:
+Fokus:
 
-- Org + Access + Tooling Onboarding.
-- Zusätzlicher Branchenpfad als MVP-Use-Case: `property_management` (Hausverwaltung).
+- Notariatsrollen, Arbeitsplatz-Readiness und Zugriff,
+- erster fachlicher Usecase aus [usecases/](../../usecases), bevorzugt
+  Immobilienkaufvertrag oder Unterschriftsbeglaubigung,
+- technische Change-Typen für Team, Rolle und lokale Zugriffskoordination.
 
-Enthaltene Change-Typen (Schema v1):
+Enthaltene Change-Typen, Schema v1:
 
 - `team`
 - `role_change`
@@ -29,74 +32,77 @@ Enthaltene Change-Typen (Schema v1):
 
 Nicht im MVP:
 
-- Compensation,
-- Performance Management,
-- komplexe Finanzplanung,
-- autonome AI-Freigaben für sensible Themen.
+- autonome notarielle Freigaben,
+- echte Mandatsdaten im öffentlichen Repository,
+- nicht-notarielle Branchenmodule,
+- schreibende Fachsystemadapter ohne gesonderte Freigabe.
 
 ## Referenzfluss
 
 ```mermaid
 flowchart TD
-    A[PR mit Team oder Rollen-Änderung] --> B[Schema Validation]
+    A[PR mit Rolle Team oder Usecase-Änderung] --> B[Schema Validation]
     B --> C[Policy Check]
     C --> D[Plan Preview im PR]
-    D --> E[Merge nach main]
-    E --> F[Reconciler startet Connector-Tasks]
-    F --> G[IAM GitHub Jira Slack]
+    D --> E[Review und Merge]
+    E --> F[Lokaler oder freigegebener Reconciler]
+    F --> G[GitHub Entra ID XNP Arbeitsplatzgate]
     G --> H[Soll Ist Vergleich und Audit Events]
     H --> I[Drift oder Fehler als Event]
 ```
 
-## Repository-Zuschnitt für den Pilot
+## Repository-Zuschnitt Für Den Pilot
 
-- `org-model` bleibt im aktuellen Repo als modellierende Prozessartefakte (`processes/` + neue Change-Typen) umgesetzt.
-- `policy-repo` entspricht den bestehenden Richtlinien unter `policies/`.
-- `connector-config` wird initial als Konfigurationsdateien unter `docs/de/` und später als eigenes Verzeichnis ausgepraegt.
-- `schemas/` enthält die maschinenprüfbaren Vertragsdefinitionen.
+- `usecases/` enthält den fachlichen Pilot.
+- `policies/` enthält verbindliche Regeln.
+- `plugins/` und `workflows/` enthalten geplante oder implementierte
+  Notariatsanbindungen.
+- [schemas/](../../schemas) enthält maschinenprüfbare Vertragsdefinitionen.
 
 ## 6-Monats-Plan
 
-### Monat 1: Modell fixieren
+### Monat 1: Modell Fixieren
 
-- Kernobjekte und Change-Typen verbindlich machen.
-- Zielsysteme für Pilot festlegen (IAM, GitHub, Jira).
-- Policy-Minimum für Freigaben und SoD prüfbar machen.
+- Notariats-Scope verbindlich machen.
+- Pilot-Usecase auswählen.
+- Rollen- und Freigabeminimum prüfbar machen.
 
-### Monat 2: Validation und Policy
+### Monat 2: Validation Und Policy
 
-- CI validiert die neuen Schemas.
+- CI validiert betroffene Schemas.
 - Policy Checks liefern PR-fähiges Feedback.
-- Plan-Preview als menschenlesbare Änderungsfolge.
+- Plan-Preview wird menschenlesbar.
 
-### Monat 3: Reconciler + erster Connector
+### Monat 3: Lokaler Reconciler Und Arbeitsplatzgate
 
-- Merge-Ereignis startet Reconciliation.
-- Erste reale Zielsystem-Änderung reproduzierbar und idempotent.
-- Audit Trail für jede Ausführung.
+- Merge-Ereignis oder lokaler Auftrag startet Reconciliation.
+- Arbeitsplatz-, Karten-, XNP- oder Register-Readiness wird metadata-only
+  geprüft.
+- Audit Trail besteht für jede Ausführung.
 
-### Monat 4: Zwei weitere Connectoren
+### Monat 4: Anbindungen Stabilisieren
 
-- IAM, GitHub, Jira integriert.
-- Retry, Fehlerklassifikation, Idempotenzpfad stabil.
+- GitHub-, Entra-ID- und Notariatsarbeitsplatzpfade sind dokumentiert.
+- Retry, Fehlerklassifikation und Idempotenzpfad sind stabil.
 
-### Monat 5: Observability und Drift
+### Monat 5: Observability Und Drift
 
 - Soll/Ist-Abgleich mit klaren Drift-Signalen.
 - Dashboard für Durchlaufzeit, Fehler und Governance.
 
 ### Monat 6: Pilotbetrieb
 
-- Ein echter Bereich arbeitet produktiv über den Flow.
-- `joiner_mover`, `team`, `role_change` laufen Ende-zu-Ende.
+- Ein Notariatsbereich arbeitet produktiv über den freigegebenen Flow.
+- Ein notarieller Usecase läuft Ende-zu-Ende mit synthetischem oder privatem
+  Datenbestand.
 - KPI-Review mit Skalierungsentscheidung.
 
-## KPI-Set für das MVP
+## KPI-Set Für Das MVP
 
 Delivery:
 
-- Lead Time pro Team- oder Rollenwechsel.
-- Automationsquote gegen manuelle Tickets.
+- Lead Time pro Usecase- oder Rollenänderung.
+- Anteil validierter Änderungen gegen manuelle Tickets.
 
 Governance:
 
@@ -105,25 +111,5 @@ Governance:
 
 User Value:
 
-- Time-to-access für neue Mitarbeitende.
-- Time-to-team-setup für neue Teams.
-
-Platform Health:
-
-- Drift Rate.
-- Reconciliation Latency.
-- Connector Failure Rate.
-
-## AI-Einsatz im MVP
-
-Erlaubt:
-
-- Planvorschläge, Policy-Erklärung, Priorisierungshilfen.
-
-Nicht erlaubt:
-
-- finale Freigaben in sensiblen HR/Finance/Security-Schritten.
-
-Prinzip:
-
-- AI schlägt vor, Menschen entscheiden.
+- Time-to-readiness für neue Mitarbeitende.
+- Time-to-pilot für einen notariellen Usecase.

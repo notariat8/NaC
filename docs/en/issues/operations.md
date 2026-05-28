@@ -46,7 +46,7 @@ Technical teams in the GitHub organization:
 
 - `team-notaries-all`: all notaries with full visibility over all notary files
 - `team-notary-ops`: operational notary-office staff
-- `team-tax`, `team-law`, `team-software`, `team-carpentry` per vertical
+- `team-notary-review`: subject-matter review and approval roles in the notary office
 - `team-audit-readonly`: internal audit view, read-only
 
 External users:

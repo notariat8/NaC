@@ -57,7 +57,7 @@ diese Aktion implementiert.
 
 ## Ablauf
 
-1. Ziel einordnen: XNP-Login-Test, Online-HRA-Gate, beA-/BNotK-Precheck oder
+1. Ziel einordnen: XNP-Login-Test, Online-HRA-Gate, BNotK-/XNP-Precheck oder
    anderer Karten-Workflow.
 2. Day0-Voraussetzungen soweit möglich mit dem lokalen Readiness-Skript
    prüfen: BNotK-Chip-/Signaturkarte, kompatibler Sicherheitsklasse-3-Leser,

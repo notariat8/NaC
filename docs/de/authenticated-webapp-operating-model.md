@@ -53,7 +53,7 @@ nächsten Review-Schritt, ohne daraus schon eine Produktintegration zu machen.
 ## Identität Und Autorisierung
 
 Entra ID ist als erste Unternehmens-Identitätsschicht sinnvoll. Für
-Kanzlei- und interne Benutzer sollte geprüft werden, ob Entra ID mit
+Notariats- und interne Benutzer sollte geprüft werden, ob Entra ID mit
 Certificate-Based Authentication, Conditional Access und KeyCards oder
 Smartcards die Anmeldung absichern kann.
 

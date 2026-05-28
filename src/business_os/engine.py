@@ -151,7 +151,7 @@ class BusinessProcessEngine:
         errors.extend(self._validate_actor_context(payload))
 
         if process_type == "invoice":
-            errors.extend(self._validate_rvg_requirements(payload))
+            errors.extend(self._validate_notarial_cost_requirements(payload))
 
         return errors
 
@@ -191,22 +191,22 @@ class BusinessProcessEngine:
 
         return errors
 
-    def _validate_rvg_requirements(self, payload: dict[str, Any]) -> list[str]:
+    def _validate_notarial_cost_requirements(self, payload: dict[str, Any]) -> list[str]:
         errors: list[str] = []
         metadata = payload.get("metadata", {})
         if not isinstance(metadata, dict):
             return errors
 
-        if metadata.get("billing_regime") != "rvg":
+        if metadata.get("billing_regime") != "notarial_costs":
             return errors
 
         actor_context = payload.get("actor_context", {})
         qualifications = actor_context.get("requested_qualification", [])
         decision_type = actor_context.get("requested_decision_type")
-        if not isinstance(qualifications, list) or "rvg_billing_trained" not in qualifications:
-            errors.append("RVG-Rechnung erfordert Qualifikation rvg_billing_trained")
+        if not isinstance(qualifications, list) or "notarial_costs_training" not in qualifications:
+            errors.append("Notarielle Kostenprüfung erfordert Qualifikation notarial_costs_training")
         if decision_type == "self_resolve":
-            errors.append("RVG-Rechnung darf nicht als self_resolve eingereicht werden")
+            errors.append("Notarielle Kostenprüfung darf nicht als self_resolve eingereicht werden")
         return errors
 
     def _build_warnings(self, document: ProcessDocument) -> list[str]:

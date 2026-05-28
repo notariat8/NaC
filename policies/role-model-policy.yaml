@@ -38,40 +38,29 @@ generic_roles:
     can_execute: true
     can_approve: false
 
-domain_roles:
-  law_firm:
-    anwalt_fachlich:
-      can_approve_legal: true
-      required_qualifications:
-        - legal_profession
-    reno:
-      can_open_ticket: true
-      can_operate_casework: true
-    refa:
-      can_open_ticket: true
-      can_operate_administration: true
+notarial_roles:
   notary:
     notar_fachlich:
       can_approve_notarial: true
       required_qualifications:
         - notary_qualification
-  tax_office:
-    steuerfachkraft:
-      can_approve_tax: true
+    notariatsfachkraft:
+      can_open_ticket: true
+      can_operate_notarial_casework: true
       required_qualifications:
-        - tax_professional
-  property_management:
-    hausverwalter_fachlich:
-      can_approve_property_ops: true
+        - notarial_office_training
+    kostenverantwortung:
+      can_review_cost_note: true
       required_qualifications:
-        - property_management_qualification
+        - notarial_costs_training
 
 qualification_gates:
-  invoice_rvg_creation:
+  notarial_cost_note_review:
     required_qualification:
-      - rvg_billing_trained
+      - notarial_costs_training
     required_role_one_of:
-      - anwalt_fachlich
+      - notar_fachlich
+      - kostenverantwortung
       - sachbearbeitung
     approval_required: true
 

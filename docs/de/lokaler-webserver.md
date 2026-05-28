@@ -99,7 +99,7 @@ verbindlich. Git und Review entscheiden, nicht der Browser.
 
 Neben `nac web` gibt es `nac operator --open`. Diese Oberfläche ist
 usecase-zentriert: Sie startet mit Vorgangskarten, Suchfeld,
-Aktenverwaltung, Kontrollansicht, Kanzlei-Workflow-Bereich,
+Aktenverwaltung, Kontrollansicht, Notariats-Workflow-Bereich,
 Arbeitsplatztests und Handbuchpfad.
 
 Technisch dient [scripts/nac_hw_bridge.py](../../scripts/nac_hw_bridge.py) die
@@ -112,7 +112,7 @@ NaC-Fork-Git-URL, Daten-Git-URL und Datenrepo-Ordner in der Benutzerkonfiguratio
 es ändert weder Git-Remotes noch klont es Repositories automatisch. Die
 Vorgangskarten bieten die primäre Tagesaktion `Akten öffnen`, die sekundäre
 Aktion `Neu`, die Kontrollaktion `Checkliste prüfen` und den eingeklappten
-Bereich `Kanzlei-Workflow`; Demo-Aktenfunktionen schreiben ausschließlich in
+Bereich `Notariats-Workflow`; Demo-Aktenfunktionen schreiben ausschließlich in
 das konfigurierte Demo-Datenrepo und führen die Status `offen`, `warten` und
 `abgeschlossen`.
 
@@ -148,9 +148,9 @@ einen sichtbaren Rückweg hat.
 
 Für die Menüführung gilt der [Operator Styleguide](operator-styleguide.md):
 Vorgangskarten trennen `Aktenverwaltung`, `Kontrolle` und
-`Kanzlei-Workflow`. Aktenverwaltung ist die sichtbare Tagesarbeit, Checklisten
+`Notariats-Workflow`. Aktenverwaltung ist die sichtbare Tagesarbeit, Checklisten
 sind Kontrollansichten, und Ablauf-/Bearbeitungsfunktionen sind
-freigaberelevante Kanzlei-Stammdaten. Beim Anlegen einer Akte schreibt die
+freigaberelevante Notariats-Stammdaten. Beim Anlegen einer Akte schreibt die
 Operator-Bridge deshalb ein `workflow_binding` mit Workflow-Version,
 Artefakt-Hashes und Bindungszeitpunkt in die Akte. Zusätzlich erzeugt sie pro
 Akte `checkliste.json` als eingefrorenen Fallstand der Usecase-Checkliste und
