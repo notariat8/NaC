@@ -4,7 +4,7 @@
   "title": "Customer-Centric Tenant Onboarding",
   "status": "planned_mvp",
   "last_update": "2026-05-28",
-  "purpose": "Definiert die sichtbare Neukundenreise von www-n8 bis zum initialen Kundenadmin in NaC. NaC fuehrt Domain-Readiness, DNS-Challenge, SaaS-Admin-Review, Owner-Apply-Plan und Tenant Registry.",
+  "purpose": "Definiert die sichtbare Neukundenreise von www-n8 bis zum initialen Kundenadmin in NaC. NaC führt Domain-Readiness, DNS-Challenge, SaaS-Admin-Review, Owner-Apply-Plan und Tenant Registry.",
   "public_entry_surface": "www-n8",
   "app_surface": "app.notariat8.de",
   "customer_journey": [

@@ -44,7 +44,7 @@ Jeder Vertrag soll definieren:
   Domain-Readiness, Admin-Provisioning-Dry-run und Owner-Apply-Gate vor jedem
   produktiven Identity-Write.
 - [workflows/contracts/customer-tenant-onboarding.contract.json](customer-tenant-onboarding.contract.json):
-  Vertrag fuer die sichtbare Neukundenreise von `www-n8` nach NaC mit
+  Vertrag für die sichtbare Neukundenreise von `www-n8` nach NaC mit
   Domain-Readiness, DNS-TXT-Challenge, SaaS-Admin-Review, Owner-Apply-Gate,
   OCI-IAM-Domain-/Compartment-Zielbild und gemeinsamer ATP-Tenant-Mapping-
   Logik ohne Mandatsdaten oder Credential-Material im Produktrepo.
