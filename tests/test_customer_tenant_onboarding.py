@@ -23,6 +23,7 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertEqual(contract["public_entry_surface"], "www-n8")
         self.assertEqual(contract["app_surface"], "app.notariat8.de")
         self.assertIn("customer_domain_readiness", contract["customer_journey"])
+        self.assertIn("live_dns_txt_check", contract["customer_journey"])
         self.assertIn("saas_admin_review_queue", contract["saas_admin_journey"])
         self.assertFalse(contract["guardrails"]["customer_oci_console_required"])
 
