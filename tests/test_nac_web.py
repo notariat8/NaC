@@ -200,6 +200,47 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("propagation", html)
         self.assertNotIn("OCI Console", html)
 
+    def test_customer_readiness_page_links_admin_provisioning_preview(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/onboarding/readiness"
+            "?domain_hint=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("Admin-Dry-Run vorbereiten", html)
+        self.assertIn(
+            "/admin/onboarding/provisioning-preview?domain=kanzlei-notariat.example&amp;tenant_slug=kanzlei-notariat&amp;admin_email=admin%40kanzlei-notariat.example",
+            html,
+        )
+
+    def test_admin_provisioning_preview_page_renders_dry_run_without_credentials(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/admin/onboarding/provisioning-preview"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("OCI-Admin-Dry-Run", html)
+        self.assertIn("dry_run", html)
+        self.assertIn("owner_apply_approval", html)
+        self.assertIn("users.create", html)
+        self.assertIn("nac-tenant-admin", html)
+        self.assertIn("admin@kanzlei-notariat.example", html)
+        self.assertNotIn("api_key", html.lower())
+        self.assertNotIn("password", html.lower())
+        self.assertNotIn("client_secret", html.lower())
+
     def test_customer_readiness_return_later_preserves_customer_context(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 

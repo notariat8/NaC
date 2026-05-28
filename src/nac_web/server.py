@@ -52,6 +52,9 @@ ROLE_LABELS_DE = {
     "testator": "Erblasser",
 }
 
+DEFAULT_OCI_IDENTITY_DOMAIN_URL = "https://idcs.example.identity.oraclecloud.com:443"
+DEFAULT_OCI_IDENTITY_DOMAIN_ID = "ocid1.domain.oc1.example"
+
 
 class NaCLocalWebApp:
     def __init__(self, repo_root: Path) -> None:
@@ -70,6 +73,8 @@ class NaCLocalWebApp:
                 return _html_response(build_login_page(parsed.query))
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query))
+            if route == "/admin/onboarding/provisioning-preview":
+                return _html_response(build_admin_provisioning_preview_page(parsed.query))
             if route == "/admin/onboarding":
                 return _html_response(build_admin_onboarding_page())
             if route == "/healthz":
@@ -496,6 +501,13 @@ def build_customer_readiness_page(query: str) -> str:
             "admin_email": readiness["admin_email"],
         }
     )
+    preview_query = urlencode(
+        {
+            "domain": readiness["domain"],
+            "tenant_slug": readiness["tenant_slug"],
+            "admin_email": readiness["admin_email"],
+        }
+    )
     resume_query = urlencode(
         {
             "domain_hint": readiness["domain"],
@@ -525,6 +537,7 @@ def build_customer_readiness_page(query: str) -> str:
         <p><strong>Wert:</strong> <code>{html.escape(verification["dns_record_value"])}</code></p>
         <div class="toolbar">
           <a class="button-link" href="/api/tenant/domain-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>
+          <a class="button-link" href="/admin/onboarding/provisioning-preview?{html.escape(preview_query, quote=True)}">Admin-Dry-Run vorbereiten</a>
           <a class="inline-link" href="/onboarding/readiness?{html.escape(resume_query, quote=True)}">später erneut öffnen</a>
         </div>
       </section>
@@ -541,6 +554,85 @@ def build_customer_readiness_page(query: str) -> str:
     </section>
     """
     return _layout("NaC Domain-Readiness", body)
+
+
+def build_admin_provisioning_preview_page(query: str) -> str:
+    params = parse_qs(query, keep_blank_values=True)
+    domain = _query_text(params, "domain")
+    tenant_slug = _query_text(params, "tenant_slug")
+    admin_email = _query_text(params, "admin_email")
+    plan = build_admin_provisioning_plan(
+        tenant_slug=tenant_slug,
+        domain=domain,
+        admin_email=admin_email,
+        admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
+        identity_domain_url=DEFAULT_OCI_IDENTITY_DOMAIN_URL,
+        identity_domain_id=DEFAULT_OCI_IDENTITY_DOMAIN_ID,
+    )
+    planned_write_items = "".join(
+        f"<li><span>{html.escape(write)}</span></li>" for write in plan["planned_writes"]
+    )
+    group_items = "".join(f"<li><span>{html.escape(group)}</span></li>" for group in plan["groups"])
+    binding_rows = "".join(
+        "<tr>"
+        f'<td data-label="Gruppe">{html.escape(binding["group"])}</td>'
+        f'<td data-label="Mitglied">{html.escape(binding["member"])}</td>'
+        f'<td data-label="Zweck">{html.escape(binding["purpose"])}</td>'
+        "</tr>"
+        for binding in plan["role_bindings"]
+    )
+    body = f"""
+    <nav class="topline"><a href="/onboarding/readiness?{html.escape(urlencode({"domain_hint": plan["domain"], "tenant_slug": plan["tenant_slug"], "admin_email": plan["admin_user"]["primary_email"]}), quote=True)}">← Readiness</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">OCI Identity Preview</p>
+      <h1>OCI-Admin-Dry-Run</h1>
+      <p>Lokale Vorschau für die initiale Tenant-Admin-Einladung. Diese Seite schreibt nicht nach OCI
+      und enthält keine Zugangsdaten.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Tenant</h2>
+        <p><strong>Domain:</strong> {html.escape(plan["domain"])}</p>
+        <p><strong>Tenant-Slug:</strong> {html.escape(plan["tenant_slug"])}</p>
+        <p><strong>Modus:</strong> <code>{html.escape(plan["mode"])}</code></p>
+        <p><strong>Approval-Gate:</strong> <code>{html.escape(plan["approval_gate"])}</code></p>
+      </section>
+      <section>
+        <h2>Initialer Admin</h2>
+        <p><strong>E-Mail:</strong> {html.escape(plan["admin_user"]["primary_email"])}</p>
+        <p><strong>Anzeigename:</strong> {html.escape(plan["admin_user"]["display_name"])}</p>
+        <p><strong>OCI Console für Endnutzer:</strong> nein</p>
+      </section>
+    </div>
+    <div class="grid">
+      <section>
+        <h2>Geplante Writes</h2>
+        <ul class="link-list">{planned_write_items}</ul>
+      </section>
+      <section>
+        <h2>Gruppen</h2>
+        <ul class="link-list">{group_items}</ul>
+      </section>
+    </div>
+    <section>
+      <h2>Rollenbindung</h2>
+      <div class="table-scroll responsive-table">
+        <table>
+          <thead><tr><th>Gruppe</th><th>Mitglied</th><th>Zweck</th></tr></thead>
+          <tbody>{binding_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Guardrails</h2>
+      <ul class="link-list">
+        <li><span>Produktive Identity-Writes bleiben bis Owner-Apply-Freigabe gesperrt.</span></li>
+        <li><span>DNS-Verifikation, Audit-Event und Rollback-Plan bleiben Pflicht-Gates.</span></li>
+        <li><span>Client-Zugangsdaten, API Keys und Token werden nicht erfasst.</span></li>
+      </ul>
+    </section>
+    """
+    return _layout("NaC OCI-Admin-Dry-Run", body)
 
 
 def _tenant_slug_from_domain_hint(domain_hint: str) -> str:
