@@ -4,6 +4,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +63,47 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertTrue(result["retry_allowed"])
         self.assertIn("propagation", result["customer_guidance"])
         self.assertIn("später", result["customer_guidance"])
+
+    def test_live_dns_check_result_uses_resolver_observations(self) -> None:
+        from nac_identity.customer_onboarding import build_live_dns_check_result
+
+        calls: list[str] = []
+
+        def fake_resolver(record_name: str) -> dict:
+            calls.append(record_name)
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=abc123"],
+                "resolver_error": "",
+            }
+
+        result = build_live_dns_check_result(
+            expected_name="_nac.kanzlei-notariat.example",
+            expected_value="nac-domain-verification=abc123",
+            resolver=fake_resolver,
+        )
+
+        self.assertEqual(calls, ["_nac.kanzlei-notariat.example"])
+        self.assertEqual(result["status"], "verified")
+        self.assertIn("live_dns", result["source"])
+
+    def test_live_dns_check_result_defaults_to_standard_resolver(self) -> None:
+        from nac_identity.customer_onboarding import build_live_dns_check_result
+
+        def fake_resolver(record_name: str) -> dict:
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=abc123"],
+                "resolver_error": "",
+            }
+
+        with patch("nac_identity.dns_txt.resolve_txt_records", fake_resolver):
+            result = build_live_dns_check_result(
+                expected_name="_nac.kanzlei-notariat.example",
+                expected_value="nac-domain-verification=abc123",
+            )
+
+        self.assertEqual(result["status"], "verified")
 
 
 if __name__ == "__main__":
