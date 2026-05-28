@@ -64,8 +64,8 @@ def test_domain_check_accepts_notary_domain_and_admin_email(self) -> None:
     self.assertEqual(result["tenant_slug"], "kanzlei-notariat")
     self.assertEqual(result["verification"]["dns_record_name"], "_nac.kanzlei-notariat.example")
 
-def test_domain_check_rejects_freemail_admin(self) -> None:
-    result = check_domain_ready("kanzlei-notariat.example", "kanzlei-notariat", "admin@gmail.com")
+def test_domain_check_rejects_external_admin_domain(self) -> None:
+    result = check_domain_ready("kanzlei-notariat.example", "kanzlei-notariat", "admin@example.com")
     self.assertFalse(result["ready"])
     self.assertIn("admin_email_domain_mismatch", result["blocking_findings"])
 ```
