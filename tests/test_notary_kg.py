@@ -9,6 +9,7 @@ from pathlib import Path
 from notary_kg.catalog import all_case_summaries, find_case, load_catalogs
 from notary_kg.cli import main as kg_main
 from notary_kg.editor import build_editor_view
+from nac_gnotkg.views import build_cost_review_view
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +103,59 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.kg-editor-view/v0.1")
         self.assertEqual(payload["editor_model"]["tabs"][0]["id"], "open_information")
         self.assertIn("value", payload["patch_policy"]["forbidden_fields"])
+
+    def test_every_usecase_exposes_gnotkg_cost_gate(self) -> None:
+        catalogs = load_catalogs(REPO_ROOT)
+        missing: list[str] = []
+
+        for catalog in catalogs:
+            for case in catalog.payload.get("cases", []):
+                gate_ids = {gate.get("id") for gate in case.get("gates", []) if isinstance(gate, dict)}
+                information_ids = {
+                    item.get("id")
+                    for item in case.get("required_information", [])
+                    if isinstance(item, dict)
+                }
+                decision_ids = {
+                    decision.get("id")
+                    for decision in case.get("decisions", [])
+                    if isinstance(decision, dict)
+                }
+                evidence_ids = {
+                    evidence.get("id")
+                    for evidence in case.get("evidence", [])
+                    if isinstance(evidence, dict)
+                }
+                if not {
+                    "cost.business_value",
+                    "decision.gnotkg_cost_path",
+                    "gate.gnotkg_cost_review",
+                    "evidence.gnotkg_cost_note",
+                }.issubset(information_ids | decision_ids | gate_ids | evidence_ids):
+                    missing.append(str(case.get("slug")))
+
+        self.assertEqual(missing, [])
+
+    def test_cli_cost_view_returns_safe_graph(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--format",
+                    "json",
+                    "cost-view",
+                    "immobilienkaufvertrag",
+                ]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload, build_cost_review_view(REPO_ROOT, "immobilienkaufvertrag"))
+        self.assertEqual(payload["rendering"]["preferred_renderer"], "xyflow")
+        self.assertFalse(_contains_key(payload, "value"))
 
 
 if __name__ == "__main__":

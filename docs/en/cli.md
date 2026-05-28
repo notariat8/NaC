@@ -56,6 +56,8 @@ python scripts/nac.py status
 python scripts/nac.py doctor --profile strict
 python scripts/nac.py web
 python scripts/nac.py kg status
+python scripts/nac.py kg cost-view immobilienkaufvertrag
+python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
@@ -69,6 +71,8 @@ nac status
 nac doctor --profile strict
 nac web
 nac kg status
+nac kg cost-view immobilienkaufvertrag
+nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
 nac plugins actions
@@ -86,6 +90,7 @@ nac qms status
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
+| GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, secure-link boundaries and legal-research connector candidates. |
@@ -141,6 +146,15 @@ and human review are settled.
 ```bash
 nac contracts validate
 ```
+
+The GNotKG cost contract is validated there as well. The source basis is
+[GNotKG section 3](https://www.gesetze-im-internet.de/gnotkg/__3.html),
+[GNotKG section 34](https://www.gesetze-im-internet.de/gnotkg/__34.html),
+[GNotKG section 35](https://www.gesetze-im-internet.de/gnotkg/__35.html),
+[annex 1](https://www.gesetze-im-internet.de/gnotkg/anlage_1.html) and
+[annex 2](https://www.gesetze-im-internet.de/gnotkg/anlage_2.html).
+`nac gnotkg quote` stores no entered values; final notarial cost review
+remains a review gate.
 
 The check ensures that the contract requires purpose, expiry, matter binding,
 storage target, revocation and audit evidence and that connector candidates

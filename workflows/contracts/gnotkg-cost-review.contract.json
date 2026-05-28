@@ -1,0 +1,75 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.gnotkg_cost_review",
+  "title": "GNotKG-Kostenprüfung und visuelle Kostenansicht",
+  "status": "active_mvp",
+  "last_update": "2026-05-28",
+  "purpose": "Definiert den zentralen GNotKG-Kostenbaustein für notarielle Usecases. Die Python-Engine berechnet technische Entwürfe; die visuelle Ansicht erklärt und prüft den Weg ohne echte Mandatswerte im Produktrepo.",
+  "runtime": {
+    "python_module": "nac_gnotkg",
+    "quote_cli": "python scripts/nac.py gnotkg quote --business-value <wert> --table A --fee-rate 1.0",
+    "review_cli": "python scripts/nac.py kg cost-view <usecase_slug>"
+  },
+  "source_law": [
+    "https://www.gesetze-im-internet.de/gnotkg/__3.html",
+    "https://www.gesetze-im-internet.de/gnotkg/__34.html",
+    "https://www.gesetze-im-internet.de/gnotkg/__35.html",
+    "https://www.gesetze-im-internet.de/gnotkg/anlage_1.html",
+    "https://www.gesetze-im-internet.de/gnotkg/anlage_2.html"
+  ],
+  "required_usecase_nodes": {
+    "required_information": "cost.business_value",
+    "decisions": "decision.gnotkg_cost_path",
+    "gates": "gate.gnotkg_cost_review",
+    "evidence": "evidence.gnotkg_cost_note"
+  },
+  "xyflow_contract": {
+    "preferred_renderer": "xyflow",
+    "renderer_role": "visual_review_only",
+    "source_of_truth": "nac_gnotkg Python engine and usecase-local KG",
+    "node_types": [
+      "case",
+      "information",
+      "rule",
+      "kv_item",
+      "decision",
+      "fee_table",
+      "gate",
+      "evidence"
+    ],
+    "edge_types": [
+      "requires",
+      "informs",
+      "selects",
+      "requires_review",
+      "evidences"
+    ]
+  },
+  "quote_schema": {
+    "schema_version": "nac.gnotkg-cost-quote/v0.1",
+    "required": [
+      "business_value",
+      "table",
+      "fee_rate",
+      "base_fee",
+      "fee_amount",
+      "minimum_fee_applied",
+      "source_refs"
+    ]
+  },
+  "guardrails": {
+    "real_mandate_data_in_git": false,
+    "value_fields_editable": false,
+    "xyflow_calculates_fees": false,
+    "notarial_review_required": true,
+    "final_invoice_automation": false,
+    "secret_material_allowed": false
+  },
+  "blocked_actions": [
+    "store_business_value_in_product_repo",
+    "store_party_or_property_data_in_product_repo",
+    "treat_visual_graph_as_calculation_authority",
+    "issue_final_cost_note_without_notarial_review",
+    "bypass_pull_request_for_cost_rule_changes"
+  ]
+}

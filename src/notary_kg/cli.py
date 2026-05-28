@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from nac_gnotkg.views import build_cost_review_view
+
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .editor import build_editor_view
 
@@ -38,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     editor_parser.add_argument("slug")
 
+    cost_parser = subparsers.add_parser(
+        "cost-view",
+        help="Show the safe GNotKG cost review graph for one KG case.",
+    )
+    cost_parser.add_argument("slug")
+
     return parser
 
 
@@ -65,6 +73,18 @@ def main(argv: list[str] | None = None) -> int:
             payload = build_editor_view(repo_root, args.slug)
         except KeyError:
             print(f"ERROR: Unknown KG case slug: {args.slug}")
+            return 1
+        _print_payload(payload, args.format)
+        return 0
+
+    if args.command == "cost-view":
+        try:
+            payload = build_cost_review_view(repo_root, args.slug)
+        except KeyError:
+            print(f"ERROR: Unknown KG case slug: {args.slug}")
+            return 1
+        except ValueError as exc:
+            print(f"ERROR: {exc}")
             return 1
         _print_payload(payload, args.format)
         return 0
@@ -141,6 +161,18 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- confirmation required: {payload['patch_policy']['confirmation_required']}")
         return
 
+    if payload.get("schema_version") == "nac.gnotkg-cost-review/v0.1":
+        print(f"GNotKG-Kostenansicht: {payload['usecase_slug']} ({payload['graph_id']})")
+        print(f"- title: {payload['title']}")
+        print(f"- renderer: {payload['rendering']['preferred_renderer']}")
+        print(f"- nodes: {len(payload['nodes'])}")
+        print(f"- edges: {len(payload['edges'])}")
+        print("")
+        print("Guardrails")
+        print(f"- notarielle Prüfung erforderlich: {payload['guardrails']['notarial_review_required']}")
+        print(f"- echte Mandatsdaten in Git: {payload['guardrails']['real_mandate_data_in_git']}")
+        return
+
     print(f"{payload['slug']} ({payload['catalog_id']})")
     print(f"- title: {payload['title']}")
     print(f"- priority: {payload['priority']}")
@@ -161,4 +193,3 @@ def _print_payload(payload: dict, output_format: str) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

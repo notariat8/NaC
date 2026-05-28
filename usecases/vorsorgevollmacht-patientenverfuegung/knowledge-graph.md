@@ -1,7 +1,7 @@
 # Vorsorgevollmacht und Patientenverfügung Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `top10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -23,6 +23,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `effectiveness.rules` | Wirksamkeit Regeln | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Wirksamkeit Regeln benötigt? |
 | `self_dealing.release` | Befreiung von Selbstkontrahierung und Untervollmacht | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Befreiung von Selbstkontrahierung und Untervollmacht benötigt? |
 | `central_register` | Zentrales Vorsorgeregister | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Zentrales Vorsorgeregister benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -37,6 +38,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.instrument_scope` | Entscheidung: Instrument Umfang | `offen` |
 | `decision.register` | Entscheidung: Register | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -44,6 +46,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.capacity_review` | Prüfgate: Geschäftsfähigkeit Prüfung | `offen` |
 | `gate.health_scope_review` | Prüfgate: Gesundheit Umfang Prüfung | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -51,6 +54,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.capacity_and_instruction` | Nachweis: Geschäftsfähigkeit and Anweisung | `offen` |
 | `evidence.copy_register_trace` | Nachweis: Ausfertigung Register Nachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

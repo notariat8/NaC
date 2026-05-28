@@ -1,7 +1,7 @@
 # Grundschuld / Hypothekenbestellung Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `top10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -23,6 +23,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `security.purpose` | Sicherung Zweck | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Sicherung Zweck benötigt? |
 | `ranking.requirement` | Rang Anforderung | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Rang Anforderung benötigt? |
 | `enforcement.clause` | Vollstreckung Klausel | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Vollstreckung Klausel benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -37,6 +38,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.charge_type` | Entscheidung: Grundschuld Art | `offen` |
 | `decision.execution_clause_scope` | Entscheidung: Vollzug Klausel Umfang | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -44,6 +46,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.bank_instruction_review` | Prüfgate: Bank Anweisung Prüfung | `offen` |
 | `gate.rank_review` | Prüfgate: Rang Prüfung | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -51,6 +54,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.bank_instruction_hash` | Nachweis: Bank Anweisung Hash | `offen` |
 | `evidence.land_register_application` | Nachweis: Grundbuch Register Antrag | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

@@ -1,7 +1,7 @@
 # Grundstückskaufvertrag Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `legacy-alias`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -18,11 +18,12 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `property.identity` | Grundstück Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Grundstück Identität benötigt? |
 | `seller.identity` | Verkäufer Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Verkäufer Identität benötigt? |
 | `buyer.identity` | Käufer Identität | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt? |
-| `purchase.price` | Kaufpreis und Faelligkeitsmodell | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Faelligkeitsmodell benötigt? |
+| `purchase.price` | Kaufpreis und Fälligkeitsmodell | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Kaufpreis und Fälligkeitsmodell benötigt? |
 | `encumbrances.current` | Belastungen aktueller Stand | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Belastungen aktueller Stand benötigt? |
 | `financing.required` | Finanzierung erforderlich | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Finanzierung erforderlich benötigt? |
 | `possession.transfer` | Besitz Übertragung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Besitz Übertragung benötigt? |
 | `public.approvals` | Öffentlich Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Öffentlich Genehmigungen benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -38,6 +39,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.financing_route` | Entscheidung: Finanzierung Route | `offen` |
 | `decision.encumbrance_handling` | Entscheidung: Belastung Behandlung | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -46,6 +48,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `gate.land_register_review` | Prüfgate: Grundbuchprüfung | `offen` |
 | `gate.consumer_draft_period` | Prüfgate: Verbraucher-Entwurfsfrist | `offen` |
 | `gate.execution_readiness` | Prüfgate: Vollzugsbereitschaft | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -53,6 +56,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.intake_review` | Nachweis: Aufnahmeprüfung und Entwurfsfreigabe | `offen` |
 | `evidence.filing_trace` | Nachweis: Einreichungs- und Vollzugsnachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

@@ -1,6 +1,6 @@
 # Usecase-Gantt
 
-Letzte Aktualisierung: 2026-05-19
+Letzte Aktualisierung: 2026-05-28
 
 ```mermaid
 gantt
@@ -25,6 +25,7 @@ gantt
     Deutsche Umlautpflicht für Usecases       :done,   u6f, 2026-05-18, 1d
     Usecase-BPMN-Basismodelle                  :done,   u6g, 2026-05-19, 1d
     Immobilien-KG-Bürosprache schärfen        :done,   u6h, 2026-05-19, 1d
+    GNotKG-Kostengate für alle Usecases       :done,   u6i, 2026-05-28, 1d
     Online-GmbH-Gründung                      :active, u7, 2026-05-14, 28d
     Aktive Aufnahme bereinigt                  :done,   u8, 2026-05-17, 1d
     Nicht-notarielle Aufnahme entfernen        :done,   u9, 2026-05-19, 1d
@@ -51,6 +52,7 @@ gantt
 | Deutsche fachliche Usecase-Vorderseiten | `usecases/*/README.md` plus `scripts/validate_language_parity.py` | Fertig | Jeder Usecase hat eine kurze deutsche Vorderseite für Nicht-Technik-Leser; alte englische Usecase-README-Gerüsttexte werden vom Sprachvalidator abgelehnt. |
 | Usecase-BPMN-Basismodelle | `bpmn/immobilienkaufvertrag.bpmn`, `bpmn/usecases/*.bpmn` plus `scripts/generate_usecase_bpmn.py` | Fertig | Alle usecase-lokalen KGs haben ein bpmn-js-taugliches BPMN-2.0-Basismodell mit Rolle, Ausführungskanal einschließlich E-Mail, Fax/Post, Portal, XNP und digitaler Signatur, Freigabe, Nachweis und KG-Referenz. |
 | Immobilien-KG-Bürosprache | `usecases/immobilienkaufvertrag/knowledge-graph.*` | Fertig | Sichtbare Pflichtangaben und Entscheidungslabels sind in deutscher Büro- und Fachsprache formuliert, inklusive Umlauten und ohne technische Wort-für-Wort-Bezeichnungen. |
+| GNotKG-Kostengate für alle Usecases | `usecases/*/knowledge-graph.*` plus `scripts/validate_knowledge_graph.py` | Fertig | Jeder KG-basierte Usecase enthält Geschäftswert-, Kostenweg-, Kostenprüf- und Kostenentwurfs-Knoten; der Validator erzwingt diese Basis ohne echte Mandatswerte. |
 | Online-GmbH-/UG-Gründung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
 | Bereinigte aktive Aufnahme | `usecases/` | Fertig | Nicht passende aktive Aufnahmequellen wurden aus diesem Repository entfernt und sind nicht mehr Teil des NaC-Usecase-Katalogs. |
 | Immobilienkaufvertrag | `usecases/immobilienkaufvertrag/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |

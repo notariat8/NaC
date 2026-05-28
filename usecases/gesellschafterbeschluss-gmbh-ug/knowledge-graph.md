@@ -1,7 +1,7 @@
 # Gesellschafterbeschluss bei GmbH/UG Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `majority.requirement` | Mehrheit Anforderung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Mehrheit Anforderung benötigt? |
 | `articles.wording` | Satzung Wortlaut | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Satzung Wortlaut benötigt? |
 | `register.filing` | Register Einreichung | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Register Einreichung benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -36,6 +37,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.notarial_form` | Entscheidung: Notariell Form | `offen` |
 | `decision.register_relevance` | Entscheidung: Register Relevanz | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -43,6 +45,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.quorum_majority_review` | Prüfgate: Beschlussfähigkeit Mehrheit Prüfung | `offen` |
 | `gate.register_package_ready` | Prüfgate: Register Paket bereit | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -50,6 +53,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.resolution_review` | Nachweis: Beschluss Prüfung | `offen` |
 | `evidence.register_trace` | Nachweis: Register Nachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

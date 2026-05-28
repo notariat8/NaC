@@ -15,10 +15,10 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 
 | Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
-| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
-| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
-| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Offene Angaben | 9 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 3 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
 
 ## Offene Angaben
 
@@ -32,6 +32,7 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 | `consideration.obligations` | Gegenleistung Pflichten | Notariat | tax_review, drafting |
 | `consents.approvals` | Zustimmungen Genehmigungen | Notariatsfachkraft | execution |
 | `tax.family.flags` | Steuer Familie Prüfflaggen | Notariat | legal_review |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | Notariat | gnotkg_cost_review, cost_note |
 
 ## Grenzen Für Den Betrieb
 

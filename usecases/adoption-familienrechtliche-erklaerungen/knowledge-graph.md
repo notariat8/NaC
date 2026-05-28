@@ -1,7 +1,7 @@
 # Adoption / familienrechtliche Erklärungen Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `court.destination` | Gericht Zielgericht | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Gericht Zielgericht benötigt? |
 | `irrevocability.warning` | Unwiderruflichkeit Belehrung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Unwiderruflichkeit Belehrung benötigt? |
 | `additional.approvals` | Weitere Genehmigungen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Weitere Genehmigungen benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -35,6 +36,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.declaration_route` | Entscheidung: Erklärung Route | `offen` |
 | `decision.approval_status` | Entscheidung: Genehmigung Status | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -42,6 +44,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.capacity_and_warning` | Prüfgate: Geschäftsfähigkeit and Belehrung | `offen` |
 | `gate.court_delivery` | Prüfgate: Gericht Zustellung | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -49,6 +52,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.warning_notes` | Nachweis: Belehrung Vermerke | `offen` |
 | `evidence.family_court_delivery` | Nachweis: Familie Gericht Zustellung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

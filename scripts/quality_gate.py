@@ -131,6 +131,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_kg_editor.py"],
                 ),
                 (
+                    "gnotkg_costs",
+                    "GNotKG Cost Review Contract",
+                    [sys.executable, "scripts/validate_gnotkg_costs.py"],
+                ),
+                (
                     "secure_document_links",
                     "Secure Document Link Contract",
                     [sys.executable, "scripts/validate_secure_document_links.py"],

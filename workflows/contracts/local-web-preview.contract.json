@@ -15,19 +15,25 @@
     "/",
     "/bpmn/<model>",
     "/kg/<slug>",
+    "/costs/<slug>",
     "/api/bpmn/<model>",
     "/api/kg/<slug>",
+    "/api/costs/<slug>",
+    "/api/gnotkg/quote",
     "/healthz"
   ],
   "source_modules": [
     "src/nac_web/",
-    "src/notary_kg/"
+    "src/notary_kg/",
+    "src/nac_gnotkg/"
   ],
   "allowed_outputs": [
     "BPMN-SVG-Vorschau",
     "BPMN-JSON-Struktur",
     "KG-Editor-View",
     "KG-Editor-JSON-Struktur",
+    "GNotKG-Kostenansicht",
+    "GNotKG-Kostenentwurf ohne Speicherung",
     "lokales Dashboard"
   ],
   "blocked_outputs": [

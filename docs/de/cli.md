@@ -57,6 +57,8 @@ python scripts/nac.py status
 python scripts/nac.py doctor --profile strict
 python scripts/nac.py web
 python scripts/nac.py kg status
+python scripts/nac.py kg cost-view immobilienkaufvertrag
+python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
@@ -70,6 +72,8 @@ nac status
 nac doctor --profile strict
 nac web
 nac kg status
+nac kg cost-view immobilienkaufvertrag
+nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
 nac plugins actions
@@ -87,6 +91,7 @@ nac qms status
 | Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
+| GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Secure-Link-Grenzen und Legal-Research-Connector-Kandidaten. |
@@ -143,6 +148,15 @@ AVV, AI-SBOM, Sicherheitsgrenze und menschliche Review geklärt sind.
 ```bash
 nac contracts validate
 ```
+
+Der GNotKG-Kostenvertrag wird dabei ebenfalls geprüft. Grundlage sind
+[GNotKG § 3](https://www.gesetze-im-internet.de/gnotkg/__3.html),
+[GNotKG § 34](https://www.gesetze-im-internet.de/gnotkg/__34.html),
+[GNotKG § 35](https://www.gesetze-im-internet.de/gnotkg/__35.html),
+[Anlage 1](https://www.gesetze-im-internet.de/gnotkg/anlage_1.html) und
+[Anlage 2](https://www.gesetze-im-internet.de/gnotkg/anlage_2.html).
+`nac gnotkg quote` speichert keine Eingabewerte; die finale notarielle
+Kostenprüfung bleibt ein Review-Gate.
 
 Die Prüfung stellt sicher, dass der Vertrag Zweck, Ablauf, Aktenbindung,
 Speicherziel, Widerruf und Auditnachweis fordert und dass Connector-Kandidaten
