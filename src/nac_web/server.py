@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
+from nac_identity.customer_onboarding import build_customer_tenant_plan
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
@@ -67,6 +68,8 @@ class NaCLocalWebApp:
                 return _html_response(build_home_page(self.repo_root))
             if route == "/login":
                 return _html_response(build_login_page(parsed.query))
+            if route == "/admin/onboarding":
+                return _html_response(build_admin_onboarding_page())
             if route == "/healthz":
                 return _json_response({"status": "ok"})
             if route == "/api/tenant/domain-check":
@@ -392,6 +395,79 @@ def build_login_page(query: str) -> str:
     </div>
     """
     return _layout("OCI-IdP Login-Contract", body)
+
+
+def build_admin_onboarding_page() -> str:
+    plan = build_customer_tenant_plan(
+        domain="kanzlei-notariat.example",
+        tenant_slug="kanzlei-notariat",
+        admin_email="admin@kanzlei-notariat.example",
+        saas_admin_email="ofunk@funktion8.de",
+    )
+    states = [
+        "submitted",
+        "dns_challenge_issued",
+        "domain_verified",
+        "saas_admin_review",
+        "owner_apply_ready",
+        "invited",
+    ]
+    state_rows = "".join(
+        "<tr>"
+        f'<td data-label="Status">{html.escape(state)}</td>'
+        f'<td data-label="Gate">{html.escape(_onboarding_state_gate(state))}</td>'
+        "</tr>"
+        for state in states
+    )
+    body = f"""
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/onboarding/readiness">Readiness</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">SaaS-Admin</p>
+      <h1>Readiness-Anfragen</h1>
+      <p>Read-only Vorschau für neue NaC-Kunden. Produktive OCI-Schreiboperationen bleiben an Owner-Apply-Freigabe,
+      Audit und Rollback-Plan gebunden.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Aktuelle Anfrage</h2>
+        <p><strong>Domain:</strong> {html.escape(plan["tenant"]["domain"])}</p>
+        <p><strong>Tenant:</strong> {html.escape(plan["tenant"]["slug"])}</p>
+        <p><strong>Initialer Admin:</strong> {html.escape(plan["admin_user"]["email"])}</p>
+        <p><strong>SaaS-Rolle:</strong> {html.escape(plan["saas_admin"]["role"])}</p>
+      </section>
+      <section>
+        <h2>Zielbild</h2>
+        <ul class="link-list">
+          <li><span>OCI Identity: {html.escape(plan["oci"]["identity"]["customer_domain_strategy"])}</span></li>
+          <li><span>Compartment: {html.escape(plan["oci"]["resource_isolation"]["compartment_strategy"])}</span></li>
+          <li><span>ATP: {html.escape(plan["atp"]["strategy"])}</span></li>
+          <li><span>Owner Apply: erforderlich</span></li>
+        </ul>
+      </section>
+    </div>
+    <section>
+      <h2>Statusfolge</h2>
+      <div class="table-scroll responsive-table">
+        <table>
+          <thead><tr><th>Status</th><th>Gate</th></tr></thead>
+          <tbody>{state_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    """
+    return _layout("NaC Onboarding Admin", body)
+
+
+def _onboarding_state_gate(state: str) -> str:
+    labels = {
+        "submitted": "Domain-Hinweis aus www-n8 eingegangen",
+        "dns_challenge_issued": "DNS-TXT-Challenge ausgegeben",
+        "domain_verified": "DNS-TXT bestaetigt",
+        "saas_admin_review": "nac-saas-owner prueft Zielbild",
+        "owner_apply_ready": "Owner-Apply-Artefakt kann vorbereitet werden",
+        "invited": "Initialer Tenant-Admin wurde eingeladen",
+    }
+    return labels[state]
 
 
 def build_bpmn_page(model) -> str:

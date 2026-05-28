@@ -161,6 +161,20 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "dry_run")
         self.assertTrue(payload["requires_human_approval"])
 
+    def test_admin_queue_page_shows_customer_onboarding_request_without_secrets(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("Readiness-Anfragen", html)
+        self.assertIn("nac-saas-owner", html)
+        self.assertIn("owner_apply_ready", html)
+        self.assertNotIn("api_key", html.lower())
+        self.assertNotIn("password", html.lower())
+
     def test_app_receives_www_n8_customer_handoff_without_tenant_decision(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
