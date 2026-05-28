@@ -4,12 +4,15 @@ import html
 import json
 import threading
 import webbrowser
+from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from nac_gnotkg.costs import quote_fee
+from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
     bpmn_model_json,
@@ -64,10 +67,16 @@ class NaCLocalWebApp:
                 return self._bpmn_route(route.removeprefix("/bpmn/"))
             if route.startswith("/kg/"):
                 return self._kg_route(route.removeprefix("/kg/"))
+            if route.startswith("/costs/"):
+                return self._cost_route(route.removeprefix("/costs/"))
             if route.startswith("/api/bpmn/"):
                 return self._bpmn_api_route(route.removeprefix("/api/bpmn/"))
             if route.startswith("/api/kg/"):
                 return self._kg_api_route(route.removeprefix("/api/kg/"))
+            if route.startswith("/api/costs/"):
+                return self._cost_api_route(route.removeprefix("/api/costs/"))
+            if route == "/api/gnotkg/quote":
+                return _json_response({"error": "GNotKG-Quote nutzt POST, damit Werte nicht in URL oder Requestlog stehen."}, HTTPStatus.METHOD_NOT_ALLOWED)
         except KeyError as exc:
             return _html_response(_layout("Nicht Gefunden", f"<p>{html.escape(str(exc))}</p>"), HTTPStatus.NOT_FOUND)
         except ValueError as exc:
@@ -80,6 +89,8 @@ class NaCLocalWebApp:
         try:
             if route.startswith("/api/bpmn/"):
                 return self._bpmn_api_post(route.removeprefix("/api/bpmn/"), body)
+            if route == "/api/gnotkg/quote":
+                return self._gnotkg_quote_api_post(body)
         except KeyError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.NOT_FOUND)
         except BpmnSaveConflict as exc:
@@ -98,6 +109,10 @@ class NaCLocalWebApp:
     def _kg_route(self, slug: str) -> tuple[int, str, bytes]:
         view = build_editor_view(self.repo_root, _safe_segment(slug))
         return _html_response(build_kg_page(view))
+
+    def _cost_route(self, slug: str) -> tuple[int, str, bytes]:
+        view = build_cost_review_view(self.repo_root, _safe_segment(slug))
+        return _html_response(build_cost_page(view))
 
     def _bpmn_api_route(self, stem: str) -> tuple[int, str, bytes]:
         if stem.endswith("/xml"):
@@ -123,6 +138,26 @@ class NaCLocalWebApp:
     def _kg_api_route(self, slug: str) -> tuple[int, str, bytes]:
         view = build_editor_view(self.repo_root, _safe_segment(slug))
         return _json_response(view)
+
+    def _cost_api_route(self, slug: str) -> tuple[int, str, bytes]:
+        view = build_cost_review_view(self.repo_root, _safe_segment(slug))
+        return _json_response(view)
+
+    def _gnotkg_quote_api_post(self, body: bytes) -> tuple[int, str, bytes]:
+        try:
+            payload = json.loads(body.decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("Request Body muss ein JSON-Objekt sein")
+            quote = quote_fee(
+                business_value=Decimal(_payload_text(payload, "business_value")),
+                table=_payload_text(payload, "table").upper(),
+                fee_rate=Decimal(_payload_text(payload, "fee_rate", "1.0")),
+                kv_number=_payload_text(payload, "kv_number", ""),
+                usecase_slug=_payload_text(payload, "usecase_slug", ""),
+            )
+        except (ArithmeticError, ValueError, json.JSONDecodeError) as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        return _json_response(quote.to_dict())
 
 
 def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False) -> None:
@@ -176,7 +211,8 @@ def build_home_page(repo_root: Path) -> str:
     )
     kg_items = "".join(
         f'<li><a href="/kg/{html.escape(case.slug)}">{html.escape(case.title)}</a>'
-        f'<span>{html.escape(case.slug)} · {case.open_required_information} offene Angaben</span></li>'
+        f'<span>{html.escape(case.slug)} · {case.open_required_information} offene Angaben · '
+        f'<a class="inline-link" href="/costs/{html.escape(case.slug)}">Kosten</a></span></li>'
         for case in cases[:40]
     )
     body = f"""
@@ -713,7 +749,7 @@ def build_kg_page(view: dict[str, Any]) -> str:
     tabs = "".join(_render_kg_tab(tab) for tab in view["editor_model"]["tabs"])
     status = _status_label(view.get("status", ""))
     body = f"""
-    <nav class="topline"><a href="/">← Übersicht</a><a href="/api/kg/{html.escape(view['usecase_slug'])}">JSON</a></nav>
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/costs/{html.escape(view['usecase_slug'])}">Kosten</a><a href="/api/kg/{html.escape(view['usecase_slug'])}">JSON</a></span></nav>
     <section class="hero">
       <p class="eyebrow">KG-Editor-View</p>
       <h1>{html.escape(view['title'])}</h1>
@@ -726,6 +762,100 @@ def build_kg_page(view: dict[str, Any]) -> str:
     {tabs}
     """
     return _layout(f"KG: {view['title']}", body)
+
+
+def build_cost_page(view: dict[str, Any]) -> str:
+    slug = html.escape(view["usecase_slug"])
+    node_items = "".join(
+        "<li>"
+        f"<strong>{html.escape(str(node.get('label', node.get('id', ''))))}</strong>"
+        f"<span>{html.escape(_status_label(node.get('status', '')))} · {html.escape(str(node.get('type', '')))}</span>"
+        "</li>"
+        for node in view.get("nodes", [])
+    )
+    edge_rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(edge.get('source', '')))}</td>"
+        f"<td>{html.escape(str(edge.get('type', '')))}</td>"
+        f"<td>{html.escape(str(edge.get('target', '')))}</td>"
+        "</tr>"
+        for edge in view.get("edges", [])
+    )
+    body = f"""
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/kg/{slug}">Checkliste</a><a href="/api/costs/{slug}">JSON</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">GNotKG-Kostenprüfung</p>
+      <h1>{html.escape(view['title'])}</h1>
+      <p>Geschäftswerte werden nur lokal eingegeben und nicht im Produktrepo gespeichert.</p>
+    </section>
+    <section class="notice">
+      <strong>Prüfgrenze:</strong> Die Berechnung ist ein technischer Entwurf.
+      Die finale Kostenprüfung bleibt ein notarielles Review-Gate.
+    </section>
+    <section class="quote-panel">
+      <h2>Gebühr berechnen</h2>
+      <form id="gnotkg-quote-form" class="quote-form">
+        <label for="business-value">Geschäftswert</label>
+        <input id="business-value" name="business_value" inputmode="decimal" value="500000">
+        <label for="fee-table">Tabelle</label>
+        <select id="fee-table" name="table">
+          <option value="A">Tabelle A</option>
+          <option value="B">Tabelle B</option>
+        </select>
+        <label for="fee-rate">Gebührensatz</label>
+        <input id="fee-rate" name="fee_rate" inputmode="decimal" value="1.0">
+        <label for="kv-number">KV-Nummer</label>
+        <input id="kv-number" name="kv_number" value="21100">
+        <button type="submit">Berechnen</button>
+      </form>
+      <output id="gnotkg-quote-result" class="quote-result">Noch keine Berechnung.</output>
+    </section>
+    <section>
+      <h2>Kostenpfad</h2>
+      <ol class="cost-flow">{node_items}</ol>
+    </section>
+    <section>
+      <h2>Verknüpfungen</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Quelle</th><th>Beziehung</th><th>Ziel</th></tr></thead>
+          <tbody>{edge_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <script>{_cost_page_script(view['usecase_slug'])}</script>
+    """
+    return _layout(f"GNotKG: {view['title']}", body)
+
+
+def _cost_page_script(slug: str) -> str:
+    return f"""
+    const form = document.getElementById("gnotkg-quote-form");
+    const result = document.getElementById("gnotkg-quote-result");
+    form.addEventListener("submit", async (event) => {{
+      event.preventDefault();
+      const data = new FormData(form);
+      const payload = Object.fromEntries(data.entries());
+      payload.usecase_slug = {json.dumps(slug)};
+      result.textContent = "berechne ...";
+      const response = await fetch("/api/gnotkg/quote", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload)
+      }});
+      const quotePayload = await response.json();
+      if (!response.ok) {{
+        result.textContent = "Fehler: " + (quotePayload.error || "ungültige Eingabe");
+        return;
+      }}
+      result.textContent = [
+        "Basisgebühr " + quotePayload.base_fee + " EUR",
+        "Gebühr " + quotePayload.fee_amount + " EUR",
+        "Tabelle " + quotePayload.table,
+        "Satz " + quotePayload.fee_rate
+      ].join(" · ");
+    }});
+"""
 
 
 def _render_kg_tab(tab: dict[str, Any]) -> str:
@@ -769,6 +899,15 @@ def _role_or_source_label(item: dict[str, Any]) -> str:
 
 def _identifier_fallback(value: str) -> str:
     return value.replace("_", " ").replace("-", " ")
+
+
+def _payload_text(payload: dict[str, Any], key: str, default: str | None = None) -> str:
+    value = payload.get(key)
+    if value not in (None, ""):
+        return str(value)
+    if default is not None:
+        return default
+    raise ValueError(f"{key} fehlt")
 
 
 def _layout(title: str, body: str, head_extra: str = "") -> str:
@@ -867,7 +1006,18 @@ def _css() -> str:
     th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top; overflow-wrap: anywhere; }
     th { background: #eef2f5; font-size: 13px; color: #424a53; }
     .notice { border-left: 4px solid var(--accent); }
+    .quote-form { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 10px; align-items: end; }
+    .quote-form label { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
+    .quote-form input, .quote-form select { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; font: inherit; background: #fff; }
+    .quote-result { display: block; margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfd; color: var(--ink); overflow-wrap: anywhere; }
+    .cost-flow { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0; padding: 0; }
+    .cost-flow li { counter-increment: step; position: relative; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px 14px 14px 48px; min-height: 86px; }
+    .cost-flow li::before { content: counter(step); position: absolute; left: 14px; top: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+    .cost-flow strong, .cost-flow span { display: block; }
+    .cost-flow strong { line-height: 1.25; }
+    .cost-flow span { color: var(--muted); margin-top: 6px; font-size: 13px; }
     @media (max-width: 1040px) { .editor-workbench { grid-template-columns: 1fr; } .editor-side-panel, .editor-properties-panel { border: 0; border-bottom: 1px solid var(--line); } .modeler-canvas { min-height: 560px; } }
+    @media (max-width: 900px) { .quote-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .quote-form button { grid-column: 1 / -1; } }
     @media (max-width: 760px) { .responsive-table { overflow: visible; } .responsive-table table, .responsive-table thead, .responsive-table tbody, .responsive-table tr, .responsive-table th, .responsive-table td { display: block; width: 100%; min-width: 0; } .responsive-table thead { display: none; } .responsive-table table { min-width: 0; border: 0; background: transparent; } .responsive-table tr { border: 1px solid var(--line); border-radius: 8px; background: #fff; margin: 0 0 10px; padding: 10px 12px; } .responsive-table td { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px; border: 0; padding: 6px 0; } .responsive-table td::before { content: attr(data-label); color: #424a53; font-size: 13px; font-weight: 700; } }
     @media (max-width: 720px) { main { width: calc(100% - 24px); padding: 16px 0; } h1 { font-size: 28px; } .hero, section { padding: 16px; } .bpmn-editor-shell { padding: 0; } }
     """

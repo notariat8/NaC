@@ -7,10 +7,12 @@ import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from business_os.engine import BusinessProcessEngine
+from nac_gnotkg.costs import quote_fee
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -104,7 +106,20 @@ def build_parser() -> argparse.ArgumentParser:
     kg_case.add_argument("slug")
     kg_editor = kg_sub.add_parser("editor-view", help="Zeigt die sichere KG-Editor-Ansicht.")
     kg_editor.add_argument("slug")
+    kg_cost = kg_sub.add_parser("cost-view", help="Zeigt die sichere GNotKG-Kostenansicht.")
+    kg_cost.add_argument("slug")
     kg.set_defaults(func=command_kg)
+
+    gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")
+    gnotkg_sub = gnotkg.add_subparsers(dest="gnotkg_command", required=True)
+    gnotkg_quote = gnotkg_sub.add_parser("quote", help="Berechnet eine lokale Wertgebühr ohne Speicherung.")
+    gnotkg_quote.add_argument("--business-value", required=True, help="Geschäftswert, z.B. 500000.")
+    gnotkg_quote.add_argument("--table", choices=["A", "B"], required=True, help="GNotKG-Tabelle.")
+    gnotkg_quote.add_argument("--fee-rate", default="1.0", help="Gebührensatz, z.B. 2.0.")
+    gnotkg_quote.add_argument("--kv-number", default="", help="Optionale KV-Nummer aus Anlage 1.")
+    gnotkg_quote.add_argument("--usecase-slug", default="", help="Optionaler NaC-Usecase-Slug.")
+    gnotkg_quote.add_argument("--format", choices=["text", "json"], default="text")
+    gnotkg.set_defaults(func=command_gnotkg)
 
     bpmn = subparsers.add_parser("bpmn", help="Steuert BPMN-Prozessmodelle.")
     bpmn_sub = bpmn.add_subparsers(dest="bpmn_command", required=True)
@@ -371,6 +386,34 @@ def command_kg(args: argparse.Namespace) -> int:
     return notary_kg_main(argv)
 
 
+def command_gnotkg(args: argparse.Namespace) -> int:
+    if args.gnotkg_command == "quote":
+        try:
+            quote = quote_fee(
+                business_value=Decimal(args.business_value),
+                table=args.table,
+                fee_rate=Decimal(args.fee_rate),
+                kv_number=args.kv_number,
+                usecase_slug=args.usecase_slug,
+            )
+        except (ValueError, ArithmeticError) as exc:
+            print(f"ERROR: {exc}")
+            return 1
+        if args.format == "json":
+            print(quote.to_json())
+            return 0
+        print("GNotKG-Kostenentwurf")
+        print(f"- Geschäftswert: {quote.to_dict()['business_value']}")
+        print(f"- Tabelle: {quote.table}")
+        print(f"- Gebührensatz: {quote.to_dict()['fee_rate']}")
+        print(f"- Basisgebühr: {quote.to_dict()['base_fee']}")
+        print(f"- Gebühr: {quote.to_dict()['fee_amount']}")
+        print("- Hinweis: finale notarielle Kostenprüfung bleibt erforderlich.")
+        return 0
+
+    raise AssertionError(f"Unknown GNotKG command: {args.gnotkg_command}")
+
+
 def command_bpmn(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.bpmn_command == "validate":
@@ -444,6 +487,7 @@ def command_contracts(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.contracts_command == "validate":
         validators = [
+            ("GNotKG Cost Review Contract", "validate_gnotkg_costs.py"),
             ("Secure Document Link Contract", "validate_secure_document_links.py"),
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
         ]
@@ -659,6 +703,7 @@ def command_config(args: argparse.Namespace) -> int:
             "scripts/validate_plugins.py",
             "scripts/validate_bpmn_models.py",
             "scripts/validate_kg_editor.py",
+            "scripts/validate_gnotkg_costs.py",
             "scripts/validate_secure_document_links.py",
             "scripts/validate_legal_research_connectors.py",
         ]

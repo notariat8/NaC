@@ -1,7 +1,7 @@
 # Geschäftsanteilsübertragung GmbH Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `buyer.identity` | Käufer Identität | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Käufer Identität benötigt? |
 | `consents.restrictions` | Zustimmungen Beschraenkungen | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Zustimmungen Beschraenkungen benötigt? |
 | `consideration.tax` | Gegenleistung Steuer | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Gegenleistung Steuer benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -36,6 +37,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.transfer_type` | Entscheidung: Übertragung Art | `offen` |
 | `decision.consent_needed` | Entscheidung: Zustimmung erforderlich | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -43,6 +45,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.chain_of_title_review` | Prüfgate: Kette von Titel Prüfung | `offen` |
 | `gate.shareholder_list_ready` | Prüfgate: Gesellschafter Liste bereit | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -50,6 +53,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.transfer_review` | Nachweis: Übertragung Prüfung | `offen` |
 | `evidence.shareholder_list_submission` | Nachweis: Gesellschafter Liste Einreichung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

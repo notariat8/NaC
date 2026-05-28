@@ -1,7 +1,7 @@
 # Erbausschlagung Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `heirship.basis` | Erbenstellung Grundlage | `offen` | Antragsteller | Welche Angaben, Nachweise und Prüfpunkte werden für Erbenstellung Grundlage benötigt? |
 | `representation.minors` | Representation Minderjährige | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Representation Minderjährige benötigt? |
 | `delivery.route` | Zustellung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Zustellung Route benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -36,6 +37,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.deadline_risk` | Entscheidung: Frist Risiko | `offen` |
 | `decision.approval_needed` | Entscheidung: Genehmigung erforderlich | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -43,6 +45,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.deadline_review` | Prüfgate: Frist Prüfung | `offen` |
 | `gate.court_delivery` | Prüfgate: Gericht Zustellung | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -50,6 +53,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.deadline_review` | Nachweis: Frist Prüfung | `offen` |
 | `evidence.delivery_trace` | Nachweis: Zustellung Nachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

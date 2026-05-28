@@ -33,11 +33,17 @@ The current CLI produces a safe editor view for every usecase slug:
 ```bash
 python scripts/nac.py kg editor-view immobilienkaufvertrag
 python scripts/nac.py kg --format json editor-view immobilienkaufvertrag
+python scripts/nac.py kg cost-view immobilienkaufvertrag
 ```
 
 This is not the final web editor yet, but it is an implemented contract for a
 GitHub-backed sidecar editor or a later ChatGPT App. The workflow contract lives
 in [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
+The GNotKG cost view has its own contract in
+[workflows/contracts/gnotkg-cost-review.contract.json](../../workflows/contracts/gnotkg-cost-review.contract.json):
+it produces `xyflow`-ready nodes and edges for business value, value rule,
+KV item, table A/B, fee rate, expenses, review gate and draft cost note, but
+does not calculate in the browser.
 Why the visible editing surface needs a checkable technical core is explained in
 [docs/en/ausfuehrungsmodell.md](ausfuehrungsmodell.md).
 
@@ -49,6 +55,11 @@ Why the visible editing surface needs a checkable technical core is explained in
 | Documents | `documents` | Document status with source and privacy marker |
 | Decisions | `decisions` | Dropdown/options model with status |
 | Gates/Evidence | `gates`, `evidence` | Review list for approvals and evidence |
+
+Every usecase additionally contains the cost nodes `cost.business_value`,
+`decision.gnotkg_cost_path`, `gate.gnotkg_cost_review` and
+`evidence.gnotkg_cost_note`. This lets every workflow call the same central
+cost module without duplicating cost logic per usecase.
 
 ## Guardrails
 

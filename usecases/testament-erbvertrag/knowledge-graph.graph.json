@@ -4,7 +4,7 @@
   "catalog_group": "top10",
   "title": "NaC Usecase-Wissensgraph: Testament / Erbvertrag",
   "status": "draft",
-  "last_update": "2026-05-17",
+  "last_update": "2026-05-28",
   "purpose": "Verfolgt offene Angaben, Dokumente, Entscheidungen, Prüfgates und Nachweise für diesen einzelnen Usecase, ohne echte Mandatsdaten in Git zu speichern.",
   "privacy_rule": "Alle value-Felder bleiben absichtlich leer. Echte Personen-, Grundbuch-, Gesundheits-, Nachlass-, Familien- oder Unternehmensdaten gehören in freigegebene lokale Nachweisspeicher, nicht in dieses Repository.",
   "source_refs": [
@@ -241,6 +241,19 @@
           "required_for": [
             "closing"
           ]
+        },
+        {
+          "id": "cost.business_value",
+          "label": "Geschäftswert für GNotKG-Kostenprüfung",
+          "status": "open",
+          "value": null,
+          "question": "Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt?",
+          "owner_role": "notary",
+          "privacy_class": "financial_data",
+          "required_for": [
+            "gnotkg_cost_review",
+            "cost_note"
+          ]
         }
       ],
       "documents": [
@@ -281,6 +294,19 @@
             "needs_review",
             "unknown"
           ]
+        },
+        {
+          "id": "decision.gnotkg_cost_path",
+          "label": "Entscheidung: GNotKG-Kostenweg",
+          "status": "open",
+          "options": [
+            "table_a",
+            "table_b",
+            "fixed_fee",
+            "framework_fee",
+            "needs_review",
+            "unknown"
+          ]
         }
       ],
       "gates": [
@@ -293,6 +319,12 @@
         {
           "id": "gate.binding_effect_review",
           "label": "Prüfgate: Bindungswirkung Wirkung Prüfung",
+          "status": "open",
+          "owner_role": "notary"
+        },
+        {
+          "id": "gate.gnotkg_cost_review",
+          "label": "Prüfgate: GNotKG-Kostenprüfung",
           "status": "open",
           "owner_role": "notary"
         }
@@ -314,6 +346,11 @@
           "id": "evidence.custody_registration",
           "label": "Nachweis: Verwahrung Registrierung",
           "status": "open"
+        },
+        {
+          "id": "evidence.gnotkg_cost_note",
+          "label": "Nachweis: GNotKG-Kostenentwurf und Kostenprüfung",
+          "status": "open"
         }
       ],
       "edges": [
@@ -331,6 +368,21 @@
           "from": "dispositions.wishes",
           "to": "doc.disposition_draft",
           "type": "populates"
+        },
+        {
+          "from": "cost.business_value",
+          "to": "decision.gnotkg_cost_path",
+          "type": "informs"
+        },
+        {
+          "from": "decision.gnotkg_cost_path",
+          "to": "gate.gnotkg_cost_review",
+          "type": "blocks_until_complete"
+        },
+        {
+          "from": "gate.gnotkg_cost_review",
+          "to": "evidence.gnotkg_cost_note",
+          "type": "evidenced_by"
         }
       ]
     }

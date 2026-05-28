@@ -48,6 +48,12 @@ REQUIRED_CASE_FIELDS = {
     "evidence",
     "edges",
 }
+REQUIRED_GNOTKG_NODES = {
+    "required_information": "cost.business_value",
+    "decisions": "decision.gnotkg_cost_path",
+    "gates": "gate.gnotkg_cost_review",
+    "evidence": "evidence.gnotkg_cost_note",
+}
 PROHIBITED_MARKERS = {
     "api_key",
     "client_secret",
@@ -96,6 +102,12 @@ def validate_case(case: dict[str, Any]) -> list[str]:
         value = case.get(list_name, [])
         if not isinstance(value, list) or not value:
             errors.append(f"{case_id}: {list_name} darf nicht leer sein")
+
+    for list_name, required_id in REQUIRED_GNOTKG_NODES.items():
+        value = case.get(list_name, [])
+        ids = {item.get("id") for item in value if isinstance(item, dict)} if isinstance(value, list) else set()
+        if required_id not in ids:
+            errors.append(f"{case_id}: GNotKG-Pflichtknoten fehlt: {required_id}")
 
     return errors
 

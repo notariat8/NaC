@@ -1,7 +1,7 @@
 # Immobilienkaufvertrag Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `top10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -23,6 +23,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `financing.required` | Finanzierung erforderlich | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für die erforderliche Finanzierung benötigt? |
 | `possession.transfer` | Besitzübergang | `offen` | Notarin/Notar | Welche Angaben, Nachweise und Prüfpunkte werden für den Besitzübergang benötigt? |
 | `public.approvals` | Öffentlich-rechtliche Genehmigungen | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für öffentlich-rechtliche Genehmigungen benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -38,6 +39,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.financing_route` | Entscheidung: Finanzierungsweg | `offen` |
 | `decision.encumbrance_handling` | Entscheidung: Umgang mit Belastungen | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -46,6 +48,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `gate.land_register_review` | Prüfgate: Grundbuchprüfung | `offen` |
 | `gate.consumer_draft_period` | Prüfgate: Verbraucher-Entwurfsfrist | `offen` |
 | `gate.execution_readiness` | Prüfgate: Vollzugsbereitschaft | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -53,6 +56,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.intake_review` | Nachweis: Aufnahmeprüfung und Entwurfsfreigabe | `offen` |
 | `evidence.filing_trace` | Nachweis: Einreichungs- und Vollzugsnachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

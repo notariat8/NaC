@@ -15,10 +15,10 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 
 | Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Offene Angaben | 6 | [knowledge-graph.md](knowledge-graph.md) |
-| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
-| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
-| Prüfgates | 2 | [knowledge-graph.md](knowledge-graph.md) |
+| Offene Angaben | 7 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 3 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
 
 ## Offene Angaben
 
@@ -30,6 +30,7 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 | `heirship.basis` | Erbenstellung Grundlage | Antragstellende Person | legal_review |
 | `representation.minors` | Representation Minderjährige | Notariat | approval_review |
 | `delivery.route` | Zustellung Route | Notariatsfachkraft | submission |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | Notariat | gnotkg_cost_review, cost_note |
 
 ## Grenzen Für Den Betrieb
 

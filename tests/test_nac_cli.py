@@ -70,6 +70,7 @@ class NaCCliTests(unittest.TestCase):
         rc, output = run_cli("contracts", "validate")
 
         self.assertEqual(rc, 0, output)
+        self.assertIn("GNotKG Cost Review", output)
         self.assertIn("Secure Document Link", output)
         self.assertIn("Legal Research Connectors", output)
         self.assertIn("STATUS: PASSED", output)
@@ -79,6 +80,37 @@ class NaCCliTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertIn("NaC KG development status", output)
+
+    def test_kg_cost_view_is_available_through_nac_cli(self) -> None:
+        rc, output = run_cli("kg", "--format", "json", "cost-view", "immobilienkaufvertrag")
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.gnotkg-cost-review/v0.1")
+        self.assertEqual(payload["usecase_slug"], "immobilienkaufvertrag")
+        self.assertEqual(payload["rendering"]["preferred_renderer"], "xyflow")
+
+    def test_gnotkg_quote_is_available_through_nac_cli(self) -> None:
+        rc, output = run_cli(
+            "gnotkg",
+            "quote",
+            "--business-value",
+            "500000",
+            "--table",
+            "A",
+            "--fee-rate",
+            "1.0",
+            "--kv-number",
+            "21100",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.gnotkg-cost-quote/v0.1")
+        self.assertEqual(payload["base_fee"], "4138.00")
+        self.assertEqual(payload["fee_amount"], "4138.00")
 
     def test_plugin_actions_are_listed(self) -> None:
         rc, output = run_cli("plugins", "actions")

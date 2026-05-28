@@ -15,10 +15,10 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 
 | Bereich | Anzahl | Lesbarer Einstieg |
 | --- | --- | --- |
-| Offene Angaben | 8 | [knowledge-graph.md](knowledge-graph.md) |
-| Dokument-/Nachweisreferenzen | 5 | [knowledge-graph.md](knowledge-graph.md) |
-| Entscheidungen | 2 | [knowledge-graph.md](knowledge-graph.md) |
-| Prüfgates | 3 | [knowledge-graph.md](knowledge-graph.md) |
+| Offene Angaben | 9 | [knowledge-graph.md](knowledge-graph.md) |
+| Dokument-/Nachweisreferenzen | 6 | [knowledge-graph.md](knowledge-graph.md) |
+| Entscheidungen | 3 | [knowledge-graph.md](knowledge-graph.md) |
+| Prüfgates | 4 | [knowledge-graph.md](knowledge-graph.md) |
 
 ## Offene Angaben
 
@@ -27,11 +27,12 @@ Diese Datei ist die fachliche Vorderseite für Menschen. Der genaue maschinenles
 | `property.identity` | Grundstück Identität | Notariatsfachkraft | land_register_review, drafting, execution |
 | `seller.identity` | Verkäufer Identität | Notariatsfachkraft | identity_gate, drafting, appointment |
 | `buyer.identity` | Käufer Identität | Notariatsfachkraft | identity_gate, drafting, tax_notifications |
-| `purchase.price` | Kaufpreis und Faelligkeitsmodell | Notariat | drafting, maturity_tracking, execution |
+| `purchase.price` | Kaufpreis und Fälligkeitsmodell | Notariat | drafting, maturity_tracking, execution |
 | `encumbrances.current` | Belastungen aktueller Stand | Notariatsfachkraft | land_register_review, bank_coordination, drafting |
 | `financing.required` | Finanzierung erforderlich | Notariatsfachkraft | bank_coordination, appointment_planning |
 | `possession.transfer` | Besitz Übertragung | Notariat | drafting, closing |
 | `public.approvals` | Öffentlich Genehmigungen | Notariatsfachkraft | execution, land_register_filing |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | Notariat | gnotkg_cost_review, cost_note |
 
 ## Grenzen Für Den Betrieb
 

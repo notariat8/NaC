@@ -12,7 +12,8 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
-from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_home_page, build_kg_page  # noqa: E402
+from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_cost_page, build_home_page, build_kg_page  # noqa: E402
+from nac_gnotkg.views import build_cost_review_view  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
 
 
@@ -24,6 +25,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("/bpmn/handelsregisteranmeldung", html)
         self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
         self.assertIn("/kg/immobilienkaufvertrag", html)
+        self.assertIn("/costs/immobilienkaufvertrag", html)
         self.assertIn("Lokaler NaC-Webserver", html)
 
     def test_bpmn_svg_renders_local_model(self) -> None:
@@ -74,11 +76,35 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(">notary<", html)
         self.assertNotIn("Pull Request", html)
 
+    def test_cost_page_exposes_local_quote_form_without_value_fields(self) -> None:
+        view = build_cost_review_view(REPO_ROOT, "immobilienkaufvertrag")
+        html = build_cost_page(view)
+
+        self.assertIn("GNotKG-Kostenprüfung", html)
+        self.assertIn('id="gnotkg-quote-form"', html)
+        self.assertIn("/api/gnotkg/quote", html)
+        self.assertIn("method: \"POST\"", html)
+        self.assertIn("Geschäftswert für GNotKG-Kostenprüfung", html)
+        self.assertNotIn("<td>value</td>", html)
+        self.assertNotIn("<code>value</code>", html)
+
     def test_app_serves_health_and_api(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
         health_status, health_type, health_body = app.handle("/healthz")
         api_status, api_type, api_body = app.handle("/api/bpmn/immobilienkaufvertrag")
+        cost_status, cost_type, cost_body = app.handle("/api/costs/immobilienkaufvertrag")
+        quote_status, quote_type, quote_body = app.handle_post(
+            "/api/gnotkg/quote",
+            json.dumps(
+                {
+                    "business_value": "500000",
+                    "table": "A",
+                    "fee_rate": "1.0",
+                    "kv_number": "21100",
+                }
+            ).encode("utf-8"),
+        )
 
         self.assertEqual(health_status, 200)
         self.assertEqual(health_type, "application/json; charset=utf-8")
@@ -86,6 +112,23 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(api_status, 200)
         self.assertEqual(api_type, "application/json; charset=utf-8")
         self.assertIn(b"Process_immobilienkaufvertrag", api_body)
+        self.assertEqual(cost_status, 200)
+        self.assertEqual(cost_type, "application/json; charset=utf-8")
+        self.assertIn(b"gate.gnotkg_cost_review", cost_body)
+        self.assertEqual(quote_status, 200)
+        self.assertEqual(quote_type, "application/json; charset=utf-8")
+        quote_payload = json.loads(quote_body.decode("utf-8"))
+        self.assertEqual(quote_payload["fee_amount"], "4138.00")
+
+    def test_gnotkg_quote_rejects_get_query_to_avoid_logged_values(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/api/gnotkg/quote?business_value=500000&table=A&fee_rate=1.0"
+        )
+
+        self.assertEqual(status, 405)
+        self.assertIn("POST", body.decode("utf-8"))
 
     def test_app_serves_bpmn_xml_and_editor(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -131,7 +174,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(len(slugs), 22)
         failures: list[str] = []
         for slug in slugs:
-            for route in (f"/kg/{slug}", f"/bpmn/{slug}", f"/bpmn/{slug}/edit"):
+            for route in (f"/kg/{slug}", f"/costs/{slug}", f"/bpmn/{slug}", f"/bpmn/{slug}/edit"):
                 status, content_type, body = app.handle(route)
                 if status != 200:
                     failures.append(f"{status} {route}")

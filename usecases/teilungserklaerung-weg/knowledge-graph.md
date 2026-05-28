@@ -1,7 +1,7 @@
 # Teilungserklärung nach WEG Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `ownership.shares` | Eigentum Anteile | `offen` | Mandantschaft | Welche Angaben, Nachweise und Prüfpunkte werden für Eigentum Anteile benötigt? |
 | `plans.certificates` | Pläne Bescheinigungen | `offen` | Mandantschaft | Welche Angaben, Nachweise und Prüfpunkte werden für Pläne Bescheinigungen benötigt? |
 | `encumbrance.handling` | Belastung Behandlung | `offen` | Notariat | Welche Angaben, Nachweise und Prüfpunkte werden für Belastung Behandlung benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -36,6 +37,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.use_case` | Entscheidung: Nutzung Fall | `offen` |
 | `decision.special_use_rights` | Entscheidung: Sonderfall Nutzung Rechte | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -43,6 +45,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.plan_certificate_review` | Prüfgate: Plan Bescheinigung Prüfung | `offen` |
 | `gate.land_register_implementation` | Prüfgate: Grundbuch Register Umsetzung | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -50,6 +53,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.plan_package` | Nachweis: Plan Paket | `offen` |
 | `evidence.unit_register_trace` | Nachweis: Einheit Register Nachverfolgung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

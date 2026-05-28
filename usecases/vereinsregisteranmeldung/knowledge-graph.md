@@ -1,7 +1,7 @@
 # Vereinsregisteranmeldung Wissensgraph
 
 Status: usecase-lokale statische KG-Basis
-Letzte Aktualisierung: 2026-05-17
+Letzte Aktualisierung: 2026-05-28
 Kataloggruppe: `next10`
 Usecase: [README.md](README.md)
 Maschinenlesbare KG: [knowledge-graph.graph.json](knowledge-graph.graph.json)
@@ -21,6 +21,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | `resolution.evidence` | Beschluss Nachweis | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Beschluss Nachweis benötigt? |
 | `articles.current` | Satzung aktueller Stand | `offen` | Verein | Welche Angaben, Nachweise und Prüfpunkte werden für Satzung aktueller Stand benötigt? |
 | `filing.route` | Einreichung Route | `offen` | Notariatsfachkraft | Welche Angaben, Nachweise und Prüfpunkte werden für Einreichung Route benötigt? |
+| `cost.business_value` | Geschäftswert für GNotKG-Kostenprüfung | `offen` | Notarin/Notar | Welche Geschäftswertangaben, Wertvorschriften und Nachweise werden für die GNotKG-Kostenprüfung benötigt? |
 
 ## Dokumente
 
@@ -36,6 +37,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `decision.certification_route` | Entscheidung: Beglaubigung Route | `offen` |
 | `decision.attachment_complete` | Entscheidung: Anlage Vollständigkeit | `offen` |
+| `decision.gnotkg_cost_path` | Entscheidung: GNotKG-Kostenweg | `offen` |
 
 ## Prüfgates
 
@@ -43,6 +45,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `gate.signer_authority` | Prüfgate: Unterzeichner Berechtigung | `offen` |
 | `gate.register_package_ready` | Prüfgate: Register Paket bereit | `offen` |
+| `gate.gnotkg_cost_review` | Prüfgate: GNotKG-Kostenprüfung | `offen` |
 
 ## Nachweise
 
@@ -50,6 +53,7 @@ Diese Datei ist die menschliche Review-Sicht für den usecase-lokalen statischen
 | --- | --- | --- |
 | `evidence.certification_trace` | Nachweis: Beglaubigung Nachverfolgung | `offen` |
 | `evidence.court_submission` | Nachweis: Gericht Einreichung | `offen` |
+| `evidence.gnotkg_cost_note` | Nachweis: GNotKG-Kostenentwurf und Kostenprüfung | `offen` |
 
 ## Datenschutzregel
 

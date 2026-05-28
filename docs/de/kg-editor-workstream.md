@@ -33,12 +33,18 @@ Die aktuelle CLI erzeugt eine sichere Editor-View für jeden Usecase-Slug:
 ```bash
 python scripts/nac.py kg editor-view immobilienkaufvertrag
 python scripts/nac.py kg --format json editor-view immobilienkaufvertrag
+python scripts/nac.py kg cost-view immobilienkaufvertrag
 ```
 
 Die Ausgabe ist kein finaler Web-Editor, aber sie ist ein implementierter
 Vertrag für einen GitHub-backed Sidecar-Editor oder eine spätere ChatGPT App.
 Der Workflow-Vertrag steht in
 [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json).
+Die GNotKG-Kostenansicht ist ein eigener Vertrag in
+[workflows/contracts/gnotkg-cost-review.contract.json](../../workflows/contracts/gnotkg-cost-review.contract.json):
+Sie erzeugt `xyflow`-fähige Nodes und Edges für Geschäftswert, Wertvorschrift,
+KV-Position, Tabelle A/B, Gebührensatz, Auslagen, Prüfgate und Kostenentwurf,
+berechnet aber nicht im Browser.
 Warum die sichtbare Bedienung einen prüfbaren technischen Kern braucht,
 beschreibt
 [ausfuehrungsmodell.md](ausfuehrungsmodell.md).
@@ -51,6 +57,11 @@ beschreibt
 | Dokumente | `documents` | Dokumentenstatus mit Quelle und Datenschutzmarkierung |
 | Entscheidungen | `decisions` | Dropdown-/Optionsmodell mit Status |
 | Gates/Evidence | `gates`, `evidence` | Review-Liste für Freigaben und Nachweise |
+
+Jeder Usecase enthält zusätzlich die Kostenknoten `cost.business_value`,
+`decision.gnotkg_cost_path`, `gate.gnotkg_cost_review` und
+`evidence.gnotkg_cost_note`. Dadurch kann jeder Workflow denselben zentralen
+Kostenbaustein aufrufen, ohne die Kostenlogik pro Usecase zu duplizieren.
 
 ## Guardrails
 
