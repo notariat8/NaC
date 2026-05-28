@@ -159,6 +159,63 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "dry_run")
         self.assertTrue(payload["requires_human_approval"])
 
+    def test_app_receives_www_n8_customer_handoff_without_tenant_decision(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/?source=www-n8&entry=customer&tenant_hint=notariat-musterstadt"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("NaC App-Einstieg", html)
+        self.assertIn("Bestandskunde", html)
+        self.assertIn("notariat-musterstadt", html)
+        self.assertIn("OCI-IdP-Login", html)
+        self.assertIn("kein Tenant-Autorisierungsnachweis", html)
+
+    def test_app_receives_www_n8_prospect_handoff_for_domain_readiness(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/?source=www-n8&entry=prospect&domain_hint=kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("NaC App-Einstieg", html)
+        self.assertIn("Neukunde", html)
+        self.assertIn("Domain-Readiness", html)
+        self.assertIn("kanzlei-notariat.example", html)
+        self.assertIn("/api/tenant/domain-check", html)
+        self.assertNotIn("admin@kanzlei-notariat.example", html)
+
+    def test_www_n8_handoff_escapes_hint_values(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/?source=www-n8&entry=prospect&domain_hint=%3Cscript%3Ealert(1)%3C/script%3E"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertNotIn("<script>", html)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
+
+    def test_www_n8_handoff_falls_back_for_unknown_source(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/?source=unknown&entry=prospect&domain_hint=kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("Lokaler NaC-Webserver", html)
+        self.assertNotIn("NaC App-Einstieg", html)
+
     def test_gnotkg_quote_rejects_get_query_to_avoid_logged_values(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
