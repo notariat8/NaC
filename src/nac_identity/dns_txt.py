@@ -59,20 +59,27 @@ def parse_dns_txt_response(response: bytes, *, expected_query_id: int) -> list[s
         raise ValueError(f"dns_rcode_{rcode}")
 
     offset = 12
+    question_names: list[str] = []
     for _index in range(qdcount):
-        offset = _skip_dns_name(response, offset) + 4
+        question_name, offset = _read_dns_name(response, offset)
+        question_names.append(question_name)
+        offset += 4
+
+    expected_owner = question_names[0] if question_names else ""
 
     values: list[str] = []
     for _index in range(ancount):
-        offset = _skip_dns_name(response, offset)
+        answer_owner, offset = _read_dns_name(response, offset)
         if offset + 10 > len(response):
             raise ValueError("dns_answer_too_short")
         record_type, record_class, _ttl, data_length = struct.unpack("!HHIH", response[offset : offset + 10])
         offset += 10
+        if offset + data_length > len(response):
+            raise ValueError("dns_rdata_truncated")
         data = response[offset : offset + data_length]
         offset += data_length
 
-        if record_type == DNS_TYPE_TXT and record_class == DNS_CLASS_IN:
+        if answer_owner == expected_owner and record_type == DNS_TYPE_TXT and record_class == DNS_CLASS_IN:
             values.extend(_decode_txt_chunks(data))
 
     return values
@@ -92,17 +99,41 @@ def _encode_dns_name(record_name: str) -> bytes:
 
 
 def _skip_dns_name(message: bytes, offset: int) -> int:
+    _name, new_offset = _read_dns_name(message, offset)
+    return new_offset
+
+
+def _read_dns_name(message: bytes, offset: int) -> tuple[str, int]:
+    labels: list[str] = []
+    final_offset = offset
+    jumped = False
+    seen_offsets: set[int] = set()
+
     while True:
         if offset >= len(message):
             raise ValueError("dns_name_out_of_bounds")
+        if offset in seen_offsets:
+            raise ValueError("dns_name_pointer_loop")
+        seen_offsets.add(offset)
         length = message[offset]
         if length & 0xC0 == 0xC0:
             if offset + 1 >= len(message):
                 raise ValueError("dns_pointer_out_of_bounds")
-            return offset + 2
+            pointer = ((length & 0x3F) << 8) | message[offset + 1]
+            if not jumped:
+                final_offset = offset + 2
+            offset = pointer
+            jumped = True
+            continue
         if length == 0:
-            return offset + 1
-        offset += 1 + length
+            if not jumped:
+                final_offset = offset + 1
+            return ".".join(labels), final_offset
+        offset += 1
+        if offset + length > len(message):
+            raise ValueError("dns_name_label_truncated")
+        labels.append(message[offset : offset + length].decode("idna").lower())
+        offset += length
 
 
 def _decode_txt_chunks(data: bytes) -> list[str]:
