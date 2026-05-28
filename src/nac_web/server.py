@@ -74,6 +74,8 @@ class NaCLocalWebApp:
                 return _html_response(build_admin_onboarding_page())
             if route == "/healthz":
                 return _json_response({"status": "ok"})
+            if route == "/favicon.ico":
+                return (HTTPStatus.NO_CONTENT, "image/x-icon", b"")
             if route == "/api/tenant/domain-check":
                 return self._tenant_domain_check_api(parsed.query)
             if route == "/api/tenant/login-intent":

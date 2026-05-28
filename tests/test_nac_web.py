@@ -122,6 +122,15 @@ class NaCLocalWebTests(unittest.TestCase):
         quote_payload = json.loads(quote_body.decode("utf-8"))
         self.assertEqual(quote_payload["fee_amount"], "4138.00")
 
+    def test_app_serves_empty_favicon_without_browser_console_404(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle("/favicon.ico")
+
+        self.assertEqual(status, 204)
+        self.assertEqual(content_type, "image/x-icon")
+        self.assertEqual(body, b"")
+
     def test_app_serves_tenant_domain_check_api(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
