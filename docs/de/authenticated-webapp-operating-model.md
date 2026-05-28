@@ -74,6 +74,13 @@ NaC-Rollen- und Vorgangs-Gate:
 - Freigabestatus,
 - Vier-Augen-Pflicht für sensible Schritte.
 
+Der erste NaC-App-Einstieg nutzt deshalb einen Login-Intent-Contract statt
+einer impliziten Anmeldung. NaC baut den OIDC-Redirect zu OCI Identity Domains
+über `/.well-known/openid-configuration` und `/oauth2/v1/authorize`, verlangt
+serverseitig erzeugte `state`- und `nonce`-Werte und hält `tenant_hint` nur als
+Kontext. Der Hinweis darf nicht in Rollen, Gruppen, Aktenzugriff oder OCI-Write
+übersetzt werden.
+
 XNP- und digitale-Ausweis-Pfade mit Kartenleser bleiben lokale
 Arbeitsplatz-Gates. Sie können Identitäts- oder Readiness-Nachweise liefern,
 ersetzen aber weder OCI-Login noch NaC-Autorisierung und speichern keine PINs,

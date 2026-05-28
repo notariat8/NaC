@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import threading
 import webbrowser
 from decimal import Decimal
@@ -9,9 +10,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
+from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
@@ -63,10 +65,14 @@ class NaCLocalWebApp:
                 if handoff_page is not None:
                     return _html_response(handoff_page)
                 return _html_response(build_home_page(self.repo_root))
+            if route == "/login":
+                return _html_response(build_login_page(parsed.query))
             if route == "/healthz":
                 return _json_response({"status": "ok"})
             if route == "/api/tenant/domain-check":
                 return self._tenant_domain_check_api(parsed.query)
+            if route == "/api/tenant/login-intent":
+                return self._tenant_login_intent_api(parsed.query)
             if route == "/api/bpmn-moddle":
                 return _json_text_response((self.repo_root / "bpmn" / "nac-moddle.json").read_text(encoding="utf-8"))
             if route.startswith("/bpmn/"):
@@ -158,6 +164,21 @@ class NaCLocalWebApp:
                 domain=_query_text(params, "domain"),
                 tenant_slug=_query_text(params, "tenant_slug"),
                 admin_email=_query_text(params, "admin_email"),
+            )
+        except ValueError as exc:
+            return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        return _json_response(payload)
+
+    def _tenant_login_intent_api(self, query: str) -> tuple[int, str, bytes]:
+        try:
+            params = parse_qs(query, keep_blank_values=True)
+            _reject_caller_supplied_login_config(params)
+            config = _login_intent_config_from_env()
+            payload = build_login_intent(
+                tenant_hint=_optional_query_text(params, "tenant_hint", max_length=120),
+                identity_domain_url=config["identity_domain_url"],
+                client_id=config["client_id"],
+                redirect_uri=config["redirect_uri"],
             )
         except ValueError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
@@ -281,6 +302,7 @@ def build_www_n8_handoff_page(query: str) -> str | None:
     if entry == "customer":
         tenant_hint = _optional_query_text(params, "tenant_hint", max_length=120)
         hint = html.escape(tenant_hint) if tenant_hint else "nicht übergeben"
+        login_href = "/login?" + urlencode({"source": "www-n8", "entry": "customer", "tenant_hint": tenant_hint})
         body = f"""
         <nav class="topline"><a href="/">← Übersicht</a><span><a href="/healthz">Health</a></span></nav>
         <section class="hero">
@@ -294,6 +316,7 @@ def build_www_n8_handoff_page(query: str) -> str | None:
             <h2>Tenant-Kontext</h2>
             <p><strong>Tenant-Hinweis:</strong> {hint}</p>
             <p><strong>Nächster Gate:</strong> OCI-IdP-Login mit serverseitiger Tenant-Zuordnung.</p>
+            <p><a class="inline-link" href="{html.escape(login_href)}">OCI-IdP Login-Contract öffnen</a></p>
           </section>
           <section>
             <h2>Guardrails</h2>
@@ -333,6 +356,42 @@ def build_www_n8_handoff_page(query: str) -> str | None:
         """
         return _layout("NaC App-Einstieg", body)
     return None
+
+
+def build_login_page(query: str) -> str:
+    params = parse_qs(query, keep_blank_values=True)
+    source = _optional_query_text(params, "source")
+    entry = _optional_query_text(params, "entry")
+    tenant_hint = _optional_query_text(params, "tenant_hint", max_length=120)
+    context_label = "www-n8 Bestandskunde" if source == "www-n8" and entry == "customer" else "direkter Login-Einstieg"
+    hint = html.escape(tenant_hint) if tenant_hint else "nicht übergeben"
+    body = f"""
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/api/tenant/login-intent">Login Intent API</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">OCI-IdP Login-Contract</p>
+      <h1>Login-Intent vorbereiten</h1>
+      <p>Diese Kante beschreibt den OIDC-Redirect zu Oracle OCI Identity Domains. Der konkrete Redirect braucht
+      serverseitig erzeugte State- und Nonce-Werte sowie eine konfigurierte Integrated Application; Query-Hinweise bleiben nur Kontext.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Handoff-Kontext</h2>
+        <p><strong>Quelle:</strong> {html.escape(context_label)}</p>
+        <p><strong>Tenant-Hinweis:</strong> {hint}</p>
+        <p><strong>API:</strong> <code>/api/tenant/login-intent</code></p>
+      </section>
+      <section>
+        <h2>Pflicht-Gates</h2>
+        <ul class="link-list">
+          <li><span>OCI prüft die Anmeldung über <code>/oauth2/v1/authorize</code>.</span></li>
+          <li><span>NaC validiert danach Callback, State, Nonce und Token serverseitig.</span></li>
+          <li><span>NaC-Rollen- und Vorgangs-Gate entscheidet erst nach dem IdP-Login ueber Zugriff.</span></li>
+          <li><span>Keine Client-Secrets, Mandatsdaten oder OCI-Schreiboperationen in dieser Kante.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return _layout("OCI-IdP Login-Contract", body)
 
 
 def build_bpmn_page(model) -> str:
@@ -1023,6 +1082,29 @@ def _optional_query_text(params: dict[str, list[str]], key: str, *, max_length: 
     if max_length is not None:
         return value[:max_length]
     return value
+
+
+def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
+    server_side_fields = {
+        "identity_domain_url",
+        "client_id",
+        "redirect_uri",
+        "state",
+        "nonce",
+    }
+    if any(params.get(field) for field in server_side_fields):
+        raise ValueError("login_intent_config_is_server_side")
+
+
+def _login_intent_config_from_env() -> dict[str, str]:
+    config = {
+        "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
+        "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
+        "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
+    }
+    if not all(config.values()):
+        raise ValueError("login_intent_config_missing")
+    return config
 
 
 def _layout(title: str, body: str, head_extra: str = "") -> str:
