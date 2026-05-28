@@ -49,6 +49,8 @@ Diese Liste ist als Vorlage für GitHub Issues gedacht.
 
 ### 6) Release Checklist für Prozessversionen
 - **Typ:** Release Governance
+- **Status:** umgesetzt als [Release-Checkliste](../operations/release-checklist.md);
+  erste Referenz-Releases bleiben Folgearbeit.
 - **Akzeptanzkriterien:**
   - Checkliste für Tag/Release
   - Verweis auf Audit-/Nachweisartefakte

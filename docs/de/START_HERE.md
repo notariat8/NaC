@@ -162,3 +162,7 @@ zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 strict` frisch bestanden hat, `HEAD` dem GitHub-Zielstand entspricht und der
 lokale Arbeitsbaum sauber ist. Lokale Änderungen und unge-mergte PR-Branches
 sind Zwischenstand.
+
+Für versionierte Prozesspakete ist vor Tag und GitHub Release zusätzlich die
+[Release-Checkliste](operations/release-checklist.md) auszufüllen oder im
+führenden Issue/PR nachvollziehbar zu referenzieren.

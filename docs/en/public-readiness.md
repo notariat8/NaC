@@ -33,8 +33,9 @@ All previous blockers have been implemented.
 ## Improvements After Public Release, Recommended
 
 1. Expand architecture and policy checks in CI.
-2. Add a release checklist for versioned process packages.
-3. Create the first public reference releases with a changelog-based attestation
-   process.
+2. Create the first public reference releases with the
+   [release checklist](operations/release-checklist.md) and a changelog-based
+   attestation process.
+3. Refine the release checklist regularly based on real pilot releases.
 4. Add more concrete subject-matter examples beyond the real-estate purchase
    contract.

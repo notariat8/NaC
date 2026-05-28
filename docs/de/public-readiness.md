@@ -26,6 +26,8 @@ Alle frueheren Blocker wurden umgesetzt.
 ## Verbesserungen (nach Public, aber empfohlen)
 
 1. Architektur- und Policy-Checks in CI ausbauen.
-2. Release-Checkliste für versionierte Prozesspakete ergänzen.
-3. Erste öffentliche Referenz-Releases mit changelog-basiertem Testatprozess erstellen.
+2. Erste öffentliche Referenz-Releases mit
+   [Release-Checkliste](operations/release-checklist.md) und
+   changelog-basiertem Testatprozess erstellen.
+3. Release-Checkliste regelmäßig anhand echter Pilot-Releases schärfen.
 4. Weitere konkrete Fachbeispiele neben dem Immobilienkaufvertrag ergänzen.

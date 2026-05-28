@@ -37,3 +37,6 @@
 - Referenzen:
 - Externe Tickets:
 - Export- oder Abschlussbedarf:
+- Bei Prozessversion/Release:
+  [docs/de/operations/release-checklist.md](https://github.com/notariat8/NaC/blob/main/docs/de/operations/release-checklist.md)
+  ausgefüllt oder im führenden Issue nachvollziehbar referenziert

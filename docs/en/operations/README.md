@@ -8,6 +8,8 @@ model and repository consolidation.
 - [fork-and-release-operating-model.md](fork-and-release-operating-model.md): company operation with a central
   upstream.
 - [release-sync-playbook.md](release-sync-playbook.md): binding upstream sync process.
+- [release-checklist.md](release-checklist.md): approval form for tag, release, audit artifacts and
+  rollout decision of versioned process packages.
 - [parallelbetrieb-version-binding.md](parallelbetrieb-version-binding.md): mixed old/new operation with version
   binding.
 - [agile-cadence.md](agile-cadence.md): work method and team cadence.

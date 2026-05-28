@@ -8,6 +8,8 @@ Arbeitsmodell und Repo-Konsolidierung.
 - [fork-and-release-operating-model.md](fork-and-release-operating-model.md): Unternehmensbetrieb mit zentralem
   Upstream.
 - [release-sync-playbook.md](release-sync-playbook.md): verbindlicher Upstream-Sync-Ablauf.
+- [release-checklist.md](release-checklist.md): Freigabeformular für Tag, Release, Audit-Artefakte
+  und Rollout-Entscheidung versionierter Prozesspakete.
 - [parallelbetrieb-version-binding.md](parallelbetrieb-version-binding.md): Mischbetrieb alt/neu mit
   Version-Binding.
 - [agile-cadence.md](agile-cadence.md): Arbeitsmethode und Team-Cadence.

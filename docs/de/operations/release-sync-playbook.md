@@ -24,10 +24,12 @@ Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem
 3. Upstream-Stand übernehmen.
 4. Impact-Assessment erfassen (fachlich, technisch, regulatorisch).
 5. Tests und Validierung ausführen.
-6. Sync-PR mit Nachweisen eroefnen.
+6. Sync-PR mit Nachweisen eröffnen.
 7. Review und Freigabe nach Rollenmodell.
-8. Merge in Unternehmens-`main`.
-9. Unternehmens-Release taggen (`v*`) und Rollout starten.
+8. Release-Checkliste abarbeiten:
+   [release-checklist.md](release-checklist.md).
+9. Merge in Unternehmens-`main`.
+10. Unternehmens-Release taggen (`v*`) und Rollout starten.
 
 ## Pflichtinhalte eines Sync-PR
 
@@ -35,6 +37,8 @@ Dieses Playbook standardisiert, wie ein Unternehmens-Fork neue Versionen aus dem
 - Zusammenfassung der relevanten Änderungen.
 - Impact-Einstufung (`low`, `medium`, `high`).
 - Testnachweise (Validierung, relevante Regressionen, Pilotfall).
+- Checklistenstand aus [release-checklist.md](release-checklist.md) mit
+  Audit- und Nachweisartefakten.
 - Rollout-Entscheidung:
   - sofort für neue Vorgänge aktiv,
   - erst nach Pilot,
@@ -65,5 +69,6 @@ Jede Übernahme erzeugt mindestens:
 
 - Sync-PR mit Freigabehistorie,
 - Release-Tag im Unternehmens-Fork,
-- ggf. SBOM-Artefakt gemaess Policy,
+- ausgefüllte Release-Checkliste oder Link auf den Checklistenstand,
+- ggf. SBOM-Artefakt gemäß Policy,
 - Entscheidungseintrag für Rollout und Geltungsbeginn.
