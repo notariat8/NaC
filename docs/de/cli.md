@@ -80,6 +80,7 @@ nac config list
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run
+nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
@@ -102,7 +103,7 @@ nac qms status
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
-| Tenant-Identity | `nac tenant domain-check` und `nac tenant provision-admin --dry-run` | Prüft Neukunden-Domains und erzeugt OCI-Identity-Dry-run-Pläne ohne produktive Schreiboperation. |
+| Tenant-Identity | `nac tenant domain-check`, `nac tenant provision-admin --dry-run` und `nac tenant apply-request --dry-run` | Prüft Neukunden-Domains und erzeugt OCI-Identity-Dry-run- und Apply-Readiness-Artefakte ohne produktive Schreiboperation. |
 | QMS | `nac qms status` und `nac qms evidence --repo ../demo8notariat` | Zeigt ISO-9001/QMS-Artefakte und Nachweiszahlen aus dem Datenrepo. |
 
 ## QMS- und ISO-9001-Schicht
@@ -149,6 +150,16 @@ nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notar
 
 Produktive Identity-Writes brauchen einen separaten Owner-Review und eine
 ausdrückliche Apply-Freigabe.
+
+Wenn DNS-Verifikation, Owner-Freigabe, Audit-Event und Rollback-Plan
+vorbereitet sind, erzeugt NaC daraus weiterhin nur ein Review-Artefakt:
+
+```bash
+nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run --format json
+```
+
+Dieser Befehl ist noch kein OCI-Connector und führt keine Benutzer-,
+Gruppen- oder Mitgliedschaftsänderung aus.
 
 Das führende Aktenmodell nutzt kleine JSON-Dateien mit stabilen IDs für Akten,
 Personen, Dokumente, Ereignisse und Indizes. PDF-, JPG- und andere

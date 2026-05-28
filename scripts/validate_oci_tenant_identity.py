@@ -13,7 +13,7 @@ if src_root_text in sys.path:
     sys.path.remove(src_root_text)
 sys.path.insert(0, src_root_text)
 
-from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready  # noqa: E402
+from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready  # noqa: E402
 
 
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "oci-tenant-identity.contract.json"
@@ -27,6 +27,7 @@ def main() -> int:
         _validate_contract(errors)
     _validate_domain_readiness(errors)
     _validate_admin_plan(errors)
+    _validate_apply_request(errors)
 
     if errors:
         print("OCI tenant identity validation failed:")
@@ -54,6 +55,14 @@ def _validate_contract(errors: list[str]) -> None:
     for gate in ("domain_ready", "dry_run_plan", "owner_apply_approval"):
         if gate not in payload.get("required_gates", []):
             errors.append(f"Contract missing gate {gate}")
+    for gate in ("dns_verified", "audit_event_prepared", "rollback_plan_prepared"):
+        if gate not in payload.get("required_gates", []):
+            errors.append(f"Contract missing apply-readiness gate {gate}")
+    if payload.get("apply_readiness_schema", {}).get("schema_version") != "nac.oci-identity-apply-request/v0.1":
+        errors.append("Contract missing apply readiness schema")
+    guardrails = payload.get("guardrails", {})
+    if guardrails.get("apply_request_contains_credential_material") is not False:
+        errors.append("Apply request must not contain credential material")
 
 
 def _validate_domain_readiness(errors: list[str]) -> None:
@@ -102,6 +111,45 @@ def _validate_admin_plan(errors: list[str]) -> None:
     for forbidden in ("secret", "token", "private_key"):
         if forbidden in serialized:
             errors.append(f"Admin provisioning plan exposes forbidden marker {forbidden}")
+
+
+def _validate_apply_request(errors: list[str]) -> None:
+    plan = build_admin_provisioning_plan(
+        tenant_slug="kanzlei-notariat",
+        domain="kanzlei-notariat.example",
+        admin_email="admin@kanzlei-notariat.example",
+        admin_display_name="Admin Notariat",
+        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+        identity_domain_id="ocid1.domain.oc1.example",
+    )
+    blocked = build_apply_request(
+        plan,
+        dns_verified=False,
+        owner_approval_id="",
+        audit_event_id="",
+        rollback_plan_id="",
+    )
+    if blocked.get("ready_to_apply") is not False:
+        errors.append("Apply request without gates must not be ready")
+    for finding in ("dns_not_verified", "owner_apply_approval_missing", "audit_event_missing", "rollback_plan_missing"):
+        if finding not in blocked.get("blocking_findings", []):
+            errors.append(f"Blocked apply request missing finding {finding}")
+
+    ready = build_apply_request(
+        plan,
+        dns_verified=True,
+        owner_approval_id="OWNER-APPROVED-32",
+        audit_event_id="AUDIT-32",
+        rollback_plan_id="ROLLBACK-32",
+    )
+    if ready.get("ready_to_apply") is not True:
+        errors.append(f"Ready apply request blocked by {ready.get('blocking_findings')}")
+    if ready.get("productive_write_executed") is not False:
+        errors.append("Apply request must not execute productive writes")
+    serialized = json.dumps(ready, sort_keys=True).lower()
+    for forbidden in ("secret", "token", "private_key"):
+        if forbidden in serialized:
+            errors.append(f"Apply request exposes forbidden marker {forbidden}")
 
 
 if __name__ == "__main__":
