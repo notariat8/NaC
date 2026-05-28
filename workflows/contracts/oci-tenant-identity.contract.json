@@ -17,7 +17,10 @@
     "dns_txt_verification",
     "dry_run_plan",
     "owner_review",
-    "owner_apply_approval"
+    "owner_apply_approval",
+    "dns_verified",
+    "audit_event_prepared",
+    "rollback_plan_prepared"
   ],
   "nac_roles": [
     "nac-tenant-admin",
@@ -29,12 +32,14 @@
   "allowed_operations": [
     "domain_readiness_preview",
     "oci_admin_provisioning_dry_run",
+    "oci_identity_apply_request_dry_run",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
   ],
   "blocked_operations": [
     "create_oci_user_without_owner_apply_approval",
     "create_oci_group_without_owner_apply_approval",
+    "execute_oci_write_without_apply_request",
     "store_client_credential_material_in_product_repo",
     "store_api_key_material_in_product_repo",
     "require_end_user_oci_console_work",
@@ -64,11 +69,28 @@
       "planned_writes"
     ]
   },
+  "apply_readiness_schema": {
+    "schema_version": "nac.oci-identity-apply-request/v0.1",
+    "required": [
+      "mode",
+      "tenant_slug",
+      "domain",
+      "ready_to_apply",
+      "productive_write_executed",
+      "approval",
+      "audit",
+      "rollback",
+      "planned_writes"
+    ]
+  },
   "guardrails": {
     "real_mandate_data_in_git": false,
     "credential_material_in_git": false,
     "productive_writes_in_first_track": false,
     "human_approval_required_for_apply": true,
+    "audit_event_required_for_apply": true,
+    "rollback_plan_required_for_apply": true,
+    "apply_request_contains_credential_material": false,
     "static_site_stores_identity_material": false,
     "nac_role_gate_required_after_idp_login": true
   }

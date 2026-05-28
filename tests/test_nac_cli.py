@@ -158,6 +158,41 @@ class NaCCliTests(unittest.TestCase):
         self.assertTrue(payload["requires_human_approval"])
         self.assertFalse(payload["console_access_required_for_end_users"])
 
+    def test_tenant_apply_request_cli_is_review_artifact_only(self) -> None:
+        rc, output = run_cli(
+            "tenant",
+            "apply-request",
+            "--tenant-slug",
+            "kanzlei-notariat",
+            "--domain",
+            "kanzlei-notariat.example",
+            "--admin-email",
+            "admin@kanzlei-notariat.example",
+            "--admin-display-name",
+            "Admin Notariat",
+            "--identity-domain-url",
+            "https://idcs.example.identity.oraclecloud.com:443",
+            "--identity-domain-id",
+            "ocid1.domain.oc1.example",
+            "--dns-verified",
+            "--owner-approval-id",
+            "OWNER-APPROVED-32",
+            "--audit-event-id",
+            "AUDIT-32",
+            "--rollback-plan-id",
+            "ROLLBACK-32",
+            "--dry-run",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertTrue(payload["ready_to_apply"])
+        self.assertEqual(payload["mode"], "review_artifact_only")
+        self.assertFalse(payload["productive_write_executed"])
+        self.assertEqual(payload["approval"]["owner_approval_id"], "OWNER-APPROVED-32")
+
     def test_plugin_actions_are_listed(self) -> None:
         rc, output = run_cli("plugins", "actions")
 

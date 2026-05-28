@@ -138,6 +138,91 @@ def build_admin_provisioning_plan(
     }
 
 
+def build_apply_request(
+    plan: dict,
+    *,
+    dns_verified: bool,
+    owner_approval_id: str,
+    audit_event_id: str,
+    rollback_plan_id: str,
+) -> dict:
+    findings: list[str] = []
+    if plan.get("schema_version") != "nac.oci-admin-provisioning-plan/v0.1":
+        findings.append("source_plan_schema_invalid")
+    if plan.get("mode") != "dry_run":
+        findings.append("source_plan_not_dry_run")
+    if plan.get("requires_human_approval") is not True:
+        findings.append("source_plan_missing_human_approval")
+    if not dns_verified:
+        findings.append("dns_not_verified")
+
+    normalized_owner_approval = owner_approval_id.strip()
+    normalized_audit_event = audit_event_id.strip()
+    normalized_rollback_plan = rollback_plan_id.strip()
+    if not normalized_owner_approval:
+        findings.append("owner_apply_approval_missing")
+    if not normalized_audit_event:
+        findings.append("audit_event_missing")
+    if not normalized_rollback_plan:
+        findings.append("rollback_plan_missing")
+
+    target = plan.get("target") if isinstance(plan.get("target"), dict) else {}
+    admin_user = plan.get("admin_user") if isinstance(plan.get("admin_user"), dict) else {}
+    planned_writes = plan.get("planned_writes") if isinstance(plan.get("planned_writes"), list) else []
+    role_bindings = plan.get("role_bindings") if isinstance(plan.get("role_bindings"), list) else []
+    return {
+        "schema_version": "nac.oci-identity-apply-request/v0.1",
+        "mode": "review_artifact_only",
+        "tenant_slug": str(plan.get("tenant_slug", "")),
+        "domain": str(plan.get("domain", "")),
+        "ready_to_apply": not findings,
+        "blocking_findings": findings,
+        "productive_write_executed": False,
+        "source_plan": {
+            "schema_version": str(plan.get("schema_version", "")),
+            "mode": str(plan.get("mode", "")),
+        },
+        "target": {
+            "provider": str(target.get("provider", "")),
+            "identity_domain_id": str(target.get("identity_domain_id", "")),
+            "identity_domain_url": str(target.get("identity_domain_url", "")),
+            "users_endpoint": str(target.get("users_endpoint", "")),
+            "groups_endpoint": str(target.get("groups_endpoint", "")),
+        },
+        "admin_user": {
+            "user_name": str(admin_user.get("user_name", "")),
+            "display_name": str(admin_user.get("display_name", "")),
+            "primary_email": str(admin_user.get("primary_email", "")),
+        },
+        "planned_writes": [str(item) for item in planned_writes],
+        "role_bindings": role_bindings,
+        "gates": {
+            "dns_verified": dns_verified,
+            "owner_apply_approval": bool(normalized_owner_approval),
+            "audit_event_prepared": bool(normalized_audit_event),
+            "rollback_plan_prepared": bool(normalized_rollback_plan),
+        },
+        "approval": {
+            "owner_approval_id": normalized_owner_approval,
+            "required_before_connector_apply": True,
+        },
+        "audit": {
+            "audit_event_id": normalized_audit_event,
+            "records_intent_only": True,
+        },
+        "rollback": {
+            "rollback_plan_id": normalized_rollback_plan,
+            "must_be_reviewed_before_connector_apply": True,
+        },
+        "guardrails": {
+            "contains_credentials": False,
+            "connector_apply_in_scope": False,
+            "end_user_console_work_allowed": False,
+        },
+        "next_step": "reviewed_connector_apply" if not findings else "resolve_apply_blocking_findings",
+    }
+
+
 def _normalize_domain(domain: str) -> str:
     return domain.strip().lower().rstrip(".")
 

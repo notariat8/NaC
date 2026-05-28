@@ -108,6 +108,66 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         self.assertIn("admin_email_domain_mismatch", str(error.exception))
 
+    def test_apply_request_requires_all_apply_gates(self) -> None:
+        from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request
+
+        plan = build_admin_provisioning_plan(
+            tenant_slug="kanzlei-notariat",
+            domain="kanzlei-notariat.example",
+            admin_email="admin@kanzlei-notariat.example",
+            admin_display_name="Admin Notariat",
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_id="ocid1.domain.oc1.example",
+        )
+
+        request = build_apply_request(
+            plan,
+            dns_verified=False,
+            owner_approval_id="",
+            audit_event_id="",
+            rollback_plan_id="",
+        )
+
+        self.assertEqual(request["schema_version"], "nac.oci-identity-apply-request/v0.1")
+        self.assertFalse(request["ready_to_apply"])
+        self.assertEqual(request["mode"], "review_artifact_only")
+        self.assertIn("dns_not_verified", request["blocking_findings"])
+        self.assertIn("owner_apply_approval_missing", request["blocking_findings"])
+        self.assertIn("audit_event_missing", request["blocking_findings"])
+        self.assertIn("rollback_plan_missing", request["blocking_findings"])
+
+    def test_apply_request_ready_artifact_is_secret_free(self) -> None:
+        from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request
+
+        plan = build_admin_provisioning_plan(
+            tenant_slug="kanzlei-notariat",
+            domain="kanzlei-notariat.example",
+            admin_email="admin@kanzlei-notariat.example",
+            admin_display_name="Admin Notariat",
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_id="ocid1.domain.oc1.example",
+        )
+
+        request = build_apply_request(
+            plan,
+            dns_verified=True,
+            owner_approval_id="OWNER-APPROVED-32",
+            audit_event_id="AUDIT-32",
+            rollback_plan_id="ROLLBACK-32",
+        )
+        serialized = json.dumps(request, sort_keys=True).lower()
+
+        self.assertTrue(request["ready_to_apply"])
+        self.assertEqual(request["blocking_findings"], [])
+        self.assertEqual(request["approval"]["owner_approval_id"], "OWNER-APPROVED-32")
+        self.assertEqual(request["audit"]["audit_event_id"], "AUDIT-32")
+        self.assertEqual(request["rollback"]["rollback_plan_id"], "ROLLBACK-32")
+        self.assertFalse(request["productive_write_executed"])
+        self.assertIn("users.create", request["planned_writes"])
+        self.assertNotIn("secret", serialized)
+        self.assertNotIn("token", serialized)
+        self.assertNotIn("private_key", serialized)
+
 
 if __name__ == "__main__":
     unittest.main()

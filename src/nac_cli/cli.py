@@ -13,7 +13,7 @@ from typing import Any
 
 from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
-from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
+from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -259,6 +259,19 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_admin.add_argument("--identity-domain-id", required=True, help="OCI Identity Domain OCID.")
     tenant_admin.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Plan erzeugen, keine OCI-Schreiboperation.")
     tenant_admin.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_apply = tenant_sub.add_parser("apply-request", help="Erzeugt einen OCI-Identity-Apply-Readiness-Request.")
+    tenant_apply.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
+    tenant_apply.add_argument("--domain", required=True, help="Kundendomain.")
+    tenant_apply.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
+    tenant_apply.add_argument("--admin-display-name", required=True, help="Anzeigename des initialen Tenant-Admins.")
+    tenant_apply.add_argument("--identity-domain-url", required=True, help="OCI Identity Domain URL ohne /admin/v1.")
+    tenant_apply.add_argument("--identity-domain-id", required=True, help="OCI Identity Domain OCID.")
+    tenant_apply.add_argument("--dns-verified", action="store_true", help="DNS-TXT-Domainverifikation wurde extern geprüft.")
+    tenant_apply.add_argument("--owner-approval-id", default="", help="Owner-Apply-Freigabe-ID.")
+    tenant_apply.add_argument("--audit-event-id", default="", help="Audit-Event-ID für die Apply-Absicht.")
+    tenant_apply.add_argument("--rollback-plan-id", default="", help="Rollback-Plan-ID für späteren Connector-Apply.")
+    tenant_apply.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Review-Artefakt erzeugen.")
+    tenant_apply.add_argument("--format", choices=["text", "json"], default="text")
     tenant.set_defaults(func=command_tenant)
 
     return parser
@@ -846,6 +859,39 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Gruppen-Endpunkt: {payload['target']['groups_endpoint']}")
             print("- Owner-Freigabe vor Apply: erforderlich")
             return 0
+
+        if args.tenant_command == "apply-request":
+            if not args.dry_run:
+                print("ERROR: OCI-Apply-Requests sind in diesem Track nur mit --dry-run zulässig.")
+                return 1
+            plan = build_admin_provisioning_plan(
+                tenant_slug=args.tenant_slug,
+                domain=args.domain,
+                admin_email=args.admin_email,
+                admin_display_name=args.admin_display_name,
+                identity_domain_url=args.identity_domain_url,
+                identity_domain_id=args.identity_domain_id,
+            )
+            payload = build_apply_request(
+                plan,
+                dns_verified=args.dns_verified,
+                owner_approval_id=args.owner_approval_id,
+                audit_event_id=args.audit_event_id,
+                rollback_plan_id=args.rollback_plan_id,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0 if payload["ready_to_apply"] else 1
+            print("OCI-Identity-Apply-Readiness")
+            print("- Modus: review_artifact_only")
+            print(f"- Tenant: {payload['tenant_slug']}")
+            print(f"- Status: {'bereit' if payload['ready_to_apply'] else 'blockiert'}")
+            print(f"- Owner-Approval: {payload['approval']['owner_approval_id'] or 'fehlt'}")
+            print(f"- Audit-Event: {payload['audit']['audit_event_id'] or 'fehlt'}")
+            print(f"- Rollback-Plan: {payload['rollback']['rollback_plan_id'] or 'fehlt'}")
+            for finding in payload["blocking_findings"]:
+                print(f"- Blocker: {finding}")
+            return 0 if payload["ready_to_apply"] else 1
 
         if args.tenant_command == "status":
             status = tenant_status(args.repo)
