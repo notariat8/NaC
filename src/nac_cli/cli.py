@@ -13,6 +13,7 @@ from typing import Any
 
 from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
+from nac_identity.customer_onboarding import build_customer_tenant_plan
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
@@ -272,6 +273,12 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_apply.add_argument("--rollback-plan-id", default="", help="Rollback-Plan-ID für späteren Connector-Apply.")
     tenant_apply.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Review-Artefakt erzeugen.")
     tenant_apply.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_customer_plan = tenant_sub.add_parser("customer-plan", help="Erzeugt einen Customer-Tenant-Onboarding-Plan.")
+    tenant_customer_plan.add_argument("--domain", required=True, help="Kundendomain.")
+    tenant_customer_plan.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
+    tenant_customer_plan.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
+    tenant_customer_plan.add_argument("--saas-admin-email", required=True, help="SaaS-Owner fuer Owner-Apply-Review.")
+    tenant_customer_plan.add_argument("--format", choices=["text", "json"], default="text")
     tenant.set_defaults(func=command_tenant)
 
     return parser
@@ -892,6 +899,27 @@ def command_tenant(args: argparse.Namespace) -> int:
             for finding in payload["blocking_findings"]:
                 print(f"- Blocker: {finding}")
             return 0 if payload["ready_to_apply"] else 1
+
+        if args.tenant_command == "customer-plan":
+            payload = build_customer_tenant_plan(
+                domain=args.domain,
+                tenant_slug=args.tenant_slug,
+                admin_email=args.admin_email,
+                saas_admin_email=args.saas_admin_email,
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Customer-Tenant-Onboarding-Plan")
+            print(f"- Tenant: {payload['tenant']['slug']}")
+            print(f"- Domain: {payload['tenant']['domain']}")
+            print(f"- Admin: {payload['admin_user']['email']}")
+            print(f"- SaaS-Owner: {payload['saas_admin']['email']}")
+            print(f"- Identity: {payload['oci']['identity']['customer_domain_strategy']}")
+            print(f"- Compartment: {payload['oci']['resource_isolation']['compartment_strategy']}")
+            print(f"- ATP: {payload['atp']['strategy']}")
+            print("- Owner-Apply vor OCI-Schreiboperation: erforderlich")
+            return 0
 
         if args.tenant_command == "status":
             status = tenant_status(args.repo)

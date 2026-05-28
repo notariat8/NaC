@@ -193,6 +193,31 @@ class NaCCliTests(unittest.TestCase):
         self.assertFalse(payload["productive_write_executed"])
         self.assertEqual(payload["approval"]["owner_approval_id"], "OWNER-APPROVED-32")
 
+    def test_customer_onboarding_plan_cli_returns_json(self) -> None:
+        rc, output = run_cli(
+            "tenant",
+            "customer-plan",
+            "--domain",
+            "kanzlei-notariat.example",
+            "--tenant-slug",
+            "kanzlei-notariat",
+            "--admin-email",
+            "admin@kanzlei-notariat.example",
+            "--saas-admin-email",
+            "saas-owner@example.com",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.customer-tenant-plan/v0.1")
+        self.assertEqual(payload["oci"]["identity"]["customer_domain_strategy"], "single_secondary_domain")
+        self.assertEqual(payload["oci"]["resource_isolation"]["compartment_strategy"], "one_compartment_per_customer_domain")
+        self.assertEqual(payload["atp"]["strategy"], "shared_atp_with_tenant_id")
+        self.assertIn("tenant_id", payload["atp"]["required_controls"])
+        self.assertTrue(payload["requires_owner_apply"])
+
     def test_plugin_actions_are_listed(self) -> None:
         rc, output = run_cli("plugins", "actions")
 

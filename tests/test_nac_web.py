@@ -161,6 +161,53 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "dry_run")
         self.assertTrue(payload["requires_human_approval"])
 
+    def test_admin_queue_page_shows_customer_onboarding_request_without_secrets(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("Readiness-Anfragen", html)
+        self.assertIn("nac-saas-owner", html)
+        self.assertIn("owner_apply_ready", html)
+        self.assertNotIn("api_key", html.lower())
+        self.assertNotIn("password", html.lower())
+
+    def test_customer_readiness_page_explains_next_steps(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle("/onboarding/readiness?domain_hint=kanzlei-notariat.example")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("Domain-Readiness", html)
+        self.assertIn("DNS-TXT", html)
+        self.assertIn("DNS jetzt prüfen", html)
+        self.assertIn("später", html)
+        self.assertIn("Keine Mandatsdaten", html)
+        self.assertIn("propagation", html)
+        self.assertNotIn("OCI Console", html)
+
+    def test_customer_readiness_return_later_preserves_customer_context(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle(
+            "/onboarding/readiness"
+            "?domain_hint=kanzlei-notariat.example"
+            "&tenant_slug=notariat-2026"
+            "&admin_email=verwaltung@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "/onboarding/readiness?domain_hint=kanzlei-notariat.example&amp;tenant_slug=notariat-2026&amp;admin_email=verwaltung%40kanzlei-notariat.example",
+            html,
+        )
+
     def test_app_receives_www_n8_customer_handoff_without_tenant_decision(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
@@ -192,6 +239,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Neukunde", html)
         self.assertIn("Domain-Readiness", html)
         self.assertIn("kanzlei-notariat.example", html)
+        self.assertIn("/onboarding/readiness?domain_hint=kanzlei-notariat.example", html)
         self.assertIn("/api/tenant/domain-check", html)
         self.assertNotIn("admin@kanzlei-notariat.example", html)
 
