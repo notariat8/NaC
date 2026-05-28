@@ -19,7 +19,7 @@ Empfehlung: `provider_managed_dedicated_subtenant`
 
 ## Warum dieses Modell gut passt
 
-- reduziert Adminaufwand für Notare/Kanzleien ohne tiefes Cloud-Know-how,
+- reduziert Adminaufwand für Notariate ohne tiefes Cloud-Know-how,
 - hält Compliance-Forderungen durch Isolation und klare Verantwortungsmatrix,
 - ermöglicht standardisierte, wiederholbare Auditprozesse über viele Kunden.
 

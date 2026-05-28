@@ -6,7 +6,7 @@ Recommended target state for production forks and sensitive process changes:
 
 - prohibit direct pushes to `main`,
 - require pull requests,
-- require status checks from `Validate Business Processes`,
+- require status checks from `Validate NaC Runtime Fixtures` and `NaC Quality Gate`,
 - require review by at least one subject-matter owner,
 - use signed tags for closures such as `close/2026-03`.
 
@@ -25,9 +25,9 @@ Recommendation for organization forks:
 
 ## Environment Mapping
 
-- `business-operations`: sensitive manual execution of individual processes.
+- `nac-operations`: sensitive manual execution of individual NaC process fixtures.
 - `month-close`: monthly close and periodic aggregation.
-- optional `tax-submission`: final approval stage before external tax filing.
+- optional notary-office environments for approved specialist-system or register gates.
 
 ## Subject-Matter Mapping
 
@@ -43,27 +43,27 @@ Recommendation for organization forks:
 
 ## Practical Rules Per Domain
 
-### Formation
+### Notarial Formation Matters
 
 - Steps can be handled in one grouped matter or as separate process files.
 - Status `needs_review` should be coupled to manual review.
 
-### Invoicing
+### Notarial Cost Notes
 
 - `draft -> approved` only through pull request.
 - `approved -> issued` only in a protected runtime or after documented approval.
-- RVG-related invoices only with documented qualification and approval.
+- notarial cost reviews only with documented qualification and approval.
 
 ### Bookkeeping
 
 - Accounting entries must be balanced.
 - Idempotency keys and receipt references prevent duplicate bookings.
 
-### Tax
+### Notarial Notices With Tax Relation
 
 - `prepared -> approved` always with four-eyes principle.
 - `submitted` should be set only after manual approval and possible external
-  filing.
+  notice submission.
 
 ## Role-Based Decision Logic
 

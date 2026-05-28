@@ -40,7 +40,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    User["Business user"] --> Prompt["LLM prompt frontend"]
+    User["Notary-office user"] --> Prompt["LLM prompt frontend"]
     Prompt --> Draft["JSON process request"]
     Draft --> GitChange["Branch or pull request"]
     GitChange --> Validate["Python validation"]
@@ -104,11 +104,11 @@ workspace and returns minimized readiness metadata.
 
 ```mermaid
 flowchart TD
-    RefModel["Reference pattern organization"] --> BranchPack["Domain module law notary tax software"]
-    RefModel --> GenericPack["Generic core processes"]
-    GenericPack --> CompanyFork["Organization fork"]
-    BranchPack --> CompanyFork
-    CompanyFork --> LocalChange["Local change as change request"]
+    RefModel["NaC reference standard"] --> Usecases["Canonical notarial usecases"]
+    RefModel --> CoreRules["Notarial core rules and gates"]
+    CoreRules --> CompanyFork["Private notary-office fork"]
+    Usecases --> CompanyFork
+    CompanyFork --> LocalChange["Local notary-office change as change request"]
     LocalChange --> LocalApprove["Local approval and versioning"]
     LocalApprove --> CompanyRun["Operation in the organization"]
     LocalApprove --> UpstreamProposal["Optional return to reference"]
@@ -122,8 +122,8 @@ Operational details are maintained in:
 - [docs/en/operations/release-sync-playbook.md](operations/release-sync-playbook.md)
 - [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
 - [docs/en/issues/taxonomy.md](issues/taxonomy.md)
-- [docs/en/service-model/core-vertical-blueprint.md](service-model/core-vertical-blueprint.md)
-- [docs/en/service-model/vertical-starter-process-catalog.md](service-model/vertical-starter-process-catalog.md)
+- [docs/en/service-model/notariat-scope-blueprint.md](service-model/notariat-scope-blueprint.md)
+- [docs/en/service-model/notarial-usecase-starter.md](service-model/notarial-usecase-starter.md)
 - [docs/en/operations/single-repo-refactor-plan.md](operations/single-repo-refactor-plan.md)
 - [docs/en/plugin-plans/README.md](plugin-plans/README.md)
 

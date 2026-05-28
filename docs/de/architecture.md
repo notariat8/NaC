@@ -98,11 +98,11 @@ Workspace startet und minimierte Readiness-Metadaten zurückgibt.
 
 ```mermaid
 flowchart TD
-    RefModel["Referenz-Musterunternehmen"] --> BranchPack["Branchenmodul anwalt notariat steuer software"]
-    RefModel --> GenericPack["Generische Kernprozesse"]
-    GenericPack --> CompanyFork["Unternehmens-Fork"]
-    BranchPack --> CompanyFork
-    CompanyFork --> LocalChange["Lokale Änderung als Change Request"]
+    RefModel["NaC Referenzstandard"] --> Usecases["Kanonische notarielle Usecases"]
+    RefModel --> CoreRules["Notariatskern Regeln und Gates"]
+    CoreRules --> CompanyFork["Privater Notariats-Fork"]
+    Usecases --> CompanyFork
+    CompanyFork --> LocalChange["Lokale Notariatsänderung als Change Request"]
     LocalChange --> LocalApprove["Lokale Freigabe und Versionierung"]
     LocalApprove --> CompanyRun["Betrieb im Unternehmen"]
     LocalApprove --> UpstreamProposal["Optionale Rückgabe an Referenz"]
@@ -116,8 +116,8 @@ Operative Details sind ausgelagert nach:
 - `docs/de/operations/release-sync-playbook.md`
 - `docs/de/operations/parallelbetrieb-version-binding.md`
 - `docs/de/issues/taxonomy.md`
-- `docs/de/service-model/core-vertical-blueprint.md`
-- `docs/de/service-model/vertical-starter-process-catalog.md`
+- `docs/de/service-model/notariat-scope-blueprint.md`
+- `docs/de/service-model/notarial-usecase-starter.md`
 - `docs/de/operations/single-repo-refactor-plan.md`
 
 ## Python-Komponenten

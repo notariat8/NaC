@@ -320,7 +320,7 @@ function enhanceCaseRows() {
     const workflowActions = document.createElement("details");
     workflowActions.className = "case-workflow-actions";
     workflowActions.innerHTML = `
-      <summary>Kanzlei-Workflow</summary>
+      <summary>Notariats-Workflow</summary>
       <p>Ablauf und Bearbeitung sind freigegebene Stammdaten des Notariats.</p>
     `;
     const workflowButtons = document.createElement("div");
@@ -539,7 +539,7 @@ function openMatterForm(slug, title) {
     matterFormStatus.dataset.status = "ready";
     matterFormStatus.innerHTML = `
       <p>Nur Demo- oder Testdaten in das öffentliche Datenrepo eintragen.</p>
-      <p>Diese Akte wird beim Anlegen an die aktuell freigegebene Kanzlei-Workflow-Version gebunden.</p>
+      <p>Diese Akte wird beim Anlegen an die aktuell freigegebene Notariats-Workflow-Version gebunden.</p>
     `;
   }
   showPanel("matter-new");
@@ -699,7 +699,7 @@ function matterCardHtml(matter) {
   const workflowVersion = workflow.workflow_version || "v1";
   const workflowRevision = workflow.workflow_revision_hash ? ` · Rev ${workflow.workflow_revision_hash}` : "";
   const workflowText = hasWorkflowBinding
-    ? `Kanzlei-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden`
+    ? `Notariats-Workflow ${escapeHtml(workflowVersion)}${escapeHtml(workflowRevision)} · bei Aktenanlage gebunden`
     : "CLI-Musterakte · Aufgaben aus dem Datenrepo";
   const checklist = matter.checklist_summary || {};
   const nextStep = checklist.next_step || {};
@@ -707,7 +707,7 @@ function matterCardHtml(matter) {
   const nextStepContext = [nextStep.section, nextStep.owner_role ? ownerRoleLabel(nextStep.owner_role) : ""].filter(Boolean).join(" · ");
   const checklistText = checklist.total_count
     ? `${checklist.open_count || 0} offen · ${checklist.completed_count || 0} erledigt · ${checklist.total_count} gesamt`
-    : "Checklistenstand wird aus dem Kanzlei-Workflow gebildet";
+    : "Checklistenstand wird aus dem Notariats-Workflow gebildet";
   return `
     <article class="matter-card">
       <div>

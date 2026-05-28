@@ -25,7 +25,7 @@ NaC realistisch einzuordnen.
 ## Kurzform Für Entscheider
 
 NaC ist heute stark als prüfbares Muster, lokaler Kontrollrahmen und
-Pilotvorbereitung. Der produktive Kanzlei- oder Notariatsbetrieb entsteht erst
+Pilotvorbereitung. Der produktive Notariatsbetrieb entsteht erst
 in einem privaten Fork mit lokalen Systemen, Rollen, Datenschutzklärung und
 menschlichen Freigaben.
 

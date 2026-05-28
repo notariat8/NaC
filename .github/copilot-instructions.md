@@ -6,17 +6,18 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 1. Compliance und rechtliche Pflichten
 2. Prozessgovernance (Review, Freigaben, Nachvollziehbarkeit)
-3. Branchenmodule
+3. Notarielle Fach- und Berufsregeln
 4. Kultur- und Sprachvorgaben
 
 ## Arbeitsweise
 
 - Behandle das LLM als Assistent für Eingaben, nicht als finale fachliche Autorität.
 - Rahmen: `Notariat as Code` + `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
+- NaC ist ausschließlich für Notariate und notarielle Vorgangsarten gedacht. Nicht-notarielle Produktpfade oder Beispiele sind keine gültigen NaC-Beispiele.
 - Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](../docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](../docs/en/regelarchitektur.md).
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
-- Sensible Prozessschritte (z. B. Steuer, Zahlungsfreigaben) brauchen Vier-Augen-Prinzip.
+- Sensible Prozessschritte, insbesondere notarielle Freigaben, Register- oder Kostengates, brauchen Vier-Augen-Prinzip.
 - Jede Prozessänderung muss begründet und versioniert sein.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
 - Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig, wenn zusätzlich `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate` erfolgreich sind.
@@ -39,8 +40,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Plugin-Anzeigenamen, Plugin-Beschreibungen, Plugin-README-Überschriften, Marketplace-Kategorien, Starter-Prompts und Skill-Frontmatter-Beschreibungen werden deutsch geführt. Skill-Namen, Ordner, Commands, IDs, Akronyme, Produktnamen und technische Output-Labels dürfen englisch/ASCII bleiben. Jeder Skill braucht im Body eine kurze englische Summary.
 - Deutsche menschlich lesbare Inhalte nutzen echte Umlaute und ß; ASCII-Umschreibungen bleiben nur für technische Identifier, Pfade, URLs, Commands und Code zulässig.
 - Plugin-Karten müssen kurze lesbare Anzeigenamen, knappe Kurzbeschreibungen und echte Icon-/Logo-Assets haben; leere Platzhalterbilder sind nicht zulässig.
-- Standard-MVP-Module im Referenzrepo sind synchron: `software_company`, `notary`, `wealth_management`.
-- Zusätzlicher MVP-Use-Case: `property_management`.
+- Der synchrone MVP-Scope im Referenzrepo ist `notary`.
+- Produktbeispiele kommen ausschließlich aus [usecases/](../usecases), zum Beispiel Immobilienkaufvertrag, Unterschriftsbeglaubigung, Online-GmbH-Gründung oder Handelsregisteranmeldung.
 - Plugin- und Connector-Pläne liegen unter [docs/de/plugin-plans/](../docs/de/plugin-plans) und
   [docs/en/plugin-plans/](../docs/en/plugin-plans).
 - Mindestvoraussetzungen für Base-Workspace, Plugin-Entwicklung und lokalen Notariatsarbeitsplatz stehen in [docs/de/minimum-requirements.md](../docs/de/minimum-requirements.md) und [docs/en/minimum-requirements.md](../docs/en/minimum-requirements.md).
@@ -95,8 +96,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - [docs/de/operations/parallelbetrieb-version-binding.md](../docs/de/operations/parallelbetrieb-version-binding.md)
 - [docs/de/issues/taxonomy.md](../docs/de/issues/taxonomy.md)
 - [../docs/de/einfuehrung-greenfield-brownfield.md](../docs/de/einfuehrung-greenfield-brownfield.md)
-- [docs/de/service-model/core-vertical-blueprint.md](../docs/de/service-model/core-vertical-blueprint.md)
-- [docs/de/service-model/vertical-starter-process-catalog.md](../docs/de/service-model/vertical-starter-process-catalog.md)
+- [docs/de/service-model/notariat-scope-blueprint.md](../docs/de/service-model/notariat-scope-blueprint.md)
+- [docs/de/service-model/notarial-usecase-starter.md](../docs/de/service-model/notarial-usecase-starter.md)
 - [docs/de/operations/single-repo-refactor-plan.md](../docs/de/operations/single-repo-refactor-plan.md)
 - [docs/de/plugin-plans/README.md](../docs/de/plugin-plans/README.md)
 - [docs/de/operations/agile-cadence.md](../docs/de/operations/agile-cadence.md)
@@ -140,8 +141,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
    `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
    Danach Codex neu starten oder eine neue Session öffnen.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
-3. Wähle das passende Branchen-Onboarding unter [prompts/de/onboarding/](../prompts/de/onboarding) oder [prompts/en/onboarding/](../prompts/en/onboarding).
-   Bevorzugte Defaults: `software-company-first-setup.md`, `notary-first-setup.md`, `wealth-management-first-setup.md`.
-   Zusätzlicher MVP-Pfad: `property-management-first-setup.md`.
+3. Wähle das Notariats-Onboarding unter [prompts/de/onboarding/notary-first-setup.md](../prompts/de/onboarding/notary-first-setup.md) oder [prompts/en/onboarding/notary-first-setup.md](../prompts/en/onboarding/notary-first-setup.md).
+   Weitere fachliche Beispiele werden nur aus dem kanonischen [usecases/](../usecases)-Katalog abgeleitet.
 4. Beginne mit einem Pilotprozess statt Vollausrollung.
 5. Nutze für Fork-Betrieb, Sync und Mischbetrieb die neuen Betriebsdokumente in [docs/de/](../docs/de) und [docs/en/](../docs/en).

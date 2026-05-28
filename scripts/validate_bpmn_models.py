@@ -57,7 +57,6 @@ ALLOWED_APPROVALS = {"none", "human", "four_eyes"}
 ALLOWED_EVIDENCE = {"none", "optional", "required"}
 ALLOWED_CHANNELS = {
     "authority",
-    "bea",
     "ben",
     "court",
     "email",

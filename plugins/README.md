@@ -1,9 +1,8 @@
-# NaC Plugins für regulierte Branchen
+# NaC Plugins Für Notariate
 
-Dieser Ordner enthält installierbare repo-lokale Codex-Plugins für NaC-
-Arbeitsabläufe in regulierten Branchen. Die erste Suite fokussiert
-Anwaltskanzleien, Notariate, Steuer-Arbeitsabläufe und
-Cloud-Nachweisbetrieb.
+Dieser Ordner enthält installierbare repo-lokale Codex-Plugins für
+Notariat-as-Code-Arbeitsabläufe. Die Suite fokussiert Notariatsbetrieb,
+lokale Arbeitsplatzgates, Register-/XNP-Pfade und Cloud-Nachweisbetrieb.
 
 ## Installierbare Plugins
 
@@ -13,8 +12,6 @@ Cloud-Nachweisbetrieb.
 - `nac-bnotk-xnp`: lokale XNP-Authentifizierungsprüfung nach Kartenbereitschaft.
 - `nac-pkcs7-certbundle`: lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur.
 - `nac-handelsregister`: HRA-zuerst-Bereitschaft für Online-Registeranmeldungen nach Modusentscheidung.
-- `nac-bea-portal`: beA-Arbeitsablauf- und Nachweisbegleiter.
-- `nac-elster-eric`: ELSTER- und ERiC-Arbeitsablaufbegleiter.
 - `nac-grundbuch-portal`: Grundbuchzugangs- und Nachweisbegleiter.
 - `nac-oci-evidence`: OCI-Landing-Zone-Nachweis- und Auditbegleiter.
 

@@ -150,8 +150,7 @@ The first iteration implements:
 ## Provider Runbook
 
 1. Identify relevant federal states for the first customers.
-2. Determine customer and user groups: notary office, law firm, bank,
-   authority, utility or other.
+2. Determine notary-office roles and authorized user groups.
 3. Document authorization and permitted scope.
 4. Document TOMs for proper data processing and abuse prevention.
 5. Define retention and evidence rules.

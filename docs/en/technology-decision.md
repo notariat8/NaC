@@ -42,11 +42,11 @@ This policy closes that gap.
 
 This combines collaboration and export capability.
 
-## b) Python Code-First For Business Processes Under BPMN 2.0
+## b) Python Code-First For Notarial Processes Under BPMN 2.0
 
 ### Assessment
 
-Pure code-first is not optimal for business departments in the long run,
+Pure code-first is not optimal for notary-office teams in the long run,
 because:
 
 - subject-matter logic in code becomes difficult for non-IT reviewers,
@@ -59,7 +59,7 @@ because:
 - Python must follow the BPMN model, not the other way around.
 
 This improves readability, auditability and maintainability for both IT and
-business departments.
+notary-office teams.
 
 ## c) BPMN 2.0 Visualization: bpmn-js, Mermaid Or Alternatives
 
@@ -83,11 +83,11 @@ business departments.
 - PlantUML optional for technical architecture, not for the subject-matter BPMN
   source.
 
-## Benefit For Business Departments
+## Benefit For Notary-Office Teams
 
-- The organization can understand processes primarily through visual BPMN
+- The notary office can understand processes primarily through visual BPMN
   models.
-- IT and business departments work from the same process truth.
+- IT and subject-matter teams work from the same process truth.
 - Documentation is versioned, exportable and audit-ready.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) describes the
   NaC path from visual editor to checked pull request.

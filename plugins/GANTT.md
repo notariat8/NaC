@@ -33,9 +33,7 @@ gantt
     Handelsregister-Plugin                     :active, p7, after p6, 28d
 
     section Folge-Plugins
-    beA-Portal-Begleiter                       :        p8, 2026-06-15, 28d
     Grundbuchportal-Begleiter                  :        p9, 2026-06-15, 28d
-    ELSTER-ERiC-Begleiter                      :        p10, 2026-07-01, 28d
     OCI-Nachweisbegleiter                      :        p11, 2026-07-01, 28d
 ```
 
@@ -49,8 +47,6 @@ gantt
 | `nac-bnotk-xnp` | XNP-Authentifizierungsbereitschaft | Aktiv | Der lokale Leser-Prompt-Nachweis bindet die XNP-Vorprüfung an die cyberJack-Prüfung, kann die optionale morris-API-Prüfung durchreichen und ist über `nac plugins xnp-reader-prompt` erreichbar; bei installiertem XNP ist echte lokale Workstation-Validierung vorgesehen, ohne Login, Signatur oder Einreichung. |
 | `nac-pkcs7-certbundle` | Lokaler PKCS#7/P7B-Zertifikatsbündel-Nachweis ohne Signatur | Aktiv | Installierbares MVP mit metadatenbasierter lokaler Prüfung über `nac plugins pkcs7-inspect`, ohne PFX/PKCS#12-Import, ohne Private-Key-Zugriff und ohne Signaturvorgang; CI-Härtung entfernt PEM-ähnliche Testliterale aus Quellfixtures. |
 | `nac-handelsregister` | Registeranmeldungsbereitschaft | Aktiv | An GmbH-Gründungs-Usecase binden. |
-| `nac-bea-portal` | beA-Arbeitsablauf-Begleiter | Geplant | Priorität für Notariats-/Kanzleibetrieb bestätigen. |
-| `nac-elster-eric` | ELSTER-/ERiC-Begleiter | Geplant | Von notariellem Kern getrennt halten, solange nicht benötigt. |
 | `nac-grundbuch-portal` | Grundbuch-Begleiter | Geplant | An Immobilienkaufvertrags-Starter binden. |
 | `nac-oci-evidence` | OCI-Nachweisbetrieb | Geplant | Als Infrastruktur-/Nachweisplugin führen, nicht als Usecase. |
 

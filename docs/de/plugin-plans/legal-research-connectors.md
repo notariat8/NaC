@@ -21,8 +21,6 @@ erst danach eine technische Integration planen.
 | German Law MCP von Ansvar Systems | [LobeHub](https://lobehub.com/mcp/ansvar-systems-german-law-mcp) | Kandidat | Metadatenprüfung für öffentliche Rechtsquellen, AI-SBOM offen. |
 | German Law MCP auf ElasticFlow | [ElasticFlow](https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp) | Kandidat, Doppellistung | Gleicher technischer Kandidat wie Ansvar/LobeHub, separat nachgewiesen. |
 | beck-online MCP Listing | [MCP Market](https://mcpmarket.com/server/beck-online) | Lizenzprüfung nötig | Keine Nutzung ohne Vertrags-, Lizenz-, TDM-, Sicherheits- und Credential-Prüfung. |
-| Otto Schmidt Answers Marktübersicht | [tax & bytes](https://www.taxandbytes.de/tools/ki-recherche-assistenz/otto-schmidt-answers/alternativen) | Watchlist | Markt- und Produktlandschaft, keine Connector-Freigabe. |
-| LTO KI-Kanzlei-Hinweis | [LTO](https://www.lto.de/recht/sponsored/s/ki-einsatz-in-der-kanzlei-mehr-zeit-fuer-das-wesentliche-anzeige) | manuelle Prüfung offen | Nur Nutzerhinweis; Inhalt vor Produktbezug erneut prüfen. |
 
 Alle URLs werden ohne Trackingparameter geführt. Die maschinenlesbare Grenze
 steht im

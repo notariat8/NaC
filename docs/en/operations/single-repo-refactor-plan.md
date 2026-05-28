@@ -1,84 +1,65 @@
-# Repository Refactor Plan: Single-Repository Modules
+# Single-Repo Plan For Notarial Usecases
 
 ## Goal
 
-This plan describes the target structure and a low-risk migration to a shared
-core with vertical modules in the same repository.
+This plan replaces the earlier multi-domain migration idea. NaC remains one
+repository for Notariat as Code. The target structure separates shared
+notarial rules, concrete notarial usecases, runtime and integrations.
 
 ## Target Structure
 
 ```text
-processes/
-  core/
-    intake/
-    approvals/
-    billing/
-    accounting_tax/
-    audit_close/
-  verticals/
-    law_firm/
-    notary/
-    tax_office/
-    property_management/
-    software_company/
-    wealth_management/
-    carpentry/
+usecases/
+  immobilienkaufvertrag/
+  unterschriftsbeglaubigung/
+  online-gmbh-gruendung/
+  handelsregisteranmeldung/
+workflows/
+plugins/
+policies/
+docs/
 ```
 
-## Mapping From Current State To Target Picture
+## Principles
 
-- Existing generic process files are moved to `processes/core/`.
-- Domain-related content is moved to `processes/verticals/<vertical>/`.
-- Shared rules remain in [policies/](../../../policies) and [docs/en/](..).
-- Domain activation remains centralized in
-  [policies/process-policy.yaml](../../../policies/process-policy.yaml).
+- New subject-matter examples are created only as notarial usecases under
+  [usecases/](../../../usecases).
+- Shared rules belong in [policies/](../../../policies) and are mirrored in
+  agent-facing surfaces.
+- Technical runtime fixtures under [processes/](../../../processes) are not
+  additional product examples.
+- Non-notarial domain sets are not accepted.
 
-## Migration Sequence
+## Implementation Steps
 
-1. **Inventory**
-   - classify all existing process files as `core` or `vertical`.
-2. **Prepare target paths**
-   - create folder structure and fix naming convention.
-3. **Migrate pilot vertical**
-   - migrate one vertical first, recommended: `notary`, including core
-     processes.
-4. **Validation and review**
-   - run validation/tests and subject-matter approval on the pilot vertical.
-5. **Migrate additional verticals**
-   - migrate `law_firm`, `tax_office`, `property_management`,
-     `software_company`, `wealth_management`, `carpentry` on a fixed cadence.
-6. **Closure**
-   - update index/documentation references and tag release.
+1. **Fix the scope**
+   - Mirror the notarial scope in policy, README, START_HERE and agent rules.
+2. **Maintain the usecase catalog**
+   - Keep existing usecases aligned with maturity and pilot readiness.
+3. **Separate runtime fixtures**
+   - Mark technical process examples as compatibility and test material.
+4. **Select the pilot usecase**
+   - Pilot real-estate purchase contract or signature certification first,
+     using synthetic data.
+5. **Check release binding**
+   - Running matters remain on their bound version; new versions apply only to
+     new matters.
 
 ## Risks And Countermeasures
 
-- **Risk:** unclear assignment of core vs vertical.
-  **Countermeasure:** apply the boundary rule from
-  [docs/en/service-model/core-vertical-blueprint.md](../service-model/core-vertical-blueprint.md)
-  as binding.
+- **Risk:** old multi-domain terms reappear in documentation or prompts.
+  **Countermeasure:** search for non-notarial domain sets before PR completion.
+- **Risk:** technical fixtures are misunderstood as product examples.
+  **Countermeasure:** README and start documents point to
+  [usecases/](../../../usecases) for examples only.
+- **Risk:** local notary-office variants blur the reference standard.
+  **Countermeasure:** variants only through change request, review and version
+  binding.
 
-- **Risk:** path changes break references.
-  **Countermeasure:** migrate in small PRs and check references per PR.
+## Exit Criteria
 
-- **Risk:** industry-specific special cases blur the core.
-  **Countermeasure:** do not merge vertical-specific rules into core without
-  multi-vertical evidence.
-
-## Fallback Strategy
-
-- Migration only through small, individually revertible PRs.
-- Each migration block is released separately.
-- If problems occur, roll back to the last approved release for new matters.
-- Running matters keep their bound version.
-
-## Acceptance Criteria
-
-- All processes are clearly assigned to a target path.
-- Validation and required reviews are successful.
-- Documentation and policies reference the new structure correctly.
-- At least one successful pilot vertical is proven productively.
-
-## Implementation Boundary For This Round
-
-This plan describes the refactor but does not perform it automatically. It is
-the working basis for the next controlled migration round.
+- README, START_HERE, policy and agent-facing surfaces describe NaC as
+  notary-office-only.
+- Onboarding prompts refer only to notarial usecases.
+- Issue #3 describes notarial example processes instead of domain sets.
+- `nac doctor --profile strict` passes.

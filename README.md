@@ -49,7 +49,7 @@ Englische Orientierung: [docs/en/notar-start.md](docs/en/notar-start.md),
 ## Was Dieses Repo Leistet
 
 - Es beschreibt notarielle Vorgangsarten als versionierte, prüfbare Usecases.
-- Es trennt öffentliche Muster, private Kanzlei-/Notariatsdaten und lokale
+- Es trennt öffentliche Muster, private Notariatsdaten und lokale
   Fachsysteme.
 - Es stellt Plugins, Workflow-Verträge und deterministische Python-Prüfungen
   für AI-first-Betrieb bereit.

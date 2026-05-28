@@ -1,4 +1,4 @@
-# Plugin Plan: Domain Connector Runtime
+# Plugin Plan: Notariats-Connector-Runtime
 
 Status: `draft`
 
@@ -10,7 +10,7 @@ Fachsystem-Connectoren sollen NaC-Änderungen kontrolliert in Zielsysteme reconc
 - GitHub
 - Jira oder vergleichbare Ticket-Systeme
 - Slack oder Teams für Benachrichtigungen
-- spätere Branchen- oder Kundensysteme
+- spätere Notariats- oder Tenant-Systeme
 - juristische Recherche- und Verlagsdatenquellen nach gesonderter
   Kandidatenprüfung
 

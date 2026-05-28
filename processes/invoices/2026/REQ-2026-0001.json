@@ -1,45 +1,45 @@
 {
   "process_type": "invoice",
   "request_id": "REQ-2026-0001",
-  "idempotency_key": "invoice-acme-20260301",
+  "idempotency_key": "notarial-cost-note-20260301",
   "actor_context": {
     "actor_role": "sachbearbeitung",
-    "actor_display": "ReNo Team",
+    "actor_display": "Notariat Kostenstelle",
     "requested_decision_type": "requires_approval",
     "impact_level": "medium",
     "compliance_impact": true,
     "requested_qualification": [
-      "rvg_billing_trained"
+      "notarial_costs_training"
     ],
     "qualification_evidence": [
       "TRAINING-CERT-2026-001"
     ],
-    "approver_role": "anwalt_fachlich",
+    "approver_role": "notar_fachlich",
     "resolver_role": "sachbearbeitung"
   },
   "status": "draft",
   "year": 2026,
   "customer": {
-    "name": "Acme GmbH",
+    "name": "Muster Beteiligte GmbH",
     "customer_id": "C-1000",
-    "email": "billing@acme.example"
+    "email": "kosten@muster-beteiligte.example"
   },
   "currency": "EUR",
   "issue_date": "2026-03-01",
   "due_date": "2026-03-15",
   "items": [
     {
-      "description": "Strategie-Workshop",
+      "description": "Notarielle Kostenrechnung Immobilienkaufvertrag",
       "quantity": 1,
       "unit_price": 1200.0,
       "account_code": "8400",
       "tax_rate": 19.0
     }
   ],
-  "external_ref": "CRM-2026-44",
+  "external_ref": "UVZ-2026-0001",
   "metadata": {
     "channel": "llm",
-    "owner": "sales",
-    "billing_regime": "rvg"
+    "owner": "notariat-ops",
+    "billing_regime": "notarial_costs"
   }
 }

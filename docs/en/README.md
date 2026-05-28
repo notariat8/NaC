@@ -1,14 +1,14 @@
 # NaC: Notariat as Code with Enterprise Control Plane
 
-This repository shows how an organization can be operated as a declarative,
-versioned system. Users express business intent through an LLM frontend, while
-Git, pull requests, reviews, GitHub Actions, and deterministic Python checks
-provide the binding process control.
+This repository shows how a notary office can operate notarial case types as a
+declarative, versioned and checkable system. Users express subject-matter
+intent through an LLM frontend, while Git, pull requests, reviews, GitHub
+Actions and deterministic Python checks provide the binding process control.
 
 ## Core Idea
 
-- The LLM turns natural-language requests into structured process requests.
-- Git represents the official lifecycle of a business change.
+- The LLM turns natural-language requests into structured notarial requests.
+- Git represents the official lifecycle of a notarial matter or change.
 - Python validates rules and runs repeatable deterministic checks.
 - GitHub Actions orchestrate checks, approvals, scheduled jobs, and artifacts.
 
@@ -106,13 +106,13 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.
-- [docs/en/service-model/](service-model) contains core/vertical, provider, tenant and exit docs.
+- [docs/en/service-model/](service-model) contains notarial scope, provider, tenant and exit docs.
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
-- [processes/](../../processes) contains example business process instances.
-- [src/business_os/](../../src/business_os) contains the Python engine.
+- [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
+- [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.
 - [.cursor/rules/](../../.cursor/rules) and [.github/copilot-instructions.md](../../.github/copilot-instructions.md) mirror agent-facing rules.
 
@@ -120,9 +120,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 
 ```bash
 python scripts/nac.py status
-python scripts/nac.py process validate processes/invoices/2026/REQ-2026-0001.json
-python scripts/nac.py process render-summary processes/invoices/2026/REQ-2026-0001.json
-python scripts/nac.py process monthly-close --year 2026 --month 3
+python scripts/nac.py kg case immobilienkaufvertrag
+python scripts/nac.py bpmn show immobilienkaufvertrag
+python scripts/nac.py bpmn validate
 ```
 
 For a full local gate:
@@ -154,16 +154,14 @@ documented in [TRADEMARK.md](../../TRADEMARK.md).
 
 1. [docs/en/START_HERE.md](START_HERE.md)
 2. [docs/en/fachanwender-guide.md](fachanwender-guide.md)
-3. [docs/en/business-os.md](business-os.md)
+3. [docs/en/notariat-as-code.md](notariat-as-code.md)
 4. [docs/en/governance.md](governance.md)
 5. [docs/en/quality-gate.md](quality-gate.md)
 
-## Onboarding Prompts
+## Notary-Office Onboarding
 
-- Law firm: [prompts/en/onboarding/law-firm-first-setup.md](../../prompts/en/onboarding/law-firm-first-setup.md)
 - Notary office: [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
-- Property management: [prompts/en/onboarding/property-management-first-setup.md](../../prompts/en/onboarding/property-management-first-setup.md)
-- Software company: [prompts/en/onboarding/software-company-first-setup.md](../../prompts/en/onboarding/software-company-first-setup.md)
-- Tax office: [prompts/en/onboarding/tax-office-first-setup.md](../../prompts/en/onboarding/tax-office-first-setup.md)
-- Wealth management: [prompts/en/onboarding/wealth-management-first-setup.md](../../prompts/en/onboarding/wealth-management-first-setup.md)
-- VS Code + Copilot: [prompts/en/onboarding/vscode-copilot-business-os-setup.md](../../prompts/en/onboarding/vscode-copilot-business-os-setup.md)
+- VS Code + Copilot: [prompts/en/onboarding/vscode-copilot-notariat-setup.md](../../prompts/en/onboarding/vscode-copilot-notariat-setup.md)
+
+The synchronous MVP path in this repository is `notary`. Subject-matter
+examples are derived only from [usecases/](../../usecases).

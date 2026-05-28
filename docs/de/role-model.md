@@ -1,54 +1,60 @@
-# Rollenmodell: Generisch und fachspezifisch
+# Rollenmodell: Notariat
 
 ## Ziel
 
 Dieses Modell stellt sicher, dass:
 
-- jede Person Tickets erstellen kann,
+- jede Person im zulässigen Rahmen Tickets erstellen kann,
 - nur qualifizierte Rollen fachkritische Schritte final entscheiden,
-- Freigaben nachvollziehbar und revisionsfest dokumentiert sind.
+- notarielle Freigaben nachvollziehbar und revisionsfest dokumentiert sind.
 
-## 1) Grundprinzip für alle Unternehmen
+## 1) Grundprinzip Im Notariat
 
-- Beobachten darf jede Rolle.
-- Ein Ticket aufmachen darf jede Rolle.
-- Selbst loesen darf jede Rolle nur innerhalb ihrer freigegebenen Kompetenz.
-- Fachkritische Entscheidungen brauchen qualifizierte Rollen und ggf. Freigabe.
+- Beobachten darf jede berechtigte Rolle.
+- Ein Ticket aufmachen darf jede berechtigte Rolle.
+- Selbst lösen darf jede Rolle nur innerhalb ihrer freigegebenen Kompetenz.
+- Fachkritische Entscheidungen brauchen qualifizierte Rollen und ggf.
+  Vier-Augen-Freigabe.
 
-Beispiel: Wenn Kopierpapier fehlt, muss niemand Notar sein, um das zu melden.
+Beispiel: Wenn ein Arbeitsplatz-Gate fehlschlägt, muss niemand Notar sein, um
+das zu melden. Eine notarielle Freigabe bleibt aber bei der qualifizierten
+fachlichen Rolle.
 
-## 2) Generische Mindestrollen
+## 2) Mindestrollen
 
 - `mitarbeiter`: darf melden, kommentieren, Status aktualisieren.
-- `sachbearbeitung`: darf operative Tickets bearbeiten und abschließen, sofern kein fachkritischer Impact.
+- `sachbearbeitung`: darf operative Tickets bearbeiten und abschließen, sofern
+  kein fachkritischer Impact besteht.
+- `notariatsfachkraft`: darf Vorgangsdaten, offene Angaben und Nachweise
+  vorbereiten.
+- `notar_fachlich`: darf notarielle Fachentscheidungen treffen.
+- `kostenverantwortung`: darf Kosten- und Gebührenfragen prüfen, soweit
+  qualifiziert.
 - `prozessverantwortung`: darf Arbeitsregeln im Fachprozess freigeben.
 - `freigabeverantwortung`: darf approval-pflichtige Schritte final freigeben.
 - `revision_audit`: darf prüfen, aber nicht operativ entscheiden.
-- `automation`: führt technische Standardaufgaben aus, entscheidet nicht fachlich.
+- `automation`: führt technische Standardaufgaben aus, entscheidet nicht
+  fachlich.
 
-## 3) Fachspezifische Rollen (Beispiel Kanzlei)
+## 3) Qualifikation Statt Titel
 
-- `anwalt_fachlich`: fachliche Entscheidung in Mandats-/RVG-relevanten Schritten.
-- `reno`: operativer Ablauf, Fristen, Aktenkoordination.
-- `refa`: organisationsnahe Sachbearbeitung und Ablaufunterstützung.
-- `notar_fachlich` (nur Notariat): notarielle Freigaben.
-- `steuerfachkraft` (nur Steuerbüro): deklarationsnahe Freigaben.
-
-## 4) Qualifikation statt Titel
-
-Entscheidend ist nicht nur die Stellenbezeichnung, sondern die dokumentierte Qualifikation.
+Entscheidend ist nicht nur die Stellenbezeichnung, sondern die dokumentierte
+Qualifikation.
 
 Beispiel:
 
-- `rechnung_rvg_erstellen`: erlaubt nur für Rollen mit `qualification: rvg_billing_trained`.
+- `notarial_cost_note_review`: erlaubt nur für Rollen mit
+  `qualification: notarial_costs_training`.
 
-## 5) Entscheidungsmatrix (Self-Resolve vs Approval)
+## 4) Entscheidungsmatrix
 
 - `impact=low` und `compliance=none`: self-resolve erlaubt.
-- `impact=medium` oder `financial=true`: review durch Prozessverantwortung.
-- `impact=high` oder `legal=true`: approval durch freigabeberechtigte Fachrolle.
+- `impact=medium` oder `financial=true`: Review durch Prozessverantwortung oder
+  Kostenverantwortung.
+- `impact=high`, `legal=true` oder notarielle Fachentscheidung: Approval durch
+  qualifizierte Fachrolle.
 
-## 6) Workflow-Integration
+## 5) Workflow-Integration
 
 ```mermaid
 flowchart TD
@@ -58,7 +64,7 @@ flowchart TD
     SelfResolve -->|ja| Done[Ticket abgeschlossen]
     SelfResolve -->|nein| Review[Review durch zuständige Rolle]
     Review --> Approval{Finale Freigabe nötig}
-    Approval -->|ja| Approver[Freigabeverantwortung oder Fachrolle]
+    Approval -->|ja| Approver[Notarielle Fachrolle oder Freigabeverantwortung]
     Approval -->|nein| Done
     Approver --> Done
 ```
@@ -73,13 +79,8 @@ Technische Pflichtfelder je Prozessantrag:
 - optional `actor_context.qualification_evidence`
 - je nach Entscheidung `actor_context.approver_role`
 
-## 7) Gender und Rollennamen
+## 6) Gender Und Rollennamen
 
-Die interne Rollen-ID bleibt neutral und stabil, z. B. `anwalt_fachlich` als technische Kennung.
-Die sichtbare Sprachform folgt `policies/culture-policy.yaml`.
-
-Empfehlung:
-
-- Technische IDs: neutral/stabil
-- Sichttexte: je nach Policy (neutral, Paarform, etc.)
-- Gleiche Rechte für alle Schreibformen
+Die interne Rollen-ID bleibt neutral und stabil, z. B. `notar_fachlich` als
+technische Kennung. Die sichtbare Sprachform folgt
+[policies/culture-policy.yaml](../../policies/culture-policy.yaml).

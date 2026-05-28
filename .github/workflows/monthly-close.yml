@@ -35,10 +35,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          python -m business_os monthly-close \
+          python scripts/nac.py process monthly-close \
             --year "${{ inputs.year || '2026' }}" \
             --month "${{ inputs.month || '3' }}" \
-            --repo-root . > out/monthly-close-report.json
+            > out/monthly-close-report.json
 
       - name: Upload close report
         uses: actions/upload-artifact@v4

@@ -1,8 +1,7 @@
 # Regulierung
 
 Gemeinsame lokale Arbeitsablauf-, Sicherheitsgrenzen-, Planvorschau-,
-Freigabe- und Nachweisführung für NaC-Plugins in Anwaltskanzleien,
-Notariaten und angrenzenden regulierten Betriebsabläufen.
+Freigabe- und Nachweisführung für NaC-Plugins im Notariatsbetrieb.
 
 ## Status
 

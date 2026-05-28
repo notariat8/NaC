@@ -1,114 +1,106 @@
-# Business-User Guide: Git As A Business OS Without IT Specialist Knowledge
+# Non-Technical Guide: Notariat As Code Without IT Specialist Knowledge
 
 ## Why This Model Helps
 
-An organization depends on repeatable decisions and traceable flows. In many
-companies these rules exist only in people's heads, emails or individual tools.
-That leads to:
+A notary office depends on repeatable decisions, deadlines, evidence and clear
+responsibilities. When these rules live only in people's heads, emails or
+individual specialist-system screens, risks appear:
 
 - unclear responsibilities,
-- incomplete documentation,
-- difficult auditability for audits, tax or quality evidence,
+- incomplete matter and approval traces,
+- difficult auditability for privacy, QMS, audit or professional evidence,
 - high dependency on individual people.
 
-Git as a business OS solves this by versioning, approving and permanently
-documenting every relevant process step.
+NaC solves this by versioning, approving and permanently documenting notarial
+case types.
 
 In short:
 
-- The LLM is the simple language input for employees.
+- The LLM is the simple language input for staff.
 - Git is the reliable protocol and approval system.
-- Python is the standardized execution layer for repeatable processes.
+- Python is the standardized check layer for repeatable steps.
+- The human in the notary office remains professionally responsible.
 
-## Why Processes Should Be Built First
+## Why Usecases Should Be Built First
 
-Before a process is rolled out in the organization, it should be modeled cleanly
-in the pattern. Otherwise errors become visible only in day-to-day operations.
-The pattern provides:
+Before a flow is rolled out in the notary office, it should be modeled cleanly
+in the pattern. Otherwise errors become visible only in daily work. The pattern
+provides:
 
 - clear roles,
 - unambiguous status steps,
 - defined approval points,
-- auditable documentation duties.
+- auditable documentation duties,
+- boundaries for AI, specialist systems and real matter data.
 
-Therefore: process design first, operational rollout second.
+Therefore: usecase design first, operational rollout second.
 
-## Why Already Implemented Processes Should Also Be Documented
+## Canonical Notarial Building Blocks
 
-Existing flows also need to be transferred into the system so that:
+NaC is not an industry toolkit. There are no examples for non-notarial
+organization types.
 
-- current-state processes become transparent,
-- risks and deviations become visible,
-- improvements can be planned in a versioned way,
-- audits can rely on robust evidence.
+Subject-matter examples come only from the
+[usecase catalog](../../usecases/README.md), including:
 
-Practically this means that existing processes are first captured as an
-"as-is version" and then gradually transformed into improved "target versions".
+- real-estate purchase contract,
+- signature certification,
+- online GmbH formation,
+- commercial-register filing,
+- testament or inheritance contract,
+- power of attorney and patient directive.
 
-## Generic And Domain-Specific Building Blocks
+The pattern combines:
 
-### Generic Processes For Almost All Organizations
-
-- roles and approvals,
-- invoicing,
-- bookkeeping,
-- tax processes,
-- monthly and annual closing,
-- deadline and evidence management.
-
-### Domain-Specific Knowledge As Options
-
-- Law firm: mandate acceptance, deadline calendar, conflict check, file closure.
-- Notary office: deed preparation, identity check, completion steps.
-- Tax office: client onboarding, declaration cycles, plausibility checks.
-- Software company: release approvals, SLA/support processes, compliance
-  evidence.
-
-The pattern organization always combines both:
-
-- core processes from the generic standard,
-- domain modules from the respective industry.
+- shared notary-office rules for roles, approvals, evidence, privacy and
+  versioning,
+- concrete usecase rules per case type.
 
 ## Decision Principle For Different Ways Of Working
 
-When organizations work differently, this must be modeled as a configurable
-choice, not as an exception.
+When notary offices work differently, this is modeled as an approved variant,
+not as a silent exception.
 
 Example:
 
-- Variant A: the invoice is sent automatically after subject-matter approval.
-- Variant B: the invoice is sent only after final commercial approval.
+- Variant A: a real-estate purchase contract starts with land-register review
+  before draft approval.
+- Variant B: a simple certification starts with identity and representation
+  review.
 
 Both variants can be valid. The system documents which variant applies to which
-organization and since when.
+location or usecase and since when.
 
-## How A Non-IT Decision Maker Starts In Their Own Company
+## How A Non-IT Decision Maker Starts In A Notary Office
 
 ## Step 1: Define Responsibility And Target Picture
 
-- Name a subject-matter process owner.
-- Define three to five core processes for the start.
-- Define which evidence is mandatory from audit or liability perspectives.
+- Name the responsible roles in the notary office.
+- Select one to three prioritized usecases from [usecases/](../../usecases),
+  for example real-estate purchase contract or signature certification.
+- Define which evidence is mandatory from privacy, professional, liability or
+  QMS perspectives.
 
-## Step 2: Set Up A Company Repository
+## Step 2: Set Up A Private Notary-Office Fork
 
-- Create a dedicated Git repository for your organization.
+- Create a dedicated private repository for the notary office.
 - Use this pattern as a template and adopt only the suitable parts.
 - Define access and roles: who may propose, review and approve.
 
-## Step 3: Clone The Pattern And Create The First Company Variant
+## Step 3: Create The First Notary-Office Variant
 
 - Clone the pattern into your environment.
-- Adapt domain modules to your concrete business.
-- Start with a pilot path, for example the invoicing process for one location.
+- Adapt only notarial usecases and rules to local operations.
+- Start with a pilot path such as real-estate purchase contract or signature
+  certification without real matter data.
 
 ## Step 4: Make Approval Rules Binding
 
-- In production organization forks, processes are changed through pull
+- In production notary-office forks, processes are changed through pull
   requests; in the active reference repo, the owner may explicitly request
   direct delivery.
 - Sensitive steps receive four-eyes approval.
-- Monthly closings are marked as versioned states.
+- Release states are marked with versions.
 
 ## Step 5: Operate With Continuous Improvement
 
@@ -120,72 +112,43 @@ organization and since when.
 
 ```mermaid
 flowchart TD
-    CurrentProcess["Current process in operation"] --> Observation["Deviation or improvement identified"]
+    CurrentUsecase["Current notarial usecase"] --> Observation["Deviation or improvement identified"]
     Observation --> ChangeRequest["Change request in the repository"]
     ChangeRequest --> Assessment["Subject-matter and regulatory assessment"]
-    Assessment --> Pilot["Pilot in test area"]
+    Assessment --> Pilot["Pilot without real matter data"]
     Pilot --> Approval["Approval by responsible roles"]
-    Approval --> Rollout["Rollout as new process version"]
-    Rollout --> Evidence["Versioned audit evidence"]
-    Evidence --> CurrentProcess
+    Approval --> Rollout["Rollout as new usecase version"]
+    Rollout --> Evidence["Versioned audit and QMS evidence"]
+    Evidence --> CurrentUsecase
 ```
 
-## How Everyone Can Benefit From Improvements
+## Standardization And Certification
 
-A useful model consists of:
-
-- a central reference pattern, generic plus domain,
-- organization forks for local adjustments,
-- a controlled return path for good improvements into the reference standard.
-
-This creates:
-
-- local flexibility,
-- shared learning,
-- stable, versioned documentation standards.
-
-## Running Old And New Processes In Parallel
-
-When a new release arrives while matters are running:
-
-- running matters remain on their start version,
-- new matters start on the newly approved version,
-- both lines remain cleanly separable in the audit.
-
-Example notary office:
-
-- File A starts at 10:15 on `v1.4.0` and remains there.
-- File B starts after approval at 13:00 on `v1.5.0`.
-
-Details: [docs/en/operations/parallelbetrieb-version-binding.md](operations/parallelbetrieb-version-binding.md)
-
-## Role Of Associations And Certification
-
-The idea is sound from a subject-matter perspective: when, for example, 1,000
-law firms use the same core process, an association can review and recommend a
-referenced standard version.
+When many notary offices use the same reviewed usecase state, an association or
+subject-matter review body can assess and recommend a concrete version.
 
 Possible model:
 
-- association reference process with clear version history,
+- reference usecase with clear version history,
 - formal review against quality and compliance criteria,
-- optional certificate or attestation for a specific process version,
+- optional certificate or attestation for a specific usecase version,
 - public evidence of which version was reviewed.
 
 Important:
 
 - A certificate should always refer to a concrete version.
 - Every change after certification requires a new assessment.
-- Organizations may extend locally, but may lose certification status for
+- Notary offices may extend locally, but may lose certification status for
   modified parts until those parts have been reviewed again.
 
 ## Practical 90-Day Start Recommendation
 
-- Weeks 1-2: define target picture, roles and pilot processes.
-- Weeks 3-4: set up repository, adopt pattern, define approval rules.
-- Weeks 5-8: run pilot for invoicing and bookkeeping.
-- Weeks 9-10: connect tax and deadline process.
-- Weeks 11-12: lessons learned, change requests, approve version 1.0.
+- Weeks 1-2: define target picture, roles and first usecase.
+- Weeks 3-4: set up private fork and define approval rules.
+- Weeks 5-8: pilot real-estate purchase contract or signature certification
+  with synthetic data.
+- Weeks 9-10: check local workstation, XNP, card and register gates.
+- Weeks 11-12: lessons learned, change requests and first version approval.
 
-This gives the organization a robust, auditable and learnable process operating
-system.
+This creates a robust, auditable and learnable operating system for notarial
+case types.

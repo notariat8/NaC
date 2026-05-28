@@ -1,7 +1,7 @@
 {
   "process_type": "team",
   "request_id": "REQ-2026-0005",
-  "idempotency_key": "team-model-eval-2026",
+  "idempotency_key": "team-notariat-readiness-2026",
   "actor_context": {
     "actor_role": "org_manager",
     "requested_decision_type": "requires_review",
@@ -12,14 +12,14 @@
   "status": "validated",
   "year": 2026,
   "team": {
-    "id": "model-eval",
-    "org_unit": "ai-platform",
-    "manager": "dir-eval",
+    "id": "notariat-readiness",
+    "org_unit": "notariat-ops",
+    "manager": "notar-fachlich",
     "members_target": 6,
-    "access_profile": "ml-standard",
-    "tools": ["github", "jira", "slack", "mlflow"]
+    "access_profile": "notary-standard",
+    "tools": ["github", "entra-id", "xnp-readiness", "notary-workstation"]
   },
   "metadata": {
-    "pilot_domain": "software_company"
+    "pilot_domain": "notary"
   }
 }

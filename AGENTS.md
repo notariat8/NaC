@@ -6,13 +6,14 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 1. Gesetzliche und regulatorische Pflichten
 2. Verbindliche Prozess- und Governance-Regeln
-3. Unternehmensspezifische Branchenregeln
+3. Notarielle Fach- und Berufsregeln
 4. Kultur- und Sprachregeln
 
 ## Arbeitsprinzip
 
 - Das LLM ist Eingabeoberfläche, nicht die fachliche Wahrheit.
 - Das Zielmodell ist `Notariat as Code`, der operative Änderungsfluss ist `Enterprise GitOps`.
+- NaC ist ausschließlich für Notariate und notarielle Vorgangsarten gedacht. Nicht-notarielle Produktpfade oder Beispiele sind keine gültigen NaC-Beispiele.
 - Fachliche Wahrheit entsteht durch versionierte Änderung + Review + Freigabe.
 - Sensible Schritte brauchen Vier-Augen-Freigabe.
 - Prozessänderungen werden immer mit Begründung dokumentiert.
@@ -50,8 +51,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Unternehmensbetrieb mit zentralem Upstream erfolgt nach [docs/de/operations/fork-and-release-operating-model.md](docs/de/operations/fork-and-release-operating-model.md).
 - Upstream-Übernahmen erfolgen nach [docs/de/operations/release-sync-playbook.md](docs/de/operations/release-sync-playbook.md).
 - Mischbetrieb alt/neu erfolgt mit Version-Binding nach [docs/de/operations/parallelbetrieb-version-binding.md](docs/de/operations/parallelbetrieb-version-binding.md).
-- Core/Vertical-Struktur für Dienstleister erfolgt nach [docs/de/service-model/core-vertical-blueprint.md](docs/de/service-model/core-vertical-blueprint.md).
-- Starter-Prozesse je Vertical stehen in [docs/de/service-model/vertical-starter-process-catalog.md](docs/de/service-model/vertical-starter-process-catalog.md).
+- Der Notariats-Scope erfolgt nach [docs/de/service-model/notariat-scope-blueprint.md](docs/de/service-model/notariat-scope-blueprint.md).
+- Starter-Beispiele sind ausschließlich notarielle Usecases nach [docs/de/service-model/notarial-usecase-starter.md](docs/de/service-model/notarial-usecase-starter.md) und [usecases/README.md](usecases/README.md).
 - Arbeitsmethode und Team-Cadence werden nach [docs/de/operations/agile-cadence.md](docs/de/operations/agile-cadence.md) dokumentiert.
 - Rollen-/Rechtebetrieb und Issue-Sichtbarkeit stehen in [docs/de/issues/operations.md](docs/de/issues/operations.md).
 - Plugin- und Connector-Pläne werden unter [docs/de/plugin-plans/](docs/de/plugin-plans) und [docs/en/plugin-plans/](docs/en/plugin-plans) gepflegt.
@@ -84,9 +85,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
    Danach Codex neu starten oder eine neue Session öffnen, weil Plugins beim
    Session-Start geladen werden.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide auto`.
-5. Passendes Onboarding-Prompt unter [prompts/de/onboarding/](prompts/de/onboarding) oder [prompts/en/onboarding/](prompts/en/onboarding) starten.
-   Standard-MVP-Set im Referenzrepo: `software_company`, `notary`, `wealth_management`.
-   Zusätzlicher MVP-Use-Case: `property_management`.
+5. Notariats-Onboarding-Prompt unter [prompts/de/onboarding/notary-first-setup.md](prompts/de/onboarding/notary-first-setup.md) oder [prompts/en/onboarding/notary-first-setup.md](prompts/en/onboarding/notary-first-setup.md) starten.
+   Produktbeispiele kommen ausschließlich aus [usecases/](usecases), zum Beispiel Immobilienkaufvertrag, Unterschriftsbeglaubigung, Online-GmbH-Gründung oder Handelsregisteranmeldung.
 6. Erst danach mit produktiven Prozessänderungen beginnen.
 7. Für Greenfield/Brownfield den Pfad aus [docs/de/einfuehrung-greenfield-brownfield.md](docs/de/einfuehrung-greenfield-brownfield.md) oder [docs/en/einfuehrung-greenfield-brownfield.md](docs/en/einfuehrung-greenfield-brownfield.md) wählen.
 

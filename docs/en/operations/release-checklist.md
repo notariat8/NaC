@@ -21,8 +21,8 @@ process impact or local test runs without approval character.
 Before the tag is created, these details must be present in the leading issue,
 pull request or release draft:
 
-- process package or scope, for example `notary`, `software_company` or a
-  specific usecase,
+- process package or scope, for example `notary`,
+  `immobilienkaufvertrag` or `unterschriftsbeglaubigung`,
 - target version or tag, for example `v*`,
 - start of applicability for new matters,
 - rollout mode:

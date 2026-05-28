@@ -36,7 +36,7 @@ Case cards are always split into three blocks:
 | --- | --- | --- | --- |
 | `Aktenverwaltung` | always open | open matters, create a new demo matter, see status counters | daily office work, all authorized users |
 | `Kontrolle` | always open, but secondary | inspect the checklist | clerks, notary, quality review |
-| `Kanzlei-Workflow` | collapsed | view flow, propose a change | notary, process owners, review |
+| `Notariats-Workflow` | collapsed | view flow, propose a change | notary, process owners, review |
 
 `Akten öffnen` is the primary daily action. `Neu` is secondary because users
 should first check whether a matter or inbox item already exists. `Checkliste
@@ -90,7 +90,7 @@ The current MVP binds matters to `v1` plus a hash of the available BPMN and
 checklist artifacts. Productive office operation additionally needs an
 approval registry per office and use case with version, approval timestamp,
 approval role, approving person, effective date and replacement rule. This is
-tracked in the global Gantt as `Kanzlei-Workflow-Freigaberegister bauen`.
+tracked in the global Gantt as `Notariats-Workflow-Freigaberegister bauen`.
 
 ## Matter-Specific Checklist
 
@@ -126,6 +126,6 @@ The UI uses office terms:
 - `Übersicht` instead of a technical start point,
 - `Aktenverwaltung` for opening and creating matters,
 - `Kontrolle` for checklist inspection,
-- `Kanzlei-Workflow` for flow and editing,
+- `Notariats-Workflow` for flow and editing,
 - `Änderung vorschlagen` instead of direct editing when master data is
   affected.

@@ -19,7 +19,7 @@ Die folgenden Inhalte müssen inhaltlich auf beiden Plattformen gleich bleiben:
 - Review- und Freigabelogik
 - Kultur- und Sprachpolicy
 - Onboarding-Reihenfolge für Nicht-IT-Nutzer
-- Default-MVP-Module und zugehörige Onboarding-Prompts
+- Notariats-Scope, kanonische Usecases und zugehörige Onboarding-Prompts
 
 ## Änderungsregel
 
@@ -32,10 +32,8 @@ Bei jeder konzeptuellen Änderung:
 
 ## Aktueller synchroner MVP-Default
 
-- `software_company` -> `prompts/de/onboarding/software-company-first-setup.md`
 - `notary` -> `prompts/de/onboarding/notary-first-setup.md`
-- `wealth_management` -> `prompts/de/onboarding/wealth-management-first-setup.md`
 
-Zusätzlicher MVP-Use-Case:
-
-- `property_management` -> `prompts/de/onboarding/property-management-first-setup.md`
+Nicht-notarielle Produktpfade sind kein NaC-Scope. Fachliche Beispiele kommen
+ausschließlich aus `usecases/`, zum Beispiel Immobilienkaufvertrag oder
+Unterschriftsbeglaubigung.

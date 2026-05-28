@@ -38,7 +38,7 @@ in this repository.
 ## Why The Separation Matters
 
 - It reduces misunderstandings between tooling and target model.
-- It makes the model easier to review for business users, auditors and
+- It makes the model easier to review for notary-office users, auditors and
   operations owners.
 - It supports third-party operation and replaceability without terminology
   conflicts.

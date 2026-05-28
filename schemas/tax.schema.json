@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "TaxProcess",
+  "title": "NotarialTaxNotificationProcess",
   "type": "object",
   "required": [
     "process_type",
@@ -66,7 +66,7 @@
     },
     "tax_type": {
       "type": "string",
-      "enum": ["ustva", "jahreserklaerung", "lohnsteuer", "gewerbesteuer"]
+      "enum": ["grunderwerbsteueranzeige", "erbschaftsteueranzeige", "schenkungsanzeige"]
     },
     "period": {
       "type": "string",

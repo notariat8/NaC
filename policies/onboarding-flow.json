@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "title": "Business-OS Onboarding Flow",
+  "title": "Notariat as Code Onboarding Flow",
   "modes": [
     "founding",
     "existing"
@@ -27,7 +27,7 @@
     {
       "id": "q_mode",
       "phase": "phase_1_context",
-      "prompt": "Starten Sie mit Gründung oder Bestandsunternehmen?",
+      "prompt": "Starten Sie mit neuem Notariats-Setup oder bestehendem Notariatsbetrieb?",
       "options": [
         "founding",
         "existing"
@@ -41,9 +41,9 @@
       ]
     },
     {
-      "id": "q_company_scope",
+      "id": "q_notary_scope",
       "phase": "phase_1_context",
-      "prompt": "Welche Einheiten sollen zuerst betrachtet werden (Standort, Team, Bereich)?",
+      "prompt": "Welche Notariatsstandorte, Teams oder Vorgangsarten sollen zuerst betrachtet werden?",
       "options": [],
       "required_for_modes": [
         "founding",
@@ -55,9 +55,9 @@
       ]
     },
     {
-      "id": "q_critical_processes",
+      "id": "q_priority_usecases",
       "phase": "phase_1_context",
-      "prompt": "Welche 3 Kernprozesse haben oberste Priorität?",
+      "prompt": "Welche drei notariellen Usecases haben oberste Priorität?",
       "options": [],
       "required_for_modes": [
         "founding",
@@ -70,7 +70,7 @@
     {
       "id": "q_existing_systems",
       "phase": "phase_2_feasibility",
-      "prompt": "Welche bestehenden Systeme müssen integriert werden?",
+      "prompt": "Welche bestehenden Notariats-, Register-, XNP- oder Dokumentensysteme müssen integriert werden?",
       "options": [],
       "required_for_modes": [
         "existing"
@@ -83,7 +83,7 @@
     {
       "id": "q_regulatory_needs",
       "phase": "phase_2_feasibility",
-      "prompt": "Welche regulatorischen Nachweise sind zwingend?",
+      "prompt": "Welche notariellen, datenschutzrechtlichen und revisionssicheren Nachweise sind zwingend?",
       "options": [],
       "required_for_modes": [
         "founding",
@@ -97,7 +97,7 @@
     {
       "id": "q_role_mapping",
       "phase": "phase_3_target_model",
-      "prompt": "Welche generischen und fachspezifischen Rollen werden genutzt?",
+      "prompt": "Welche Notariatsrollen und Qualifikationsgrenzen werden genutzt?",
       "options": [],
       "required_for_modes": [
         "founding",

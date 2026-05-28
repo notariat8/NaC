@@ -4,7 +4,7 @@
   "idempotency_key": "bank-20260304-10001",
   "actor_context": {
     "actor_role": "sachbearbeitung",
-    "actor_display": "Finance Ops",
+    "actor_display": "Notariat Buchhaltung",
     "requested_decision_type": "self_resolve",
     "impact_level": "low",
     "compliance_impact": false,
@@ -34,7 +34,7 @@
       "tax_code": "U19"
     }
   ],
-  "external_ref": "BANKAPI-9981",
+  "external_ref": "UVZ-2026-0001-KOSTEN",
   "metadata": {
     "source": "bank_feed"
   }

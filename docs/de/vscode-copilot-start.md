@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Dieser Leitfaden zeigt, wie ein Unternehmen dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
+Dieser Leitfaden zeigt, wie ein Notariat dieses Musterrepo ohne Cursor mit VS Code und GitHub Copilot nutzt.
 Der fachliche Rahmen ist `Notariat as Code` mit `Enterprise GitOps`; `NaC` ist die konkrete Umsetzung.
 
 Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den geführten Pfad:
@@ -21,7 +21,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefüh
 
 ## Einrichtung in 8 Schritten
 
-1. Erstellen Sie ein eigenes Repository für Ihr Unternehmen.
+1. Erstellen Sie ein eigenes privates Repository für Ihr Notariat.
 2. Übernehmen Sie dieses Muster als Basis (Template oder Fork).
 3. Oeffnen Sie das Repo in VS Code.
 4. Installieren und aktivieren Sie GitHub Copilot im Editor.
@@ -30,9 +30,8 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefüh
    Für Plugin-Entwicklung zusätzlich `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
    Für Kartenleser-, morris- oder XNP-nahe Arbeit zusätzlich `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
 7. Bestätigen Sie die Policies unter `policies/`.
-8. Nutzen Sie ein Onboarding-Prompt aus `prompts/de/onboarding/` für Ihre Branche.
-   Standard für den MVP in diesem Repo: `software_company`, `notary`, `wealth_management`.
-   Zusätzlicher MVP-Use-Case: `property_management`.
+8. Nutzen Sie [prompts/de/onboarding/notary-first-setup.md](../../prompts/de/onboarding/notary-first-setup.md).
+   Standard für den MVP in diesem Repo: `notary`.
 9. Starten Sie mit einem Pilotprozess und prüfen Sie den Pull-Request-Workflow.
 10. Führen Sie erst nach erfolgreichem Pilot den breiten Rollout durch.
 11. Definieren Sie Fork/Synchronisierung/Mischbetrieb über die Betriebsdokumente in `docs/de/`.
@@ -43,7 +42,7 @@ Wenn Sie als Erstnutzer nicht alle Dokumente lesen wollen, nutzen Sie den gefüh
 ## Empfohlener Copilot-Startprompt
 
 ```text
-Lies zuerst folgende Dateien und erklaere mir dann die naechsten 3 Schritte ohne IT-Fachsprache:
+Lies zuerst folgende Dateien und erkläre mir dann die nächsten 3 Schritte ohne IT-Fachsprache:
 - docs/de/START_HERE.md
 - docs/de/fachanwender-guide.md
 - policies/process-policy.yaml
@@ -51,9 +50,9 @@ Lies zuerst folgende Dateien und erklaere mir dann die naechsten 3 Schritte ohne
 - policies/technology-policy.yaml
 
 Danach:
-1) Frage mich nach Unternehmensart und Prioritaetsprozessen.
-2) Schlage passende Branchenmodule vor.
-3) Erstelle einen 30-Tage-Pilotplan für Team-, Rollen- und Zugriffsprozesse.
+1) Frage mich nach Notariatsstandort, Rollen und priorisierten Usecases.
+2) Schlage passende Usecases aus usecases/ vor.
+3) Erstelle einen 30-Tage-Pilotplan für einen notariellen Usecase.
 ```
 
 ## Operative Regeln für Copilot-Nutzung
@@ -85,8 +84,8 @@ Danach:
 - `docs/de/operations/parallelbetrieb-version-binding.md`
 - `docs/de/issues/taxonomy.md`
 - `docs/de/einfuehrung-greenfield-brownfield.md`
-- `docs/de/service-model/core-vertical-blueprint.md`
-- `docs/de/service-model/vertical-starter-process-catalog.md`
+- `docs/de/service-model/notariat-scope-blueprint.md`
+- `docs/de/service-model/notarial-usecase-starter.md`
 - `docs/de/operations/single-repo-refactor-plan.md`
 - `docs/de/operations/agile-cadence.md`
 - `docs/de/issues/operations.md`

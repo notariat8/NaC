@@ -1,4 +1,4 @@
-name: Validate Business Processes
+name: Validate NaC Runtime Fixtures
 
 on:
   pull_request:
@@ -27,13 +27,13 @@ jobs:
         run: pip install -e .
 
       - name: Validate all process documents
-        run: python -m business_os validate-all --repo-root .
+        run: python scripts/nac.py process validate-all
 
       - name: Run tests
         run: python -m unittest discover -s tests -p "test_*.py"
 
-      - name: Render summaries
+      - name: Render fixture summaries
         shell: bash
         run: |
-          python -m business_os render-summary processes/invoices/2026/REQ-2026-0001.json
-          python -m business_os render-summary processes/bookkeeping/2026/REQ-2026-0002.json
+          python scripts/nac.py process render-summary processes/invoices/2026/REQ-2026-0001.json
+          python scripts/nac.py process render-summary processes/bookkeeping/2026/REQ-2026-0002.json

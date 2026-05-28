@@ -10,15 +10,19 @@ gender:
     - paarform
     - mirror_user
   notes:
-    - "Empfehlung für Musterunternehmen: neutral."
+    - "Empfehlung für Notariate: neutral."
     - "Originalzitate aus Gesetzen, Urteilen oder Verträgen unverändert lassen."
 role_naming:
   technical_role_ids_are_neutral: true
   visible_text_follows_gender_mode: true
   aliases:
-    anwalt_fachlich:
-      - anwalt
-      - anwaeltin
+    notar_fachlich:
+      - notar
+      - notarin
+    notariatsfachkraft:
+      - notariatsfachkraft
+      - notarfachangestellte
+      - notarfachangestellter
     mitarbeiter:
       - mitarbeiter
       - mitarbeiterin

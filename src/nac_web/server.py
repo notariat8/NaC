@@ -42,7 +42,6 @@ ROLE_LABELS_DE = {
     "principal": "Vollmachtgeber",
     "spouses": "Ehegatten",
     "system_betreuer": "Systembetreuung",
-    "tax_clerk": "Steuerfachkraft",
     "testator": "Erblasser",
 }
 

@@ -11,7 +11,7 @@ erkennen lassen:
 - wo die Nutzerin steht,
 - wie sie zurück zur Übersicht kommt,
 - welche Aktionen tägliche Aktenarbeit sind,
-- welche Aktionen Kanzlei-Stammdaten oder freigabepflichtige Änderungen
+- welche Aktionen Notariats-Stammdaten oder freigabepflichtige Änderungen
   betreffen,
 - auf welcher Workflow- und Checklisten-Version eine Akte läuft.
 
@@ -38,13 +38,13 @@ Vorgangskarten sind immer in drei Blöcke gegliedert:
 | --- | --- | --- | --- |
 | `Aktenverwaltung` | immer offen | Akten öffnen, neue Demo-Akte anlegen, Statuszähler sehen | Büroalltag, alle berechtigten Nutzer |
 | `Kontrolle` | immer offen, aber nachgeordnet | Checkliste prüfen | Sachbearbeitung, Notar, Qualitätskontrolle |
-| `Kanzlei-Workflow` | eingeklappt | Ablauf ansehen, Änderung vorschlagen | Notar, Prozessverantwortliche, Review |
+| `Notariats-Workflow` | eingeklappt | Ablauf ansehen, Änderung vorschlagen | Notar, Prozessverantwortliche, Review |
 
 `Akten öffnen` ist die primäre Tagesaktion. `Neu` ist sekundär, weil zuerst
 geklärt werden soll, ob bereits eine Akte oder ein Eingang existiert.
 `Checkliste prüfen` ist nicht gleichwertig mit Aktenverwaltung, aber im
 Büroalltag sichtbar. `Ablauf ansehen` und `Änderung vorschlagen` sind keine
-täglichen Aktenaktionen; sie betreffen die freigegebenen Kanzlei-Stammdaten.
+täglichen Aktenaktionen; sie betreffen die freigegebenen Notariats-Stammdaten.
 
 Die Checkliste ist deshalb keine reine Usecase-Vorlage. Die Usecase-Vorlage
 definiert, welche Prüfpunkte es gibt. Beim Aktenstart wird daraus ein
@@ -52,10 +52,10 @@ aktenbezogener Checklistenstand erzeugt. Die Aktenansicht zeigt den nächsten
 offenen Schritt, offene Punkte und erledigte Punkte aus genau diesem
 aktenbezogenen Stand.
 
-## Workflow Als Kanzlei-Stammdatum
+## Workflow Als Notariats-Stammdatum
 
 Ein Workflow gehört nicht zur einzelnen Akte, sondern zum freigegebenen
-Kanzlei-Standard je Usecase. Dazu gehören mindestens:
+Notariatsstandard je Usecase. Dazu gehören mindestens:
 
 - BPMN-Ablauf,
 - KG-/Checklisten-Artefakt,
@@ -63,7 +63,7 @@ Kanzlei-Standard je Usecase. Dazu gehören mindestens:
 - revisionsfester Hash der freigegebenen Artefakte,
 - Freigabezustand und Freigaberolle.
 
-Eine Änderung am Ablauf ist deshalb eine Änderung des Kanzlei-Workflows. Sie
+Eine Änderung am Ablauf ist deshalb eine Änderung des Notariats-Workflows. Sie
 darf nicht beiläufig aus einer Akte heraus erfolgen. Der erwartete Weg ist:
 
 1. Änderung vorschlagen.
@@ -90,10 +90,10 @@ auch nach Freigabe von `v2` weiter auf `v1` laufen. Ein Wechsel auf `v2` ist
 eine eigene Aktenentscheidung und muss als Ereignis dokumentiert werden.
 
 Der aktuelle MVP bindet Akten an `v1` plus Hash der vorhandenen BPMN- und
-Checklisten-Artefakte. Für den produktiven Kanzleibetrieb braucht es zusätzlich
-ein Freigaberegister je Kanzlei und Usecase mit Version, Freigabezeitpunkt,
+Checklisten-Artefakte. Für den produktiven Notariatsbetrieb braucht es zusätzlich
+ein Freigaberegister je Notariat und Usecase mit Version, Freigabezeitpunkt,
 Freigaberolle, freigebender Person, Gültigkeitsbeginn und Ablösungsregel.
-Dieser Baustein ist im globalen Gantt als `Kanzlei-Workflow-Freigaberegister
+Dieser Baustein ist im globalen Gantt als `Notariats-Workflow-Freigaberegister
 bauen` vorgemerkt.
 
 ## Aktenbezogene Checkliste
@@ -108,7 +108,7 @@ Fallstand der Checkliste, nicht nur ein Link auf die Vorlage. Sie enthält:
 - Status je Prüfschritt,
 - den nächsten offenen Schritt für die Aktenübersicht.
 
-Spätere Änderungen an der Kanzlei-Vorlage ändern diese Akten-Checkliste nicht
+Spätere Änderungen an der Notariatsvorlage ändern diese Akten-Checkliste nicht
 automatisch. Ein Wechsel auf eine neue Version braucht ein eigenes
 Aktenereignis.
 
@@ -131,6 +131,6 @@ Die UI verwendet Bürobegriffe:
 - `Übersicht` statt technischem Startpunkt,
 - `Aktenverwaltung` für Akten öffnen und anlegen,
 - `Kontrolle` für Checklistenprüfung,
-- `Kanzlei-Workflow` für Ablauf und Bearbeitung,
+- `Notariats-Workflow` für Ablauf und Bearbeitung,
 - `Änderung vorschlagen` statt direktes Bearbeiten, wenn Stammdaten betroffen
   sind.

@@ -1,178 +1,156 @@
-# Fachanwender-Guide: Git als Business-OS ohne IT-Spezialwissen
+# Fachanwender-Guide: Notariat as Code Ohne IT-Spezialwissen
 
-## Warum dieses Modell hilfreich ist
+## Warum Dieses Modell Hilft
 
-Ein Unternehmen lebt von wiederholbaren Entscheidungen und nachvollziehbaren Abläufen. In vielen Firmen existieren diese Regeln nur in Köpfen, E-Mails oder einzelnen Tools. Das führt zu:
+Ein Notariat lebt von wiederholbaren Entscheidungen, Fristen, Nachweisen und
+klaren Verantwortlichkeiten. Wenn diese Regeln nur in Köpfen, E-Mails oder
+einzelnen Fachsystemmasken liegen, entstehen Risiken:
 
-- unklaren Verantwortlichkeiten,
-- unvollständiger Dokumentation,
-- schwerer Prüfbarkeit bei Audit, Steuer oder Qualitätsnachweisen,
-- hoher Abhängigkeit von Einzelpersonen.
+- unklare Zuständigkeiten,
+- unvollständige Vorgangs- und Freigabespuren,
+- schwere Prüfbarkeit bei Datenschutz, QMS, Audit oder berufsrechtlichen
+  Nachweisen,
+- hohe Abhängigkeit von Einzelpersonen.
 
-Git als Business-OS löst dieses Problem, indem jeder relevante Prozessschritt versioniert, freigegeben und dauerhaft nachvollziehbar dokumentiert wird.
+NaC löst dieses Problem, indem notarielle Vorgangsarten versioniert,
+freigegeben und dauerhaft nachvollziehbar dokumentiert werden.
 
 Kurz gesagt:
 
 - Das LLM ist die einfache Spracheingabe für Mitarbeitende.
 - Git ist das verlässliche Protokoll- und Freigabesystem.
-- Python ist die standardisierte Ausführung für wiederholbare Prozesse.
+- Python ist die standardisierte Prüfung für wiederholbare Schritte.
+- Der Mensch im Notariat bleibt fachlich verantwortlich.
 
-## Warum Prozesse zuerst gebaut werden sollten
+## Warum Usecases Zuerst Gebaut Werden Sollten
 
-Bevor ein Prozess in der Organisation ausgerollt wird, sollte er im Muster sauber modelliert sein. Sonst werden Fehler erst im Tagesgeschäft sichtbar. Das Muster liefert:
+Bevor ein Ablauf im Notariat ausgerollt wird, sollte er im Muster sauber
+modelliert sein. Sonst werden Fehler erst im Tagesgeschäft sichtbar. Das Muster
+liefert:
 
 - klare Rollen,
 - eindeutige Statusschritte,
 - definierte Freigabepunkte,
-- prüfbare Dokumentationspflichten.
+- prüfbare Dokumentationspflichten,
+- Grenzen für KI, Fachsysteme und echte Mandatsdaten.
 
-Dadurch gilt: Erst Prozessdesign, dann operative Einführung.
+Dadurch gilt: Erst Usecase-Design, dann operative Einführung.
 
-## Warum auch bereits implementierte Prozesse dokumentiert werden sollen
+## Kanonische Notarielle Bausteine
 
-Auch bestehende Abläufe müssen in das System überführt werden, damit:
+NaC ist kein Branchenbaukasten. Es gibt keine Beispiele für nicht-notarielle
+Unternehmensarten.
 
-- Ist-Prozesse transparent werden,
-- Risiken und Abweichungen sichtbar werden,
-- Verbesserungen versioniert geplant werden können,
-- Audits belastbare Nachweise sehen.
+Fachliche Beispiele kommen ausschließlich aus dem
+[Usecase-Katalog](../../usecases/README.md), unter anderem:
 
-Praktisch bedeutet das: Bestehende Prozesse werden zuerst als "Ist-Version" aufgenommen, dann schrittweise in verbesserte "Soll-Versionen" überführt.
+- Immobilienkaufvertrag,
+- Unterschriftsbeglaubigung,
+- Online-GmbH-Gründung,
+- Handelsregisteranmeldung,
+- Testament oder Erbvertrag,
+- Vorsorgevollmacht und Patientenverfügung.
 
-## Generische und branchenspezifische Bausteine
+Das Muster kombiniert:
 
-### Generische Prozesse (für fast alle Unternehmen)
+- gemeinsame Notariatsregeln für Rollen, Freigaben, Nachweise,
+  Datenschutz und Versionierung,
+- konkrete Usecase-Regeln je Vorgangsart.
 
-- Rollen und Freigaben
-- Rechnungsstellung
-- Buchführung
-- Steuerprozesse
-- Monats- und Jahresabschluss
-- Fristen- und Nachweismanagement
+## Entscheidungsprinzip Bei Unterschiedlichen Arbeitsweisen
 
-### Branchenspezifisches Wissen (als Wahloptionen)
-
-- Anwaltskanzlei: Mandatsannahme, Fristenkalender, Konfliktprüfung, Aktenabschluss
-- Notariat: Urkundenvorbereitung, Identitätsprüfung, Vollzugsschritte
-- Steuerbüro: Mandanten-Onboarding, Deklarationszyklen, Plausibilitätsprüfung
-- Softwareunternehmen: Release-Freigaben, SLA/Support-Prozesse, Compliance-Nachweise
-
-Das Musterunternehmen kombiniert immer beides:
-
-- Kernprozesse aus dem generischen Standard
-- Fachmodule aus der jeweiligen Branche
-
-## Entscheidungsprinzip bei unterschiedlichen Arbeitsweisen
-
-Wenn Unternehmen unterschiedlich arbeiten, muss das als konfigurierbare Wahlmöglichkeit modelliert sein, nicht als Ausnahme.
+Wenn Notariate unterschiedlich arbeiten, wird das als freigegebene Variante
+modelliert, nicht als stille Ausnahme.
 
 Beispiel:
 
-- Variante A: Rechnung wird nach fachlicher Freigabe automatisch versendet.
-- Variante B: Rechnung wird erst nach kaufmännischer Endfreigabe versendet.
+- Variante A: Ein Immobilienkaufvertrag startet mit Grundbuchprüfung vor
+  Entwurfsfreigabe.
+- Variante B: Ein einfaches Beglaubigungsverfahren startet mit Identitäts- und
+  Vertretungsprüfung.
 
-Beide Varianten können gültig sein. Das System dokumentiert, welche Variante für welches Unternehmen gilt und seit wann.
+Beide Varianten können gültig sein. Das System dokumentiert, welche Variante
+für welchen Standort oder Usecase gilt und seit wann.
 
-## So startet ein Nicht-IT-Entscheider in der eigenen Firma
+## So Startet Ein Nicht-IT-Entscheider Im Notariat
 
-## Schritt 1: Verantwortung und Zielbild festlegen
+## Schritt 1: Verantwortung Und Zielbild Festlegen
 
-- Benennen Sie einen fachlichen Prozessverantwortlichen.
-- Definieren Sie 3-5 Kernprozesse für den Start.
-- Legen Sie fest, welche Nachweise aus Prüfungs- oder Haftungssicht zwingend sind.
+- Benennen Sie fachliche Verantwortliche im Notariat.
+- Wählen Sie ein bis drei priorisierte Usecases aus
+  [usecases/](../../usecases), zum Beispiel Immobilienkaufvertrag oder
+  Unterschriftsbeglaubigung.
+- Legen Sie fest, welche Nachweise aus Datenschutz-, Berufsrechts-,
+  Haftungs- oder QMS-Sicht zwingend sind.
 
-## Schritt 2: Eigenes Unternehmens-Repository aufsetzen
+## Schritt 2: Privaten Notariats-Fork Aufsetzen
 
-- Legen Sie ein eigenes Git-Repository für Ihr Unternehmen an.
+- Legen Sie ein eigenes, privates Repository für das Notariat an.
 - Nutzen Sie dieses Muster als Vorlage und übernehmen Sie nur passende Teile.
-- Definieren Sie Zugriff und Rollen (wer darf vorschlagen, prüfen, freigeben).
+- Definieren Sie Zugriff und Rollen: wer darf vorschlagen, prüfen, freigeben.
 
-## Schritt 3: Muster klonen und erste Firmenvariante erstellen
+## Schritt 3: Erste Notariatsvariante Erstellen
 
 - Klonen Sie das Muster in Ihre Umgebung.
-- Passen Sie Branchenmodule an Ihr konkretes Geschäft an.
-- Starten Sie mit einer Pilotstrecke, z. B. Rechnungsprozess für einen Standort.
+- Passen Sie nur notarielle Usecases und Regeln an den lokalen Betrieb an.
+- Starten Sie mit einer Pilotstrecke, etwa Immobilienkaufvertrag oder
+  Unterschriftsbeglaubigung ohne echte Mandatsdaten.
 
-## Schritt 4: Freigaberegeln verbindlich machen
+## Schritt 4: Freigaberegeln Verbindlich Machen
 
-- In produktiven Unternehmens-Forks werden Prozesse über Pull Request geändert;
+- In produktiven Notariats-Forks werden Prozesse über Pull Request geändert;
   im aktiven Referenzrepo kann der Owner direkte Lieferung ausdrücklich
   beauftragen.
 - Sensible Schritte erhalten Vier-Augen-Freigabe.
-- Monatsabschlüsse werden als versionierte Stände markiert.
+- Release-Stände werden versioniert markiert.
 
-## Schritt 5: Betrieb mit kontinuierlicher Verbesserung
+## Schritt 5: Betrieb Mit Kontinuierlicher Verbesserung
 
 - Jede Abweichung wird als Change Request dokumentiert.
 - Jede Änderung erhält eine Versionsnummer mit Begründung.
 - Jede neue Version wird vor Rollout in einer Teststrecke geprüft.
 
-## Kontinuierliches Verbesserungswesen (KVP) in Git
+## Kontinuierliches Verbesserungswesen In Git
 
 ```mermaid
 flowchart TD
-    IstProzess["Ist-Prozess im Betrieb"] --> Beobachtung["Abweichung oder Verbesserung erkannt"]
+    IstUsecase["Notarieller Ist-Usecase"] --> Beobachtung["Abweichung oder Verbesserung erkannt"]
     Beobachtung --> ChangeRequest["Change Request im Repository"]
     ChangeRequest --> Bewertung["Fachliche und regulatorische Bewertung"]
-    Bewertung --> Pilot["Pilot in Testbereich"]
+    Bewertung --> Pilot["Pilot ohne echte Mandatsdaten"]
     Pilot --> Freigabe["Freigabe durch Verantwortliche"]
-    Freigabe --> Rollout["Rollout als neue Prozessversion"]
-    Rollout --> Nachweis["Versionierter Nachweis für Audit"]
-    Nachweis --> IstProzess
+    Freigabe --> Rollout["Rollout als neue Usecase-Version"]
+    Rollout --> Nachweis["Versionierter Nachweis für Audit und QMS"]
+    Nachweis --> IstUsecase
 ```
 
-## Wie alle von Verbesserungen profitieren können
+## Standardisierung Und Zertifizierung
 
-Sinnvoll ist ein Modell aus:
-
-- zentralem Referenz-Muster (generisch + branche),
-- Unternehmens-Forks für lokale Anpassungen,
-- geregeltem Rückfluss guter Verbesserungen in den Referenzstandard.
-
-Damit entstehen:
-
-- lokale Flexibilität,
-- gemeinsamer Lerngewinn,
-- stabiler, versionierter Dokumentationsstandard.
-
-## Alt- und Neu-Prozess parallel betreiben
-
-Wenn während laufender Verfahren ein neues Release kommt, gilt:
-
-- laufende Fälle bleiben auf ihrer Startversion,
-- neue Fälle starten auf der neu freigegebenen Version,
-- beide Linien bleiben im Audit sauber trennbar.
-
-Beispiel Notariat:
-
-- Akte A startet um 10:15 auf `v1.4.0` und bleibt dort.
-- Akte B startet nach Freigabe um 13:00 auf `v1.5.0`.
-
-Details: `docs/de/operations/parallelbetrieb-version-binding.md`
-
-## Rolle von Verbaenden und Zertifizierung
-
-Ihre Idee ist fachlich sehr sinnvoll: Wenn z. B. 1000 Kanzleien denselben Kernprozess nutzen, kann ein Verband eine referenzierte Standardversion fachlich prüfen und empfehlen.
+Wenn viele Notariate denselben geprüften Usecase-Stand nutzen, kann ein Verband
+oder eine fachliche Prüfstelle eine konkrete Version bewerten und empfehlen.
 
 Mögliches Modell:
 
-- Verbands-Referenzprozess mit klarer Versionshistorie
-- Formale Prüfung gegen Qualitäts- und Compliance-Kriterien
-- Optionales Zertifikat oder Testat für eine bestimmte Prozessversion
-- Öffentliche Nachweise, welche Version geprüft wurde
+- Referenz-Usecase mit klarer Versionshistorie,
+- formale Prüfung gegen Qualitäts- und Compliance-Kriterien,
+- optionales Zertifikat oder Testat für eine bestimmte Usecase-Version,
+- öffentliche Nachweise, welche Version geprüft wurde.
 
 Wichtig:
 
 - Das Zertifikat sollte immer auf eine konkrete Version verweisen.
 - Jede Änderung nach Zertifizierung braucht neue Bewertung.
-- Unternehmen dürfen lokal erweitern, verlieren aber ggf. den Zertifizierungsstatus für geänderte Teile, bis diese neu geprüft sind.
+- Notariate dürfen lokal erweitern, verlieren aber ggf. den
+  Zertifizierungsstatus für geänderte Teile, bis diese neu geprüft sind.
 
-## Praktische Empfehlung für den Start in 90 Tagen
+## Praktische Empfehlung Für Den Start In 90 Tagen
 
-- Woche 1-2: Zielbild, Rollen, Pilotprozesse festlegen
-- Woche 3-4: Repository aufsetzen, Muster übernehmen, Freigaberegeln definieren
-- Woche 5-8: Pilot für Rechnung und Buchführung durchführen
-- Woche 9-10: Steuer- und Fristenprozess anbinden
-- Woche 11-12: Lessons Learned, Change Requests, Version 1.0 freigeben
+- Woche 1-2: Zielbild, Rollen und ersten Usecase festlegen.
+- Woche 3-4: privaten Fork aufsetzen und Freigaberegeln definieren.
+- Woche 5-8: Pilot für Immobilienkaufvertrag oder Unterschriftsbeglaubigung
+  mit synthetischen Daten durchführen.
+- Woche 9-10: lokale Arbeitsplatz-, XNP-, Karten- und Registergates prüfen.
+- Woche 11-12: Lessons Learned, Change Requests und erste Version freigeben.
 
-So erhalten Sie ein belastbares, prüfbares und lernfähiges Prozessbetriebssystem für Ihr Unternehmen.
+So entsteht ein belastbares, prüfbares und lernfähiges Betriebssystem für
+notarielle Vorgangsarten.

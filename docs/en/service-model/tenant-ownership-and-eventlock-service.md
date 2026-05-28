@@ -24,7 +24,7 @@ Recommendation: `provider_managed_dedicated_subtenant`
 
 ## Why This Model Fits
 
-- Reduces administration effort for notaries and law firms without deep cloud
+- Reduces administration effort for notary offices without deep cloud
   expertise.
 - Satisfies compliance requirements through isolation and a clear
   responsibility matrix.

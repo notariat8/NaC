@@ -2,7 +2,7 @@
 
 ## Goal
 
-This guide shows how an organization can use this reference repository with
+This guide shows how a notary office can use this reference repository with
 VS Code and GitHub Copilot instead of Cursor. The business frame is `Notariat
 as Code` with `Enterprise GitOps`; `NaC` is the concrete implementation.
 
@@ -23,7 +23,7 @@ guided path:
 
 ## Setup
 
-1. Create your own company repository.
+1. Create your own private notary-office repository.
 2. Use this repository as the base version, either as a template or fork.
 3. Open the repository in VS Code.
 4. Install and activate GitHub Copilot in the editor.
@@ -32,9 +32,8 @@ guided path:
    For plugin development, also run `python scripts/startup_check.py --profile plugin-dev --ide vscode`.
    For card-reader, morris or XNP-adjacent work, also run `python scripts/startup_check.py --profile notary-workstation --ide vscode`.
 7. Confirm the policies under `policies/`.
-8. Use an onboarding prompt from `prompts/en/onboarding/` for your industry.
-   The MVP defaults in this repository are `software_company`, `notary`, and
-   `wealth_management`; the additional MVP usecase is `property_management`.
+8. Use [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md).
+   The MVP default in this repository is `notary`.
 9. Start with a pilot process and verify the pull-request workflow.
 10. Roll out more broadly only after the pilot succeeds.
 11. Define fork, sync, and mixed-version operation through the operating
@@ -60,9 +59,9 @@ Read these files first and then explain the next 3 steps without IT jargon:
 - policies/technology-policy.yaml
 
 Then:
-1) Ask me for company type and priority processes.
-2) Suggest matching industry modules.
-3) Create a 30-day pilot plan for team, role, and access processes.
+1) Ask me for notary-office location, roles and prioritized usecases.
+2) Suggest matching usecases from usecases/.
+3) Create a 30-day pilot plan for one notarial usecase.
 ```
 
 ## Operating Rules
@@ -100,8 +99,8 @@ Then:
 - `docs/en/operations/parallelbetrieb-version-binding.md`
 - `docs/en/issues/taxonomy.md`
 - `docs/en/einfuehrung-greenfield-brownfield.md`
-- `docs/en/service-model/core-vertical-blueprint.md`
-- `docs/en/service-model/vertical-starter-process-catalog.md`
+- `docs/en/service-model/notariat-scope-blueprint.md`
+- `docs/en/service-model/notarial-usecase-starter.md`
 - `docs/en/operations/single-repo-refactor-plan.md`
 - `docs/en/operations/agile-cadence.md`
 - `docs/en/issues/operations.md`

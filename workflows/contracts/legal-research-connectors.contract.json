@@ -79,7 +79,7 @@
         "mcp_use",
         "personal_data_processing"
       ],
-      "notes": "External reference list for legal, tax, authority and office connectors; NaC treats it only as a candidate source."
+            "notes": "External reference list for German-law, authority and office connectors; NaC treats it only as a candidate source."
     },
     {
       "id": "ansvar-german-law-mcp-lobehub",
@@ -214,89 +214,6 @@
         "personal_data_processing"
       ],
       "notes": "Marketplace listing claims programmatic access using subscription credentials; NaC blocks integration until terms, license, security and provider boundaries are reviewed."
-    },
-    {
-      "id": "otto-schmidt-answers-taxandbytes",
-      "display_name": "Otto Schmidt Answers alternatives overview",
-      "provider": "tax & bytes / Verlag Dr. Otto Schmidt KG context",
-      "source_type": "market_landscape",
-      "status": "watchlist",
-      "integration_level": "none",
-      "canonical_url": "https://www.taxandbytes.de/tools/ki-recherche-assistenz/otto-schmidt-answers/alternativen",
-      "source_seen_at": "2026-05-22",
-      "credentials_required": true,
-      "credentials_in_repo_allowed": false,
-      "personal_data_allowed": false,
-      "llm_receives_source_content": false,
-      "tdm_or_scraping_allowed": "unknown",
-      "license_review_required": true,
-      "avv_dpa_required_before_personal_data": true,
-      "ai_sbom_status": "pending",
-      "allowed_actions": [
-        "document_candidate",
-        "record_research_metadata",
-        "open_provider_page",
-        "record_license_status"
-      ],
-      "blocked_actions": [
-        "automated_provider_query_without_contract",
-        "send_mandate_data_to_external_ai",
-        "store_provider_full_text_in_product_repo"
-      ],
-      "evidence_fields": [
-        "source_url",
-        "checked_at",
-        "checked_by",
-        "license_basis",
-        "data_classes",
-        "notes"
-      ],
-      "human_review_required_for": [
-        "activation",
-        "api_use",
-        "personal_data_processing"
-      ],
-      "notes": "Market overview for AI research assistants and alternatives; useful for product landscape only, not a connector approval."
-    },
-    {
-      "id": "lto-ki-kanzlei-sponsored",
-      "display_name": "LTO sponsored KI in Kanzlei reference",
-      "provider": "Legal Tribune Online / sponsored source",
-      "source_type": "market_signal",
-      "status": "pending_manual_verification",
-      "integration_level": "none",
-      "canonical_url": "https://www.lto.de/recht/sponsored/s/ki-einsatz-in-der-kanzlei-mehr-zeit-fuer-das-wesentliche-anzeige",
-      "source_seen_at": "2026-05-22",
-      "credentials_required": false,
-      "credentials_in_repo_allowed": false,
-      "personal_data_allowed": false,
-      "llm_receives_source_content": false,
-      "tdm_or_scraping_allowed": "unknown",
-      "license_review_required": false,
-      "avv_dpa_required_before_personal_data": true,
-      "ai_sbom_status": "not_applicable",
-      "allowed_actions": [
-        "document_candidate",
-        "record_research_metadata",
-        "open_provider_page"
-      ],
-      "blocked_actions": [
-        "treat_ai_answer_as_legal_truth",
-        "send_mandate_data_to_external_ai",
-        "automated_provider_query_without_contract"
-      ],
-      "evidence_fields": [
-        "source_url",
-        "checked_at",
-        "checked_by",
-        "data_classes",
-        "notes"
-      ],
-      "human_review_required_for": [
-        "activation",
-        "personal_data_processing"
-      ],
-      "notes": "User-provided market signal; content must be manually rechecked before being used as product evidence."
     }
   ]
 }

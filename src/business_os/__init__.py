@@ -1,4 +1,4 @@
-"""Business OS reference package."""
+"""Legacy deterministic process runtime used behind the NaC CLI."""
 
 from .engine import BusinessProcessEngine
 

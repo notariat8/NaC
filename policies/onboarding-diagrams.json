@@ -3,15 +3,15 @@
   "questions": {
     "q_mode": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#mode-gateway",
-      "mermaid": "flowchart TD\n    Start[Start] --> Mode{Gründung oder Bestand}\n    Mode -->|Gründung| Founding[Pfad Gründung]\n    Mode -->|Bestand| Existing[Pfad Bestandsunternehmen]"
+      "mermaid": "flowchart TD\n    Start[Start] --> Mode{Neues Setup oder Bestand}\n    Mode -->|Neues Setup| Founding[Pfad neues Notariat]\n    Mode -->|Bestand| Existing[Pfad bestehender Notariatsbetrieb]"
     },
-    "q_company_scope": {
+    "q_notary_scope": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#scope-definition",
-      "mermaid": "flowchart TD\n    Scope[Scope erfassen] --> Units[Einheiten definieren]\n    Units --> Owners[Verantwortliche je Einheit]"
+      "mermaid": "flowchart TD\n    Scope[Notariatsscope erfassen] --> Units[Standorte Teams Usecases definieren]\n    Units --> Owners[Verantwortliche je Vorgangsart]"
     },
-    "q_critical_processes": {
+    "q_priority_usecases": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#priority-processes",
-      "mermaid": "flowchart TD\n    Proc[Prozessliste] --> Priorize[Top-3 priorisieren]\n    Priorize --> Pilot[Pilotkandidaten festlegen]"
+      "mermaid": "flowchart TD\n    Proc[Usecase-Katalog] --> Priorize[Top-3 priorisieren]\n    Priorize --> Pilot[Pilotvorgaenge festlegen]"
     },
     "q_existing_systems": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#system-integration",
@@ -23,7 +23,7 @@
     },
     "q_role_mapping": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#role-mapping",
-      "mermaid": "flowchart TD\n    Generic[Generische Rollen] --> Domain[Fachspezifische Rollen]\n    Domain --> Qual[Qualifikationen zuordnen]"
+      "mermaid": "flowchart TD\n    Notariat[Rollen im Notariat] --> Fach[Notarielle Fachgrenzen]\n    Fach --> Qual[Qualifikationen zuordnen]"
     },
     "q_approval_rules": {
       "bpmn_ref": "bpmn/onboarding-entry.bpmn#approval-matrix",

@@ -1,12 +1,17 @@
 # NaC: Notariat as Code mit Enterprise Control Plane
 
-Dieses Repository zeigt, wie ein Unternehmen als deklaratives und versioniertes System betrieben werden kann (`Notariat as Code`). Fachanwender arbeiten über ein LLM-Frontend in natürlicher Sprache, während Git, Pull Requests, Reviews, Actions und signierte Abschlüsse die verbindliche Prozessführung übernehmen. `NaC` ist dabei die konkrete Ausprägung als Enterprise Control Plane.
+Dieses Repository zeigt, wie ein Notariat notarielle Vorgangsarten deklarativ,
+versioniert und prüfbar führen kann (`Notariat as Code`). Fachanwender arbeiten
+über ein LLM-Frontend in natürlicher Sprache, während Git, Pull Requests,
+Reviews, Actions und signierte Abschlüsse die verbindliche Prozessführung
+übernehmen. `NaC` ist dabei die konkrete Ausprägung als Enterprise Control
+Plane.
 
 ## Kernidee
 
 - Das LLM erzeugt aus Prompts strukturierte Prozessanträge.
-- Git repräsentiert den offiziellen Lebenszyklus eines Geschäftsvorgangs.
-- Python validiert fachliche Regeln und führt wiederholbare Prozesse deterministisch aus.
+- Git repräsentiert den offiziellen Lebenszyklus eines notariellen Vorgangs.
+- Python validiert fachliche Regeln und führt wiederholbare Prüfungen deterministisch aus.
 - GitHub Actions orchestrieren Checks, Freigaben, periodische Jobs und Artefakt-Erzeugung.
 
 ## Positionierung
@@ -53,13 +58,17 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 [docs/de/reifegrad.md](reifegrad.md), [docs/de/glossar.md](glossar.md) und
 [docs/de/beispiel-immobilienkaufvertrag.md](beispiel-immobilienkaufvertrag.md).
 
-## Prozessklassen
+## Usecase-Klassen
 
-- `formation`: Gründung, Rollen, Register- und Fristenschritte
-- `invoice`: Angebot, Rechnungsentwurf, Freigabe, Versand, Zahlung
-- `bookkeeping`: Buchungssatz, Kontierung, Belegbezug, Monatsabschluss
-- `tax`: Steuerfall, Aggregation, Voranmeldung, Abgabevorbereitung
-- `team`, `role_change`, `joiner_mover`: MVP-Startset für Org/Access/Tooling-Onboarding
+Produktbeispiele kommen ausschließlich aus [usecases/](../../usecases), zum Beispiel:
+
+- `immobilienkaufvertrag`
+- `unterschriftsbeglaubigung`
+- `online-gmbh-gruendung`
+- `handelsregisteranmeldung`
+
+Ältere JSON-Prozessartefakte unter [processes/](../../processes) sind technische
+Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 
 ## Repository-Struktur
 
@@ -103,7 +112,7 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 - [docs/de/issues/](issues): Issue-Taxonomie, Issue-Betrieb und Public-Backlog.
 - [docs/de/operations/](operations): Fork/Release, Upstream-Sync, Version-Binding,
   Arbeitsmodell und Repo-Konsolidierung.
-- [docs/de/service-model/](service-model): Core/Vertical-Struktur, Provider-Leistungen,
+- [docs/de/service-model/](service-model): Notariats-Scope, Provider-Leistungen,
   Tenant-Ownership und Exit.
 - [docs/de/plugin-plans/](plugin-plans): Plugin- und Connector-Pläne.
 - [docs/de/plugin-operations/](plugin-operations): operative Plugin-Nutzung und Prüfpfade.
@@ -134,8 +143,8 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 - [.cursor/rules/](../../.cursor/rules) und [.github/copilot-instructions.md](../../.github/copilot-instructions.md) spiegeln die
   verbindlichen Agentenregeln.
 - [schemas/](../../schemas), [bpmn/](../../bpmn), [processes/](../../processes), [src/](../../src) und [scripts/](../../scripts) enthalten
-  strukturierte Prozessanträge, Prozessmodelle, Beispiele, Runtime und lokale
-  Werkzeuge.
+  strukturierte Prozessanträge, Prozessmodelle, technische Fixtures, Runtime
+  und lokale Werkzeuge.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json)
   beschreibt den implementierten KG-Editor-Vertrag für die usecase-lokalen
   Knowledge Graphs.
@@ -149,9 +158,9 @@ Schnelle Orientierung: [cli.md](cli.md), [ausfuehrungsmodell.md](ausfuehrungsmod
 
 ```bash
 python scripts/nac.py status
-python scripts/nac.py process validate processes/invoices/2026/REQ-2026-0001.json
-python scripts/nac.py process render-summary processes/invoices/2026/REQ-2026-0001.json
-python scripts/nac.py process monthly-close --year 2026 --month 3
+python scripts/nac.py kg case immobilienkaufvertrag
+python scripts/nac.py bpmn show immobilienkaufvertrag
+python scripts/nac.py bpmn validate
 ```
 
 ## Betriebsmodell
@@ -196,28 +205,16 @@ stehen in [TRADEMARK.md](../../TRADEMARK.md).
 
 1. [docs/de/fachanwender-guide.md](fachanwender-guide.md) für Zielbild, Nutzen und Einführung.
 2. [docs/de/START_HERE.md](START_HERE.md) für den konkreten Start im eigenen Unternehmen.
-3. [docs/de/business-os.md](business-os.md) für Rollen, Prozesslogik und Grenzen.
+3. [docs/de/notariat-as-code.md](notariat-as-code.md) für Rollen, Usecase-Logik und Grenzen.
 4. [docs/de/governance.md](governance.md) für Freigabe- und Nachweispflichten.
 
-## Branchen-Onboarding
+## Notariats-Onboarding
 
-- Kanzlei: [prompts/de/onboarding/law-firm-first-setup.md](../../prompts/de/onboarding/law-firm-first-setup.md)
 - Notariat: [prompts/de/onboarding/notary-first-setup.md](../../prompts/de/onboarding/notary-first-setup.md)
-- Hausverwaltung: [prompts/de/onboarding/property-management-first-setup.md](../../prompts/de/onboarding/property-management-first-setup.md)
-- Softwareunternehmen: [prompts/de/onboarding/software-company-first-setup.md](../../prompts/de/onboarding/software-company-first-setup.md)
-- Steuerbüro: [prompts/de/onboarding/tax-office-first-setup.md](../../prompts/de/onboarding/tax-office-first-setup.md)
-- Vermögensverwaltung: [prompts/de/onboarding/wealth-management-first-setup.md](../../prompts/de/onboarding/wealth-management-first-setup.md)
-- VS Code + Copilot Start: [prompts/de/onboarding/vscode-copilot-business-os-setup.md](../../prompts/de/onboarding/vscode-copilot-business-os-setup.md)
+- VS Code + Copilot Start: [prompts/de/onboarding/vscode-copilot-notariat-setup.md](../../prompts/de/onboarding/vscode-copilot-notariat-setup.md)
 
-Default für synchrone MVP-Pfade in diesem Repo:
-
-- `software_company`
-- `notary`
-- `wealth_management`
-
-Zusätzlicher MVP-Use-Case:
-
-- `property_management`
+Default für den synchronen MVP-Pfad in diesem Repo: `notary`.
+Fachliche Beispiele werden nur aus [usecases/](../../usecases) abgeleitet.
 
 ## Plattform-Regel
 

@@ -42,7 +42,7 @@ Technische Teams in der GitHub-Organisation:
 
 - `team-notaries-all`: alle Notare mit Vollsicht auf alle Notariats-Akten
 - `team-notary-ops`: operative Mitarbeitende Notariat
-- `team-tax`, `team-law`, `team-software`, `team-carpentry` (je Vertical)
+- `team-notary-review`: fachliche Review- und Freigaberollen im Notariat
 - `team-audit-readonly`: interne Audit-Sicht, read-only
 
 Externe:

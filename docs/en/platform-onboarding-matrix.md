@@ -20,7 +20,7 @@ The following content must remain equivalent on both platforms:
 - review and approval logic,
 - culture and language policy,
 - onboarding order for non-IT users,
-- default MVP modules and related onboarding prompts,
+- notarial scope, canonical usecases and related onboarding prompts,
 - local execution location for NaC: `~/NaC` in WSL,
 - plugin and connector planning model.
 
@@ -36,14 +36,9 @@ For every conceptual change:
 
 ## Current Synchronous MVP Default
 
-- `software_company`:
-  [prompts/en/onboarding/software-company-first-setup.md](../../prompts/en/onboarding/software-company-first-setup.md)
 - `notary`:
   [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
-- `wealth_management`:
-  [prompts/en/onboarding/wealth-management-first-setup.md](../../prompts/en/onboarding/wealth-management-first-setup.md)
 
-Additional MVP usecase:
-
-- `property_management`:
-  [prompts/en/onboarding/property-management-first-setup.md](../../prompts/en/onboarding/property-management-first-setup.md)
+Non-notarial domain sets are outside NaC scope. Subject-matter examples come
+only from [usecases/](../../usecases), for example real-estate purchase contract
+or signature certification.
