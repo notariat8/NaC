@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, unquote, urlencode, urlparse
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result
 from nac_identity.oci_login import build_login_intent
-from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
+from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
@@ -54,6 +54,9 @@ ROLE_LABELS_DE = {
 
 DEFAULT_OCI_IDENTITY_DOMAIN_URL = "https://idcs.example.identity.oraclecloud.com:443"
 DEFAULT_OCI_IDENTITY_DOMAIN_ID = "ocid1.domain.oc1.example"
+DEFAULT_OWNER_APPLY_APPROVAL_ID = "OWNER-APPLY-2026-0001"
+DEFAULT_AUDIT_EVENT_ID = "AUDIT-2026-0001"
+DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
 class NaCLocalWebApp:
@@ -75,6 +78,8 @@ class NaCLocalWebApp:
                 return _html_response(build_customer_readiness_page(parsed.query))
             if route == "/admin/onboarding/provisioning-preview":
                 return _html_response(build_admin_provisioning_preview_page(parsed.query))
+            if route == "/admin/onboarding/apply-readiness":
+                return _html_response(build_admin_apply_readiness_page(parsed.query))
             if route == "/admin/onboarding":
                 return _html_response(build_admin_onboarding_page())
             if route == "/healthz":
@@ -581,6 +586,13 @@ def build_admin_provisioning_preview_page(query: str) -> str:
         "</tr>"
         for binding in plan["role_bindings"]
     )
+    apply_query = urlencode(
+        {
+            "domain": plan["domain"],
+            "tenant_slug": plan["tenant_slug"],
+            "admin_email": plan["admin_user"]["primary_email"],
+        }
+    )
     body = f"""
     <nav class="topline"><a href="/onboarding/readiness?{html.escape(urlencode({"domain_hint": plan["domain"], "tenant_slug": plan["tenant_slug"], "admin_email": plan["admin_user"]["primary_email"]}), quote=True)}">← Readiness</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
     <section class="hero">
@@ -596,6 +608,9 @@ def build_admin_provisioning_preview_page(query: str) -> str:
         <p><strong>Tenant-Slug:</strong> {html.escape(plan["tenant_slug"])}</p>
         <p><strong>Modus:</strong> <code>{html.escape(plan["mode"])}</code></p>
         <p><strong>Approval-Gate:</strong> <code>{html.escape(plan["approval_gate"])}</code></p>
+        <div class="toolbar">
+          <a class="button-link" href="/admin/onboarding/apply-readiness?{html.escape(apply_query, quote=True)}">Apply-Readiness vorbereiten</a>
+        </div>
       </section>
       <section>
         <h2>Initialer Admin</h2>
@@ -633,6 +648,149 @@ def build_admin_provisioning_preview_page(query: str) -> str:
     </section>
     """
     return _layout("NaC OCI-Admin-Dry-Run", body)
+
+
+def build_admin_apply_readiness_page(query: str) -> str:
+    params = parse_qs(query, keep_blank_values=True)
+    domain = _query_text(params, "domain")
+    tenant_slug = _query_text(params, "tenant_slug")
+    admin_email = _query_text(params, "admin_email")
+    plan = build_admin_provisioning_plan(
+        tenant_slug=tenant_slug,
+        domain=domain,
+        admin_email=admin_email,
+        admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
+        identity_domain_url=DEFAULT_OCI_IDENTITY_DOMAIN_URL,
+        identity_domain_id=DEFAULT_OCI_IDENTITY_DOMAIN_ID,
+    )
+    apply_request = build_apply_request(
+        plan,
+        dns_verified=_optional_query_bool(params, "dns_verified", default=True),
+        owner_approval_id=(
+            _optional_query_text(params, "owner_approval_id", max_length=120) or DEFAULT_OWNER_APPLY_APPROVAL_ID
+        ),
+        audit_event_id=_optional_query_text(params, "audit_event_id", max_length=120) or DEFAULT_AUDIT_EVENT_ID,
+        rollback_plan_id=(
+            _optional_query_text(params, "rollback_plan_id", max_length=120) or DEFAULT_ROLLBACK_PLAN_ID
+        ),
+    )
+    readiness_query = urlencode(
+        {
+            "domain_hint": apply_request["domain"],
+            "tenant_slug": apply_request["tenant_slug"],
+            "admin_email": apply_request["admin_user"]["primary_email"],
+        }
+    )
+    preview_query = urlencode(
+        {
+            "domain": apply_request["domain"],
+            "tenant_slug": apply_request["tenant_slug"],
+            "admin_email": apply_request["admin_user"]["primary_email"],
+        }
+    )
+    gate_rows = "".join(
+        "<tr>"
+        f'<td data-label="Gate"><code>{html.escape(gate)}</code></td>'
+        f'<td data-label="Status">{html.escape("erfüllt" if bool(value) else "fehlt")}</td>'
+        "</tr>"
+        for gate, value in apply_request["gates"].items()
+    )
+    guardrail_rows = "".join(
+        "<tr>"
+        f'<td data-label="Guardrail"><code>{html.escape(guardrail)}</code></td>'
+        f'<td data-label="Wert">{html.escape(str(value).lower())}</td>'
+        "</tr>"
+        for guardrail, value in apply_request["guardrails"].items()
+    )
+    planned_write_items = "".join(
+        f"<li><span>{html.escape(write)}</span></li>" for write in apply_request["planned_writes"]
+    )
+    finding_items = "".join(
+        f"<li><span>{html.escape(finding)}</span></li>" for finding in apply_request["blocking_findings"]
+    ) or "<li><span>keine Blocker</span></li>"
+    binding_rows = "".join(
+        "<tr>"
+        f'<td data-label="Gruppe">{html.escape(str(binding.get("group", "")))}</td>'
+        f'<td data-label="Mitglied">{html.escape(str(binding.get("member", "")))}</td>'
+        f'<td data-label="Zweck">{html.escape(str(binding.get("purpose", "")))}</td>'
+        "</tr>"
+        for binding in apply_request["role_bindings"]
+        if isinstance(binding, dict)
+    )
+    body = f"""
+    <nav class="topline"><a href="/admin/onboarding/provisioning-preview?{html.escape(preview_query, quote=True)}">← Admin-Dry-Run</a><span><a href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Readiness</a><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">Owner Apply Review</p>
+      <h1>Apply-Readiness</h1>
+      <p>Lokales Review-Artefakt für den späteren OCI-Connector-Apply. Diese Seite dokumentiert Gates,
+      schreibt nicht nach OCI und enthält keine Zugangsdaten.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Review-Artefakt</h2>
+        <p><strong>Schema:</strong> <code>{html.escape(apply_request["schema_version"])}</code></p>
+        <p><strong>Modus:</strong> <code>{html.escape(apply_request["mode"])}</code></p>
+        <p><strong>Status-Feld:</strong> <code>ready_to_apply</code></p>
+        <p><strong>Status:</strong> {html.escape("bereit" if apply_request["ready_to_apply"] else "blockiert")}</p>
+        <p><strong>Nächster Schritt:</strong> <code>{html.escape(apply_request["next_step"])}</code></p>
+      </section>
+      <section>
+        <h2>Tenant</h2>
+        <p><strong>Domain:</strong> {html.escape(apply_request["domain"])}</p>
+        <p><strong>Tenant-Slug:</strong> {html.escape(apply_request["tenant_slug"])}</p>
+        <p><strong>Admin:</strong> {html.escape(apply_request["admin_user"]["primary_email"])}</p>
+        <p><strong>Quelle:</strong> <code>{html.escape(apply_request["source_plan"]["mode"])}</code></p>
+      </section>
+    </div>
+    <div class="grid">
+      <section>
+        <h2>Apply-Gates</h2>
+        <div class="table-scroll responsive-table compact-table">
+          <table>
+            <thead><tr><th>Gate</th><th>Status</th></tr></thead>
+            <tbody>{gate_rows}</tbody>
+          </table>
+        </div>
+      </section>
+      <section>
+        <h2>Freigabe-Nachweise</h2>
+        <p><strong>Owner:</strong> <code>{html.escape(apply_request["approval"]["owner_approval_id"])}</code></p>
+        <p><strong>Audit:</strong> <code>{html.escape(apply_request["audit"]["audit_event_id"])}</code></p>
+        <p><strong>Rollback:</strong> <code>{html.escape(apply_request["rollback"]["rollback_plan_id"])}</code></p>
+      </section>
+    </div>
+    <div class="grid">
+      <section>
+        <h2>Guardrails</h2>
+        <div class="table-scroll responsive-table compact-table">
+          <table>
+            <thead><tr><th>Guardrail</th><th>Wert</th></tr></thead>
+            <tbody>{guardrail_rows}<tr><td data-label="Guardrail"><code>productive_write_executed</code></td><td data-label="Wert">{html.escape(str(apply_request["productive_write_executed"]).lower())}</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section>
+        <h2>Blocker</h2>
+        <ul class="link-list">{finding_items}</ul>
+      </section>
+    </div>
+    <div class="grid">
+      <section>
+        <h2>Geplante Writes</h2>
+        <ul class="link-list">{planned_write_items}</ul>
+      </section>
+      <section>
+        <h2>Rollenbindung</h2>
+        <div class="table-scroll responsive-table">
+          <table>
+            <thead><tr><th>Gruppe</th><th>Mitglied</th><th>Zweck</th></tr></thead>
+            <tbody>{binding_rows}</tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    """
+    return _layout("NaC Apply-Readiness", body)
 
 
 def _tenant_slug_from_domain_hint(domain_hint: str) -> str:
@@ -1331,6 +1489,17 @@ def _optional_query_text(params: dict[str, list[str]], key: str, *, max_length: 
     return value
 
 
+def _optional_query_bool(params: dict[str, list[str]], key: str, *, default: bool) -> bool:
+    raw = _optional_query_text(params, key, max_length=12).lower()
+    if not raw:
+        return default
+    if raw in {"1", "true", "yes", "ja"}:
+        return True
+    if raw in {"0", "false", "no", "nein"}:
+        return False
+    raise ValueError(f"{key} ungültig")
+
+
 def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
     server_side_fields = {
         "identity_domain_url",
@@ -1447,6 +1616,7 @@ def _css() -> str:
     .node-badge { text-anchor: middle; font-size: 12px; fill: var(--muted); }
     .table-scroll { width: 100%; overflow-x: auto; }
     .table-scroll table { min-width: 980px; }
+    .compact-table table { min-width: 0; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
     th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top; overflow-wrap: anywhere; }
     th { background: #eef2f5; font-size: 13px; color: #424a53; }

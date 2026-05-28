@@ -237,9 +237,45 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("users.create", html)
         self.assertIn("nac-tenant-admin", html)
         self.assertIn("admin@kanzlei-notariat.example", html)
+        self.assertIn("Apply-Readiness vorbereiten", html)
+        self.assertIn(
+            "/admin/onboarding/apply-readiness?domain=kanzlei-notariat.example&amp;tenant_slug=kanzlei-notariat&amp;admin_email=admin%40kanzlei-notariat.example",
+            html,
+        )
         self.assertNotIn("api_key", html.lower())
         self.assertNotIn("password", html.lower())
         self.assertNotIn("client_secret", html.lower())
+
+    def test_admin_apply_readiness_preview_page_renders_review_artifact_without_credentials(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/admin/onboarding/apply-readiness"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("Apply-Readiness", html)
+        self.assertIn("review_artifact_only", html)
+        self.assertIn("ready_to_apply", html)
+        self.assertIn("bereit", html)
+        self.assertIn("OWNER-APPLY-2026-0001", html)
+        self.assertIn("AUDIT-2026-0001", html)
+        self.assertIn("ROLLBACK-2026-0001", html)
+        self.assertIn("dns_verified", html)
+        self.assertIn("connector_apply_in_scope", html)
+        self.assertIn("productive_write_executed", html)
+        self.assertIn("compact-table", html)
+        self.assertIn(".compact-table table { min-width: 0;", html)
+        self.assertIn("admin@kanzlei-notariat.example", html)
+        self.assertNotIn("api_key", html.lower())
+        self.assertNotIn("password", html.lower())
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
 
     def test_customer_readiness_return_later_preserves_customer_context(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

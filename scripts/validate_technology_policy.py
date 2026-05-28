@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -248,7 +248,13 @@ def validate_required_sync_targets(root: Path) -> list[str]:
             errors.append("Pflichtziel fuer Cross-IDE-Sync ist kein Pfad-String")
             continue
         target = Path(rel_path)
-        if target.is_absolute() or ".." in target.parts:
+        normalized_parts = PurePosixPath(rel_path.replace("\\", "/")).parts
+        if (
+            target.is_absolute()
+            or PurePosixPath(rel_path).is_absolute()
+            or PureWindowsPath(rel_path).is_absolute()
+            or ".." in normalized_parts
+        ):
             errors.append(
                 "Cross-IDE-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
                 f"{rel_path}"
