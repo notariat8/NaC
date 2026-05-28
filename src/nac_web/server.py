@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
-from nac_identity.customer_onboarding import build_customer_tenant_plan
+from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
@@ -68,6 +68,8 @@ class NaCLocalWebApp:
                 return _html_response(build_home_page(self.repo_root))
             if route == "/login":
                 return _html_response(build_login_page(parsed.query))
+            if route == "/onboarding/readiness":
+                return _html_response(build_customer_readiness_page(parsed.query))
             if route == "/admin/onboarding":
                 return _html_response(build_admin_onboarding_page())
             if route == "/healthz":
@@ -334,8 +336,9 @@ def build_www_n8_handoff_page(query: str) -> str | None:
     if entry == "prospect":
         domain_hint = _optional_query_text(params, "domain_hint", max_length=120)
         hint = html.escape(domain_hint) if domain_hint else "nicht übergeben"
+        readiness_href = "/onboarding/readiness?" + urlencode({"domain_hint": domain_hint})
         body = f"""
-        <nav class="topline"><a href="/">← Übersicht</a><span><a href="/api/tenant/domain-check">Domain API</a></span></nav>
+        <nav class="topline"><a href="/">← Übersicht</a><span><a href="{html.escape(readiness_href, quote=True)}">Readiness öffnen</a><a href="/api/tenant/domain-check">Domain API</a></span></nav>
         <section class="hero">
           <p class="eyebrow">NaC App-Einstieg</p>
           <h1>Neukunde</h1>
@@ -346,6 +349,7 @@ def build_www_n8_handoff_page(query: str) -> str | None:
           <section class="notice">
             <h2>Domain-Readiness</h2>
             <p><strong>Domain-Hinweis:</strong> {hint}</p>
+            <p><a class="inline-link" href="{html.escape(readiness_href, quote=True)}">Domain-Readiness in NaC vorbereiten</a></p>
             <p><strong>API-Kante:</strong> <code>/api/tenant/domain-check</code></p>
           </section>
           <section>
@@ -468,6 +472,72 @@ def _onboarding_state_gate(state: str) -> str:
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }
     return labels[state]
+
+
+def build_customer_readiness_page(query: str) -> str:
+    params = parse_qs(query, keep_blank_values=True)
+    domain_hint = _optional_query_text(params, "domain_hint", max_length=120) or "kanzlei-notariat.example"
+    tenant_slug = _optional_query_text(params, "tenant_slug", max_length=80) or _tenant_slug_from_domain_hint(domain_hint)
+    admin_email = _optional_query_text(params, "admin_email", max_length=160) or f"admin@{domain_hint.strip().lower().rstrip('.')}"
+    readiness = check_domain_ready(domain=domain_hint, tenant_slug=tenant_slug, admin_email=admin_email)
+    verification = readiness["verification"]
+    dns_check = build_dns_check_result(
+        expected_name=verification["dns_record_name"],
+        expected_value=verification["dns_record_value"],
+        observed_values=[],
+        resolver_error="not_found",
+    )
+    check_query = urlencode(
+        {
+            "domain": readiness["domain"],
+            "tenant_slug": readiness["tenant_slug"],
+            "admin_email": readiness["admin_email"],
+        }
+    )
+    body = f"""
+    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">NaC Neukunden-Onboarding</p>
+      <h1>Domain-Readiness</h1>
+      <p>Startpunkt für neue Notariatskunden aus <code>www-n8</code>. Hier werden nur Domain, Admin-Adresse
+      und DNS-TXT-Challenge vorbereitet. Keine Mandatsdaten und keine Vorgangsdokumente.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Ihre Domain</h2>
+        <p><strong>Domain:</strong> {html.escape(readiness["domain"])}</p>
+        <p><strong>Tenant-Slug:</strong> {html.escape(readiness["tenant_slug"])}</p>
+        <p><strong>Admin-E-Mail:</strong> {html.escape(readiness["admin_email"])}</p>
+        <p><strong>Status:</strong> {html.escape("bereit" if readiness["ready"] else "blockiert")}</p>
+      </section>
+      <section>
+        <h2>DNS-TXT</h2>
+        <p><strong>Name:</strong> <code>{html.escape(verification["dns_record_name"])}</code></p>
+        <p><strong>Wert:</strong> <code>{html.escape(verification["dns_record_value"])}</code></p>
+        <div class="toolbar">
+          <a class="button-link" href="/api/tenant/domain-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>
+          <a class="inline-link" href="/onboarding/readiness?{html.escape(urlencode({'domain_hint': readiness['domain']}), quote=True)}">später erneut öffnen</a>
+        </div>
+      </section>
+    </div>
+    <section>
+      <h2>Letzter Check</h2>
+      <p><strong>DNS-Status:</strong> {html.escape(dns_check["status"])}</p>
+      <p>{html.escape(dns_check["customer_guidance"])}</p>
+      <ul class="link-list">
+        <li><span>Nach DNS propagation kann derselbe Link erneut geprüft werden.</span></li>
+        <li><span>Nach verifizierter Domain prüft <code>nac-saas-owner</code> die Admin-Einladung und den Owner-Apply-Plan.</span></li>
+        <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
+      </ul>
+    </section>
+    """
+    return _layout("NaC Domain-Readiness", body)
+
+
+def _tenant_slug_from_domain_hint(domain_hint: str) -> str:
+    normalized = domain_hint.strip().lower().rstrip(".")
+    label = normalized.split(".", 1)[0]
+    return "".join(character if character.isalnum() else "-" for character in label).strip("-") or "neukunde"
 
 
 def build_bpmn_page(model) -> str:
@@ -1223,6 +1293,7 @@ def _css() -> str:
     .topline a { color: #0b4f6c; font-weight: 700; text-decoration: none; }
     .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; }
     button { appearance: none; border: 0; border-radius: 6px; background: #0b4f6c; color: #fff; font-weight: 700; padding: 10px 14px; cursor: pointer; }
+    .button-link { display: inline-flex; align-items: center; min-height: 40px; border-radius: 6px; background: #0b4f6c; color: #fff; font-weight: 700; padding: 10px 14px; text-decoration: none; }
     button:disabled { opacity: .55; cursor: not-allowed; }
     #editor-status { color: var(--muted); font-size: 14px; }
     .bpmn-editor-shell { padding: 0; overflow: hidden; }
