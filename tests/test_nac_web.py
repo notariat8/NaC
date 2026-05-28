@@ -195,10 +195,38 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Domain-Readiness", html)
         self.assertIn("DNS-TXT", html)
         self.assertIn("DNS jetzt prüfen", html)
+        self.assertIn("/onboarding/dns-check?domain=kanzlei-notariat.example", html)
         self.assertIn("später", html)
         self.assertIn("Keine Mandatsdaten", html)
         self.assertIn("propagation", html)
         self.assertNotIn("OCI Console", html)
+
+    def test_customer_dns_check_page_renders_live_dns_result_without_raw_json(self) -> None:
+        def fake_resolver(record_name: str) -> dict:
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=36685e54c3d26580dace709f1f09c702"],
+                "resolver_error": "",
+            }
+
+        app = NaCLocalWebApp(REPO_ROOT, dns_resolver=fake_resolver)
+
+        status, content_type, body = app.handle(
+            "/onboarding/dns-check"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("DNS-Prüfergebnis", html)
+        self.assertIn("verified", html)
+        self.assertIn("live_dns", html)
+        self.assertIn("Admin-Dry-Run vorbereiten", html)
+        self.assertNotIn('"schema_version"', html)
+        self.assertNotIn("client_secret", html.lower())
 
     def test_customer_readiness_page_links_admin_provisioning_preview(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

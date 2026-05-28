@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -217,6 +218,34 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["atp"]["strategy"], "shared_atp_with_tenant_id")
         self.assertIn("tenant_id", payload["atp"]["required_controls"])
         self.assertTrue(payload["requires_owner_apply"])
+
+    def test_tenant_dns_check_cli_returns_live_dns_json(self) -> None:
+        def fake_resolver(record_name: str) -> dict:
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=36685e54c3d26580dace709f1f09c702"],
+                "resolver_error": "",
+            }
+
+        with patch("nac_identity.dns_txt.resolve_txt_records", fake_resolver):
+            rc, output = run_cli(
+                "tenant",
+                "dns-check",
+                "--domain",
+                "kanzlei-notariat.example",
+                "--tenant-slug",
+                "kanzlei-notariat",
+                "--admin-email",
+                "admin@kanzlei-notariat.example",
+                "--format",
+                "json",
+            )
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.dns-readiness-check/v0.1")
+        self.assertEqual(payload["status"], "verified")
+        self.assertEqual(payload["source"], "live_dns")
 
     def test_plugin_actions_are_listed(self) -> None:
         rc, output = run_cli("plugins", "actions")

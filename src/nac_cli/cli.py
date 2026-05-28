@@ -13,7 +13,7 @@ from typing import Any
 
 from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
-from nac_identity.customer_onboarding import build_customer_tenant_plan
+from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
@@ -277,8 +277,13 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_customer_plan.add_argument("--domain", required=True, help="Kundendomain.")
     tenant_customer_plan.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
     tenant_customer_plan.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
-    tenant_customer_plan.add_argument("--saas-admin-email", required=True, help="SaaS-Owner fuer Owner-Apply-Review.")
+    tenant_customer_plan.add_argument("--saas-admin-email", required=True, help="SaaS-Owner für Owner-Apply-Review.")
     tenant_customer_plan.add_argument("--format", choices=["text", "json"], default="text")
+    tenant_dns = tenant_sub.add_parser("dns-check", help="Prüft den DNS-TXT-Record live über DNS.")
+    tenant_dns.add_argument("--domain", required=True, help="Kundendomain.")
+    tenant_dns.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
+    tenant_dns.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
+    tenant_dns.add_argument("--format", choices=["text", "json"], default="text")
     tenant.set_defaults(func=command_tenant)
 
     return parser
@@ -920,6 +925,29 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- ATP: {payload['atp']['strategy']}")
             print("- Owner-Apply vor OCI-Schreiboperation: erforderlich")
             return 0
+
+        if args.tenant_command == "dns-check":
+            readiness = check_domain_ready(
+                domain=args.domain,
+                tenant_slug=args.tenant_slug,
+                admin_email=args.admin_email,
+            )
+            verification = readiness["verification"]
+            payload = build_live_dns_check_result(
+                expected_name=verification["dns_record_name"],
+                expected_value=verification["dns_record_value"],
+            )
+            if args.format == "json":
+                print_json(payload)
+                return 0 if payload["status"] == "verified" else 1
+            print("NaC Live-DNS-Readiness")
+            print(f"- DNS-TXT: {payload['expected']['name']}")
+            print(f"- Erwarteter Wert: {payload['expected']['value']}")
+            print(f"- Status: {payload['status']}")
+            print(f"- Hinweis: {payload['customer_guidance']}")
+            for finding in payload["findings"]:
+                print(f"- Diagnose: {finding}")
+            return 0 if payload["status"] == "verified" else 1
 
         if args.tenant_command == "status":
             status = tenant_status(args.repo)

@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
-from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result
+from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result, build_live_dns_check_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
@@ -60,8 +60,9 @@ DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
 class NaCLocalWebApp:
-    def __init__(self, repo_root: Path) -> None:
+    def __init__(self, repo_root: Path, dns_resolver=None) -> None:
         self.repo_root = repo_root.resolve()
+        self.dns_resolver = dns_resolver
 
     def handle(self, path: str) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -76,6 +77,8 @@ class NaCLocalWebApp:
                 return _html_response(build_login_page(parsed.query))
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query))
+            if route == "/onboarding/dns-check":
+                return _html_response(self._tenant_dns_check_page(parsed.query))
             if route == "/admin/onboarding/provisioning-preview":
                 return _html_response(build_admin_provisioning_preview_page(parsed.query))
             if route == "/admin/onboarding/apply-readiness":
@@ -217,6 +220,92 @@ class NaCLocalWebApp:
         except (ValueError, json.JSONDecodeError) as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
         return _json_response(plan)
+
+    def _tenant_dns_check_page(self, query: str) -> str:
+        params = parse_qs(query, keep_blank_values=True)
+        readiness = check_domain_ready(
+            domain=_query_text(params, "domain"),
+            tenant_slug=_query_text(params, "tenant_slug"),
+            admin_email=_query_text(params, "admin_email"),
+        )
+        verification = readiness["verification"]
+        result = build_live_dns_check_result(
+            expected_name=verification["dns_record_name"],
+            expected_value=verification["dns_record_value"],
+            resolver=self.dns_resolver,
+        )
+        readiness_query = urlencode(
+            {
+                "domain_hint": readiness["domain"],
+                "tenant_slug": readiness["tenant_slug"],
+                "admin_email": readiness["admin_email"],
+            }
+        )
+        dns_query = urlencode(
+            {
+                "domain": readiness["domain"],
+                "tenant_slug": readiness["tenant_slug"],
+                "admin_email": readiness["admin_email"],
+            }
+        )
+        preview_query = urlencode(
+            {
+                "domain": readiness["domain"],
+                "tenant_slug": readiness["tenant_slug"],
+                "admin_email": readiness["admin_email"],
+            }
+        )
+        observed_values = result["observed"]["values"]
+        observed_items = "".join(
+            f"<li><span><code>{html.escape(str(value))}</code></span></li>" for value in observed_values
+        ) or "<li><span>kein DNS-TXT-Wert beobachtet</span></li>"
+        findings = result["findings"]
+        finding_items = "".join(
+            f"<li><span>{html.escape(str(finding))}</span></li>" for finding in findings
+        ) or "<li><span>keine Blocker</span></li>"
+        admin_action = ""
+        if readiness["ready"] and result["status"] == "verified":
+            admin_action = (
+                f'<a class="button-link" href="/admin/onboarding/provisioning-preview?'
+                f'{html.escape(preview_query, quote=True)}">Admin-Dry-Run vorbereiten</a>'
+            )
+        body = f"""
+        <nav class="topline"><a href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">← Readiness</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+        <section class="hero">
+          <p class="eyebrow">Live DNS</p>
+          <h1>DNS-Prüfergebnis</h1>
+          <p>NaC hat den DNS-TXT-Record über den konfigurierten Resolver geprüft. Diese Seite speichert keine
+          Mandatsdaten, Zugangsdaten oder OCI-Credentials.</p>
+        </section>
+        <div class="grid">
+          <section class="notice">
+            <h2>Ergebnis</h2>
+            <p><strong>Status:</strong> <code>{html.escape(result["status"])}</code></p>
+            <p><strong>Quelle:</strong> <code>{html.escape(result["source"])}</code></p>
+            <p>{html.escape(result["customer_guidance"])}</p>
+            <div class="toolbar">
+              <a class="button-link" href="/onboarding/dns-check?{html.escape(dns_query, quote=True)}">Erneut prüfen</a>
+              {admin_action}
+            </div>
+          </section>
+          <section>
+            <h2>Erwarteter DNS-TXT</h2>
+            <p><strong>Name:</strong> <code>{html.escape(result["expected"]["name"])}</code></p>
+            <p><strong>Wert:</strong> <code>{html.escape(result["expected"]["value"])}</code></p>
+          </section>
+        </div>
+        <div class="grid">
+          <section>
+            <h2>Beobachtete Werte</h2>
+            <ul class="link-list">{observed_items}</ul>
+          </section>
+          <section>
+            <h2>Diagnose</h2>
+            <ul class="link-list">{finding_items}</ul>
+          </section>
+        </div>
+        """
+        return _layout("NaC DNS-Prüfergebnis", body)
 
     def _gnotkg_quote_api_post(self, body: bytes) -> tuple[int, str, bytes]:
         try:
@@ -541,7 +630,7 @@ def build_customer_readiness_page(query: str) -> str:
         <p><strong>Name:</strong> <code>{html.escape(verification["dns_record_name"])}</code></p>
         <p><strong>Wert:</strong> <code>{html.escape(verification["dns_record_value"])}</code></p>
         <div class="toolbar">
-          <a class="button-link" href="/api/tenant/domain-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>
+          <a class="button-link" href="/onboarding/dns-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>
           <a class="button-link" href="/admin/onboarding/provisioning-preview?{html.escape(preview_query, quote=True)}">Admin-Dry-Run vorbereiten</a>
           <a class="inline-link" href="/onboarding/readiness?{html.escape(resume_query, quote=True)}">später erneut öffnen</a>
         </div>
