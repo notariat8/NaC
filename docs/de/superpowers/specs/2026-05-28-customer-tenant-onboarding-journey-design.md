@@ -87,10 +87,46 @@ flowchart TD
    erforderlicher Admin-E-Mail derselben Domain.
 5. NaC erzeugt eine DNS-TXT-Challenge ohne Secret im Repository.
 6. Der Kunde trägt den DNS-TXT-Eintrag bei seinem DNS-Anbieter ein.
-7. NaC prüft die Domain und markiert die Anfrage als `domain_verified`.
-8. Nach SaaS-Admin-Freigabe erhält der initiale Tenant-Admin eine Einladung.
-9. Der Tenant-Admin meldet sich in NaC an und verwaltet Benutzer und Rollen in
+7. Die Readiness-Seite bietet einen sichtbaren `DNS jetzt prüfen`-Button.
+8. Wenn die Prüfung kurz nach der Änderung fehlschlägt, erklärt NaC, dass
+   DNS-Änderungen je nach Provider, TTL und Resolver-Cache Zeit brauchen
+   können. Die Seite darf nicht verlangen, dass das Browserfenster offen
+   bleibt.
+9. Der Kunde kann später über eine nicht geheime Readiness-Referenz und einen
+   sicheren Rückkehrpfad erneut testen, bis der Nachweis funktioniert oder eine
+   fachliche Rückfrage nötig wird.
+10. NaC prüft die Domain und markiert die Anfrage als `domain_verified`.
+11. Nach SaaS-Admin-Freigabe erhält der initiale Tenant-Admin eine Einladung.
+12. Der Tenant-Admin meldet sich in NaC an und verwaltet Benutzer und Rollen in
    NaC. Die OCI Console bleibt für Endkunden unsichtbar.
+
+## DNS-Prüfung Und Rückkehrpfad
+
+Die Domain-Readiness ist ein eigener, wiederaufrufbarer Vorgang. Der Kunde
+bekommt nach der ersten Eingabe eine Readiness-Referenz, die keine Secrets,
+Tokens oder Mandatsdaten enthält. Die Seite zeigt:
+
+- den erwarteten DNS-TXT-Namen,
+- den erwarteten TXT-Wert oder dessen sichere Anzeigeform,
+- einen `DNS jetzt prüfen`-Button,
+- den letzten Prüfzeitpunkt,
+- den letzten Prüfstatus,
+- einen Hinweis, dass DNS-Propagation auch Stunden dauern kann,
+- einen Weg, später zur gleichen Readiness-Prüfung zurückzukehren.
+
+NaC darf bei fehlgeschlagener Prüfung Root-Cause-Hilfe leisten, soweit dies
+ohne Zugriff auf fremde DNS-Provider-Konten möglich ist. In Scope sind:
+
+- Record nicht gefunden,
+- falscher TXT-Wert,
+- TXT-Wert an falschem Namen,
+- Domain- oder Tenant-Slug-Mismatch,
+- Resolver- oder Timeout-Fehler,
+- Hinweis auf mögliche TTL-/Propagation-Wartezeit.
+
+Out of Scope für NaC ist das direkte Ändern fremder DNS-Zonen beim Provider.
+Der Kunde bleibt verantwortlich für die DNS-Konfiguration; NaC erklärt nur den
+erwarteten Zustand und die beobachtete Abweichung.
 
 ## SaaS-Admin-Workflow
 
@@ -179,5 +215,7 @@ Mandantentrennung die gemeinsame ATP übersteigen.
 - Die OCI-Startentscheidung ist nachvollziehbar und quellenbasiert.
 - Das ATP-Zielbild bildet Tenant-Isolation ab, ohne sofort dedizierte
   Datenbanken zu erzwingen.
+- DNS-Readiness ist als wiederaufrufbarer Vorgang mit Testbutton,
+  Propagation-Hinweis und Root-Cause-Hilfe beschrieben.
 - Der nächste Implementation-Track kann daraus konkrete Views, APIs,
   Apply-Pläne und Tests ableiten.

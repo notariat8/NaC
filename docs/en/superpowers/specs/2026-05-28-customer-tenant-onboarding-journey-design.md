@@ -86,10 +86,45 @@ flowchart TD
 5. NaC creates a DNS TXT challenge without storing secret material in the
    repository.
 6. The customer adds the DNS TXT record with the DNS provider.
-7. NaC checks the domain and marks the request as `domain_verified`.
-8. After SaaS-admin approval, the initial tenant admin receives an invitation.
-9. The tenant admin signs in to NaC and manages users and roles in NaC. The OCI
+7. The readiness page provides a visible `Check DNS now` button.
+8. If the check fails shortly after the DNS change, NaC explains that DNS
+   updates can take time depending on provider, TTL and resolver cache. The
+   page must not require the browser window to stay open.
+9. The customer can return later through a non-secret readiness reference and a
+   safe return path, and retry until the proof works or a domain question is
+   needed.
+10. NaC checks the domain and marks the request as `domain_verified`.
+11. After SaaS-admin approval, the initial tenant admin receives an invitation.
+12. The tenant admin signs in to NaC and manages users and roles in NaC. The OCI
    Console remains invisible to end customers.
+
+## DNS Check And Return Path
+
+Domain readiness is its own resumable request. After the first submission, the
+customer receives a readiness reference that contains no secrets, tokens or
+mandate data. The page shows:
+
+- the expected DNS TXT name,
+- the expected TXT value or a safe representation of it,
+- a `Check DNS now` button,
+- the last check timestamp,
+- the last check status,
+- a note that DNS propagation can take hours,
+- a way to return later to the same readiness check.
+
+NaC can provide root-cause help for failed checks as long as this does not
+require access to third-party DNS provider accounts. In scope:
+
+- record not found,
+- wrong TXT value,
+- TXT value at the wrong name,
+- domain or tenant-slug mismatch,
+- resolver or timeout error,
+- note about possible TTL or propagation delay.
+
+Directly changing external DNS zones at the provider is out of scope for NaC.
+The customer remains responsible for DNS configuration; NaC explains only the
+expected state and the observed deviation.
 
 ## SaaS Admin Workflow
 
@@ -177,5 +212,7 @@ exceed the shared ATP model.
 - The OCI starting decision is source-based and understandable.
 - The ATP target state models tenant isolation without requiring dedicated
   databases immediately.
+- DNS readiness is described as a resumable request with a test button,
+  propagation guidance and root-cause help.
 - The next implementation track can derive concrete views, APIs, apply plans
   and tests from this design.

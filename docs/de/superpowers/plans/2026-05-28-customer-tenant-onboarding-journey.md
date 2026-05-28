@@ -171,6 +171,8 @@ def test_customer_readiness_page_explains_next_steps(self) -> None:
     self.assertIn("text/html", content_type)
     self.assertIn("Domain-Readiness", html)
     self.assertIn("DNS-TXT", html)
+    self.assertIn("DNS jetzt prüfen", html)
+    self.assertIn("später", html)
     self.assertIn("Keine Mandatsdaten", html)
     self.assertNotIn("OCI Console", html)
 ```
@@ -185,13 +187,59 @@ Expected: missing route.
 
 Add `/onboarding/readiness` as the app landing page for `www-n8` readiness
 hints. The page explains domain, admin email from same domain, DNS-TXT,
-SaaS-admin review and invitation. It must not collect mandate documents.
+SaaS-admin review and invitation. It must include a DNS test button,
+propagation guidance, last-check status and a return-later path. It must not
+collect mandate documents.
 
 - [ ] **Step 4: Run tests and commit**
 
 Run: `/home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_nac_web tests.test_customer_tenant_onboarding`
 
 Commit: `feat: add customer readiness onboarding page`
+
+### Task 4a: DNS Check Result Diagnostics
+
+**Files:**
+- Modify: `src/nac_identity/customer_onboarding.py`
+- Modify: `src/nac_web/server.py`
+- Test: `tests/test_customer_tenant_onboarding.py`
+- Test: `tests/test_nac_web.py`
+
+- [ ] **Step 1: Write failing diagnostics tests**
+
+```python
+def test_dns_check_result_explains_propagation_delay(self) -> None:
+    from nac_identity.customer_onboarding import build_dns_check_result
+
+    result = build_dns_check_result(
+        expected_name="_nac.kanzlei-notariat.example",
+        expected_value="nac-domain-verification=abc123",
+        observed_values=[],
+        resolver_error="not_found",
+    )
+    self.assertEqual(result["status"], "pending")
+    self.assertIn("dns_record_not_found", result["findings"])
+    self.assertTrue(result["retry_allowed"])
+    self.assertIn("propagation", result["customer_guidance"])
+```
+
+- [ ] **Step 2: Run the test and verify RED**
+
+Run: `/home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_customer_tenant_onboarding.CustomerTenantOnboardingTests.test_dns_check_result_explains_propagation_delay`
+
+Expected: import failure or missing function.
+
+- [ ] **Step 3: Implement deterministic diagnostics**
+
+Implement `build_dns_check_result(...)` without live DNS access. It classifies
+`verified`, `pending`, `wrong_value`, `wrong_name` and `resolver_error`
+results from supplied observations. Live DNS lookup remains a later connector.
+
+- [ ] **Step 4: Run tests and commit**
+
+Run: `/home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_customer_tenant_onboarding tests.test_nac_web`
+
+Commit: `feat: add dns readiness diagnostics`
 
 ### Task 5: CLI Apply-Plan Preview
 
