@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -174,6 +176,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("notariat-musterstadt", html)
         self.assertIn("OCI-IdP-Login", html)
         self.assertIn("kein Tenant-Autorisierungsnachweis", html)
+        self.assertIn("/login?source=www-n8&amp;entry=customer&amp;tenant_hint=notariat-musterstadt", html)
 
     def test_app_receives_www_n8_prospect_handoff_for_domain_readiness(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -215,6 +218,61 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("Lokaler NaC-Webserver", html)
         self.assertNotIn("NaC App-Einstieg", html)
+
+    def test_login_page_accepts_www_n8_customer_context_without_authorizing_tenant(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/login?source=www-n8&entry=customer&tenant_hint=notariat-musterstadt"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("OCI-IdP Login-Contract", html)
+        self.assertIn("notariat-musterstadt", html)
+        self.assertIn("serverseitig erzeugte State- und Nonce-Werte", html)
+        self.assertIn("NaC-Rollen- und Vorgangs-Gate", html)
+        self.assertNotIn("client_secret", html)
+
+    def test_app_serves_login_intent_api_without_leaking_tenant_hint_to_authorize_url(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "nac-web-app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+            },
+        ):
+            status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["schema_version"], "nac.oci-login-intent/v0.1")
+        self.assertIn("/oauth2/v1/authorize", payload["authorization_url"])
+        self.assertNotIn("notariat-musterstadt", payload["authorization_url"])
+        self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
+        self.assertNotEqual(payload["oidc"]["state"], "state-1234567890")
+        self.assertNotEqual(payload["oidc"]["nonce"], "nonce-1234567890")
+
+    def test_login_intent_api_rejects_caller_supplied_oidc_config(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/api/tenant/login-intent"
+            "?tenant_hint=notariat-musterstadt"
+            "&identity_domain_url=https%3A%2F%2Fidcs.example.identity.oraclecloud.com%3A443"
+            "&state=attacker-state"
+            "&nonce=attacker-nonce"
+        )
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["error"], "login_intent_config_is_server_side")
 
     def test_gnotkg_quote_rejects_get_query_to_avoid_logged_values(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

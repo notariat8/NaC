@@ -10,7 +10,10 @@
   "end_user_console_work_allowed": false,
   "oci_identity_domain_endpoints": [
     "/admin/v1/Users",
-    "/admin/v1/Groups"
+    "/admin/v1/Groups",
+    "/.well-known/openid-configuration",
+    "/oauth2/v1/authorize",
+    "/oauth2/v1/token"
   ],
   "required_gates": [
     "domain_ready",
@@ -20,7 +23,11 @@
     "owner_apply_approval",
     "dns_verified",
     "audit_event_prepared",
-    "rollback_plan_prepared"
+    "rollback_plan_prepared",
+    "server_generated_state",
+    "server_generated_nonce",
+    "idp_login_validated",
+    "nac_role_gate"
   ],
   "nac_roles": [
     "nac-tenant-admin",
@@ -33,6 +40,7 @@
     "domain_readiness_preview",
     "oci_admin_provisioning_dry_run",
     "oci_identity_apply_request_dry_run",
+    "oci_oidc_login_intent",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
   ],
@@ -42,9 +50,27 @@
     "execute_oci_write_without_apply_request",
     "store_client_credential_material_in_product_repo",
     "store_api_key_material_in_product_repo",
+    "store_oidc_client_secret_in_product_repo",
+    "authorize_tenant_from_query_hint",
+    "skip_nac_role_gate_after_idp_login",
     "require_end_user_oci_console_work",
     "store_mandate_data_in_public_site"
   ],
+  "login_intent_schema": {
+    "schema_version": "nac.oci-login-intent/v0.1",
+    "required": [
+      "mode",
+      "provider",
+      "tenant_context",
+      "endpoints",
+      "oidc",
+      "authorization_url",
+      "guardrails"
+    ],
+    "flow": "authorization_code",
+    "tenant_hint_authorizes_access": false,
+    "requires_server_generated_state_and_nonce": true
+  },
   "domain_readiness_schema": {
     "schema_version": "nac.tenant-domain-readiness/v0.1",
     "required": [
@@ -92,6 +118,8 @@
     "rollback_plan_required_for_apply": true,
     "apply_request_contains_credential_material": false,
     "static_site_stores_identity_material": false,
+    "login_intent_contains_credential_material": false,
+    "tenant_hint_authorizes_access": false,
     "nac_role_gate_required_after_idp_login": true
   }
 }

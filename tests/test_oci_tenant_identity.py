@@ -24,6 +24,9 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertIn("owner_apply_approval", contract["required_gates"])
         self.assertIn("/admin/v1/Users", contract["oci_identity_domain_endpoints"])
         self.assertIn("/admin/v1/Groups", contract["oci_identity_domain_endpoints"])
+        self.assertIn("/oauth2/v1/authorize", contract["oci_identity_domain_endpoints"])
+        self.assertEqual(contract["login_intent_schema"]["schema_version"], "nac.oci-login-intent/v0.1")
+        self.assertTrue(contract["guardrails"]["nac_role_gate_required_after_idp_login"])
 
     def test_domain_check_accepts_notary_domain_and_admin_email(self) -> None:
         from nac_identity.oci_tenant import check_domain_ready
@@ -167,6 +170,66 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("secret", serialized)
         self.assertNotIn("token", serialized)
         self.assertNotIn("private_key", serialized)
+
+    def test_login_intent_builds_oci_oidc_authorize_url_without_authorizing_tenant(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+
+        intent = build_login_intent(
+            tenant_hint="notariat-musterstadt",
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            client_id="nac-web-app",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+        )
+        serialized = json.dumps(intent, sort_keys=True).lower()
+
+        self.assertEqual(intent["schema_version"], "nac.oci-login-intent/v0.1")
+        self.assertEqual(intent["mode"], "authorization_code_redirect_intent")
+        self.assertEqual(intent["tenant_context"]["tenant_hint"], "notariat-musterstadt")
+        self.assertFalse(intent["tenant_context"]["tenant_authorized_by_hint"])
+        self.assertTrue(intent["guardrails"]["nac_role_gate_required_after_idp_login"])
+        self.assertTrue(intent["guardrails"]["server_generated_state_required"])
+        self.assertEqual(
+            intent["endpoints"]["authorization_endpoint"],
+            "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/authorize",
+        )
+        self.assertEqual(
+            intent["endpoints"]["discovery_endpoint"],
+            "https://idcs.example.identity.oraclecloud.com:443/.well-known/openid-configuration",
+        )
+        self.assertIn("response_type=code", intent["authorization_url"])
+        self.assertIn("client_id=nac-web-app", intent["authorization_url"])
+        self.assertIn("scope=openid+profile+email", intent["authorization_url"])
+        self.assertTrue(intent["oidc"]["state"].startswith("state-"))
+        self.assertTrue(intent["oidc"]["nonce"].startswith("nonce-"))
+        self.assertNotIn("notariat-musterstadt", intent["authorization_url"])
+        self.assertNotIn("client_secret", serialized)
+        self.assertNotIn("private_key", serialized)
+
+    def test_login_intent_rejects_non_https_redirect_uri(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+
+        with self.assertRaises(ValueError) as error:
+            build_login_intent(
+                tenant_hint="notariat-musterstadt",
+                identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+                client_id="nac-web-app",
+                redirect_uri="http://app.notariat8.de/auth/callback",
+            )
+
+        self.assertIn("redirect_uri_invalid", str(error.exception))
+
+    def test_login_intent_rejects_non_oci_identity_domain_url(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+
+        with self.assertRaises(ValueError) as error:
+            build_login_intent(
+                tenant_hint="notariat-musterstadt",
+                identity_domain_url="https://login.example.com",
+                client_id="nac-web-app",
+                redirect_uri="https://app.notariat8.de/auth/callback",
+            )
+
+        self.assertIn("identity_domain_url_not_oci_identity_domain", str(error.exception))
 
 
 if __name__ == "__main__":

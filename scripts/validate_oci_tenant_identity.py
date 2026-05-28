@@ -13,6 +13,7 @@ if src_root_text in sys.path:
     sys.path.remove(src_root_text)
 sys.path.insert(0, src_root_text)
 
+from nac_identity.oci_login import build_login_intent  # noqa: E402
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready  # noqa: E402
 
 
@@ -28,6 +29,7 @@ def main() -> int:
     _validate_domain_readiness(errors)
     _validate_admin_plan(errors)
     _validate_apply_request(errors)
+    _validate_login_intent(errors)
 
     if errors:
         print("OCI tenant identity validation failed:")
@@ -49,7 +51,7 @@ def _validate_contract(errors: list[str]) -> None:
         errors.append("Contract must block productive identity writes")
     if payload.get("end_user_console_work_allowed") is not False:
         errors.append("Contract must block end-user OCI Console work")
-    for endpoint in ("/admin/v1/Users", "/admin/v1/Groups"):
+    for endpoint in ("/admin/v1/Users", "/admin/v1/Groups", "/oauth2/v1/authorize"):
         if endpoint not in payload.get("oci_identity_domain_endpoints", []):
             errors.append(f"Contract missing endpoint {endpoint}")
     for gate in ("domain_ready", "dry_run_plan", "owner_apply_approval"):
@@ -60,9 +62,15 @@ def _validate_contract(errors: list[str]) -> None:
             errors.append(f"Contract missing apply-readiness gate {gate}")
     if payload.get("apply_readiness_schema", {}).get("schema_version") != "nac.oci-identity-apply-request/v0.1":
         errors.append("Contract missing apply readiness schema")
+    if payload.get("login_intent_schema", {}).get("schema_version") != "nac.oci-login-intent/v0.1":
+        errors.append("Contract missing login intent schema")
     guardrails = payload.get("guardrails", {})
     if guardrails.get("apply_request_contains_credential_material") is not False:
         errors.append("Apply request must not contain credential material")
+    if guardrails.get("login_intent_contains_credential_material") is not False:
+        errors.append("Login intent must not contain credential material")
+    if guardrails.get("tenant_hint_authorizes_access") is not False:
+        errors.append("Tenant hint must not authorize access")
 
 
 def _validate_domain_readiness(errors: list[str]) -> None:
@@ -150,6 +158,33 @@ def _validate_apply_request(errors: list[str]) -> None:
     for forbidden in ("secret", "token", "private_key"):
         if forbidden in serialized:
             errors.append(f"Apply request exposes forbidden marker {forbidden}")
+
+
+def _validate_login_intent(errors: list[str]) -> None:
+    intent = build_login_intent(
+        tenant_hint="notariat-musterstadt",
+        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+        client_id="nac-web-app",
+        redirect_uri="https://app.notariat8.de/auth/callback",
+    )
+    if intent.get("schema_version") != "nac.oci-login-intent/v0.1":
+        errors.append("Login intent schema_version is unexpected")
+    if not str(intent.get("authorization_url", "")).startswith(
+        "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/authorize?"
+    ):
+        errors.append("Login intent must point to OCI authorize endpoint")
+    if intent.get("tenant_context", {}).get("tenant_authorized_by_hint") is not False:
+        errors.append("Login intent must not authorize tenant from hint")
+    if intent.get("guardrails", {}).get("nac_role_gate_required_after_idp_login") is not True:
+        errors.append("Login intent must require NaC role gate after IdP login")
+    if not str(intent.get("oidc", {}).get("state", "")).startswith("state-"):
+        errors.append("Login intent state must be server generated")
+    if not str(intent.get("oidc", {}).get("nonce", "")).startswith("nonce-"):
+        errors.append("Login intent nonce must be server generated")
+    serialized = json.dumps(intent, sort_keys=True).lower()
+    for forbidden in ("client_secret", "private_key"):
+        if forbidden in serialized:
+            errors.append(f"Login intent exposes forbidden marker {forbidden}")
 
 
 if __name__ == "__main__":

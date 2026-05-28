@@ -73,6 +73,13 @@ subject-matter permission is decided afterwards by the NaC role and case gate:
 - approval state,
 - four-eyes requirement for sensitive steps.
 
+The first NaC app entry therefore uses a login-intent contract instead of an
+implicit login. NaC builds the OIDC redirect to OCI Identity Domains through
+`/.well-known/openid-configuration` and `/oauth2/v1/authorize`, requires
+server-generated `state` and `nonce` values, and treats `tenant_hint` only as
+context. The hint must not be translated into roles, groups, matter access or
+OCI writes.
+
 XNP and German eID paths with card readers remain local workstation gates. They
 can provide identity or readiness evidence, but they replace neither OCI login
 nor NaC authorization and they do not store PINs, raw card data, raw eID data
