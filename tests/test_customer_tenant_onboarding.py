@@ -47,6 +47,21 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertNotIn("private_key", serialized)
         self.assertNotIn("client_secret", serialized)
 
+    def test_dns_check_result_explains_propagation_delay(self) -> None:
+        from nac_identity.customer_onboarding import build_dns_check_result
+
+        result = build_dns_check_result(
+            expected_name="_nac.kanzlei-notariat.example",
+            expected_value="nac-domain-verification=abc123",
+            observed_values=[],
+            resolver_error="not_found",
+        )
+
+        self.assertEqual(result["status"], "pending")
+        self.assertIn("dns_record_not_found", result["findings"])
+        self.assertTrue(result["retry_allowed"])
+        self.assertIn("propagation", result["customer_guidance"])
+
 
 if __name__ == "__main__":
     unittest.main()
