@@ -46,7 +46,7 @@ flowchart TD
     C --> D[Plan Preview im PR]
     D --> E[Review und Merge]
     E --> F[Lokaler oder freigegebener Reconciler]
-    F --> G[GitHub Entra ID XNP Arbeitsplatzgate]
+    F --> G[GitHub OCI Identity XNP Arbeitsplatzgate]
     G --> H[Soll Ist Vergleich und Audit Events]
     H --> I[Drift oder Fehler als Event]
 ```
@@ -82,7 +82,7 @@ flowchart TD
 
 ### Monat 4: Anbindungen Stabilisieren
 
-- GitHub-, Entra-ID- und Notariatsarbeitsplatzpfade sind dokumentiert.
+- GitHub-, OCI-Identity- und Notariatsarbeitsplatzpfade sind dokumentiert.
 - Retry, Fehlerklassifikation und Idempotenzpfad sind stabil.
 
 ### Monat 5: Observability Und Drift

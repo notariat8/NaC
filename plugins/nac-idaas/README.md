@@ -11,7 +11,8 @@ eID-Prüfungs-Bereitschaft und IAM-Projektionsplanung.
 - deutsche eID-Bereitschaft über AusweisApp-orientierte Abläufe
 - Minimierung verifizierter Claims
 - Einwilligungs- und Zweckbindungsnachweise
-- IAM-Projektionsplanung für Entra ID, Oracle IAM und SCIM-Ziele
+- IAM-Projektionsplanung für Oracle IAM, SCIM-Ziele und optionale Microsoft
+  Entra ID als separat freizugebendes Ziel
 - Trockenlauf-Prüfung von API- und Eventverträgen
 
 ## Grenze

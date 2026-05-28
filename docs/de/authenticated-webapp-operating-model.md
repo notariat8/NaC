@@ -30,8 +30,8 @@ Rollen, Verträge und `nac`-Validierung begrenzt.
 flowchart TD
     Static["GitHub Pages / Jekyll: statische Inhalte"] --> Public["öffentliche Orientierung"]
     User["angemeldeter Benutzer"] --> AuthApp["authentifizierte Webapp oder mobile App"]
-    AuthApp --> Entra["Entra ID, CBA, Conditional Access"]
-    Entra --> NacRole["NaC-Rollen- und Vorgangs-Gate"]
+    AuthApp --> OciIdp["OCI Identity Domains, OIDC/SCIM, Gruppenanker"]
+    OciIdp --> NacRole["NaC-Rollen- und Vorgangs-Gate"]
     NacRole --> Runtime["NaC-Runtime / Backend"]
     Runtime --> DataRepo["getrenntes Datenrepo"]
     Runtime --> Storage["Object Store, Datenbank-Blob oder OneDrive"]
@@ -52,13 +52,19 @@ nächsten Review-Schritt, ohne daraus schon eine Produktintegration zu machen.
 
 ## Identität Und Autorisierung
 
-Entra ID ist als erste Unternehmens-Identitätsschicht sinnvoll. Für
-Notariats- und interne Benutzer sollte geprüft werden, ob Entra ID mit
-Certificate-Based Authentication, Conditional Access und KeyCards oder
-Smartcards die Anmeldung absichern kann.
+Oracle OCI Identity Domains ist für diesen SaaS-Pfad die produktive
+Identitätsschicht. Der öffentliche Übergang von `www-n8` in die NaC-App läuft
+tenant-aware: Bestandskunden übergeben einen Tenant-Hinweis, Neukunden werden
+zuerst über eine Domain-Readiness-Prüfung geführt. Danach erzeugt NaC einen
+prüfbaren Admin-Provisioning-Plan für OCI Identity Domains.
 
-Diese Prüfung beantwortet nur die Frage, ob eine Person oder ein Gerät
-vertrauenswürdig angemeldet ist. Die fachliche Berechtigung entsteht danach im
+Endbenutzer arbeiten nicht in der OCI Console. NaC bedient Identity Domains
+über geprüfte API- und CLI-Verträge; produktive Schreiboperationen an
+Benutzern, Gruppen oder Mitgliedschaften brauchen vor dem Apply einen
+separaten Owner-Review und eine ausdrückliche Freigabe.
+
+Die IdP-Anmeldung beantwortet nur die Frage, ob eine Person vertrauenswürdig
+angemeldet ist. Die fachliche Berechtigung entsteht danach im
 NaC-Rollen- und Vorgangs-Gate:
 
 - Rolle im Notariat,
@@ -70,8 +76,8 @@ NaC-Rollen- und Vorgangs-Gate:
 
 XNP- und digitale-Ausweis-Pfade mit Kartenleser bleiben lokale
 Arbeitsplatz-Gates. Sie können Identitäts- oder Readiness-Nachweise liefern,
-ersetzen aber keine NaC-Autorisierung und speichern keine PINs, Kartendaten,
-Ausweisrohdaten oder Zertifikatsgeheimnisse im Repository.
+ersetzen aber weder OCI-Login noch NaC-Autorisierung und speichern keine PINs,
+Kartendaten, Ausweisrohdaten oder Zertifikatsgeheimnisse im Repository.
 
 ## Mobile App Und Sichere Links
 
@@ -136,8 +142,8 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
 
 1. Statische GitHub-Pages-Schicht für öffentliche Inhalte und synthetische
    Demos weiter nutzen.
-2. Interne authentifizierte Webapp für Notariatsbenutzer über Entra ID und
-   NaC-Rollen-Gate entwerfen.
+2. Interne authentifizierte Webapp für Notariatsbenutzer über OCI Identity
+   Domains und NaC-Rollen-Gate entwerfen.
 3. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
 4. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
    `notary-workstation` prüfen.

@@ -70,7 +70,7 @@ regardless of the language used in the prompt. The binding rule is defined in
   office UI and the checkable NaC core work together.
 - [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
   defines the target model for GitHub Pages as a static reading layer, the
-  authenticated web app, Entra ID/card gates and mobile secure document links.
+  authenticated web app, OCI Identity Domains, card gates and mobile secure document links.
 - [docs/en/cli.md](cli.md) explains the technical `nac` control surface behind
   the office UI, first commands and the architecture rule for new functionality.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why

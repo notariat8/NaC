@@ -20,9 +20,9 @@ Ziel-IAM-Projektionen.
 
 ## Zielsysteme
 
-- Microsoft Entra ID
 - Oracle IAM
 - SCIM-kompatible Ziele
+- Microsoft Entra ID als optionales Ziel mit separater Freigabe
 
 ## NaC-Adaption
 

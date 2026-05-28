@@ -61,6 +61,7 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py plugins actions
+python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
 ```
 
@@ -76,6 +77,8 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac plugins actions
+nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
@@ -93,11 +96,12 @@ nac qms status
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
-| Workflow contracts | `nac contracts validate` | Validates workflow contracts, secure-link boundaries and legal-research connector candidates. |
+| Workflow contracts | `nac contracts validate` | Validates workflow contracts, secure-link boundaries, OCI tenant identity and legal-research connector candidates. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
 | Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
+| Tenant identity | `nac tenant domain-check` and `nac tenant provision-admin --dry-run` | Checks new-customer domains and creates OCI Identity dry-run plans without productive writes. |
 | QMS | `nac qms status` and `nac qms evidence --repo ../demo8notariat` | Shows ISO 9001/QMS artifacts and evidence counts from the data repository. |
 
 ## QMS And ISO 9001 Layer
@@ -125,6 +129,25 @@ nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
 ```
+
+## Tenant Identity And OCI Dry Run
+
+New customers do not start in the OCI Console. NaC first checks whether the
+customer domain and initial admin email match:
+
+```bash
+nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+```
+
+NaC then creates an admin-provisioning plan for OCI Identity Domains. This
+command does not write to OCI and contains no credentials:
+
+```bash
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run --format json
+```
+
+Productive identity writes require separate owner review and explicit apply
+approval.
 
 The leading matter model uses small JSON files with stable IDs for matters,
 people, documents, events and indices. PDF, JPG and other binary files live as
