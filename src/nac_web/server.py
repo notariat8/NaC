@@ -466,8 +466,8 @@ def _onboarding_state_gate(state: str) -> str:
     labels = {
         "submitted": "Domain-Hinweis aus www-n8 eingegangen",
         "dns_challenge_issued": "DNS-TXT-Challenge ausgegeben",
-        "domain_verified": "DNS-TXT bestaetigt",
-        "saas_admin_review": "nac-saas-owner prueft Zielbild",
+        "domain_verified": "DNS-TXT bestätigt",
+        "saas_admin_review": "nac-saas-owner prüft Zielbild",
         "owner_apply_ready": "Owner-Apply-Artefakt kann vorbereitet werden",
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }

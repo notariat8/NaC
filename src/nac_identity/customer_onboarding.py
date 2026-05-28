@@ -88,12 +88,12 @@ def build_dns_check_result(
     elif expected_txt in observed_txt_values:
         status = "verified"
         retry_allowed = False
-        guidance = "DNS-TXT wurde gefunden. NaC kann die SaaS-Admin-Pruefung vorbereiten."
+        guidance = "DNS-TXT wurde gefunden. NaC kann die SaaS-Admin-Prüfung vorbereiten."
     elif not observed_txt_values and normalized_error in {"", "not_found", "nxdomain", "no_answer"}:
         status = "pending"
         findings.append("dns_record_not_found")
         retry_allowed = True
-        guidance = "DNS-TXT wurde noch nicht gefunden. DNS propagation kann einige Minuten dauern; spaeter erneut pruefen."
+        guidance = "DNS-TXT wurde noch nicht gefunden. DNS propagation kann einige Minuten dauern; später erneut prüfen."
     elif observed_txt_values:
         status = "wrong_value"
         findings.append("dns_record_value_mismatch")
@@ -103,7 +103,7 @@ def build_dns_check_result(
         status = "resolver_error"
         findings.append("dns_resolver_error")
         retry_allowed = True
-        guidance = "Die DNS-Pruefung konnte nicht abgeschlossen werden. Bitte spaeter erneut pruefen."
+        guidance = "Die DNS-Prüfung konnte nicht abgeschlossen werden. Bitte später erneut prüfen."
 
     return {
         "schema_version": "nac.dns-readiness-check/v0.1",

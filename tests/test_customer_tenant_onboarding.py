@@ -61,6 +61,7 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertIn("dns_record_not_found", result["findings"])
         self.assertTrue(result["retry_allowed"])
         self.assertIn("propagation", result["customer_guidance"])
+        self.assertIn("später", result["customer_guidance"])
 
 
 if __name__ == "__main__":
