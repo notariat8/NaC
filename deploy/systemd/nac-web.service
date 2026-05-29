@@ -1,0 +1,21 @@
+[Unit]
+Description=NaC web runtime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nac
+Group=nac
+EnvironmentFile=-/etc/nac/nac-web.env
+WorkingDirectory=/opt/nac/current
+ExecStart=/opt/nac/venv/bin/nac-web --repo-root /opt/nac/current --host 0.0.0.0 --port 8768
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
