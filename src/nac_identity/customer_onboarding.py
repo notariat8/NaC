@@ -121,3 +121,25 @@ def build_dns_check_result(
         "retry_allowed": retry_allowed,
         "customer_guidance": guidance,
     }
+
+
+def build_live_dns_check_result(
+    *,
+    expected_name: str,
+    expected_value: str,
+    resolver=None,
+) -> dict:
+    if resolver is None:
+        from nac_identity.dns_txt import resolve_txt_records
+
+        resolver = resolve_txt_records
+    observation = resolver(expected_name)
+    result = build_dns_check_result(
+        expected_name=expected_name,
+        expected_value=expected_value,
+        observed_name=str(observation.get("name", expected_name)),
+        observed_values=[str(value) for value in observation.get("values", [])],
+        resolver_error=str(observation.get("resolver_error", "")),
+    )
+    result["source"] = "live_dns"
+    return result

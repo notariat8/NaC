@@ -11,6 +11,7 @@
     "customer_domain_readiness",
     "admin_email_capture",
     "dns_txt_challenge",
+    "live_dns_txt_check",
     "dns_status_check",
     "return_later_resume",
     "saas_admin_review",
