@@ -77,3 +77,30 @@ Das verbessert Lesbarkeit, Auditierbarkeit und Wartbarkeit für IT und Notariats
 - Dokumentation ist versioniert, exportierbar und revisionsfähig.
 - [docs/de/bpmn-js-business-layer.md](bpmn-js-business-layer.md) beschreibt den
   NaC-Pfad vom visuellen Editor zum geprüften Pull Request.
+
+## d) Agentische Systeme: Code, Workflows Und Governance Als Betriebsschicht
+
+### Bewertung
+
+Agentische KI verschiebt Software Engineering nicht nur in Richtung
+Codegenerierung. Für NaC sind auch Prompts, Workflows, Policies,
+Eskalationsregeln, Entscheidungsroutinen, Qualitätsgates und regulatorische
+Passung technische Betriebsartefakte. Sie sind nicht alle vollständig
+deterministisch ausführbar, prägen aber die Ausführung eines Notariatsprozesses
+direkt.
+
+### Entscheidung
+
+- NaC behandelt Code, BPMN, Markdown, Prompts, Workflow-Verträge, Policies,
+  Gantt, Issues und QMS-Nachweise als zusammenhängende Betriebsschicht.
+- Ausführbare Teile laufen über Python, `nac`, Tests und Validatoren.
+- Semi-ausführbare Teile müssen versioniert, menschlich lesbar, sprachlich
+  gepflegt und über Gates überprüfbar sein.
+- Eine neue agentische Fähigkeit ist erst NaC-reif, wenn klar ist, welcher Ring
+  geändert wird: Code, Anweisung, Workflow, Kontrolle, operative Logik oder
+  institutionelle Passung.
+
+Quelle für den Architekturbegriff:
+[The Semi-Executable Stack](https://arxiv.org/abs/2604.15468), ergänzt durch
+den deutschsprachigen Review-Hinweis von
+[The Decoder](https://the-decoder.de/forscher-ki-agenten-machen-entwickler-nicht-ueberfluessig-sondern-bringen-neue-disziplinen/).

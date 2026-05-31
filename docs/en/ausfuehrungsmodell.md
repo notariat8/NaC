@@ -15,6 +15,35 @@ same case work local, traceable, automatable and checkable in the quality gate.
 | Technical execution | Run the same actions as explicit, repeatable NaC work orders. | local installation, Codex plugin, CI, maintainer. |
 | Governance and evidence | Keep rules, validations, review, license, audit and merge traceable. | Owner, technical service providers, reviewers, external evaluation. |
 
+## Agentic Operating Layer And Semi-Executable Stack
+
+NaC follows a newer understanding of agentic software engineering: code is not
+the only technical artifact. Prompts, BPMN models, workflow contracts, plugin
+calls, guardrails, approval rules, roles, privacy boundaries, QMS evidence and
+issue/Gantt control also shape system behavior.
+
+These artifacts are semi-executable: they drive work, but not always as fully
+deterministic classical program code. Some parts are executed by Python, some
+are interpreted by Codex or a plugin, and some require subject-matter decision,
+review or approval. That is why NaC versions them, keeps them readable,
+validates them and connects them to `nac`.
+
+| Ring | NaC Equivalent | Rule |
+| --- | --- | --- |
+| Executable code | Python runtime, CLI, validators, tests, schemas. | Must be deterministically checkable. |
+| Instructions and specifications | Markdown, prompts, usecase KG, BPMN descriptions. | German leads for subject matter; changes need language and link parity. |
+| Orchestrated workflows | Codex plugins, `nac` commands, import jobs, BPMN workflows. | Every new function needs a checkable operating edge. |
+| Controls | Privacy policy, secret scan, quality gate, role and approval rules. | Completion only after fresh verification. |
+| Operating logic | Issue operations, Gantt, QMS, matter and evidence decisions. | Must remain understandable for owner, office and reviewers. |
+| Institutional fit | BRAO, GDPR, EU AI Act, notary-office operations, ISO 9001 target model. | No productive path without subject-matter and legal approval. |
+
+Review note: The term "Semi-Executable Stack" comes from the paper
+[The Semi-Executable Stack: Agentic Software Engineering and the Expanding Scope of SE](https://arxiv.org/abs/2604.15468).
+The German-language trigger article is
+[Forscher: KI-Agenten machen Entwickler nicht überflüssig, sondern bringen neue Disziplinen](https://the-decoder.de/forscher-ki-agenten-machen-entwickler-nicht-ueberfluessig-sondern-bringen-neue-disziplinen/).
+For NaC, the conclusion is: code is not only output but an operating layer;
+rules, workflows and evidence are part of the same technical responsibility.
+
 ## What Does CLI Mean?
 
 CLI means "Command Line Interface". In NaC, it is not meant to be the daily

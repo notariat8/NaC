@@ -17,6 +17,36 @@ Quality Gate prüfbar bleiben.
 | Technische Ausführung | Dieselben Aktionen als eindeutige, wiederholbare NaC-Aufträge ausführen. | lokale Installation, Codex-Plugin, CI, Maintainer. |
 | Governance und Nachweis | Regeln, Validierungen, Review, Lizenz, Audit und Merge nachvollziehbar halten. | Owner, technische Dienstleister, Prüfer, externe Bewertung. |
 
+## Agentische Betriebsschicht Und Semi-Ausführbarer Stack
+
+NaC folgt hier einem neueren Verständnis von agentischem Software Engineering:
+Nicht nur Code ist ein technisches Artefakt. Auch Prompts, BPMN-Modelle,
+Workflow-Verträge, Plugin-Aufrufe, Guardrails, Freigaberegeln, Rollen,
+Datenschutzgrenzen, QMS-Nachweise und Issue-/Gantt-Steuerung prägen das
+Systemverhalten.
+
+Diese Artefakte sind semi-ausführbar: Sie steuern Arbeit, aber nicht immer wie
+klassischer Programmcode vollständig deterministisch. Manche Teile werden von
+Python ausgeführt, manche von Codex oder einem Plugin interpretiert, manche
+brauchen fachliche Entscheidung, Review oder Freigabe. Genau deshalb müssen sie
+in NaC versioniert, lesbar, prüfbar und an `nac` angebunden sein.
+
+| Ring | NaC-Entsprechung | Regel |
+| --- | --- | --- |
+| Ausführbarer Code | Python-Runtime, CLI, Validatoren, Tests, Schemas. | Muss deterministisch prüfbar sein. |
+| Anweisungen und Spezifikationen | Markdown, Prompts, Usecase-KG, BPMN-Beschreibungen. | Deutsch führt fachlich; Änderungen brauchen Sprach- und Link-Parität. |
+| Orchestrierte Abläufe | Codex-Plugins, `nac`-Befehle, Import-Jobs, BPMN-Workflows. | Jede neue Funktion braucht eine prüfbare Bedienkante. |
+| Kontrollen | Datenschutz-Policy, Secret-Scan, Quality Gate, Rollen- und Freigaberegeln. | Abschluss erst nach frischer Verifikation. |
+| Operative Logik | Issue-Betrieb, Gantt, QMS, Akten- und Nachweisentscheidungen. | Muss für Owner, Büro und Prüfer nachvollziehbar bleiben. |
+| Institutionelle Passung | BRAO, DSGVO, EU AI Act, Notariatsbetrieb, ISO-9001-Zielbild. | Kein produktiver Pfad ohne fachliche und rechtliche Freigabe. |
+
+Review-Hinweis: Der Begriff des "Semi-Executable Stack" stammt aus dem Paper
+[The Semi-Executable Stack: Agentic Software Engineering and the Expanding Scope of SE](https://arxiv.org/abs/2604.15468).
+Der deutschsprachige Anlassartikel ist
+[Forscher: KI-Agenten machen Entwickler nicht überflüssig, sondern bringen neue Disziplinen](https://the-decoder.de/forscher-ki-agenten-machen-entwickler-nicht-ueberfluessig-sondern-bringen-neue-disziplinen/).
+Für NaC folgt daraus: Code ist nicht nur Ergebnis, sondern Betriebsschicht;
+Regeln, Workflows und Nachweise sind Teil derselben technischen Verantwortung.
+
 ## Was Bedeutet CLI?
 
 CLI steht für "Command Line Interface", also Kommandozeilen-Schnittstelle. In

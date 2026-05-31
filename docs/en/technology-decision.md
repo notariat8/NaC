@@ -91,3 +91,29 @@ notary-office teams.
 - Documentation is versioned, exportable and audit-ready.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) describes the
   NaC path from visual editor to checked pull request.
+
+## d) Agentic Systems: Code, Workflows And Governance As Operating Layer
+
+### Assessment
+
+Agentic AI does not move software engineering only toward code generation. For
+NaC, prompts, workflows, policies, escalation rules, decision routines, quality
+gates and regulatory fit are also technical operating artifacts. They are not
+all fully deterministic executable code, but they directly shape the execution
+of a notary-office process.
+
+### Decision
+
+- NaC treats code, BPMN, Markdown, prompts, workflow contracts, policies, Gantt,
+  issues and QMS evidence as one connected operating layer.
+- Executable parts run through Python, `nac`, tests and validators.
+- Semi-executable parts must be versioned, human-readable, localized and
+  checkable through gates.
+- A new agentic capability is NaC-ready only when it is clear which ring is
+  changing: code, instruction, workflow, control, operating logic or
+  institutional fit.
+
+Source for the architecture term:
+[The Semi-Executable Stack](https://arxiv.org/abs/2604.15468), complemented by
+the German-language review note from
+[The Decoder](https://the-decoder.de/forscher-ki-agenten-machen-entwickler-nicht-ueberfluessig-sondern-bringen-neue-disziplinen/).
