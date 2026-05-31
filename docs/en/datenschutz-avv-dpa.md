@@ -105,6 +105,39 @@ personal data:
 | Which minimization measure applies? | IDs/placeholders/synthetic/redaction |
 | Where is the external contract evidence stored? | Reference only, no document in repo |
 
+## Law-Firm AI / Legal-Tech SaaS Review
+
+Justin Legal is recorded as a substantive review candidate for law-firm AI,
+mandate intake and matter creation. Its privacy text describes personal-data
+processing for the product and website, digital mandate initiation and
+handling, processing under Article 28 GDPR on behalf of the relevant lawyer,
+the lawyer or law firm as controller, deletion on law-firm instruction or
+after the usage relationship ends, and external technical services such as
+authentication, payment processing, CRM, ticketing, analytics, cookie consent
+and hosting.
+
+NaC does not treat this as compliance approval. GDPR- and BRAO-compatible use
+would need to be clarified separately before any pilot:
+
+- written DPA/AVV with clear role allocation between law firm, provider and
+  subprocessors
+- categories of mandate, communication, matter and usage data
+- hosting, storage, deletion, export and return process
+- complete subprocessor list including third-country transfers, SCC/TIA and
+  support access
+- separation between website tracking/marketing and confidential mandate
+  processing
+- encryption, access-control, logging and role model for law-firm users
+- no real mandate data in test, demo, analytics or training paths without
+  explicit approval
+- BRAO review for professional secrecy, service-provider use, necessity of
+  access, provider confidentiality commitment, foreign-service context and
+  comparable protection of secrets
+
+Until these points are evidenced, such a provider remains comparison and
+review material in NaC. It is not an approved product integration and not
+evidence of GDPR or BRAO compliance.
+
 ## Relationship To Existing NaC Documents
 
 - `docs/en/security-and-dsgvo.md`: general repository protection rules.

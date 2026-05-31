@@ -108,6 +108,41 @@ personenbezogenen Daten eine kurze Entscheidung enthalten:
 | Welche Datensparsamkeitsmaßnahme gilt? | IDs/Platzhalter/Synthetik/Redaktion |
 | Wo liegt der externe Vertragsnachweis? | Verweis, kein Dokument im Repo |
 
+## Kanzlei-KI-/Legal-Tech-SaaS-Review
+
+Justin Legal wird als inhaltlicher Review-Kandidat für Kanzlei-KI,
+Mandatsannahme und Aktenanlage geführt. Der Datenschutztext beschreibt
+personenbezogene Produkt- und Webseitenverarbeitung, digitale
+Mandatsanbahnung und Mandatsbearbeitung, Auftragsverarbeitung nach Art. 28
+DSGVO im Auftrag des jeweiligen Rechtsanwalts, Rechtsanwalt oder Kanzlei als
+datenschutzrechtlich Verantwortliche, Löschung nach Weisung der Kanzlei
+beziehungsweise nach Ende des Nutzungsverhältnisses sowie externe technische
+Dienste wie Authentifizierung, Zahlungsabwicklung, CRM, Ticketing, Analyse,
+Cookie-Einwilligung und Hosting.
+
+Für NaC ist daraus keine Konformitätsfreigabe ableitbar. Eine DSGVO- und
+BRAO-konforme Nutzung wäre vor jedem Pilot gesondert zu klären:
+
+- schriftlicher AVV/DPA mit klarer Rollenverteilung zwischen Kanzlei,
+  Anbieter und Unterauftragsverarbeitern
+- Kategorien von Mandats-, Kommunikations-, Akten- und Nutzungsdaten
+- Hosting-, Speicher-, Lösch-, Export- und Herausgabeprozess
+- vollständige Unterauftragsverarbeiterliste inklusive Drittlandtransfer,
+  SCC/TIA und Supportzugriffen
+- Trennung zwischen Webseiten-Tracking/Marketing und vertraulicher
+  Mandatsbearbeitung
+- Verschlüsselungs-, Zugriffskontroll-, Protokollierungs- und
+  Rollenmodell für Kanzleibenutzer
+- keine Nutzung echter Mandatsdaten in Test-, Demo-, Analyse- oder
+  Trainingspfaden ohne ausdrückliche Freigabe
+- BRAO-Prüfung zu Verschwiegenheit, Dienstleistereinsatz,
+  Erforderlichkeit des Zugriffs, Verpflichtung des Dienstleisters,
+  Auslandsbezug und vergleichbarem Geheimnisschutz
+
+Solange diese Punkte nicht nachgewiesen sind, bleibt ein solcher Anbieter in
+NaC nur Vergleichs- und Review-Material. Er ist keine freigegebene
+Produktintegration und kein Beleg für DSGVO- oder BRAO-Konformität.
+
 ## Beziehung zu bestehenden NaC-Dokumenten
 
 - `docs/de/security-and-dsgvo.md`: allgemeine Repo-Schutzregeln.
