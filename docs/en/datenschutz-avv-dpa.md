@@ -138,6 +138,43 @@ Until these points are evidenced, such a provider remains comparison and
 review material in NaC. It is not an approved product integration and not
 evidence of GDPR or BRAO compliance.
 
+## AI Tools In Law Firms 2026
+
+NaC evaluates AI tools for law firms by tool class, data class and contract
+path. The relevant checks include professional secrecy under Section 43a(2)
+BRAO, service-provider use under Section 43e BRAO, BDSG, Article 6 GDPR,
+Article 28 GDPR and, for high-risk processing, Article 35 GDPR. The EU AI Act
+Article 4 AI literacy obligation is treated as a training and evidence
+requirement for all people who use AI systems in the law firm.
+
+| Tool Class | Review Examples | NaC Decision |
+| --- | --- | --- |
+| Research | Perplexity Pro, beck-online AI/beck-chat | Only for non-confidential, anonymized or public research until DPA/AVV, license, source quality, citability, logging and mandate-data prohibition are approved. Source citations do not replace professional review. |
+| Document drafting | Claude, ChatGPT and other LLMs | No consumer Free/Pro use with mandate secrets. Provider policy for API, Team, Enterprise or law-firm contract must be checked separately. A "does not train" statement is sufficient only when it contractually and technically applies to the exact channel used. |
+| Practice management | RA-MICRO with AI module, Anwalt 365 or comparable law-firm software | Only after law-firm-software, DPA/AVV, hosting, role, logging, deletion and export review. System integration also needs migration and exit path. |
+
+Required setup for NaC pilots with law-firm data:
+
+- DPA/AVV with every provider and all relevant subprocessors
+- DPIA screening for every systematic AI processing path; NaC treats mandate
+  data processing as DPIA-required until it is documented that no high risk is
+  present
+- documented AI literacy training under Article 4 EU AI Act for lawyers,
+  staff and external users who operate AI systems on behalf of the law firm
+- written client information and, where used as legal basis or professional
+  secrecy release, documented consent; consent does not replace DPA/AVV or
+  BRAO service-provider review
+- no real mandate data in test, Free, consumer, demo, product analytics or
+  training paths
+- separate approval per tool class: research, drafting and practice management
+  cannot substitute approval for one another
+- evidence storage outside Git; the repository stores only review status,
+  decision metadata, hashes or references
+
+Price references such as "20 USD/month" or "20 EUR/month" are only
+procurement notes for NaC and must be rechecked with the provider before a
+decision. They are not privacy, BRAO or security criteria.
+
 ## Relationship To Existing NaC Documents
 
 - `docs/en/security-and-dsgvo.md`: general repository protection rules.

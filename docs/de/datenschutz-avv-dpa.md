@@ -143,6 +143,44 @@ Solange diese Punkte nicht nachgewiesen sind, bleibt ein solcher Anbieter in
 NaC nur Vergleichs- und Review-Material. Er ist keine freigegebene
 Produktintegration und kein Beleg für DSGVO- oder BRAO-Konformität.
 
+## KI-Tools in der Anwaltskanzlei 2026
+
+NaC bewertet KI-Werkzeuge für Anwaltskanzleien nach Tool-Klasse, Datenklasse
+und Vertragspfad. Maßgeblich sind Mandantengeheimnis nach § 43a Abs. 2 BRAO,
+Dienstleistereinsatz nach § 43e BRAO, BDSG, Art. 6 DSGVO, Art. 28 DSGVO und
+bei hohem Risiko Art. 35 DSGVO. Die EU-AI-Act-Pflicht zu AI Literacy nach
+Art. 4 wird als Schulungs- und Nachweispflicht für alle Personen behandelt, die
+KI-Systeme in der Kanzlei einsetzen.
+
+| Tool-Klasse | Beispiele für Review | NaC-Entscheidung |
+| --- | --- | --- |
+| Recherche | Perplexity Pro, beck-online KI/beck-chat | Nur für nicht vertrauliche, anonymisierte oder öffentliche Recherche, solange AVV/DPA, Lizenz, Quellenqualität, Zitierfähigkeit, Protokollierung und Mandatsdatenverbot nicht freigegeben sind. Quellenbelege ersetzen keine fachliche Prüfung. |
+| Dokumenten-Drafting | Claude, ChatGPT, andere LLMs | Keine Consumer-Free-/Pro-Nutzung mit Mandantengeheimnissen. Anbieter-Policy für API, Team, Enterprise oder Kanzleivertrag separat prüfen. Die Aussage "trainiert nicht" reicht nur, wenn sie für den konkret genutzten Kanal vertraglich und technisch gilt. |
+| Praxis-Verwaltung | RA-MICRO mit KI-Modul, Anwalt 365 oder vergleichbare Kanzleisoftware | Nur nach Kanzleisoftware-, AVV-/DPA-, Hosting-, Rollen-, Protokollierungs-, Lösch- und Exportprüfung. Fachsystemintegration braucht zusätzlich Migrations- und Exitpfad. |
+
+Pflicht-Setup für NaC-Piloten mit Kanzleidaten:
+
+- AVV/DPA mit jedem Anbieter und allen relevanten Unterauftragsverarbeitern
+- DSFA-Screening für jede systematische KI-Verarbeitung; NaC behandelt
+  Mandatsdatenverarbeitung als DSFA-pflichtig, bis dokumentiert kein hohes
+  Risiko vorliegt
+- dokumentierte AI-Literacy-Schulung nach Art. 4 EU AI Act für Anwälte,
+  Mitarbeitende und externe Nutzer, die KI-Systeme im Auftrag der Kanzlei
+  bedienen
+- schriftliche Mandanteninformation und, soweit als Rechtsgrundlage oder
+  Berufsgeheimnisfreigabe benötigt, dokumentierte Einwilligung; Einwilligung
+  ersetzt aber weder AVV/DPA noch BRAO-Dienstleisterprüfung
+- keine echten Mandatsdaten in Test-, Free-, Consumer-, Demo-,
+  Produktanalyse- oder Trainingspfaden
+- getrennte Freigabe je Tool-Klasse: Recherche, Drafting und
+  Praxisverwaltung dürfen nicht gegenseitig als Freigabeersatz dienen
+- Nachweisablage außerhalb von Git; im Repo liegen nur Reviewstatus,
+  Entscheidungsmetadaten, Hashes oder Verweise
+
+Preisangaben wie "20 USD/Monat" oder "20 EUR/Monat" sind für NaC nur
+Beschaffungsnotizen und müssen vor Entscheidung aktuell beim Anbieter geprüft
+werden. Sie sind kein Datenschutz-, BRAO- oder Sicherheitskriterium.
+
 ## Beziehung zu bestehenden NaC-Dokumenten
 
 - `docs/de/security-and-dsgvo.md`: allgemeine Repo-Schutzregeln.
