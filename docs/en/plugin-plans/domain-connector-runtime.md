@@ -37,6 +37,15 @@ recorded as candidates in the
 may move into this general connector model only after license, DPA, AI-SBOM,
 security and human-review checks.
 
+## Later Discovery Candidates
+
+DNS-AID is recorded as a later review candidate:
+[github.com/dns-aid](https://github.com/dns-aid). Its project profile describes
+a DNS-based discovery layer for AI agents with DNSSEC verification. For NaC,
+this is only a review point for possible agent or connector discovery. It is
+not an approved dependency, production connector or replacement for NaC
+reviews, domain approvals, DPA checks, AI-SBOM and the security model.
+
 ## Day 0
 
 - Confirm target systems for the MVP:

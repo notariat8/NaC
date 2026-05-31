@@ -39,6 +39,16 @@ Kandidaten geführt. Ein Kandidat darf erst nach Lizenz-, AVV-/DPA-,
 AI-SBOM-, Sicherheits- und Human-Review-Prüfung in dieses allgemeine
 Connector-Modell übernommen werden.
 
+## Spätere Discovery-Kandidaten
+
+DNS-AID wird als späterer Review-Kandidat geführt:
+[github.com/dns-aid](https://github.com/dns-aid). Laut Projektprofil geht es
+um eine DNS-basierte Discovery-Schicht für AI-Agenten mit DNSSEC-Verifikation.
+Für NaC ist das vorerst nur ein Prüfpunkt für mögliche Agenten- oder
+Connector-Auffindbarkeit. Es ist keine freigegebene Abhängigkeit, kein
+Produktionsconnector und kein Ersatz für NaC-Reviews, Domainfreigaben,
+AVV-/DPA-Prüfung, AI-SBOM und Sicherheitsmodell.
+
 ## Day0
 
 - Zielsysteme für MVP bestätigen:
