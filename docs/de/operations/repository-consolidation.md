@@ -24,7 +24,7 @@ Ein Repo verschwindet in GitHub nicht dadurch, dass sein Inhalt in NaC
 | nicht-notarielle Aufnahmequelle | keine NaC-Usecase-Zielstruktur | aus dem NaC-Usecase-Katalog entfernt | extern | Nicht in NaC übernehmen. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migriert in PR #6 | altes Repo sichtbar | Nach Merge Redirect-README setzen oder archivieren. |
 | `ofunk/NaaS` | `usecases/` und `workflows/` | noch nicht migriert | altes Repo sichtbar | Zerlegen statt 1:1 verschieben: Usecases, Workflow-Kontrakte und ggf. Backlog getrennt übernehmen. |
-| `ofunk/oci-landing-zone` | `plugins/nac-oci-evidence/` und Cloud-/Evidence-Doku | teilweise fachlich abgedeckt | altes Repo sichtbar | Prüfen, ob Runbooks/Infra-Verträge in NaC fehlen; dann migrieren oder als externe Infrastrukturquelle belassen. |
+| `notariat8/oci-landing-zone` | `plugins/nac-oci-evidence/` und Cloud-/Evidence-Doku | teilweise fachlich abgedeckt | kanonische externe Infrastrukturquelle | Prüfen, ob Runbooks/Infra-Verträge in NaC fehlen; dann migrieren oder als externe Infrastrukturquelle belassen. |
 | `ofunk/PaaS` | ggf. `workflows/` oder Editor-/Workspace-Doku | nicht migriert | altes Repo sichtbar | Prüfen, ob Inhalte zu NaC gehören oder als separates VS-Code-Orchestrator-Repo bleiben. |
 | `ofunk/1gem8` | ggf. Startup-Doku | nicht migriert | altes Repo sichtbar | Prüfen, ob Inhalte zu NaC gehören oder extern bleiben. |
 | `ofunk/machine-setup` | keine fachliche NaC-Domäne | extern | altes Repo sichtbar | Nicht in NaC verschieben, außer es wird bewusst als Tooling-Runbook übernommen. |

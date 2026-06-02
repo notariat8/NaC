@@ -24,7 +24,7 @@ Retirement is a separate step.
 | non-notarial intake source | no NaC usecase target | removed from the NaC usecase catalog | external | Do not move into NaC. |
 | `ofunk/IDaaS` | `plugins/nac-idaas/` | migrated in PR #6 | old repo visible | After merge, add redirect README or archive. |
 | `ofunk/NaaS` | `usecases/` and `workflows/` | not migrated yet | old repo visible | Decompose instead of moving wholesale: usecases, workflow contracts, and backlog separately. |
-| `ofunk/oci-landing-zone` | `plugins/nac-oci-evidence/` and cloud/evidence docs | partly covered conceptually | old repo visible | Check whether runbooks or infra contracts are missing in NaC; migrate or keep as external infrastructure source. |
+| `notariat8/oci-landing-zone` | `plugins/nac-oci-evidence/` and cloud/evidence docs | partly covered conceptually | canonical external infrastructure source | Check whether runbooks or infra contracts are missing in NaC; migrate or keep as external infrastructure source. |
 | `ofunk/PaaS` | possibly `workflows/` or editor/workspace docs | not migrated | old repo visible | Check whether content belongs in NaC or should remain a separate VS Code orchestrator repository. |
 | `ofunk/1gem8` | possibly startup docs | not migrated | old repo visible | Check whether content belongs in NaC or should remain external. |
 | `ofunk/machine-setup` | no business NaC domain | external | old repo visible | Do not move into NaC unless intentionally adopted as tooling runbook. |
