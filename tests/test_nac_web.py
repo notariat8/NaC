@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import sys
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -14,6 +16,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
+import nac_web.server as nac_server  # noqa: E402
 from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_cost_page, build_home_page, build_kg_page  # noqa: E402
 from nac_gnotkg.views import build_cost_review_view  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
@@ -121,6 +124,27 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(quote_type, "application/json; charset=utf-8")
         quote_payload = json.loads(quote_body.decode("utf-8"))
         self.assertEqual(quote_payload["fee_amount"], "4138.00")
+
+    def test_runtime_server_supports_head_healthz_for_lb_monitoring(self) -> None:
+        server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            conn.request("HEAD", "/healthz")
+            response = conn.getresponse()
+            body = response.read()
+            conn.close()
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+            server.server_close()
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.getheader("Content-Type"), "application/json; charset=utf-8")
+        self.assertEqual(response.getheader("Content-Length"), "20")
+        self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(body, b"")
 
     def test_app_serves_empty_favicon_without_browser_console_404(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
