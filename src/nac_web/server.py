@@ -324,33 +324,37 @@ class NaCLocalWebApp:
         return _json_response(quote.to_dict())
 
 
-def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False) -> None:
+def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
     app = NaCLocalWebApp(repo_root)
 
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
-            status, content_type, body = app.handle(self.path)
+        def _send_app_response(self, status: int, content_type: str, body: bytes, *, include_body: bool = True) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
-            self.wfile.write(body)
+            if include_body:
+                self.wfile.write(body)
+
+        def do_GET(self) -> None:  # noqa: N802
+            self._send_app_response(*app.handle(self.path))
+
+        def do_HEAD(self) -> None:  # noqa: N802
+            self._send_app_response(*app.handle(self.path), include_body=False)
 
         def do_POST(self) -> None:  # noqa: N802
             length = int(self.headers.get("Content-Length", "0"))
-            status, content_type, body = app.handle_post(self.path, self.rfile.read(length))
-            self.send_response(status)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.end_headers()
-            self.wfile.write(body)
+            self._send_app_response(*app.handle_post(self.path, self.rfile.read(length)))
 
         def log_message(self, format: str, *args: Any) -> None:
             print(f"{self.address_string()} - {format % args}")
 
-    server = ThreadingHTTPServer((host, port), Handler)
+    return ThreadingHTTPServer((host, port), Handler)
+
+
+def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False) -> None:
+    server = build_server(repo_root, host, port)
     url = f"http://{host}:{server.server_port}/"
     print(f"NaC local web server: {url}")
     print("Abbrechen mit Ctrl+C.")
