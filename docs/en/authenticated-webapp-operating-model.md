@@ -36,9 +36,31 @@ flowchart TD
     Runtime --> DataRepo["separate data repository"]
     Runtime --> Storage["object store, database blob or OneDrive"]
     Runtime --> Audit["audit, hash, purpose, expiry, revocation"]
+    Workstation --> O365["Office 365 / Microsoft 365 client layer"]
+    O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
+    O365 --> AgentRegistry["Microsoft Agent 365 Agent Registry"]
     Workstation["local notary workstation"] --> Card["card reader, XNP, eID bridge"]
     Card --> Runtime
 ```
+
+Office 365 is mandatory on the client side. For NaC, that does not mean the
+SaaS identity layer or the current OCI deployment changes. Office 365 is the
+mandatory workstation, document, calendar, communication and collaboration
+layer for the notary office; NaC may therefore plan integrations with OneDrive,
+SharePoint, Outlook, Teams and future Microsoft 365 features, while every
+access path remains bounded by NaC roles, matter binding, purpose binding,
+audit and human approval.
+
+Microsoft Agent 365 Agent Registry is included as a target-architecture
+building block for agent governance. Microsoft Learn describes Agent Registry
+Sync in the Microsoft 365 Admin Center as a Preview feature that can provide
+central visibility and governance for agents from external AI-agent
+environments. The listed platforms are Amazon Bedrock, Google Vertex AI,
+Salesforce Agentforce and Databricks Genie. This is not a current deploy step.
+For NaC it is not a production integration requirement. It is a future
+control anchor: when NaC agents, MCP connectors or external agent platforms are
+connected productively, their registration, visibility, accountability and
+deactivation must be reconciled with Microsoft 365 agent governance.
 
 The static site may link to the authenticated web app. It must not serve
 tokens, secret upload links, raw documents, identity-card data, certificate
@@ -57,6 +79,11 @@ path. The public transition from `www-n8` into the NaC app is tenant-aware:
 existing customers pass a tenant hint, while new customers first run through a
 domain-readiness check. NaC then creates a reviewable admin-provisioning plan
 for OCI Identity Domains.
+
+Office 365 complements this path on the client and workstation side. OCI
+Identity Domains remains the IdP and tenant-provisioning layer for the current
+SaaS path; Microsoft 365 supplies workstation services and agent governance
+unless a separate reviewed IdP change decides otherwise.
 
 End users do not work in the OCI Console. NaC operates Identity Domains through
 reviewed API and CLI contracts; productive writes to users, groups or
@@ -148,11 +175,14 @@ from a product idea into a checkable NaC artifact path.
    demos.
 2. Design the internal authenticated web app for notary-office users through
    OCI Identity Domains and the NaC role gate.
-3. Explicitly disallow consumer ChatGPT as a client-upload gateway.
-4. Check card-reader, XNP and eID paths only locally through the
+3. Track Office 365 as the mandatory client layer and Microsoft Agent 365 Agent
+   Registry as a Preview governance anchor in the target architecture and
+   backlog.
+4. Explicitly disallow consumer ChatGPT as a client-upload gateway.
+5. Check card-reader, XNP and eID paths only locally through the
    `notary-workstation` profile.
-5. Connect the mobile web app or PWA to storage targets first through
+6. Connect the mobile web app or PWA to storage targets first through
    short-lived secure links; build native apps only for concrete device needs.
-6. Treat uploads as inbox items or import proposals first.
-7. Make contract, validator, audit and human approval mandatory before
+7. Treat uploads as inbox items or import proposals first.
+8. Make contract, validator, audit and human approval mandatory before
    productive links.
