@@ -361,9 +361,11 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("notariat-musterstadt", html)
         self.assertIn("OCI-IdP-Login", html)
         self.assertIn("kein Tenant-Autorisierungsnachweis", html)
-        self.assertIn("/login?source=www-n8&amp;entry=customer&amp;tenant_hint=notariat-musterstadt", html)
+        self.assertIn("notariat8", html)
+        self.assertIn("/login?source=notariat8&amp;entry=customer&amp;tenant_hint=notariat-musterstadt", html)
+        self.assertNotIn("www-n8", html)
 
-    def test_app_receives_www_n8_prospect_handoff_for_domain_readiness(self) -> None:
+    def test_app_receives_www_n8_prospect_handoff_on_customer_readiness_page(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
         status, content_type, body = app.handle(
@@ -373,13 +375,88 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
-        self.assertIn("NaC App-Einstieg", html)
-        self.assertIn("Neukunde", html)
         self.assertIn("Domain-Readiness", html)
+        self.assertIn("DNS-TXT", html)
+        self.assertIn("Keine Mandatsdaten", html)
+        self.assertIn("notariat8", html)
         self.assertIn("kanzlei-notariat.example", html)
-        self.assertIn("/onboarding/readiness?domain_hint=kanzlei-notariat.example", html)
-        self.assertIn("/api/tenant/domain-check", html)
+        self.assertIn("NaC-Kennung", html)
+        self.assertIn("Administrations-E-Mail angeben", html)
+        self.assertIn('name="admin_email"', html)
+        self.assertIn("keine E-Mail automatisch versendet", html)
+        self.assertIn("noch offen", html)
+        self.assertNotIn("DNS jetzt prüfen", html)
         self.assertNotIn("admin@kanzlei-notariat.example", html)
+        self.assertNotIn("admin%40kanzlei-notariat.example", html)
+        self.assertNotIn("NaC App-Einstieg", html)
+        self.assertNotIn("API-Kante", html)
+        self.assertNotIn("Guardrails", html)
+        self.assertNotIn("www-n8", html)
+        self.assertNotIn("Tenant-Slug", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Admin-Dry-Run", html)
+        self.assertNotIn("nac-saas-owner", html)
+        self.assertNotIn("Notariat8", html)
+        self.assertNotIn("pending", html)
+        self.assertNotIn("propagation", html)
+
+    def test_www_n8_prospect_readiness_uses_explicit_admin_email_only(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/onboarding/readiness"
+            "?audience=customer"
+            "&domain_hint=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=verwaltung@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("verwaltung@kanzlei-notariat.example", html)
+        self.assertIn("DNS jetzt prüfen", html)
+        self.assertIn("admin_email=verwaltung%40kanzlei-notariat.example", html)
+        self.assertNotIn("admin@kanzlei-notariat.example", html)
+
+    def test_www_n8_prospect_dns_check_stays_customer_facing(self) -> None:
+        def fake_resolver(record_name: str) -> dict:
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=36685e54c3d26580dace709f1f09c702"],
+                "resolver_error": "",
+            }
+
+        app = NaCLocalWebApp(REPO_ROOT, dns_resolver=fake_resolver)
+
+        status, content_type, body = app.handle(
+            "/onboarding/dns-check"
+            "?audience=customer"
+            "&domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("DNS-Prüfergebnis", html)
+        self.assertIn("Domain bestätigt", html)
+        self.assertIn("Was passiert als Nächstes?", html)
+        self.assertIn("notariat8", html)
+        self.assertIn("bestätigt", html)
+        self.assertIn("Erneut prüfen", html)
+        self.assertIn("keine E-Mail automatisch versendet", html)
+        self.assertNotIn("verified", html)
+        self.assertNotIn("www-n8", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Admin-Dry-Run", html)
+        self.assertNotIn("Tenant-Slug", html)
+        self.assertNotIn("nac-saas-owner", html)
+        self.assertNotIn("live_dns", html)
+        self.assertNotIn("OCI-Credentials", html)
+        self.assertNotIn("Beobachtete Werte", html)
+        self.assertNotIn("Diagnose", html)
 
     def test_www_n8_handoff_escapes_hint_values(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
