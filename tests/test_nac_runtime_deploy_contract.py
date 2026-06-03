@@ -72,6 +72,74 @@ class NaCRuntimeDeploymentContractTests(unittest.TestCase):
         self.assertEqual(content_type, "application/json; charset=utf-8")
         self.assertIn(b'"status": "ok"', body)
 
+    def test_release_overlay_script_promotes_checked_archive_without_secrets(self) -> None:
+        script = read("deploy/runtime/nac-web-release.sh")
+
+        required_terms = [
+            "NAC_RELEASE_ARCHIVE",
+            "NAC_RELEASE_SHA256",
+            "NAC_RELEASE_COMMIT",
+            "/opt/nac/releases",
+            "/opt/nac/current",
+            "sha256sum -c",
+            "tar -xzf",
+            "ln -sfn",
+            "systemctl restart",
+            "rollback",
+            "previous_target",
+            "http://127.0.0.1:8768/healthz",
+            '"status": "ok"',
+        ]
+
+        for term in required_terms:
+            self.assertIn(term, script)
+
+        forbidden_terms = [
+            "BEGIN PRIVATE KEY",
+            "key_file",
+            "client_secret",
+            "password=",
+        ]
+
+        for term in forbidden_terms:
+            self.assertNotIn(term, script)
+
+    def test_runtime_docs_separate_app_release_overlay_from_vm_replacement(self) -> None:
+        german_content = read("docs/de/operations/oci-runtime.md")
+        english_content = read("docs/en/operations/oci-runtime.md")
+
+        german_required_terms = [
+            "App-Release-Overlay",
+            "kein VM-Replacement",
+            "VM-Replacement bleibt",
+            "Basisimage",
+            "Firewall",
+            "Owner Apply Approval for Apply Block H NaC app release overlay",
+            "Commit",
+            "SHA-256",
+            "systemd-Restart",
+            "Rollback",
+        ]
+
+        for term in german_required_terms:
+            self.assertIn(term, german_content)
+
+        english_required_terms = [
+            "App Release Overlay",
+            "does not require VM replacement",
+            "VM replacement remains",
+            "base image",
+            "firewall",
+            "Owner Apply Approval for Apply Block H NaC app release overlay",
+            "commit",
+            "SHA-256",
+            "systemd restart",
+            "rollback",
+        ]
+
+        for term in english_required_terms:
+            self.assertIn(term, english_content)
+
 
 if __name__ == "__main__":
     unittest.main()

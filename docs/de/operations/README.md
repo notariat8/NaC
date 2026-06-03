@@ -13,6 +13,8 @@ Arbeitsmodell und Repo-Konsolidierung.
 - [parallelbetrieb-version-binding.md](parallelbetrieb-version-binding.md): Mischbetrieb alt/neu mit
   Version-Binding.
 - [agile-cadence.md](agile-cadence.md): Arbeitsmethode und Team-Cadence.
+- [oci-runtime.md](oci-runtime.md): Live-Runtime-Vertrag, App-Release-Overlay
+  und Abgrenzung zu VM-Replacement für `app.notariat8.de`.
 - [repository-consolidation.md](repository-consolidation.md): migrierte, offene und stillzulegende
   Einzelrepos.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): Zielstruktur und Migration in einem Repo.
