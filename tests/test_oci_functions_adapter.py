@@ -56,6 +56,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("from nac_web.oci_functions import handler", func_py)
         self.assertIn("COPY src /function/src", dockerfile)
         self.assertIn("COPY deploy/functions/nac-app/func.py /function/func.py", dockerfile)
+        self.assertIn("ENV PYTHONPATH=/python:/function/src", dockerfile)
         self.assertIn("fdk", requirements)
         self.assertIn("dependencies = []", pyproject)
 
@@ -86,6 +87,23 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("True", result.stdout)
+
+    def test_function_docker_context_excludes_local_secret_and_vcs_paths(self) -> None:
+        dockerignore = self.read(".dockerignore")
+
+        required_patterns = [
+            ".git",
+            ".venv",
+            ".venvs",
+            ".oci",
+            "*.pem",
+            "*.key",
+            "*.tfstate",
+            "*.tfvars",
+            "certificate.zip",
+        ]
+        for pattern in required_patterns:
+            self.assertIn(pattern, dockerignore)
 
     def test_operations_docs_define_functions_parallel_runtime_gate(self) -> None:
         german = self.read("docs/de/operations/oci-runtime.md")
