@@ -18,6 +18,23 @@ First live endpoints:
 - `GET /healthz`
 - `GET /admin/onboarding`
 
+## OCI Functions Parallel Runtime
+
+The next runtime stage is an OCI Functions Parallel Runtime behind OCI API
+Gateway. It does not replace the VM immediately: the VM remains fallback until
+the Functions path is confirmed by a live smoke test.
+
+The first Functions adapter is intentionally GET/HEAD-only. It calls the same
+`NaCLocalWebApp.handle(...)` contract as the local web server and performs no
+POST, apply, or productive write operations. The entry path is intended for
+`/healthz`, `/onboarding/readiness`, `/onboarding/dns-check`, and other
+read-only customer onboarding pages. The function package stores no mandate data,
+secrets, OCI API keys, or tenant credentials.
+
+Required apply gate for the Functions parallel path:
+
+`Owner Apply Approval for Apply Block J NaC OCI Functions parallel runtime`
+
 ## App Release Overlay
 
 An ordinary NaC software release does not require VM replacement after the
