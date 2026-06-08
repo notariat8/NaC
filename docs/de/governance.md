@@ -23,6 +23,23 @@ Empfehlung für Unternehmens-Forks:
 - Upstream-Übernahme nur über dokumentierte Sync-PRs
 - laufende Vorgänge auf Startversion belassen (Version-Binding)
 
+## Agentische Änderungsdisziplin
+
+Nichttriviale agentische Arbeit wird nicht direkt im Code ausgehandelt. Zuerst
+werden Scope, Risiko, Akzeptanzkriterien und relevante Schichten im Plan
+geklärt. Danach prüft ein Review den Plan, bevor umgesetzt wird.
+
+Nach der Umsetzung prüft ein Code-Review mindestens:
+
+- ob die Änderung dem Plan und den bestehenden Repo-Mustern folgt
+- ob Daten-, Controller-/Logik- und View-Schicht konsistent bleiben
+- ob Fehlerfälle, Tests und Sicherheitsaspekte angemessen abgedeckt sind
+- ob keine unnötige neue Technik, Doppelstruktur oder Überkomplexität entsteht
+
+Bei hartnäckigen oder unklaren Fehlern gilt: erst Diagnose, dann Fix. Ein
+Agent darf in dieser Situation nicht weiterprobieren, bis die Ursache
+benannt und der kleinste sinnvolle Fix-Pfad beschrieben ist.
+
 ## Environment-Mapping
 
 - `nac-operations`: sensible manuelle Ausführung einzelner NaC-Prozessfixtures

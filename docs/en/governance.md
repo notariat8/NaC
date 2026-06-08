@@ -23,6 +23,24 @@ Recommendation for organization forks:
 - take upstream changes only through documented sync PRs,
 - keep running matters on their start version through version binding.
 
+## Agentic Change Discipline
+
+Non-trivial agentic work is not negotiated directly in code. Scope, risk,
+acceptance criteria and the relevant layers are clarified in a plan first. A
+review then checks the plan before implementation starts.
+
+After implementation, code review checks at least:
+
+- whether the change follows the plan and existing repository patterns,
+- whether the data, controller/logic and view layers remain consistent,
+- whether error cases, tests and security concerns are covered adequately,
+- whether no unnecessary new technology, duplicate structure or over-complexity
+  has been introduced.
+
+For persistent or unclear failures, diagnosis comes before fixing. In that
+situation, an agent must not keep trying changes until the cause is named and
+the smallest sensible fix path is described.
+
 ## Environment Mapping
 
 - `nac-operations`: sensitive manual execution of individual NaC process fixtures.

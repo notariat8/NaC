@@ -28,6 +28,7 @@ documentation rule.
 | Completion and finished state | Prevents local intermediate states from being called finished. | hard | `nac doctor --profile strict`, `git status`, `HEAD` versus `origin/main`, `remote_ci_checks` |
 | Git delivery | Separates production PR approval from owner-direct work in the active reference repo. | mode-dependent | branch protection/PR in production mode, push+clean check in reference mode |
 | GitHub-first work control | Ties non-trivial agentic work to a leading issue and visible Project board. | working rule plus completion gate | issue trail, `NaC Control Plane`, Delivery Mode, `remote_ci_checks` |
+| Agentic change discipline | Prevents doom loops caused by unclear requirements, unreviewed agent changes and fixes without diagnosis. | working rule plus validator gate | `agent_workflows` in [policies/process-policy.yaml](../../policies/process-policy.yaml), plan/code review, validation evidence |
 | Roadmap and Gantt | Keeps delivery plan and status visible without blocking small fixes. | guidance plus render gate | `scripts/validate_gantt_progress.py` |
 | Language and localization | German leads for subject matter, English is translation/orientation. | hard | `scripts/validate_language_parity.py` |
 | CLI and office surface | New NaC functionality needs a verifiable operating surface. | hard for new functionality | tests, CLI call, `nac doctor --profile strict` |
@@ -65,6 +66,23 @@ An update is finished only when the Delivery Mode documented in the issue is
 satisfied and the required `remote_ci_checks` are successful. The Project does
 not bypass repository permissions: users see only issues from repositories
 they can already access.
+
+## Agentic Change Discipline
+
+Non-trivial work follows two separate loops:
+
+1. `plan -> review -> fix`: requirements, architecture assumptions, scope,
+   risks and acceptance criteria are clarified in text first. A fresh review
+   checks the plan for gaps, contradictions, unnecessary technology and missing
+   tests or approvals.
+2. `implement -> review -> fix`: the implementation is checked against the
+   plan, existing repository patterns, error handling, test coverage and
+   security before the state is ready for acceptance.
+
+For repeated, unclear or cross-layer failures, diagnosis comes before fixing.
+An agent may change code only after the cause has been named. Changes that
+touch the data, controller/logic or view layer need an explicit check that
+those layers stay synchronized.
 
 ## Gantt Rule
 

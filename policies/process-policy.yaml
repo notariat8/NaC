@@ -129,6 +129,11 @@ rule_architecture:
 
 agent_workflows:
   require_plan_before_code_when_scope_is_open: true
+  require_plan_review_fix_for_nontrivial_work: true
+  require_implementation_review_before_user_acceptance: true
+  require_diagnosis_before_fix_for_repeated_or_unclear_failures: true
+  require_layer_sync_check_for_data_controller_view_changes: true
+  require_error_test_security_review_for_code_reviewer: true
   require_user_confirmation_before_code_for_ambiguous_requests: true
   allow_direct_implementation_for_clear_small_changes: true
   require_tests_or_validation_evidence_for_code_changes: true

@@ -50,6 +50,7 @@ MANDATORY_LANGUAGE_POLICY_KEYS = (
 MANDATORY_PROCESS_POLICY_KEYS = (
     "delivery_modes:",
     "github_first_operating_model:",
+    "agent_workflows:",
     "protected_pr:",
     "owner_direct_main:",
     "rule_architecture:",
@@ -112,6 +113,14 @@ EXPECTED_GITHUB_FIRST_BRANCH_PREFIXES = {
     "sync": "sync/<issue-number>-<short-slug>",
     "hotfix": "hotfix/<issue-number>-<short-slug>",
 }
+
+EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
+    "require_plan_review_fix_for_nontrivial_work",
+    "require_implementation_review_before_user_acceptance",
+    "require_diagnosis_before_fix_for_repeated_or_unclear_failures",
+    "require_layer_sync_check_for_data_controller_view_changes",
+    "require_error_test_security_review_for_code_reviewer",
+)
 
 EXPECTED_GITHUB_SURFACES = (
     "issues",
@@ -368,6 +377,20 @@ def validate_process_policy_file() -> list[str]:
                         "Pflichtwert fehlt in process-policy: "
                         f"github_first_operating_model.branch_prefixes.{key}"
                     )
+
+    agent_workflows = policy.get("agent_workflows")
+    if not isinstance(agent_workflows, dict):
+        errors.append(
+            "Pflichtabschnitt fehlt in process-policy: "
+            "agent_workflows must be a mapping"
+        )
+    else:
+        for key in EXPECTED_AGENT_WORKFLOW_TRUE_KEYS:
+            if agent_workflows.get(key) is not True:
+                errors.append(
+                    "Pflichtwert fehlt in process-policy: "
+                    f"agent_workflows.{key}.true"
+                )
 
     for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
         if not (REPO_ROOT / rel_path).exists():

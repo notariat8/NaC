@@ -17,6 +17,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Die verbindliche Regelarchitektur steht in [docs/de/regelarchitektur.md](../docs/de/regelarchitektur.md) und [docs/en/regelarchitektur.md](../docs/en/regelarchitektur.md).
 - Produktive Forks und sensible Prozessänderungen nutzen Branch + Pull Request + Review; im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
+- Nichttriviale agentische Arbeit folgt `plan -> review -> fix` vor der Umsetzung und `implement -> review -> fix` vor der Abnahme. Bei wiederholten, unklaren oder schichtübergreifenden Fehlern gilt Diagnose vor Fix.
 - Sensible Prozessschritte, insbesondere notarielle Freigaben, Register- oder Kostengates, brauchen Vier-Augen-Prinzip.
 - Jede Prozessänderung muss begründet und versioniert sein.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
@@ -51,6 +52,8 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
   in die lokale Codex-Discovery gespiegelt; danach Codex neu starten oder eine
   neue Session öffnen.
 - Bei offenem Scope, Issue-getriebener Arbeit oder mehreren relevanten Lösungswegen zuerst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestätigung einholen, bevor Code geändert wird.
+- Nichttriviale Arbeit in zwei Schleifen führen: `plan -> review -> fix` klärt Anforderungen, Scope, Risiko und Akzeptanzkriterien; `implement -> review -> fix` prüft Umsetzung gegen Plan, Repo-Muster, Fehlerbehandlung, Tests und Sicherheit.
+- Bei wiederholten oder unklaren Fehlern zuerst Diagnose und Ursache dokumentieren, dann erst ändern. Bei Änderungen an Daten-, Controller-/Logik- oder View-Schicht explizit prüfen, dass diese Schichten synchron bleiben.
 - Bei klar beauftragten, eng abgegrenzten Änderungen darf direkt umgesetzt werden; Annahmen und Validierung bleiben sichtbar.
 - Codeänderungen brauchen Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder Testlücke festhalten, dann implementieren, iterieren und erneut validieren.
 - UI-, Frontend- und andere visuelle Änderungen brauchen Screenshot oder vergleichbaren visuellen Nachweis vor Abschluss.

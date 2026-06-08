@@ -10,6 +10,7 @@ alwaysApply: true
 - Produktive Forks und sensible Prozessänderungen laufen über Branch + Pull Request + Review.
 - Im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
+- Nichttriviale agentische Arbeit folgt `plan -> review -> fix` vor der Umsetzung und `implement -> review -> fix` vor der Abnahme; bei wiederholten, unklaren oder schichtübergreifenden Fehlern gilt Diagnose vor Fix.
 - Jede Änderung braucht Zweck, Risiko und Verantwortliche.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
 - Wenn nach `fertig` gefragt wird, ist nur ein mit `nac doctor --profile strict` geprüfter, mit GitHub synchroner und lokal sauberer Stand fertig, wenn zusätzlich `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate` erfolgreich sind.

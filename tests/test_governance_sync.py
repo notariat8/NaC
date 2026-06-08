@@ -96,6 +96,12 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 '    agent: "agent/<issue-number>-<short-slug>"',
                 '    sync: "sync/<issue-number>-<short-slug>"',
                 '    hotfix: "hotfix/<issue-number>-<short-slug>"',
+                "agent_workflows:",
+                "  require_plan_review_fix_for_nontrivial_work: true",
+                "  require_implementation_review_before_user_acceptance: true",
+                "  require_diagnosis_before_fix_for_repeated_or_unclear_failures: true",
+                "  require_layer_sync_check_for_data_controller_view_changes: true",
+                "  require_error_test_security_review_for_code_reviewer: true",
                 "rule_architecture:",
                 "  human_explanation_de: docs/de/regelarchitektur.md",
                 "  human_explanation_en: docs/en/regelarchitektur.md",
@@ -212,6 +218,81 @@ class GovernanceSyncValidationTest(unittest.TestCase):
         self.assertIn(
             "Pflichtwert fehlt in process-policy: "
             "github_first_operating_model.branch_prefixes.sync",
+            errors,
+        )
+
+    def test_process_policy_reports_missing_agentic_change_discipline(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = "\n".join(
+                (
+                    "change_management:",
+                    "  delivery_modes:",
+                    "    protected_pr:",
+                    "    owner_direct_main:",
+                    "github_first_operating_model:",
+                    "  enabled: true",
+                    "  project_owner: notariat8",
+                    "  project_title: NaC Control Plane",
+                    "  project_scope: organization",
+                    "  project_required_for_nontrivial_work: true",
+                    "  require_leading_issue_for_nontrivial_work: true",
+                    "  require_project_fields_for_nontrivial_work: true",
+                    "  allow_owner_direct_with_issue_project_trail: true",
+                    "  completion_requires_remote_ci_checks: true",
+                    "  forbid_secrets_and_matter_data_in_github_surfaces: true",
+                    "  required_project_fields:",
+                    "    - Status",
+                    "    - Track",
+                    "    - Work Type",
+                    "    - Risk Gate",
+                    "    - Delivery Mode",
+                    "    - Priority",
+                    "    - Size",
+                    "    - Iteration",
+                    "    - Due Date",
+                    "  required_statuses:",
+                    "    - Inbox",
+                    "    - Ready",
+                    "    - In Progress",
+                    "    - Review",
+                    "    - Blocked",
+                    "    - Done",
+                    "  required_views:",
+                    "    - Owner Board",
+                    "    - Now",
+                    "    - Blocked",
+                    "    - Governance And Security",
+                    "    - Release Readiness",
+                    "    - My Agent Work",
+                    "  delivery_modes:",
+                    "    - Owner Direct",
+                    "    - Protected PR",
+                    "    - Sync PR",
+                    "  branch_prefixes:",
+                    '    agent: "agent/<issue-number>-<short-slug>"',
+                    '    sync: "sync/<issue-number>-<short-slug>"',
+                    '    hotfix: "hotfix/<issue-number>-<short-slug>"',
+                    "agent_workflows:",
+                    "  require_plan_review_fix_for_nontrivial_work: true",
+                    "rule_architecture:",
+                    "  human_explanation_de: docs/de/regelarchitektur.md",
+                    "  human_explanation_en: docs/en/regelarchitektur.md",
+                )
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.require_implementation_review_before_user_acceptance.true",
+            errors,
+        )
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.require_diagnosis_before_fix_for_repeated_or_unclear_failures.true",
             errors,
         )
 
