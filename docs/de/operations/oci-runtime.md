@@ -44,7 +44,10 @@ NaC-Commit wird als geprüftes Archiv mit dokumentierter SHA-256 auf die private
 Runtime übertragen, durch [deploy/runtime/nac-web-release.sh](../../../deploy/runtime/nac-web-release.sh)
 nach `/opt/nac/releases/<commit>` entpackt, über `/opt/nac/current` aktiviert
 und anschließend per systemd-Restart von `nac-web` geprüft.
-Wenn der Healthcheck fehlschlägt, setzt das Skript `/opt/nac/current` per
+Der Healthcheck nutzt ein kurzes, konfigurierbares Wartefenster
+(`NAC_RELEASE_HEALTH_ATTEMPTS`, `NAC_RELEASE_HEALTH_SLEEP_SECONDS`), damit ein
+gesunder Prozess nach dem Restart Zeit zum Binden des Ports hat. Wenn der
+Healthcheck danach fehlschlägt, setzt das Skript `/opt/nac/current` per
 Rollback auf den vorherigen Zielstand zurück und startet `nac-web` erneut.
 
 Erforderliches Apply-Gate für diesen App-Release-Pfad:

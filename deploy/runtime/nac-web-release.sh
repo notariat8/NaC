@@ -8,6 +8,8 @@ set -euo pipefail
 NAC_RELEASE_ROOT="${NAC_RELEASE_ROOT:-/opt/nac}"
 NAC_RELEASE_SERVICE="${NAC_RELEASE_SERVICE:-nac-web}"
 NAC_RELEASE_HEALTH_URL="${NAC_RELEASE_HEALTH_URL:-http://127.0.0.1:8768/healthz}"
+NAC_RELEASE_HEALTH_ATTEMPTS="${NAC_RELEASE_HEALTH_ATTEMPTS:-30}"
+NAC_RELEASE_HEALTH_SLEEP_SECONDS="${NAC_RELEASE_HEALTH_SLEEP_SECONDS:-1}"
 
 # Default release store: /opt/nac/releases; active symlink: /opt/nac/current.
 
@@ -83,7 +85,22 @@ fi
 ln -sfn "$release_dir" "$current_link"
 systemctl restart "$NAC_RELEASE_SERVICE"
 systemctl is-active --quiet "$NAC_RELEASE_SERVICE"
-curl --fail --silent --show-error "$NAC_RELEASE_HEALTH_URL" | grep -F '"status": "ok"'
+
+health_ok=0
+for attempt in $(seq 1 "$NAC_RELEASE_HEALTH_ATTEMPTS"); do
+  if curl --fail --silent --show-error "$NAC_RELEASE_HEALTH_URL" | grep -F '"status": "ok"'; then
+    health_ok=1
+    break
+  fi
+  if [ "$attempt" != "$NAC_RELEASE_HEALTH_ATTEMPTS" ]; then
+    sleep "$NAC_RELEASE_HEALTH_SLEEP_SECONDS"
+  fi
+done
+
+if [ "$health_ok" -ne 1 ]; then
+  echo "NaC release ${NAC_RELEASE_COMMIT} did not pass health check after ${NAC_RELEASE_HEALTH_ATTEMPTS} attempts" >&2
+  exit 1
+fi
 
 trap - EXIT
 echo "NaC release ${NAC_RELEASE_COMMIT} is active"

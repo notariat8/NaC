@@ -87,6 +87,10 @@ class NaCRuntimeDeploymentContractTests(unittest.TestCase):
             "systemctl restart",
             "rollback",
             "previous_target",
+            "NAC_RELEASE_HEALTH_ATTEMPTS",
+            "NAC_RELEASE_HEALTH_SLEEP_SECONDS",
+            'for attempt in $(seq 1 "$NAC_RELEASE_HEALTH_ATTEMPTS")',
+            'sleep "$NAC_RELEASE_HEALTH_SLEEP_SECONDS"',
             "http://127.0.0.1:8768/healthz",
             '"status": "ok"',
         ]

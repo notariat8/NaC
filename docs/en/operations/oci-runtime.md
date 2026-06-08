@@ -43,7 +43,10 @@ reviewed NaC commit is transferred to the private runtime as a checked archive w
 documented SHA-256, unpacked by [deploy/runtime/nac-web-release.sh](../../../deploy/runtime/nac-web-release.sh)
 into `/opt/nac/releases/<commit>`, activated through `/opt/nac/current`, and
 verified after a `nac-web` systemd restart.
-If the health check fails, the script performs a rollback by pointing
+The health check uses a short configurable wait window
+(`NAC_RELEASE_HEALTH_ATTEMPTS`, `NAC_RELEASE_HEALTH_SLEEP_SECONDS`) so a
+healthy process has time to bind its port after the restart. If the health
+check still fails, the script performs a rollback by pointing
 `/opt/nac/current` back to the previous target and restarting `nac-web` again.
 
 Required apply gate for this app release path:
