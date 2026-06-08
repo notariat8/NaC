@@ -36,11 +36,14 @@ class PublicOnboardingCopyTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertIn("notariat8 Domain-Check", html)
-        self.assertIn("ersten notariat8-Zugang", html)
-        self.assertIn("notariat8 führt Sie durch die nächsten Schritte", html)
+        self.assertIn("E-Mail-Adresse der verantwortlichen Person", html)
+        self.assertIn("notariat8 führt Sie anschließend durch die nächsten Schritte", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("Oracle Cloud", html)
         self.assertNotIn("OCI", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("Administrations-E-Mail", html)
+        self.assertNotIn("notariat8-Zugang", html)
         self.assertNotIn("NaC-Zugang", html)
         self.assertNotIn("für NaC bestätigt", html)
         self.assertNotIn("technische Einrichtung", html)
@@ -59,9 +62,12 @@ class PublicOnboardingCopyTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertIn("für notariat8 vorbereitet", html)
-        self.assertIn("notariat8-Kennung", html)
+        self.assertIn("notariat8-Referenz", html)
+        self.assertIn("E-Mail-Adresse der verantwortlichen Person", html)
         self.assertNotIn("für NaC vorbereitet", html)
         self.assertNotIn("NaC-Kennung", html)
+        self.assertNotIn("Administrations-E-Mail", html)
+        self.assertNotIn("notariat8-Zugang", html)
 
 
 if __name__ == "__main__":
