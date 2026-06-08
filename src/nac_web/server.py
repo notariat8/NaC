@@ -294,7 +294,7 @@ class NaCLocalWebApp:
             <section class="hero">
               <p class="eyebrow">notariat8 Domain-Check</p>
               <h1>DNS-Prüfergebnis</h1>
-              <p>Hier sehen Sie, ob Ihre Domain für NaC bestätigt wurde. Es werden nur Domain,
+              <p>Hier sehen Sie, ob Ihre Domain für notariat8 bestätigt wurde. Es werden nur Domain,
               Administrations-E-Mail und DNS-TXT-Challenge geprüft.</p>
             </section>
             <div class="grid">
@@ -316,9 +316,9 @@ class NaCLocalWebApp:
             <section>
               <h2>Was passiert als Nächstes?</h2>
               <ul class="link-list">
-                <li><span>notariat8 prüft die Administrations-E-Mail für den ersten NaC-Zugang.</span></li>
+                <li><span>notariat8 prüft die Administrations-E-Mail für den ersten notariat8-Zugang.</span></li>
                 <li><span>In diesem Schritt wird keine E-Mail automatisch versendet.</span></li>
-                <li><span>Sie müssen in Oracle Cloud nicht selbst arbeiten; die technische Einrichtung läuft über notariat8.</span></li>
+                <li><span>Sie bleiben im notariat8-Onboarding; notariat8 führt Sie durch die nächsten Schritte.</span></li>
                 <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
               </ul>
             </section>
@@ -429,34 +429,34 @@ def build_home_page(repo_root: Path) -> str:
     cases = all_case_summaries(catalogs)
     bpmn_items = "".join(
         f'<li><a href="/bpmn/{html.escape(model.stem)}">{html.escape(model.name)}</a>'
-        f'<span>{html.escape(model.path)} · <a class="inline-link" href="/bpmn/{html.escape(model.stem)}/edit">bearbeiten</a></span></li>'
+        f'<span>Ablaufmodell · <a class="inline-link" href="/bpmn/{html.escape(model.stem)}/edit">Änderung vorbereiten</a></span></li>'
         for model in bpmn_models
     )
     kg_items = "".join(
         f'<li><a href="/kg/{html.escape(case.slug)}">{html.escape(case.title)}</a>'
-        f'<span>{html.escape(case.slug)} · {case.open_required_information} offene Angaben · '
-        f'<a class="inline-link" href="/costs/{html.escape(case.slug)}">Kosten</a></span></li>'
+        f'<span>{case.open_required_information} offene Angaben · '
+        f'<a class="inline-link" href="/costs/{html.escape(case.slug)}">Kosten prüfen</a></span></li>'
         for case in cases[:40]
     )
     body = f"""
     <section class="hero">
-      <p class="eyebrow">Lokale Notariat8-App</p>
-      <h1>Lokale Prozessansichten prüfen</h1>
-      <p>BPMN-Prozessmodelle und Wissensgraph-Ansichten werden direkt aus dem versionierten Referenzstand gelesen.
-      Der Server läuft lokal auf <code>127.0.0.1</code> und speichert keine Mandatsdaten.</p>
+      <p class="eyebrow">Notariat8-App</p>
+      <h1>Notarielle Abläufe ohne Mandatsdaten ansehen.</h1>
+      <p>Diese Übersicht zeigt freigegebene Ablaufmodelle, offene Angaben und Kostenansichten zu notariellen Vorgängen.
+      Sie dient der Prüfung und Vorbereitung; echte Mandatsdaten werden hier nicht gespeichert.</p>
     </section>
     <div class="grid">
       <section>
-        <h2>BPMN-Prozessmodelle</h2>
+        <h2>Ablaufmodelle</h2>
         <ul class="link-list">{bpmn_items}</ul>
       </section>
       <section>
-        <h2>Wissensgraphen</h2>
+        <h2>Offene Angaben</h2>
         <ul class="link-list">{kg_items}</ul>
       </section>
     </div>
     """
-    return _layout("Lokale Notariat8-App", body)
+    return _layout("Notariat8-App", body)
 
 
 def _home_bpmn_models(repo_root: Path):
@@ -665,7 +665,7 @@ def build_customer_readiness_page(query: str) -> str:
     nav = _customer_onboarding_nav(resume_query) if public_context else (
         '<nav class="topline"><a href="/">← Übersicht</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>'
     )
-    slug_label = "NaC-Kennung" if public_context else "Tenant-Slug"
+    slug_label = "notariat8-Kennung" if public_context else "Tenant-Slug"
     admin_email_line = (
         f'<p><strong>Administrations-E-Mail:</strong> {html.escape(readiness["admin_email"])}</p>'
         if admin_email_provided
@@ -690,7 +690,7 @@ def build_customer_readiness_page(query: str) -> str:
         admin_email_form = f"""
         <section class="notice">
           <h2>Administrations-E-Mail angeben</h2>
-          <p>Tragen Sie die E-Mail-Adresse der Person ein, die den ersten NaC-Zugang administrieren soll.
+          <p>Tragen Sie die E-Mail-Adresse der Person ein, die den ersten notariat8-Zugang administrieren soll.
           notariat8 leitet diese Adresse nicht aus der Domain ab; in diesem Schritt wird keine E-Mail automatisch versendet.</p>
           <form class="readiness-form" method="get" action="/onboarding/readiness">
             <input type="hidden" name="audience" value="customer">
@@ -731,9 +731,9 @@ def build_customer_readiness_page(query: str) -> str:
     body = f"""
     {nav}
     <section class="hero">
-      <p class="eyebrow">NaC Neukunden-Onboarding</p>
+      <p class="eyebrow">notariat8 Neukunden-Onboarding</p>
       <h1>Domain-Readiness</h1>
-      <p>Prüfen Sie hier, ob Ihre Domain für NaC vorbereitet ist. Diese Seite verwendet nur Domain,
+      <p>Prüfen Sie hier, ob Ihre Domain für notariat8 vorbereitet ist. Diese Seite verwendet nur Domain,
       Administrations-E-Mail und DNS-TXT-Challenge. Keine Mandatsdaten und keine Vorgangsdokumente.</p>
     </section>
     <div class="grid">
@@ -765,7 +765,7 @@ def build_customer_readiness_page(query: str) -> str:
       </ul>
     </section>
     """
-    return _layout("NaC Domain-Readiness", body)
+    return _layout("notariat8 Domain-Readiness" if public_context else "NaC Domain-Readiness", body)
 
 
 def build_admin_provisioning_preview_page(query: str) -> str:

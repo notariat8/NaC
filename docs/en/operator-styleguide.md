@@ -18,6 +18,35 @@ The design follows [WCAG 2.2 consistent navigation](https://www.w3.org/TR/WCAG22
 and public-service patterns such as [GOV.UK Service Navigation](https://design-system.service.gov.uk/components/service-navigation/)
 and [Navigate a service](https://design-system.service.gov.uk/patterns/navigate-a-service/).
 
+## Editorial Role
+
+Visible surfaces are written like a website or app for notarial offices, not
+like internal IT documentation. Comments, sketches and abbreviations are raw
+material. They are checked for subject-matter fit, translated into clear UI
+language and implemented in the existing design language.
+
+Brand and product shorthand is translated: `n8`, `NaC` or internal working
+names appear on customer-facing or notary-facing surfaces only when they are
+required as a brand or URL. Otherwise the UI uses `Notariat8` or a
+subject-matter function name.
+
+Technical terms do not stand alone. The UI first says what users can do in
+their office work:
+
+- `NaC-Webserver` becomes `Notariat8-App`.
+- `BPMN-Modell` becomes `Ablaufmodell`.
+- `Knowledge Graph` or `KG` becomes `Offene Angaben`, `Prüfpunkte` or
+  `Wissensgraph` only in technical documentation.
+- `Repository` becomes `versionierter Referenzstand` or
+  `GitHub-Referenzstand` when GitHub is intentionally visible.
+- `Use Case` becomes `notarieller Vorgang` or `Ablauf`.
+- `bearbeiten` for approved master data becomes `Änderung vorschlagen` or a
+  precise preparatory action.
+
+If a term may be legally or professionally sensitive, check statutory wording,
+Federal Chamber of Notaries material, chamber guidance or established notarial
+communication before putting it into the UI.
+
 ## Navigation Rule
 
 Every work view outside the overview gets a simple text navigation at the top:
