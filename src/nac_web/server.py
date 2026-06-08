@@ -424,7 +424,7 @@ def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False
 
 
 def build_home_page(repo_root: Path) -> str:
-    bpmn_models = list_bpmn_models(repo_root)
+    bpmn_models = _home_bpmn_models(repo_root)
     catalogs = load_catalogs(repo_root)
     cases = all_case_summaries(catalogs)
     bpmn_items = "".join(
@@ -440,23 +440,31 @@ def build_home_page(repo_root: Path) -> str:
     )
     body = f"""
     <section class="hero">
-      <p class="eyebrow">Lokaler NaC-Webserver</p>
-      <h1>Grafische Ausgaben lokal prüfen</h1>
-      <p>BPMN-Modelle und KG-Editor-Views werden direkt aus dem Repository gelesen.
-      Der Server bindet standardmäßig an <code>127.0.0.1</code> und speichert keine Mandatsdaten.</p>
+      <p class="eyebrow">Lokale Notariat8-App</p>
+      <h1>Lokale Prozessansichten prüfen</h1>
+      <p>BPMN-Prozessmodelle und Wissensgraph-Ansichten werden direkt aus dem versionierten Referenzstand gelesen.
+      Der Server läuft lokal auf <code>127.0.0.1</code> und speichert keine Mandatsdaten.</p>
     </section>
     <div class="grid">
       <section>
-        <h2>BPMN</h2>
+        <h2>BPMN-Prozessmodelle</h2>
         <ul class="link-list">{bpmn_items}</ul>
       </section>
       <section>
-        <h2>Knowledge Graphs</h2>
+        <h2>Wissensgraphen</h2>
         <ul class="link-list">{kg_items}</ul>
       </section>
     </div>
     """
-    return _layout("NaC Lokaler Webserver", body)
+    return _layout("Lokale Notariat8-App", body)
+
+
+def _home_bpmn_models(repo_root: Path):
+    return [
+        model
+        for model in list_bpmn_models(repo_root)
+        if model.path == "bpmn/immobilienkaufvertrag.bpmn" or model.path.startswith("bpmn/usecases/")
+    ]
 
 
 def build_www_n8_handoff_page(query: str) -> str | None:

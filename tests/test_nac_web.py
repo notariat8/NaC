@@ -31,7 +31,22 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("/bpmn/handelsregisteranmeldung/edit", html)
         self.assertIn("/kg/immobilienkaufvertrag", html)
         self.assertIn("/costs/immobilienkaufvertrag", html)
-        self.assertIn("Lokaler NaC-Webserver", html)
+        self.assertIn("Lokale Notariat8-App", html)
+        self.assertIn("Lokale Prozessansichten prüfen", html)
+        self.assertIn("BPMN-Prozessmodelle", html)
+        self.assertIn("Wissensgraphen", html)
+        self.assertIn("Wissensgraph-Ansichten", html)
+        self.assertIn("versionierten Referenzstand", html)
+        self.assertNotIn("Knowledge Graphs", html)
+        self.assertNotIn("KG-Editor-Views", html)
+        self.assertNotIn("Repository gelesen", html)
+        self.assertNotIn("bindet standardmäßig", html)
+        self.assertNotIn("Bookkeeping Process", html)
+        self.assertNotIn("Invoice Process", html)
+        self.assertNotIn("Onboarding Entry Process", html)
+        self.assertNotIn("/bpmn/bookkeeping-process", html)
+        self.assertNotIn("/bpmn/invoice-process", html)
+        self.assertNotIn("/bpmn/onboarding-entry", html)
 
     def test_bpmn_svg_renders_local_model(self) -> None:
         model = find_bpmn_model(REPO_ROOT, "immobilienkaufvertrag")
@@ -479,7 +494,7 @@ class NaCLocalWebTests(unittest.TestCase):
         html = body.decode("utf-8")
 
         self.assertEqual(status, 200)
-        self.assertIn("Lokaler NaC-Webserver", html)
+        self.assertIn("Lokale Notariat8-App", html)
         self.assertNotIn("NaC App-Einstieg", html)
 
     def test_login_page_accepts_www_n8_customer_context_without_authorizing_tenant(self) -> None:
