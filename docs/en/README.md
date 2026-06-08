@@ -97,6 +97,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md) defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md) defines the no-code KG editor,
   patch principle and sidecar-editor path for subject-matter staff.
+- [docs/en/codex-parallel-review-workflow.md](codex-parallel-review-workflow.md)
+  defines explicit parallel review with read-only Codex agents for KG, BPMN,
+  governance, documentation parity, and validation.
 - [docs/en/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md) defines the
   separate demo data repository for synthetic NaC cases and a later sovereign Git move.
 - [docs/en/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md) derives
@@ -110,6 +113,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
+- [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json) defines the contract for explicit parallel Codex reviews with read-only agent profiles and fresh validation.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.

@@ -194,6 +194,13 @@ Die drei technischen Wege sind getrennt zu behandeln:
    Bedienkanal. Dann ruft ein lokaler Backend-Endpunkt die OpenAI API auf; der
    API-Schlüssel bleibt serverseitig und die lokalen Tools bleiben dieselben.
 
+Aktuelle Arbeitsnotiz: NaC macht vorerst wie bisher weiter, also mit lokaler
+Operator-Webapp, zentraler `nac`-CLI, Python-Validatoren und `nac-mcp`/App SDK
+als Zielarchitektur. CopilotKit bleibt als mögliche spätere
+Sidecar-/Agenten-UI-Option im Blick, vor allem für synthetische KG-/BPMN-Demos
+oder einen kontrollierten React-Prototypen; es ersetzt aktuell keine Runtime,
+kein Review und keine Freigabe.
+
 Für NaC gilt daher: Actions mit OpenAPI und Tunnel dürfen kurze Demos
 ermöglichen, aber die regulierte Zielarchitektur ist MCP/App SDK mit expliziter
 Authentifizierung, minimalen Tool-Rechten, Auditlog, menschlicher Bestätigung

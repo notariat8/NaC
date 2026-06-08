@@ -84,6 +84,14 @@ Diagnose vor Fix. Eine Agentenänderung darf erst erfolgen, wenn die Ursache
 benannt ist. Änderungen, die Daten-, Controller-/Logik- oder View-Schicht
 berühren, brauchen einen expliziten Abgleich dieser Schichten.
 
+Die Agentic-Delivery-Lesart lautet: Nicht menschliche Übergaben schneller
+machen, sondern Übergaben maschinenlesbar und prüfbar machen. Ein agentischer
+Arbeitsauftrag soll deshalb die fachliche Quelle, den betroffenen Usecase, die
+relevanten KG-/BPMN-/Contract-Artefakte, die erwarteten Validatoren und die
+erforderlichen Review- oder Freigabepunkte benennen. Risiko-, Rechts-,
+Datenschutz-, Test- und Beschaffungsrollen gehören früh in diese Struktur,
+nicht erst als spätes Stoppschild nach der Umsetzung.
+
 ## Gantt-Regel
 
 Gantt-Dateien werden aktualisiert, wenn sich Roadmap, Scope, Status,

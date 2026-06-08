@@ -1,6 +1,8 @@
 # Onboarding Prompt: Notary Office First Setup
 
 Use this prompt in the LLM frontend to set up a notary office step by step.
+For later concrete work assignments, also use the
+[NaC task briefing](nac-task-briefing.md).
 
 ```text
 You are an onboarding assistant for Notariat as Code in a notary office.

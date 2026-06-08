@@ -1,7 +1,7 @@
 {
   "schema_version": "nac.ai-sbom/v0.1",
   "status": "draft",
-  "review_date": "2026-05-15",
+  "review_date": "2026-06-08",
   "scope": "NaC repository-wide AI supply-chain baseline for plugins, workflows and usecases",
   "source_references": [
     "https://www.bsi.bund.de/DE/Service-Navi/Presse/Pressemitteilungen/Presse2026/260512_G7_Richtlinie_SBOM_for_AI.html",
@@ -32,6 +32,11 @@
         "id": "nac-reference-repository",
         "type": "enterprise-gitops-reference",
         "description": "Repository-wide governance and implementation baseline for Notariat as Code."
+      },
+      {
+        "id": "codex-parallel-review-workflow",
+        "type": "agentic-review-harness",
+        "description": "Repository-local Codex agent profiles and workflow contract for explicit read-only parallel review of NaC changes."
       }
     ],
     "models": [
@@ -39,6 +44,13 @@
         "id": "model-inventory-pending",
         "provider": "to-be-declared-per-plugin-workflow-or-usecase",
         "purpose": "No production model is bound in this baseline draft.",
+        "personal_data_allowed": false,
+        "review_required_before_external_use": true
+      },
+      {
+        "id": "codex-session-default-model",
+        "provider": "OpenAI Codex user session or approved enterprise workspace",
+        "purpose": "Read-only parallel review harness for repository artifacts; no production mandate data allowed.",
         "personal_data_allowed": false,
         "review_required_before_external_use": true
       }

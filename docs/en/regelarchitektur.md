@@ -84,6 +84,13 @@ An agent may change code only after the cause has been named. Changes that
 touch the data, controller/logic or view layer need an explicit check that
 those layers stay synchronized.
 
+The agentic-delivery reading is: do not merely make human handoffs faster; make
+handoffs machine-readable and checkable. An agentic work order should therefore
+name the subject-matter source, affected usecase, relevant KG/BPMN/contract
+artifacts, expected validators and required review or approval points. Risk,
+legal, privacy, testing and procurement roles belong in that structure early,
+not only as a late stop sign after implementation.
+
 ## Gantt Rule
 
 Gantt files are updated when roadmap, scope, status, milestone, pilot readiness

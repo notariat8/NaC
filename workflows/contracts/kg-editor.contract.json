@@ -3,7 +3,7 @@
   "contract_id": "workflow.kg_editor",
   "title": "KG Editor for notarial usecase graphs",
   "status": "active_mvp",
-  "last_update": "2026-05-15",
+  "last_update": "2026-06-08",
   "purpose": "Expose usecase-local knowledge graphs as safe form and checklist views for notarial Fachpersonal without requiring raw JSON edits.",
   "source_schema": "schemas/kg-editor-patch.schema.json",
   "runtime": {
@@ -69,9 +69,18 @@
     "value_fields_editable": false,
     "real_mandate_data_in_git": false,
     "blind_overwrite": false,
+    "agent_auto_merge_nodes": false,
+    "alias_equals_identity": false,
     "confirmation_required": true,
     "graph_visualization_priority": "later_optional_power_user_view"
   },
+  "cleanliness_rules": [
+    "Stable node ids are identity; labels, questions and aliases may change without proving identity.",
+    "Agents may flag possible duplicates, similar ids, orphan edges, unknown source_refs or missing privacy classes.",
+    "Node merges, replacements and deletions require patch, diff, human review and pull request.",
+    "Uncertain KG matches are review signals, not automation triggers.",
+    "Real replacements must preserve provenance through deprecated, replaced_by or an equivalent review note."
+  ],
   "future_integration_path": [
     "MVP 1: GitHub-backed KG editor that reads usecase-local graph files and opens pull requests.",
     "MVP 2: ChatGPT App with embedded React sidecar for the editor.",
