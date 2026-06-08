@@ -36,9 +36,33 @@ flowchart TD
     Runtime --> DataRepo["getrenntes Datenrepo"]
     Runtime --> Storage["Object Store, Datenbank-Blob oder OneDrive"]
     Runtime --> Audit["Audit, Hash, Zweck, Ablauf, Widerruf"]
+    Workstation --> O365["Office 365 / Microsoft 365 Client-Schicht"]
+    O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
+    O365 --> AgentRegistry["Microsoft Agent 365 Agent Registry"]
     Workstation["lokaler Notariatsarbeitsplatz"] --> Card["Kartenleser, XNP, eID-Brücke"]
     Card --> Runtime
 ```
+
+Office 365 ist auf der Client-Seite Pflicht. Für NaC bedeutet das nicht, dass
+die SaaS-Identität oder das aktuelle OCI-Deployment umgestellt werden. Office
+365 bildet die verpflichtende Arbeitsplatz-, Dokumenten-, Kalender-,
+Kommunikations- und Kollaborationsschicht des Notariats; NaC darf deshalb
+OneDrive, SharePoint, Outlook, Teams und künftige Microsoft-365-Features als
+Client-nahe Integrationsziele vorsehen, muss aber jeden Zugriff über
+NaC-Rollen, Aktenbindung, Zweckbindung, Audit und menschliche Freigaben
+begrenzen.
+
+Microsoft Agent 365 Agent Registry wird als Zielarchitektur-Baustein für
+Agent-Governance aufgenommen. Die laut Microsoft Learn als Vorschau geführte
+Agent Registry Sync-Funktion im Microsoft 365 Admin Center soll zentrale
+Sichtbarkeit und Governance für Agents aus externen KI-Agent-Umgebungen
+ermöglichen. Die Quelle nennt als unterstützte Plattformen Amazon Bedrock,
+Google Vertex AI, Salesforce Agentforce und Databricks Genie. Für NaC ist das
+kein aktueller Deploy-Schritt und keine produktive Pflichtintegration, sondern
+ein künftiger Kontrollanker: Wenn NaC-Agenten, MCP-Connectoren oder externe
+Agent-Plattformen produktiv angebunden werden, muss ihre Registrierung,
+Sichtbarkeit, Verantwortlichkeit und Deaktivierbarkeit mit der
+Microsoft-365-Agent-Governance abgeglichen werden.
 
 Die statische Seite kann auf die authentifizierte Webapp verlinken. Sie darf
 aber keine Tokens, geheimen Uploadlinks, Rohdokumente, Ausweisdaten,
@@ -57,6 +81,12 @@ Identitätsschicht. Der öffentliche Übergang von `www-n8` in die NaC-App läuf
 tenant-aware: Bestandskunden übergeben einen Tenant-Hinweis, Neukunden werden
 zuerst über eine Domain-Readiness-Prüfung geführt. Danach erzeugt NaC einen
 prüfbaren Admin-Provisioning-Plan für OCI Identity Domains.
+
+Office 365 ergänzt diesen Pfad auf der Client- und Arbeitsplatzseite. OCI
+Identity Domains bleibt für den aktuellen SaaS-Pfad die IdP- und
+Tenant-Provisioning-Schicht; Microsoft 365 liefert Arbeitsplatzdienste und
+Agent-Governance, solange eine separate, reviewte IdP-Änderung nichts anderes
+entscheidet.
 
 Endbenutzer arbeiten nicht in der OCI Console. NaC bedient Identity Domains
 über geprüfte API- und CLI-Verträge; produktive Schreiboperationen an
@@ -151,11 +181,14 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
    Demos weiter nutzen.
 2. Interne authentifizierte Webapp für Notariatsbenutzer über OCI Identity
    Domains und NaC-Rollen-Gate entwerfen.
-3. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
-4. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
+3. Office 365 als verpflichtende Client-Schicht und Microsoft Agent 365 Agent
+   Registry als Preview-Governance-Anker in Zielarchitektur und Backlog
+   führen.
+4. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
+5. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
    `notary-workstation` prüfen.
-5. Mobile Web-App oder PWA zuerst über kurzlebige sichere Links an
+6. Mobile Web-App oder PWA zuerst über kurzlebige sichere Links an
    Speicherziele anbinden; native Apps nur bei konkretem Gerätebedarf bauen.
-6. Uploads immer erst als Eingang oder Importvorschlag behandeln.
-7. Vertrag, Validator, Audit und menschliche Freigabe vor produktiven Links
+7. Uploads immer erst als Eingang oder Importvorschlag behandeln.
+8. Vertrag, Validator, Audit und menschliche Freigabe vor produktiven Links
    verpflichtend machen.

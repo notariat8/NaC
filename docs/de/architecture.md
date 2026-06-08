@@ -20,6 +20,10 @@ Das operative Ausführungsmodell mit Bürooberfläche und prüfbarem Kern steht 
    Die Engine validiert Schemas, prüft Zustandsübergänge, berechnet Folgewerte und erzeugt Zusammenfassungen.
 4. `Automation Plane`
    GitHub Actions führen PR-Checks, periodische Prozesse und Genehmigungsgates aus.
+5. `Client And Agent Governance Plane`
+   Office 365 / Microsoft 365 ist die verpflichtende Client- und
+   Arbeitsplatzschicht. Microsoft Agent 365 Agent Registry dient in der
+   Zielarchitektur als Preview-Governance-Anker für externe Agentenflächen.
 
 ## NaC-Layer-Mapping
 
@@ -78,6 +82,27 @@ Die lokale Operator-Webapp ist ein Bedienkanal für Arbeitsplatz-Gates. Sie
 führt NaC nicht remote aus, sondern spricht eine per `nac operator --open`
 gestartete `127.0.0.1`-Bridge an, die freigegebene lokale Prüfskripte im
 Workspace startet und minimierte Readiness-Metadaten zurückgibt.
+
+## Office-365-Client- Und Agent-Governance
+
+Office 365 ist die verpflichtende Client-Seite der Zielarchitektur. NaC plant
+deshalb Microsoft-365-nahe Arbeitsflächen wie OneDrive, SharePoint, Outlook und
+Teams als mögliche Bedien- und Nachweiskanten, ohne dort fachliche Wahrheit
+oder Mandatsdaten ungeprüft abzulegen.
+
+Microsoft Agent 365 Agent Registry wird als Governance-Schicht für agentische
+Integrationen aufgenommen. Die Microsoft-Learn-Quelle
+[Registrierungssynchronisierung in der Microsoft 365-Agentregistrierung](https://learn.microsoft.com/de-de/microsoft-agent-365/admin/agent-registry)
+beschreibt Agent Registry Sync als Vorschau-Funktion im Microsoft 365 Admin
+Center für zentrale Sichtbarkeit und Governance externer Agent-Umgebungen,
+unter anderem Amazon Bedrock, Google Vertex AI, Salesforce Agentforce und
+Databricks Genie.
+
+Für NaC ist diese Agent-Registry-Aufnahme kein aktueller Deploy-Schritt. Der
+laufende technische Deploy bleibt OCI/App Release Overlay; OCI Identity Domains
+bleibt die aktuelle SaaS-IdP-Schicht. Agent Registry ist ein Zielbild-Kontroll-
+und Review-Anker für künftige NaC-Agenten, MCP-Connectoren und externe
+Agent-Plattformen.
 
 ### `monthly-close.yml`
 

@@ -26,6 +26,10 @@ The operational execution model with office UI and checkable core is described i
 5. `Plugin and Connector Plane`
    Local plugin and connector adapters create plan previews, execute approved
    changes idempotently and write audit evidence back.
+6. `Client And Agent Governance Plane`
+   Office 365 / Microsoft 365 is the mandatory client and workstation layer.
+   Microsoft Agent 365 Agent Registry is the target-architecture Preview
+   governance anchor for external agent surfaces.
 
 ## NaC Layer Mapping
 
@@ -84,6 +88,27 @@ The local operator webapp is an operator channel for workstation gates. It does
 not execute NaC remotely. It talks to a `127.0.0.1` bridge started through
 `nac operator --open`; the bridge runs approved local check scripts in the
 workspace and returns minimized readiness metadata.
+
+## Office 365 Client And Agent Governance
+
+Office 365 is the mandatory client side of the target architecture. NaC
+therefore plans Microsoft 365-adjacent work surfaces such as OneDrive,
+SharePoint, Outlook and Teams as possible operating and evidence edges, without
+placing subject-matter truth or mandate data there without checks.
+
+Microsoft Agent 365 Agent Registry is included as a governance layer for
+agentic integrations. The Microsoft Learn source
+[Registry sync in the Microsoft 365 Agent Registry](https://learn.microsoft.com/de-de/microsoft-agent-365/admin/agent-registry)
+describes Agent Registry Sync as a Preview feature in the Microsoft 365 Admin
+Center for central visibility and governance of external agent environments,
+including Amazon Bedrock, Google Vertex AI, Salesforce Agentforce and
+Databricks Genie.
+
+For NaC, adding this registry to the target architecture is not a current deploy step.
+The current technical deployment remains OCI/App Release Overlay;
+OCI Identity Domains remains the current SaaS IdP layer. Agent Registry is a
+target-state control and review anchor for future NaC agents, MCP connectors
+and external agent platforms.
 
 ### `monthly-close.yml`
 
