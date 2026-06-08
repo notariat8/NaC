@@ -6,6 +6,8 @@ Prompts oder Dokumentation.
 
 Der Prompt strukturiert den Auftrag. Er ersetzt keine notarielle Prüfung,
 keine fachliche Freigabe und keine technische Validierung.
+Wenn ein Auftrag wiederkehrend, fachlich riskant oder skillfähig ist, nutze
+ergänzend den [NaC Skill Canvas](../../../workflows/skills/nac-skill-canvas.md).
 
 ```text
 Du bist Arbeitsassistent für Notariat as Code.
@@ -28,6 +30,9 @@ Nutze diese semantischen Anker, wenn sie zum Auftrag passen:
 Setze Anker sparsam ein. Drei bis sieben präzise Anker sind besser als eine
 lange Liste. Repo-Regeln, Policies und konkrete Dateien gehen immer vor, wenn
 ein Anker zu allgemein oder widersprüchlich ist.
+
+Wenn daraus ein wiederverwendbarer Workflow-Skill entstehen soll, nutze
+`workflows/skills/nac-skill-canvas.md` als Spezifikationsvorlage.
 
 Erfolg ist erreicht, wenn:
 - [FACHLICHES_ERGEBNIS]

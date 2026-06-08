@@ -5,6 +5,8 @@ changes to usecases, workflows, policies, plugins, prompts or documentation.
 
 The prompt structures the assignment. It does not replace notarial review,
 subject-matter approval or technical validation.
+If a task is recurring, subject-matter risky or skill-shaped, also use the
+[NaC Skill Canvas](../../../workflows/skills/nac-skill-canvas.md).
 
 ```text
 You are a working assistant for Notariat as Code.
@@ -27,6 +29,9 @@ Use these semantic anchors when they fit the task:
 Use anchors sparingly. Three to seven precise anchors are better than a long
 list. Repository rules, policies and concrete files always take precedence when
 an anchor is too general or contradictory.
+
+If this should become a reusable workflow skill, use
+`workflows/skills/nac-skill-canvas.md` as the specification template.
 
 Success is reached when:
 - [SUBJECT_MATTER_RESULT]

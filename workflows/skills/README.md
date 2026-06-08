@@ -22,3 +22,9 @@ Jeder Workflow-Skill muss dokumentieren:
 - Datenklassen,
 - verbotene Aktionen,
 - Evidence-Metadaten.
+
+Für wiederkehrende oder fachlich riskante Skill-Spezifikationen ist der
+[NaC Skill Canvas](nac-skill-canvas.md) die kanonische Vorlage. Er ergänzt das
+freie Auftragsbriefing um Zweck, Auslöser, Inputs, Entscheidungsregeln,
+Grenzen, Freigaben, Outputs, Evidence, Validierung, semantische Anker und
+Beispiele.
