@@ -19,35 +19,6 @@ Die Gestaltung orientiert sich an [WCAG 2.2 konsistenter Navigation](https://www
 und an behördlichen Service-Mustern wie [GOV.UK Service Navigation](https://design-system.service.gov.uk/components/service-navigation/)
 und [Navigate a service](https://design-system.service.gov.uk/patterns/navigate-a-service/).
 
-## Redaktionelle Rolle
-
-Sichtbare Oberflächen werden wie eine Website oder App für Notariate
-geschrieben, nicht wie interne IT-Dokumentation. Kommentare, Skizzen und
-Abkürzungen sind Rohmaterial. Sie werden fachlich geprüft, in verständliche
-UI-Sprache übertragen und in der bestehenden Designsprache umgesetzt.
-
-Brand- und Produktkürzel werden übersetzt: `n8`, `NaC` oder interne
-Arbeitsnamen erscheinen auf kunden- oder notariatsnahen Oberflächen nur, wenn
-sie als Marke oder URL erforderlich sind. Sonst steht `Notariat8` oder eine
-fachliche Funktionsbezeichnung.
-
-Technische Begriffe stehen nicht allein. Die UI sagt zuerst, was Nutzer
-fachlich tun können:
-
-- `NaC-Webserver` wird `Notariat8-App`.
-- `BPMN-Modell` wird `Ablaufmodell`.
-- `Knowledge Graph` oder `KG` wird je nach Kontext `Offene Angaben`,
-  `Prüfpunkte` oder `Wissensgraph` nur in technischer Dokumentation.
-- `Repository` wird `versionierter Referenzstand` oder
-  `GitHub-Referenzstand`, wenn GitHub bewusst sichtbar sein soll.
-- `Use Case` wird `notarieller Vorgang` oder `Ablauf`.
-- `bearbeiten` bei freigegebenen Stammdaten wird `Änderung vorschlagen` oder
-  eine kontextgenaue vorbereitende Aktion.
-
-Wenn ein Begriff rechtlich oder berufsrechtlich unsicher ist, ist vor der
-UI-Formulierung die Sprache aus Gesetz, Bundesnotarkammer, Notarkammern oder
-etablierter Notariatskommunikation zu prüfen.
-
 ## Navigationsregel
 
 Jede Arbeitsansicht außerhalb der Übersicht erhält oben eine einfache

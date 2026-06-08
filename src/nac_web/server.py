@@ -285,7 +285,7 @@ class NaCLocalWebApp:
             headline = "Domain bestätigt" if confirmed else "DNS noch nicht bestätigt"
             status_label = "bestätigt" if confirmed else "ausstehend"
             guidance = (
-                "Der DNS-TXT-Eintrag wurde gefunden. notariat8 kann die Einladung vorbereiten."
+                "Der DNS-TXT-Eintrag wurde gefunden. notariat8 kann die Administrations-Einladung vorbereiten."
                 if confirmed
                 else "Der DNS-TXT-Eintrag wurde noch nicht gefunden. Prüfen Sie den Eintrag bei Ihrem DNS-Anbieter und versuchen Sie es später erneut."
             )
@@ -294,8 +294,8 @@ class NaCLocalWebApp:
             <section class="hero">
               <p class="eyebrow">notariat8 Domain-Check</p>
               <h1>DNS-Prüfergebnis</h1>
-              <p>Hier sehen Sie, ob Ihre Domain für notariat8 bestätigt wurde. Geprüft werden nur die Domain,
-              die E-Mail-Adresse der verantwortlichen Person und der DNS-TXT-Eintrag.</p>
+              <p>Hier sehen Sie, ob Ihre Domain für NaC bestätigt wurde. Es werden nur Domain,
+              Administrations-E-Mail und DNS-TXT-Challenge geprüft.</p>
             </section>
             <div class="grid">
               <section class="notice">
@@ -316,14 +316,14 @@ class NaCLocalWebApp:
             <section>
               <h2>Was passiert als Nächstes?</h2>
               <ul class="link-list">
-                <li><span>notariat8 prüft die angegebene E-Mail-Adresse für die Einrichtung Ihres Notariats.</span></li>
-                <li><span>In diesem Schritt wird noch keine Einladung versendet.</span></li>
-                <li><span>notariat8 führt Sie anschließend durch die nächsten Schritte.</span></li>
+                <li><span>notariat8 prüft die Administrations-E-Mail für den ersten NaC-Zugang.</span></li>
+                <li><span>In diesem Schritt wird keine E-Mail automatisch versendet.</span></li>
+                <li><span>Sie müssen in Oracle Cloud nicht selbst arbeiten; die technische Einrichtung läuft über notariat8.</span></li>
                 <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
               </ul>
             </section>
             """
-            return _layout("notariat8 DNS-Prüfergebnis", body)
+            return _layout("NaC DNS-Prüfergebnis", body)
         body = f"""
         {nav}
         <section class="hero">
@@ -424,47 +424,39 @@ def run_server(repo_root: Path, host: str, port: int, open_browser: bool = False
 
 
 def build_home_page(repo_root: Path) -> str:
-    bpmn_models = _home_bpmn_models(repo_root)
+    bpmn_models = list_bpmn_models(repo_root)
     catalogs = load_catalogs(repo_root)
     cases = all_case_summaries(catalogs)
     bpmn_items = "".join(
         f'<li><a href="/bpmn/{html.escape(model.stem)}">{html.escape(model.name)}</a>'
-        f'<span>Ablaufmodell · <a class="inline-link" href="/bpmn/{html.escape(model.stem)}/edit">Änderung vorbereiten</a></span></li>'
+        f'<span>{html.escape(model.path)} · <a class="inline-link" href="/bpmn/{html.escape(model.stem)}/edit">bearbeiten</a></span></li>'
         for model in bpmn_models
     )
     kg_items = "".join(
         f'<li><a href="/kg/{html.escape(case.slug)}">{html.escape(case.title)}</a>'
-        f'<span>{case.open_required_information} offene Angaben · '
-        f'<a class="inline-link" href="/costs/{html.escape(case.slug)}">Kosten prüfen</a></span></li>'
+        f'<span>{html.escape(case.slug)} · {case.open_required_information} offene Angaben · '
+        f'<a class="inline-link" href="/costs/{html.escape(case.slug)}">Kosten</a></span></li>'
         for case in cases[:40]
     )
     body = f"""
     <section class="hero">
-      <p class="eyebrow">Notariat8-App</p>
-      <h1>Notarielle Abläufe ohne Mandatsdaten ansehen.</h1>
-      <p>Diese Übersicht zeigt freigegebene Ablaufmodelle, offene Angaben und Kostenansichten zu notariellen Vorgängen.
-      Sie dient der Prüfung und Vorbereitung; echte Mandatsdaten werden hier nicht gespeichert.</p>
+      <p class="eyebrow">Lokaler NaC-Webserver</p>
+      <h1>Grafische Ausgaben lokal prüfen</h1>
+      <p>BPMN-Modelle und KG-Editor-Views werden direkt aus dem Repository gelesen.
+      Der Server bindet standardmäßig an <code>127.0.0.1</code> und speichert keine Mandatsdaten.</p>
     </section>
     <div class="grid">
       <section>
-        <h2>Ablaufmodelle</h2>
+        <h2>BPMN</h2>
         <ul class="link-list">{bpmn_items}</ul>
       </section>
       <section>
-        <h2>Offene Angaben</h2>
+        <h2>Knowledge Graphs</h2>
         <ul class="link-list">{kg_items}</ul>
       </section>
     </div>
     """
-    return _layout("Notariat8-App", body)
-
-
-def _home_bpmn_models(repo_root: Path):
-    return [
-        model
-        for model in list_bpmn_models(repo_root)
-        if model.path == "bpmn/immobilienkaufvertrag.bpmn" or model.path.startswith("bpmn/usecases/")
-    ]
+    return _layout("NaC Lokaler Webserver", body)
 
 
 def build_www_n8_handoff_page(query: str) -> str | None:
@@ -479,28 +471,28 @@ def build_www_n8_handoff_page(query: str) -> str | None:
         body = f"""
         <nav class="topline"><a href="/">← Übersicht</a><span><a href="/healthz">Health</a></span></nav>
         <section class="hero">
-          <p class="eyebrow">notariat8 App-Einstieg</p>
+          <p class="eyebrow">NaC App-Einstieg</p>
           <h1>Bestandskunde</h1>
-          <p>Der Übergang von <code>notariat8</code> wurde empfangen. notariat8 prüft den passenden
-          Notariatskontext erst nach Ihrer Anmeldung.</p>
+          <p>Der Übergang von <code>notariat8</code> wurde empfangen. Der Tenant-Hinweis ist nur eine Vorsortierung
+          und kein Tenant-Autorisierungsnachweis; die eigentliche Anmeldung bleibt am OCI-IdP-Login.</p>
         </section>
         <div class="grid">
           <section class="notice">
-            <h2>Ihr Notariat</h2>
-            <p><strong>Hinweis:</strong> {hint}</p>
-            <p><strong>Nächster Schritt:</strong> Anmeldung öffnen.</p>
-            <p><a class="inline-link" href="{html.escape(login_href)}">Anmeldung öffnen</a></p>
+            <h2>Tenant-Kontext</h2>
+            <p><strong>Tenant-Hinweis:</strong> {hint}</p>
+            <p><strong>Nächster Gate:</strong> OCI-IdP-Login mit serverseitiger Tenant-Zuordnung.</p>
+            <p><a class="inline-link" href="{html.escape(login_href)}">OCI-IdP Login-Contract öffnen</a></p>
           </section>
           <section>
-            <h2>Datenschutz</h2>
+            <h2>Guardrails</h2>
             <ul class="link-list">
               <li><span>Keine Mandatsdaten, keine Zugangsdaten, keine Secrets aus Query-Parametern.</span></li>
-              <li><span>Der Hinweis allein öffnet noch keinen geschützten Arbeitsbereich.</span></li>
+              <li><span>Der Hinweis darf keine Rollen, Gruppen oder OCI-Schreiboperationen auslösen.</span></li>
             </ul>
           </section>
         </div>
         """
-        return _layout("notariat8 App-Einstieg", body)
+        return _layout("NaC App-Einstieg", body)
     if entry == "prospect":
         domain_hint = _optional_query_text(params, "domain_hint", max_length=120)
         readiness_params = {"source": "notariat8", "entry": "prospect"}
@@ -665,12 +657,11 @@ def build_customer_readiness_page(query: str) -> str:
     nav = _customer_onboarding_nav(resume_query) if public_context else (
         '<nav class="topline"><a href="/">← Übersicht</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>'
     )
-    slug_label = "notariat8-Referenz" if public_context else "Tenant-Slug"
-    admin_email_label = "E-Mail-Adresse der verantwortlichen Person" if public_context else "Administrations-E-Mail"
+    slug_label = "NaC-Kennung" if public_context else "Tenant-Slug"
     admin_email_line = (
-        f'<p><strong>{admin_email_label}:</strong> {html.escape(readiness["admin_email"])}</p>'
+        f'<p><strong>Administrations-E-Mail:</strong> {html.escape(readiness["admin_email"])}</p>'
         if admin_email_provided
-        else f"<p><strong>{admin_email_label}:</strong> noch nicht angegeben</p>"
+        else "<p><strong>Administrations-E-Mail:</strong> noch nicht angegeben</p>"
     )
     status_label = "bereit" if readiness["ready"] else "blockiert"
     if public_context and not admin_email_provided:
@@ -684,20 +675,20 @@ def build_customer_readiness_page(query: str) -> str:
     dns_action = (
         f'<a class="button-link" href="/onboarding/dns-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>'
         if admin_email_provided or not public_context
-        else "<p>Die DNS-Prüfung startet erst nach Angabe der E-Mail-Adresse.</p>"
+        else "<p>Die DNS-Prüfung startet erst nach Angabe der Administrations-E-Mail.</p>"
     )
     admin_email_form = ""
     if public_context and not admin_email_provided:
         admin_email_form = f"""
         <section class="notice">
-          <h2>E-Mail-Adresse angeben</h2>
-          <p>Tragen Sie die E-Mail-Adresse der Person ein, die die Einrichtung für Ihr Notariat starten soll.
+          <h2>Administrations-E-Mail angeben</h2>
+          <p>Tragen Sie die E-Mail-Adresse der Person ein, die den ersten NaC-Zugang administrieren soll.
           notariat8 leitet diese Adresse nicht aus der Domain ab; in diesem Schritt wird keine E-Mail automatisch versendet.</p>
           <form class="readiness-form" method="get" action="/onboarding/readiness">
             <input type="hidden" name="audience" value="customer">
             <input type="hidden" name="domain_hint" value="{html.escape(readiness["domain"], quote=True)}">
             <input type="hidden" name="tenant_slug" value="{html.escape(readiness["tenant_slug"], quote=True)}">
-            <label>E-Mail-Adresse der verantwortlichen Person
+            <label>Administrations-E-Mail
               <input type="email" name="admin_email" autocomplete="email" required>
             </label>
             <button type="submit">E-Mail übernehmen</button>
@@ -706,15 +697,15 @@ def build_customer_readiness_page(query: str) -> str:
         """
     guidance_items = (
         """
-        <li><span>Geben Sie zuerst die E-Mail-Adresse der verantwortlichen Person ein; notariat8 nimmt dafür keine Standardadresse an.</span></li>
+        <li><span>Geben Sie zuerst die Administrations-E-Mail ein; notariat8 nimmt dafür keine Standardadresse an.</span></li>
         <li><span>Danach tragen Sie den DNS-TXT-Eintrag bei Ihrem DNS-Anbieter ein oder geben ihn an Ihre IT weiter.</span></li>
-        <li><span>Nach erfolgreicher DNS-Prüfung bereitet notariat8 die Einladung vor.</span></li>
+        <li><span>Nach erfolgreicher DNS-Prüfung bereitet notariat8 die Administrations-Einladung vor.</span></li>
         <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
         """
         if public_context and not admin_email_provided
         else """
         <li><span>Tragen Sie den DNS-TXT-Eintrag bei Ihrem DNS-Anbieter ein oder geben Sie ihn an Ihre IT weiter.</span></li>
-        <li><span>Nach erfolgreicher DNS-Prüfung bereitet notariat8 die Einladung vor.</span></li>
+        <li><span>Nach erfolgreicher DNS-Prüfung bereitet notariat8 die Administrations-Einladung vor.</span></li>
         <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
         """
         if public_context
@@ -732,10 +723,10 @@ def build_customer_readiness_page(query: str) -> str:
     body = f"""
     {nav}
     <section class="hero">
-      <p class="eyebrow">notariat8 Neukunden-Onboarding</p>
+      <p class="eyebrow">NaC Neukunden-Onboarding</p>
       <h1>Domain-Readiness</h1>
-      <p>Prüfen Sie hier, ob Ihre Domain für notariat8 vorbereitet ist. Diese Seite verwendet nur Domain,
-      E-Mail-Adresse der verantwortlichen Person und DNS-TXT-Eintrag. Keine Mandatsdaten und keine Vorgangsdokumente.</p>
+      <p>Prüfen Sie hier, ob Ihre Domain für NaC vorbereitet ist. Diese Seite verwendet nur Domain,
+      Administrations-E-Mail und DNS-TXT-Challenge. Keine Mandatsdaten und keine Vorgangsdokumente.</p>
     </section>
     <div class="grid">
       <section class="notice">
@@ -766,7 +757,7 @@ def build_customer_readiness_page(query: str) -> str:
       </ul>
     </section>
     """
-    return _layout("notariat8 Domain-Readiness" if public_context else "NaC Domain-Readiness", body)
+    return _layout("NaC Domain-Readiness", body)
 
 
 def build_admin_provisioning_preview_page(query: str) -> str:
