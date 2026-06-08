@@ -1,0 +1,114 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.codex_parallel_review",
+  "title": "Codex Parallel Review Workflow für NaC",
+  "status": "pilot_ready",
+  "last_update": "2026-06-08",
+  "purpose": "Explizite Codex-Subagents prüfen nichttriviale NaC-Änderungen parallel, ohne autonome Produktivschreibungen oder notarielle Freigaben zu ersetzen.",
+  "runtime": {
+    "primary_surface": "Codex CLI, Codex app or Codex SDK",
+    "repo_config": ".codex/config.toml",
+    "agent_profile_dir": ".codex/agents",
+    "optional_orchestration": [
+      "codex exec",
+      "Codex SDK",
+      "Codex MCP server with OpenAI Agents SDK"
+    ]
+  },
+  "agent_profiles": [
+    {
+      "name": "nac_scope_mapper",
+      "path": ".codex/agents/nac-scope-mapper.toml",
+      "sandbox_mode": "read-only",
+      "role": "Scope, Artefakte, Risiken und Review-Matrix mappen."
+    },
+    {
+      "name": "nac_kg_reviewer",
+      "path": ".codex/agents/nac-kg-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "role": "Usecase-lokale KGs, KG-Verträge, stabile IDs, Aliase, Herkunft und Privacy-Klassen prüfen."
+    },
+    {
+      "name": "nac_bpmn_reviewer",
+      "path": ".codex/agents/nac-bpmn-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "role": "BPMN-Modelle, NaC-Properties, Approval- und KG-Verweise prüfen."
+    },
+    {
+      "name": "nac_policy_reviewer",
+      "path": ".codex/agents/nac-policy-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "role": "Datenschutz, Rollen, Lizenz, AI-SBOM und Providergrenzen prüfen."
+    },
+    {
+      "name": "nac_docs_parity_reviewer",
+      "path": ".codex/agents/nac-docs-parity-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "role": "Deutsch/Englisch-Parität, Links und agentische Regelspiegel prüfen."
+    },
+    {
+      "name": "nac_validation_reviewer",
+      "path": ".codex/agents/nac-validation-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "role": "Validierungsstrategie, Quality-Gate-Abdeckung und frische Nachweise prüfen."
+    }
+  ],
+  "allowed_inputs": [
+    "Issue, Pull Request oder lokale Aufgabenbeschreibung",
+    "synthetische Beispiele",
+    "Repo-Dateien ohne echte Mandatsdaten",
+    "Validator-Ausgaben",
+    "Git-Diff und Review-Kommentare"
+  ],
+  "prohibited_inputs": [
+    "echte Mandatsdaten",
+    "echte personenbezogene Daten",
+    "PINs",
+    "Kartendaten",
+    "Passwörter",
+    "Tokens",
+    "produktive Fachsystem-Zugangsdaten",
+    "geheime Upload- oder Leselinks"
+  ],
+  "guardrails": {
+    "agent_profiles_read_only_by_default": true,
+    "productive_write_without_user_approval": false,
+    "real_mandate_data_allowed": false,
+    "external_ai_processing_without_avv_dpa_gate": false,
+    "kg_auto_merge_allowed": false,
+    "notarial_truth_from_model_output": false,
+    "human_review_required": true,
+    "git_diff_required": true,
+    "fresh_validation_required": true
+  },
+  "review_gates": [
+    "scope_and_risk_mapping",
+    "specialist_parallel_review",
+    "lead_agent_synthesis",
+    "human_review_before_implementation",
+    "implementation_diff_review",
+    "fresh_validation_evidence",
+    "owner_or_pr_approval_before_completion"
+  ],
+  "evidence_fields": [
+    "request",
+    "scope",
+    "agent_profile",
+    "artifact_path",
+    "risk_class",
+    "finding",
+    "recommendation",
+    "validation_command",
+    "validation_result",
+    "human_decision"
+  ],
+  "validation_commands": [
+    "python scripts/validate_codex_parallel_review.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_governance_sync.py",
+    "python scripts/validate_knowledge_graph.py",
+    "python scripts/validate_bpmn_models.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "operator_prompt": "Nutze den NaC Parallel Review Workflow: nac_scope_mapper mappt Scope, Artefakte, Risiken und Validatoren; passende Spezialagenten prüfen parallel read-only; der führende Lauf fasst Blocker, Hinweise und nächste Änderungen zusammen; keine produktiven Schreibaktionen ohne Freigabe."
+}

@@ -187,6 +187,12 @@ The three technical paths must stay separate:
    operating channel. In that model, a local backend endpoint calls the OpenAI
    API; the API key stays server-side and the local tools remain the same.
 
+Current working note: NaC continues as before for now, with the local operator
+web app, central `nac` CLI, Python validators and `nac-mcp`/App SDK as the
+target architecture. CopilotKit stays on the list as a possible later
+sidecar/agent UI option, especially for synthetic KG/BPMN demos or a controlled
+React prototype; it does not replace the runtime, review or approval path today.
+
 For NaC this means: Actions with OpenAPI and a tunnel may enable short demos,
 but the regulated target architecture is MCP/App SDK with explicit
 authentication, minimal tool permissions, audit logging, human confirmation for

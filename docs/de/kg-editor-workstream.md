@@ -74,6 +74,28 @@ Kostenbaustein aufrufen, ohne die Kostenlogik pro Usecase zu duplizieren.
 - Graph-Visualisierung ist nachrangig; operativ wichtiger sind offene Punkte,
   Blocker, Verantwortlichkeiten und Review-Gates.
 
+## KG-Cleanliness Für JSON-Dateien
+
+NaC behandelt den usecase-lokalen KG nicht als selbstlernende Graph-Datenbank,
+sondern als versionierten Fachvertrag. Die wichtigste Sauberkeitsregel ist
+deshalb: Alias, Label und Identität bleiben getrennt. Ein Agent darf ähnliche
+Labels oder mögliche Dubletten markieren, aber er darf keine Knoten automatisch
+zusammenführen.
+
+- Stabile `id`-Werte sind die Identität eines KG-Knotens; Labels, Fragen und
+  Aliase dürfen sich ändern, IDs nur mit expliziter Migration.
+- Label- oder Alias-Normalisierung ist erlaubt, aber sie ist kein Beweis, dass
+  zwei Knoten dieselbe fachliche Entität sind.
+- Mögliche Dubletten, ähnliche IDs, verwaiste Edges, unbekannte `source_refs`
+  oder fehlende Datenschutzklassen werden als Validator-Hinweise oder
+  Review-Kandidaten behandelt.
+- Merges, Ersetzungen und Löschungen laufen nur über Patch, Diff, menschliche
+  Prüfung und Pull Request. Bei echter Ersetzung bleibt die Herkunft über
+  `deprecated`, `replaced_by` oder eine vergleichbare Review-Notiz
+  nachvollziehbar.
+- Für NaC ist ein unsicherer KG-Treffer kein Grund für Automatik, sondern ein
+  Review-Signal.
+
 ## Integrationspfad
 
 MVP 1 ist der GitHub-backed KG-Editor. MVP 2 ist eine ChatGPT-App mit

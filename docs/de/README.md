@@ -125,6 +125,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   und Codex-Kosten.
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md): no-code KG-Editor
   für Fachpersonal, Patch-Prinzip und Sidecar-Editor-Pfad.
+- [docs/de/codex-parallel-review-workflow.md](codex-parallel-review-workflow.md):
+  expliziter Parallel-Review mit read-only Codex-Agenten für KG, BPMN,
+  Governance, Doku-Parität und Validierung.
 - [docs/de/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md): getrenntes
   Demo-Datenrepo für synthetische NaC-Vorgänge und späteren Sovereign-Git-Wechsel.
 - [docs/de/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md): Herleitung
@@ -148,6 +151,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json)
   beschreibt den implementierten KG-Editor-Vertrag für die usecase-lokalen
   Knowledge Graphs.
+- [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json)
+  beschreibt den Vertrag für explizite, parallele Codex-Reviews mit
+  read-only Agentprofilen und frischer Validierung.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

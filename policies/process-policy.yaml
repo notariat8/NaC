@@ -141,6 +141,12 @@ agent_workflows:
   require_iteration_until_validation_passes: true
   require_visual_evidence_for_ui_changes: true
   require_clear_purpose_for_elevated_command_approval: true
+  allow_codex_parallel_review_for_cross_layer_or_risky_changes: true
+  codex_parallel_review_contract: workflows/contracts/codex-parallel-review.contract.json
+  codex_parallel_review_doc_de: docs/de/codex-parallel-review-workflow.md
+  codex_parallel_review_doc_en: docs/en/codex-parallel-review-workflow.md
+  codex_parallel_review_profiles: .codex/agents
+  codex_parallel_review_write_policy: read_only_specialists_lead_agent_or_user_approved_implementation
 
 portfolio_structure:
   plugin_root: plugins

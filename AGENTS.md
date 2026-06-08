@@ -71,6 +71,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 
 - Wenn Aufgaben offen formuliert sind, aus einem Issue abgeleitet werden oder mehrere fachlich relevante Lösungswege haben, erst erkunden, einen kurzen Plan mit Zweck/Risiko nennen und Bestätigung einholen, bevor Code geändert wird.
 - Nichttriviale Arbeit in zwei Schleifen führen: `plan -> review -> fix` klärt Anforderungen, Scope, Risiko und Akzeptanzkriterien; `implement -> review -> fix` prüft Umsetzung gegen Plan, Repo-Muster, Fehlerbehandlung, Tests und Sicherheit.
+- Für schichtübergreifende oder riskante NaC-Änderungen darf der [Codex Parallel Review Workflow](docs/de/codex-parallel-review-workflow.md) genutzt werden: `nac_scope_mapper` mappt Scope und Risiken, passende read-only Spezialagenten prüfen unabhängig, und der führende Lauf setzt nur nach Freigabe um.
 - Bei wiederholten oder unklaren Fehlern zuerst Diagnose und Ursache dokumentieren, dann erst ändern. Bei Änderungen an Daten-, Controller-/Logik- oder View-Schicht explizit prüfen, dass diese Schichten synchron bleiben.
 - Bei klar beauftragten, eng abgegrenzten Änderungen darf direkt umgesetzt werden; Annahmen und Validierung werden trotzdem dokumentiert.
 - Codeänderungen brauchen vor Abschluss Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder bestehende Testlücke festhalten, dann implementieren, iterieren und erneut validieren.

@@ -72,6 +72,26 @@ cost module without duplicating cost logic per usecase.
 - Graph visualization is secondary; operationally, missing information,
   blockers, responsibilities and review gates matter more.
 
+## KG Cleanliness For JSON Files
+
+NaC treats the usecase-local KG not as a self-learning graph database, but as a
+versioned subject-matter contract. The most important cleanliness rule is
+therefore: alias, label and identity stay separate. An agent may flag similar
+labels or possible duplicates, but it must not merge nodes automatically.
+
+- Stable `id` values are the identity of a KG node; labels, questions and
+  aliases may change, IDs only through an explicit migration.
+- Label or alias normalization is allowed, but it is not proof that two nodes
+  are the same subject-matter entity.
+- Possible duplicates, similar IDs, orphan edges, unknown `source_refs` or
+  missing privacy classes are handled as validator warnings or review
+  candidates.
+- Merges, replacements and deletions go only through patch, diff, human review
+  and pull request. When a real replacement happens, provenance stays traceable
+  through `deprecated`, `replaced_by` or a comparable review note.
+- For NaC, an uncertain KG match is not a reason for automation; it is a review
+  signal.
+
 ## Integration Path
 
 MVP 1 is the GitHub-backed KG editor. MVP 2 is a ChatGPT App with an embedded

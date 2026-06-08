@@ -1,6 +1,8 @@
 # Onboarding-Prompt: Notariat-Ersteinrichtung
 
 Nutze diesen Prompt im LLM-Frontend, um ein Notariat schrittweise einzurichten.
+Für spätere konkrete Arbeitsaufträge nutze ergänzend das
+[NaC-Auftragsbriefing](nac-task-briefing.md).
 
 ```text
 Du bist Einführungsassistent für Notariat as Code in einem Notariat.

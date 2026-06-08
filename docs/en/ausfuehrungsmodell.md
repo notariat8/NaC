@@ -44,6 +44,62 @@ The German-language trigger article is
 For NaC, the conclusion is: code is not only output but an operating layer;
 rules, workflows and evidence are part of the same technical responsibility.
 
+Additional operating note: McKinsey's article
+[Rewiring software delivery for the agentic era](https://www.mckinsey.com/capabilities/mckinsey-technology/our-insights/rewiring-software-delivery-for-the-agentic-era)
+describes the same shift from a delivery perspective: shorter review/agent
+cycles, standardized paths from requirements to code, machine-readable
+handoffs, knowledge graphs as institutional memory and controls that are built
+into the flow early. For NaC, this is not an invitation to autonomous
+production paths. It confirms the existing direction: agents become reliably
+faster only where roadmap, specification, architecture boundaries, KG, BPMN,
+contracts and validators already exist as checkable work surfaces.
+
+## Platform Improvements From Enterprise Agent Review
+
+Kore.ai positions its Agent Platform as an enterprise runtime for build,
+orchestration, memory, search, evals, audit, lifecycle, admin controls and
+channels. For NaC, this is currently not a reason to introduce a second core
+platform. It is, however, a useful review frame for what the NaC platform should
+make more visible and robust itself.
+
+NaC should build out these points as its own platform capabilities:
+
+- Agent trace: every agentic run records tool, purpose, input class, result,
+  policy decision, review state and evidence reference.
+- Eval sets: KG patches, BPMN change proposals, import extractions and
+  `nac-mcp` tools get synthetic regression tests with expected decisions.
+- MCP catalog: allowed tools, data classes, roles, approval mode and logging
+  duty are maintained as a curated `nac-mcp` contract, not as an arbitrary
+  growing server list.
+- Lifecycle: skills, prompts, contracts, agent profiles and tool boundaries
+  need version, change reason, rollback path and deprecation note.
+- Observability: quality-gate, import, KG, BPMN and MCP events should later
+  feed a small operator/owner view for drift, open reviews, cost signals and
+  recurring failures.
+- Channel boundaries: operator web app, ChatGPT App, Codex, Teams/Slack or
+  voice may call the same runtime, but real mandate data and productive write
+  actions need their own DPA/AI-SBOM, role and approval review per channel.
+
+The lesson is therefore not "buy a platform", but: NaC must express the harness
+and runtime discipline such platforms promise as a checkable Git/Python/MCP
+layer of its own.
+
+## Codex Parallel Review As A Usable Harness Today
+
+For larger agentic tasks, NaC already adopts the useful shape of dynamic
+workflows with Codex building blocks: repository-local read-only agent
+profiles, explicit scope mapping, parallel specialist reviews, and fresh
+validator evidence. This does not replace a future product feature or notarial
+approval, but it makes review work more scalable.
+
+The operating entry point is the
+[Codex Parallel Review Workflow](codex-parallel-review-workflow.md). The
+machine-readable contract lives at
+[workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json).
+With it, a lead Codex run can deliberately bring in agents for KG, BPMN,
+policy, documentation parity, and validation without allowing productive write
+actions or mandate data.
+
 ## What Does CLI Mean?
 
 CLI means "Command Line Interface". In NaC, it is not meant to be the daily
@@ -131,6 +187,7 @@ rules; a mobile link does not replace NaC authorization.
 | Local operator web app | Usable today | Starts as an office UI with `python scripts/nac.py operator --open` and shows cases, checklists, BPMN, KG views and workstation tests. |
 | Unified `nac` CLI and Python runtime | Usable today | Checks KG, BPMN, configuration, status, editor view, plugins and quality gates. |
 | Codex plugins | Pilot-ready | Guide local readiness, plan and evidence checks. |
+| Codex Parallel Review | Pilot-ready | Uses repository-local read-only agent profiles for scope mapping, KG, BPMN, policy, documentation, and validation reviews. |
 | GitHub Actions | Usable today | Run gates and validations reproducibly. |
 | BPMN-js business layer | First profile present | Visual BPMN editing for subject-matter flows; Python validates the model before merge. |
 | Local web server | Usable today | Shows BPMN and KG views locally in the browser, without cloud use or real mandate data. |
@@ -157,6 +214,7 @@ documentation should show the understandable NaC path.
 - [docs/en/integration-start.md](integration-start.md)
 - [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md)
+- [docs/en/codex-parallel-review-workflow.md](codex-parallel-review-workflow.md)
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md)
 - [docs/en/lokaler-webserver.md](lokaler-webserver.md)
 - [workflows/python/README.md](../../workflows/python/README.md)

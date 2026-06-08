@@ -48,3 +48,7 @@ Jeder Vertrag soll definieren:
   Domain-Readiness, DNS-TXT-Challenge, SaaS-Admin-Review, Owner-Apply-Gate,
   OCI-IAM-Domain-/Compartment-Zielbild und gemeinsamer ATP-Tenant-Mapping-
   Logik ohne Mandatsdaten oder Credential-Material im Produktrepo.
+- [workflows/contracts/codex-parallel-review.contract.json](codex-parallel-review.contract.json):
+  Vertrag für explizite, parallele Codex-Reviews mit read-only Agentprofilen,
+  Scope-Mapping, KG-/BPMN-/Policy-/Doku-/Validierungsprüfung, Guardrails und
+  frischem Nachweis vor Abnahme.

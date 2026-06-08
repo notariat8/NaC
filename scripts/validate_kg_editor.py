@@ -85,8 +85,13 @@ def _validate_contract_file(path: Path, errors: list[str]) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("contract_id") != "workflow.kg_editor":
         errors.append("KG editor workflow contract has unexpected contract_id")
-    if payload.get("guardrails", {}).get("value_fields_editable") is not False:
+    guardrails = payload.get("guardrails", {})
+    if guardrails.get("value_fields_editable") is not False:
         errors.append("KG editor workflow contract must make value fields non-editable")
+    if guardrails.get("agent_auto_merge_nodes") is not False:
+        errors.append("KG editor workflow contract must prohibit agent auto-merge of nodes")
+    if guardrails.get("alias_equals_identity") is not False:
+        errors.append("KG editor workflow contract must keep alias and identity separate")
 
 
 def _contains_key(value: Any, key: str) -> bool:
