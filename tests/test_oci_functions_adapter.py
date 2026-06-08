@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -88,6 +90,27 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("True", result.stdout)
 
+    def test_function_entrypoint_handles_shallow_container_path(self) -> None:
+        function_dir = REPO_ROOT / "deploy" / "functions" / "nac-app"
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(SRC_ROOT)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            shutil.copy(function_dir / "func.py", tmp_path / "func.py")
+
+            result = subprocess.run(
+                [sys.executable, "-c", "import func; print(callable(func.handler))"],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("True", result.stdout)
+
     def test_function_docker_context_excludes_local_secret_and_vcs_paths(self) -> None:
         dockerignore = self.read(".dockerignore")
 
@@ -104,6 +127,13 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         ]
         for pattern in required_patterns:
             self.assertIn(pattern, dockerignore)
+
+    def test_function_image_grants_runtime_user_read_permissions(self) -> None:
+        dockerfile = self.read("deploy/functions/nac-app/Dockerfile")
+
+        self.assertIn("COPY --from=build-stage /function /function", dockerfile)
+        self.assertIn("COPY --from=build-stage /python /python", dockerfile)
+        self.assertIn("RUN chmod -R a+rX /function /python", dockerfile)
 
     def test_operations_docs_define_functions_parallel_runtime_gate(self) -> None:
         german = self.read("docs/de/operations/oci-runtime.md")
