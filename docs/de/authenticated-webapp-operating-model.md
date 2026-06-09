@@ -111,6 +111,14 @@ serverseitig erzeugte `state`- und `nonce`-Werte und hält `tenant_hint` nur als
 Kontext. Der Hinweis darf nicht in Rollen, Gruppen, Aktenzugriff oder OCI-Write
 übersetzt werden.
 
+Der Auth-Callback ist in diesem Modell noch kein erfolgreicher Login. Er ist
+zuerst ein geschlossenes Zwischenereignis mit eigenem
+`nac.auth-callback/v0.1`-Vertrag: `code`, `state` und Fehlerdetails werden
+nicht angezeigt, nicht in Kundentexte übernommen und nicht als Berechtigung
+ausgelegt. Ohne konfigurierte serverseitige State-Prüfung und Token-Austausch
+bleibt der notariat8-Arbeitsbereich geschlossen; erst danach darf das
+NaC-Rollen- und Vorgangs-Gate entscheiden.
+
 XNP- und digitale-Ausweis-Pfade mit Kartenleser bleiben lokale
 Arbeitsplatz-Gates. Sie können Identitäts- oder Readiness-Nachweise liefern,
 ersetzen aber weder OCI-Login noch NaC-Autorisierung und speichern keine PINs,

@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result, build_live_dns_check_result
+from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
@@ -406,7 +407,8 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
             self._send_app_response(*app.handle_post(self.path, self.rfile.read(length)))
 
         def log_message(self, format: str, *args: Any) -> None:
-            print(f"{self.address_string()} - {format % args}")
+            sanitized_args = tuple(_sanitize_request_log_text(str(arg)) for arg in args)
+            print(f"{self.address_string()} - {format % sanitized_args}")
 
     return ThreadingHTTPServer((host, port), Handler)
 
@@ -582,7 +584,14 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
     provider_error = _optional_query_text(params, "error", max_length=120)
     code = _optional_query_text(params, "code", max_length=4096)
     state = _optional_query_text(params, "state", max_length=4096)
-    if provider_error or not code or not state:
+    callback_result = build_auth_callback_result(
+        code=code,
+        state=state,
+        provider_error=provider_error,
+        state_validation_configured=_auth_callback_state_validation_configured(),
+        token_exchange_configured=_auth_callback_token_exchange_configured(),
+    )
+    if callback_result["status"] == "rejected":
         body = """
         <nav class="topline"><a href="/login">← Anmeldung erneut öffnen</a></nav>
         <section class="hero">
@@ -597,22 +606,31 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
         </section>
         """
         return HTTPStatus.BAD_REQUEST, _layout("notariat8 Anmeldung nicht abgeschlossen", body)
-    body = """
+    state_label = (
+        "Sicherheitsprüfung bereit"
+        if callback_result["state_validation"]["status"] == "configured"
+        else "Sicherheitsprüfung offen"
+    )
+    escaped_state_label = html.escape(state_label)
+    body = f"""
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
       <p class="eyebrow">notariat8 Anmeldung</p>
       <h1>Anmeldung empfangen</h1>
-      <p>notariat8 hat die Rückmeldung zur Anmeldung empfangen. Noch kein Arbeitsbereich geöffnet.</p>
+      <p>notariat8 hat die Rückmeldung zur Anmeldung empfangen. Der Arbeitsbereich bleibt geschlossen,
+      bis Sitzung und Rolle geprüft sind.</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Rollen- und Vorgangsprüfung</h2>
-        <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn Sitzung und Rolle geprüft sind.</p>
+        <p><strong>{escaped_state_label}</strong></p>
+        <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn notariat8 die Sitzung aufgebaut
+        und die Rolle geprüft hat.</p>
       </section>
       <section>
         <h2>Nächster Schritt</h2>
         <ul class="link-list">
-          <li><span>Die Sitzung wird in einem geprüften Folgeschritt aufgebaut.</span></li>
+          <li><span>Sitzung prüfen und notariat8-Rollengate anwenden.</span></li>
           <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
         </ul>
       </section>
@@ -1825,6 +1843,25 @@ def _login_intent_config_from_env() -> dict[str, str]:
     if not all(config.values()):
         raise ValueError("login_intent_config_missing")
     return config
+
+
+def _auth_callback_state_validation_configured() -> bool:
+    return bool(os.environ.get("NAC_OIDC_STATE_VALIDATION_KEY_REF", "").strip())
+
+
+def _auth_callback_token_exchange_configured() -> bool:
+    return bool(os.environ.get("NAC_OIDC_CLIENT_SECRET_REF", "").strip())
+
+
+def _sanitize_request_log_text(value: str) -> str:
+    marker = "/auth/callback?"
+    if marker not in value:
+        return value
+    prefix, suffix = value.split(marker, 1)
+    if " " not in suffix:
+        return f"{prefix}/auth/callback?<redacted>"
+    _query, rest = suffix.split(" ", 1)
+    return f"{prefix}/auth/callback?<redacted> {rest}"
 
 
 def _layout(title: str, body: str, head_extra: str = "") -> str:

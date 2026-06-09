@@ -205,6 +205,45 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("client_secret", serialized)
         self.assertNotIn("private_key", serialized)
 
+    def test_auth_callback_result_keeps_role_gate_closed_without_exposing_values(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-secret-from-nac",
+            provider_error="",
+            state_validation_configured=False,
+            token_exchange_configured=False,
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["schema_version"], "nac.auth-callback/v0.1")
+        self.assertEqual(result["status"], "received")
+        self.assertEqual(result["state_validation"]["status"], "not_configured")
+        self.assertEqual(result["token_exchange"]["status"], "not_started")
+        self.assertEqual(result["token_exchange"]["configuration"], "not_configured")
+        self.assertEqual(result["role_gate"]["status"], "closed")
+        self.assertFalse(result["guardrails"]["contains_credentials"])
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("state-secret-from-nac", serialized)
+
+    def test_auth_callback_result_rejects_provider_error_without_provider_details(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="",
+            state="",
+            provider_error="access_denied",
+            state_validation_configured=False,
+            token_exchange_configured=False,
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["role_gate"]["status"], "closed")
+        self.assertEqual(result["public_message"], "Anmeldung nicht abgeschlossen.")
+        self.assertNotIn("access_denied", serialized)
+
     def test_login_intent_rejects_non_https_redirect_uri(self) -> None:
         from nac_identity.oci_login import build_login_intent
 

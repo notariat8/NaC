@@ -107,6 +107,13 @@ server-generated `state` and `nonce` values, and treats `tenant_hint` only as
 context. The hint must not be translated into roles, groups, matter access or
 OCI writes.
 
+In this model, the auth callback is not yet a successful login. It is first a
+closed intermediate event with its own `nac.auth-callback/v0.1` contract:
+`code`, `state`, and provider error details are not displayed, not copied into
+customer-facing text, and not treated as authorization. Without configured
+server-side state validation and token exchange, the notariat8 workspace stays
+closed; only after that may the NaC role and case gate decide access.
+
 XNP and German eID paths with card readers remain local workstation gates. They
 can provide identity or readiness evidence, but they replace neither OCI login
 nor NaC authorization and they do not store PINs, raw card data, raw eID data

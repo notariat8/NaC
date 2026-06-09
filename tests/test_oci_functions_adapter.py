@@ -321,6 +321,8 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
         self.assertIn("Anmeldung empfangen", body)
         self.assertIn("Rollen- und Vorgangsprüfung", body)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", body)
+        self.assertIn("Sicherheitsprüfung offen", body)
         self.assertNotIn("secret-code-from-idp", body)
         self.assertNotIn("state-secret-from-nac", body)
         self.assertNotIn("Oracle", body)
