@@ -501,11 +501,13 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
-        self.assertIn("OCI-IdP Login-Contract", html)
+        self.assertIn("notariat8 Anmeldung", html)
         self.assertIn("notariat-musterstadt", html)
-        self.assertIn("serverseitig erzeugte State- und Nonce-Werte", html)
-        self.assertIn("NaC-Rollen- und Vorgangs-Gate", html)
+        self.assertIn("serverseitig mit einmaligen Sicherheitswerten erzeugt", html)
+        self.assertIn("Rollen- und Vorgangsprüfung", html)
         self.assertNotIn("client_secret", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
 
     def test_app_serves_login_intent_api_without_leaking_tenant_hint_to_authorize_url(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
