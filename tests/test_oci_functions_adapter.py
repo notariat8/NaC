@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -48,6 +49,16 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             raise AssertionError(f"{path} is missing")
         return file_path.read_text(encoding="utf-8")
 
+    def build_spec_step_command(self, step_name: str) -> str:
+        build_spec = self.read("deploy/functions/nac-app/build_spec.yaml")
+        marker = f'    name: "{step_name}"'
+        step_start = build_spec.index(marker)
+        command_start = build_spec.index("    command: |\n", step_start) + len("    command: |\n")
+        next_step = build_spec.find("\n  - type:", command_start)
+        if next_step == -1:
+            next_step = build_spec.find("\noutputArtifacts:", command_start)
+        return textwrap.dedent(build_spec[command_start:next_step])
+
     def test_function_packaging_declares_python_fdk_without_base_dependency(self) -> None:
         func_yaml = self.read("deploy/functions/nac-app/func.yaml")
         func_py = self.read("deploy/functions/nac-app/func.py")
@@ -65,8 +76,10 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("fdk", requirements)
         self.assertIn("exportedVariables:", build_spec)
         self.assertIn("BUILDRUN_HASH", build_spec)
-        self.assertIn('NAC_SOURCE_DIR="${OCI_PRIMARY_SOURCE_DIR:-nac}"', build_spec)
-        self.assertIn('test -d "$NAC_SOURCE_DIR/tests" || NAC_SOURCE_DIR="."', build_spec)
+        self.assertIn("resolve_nac_source_dir()", build_spec)
+        self.assertIn('for candidate in "${OCI_PRIMARY_SOURCE_DIR:-}" nac .; do', build_spec)
+        self.assertIn('test -d "$candidate/tests"', build_spec)
+        self.assertIn('test -f "$candidate/deploy/functions/nac-app/Dockerfile"', build_spec)
         self.assertIn('cd "$NAC_SOURCE_DIR"', build_spec)
         self.assertIn("python3 -m unittest tests.test_oci_functions_adapter -v", build_spec)
         self.assertIn("docker build -f deploy/functions/nac-app/Dockerfile -t nac-app .", build_spec)
@@ -84,6 +97,43 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         for content in (func_yaml, func_py, dockerfile, requirements, build_spec):
             for term in forbidden_terms:
                 self.assertNotIn(term, content)
+
+    def test_buildspec_prefers_checked_out_nac_source_when_primary_source_dir_is_unusable(self) -> None:
+        command = self.build_spec_step_command("Run Functions adapter tests")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            test_dir = tmp_path / "nac" / "tests"
+            test_dir.mkdir(parents=True)
+            dockerfile = tmp_path / "nac" / "deploy" / "functions" / "nac-app" / "Dockerfile"
+            dockerfile.parent.mkdir(parents=True)
+            dockerfile.write_text("FROM scratch\n", encoding="utf-8")
+            (test_dir / "test_oci_functions_adapter.py").write_text(
+                "\n".join(
+                    [
+                        "import unittest",
+                        "",
+                        "class SmokeTests(unittest.TestCase):",
+                        "    def test_buildspec_source_dir_resolution(self) -> None:",
+                        "        self.assertTrue(True)",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            env = os.environ.copy()
+            env["OCI_PRIMARY_SOURCE_DIR"] = str(tmp_path / "not-the-clone")
+
+            result = subprocess.run(
+                ["bash", "-lc", command],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
 
     def test_function_entrypoint_imports_adapter_without_external_pythonpath(self) -> None:
         function_dir = REPO_ROOT / "deploy" / "functions" / "nac-app"
