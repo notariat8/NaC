@@ -35,6 +35,22 @@ Required apply gate for the Functions parallel path:
 
 `Owner Apply Approval for Apply Block J NaC OCI Functions parallel runtime`
 
+## No-SSH Functions Release
+
+For the cloud-native runtime, the target path is a No-SSH Functions Release. A
+protected, merged GitHub commit is built by OCI DevOps, stored as a container
+image in OCIR, and pinned by an OCIR digest. The OCI Function is updated to
+that digest and then verified through an API Gateway smoke test.
+
+This path needs no Bastion or SSH access to the VM. The VM remains fallback
+until the API Gateway path for `/healthz`, `/onboarding/readiness`,
+`/onboarding/dns-check`, `/login`, and `/api/tenant/login-intent` is live-tested
+and a separate Owner Apply gate approves cutover.
+
+The Function release path remains GET/HEAD-only. Login-intent configuration
+comes only from server-side environment values; query parameters must not set
+identity domain, client, redirect, state, or nonce values.
+
 ## App Release Overlay
 
 An ordinary NaC software release does not require VM replacement after the

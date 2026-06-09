@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -8,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +53,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         func_py = self.read("deploy/functions/nac-app/func.py")
         dockerfile = self.read("deploy/functions/nac-app/Dockerfile")
         requirements = self.read("deploy/functions/nac-app/requirements.txt")
+        build_spec = self.read("deploy/functions/nac-app/build_spec.yaml")
         pyproject = self.read("pyproject.toml")
 
         self.assertIn("runtime: python", func_yaml)
@@ -60,6 +63,12 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("COPY deploy/functions/nac-app/func.py /function/func.py", dockerfile)
         self.assertIn("ENV PYTHONPATH=/python:/function/src", dockerfile)
         self.assertIn("fdk", requirements)
+        self.assertIn("exportedVariables:", build_spec)
+        self.assertIn("BUILDRUN_HASH", build_spec)
+        self.assertIn("python3 -m unittest tests.test_oci_functions_adapter -v", build_spec)
+        self.assertIn("docker build -f deploy/functions/nac-app/Dockerfile -t nac-app .", build_spec)
+        self.assertIn("type: DOCKER_IMAGE", build_spec)
+        self.assertIn("location: nac-app", build_spec)
         self.assertIn("dependencies = []", pyproject)
 
         forbidden_terms = [
@@ -69,7 +78,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "key_file",
             "ocid1.user",
         ]
-        for content in (func_yaml, func_py, dockerfile, requirements):
+        for content in (func_yaml, func_py, dockerfile, requirements, build_spec):
             for term in forbidden_terms:
                 self.assertNotIn(term, content)
 
@@ -145,6 +154,11 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "VM bleibt Fallback",
             "Owner Apply Approval for Apply Block J NaC OCI Functions parallel runtime",
             "keine Mandatsdaten",
+            "No-SSH Functions Release",
+            "OCI DevOps",
+            "OCIR-Digest",
+            "API-Gateway-Smoke-Test",
+            "keinen Bastion- oder SSH-Zugriff",
         ]
         english_terms = [
             "OCI Functions Parallel Runtime",
@@ -152,6 +166,11 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "VM remains fallback",
             "Owner Apply Approval for Apply Block J NaC OCI Functions parallel runtime",
             "no mandate data",
+            "No-SSH Functions Release",
+            "OCI DevOps",
+            "OCIR digest",
+            "API Gateway smoke test",
+            "no Bastion or SSH access",
         ]
 
         for term in german_terms:
@@ -172,6 +191,19 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
         self.assertIn(b'"status": "ok"', result.body)
 
+    def test_dispatches_head_healthz_without_response_body(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        result = dispatch_oci_function_request(
+            FakeFunctionContext(request_url="/healthz", method="HEAD"),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(result.body, b"")
+
     def test_dispatches_get_request_with_query_string(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
@@ -188,6 +220,33 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertIn("kanzlei-notariat.example", body)
         self.assertIn("Keine Mandatsdaten", body)
+
+    def test_dispatches_login_intent_api_for_function_login_page(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "nac-web-app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+            },
+        ):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(
+                    request_url="/api/tenant/login-intent?tenant_hint=notariat-musterstadt",
+                    method="GET",
+                ),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+        payload = json.loads(result.body.decode("utf-8"))
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(payload["schema_version"], "nac.oci-login-intent/v0.1")
+        self.assertIn("/oauth2/v1/authorize", payload["authorization_url"])
+        self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
 
     def test_rejects_post_routes_in_public_function_runtime(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request

@@ -36,6 +36,23 @@ Erforderliches Apply-Gate für den Functions-Parallelpfad:
 
 `Owner Apply Approval for Apply Block J NaC OCI Functions parallel runtime`
 
+## No-SSH Functions Release
+
+Für die cloud-native Runtime ist der Zielpfad ein No-SSH Functions Release.
+Ein geschützter, gemergter GitHub-Commit wird durch OCI DevOps gebaut, als
+Container-Image in OCIR abgelegt und dort über einen OCIR-Digest gebunden. Die
+OCI Function wird auf diesen Digest aktualisiert und anschließend über einen
+API-Gateway-Smoke-Test geprüft.
+
+Dieser Pfad benötigt keinen Bastion- oder SSH-Zugriff auf die VM. Die VM bleibt
+Fallback, bis der API-Gateway-Pfad für `/healthz`, `/onboarding/readiness`,
+`/onboarding/dns-check`, `/login` und `/api/tenant/login-intent` live geprüft
+ist und ein separates Owner-Apply-Gate den Cutover freigibt.
+
+Der Function-Release-Pfad bleibt GET/HEAD-only. Login-Intent-Konfiguration
+kommt ausschließlich aus serverseitigen Umgebungswerten; Query-Parameter dürfen
+keine Identity-Domain-, Client-, Redirect-, State- oder Nonce-Werte setzen.
+
 ## App-Release-Overlay
 
 Normale NaC-Software-Releases brauchen nach dem initial stabilen Runtime-Start

@@ -1,0 +1,36 @@
+version: 0.1
+component: build
+timeoutInSeconds: 3600
+shell: bash
+failImmediatelyOnError: true
+
+env:
+  exportedVariables:
+    - BUILDRUN_HASH
+
+steps:
+  - type: Command
+    name: "Prepare immutable image tag"
+    timeoutInSeconds: 120
+    command: |
+      BUILDRUN_HASH="${OCI_PRIMARY_SOURCE_COMMIT_HASH:-${OCI_BUILD_RUN_ID}}"
+      BUILDRUN_HASH="$(printf '%s' "$BUILDRUN_HASH" | cut -c 1-12)"
+      export BUILDRUN_HASH
+      echo "Building notariat8 NaC OCI Functions image ${BUILDRUN_HASH}"
+
+  - type: Command
+    name: "Run Functions adapter tests"
+    timeoutInSeconds: 600
+    command: |
+      python3 -m unittest tests.test_oci_functions_adapter -v
+
+  - type: Command
+    name: "Build Functions image"
+    timeoutInSeconds: 1800
+    command: |
+      docker build -f deploy/functions/nac-app/Dockerfile -t nac-app .
+
+outputArtifacts:
+  - name: nac_app_image
+    type: DOCKER_IMAGE
+    location: nac-app

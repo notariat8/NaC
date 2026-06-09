@@ -511,32 +511,30 @@ def build_login_page(query: str) -> str:
     context_label = "notariat8 Bestandskunde" if _is_notariat8_source(source) and entry == "customer" else "direkter Login-Einstieg"
     hint = html.escape(tenant_hint) if tenant_hint else "nicht übergeben"
     body = f"""
-    <nav class="topline"><a href="/">← Übersicht</a><span><a href="/api/tenant/login-intent">Login Intent API</a></span></nav>
+    <nav class="topline"><a href="/">← Übersicht</a></nav>
     <section class="hero">
-      <p class="eyebrow">OCI-IdP Login-Contract</p>
-      <h1>Login-Intent vorbereiten</h1>
-      <p>Diese Kante beschreibt den OIDC-Redirect zu Oracle OCI Identity Domains. Der konkrete Redirect braucht
-      serverseitig erzeugte State- und Nonce-Werte sowie eine konfigurierte Integrated Application; Query-Hinweise bleiben nur Kontext.</p>
+      <p class="eyebrow">notariat8 Zugang</p>
+      <h1>notariat8 Anmeldung</h1>
+      <p>notariat8 bereitet die sichere Anmeldung vor. Der konkrete Anmeldeschritt wird
+      serverseitig mit einmaligen Sicherheitswerten erzeugt; Hinweise aus der URL bleiben nur Kontext.</p>
     </section>
     <div class="grid">
       <section class="notice">
-        <h2>Handoff-Kontext</h2>
+        <h2>Anmeldekontext</h2>
         <p><strong>Quelle:</strong> {html.escape(context_label)}</p>
-        <p><strong>Tenant-Hinweis:</strong> {hint}</p>
-        <p><strong>API:</strong> <code>/api/tenant/login-intent</code></p>
+        <p><strong>Notariats-Hinweis:</strong> {hint}</p>
       </section>
       <section>
-        <h2>Pflicht-Gates</h2>
+        <h2>Sicherheitsprüfung</h2>
         <ul class="link-list">
-          <li><span>OCI prüft die Anmeldung über <code>/oauth2/v1/authorize</code>.</span></li>
-          <li><span>NaC validiert danach Callback, State, Nonce und Token serverseitig.</span></li>
-          <li><span>NaC-Rollen- und Vorgangs-Gate entscheidet erst nach dem IdP-Login ueber Zugriff.</span></li>
-          <li><span>Keine Client-Secrets, Mandatsdaten oder OCI-Schreiboperationen in dieser Kante.</span></li>
+          <li><span>Die Anmeldung wird erst nach serverseitiger Sicherheitsprüfung geöffnet.</span></li>
+          <li><span>Rollen- und Vorgangsprüfung entscheiden erst nach erfolgreicher Anmeldung über Zugriff.</span></li>
+          <li><span>Keine Mandatsdaten, Zugangsdaten oder Client-Secrets in dieser Einstiegskante.</span></li>
         </ul>
       </section>
     </div>
     """
-    return _layout("OCI-IdP Login-Contract", body)
+    return _layout("notariat8 Anmeldung", body)
 
 
 def build_admin_onboarding_page() -> str:
