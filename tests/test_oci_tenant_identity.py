@@ -205,6 +205,90 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("client_secret", serialized)
         self.assertNotIn("private_key", serialized)
 
+    def test_login_intent_can_use_signed_expiring_state_without_exposing_secret(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+        from nac_identity.oidc_state import validate_signed_state
+
+        intent = build_login_intent(
+            tenant_hint="notariat-musterstadt",
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            client_id="nac-web-app",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            state_signing_key="unit-test-state-signing-key",
+            now=1_800_000_000,
+        )
+        validation = validate_signed_state(
+            intent["oidc"]["state"],
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+        serialized = json.dumps(intent, sort_keys=True)
+
+        self.assertEqual(intent["state_binding"]["status"], "signed")
+        self.assertEqual(intent["state_binding"]["ttl_seconds"], 600)
+        self.assertEqual(validation["status"], "valid")
+        self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertNotIn("unit-test-state-signing-key", serialized)
+
+    def test_signed_state_rejects_tampering_and_expiry_without_returning_secret(self) -> None:
+        from nac_identity.oidc_state import build_signed_state, validate_signed_state
+
+        state = build_signed_state(
+            tenant_hint="notariat-musterstadt",
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_000,
+            ttl_seconds=120,
+        )
+        tampered_state = state[:-1] + ("A" if state[-1] != "A" else "B")
+        tampered = validate_signed_state(
+            tampered_state,
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+        expired = validate_signed_state(
+            state,
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_120,
+        )
+        future_issued_state = build_signed_state(
+            tenant_hint="notariat-musterstadt",
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_500,
+            ttl_seconds=120,
+        )
+        future_issued = validate_signed_state(
+            future_issued_state,
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+        non_string = validate_signed_state(
+            None,  # type: ignore[arg-type]
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+        serialized = json.dumps({"tampered": tampered, "expired": expired}, sort_keys=True)
+
+        self.assertEqual(tampered["status"], "invalid")
+        self.assertEqual(expired["status"], "expired")
+        self.assertEqual(future_issued["status"], "invalid")
+        self.assertEqual(non_string["status"], "invalid")
+        self.assertFalse(tampered["guardrails"]["contains_credentials"])
+        self.assertFalse(expired["guardrails"]["contains_credentials"])
+        self.assertNotIn("unit-test-state-signing-key", serialized)
+        self.assertNotIn(state, serialized)
+
+    def test_signed_state_rejects_malformed_payload_as_invalid(self) -> None:
+        from nac_identity.oidc_state import validate_signed_state
+
+        malformed = validate_signed_state(
+            "state.not-valid-base64.signature",
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+
+        self.assertEqual(malformed["status"], "invalid")
+        self.assertFalse(malformed["guardrails"]["contains_credentials"])
+
     def test_auth_callback_result_keeps_role_gate_closed_without_exposing_values(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result
 
@@ -226,6 +310,81 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertFalse(result["guardrails"]["contains_credentials"])
         self.assertNotIn("secret-code-from-idp", serialized)
         self.assertNotIn("state-secret-from-nac", serialized)
+
+    def test_auth_callback_result_accepts_validated_state_but_keeps_role_gate_closed(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={"status": "valid", "tenant_hint": "notariat-musterstadt"},
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "received")
+        self.assertEqual(result["state_validation"]["status"], "valid")
+        self.assertEqual(result["state_validation"]["tenant_hint"], "notariat-musterstadt")
+        self.assertEqual(result["role_gate"]["status"], "closed")
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("state-redacted", serialized)
+
+    def test_auth_callback_result_rejects_configured_but_missing_state_validation(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation=None,
+        )
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["role_gate"]["reason"], "state_not_started")
+
+    def test_auth_callback_result_rejects_invalid_or_expired_state(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        invalid = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={"status": "invalid"},
+        )
+        expired = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={"status": "expired"},
+        )
+
+        self.assertEqual(invalid["status"], "rejected")
+        self.assertEqual(invalid["role_gate"]["reason"], "state_invalid")
+        self.assertEqual(expired["status"], "rejected")
+        self.assertEqual(expired["role_gate"]["reason"], "state_expired")
+
+    def test_auth_callback_result_rejects_unknown_state_validation_status(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={"status": "unexpected"},
+        )
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["role_gate"]["reason"], "state_invalid")
 
     def test_auth_callback_result_rejects_provider_error_without_provider_details(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result

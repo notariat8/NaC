@@ -557,6 +557,23 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_auth_callback_fails_closed_when_state_validation_is_configured_without_result(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(os.environ, {"NAC_OIDC_STATE_VALIDATION_KEY_REF": "vault://nac/state"}, clear=False):
+            status, content_type, body = app.handle(
+                "/auth/callback?code=secret-code-from-idp&state=attacker-state"
+            )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung nicht abgeschlossen", html)
+        self.assertNotIn("attacker-state", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_auth_callback_fails_safely_without_provider_error_details(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 

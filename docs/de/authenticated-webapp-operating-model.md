@@ -119,6 +119,9 @@ ausgelegt. Ohne konfigurierte serverseitige State-Prüfung und Token-Austausch
 bleibt der notariat8-Arbeitsbereich geschlossen; erst danach darf das
 NaC-Rollen- und Vorgangs-Gate entscheiden.
 
+Die operative Grenze für signierte State-Werte und Callback-Logs steht in
+[OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
+
 XNP- und digitale-Ausweis-Pfade mit Kartenleser bleiben lokale
 Arbeitsplatz-Gates. Sie können Identitäts- oder Readiness-Nachweise liefern,
 ersetzen aber weder OCI-Login noch NaC-Autorisierung und speichern keine PINs,
