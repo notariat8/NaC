@@ -304,6 +304,28 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("/oauth2/v1/authorize", payload["authorization_url"])
         self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
 
+    def test_dispatches_auth_callback_without_exposing_callback_values(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        result = dispatch_oci_function_request(
+            FakeFunctionContext(
+                request_url="/auth/callback?code=secret-code-from-idp&state=state-secret-from-nac",
+                method="GET",
+            ),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("Anmeldung empfangen", body)
+        self.assertIn("Rollen- und Vorgangsprüfung", body)
+        self.assertNotIn("secret-code-from-idp", body)
+        self.assertNotIn("state-secret-from-nac", body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
+
     def test_rejects_post_routes_in_public_function_runtime(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
