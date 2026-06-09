@@ -15,6 +15,7 @@ EXPOSED_GET_ROUTES = {
     "/",
     "/healthz",
     "/login",
+    "/auth/callback",
     "/api/tenant/login-intent",
     "/onboarding/readiness",
     "/onboarding/dns-check",
