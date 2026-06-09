@@ -3,6 +3,8 @@ from __future__ import annotations
 import secrets
 from urllib.parse import urlencode, urlparse
 
+from .oidc_state import DEFAULT_STATE_TTL_SECONDS, build_signed_state
+
 
 DEFAULT_OIDC_SCOPES = ("openid", "profile", "email")
 
@@ -14,13 +16,34 @@ def build_login_intent(
     client_id: str,
     redirect_uri: str,
     scopes: tuple[str, ...] = DEFAULT_OIDC_SCOPES,
+    state_signing_key: str | None = None,
+    now: int | None = None,
+    state_ttl_seconds: int = DEFAULT_STATE_TTL_SECONDS,
 ) -> dict:
     base_url = _normalize_identity_domain_url(identity_domain_url)
     normalized_client_id = _required_text(client_id, "client_id")
     normalized_redirect_uri = _normalize_redirect_uri(redirect_uri)
-    normalized_state = _server_nonce("state")
-    normalized_nonce = _server_nonce("nonce")
     normalized_hint = tenant_hint.strip()[:120]
+    if state_signing_key:
+        normalized_state = build_signed_state(
+            tenant_hint=normalized_hint,
+            signing_key=state_signing_key,
+            now=now,
+            ttl_seconds=state_ttl_seconds,
+        )
+        state_binding = {
+            "status": "signed",
+            "ttl_seconds": state_ttl_seconds,
+            "tenant_hint_bound": True,
+        }
+    else:
+        normalized_state = _server_nonce("state")
+        state_binding = {
+            "status": "opaque_server_generated",
+            "ttl_seconds": None,
+            "tenant_hint_bound": False,
+        }
+    normalized_nonce = _server_nonce("nonce")
     scope = " ".join(scope.strip() for scope in scopes if scope.strip())
     if "openid" not in scope.split():
         raise ValueError("scope_openid_missing")
@@ -57,6 +80,7 @@ def build_login_intent(
             "state": normalized_state,
             "nonce": normalized_nonce,
         },
+        "state_binding": state_binding,
         "authorization_url": f"{authorization_endpoint}?{urlencode(authorization_params)}",
         "guardrails": {
             "contains_credentials": False,

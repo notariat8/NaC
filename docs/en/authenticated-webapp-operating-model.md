@@ -114,6 +114,9 @@ customer-facing text, and not treated as authorization. Without configured
 server-side state validation and token exchange, the notariat8 workspace stays
 closed; only after that may the NaC role and case gate decide access.
 
+The operational boundary for signed state values and callback logs is defined
+in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
+
 XNP and German eID paths with card readers remain local workstation gates. They
 can provide identity or readiness evidence, but they replace neither OCI login
 nor NaC authorization and they do not store PINs, raw card data, raw eID data
