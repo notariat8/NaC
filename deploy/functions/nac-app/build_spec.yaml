@@ -35,8 +35,10 @@ steps:
         return 1
       }
       NAC_SOURCE_DIR="$(resolve_nac_source_dir)"
+      echo "Using NaC source directory: $NAC_SOURCE_DIR"
       cd "$NAC_SOURCE_DIR"
-      python3 -m unittest tests.test_oci_functions_adapter -v
+      test -f tests/test_oci_functions_adapter.py
+      python3 -m unittest discover -s tests -p 'test_oci_functions_adapter.py' -v
 
   - type: Command
     name: "Build Functions image"
@@ -55,6 +57,7 @@ steps:
         return 1
       }
       NAC_SOURCE_DIR="$(resolve_nac_source_dir)"
+      echo "Using NaC source directory: $NAC_SOURCE_DIR"
       cd "$NAC_SOURCE_DIR"
       docker build -f deploy/functions/nac-app/Dockerfile -t nac-app .
 
