@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http.client
+import io
 import json
 import os
 import sys
@@ -145,6 +146,29 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(response.getheader("Content-Length"), "20")
         self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
         self.assertEqual(body, b"")
+
+    def test_runtime_server_sanitizes_auth_callback_query_in_logs(self) -> None:
+        server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        log_output = io.StringIO()
+        try:
+            with patch("sys.stdout", log_output):
+                conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+                conn.request("GET", "/auth/callback?code=secret-code-from-idp&state=state-secret-from-nac")
+                response = conn.getresponse()
+                response.read()
+                conn.close()
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+            server.server_close()
+
+        logs = log_output.getvalue()
+        self.assertEqual(response.status, 200)
+        self.assertIn("/auth/callback", logs)
+        self.assertNotIn("secret-code-from-idp", logs)
+        self.assertNotIn("state-secret-from-nac", logs)
 
     def test_app_serves_empty_favicon_without_browser_console_404(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -525,7 +549,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(content_type, "text/html; charset=utf-8")
         self.assertIn("Anmeldung empfangen", html)
         self.assertIn("Rollen- und Vorgangsprüfung", html)
-        self.assertIn("Noch kein Arbeitsbereich geöffnet", html)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", html)
+        self.assertIn("Sicherheitsprüfung offen", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn("state-secret-from-nac", html)
         self.assertNotIn("client_secret", html)
