@@ -22,12 +22,18 @@ steps:
     name: "Run Functions adapter tests"
     timeoutInSeconds: 600
     command: |
+      NAC_SOURCE_DIR="${OCI_PRIMARY_SOURCE_DIR:-nac}"
+      test -d "$NAC_SOURCE_DIR/tests" || NAC_SOURCE_DIR="."
+      cd "$NAC_SOURCE_DIR"
       python3 -m unittest tests.test_oci_functions_adapter -v
 
   - type: Command
     name: "Build Functions image"
     timeoutInSeconds: 1800
     command: |
+      NAC_SOURCE_DIR="${OCI_PRIMARY_SOURCE_DIR:-nac}"
+      test -d "$NAC_SOURCE_DIR/tests" || NAC_SOURCE_DIR="."
+      cd "$NAC_SOURCE_DIR"
       docker build -f deploy/functions/nac-app/Dockerfile -t nac-app .
 
 outputArtifacts:
