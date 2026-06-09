@@ -75,6 +75,9 @@ class NaCLocalWebApp:
                 return _html_response(build_home_page(self.repo_root))
             if route == "/login":
                 return _html_response(build_login_page(parsed.query))
+            if route == "/auth/callback":
+                status, page = build_auth_callback_page(parsed.query)
+                return _html_response(page, status)
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query))
             if route == "/onboarding/dns-check":
@@ -510,6 +513,11 @@ def build_login_page(query: str) -> str:
     tenant_hint = _optional_query_text(params, "tenant_hint", max_length=120)
     context_label = "notariat8 Bestandskunde" if _is_notariat8_source(source) and entry == "customer" else "direkter Login-Einstieg"
     hint = html.escape(tenant_hint) if tenant_hint else "nicht übergeben"
+    intent_params = {"tenant_hint": tenant_hint} if tenant_hint else {}
+    login_intent_href = "/api/tenant/login-intent"
+    if intent_params:
+        login_intent_href += "?" + urlencode(intent_params)
+    login_intent_js = json.dumps(login_intent_href)
     body = f"""
     <nav class="topline"><a href="/">← Übersicht</a></nav>
     <section class="hero">
@@ -523,6 +531,10 @@ def build_login_page(query: str) -> str:
         <h2>Anmeldekontext</h2>
         <p><strong>Quelle:</strong> {html.escape(context_label)}</p>
         <p><strong>Notariats-Hinweis:</strong> {hint}</p>
+        <div class="toolbar">
+          <button class="button-link" id="nac-login-button" type="button">Jetzt anmelden</button>
+          <span id="nac-login-status" class="muted" aria-live="polite"></span>
+        </div>
       </section>
       <section>
         <h2>Sicherheitsprüfung</h2>
@@ -533,8 +545,80 @@ def build_login_page(query: str) -> str:
         </ul>
       </section>
     </div>
+    <script>
+    (() => {{
+      const button = document.getElementById("nac-login-button");
+      const status = document.getElementById("nac-login-status");
+      const intentUrl = {login_intent_js};
+      if (!button || !status) {{
+        return;
+      }}
+      button.addEventListener("click", async () => {{
+        button.disabled = true;
+        status.textContent = "Anmeldung wird vorbereitet ...";
+        try {{
+          const response = await fetch(intentUrl, {{ headers: {{ "Accept": "application/json" }} }});
+          if (!response.ok) {{
+            throw new Error("intent failed");
+          }}
+          const payload = await response.json();
+          if (!payload || typeof payload.authorization_url !== "string" || payload.authorization_url.length === 0) {{
+            throw new Error("intent incomplete");
+          }}
+          window.location.assign(payload.authorization_url);
+        }} catch (error) {{
+          status.textContent = "Anmeldung konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut.";
+          button.disabled = false;
+        }}
+      }});
+    }})();
+    </script>
     """
     return _layout("notariat8 Anmeldung", body)
+
+
+def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
+    params = parse_qs(query, keep_blank_values=True)
+    provider_error = _optional_query_text(params, "error", max_length=120)
+    code = _optional_query_text(params, "code", max_length=4096)
+    state = _optional_query_text(params, "state", max_length=4096)
+    if provider_error or not code or not state:
+        body = """
+        <nav class="topline"><a href="/login">← Anmeldung erneut öffnen</a></nav>
+        <section class="hero">
+          <p class="eyebrow">notariat8 Anmeldung</p>
+          <h1>Anmeldung nicht abgeschlossen</h1>
+          <p>Bitte starten Sie die Anmeldung erneut. Es wurden keine Mandatsdaten geöffnet.</p>
+        </section>
+        <section class="notice">
+          <h2>Nächster Schritt</h2>
+          <p>Öffnen Sie die Anmeldung noch einmal und bestätigen Sie den Zugriff vollständig.</p>
+          <p><a class="button-link" href="/login">Erneut anmelden</a></p>
+        </section>
+        """
+        return HTTPStatus.BAD_REQUEST, _layout("notariat8 Anmeldung nicht abgeschlossen", body)
+    body = """
+    <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Anmeldung</p>
+      <h1>Anmeldung empfangen</h1>
+      <p>notariat8 hat die Rückmeldung zur Anmeldung empfangen. Noch kein Arbeitsbereich geöffnet.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Rollen- und Vorgangsprüfung</h2>
+        <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn Sitzung und Rolle geprüft sind.</p>
+      </section>
+      <section>
+        <h2>Nächster Schritt</h2>
+        <ul class="link-list">
+          <li><span>Die Sitzung wird in einem geprüften Folgeschritt aufgebaut.</span></li>
+          <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body)
 
 
 def build_admin_onboarding_page() -> str:

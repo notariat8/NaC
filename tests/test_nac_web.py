@@ -504,8 +504,48 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("notariat8 Anmeldung", html)
         self.assertIn("notariat-musterstadt", html)
         self.assertIn("serverseitig mit einmaligen Sicherheitswerten erzeugt", html)
+        self.assertIn("Jetzt anmelden", html)
+        self.assertIn("/api/tenant/login-intent?tenant_hint=notariat-musterstadt", html)
+        self.assertIn("window.location.assign", html)
         self.assertIn("Rollen- und Vorgangsprüfung", html)
         self.assertNotIn("client_secret", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("oraclecloud", html)
+
+    def test_auth_callback_acknowledges_code_without_displaying_callback_values(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/auth/callback?code=secret-code-from-idp&state=state-secret-from-nac"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung empfangen", html)
+        self.assertIn("Rollen- und Vorgangsprüfung", html)
+        self.assertIn("Noch kein Arbeitsbereich geöffnet", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn("state-secret-from-nac", html)
+        self.assertNotIn("client_secret", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_auth_callback_fails_safely_without_provider_error_details(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle(
+            "/auth/callback?error=access_denied&error_description=provider-details"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung nicht abgeschlossen", html)
+        self.assertIn("Bitte starten Sie die Anmeldung erneut", html)
+        self.assertNotIn("access_denied", html)
+        self.assertNotIn("provider-details", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
