@@ -24,13 +24,12 @@ Die nächste Runtime-Stufe ist eine OCI Functions Parallel Runtime hinter OCI
 API Gateway. Sie ersetzt die VM nicht sofort: Die VM bleibt Fallback, bis der
 Functions-Pfad live per Smoke-Test bestätigt ist.
 
-Der erste Functions-Adapter ist bewusst GET/HEAD-only. Er ruft denselben
-`NaCLocalWebApp.handle(...)`-Vertrag wie der lokale Webserver auf und führt
-keine POST-, Apply- oder produktiven Schreiboperationen aus. Der Einstieg ist
-für `/healthz`, `/onboarding/readiness`, `/onboarding/dns-check` und weitere
-read-only Customer-Onboarding-Seiten gedacht. Es werden keine Mandatsdaten,
-Secrets, OCI-API-Schlüssel oder Tenant-Zugangsdaten im Function-Paket
-gespeichert.
+Der erste Functions-Adapter ist grundsätzlich GET/HEAD-only. Er ruft denselben
+`NaCLocalWebApp.handle(...)`-Vertrag wie der lokale Webserver auf. Genau eine
+POST-Ausnahme ist für das Kunden-Onboarding zugelassen:
+`POST /onboarding/requests`. Dieser Pfad nimmt nur Domain, Tenant-Referenz und
+verantwortliche E-Mail-Adresse entgegen. Es werden keine Mandatsdaten, Secrets,
+OCI-API-Schlüssel oder Tenant-Zugangsdaten im Function-Paket gespeichert.
 
 Erforderliches Apply-Gate für den Functions-Parallelpfad:
 
@@ -49,9 +48,35 @@ Fallback, bis der API-Gateway-Pfad für `/healthz`, `/onboarding/readiness`,
 `/onboarding/dns-check`, `/login` und `/api/tenant/login-intent` live geprüft
 ist und ein separates Owner-Apply-Gate den Cutover freigibt.
 
-Der Function-Release-Pfad bleibt GET/HEAD-only. Login-Intent-Konfiguration
-kommt ausschließlich aus serverseitigen Umgebungswerten; Query-Parameter dürfen
-keine Identity-Domain-, Client-, Redirect-, State- oder Nonce-Werte setzen.
+Der Function-Release-Pfad bleibt bis auf `POST /onboarding/requests`
+GET/HEAD-only. Login-Intent-Konfiguration kommt ausschließlich aus
+serverseitigen Umgebungswerten; Query-Parameter dürfen keine Identity-Domain-,
+Client-, Redirect-, State- oder Nonce-Werte setzen.
+
+## ATP-Onboarding-Request-Store
+
+Der produktive Store für Onboarding-Anfragen wird nur über ein explizites
+serverseitiges Gate aktiviert:
+
+- `NAC_ONBOARDING_STORE=atp`
+- `NAC_ATP_DSN`
+- `NAC_ATP_USER`
+- `NAC_ATP_PASSWORD_SECRET_OCID`
+
+Ein Klartext-Passwort in `NAC_ATP_PASSWORD` aktiviert den Store nicht. Fehlt
+einer der erforderlichen Werte, bleibt die Route fail-closed und antwortet mit
+`onboarding_request_store_disabled`. Der Passwortwert wird zur Laufzeit über
+OCI Vault und Resource Principal gelesen; in Git, Chat, Query-Parametern,
+HTML und Function-Config steht nur die Secret-OCID, nicht der Secret-Inhalt.
+
+Optionale Wallet-/Netzwerkpfade:
+
+- `NAC_ATP_CONFIG_DIR`
+- `NAC_ATP_WALLET_LOCATION`
+
+Der ATP-Apply, Tabellenanlage und Secret-Boundary bleiben ein separater
+Owner-gated Infrastruktur-Track über `notariat8/oci-landing-zone#44`. Der
+App-Adapter-Track ist `notariat8/NaC#85`.
 
 ## App-Release-Overlay
 

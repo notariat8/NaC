@@ -17,7 +17,9 @@ from nac_identity.customer_onboarding import build_dns_check_result, build_live_
 from nac_identity.onboarding_requests import (
     DisabledOnboardingRequestStore,
     OnboardingRequestStoreDisabled,
+    OnboardingRequestStoreUnavailable,
     build_onboarding_request,
+    build_onboarding_request_store_from_env,
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
@@ -160,13 +162,18 @@ class NaCLocalWebApp:
                 {"error": "onboarding_request_store_disabled", "status": "unavailable"},
                 HTTPStatus.SERVICE_UNAVAILABLE,
             )
+        except OnboardingRequestStoreUnavailable:
+            return _json_response(
+                {"error": "onboarding_request_store_unavailable", "status": "unavailable"},
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
         return _json_response(created, HTTPStatus.CREATED)
 
     def _admin_onboarding_page(self) -> str:
         try:
             requests = list(self.onboarding_request_store.list_requests())
             store_available = True
-        except OnboardingRequestStoreDisabled:
+        except (OnboardingRequestStoreDisabled, OnboardingRequestStoreUnavailable):
             requests = []
             store_available = False
         return build_admin_onboarding_page(requests=requests, store_available=store_available)
@@ -438,7 +445,7 @@ class NaCLocalWebApp:
 
 
 def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
-    app = NaCLocalWebApp(repo_root)
+    app = NaCLocalWebApp(repo_root, onboarding_request_store=build_onboarding_request_store_from_env())
 
     class Handler(BaseHTTPRequestHandler):
         def _send_app_response(self, status: int, content_type: str, body: bytes, *, include_body: bool = True) -> None:
