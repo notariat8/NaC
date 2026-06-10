@@ -289,10 +289,11 @@ class NaCLocalWebApp:
             headline = "Domain bestätigt" if confirmed else "DNS noch nicht bestätigt"
             status_label = "bestätigt" if confirmed else "ausstehend"
             guidance = (
-                "Der DNS-TXT-Eintrag wurde gefunden. notariat8 kann die Einladung vorbereiten."
+                "Ihre Domain ist bestätigt. notariat8 prüft jetzt die angegebene E-Mail-Adresse für die erste Einrichtung."
                 if confirmed
                 else "Der DNS-TXT-Eintrag wurde noch nicht gefunden. Prüfen Sie den Eintrag bei Ihrem DNS-Anbieter und versuchen Sie es später erneut."
             )
+            invitation_status = "Einladung noch nicht versendet"
             body = f"""
             {nav}
             <section class="hero">
@@ -307,25 +308,33 @@ class NaCLocalWebApp:
                 <p><strong>Status:</strong> {html.escape(status_label)}</p>
                 <p>{html.escape(guidance)}</p>
                 <div class="toolbar">
-                  <a class="button-link" href="/onboarding/dns-check?{html.escape(dns_query, quote=True)}">Erneut prüfen</a>
-                  <a class="inline-link" href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Domain-Readiness öffnen</a>
+                  <a class="button-link" href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Einrichtungsstatus öffnen</a>
+                  <a class="inline-link" href="/onboarding/dns-check?{html.escape(dns_query, quote=True)}">Erneut prüfen</a>
                 </div>
               </section>
               <section>
-                <h2>DNS-TXT</h2>
+                <h2>Ihre Angaben</h2>
+                <p><strong>Domain:</strong> {html.escape(readiness["domain"])}</p>
+                <p><strong>E-Mail-Adresse:</strong> {html.escape(readiness["admin_email"])}</p>
+                <p><strong>Einladung:</strong> {html.escape(invitation_status)}</p>
+              </section>
+            </div>
+            <div class="grid">
+              <section>
+                <h2>Was passiert als Nächstes?</h2>
+                <ul class="link-list">
+                  <li><span><strong>E-Mail-Adresse prüfen:</strong> notariat8 prüft, ob die angegebene E-Mail-Adresse für die Einrichtung Ihres Notariats passt.</span></li>
+                  <li><span><strong>Einrichtung freigeben:</strong> Nach der Prüfung wird die erste Einrichtung vorbereitet.</span></li>
+                  <li><span><strong>Einladung noch nicht versendet:</strong> Eine E-Mail wird erst nach Freigabe ausgelöst.</span></li>
+                  <li><span><strong>Keine Mandatsdaten:</strong> Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
+                </ul>
+              </section>
+              <section>
+                <h2>Technischer Nachweis</h2>
                 <p><strong>Name:</strong> <code>{html.escape(result["expected"]["name"])}</code></p>
                 <p><strong>Wert:</strong> <code>{html.escape(result["expected"]["value"])}</code></p>
               </section>
             </div>
-            <section>
-              <h2>Was passiert als Nächstes?</h2>
-              <ul class="link-list">
-                <li><span>notariat8 prüft die angegebene E-Mail-Adresse für die Einrichtung Ihres Notariats.</span></li>
-                <li><span>In diesem Schritt wird noch keine Einladung versendet.</span></li>
-                <li><span>notariat8 führt Sie anschließend durch die nächsten Schritte.</span></li>
-                <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
-              </ul>
-            </section>
             """
             return _layout("notariat8 DNS-Prüfergebnis", body)
         body = f"""
@@ -1806,7 +1815,7 @@ def _customer_onboarding_nav(readiness_query: str) -> str:
     return (
         '<nav class="topline">'
         '<a href="https://www.notariat8.de/">← notariat8.de</a>'
-        f'<span><a href="/onboarding/readiness?{escaped_query}">Domain-Readiness</a></span>'
+        f'<span><a href="/onboarding/readiness?{escaped_query}">Einrichtungsstatus</a></span>'
         "</nav>"
     )
 
