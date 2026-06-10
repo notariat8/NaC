@@ -1,6 +1,7 @@
 from .customer_onboarding import build_customer_tenant_plan, build_dns_check_result, build_live_dns_check_result
 from .onboarding_requests import (
     AtpOnboardingRequestStore,
+    AtpWalletZipMaterializer,
     DisabledOnboardingRequestStore,
     OnboardingRequestStoreDisabled,
     OnboardingRequestStoreUnavailable,
@@ -16,6 +17,7 @@ __all__ = [
     "DEFAULT_OIDC_SCOPES",
     "DEFAULT_STATE_TTL_SECONDS",
     "AtpOnboardingRequestStore",
+    "AtpWalletZipMaterializer",
     "DisabledOnboardingRequestStore",
     "NAC_TENANT_ROLES",
     "OnboardingRequestStoreDisabled",

@@ -61,6 +61,7 @@ server-side gate:
 - `NAC_ATP_DSN`
 - `NAC_ATP_USER`
 - `NAC_ATP_PASSWORD_SECRET_OCID`
+- `NAC_ATP_WALLET_ZIP_SECRET_OCID` for mTLS-required ATP
 
 A plaintext password in `NAC_ATP_PASSWORD` does not enable the store. If any
 required value is missing, the route remains fail-closed and returns
@@ -68,10 +69,16 @@ required value is missing, the route remains fail-closed and returns
 OCI Vault through Resource Principal; Git, chat, query parameters, HTML, and
 Function config contain only the Secret OCID, never the secret value.
 
+For mTLS-required ATP, the wallet zip is read as a separate Vault secret and
+extracted into the ephemeral Function filesystem. The secret contains wallet
+material, not mandate data. Its contents are not written to Git, chat, Resource
+Manager variables, Function config, query parameters or HTML.
+
 Optional wallet/network paths:
 
 - `NAC_ATP_CONFIG_DIR`
 - `NAC_ATP_WALLET_LOCATION`
+- `NAC_ATP_WALLET_EXTRACT_DIR`
 
 The ATP apply, table creation, and secret boundary remain a separate
 Owner-gated infrastructure track through `notariat8/oci-landing-zone#44`. The

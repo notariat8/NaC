@@ -136,6 +136,27 @@ Pflichtfelder in `onboarding_requests`:
 Spätere Erweiterungen für Audit-Events, Vertragsstatus, AVV-Status und
 Apply-Artefakte müssen ohne Schema-Bruch möglich sein.
 
+## M2 mTLS-Wallet-Runtime
+
+Die erste produktive ATP-Instanz verlangt mTLS. NaC behält diese Grenze bei und
+schaltet nicht auf walletlose Verbindung um, nur um den ersten Apply zu
+vereinfachen.
+
+Die Function lädt zur Laufzeit nur über Resource Principal:
+
+- das Datenbankpasswort als Vault-Secret,
+- optional das ATP-Wallet-Zip als getrenntes Vault-Secret.
+
+Der Secret-Inhalt darf nicht in Git, Chat, Query-Parametern, HTML,
+Resource-Manager-Variablen oder Function-Config stehen. Function-Config enthält
+nur Secret-OCIDs und nicht geheime Verbindungsparameter. Das Wallet wird im
+ephemeren Function-Dateisystem entpackt, Pfade werden nicht im Kunden-HTML
+ausgegeben, und es gibt keinen lokalen produktiven Persistenz-Fallback.
+
+Wenn das Wallet-Zip-Secret fehlt oder nicht lesbar ist, bleibt der Store
+fail-closed bzw. antwortet mit `onboarding_request_store_unavailable`. Ein
+halb aktivierter Zustand darf keine Anfrage persistieren.
+
 ## Sicherheitsgrenzen
 
 - Keine Mandatsdaten im Onboarding-Request.
@@ -154,3 +175,6 @@ Apply-Artefakte müssen ohne Schema-Bruch möglich sein.
   erscheinen.
 - Die Admin-Queue kann echte Request-Objekte rendern.
 - Der ATP-Infrastruktur-Track ist getrennt und Apply-gated.
+- Bei mTLS-ATP kann die Function Wallet-Material aus Vault ephemer entpacken,
+  ohne Secret-Werte in Git, HTML, Query-Parametern oder Function-Config zu
+  schreiben.

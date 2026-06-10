@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import io
 import json
 import sys
+import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -163,6 +166,97 @@ class OnboardingRequestTests(unittest.TestCase):
         )
 
         self.assertEqual(secret_ids, ["ocid1.vaultsecret.oc1.eu-frankfurt-1.example"])
+
+    def test_env_factory_extracts_vault_wallet_zip_ephemerally_for_mtls(self) -> None:
+        from nac_identity.onboarding_requests import AtpOnboardingRequestStore, build_onboarding_request_store_from_env
+
+        connections: list[FakeConnection] = []
+        password_secret_ids: list[str] = []
+        wallet_secret_ids: list[str] = []
+        wallet_zip = _build_wallet_zip()
+
+        def secret_text_provider(secret_id: str) -> str:
+            password_secret_ids.append(secret_id)
+            return "vault-db-password"
+
+        def secret_bytes_provider(secret_id: str) -> bytes:
+            wallet_secret_ids.append(secret_id)
+            return wallet_zip
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = build_onboarding_request_store_from_env(
+                {
+                    "NAC_ONBOARDING_STORE": "atp",
+                    "NAC_ATP_DSN": "nacdb_low",
+                    "NAC_ATP_USER": "nac_app",
+                    "NAC_ATP_PASSWORD_SECRET_OCID": "vault-password-secret",
+                    "NAC_ATP_WALLET_ZIP_SECRET_OCID": "vault-wallet-secret",
+                    "NAC_ATP_WALLET_EXTRACT_DIR": temp_dir,
+                },
+                secret_text_provider=secret_text_provider,
+                secret_bytes_provider=secret_bytes_provider,
+                connector=lambda **kwargs: connections.append(FakeConnection(kwargs)) or connections[-1],
+            )
+
+            self.assertIsInstance(store, AtpOnboardingRequestStore)
+            store.create_request(_request_fixture())
+
+            connect_kwargs = connections[0].connect_kwargs
+            config_dir = Path(str(connect_kwargs["config_dir"]))
+            wallet_location = Path(str(connect_kwargs["wallet_location"]))
+            self.assertEqual(config_dir, wallet_location)
+            self.assertEqual(config_dir.parent, Path(temp_dir))
+            self.assertTrue((config_dir / "tnsnames.ora").exists())
+            self.assertTrue((config_dir / "cwallet.sso").exists())
+
+        self.assertEqual(password_secret_ids, ["vault-password-secret"])
+        self.assertEqual(wallet_secret_ids, ["vault-wallet-secret"])
+        self.assertEqual(connections[0].connect_kwargs["password"], "vault-db-password")
+
+    def test_wallet_zip_materializer_rejects_path_traversal_without_secret_leakage(self) -> None:
+        from nac_identity.onboarding_requests import AtpWalletZipMaterializer, OnboardingRequestStoreUnavailable
+
+        malicious_zip = _build_wallet_zip({"../secret.txt": b"do-not-write"})
+        materializer = AtpWalletZipMaterializer(
+            wallet_secret_id="vault-wallet-secret",
+            wallet_zip_provider=lambda _secret_id: malicious_zip,
+        )
+
+        with self.assertRaises(OnboardingRequestStoreUnavailable) as ctx:
+            materializer.materialize()
+
+        self.assertEqual(str(ctx.exception), "onboarding_request_store_unavailable")
+
+
+def _request_fixture() -> dict[str, str]:
+    return {
+        "request_id": "onr_myjur_20260610_000000",
+        "tenant_id": "tenant.myjur",
+        "tenant_slug": "myjur",
+        "domain": "myjur.de",
+        "admin_email": "ofunk@myjur.de",
+        "dns_status": "verified",
+        "request_status": "submitted",
+        "invitation_status": "not_sent",
+        "created_at": "2026-06-10T00:00:00Z",
+        "updated_at": "2026-06-10T00:00:00Z",
+        "created_by_surface": "app.notariat8.de",
+    }
+
+
+def _build_wallet_zip(entries: dict[str, bytes] | None = None) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as wallet:
+        for name, content in (
+            entries
+            or {
+                "tnsnames.ora": b"NACDB_LOW=(description=fixture)",
+                "sqlnet.ora": b"WALLET_LOCATION=(SOURCE=(METHOD=file))",
+                "cwallet.sso": b"fixture-wallet-bytes",
+            }
+        ).items():
+            wallet.writestr(name, content)
+    return buffer.getvalue()
 
 
 class FakeCursor:
