@@ -359,6 +359,32 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn(b"client_secret", result.body.lower())
         self.assertNotIn(b"private_key", result.body.lower())
 
+    def test_configured_store_accepts_customer_onboarding_request_post(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        class FakeStore:
+            def create_request(self, payload: dict[str, object]) -> dict[str, object]:
+                return dict(payload)
+
+            def list_requests(self, limit: int = 50) -> list[dict[str, object]]:
+                return []
+
+        with patch("nac_web.oci_functions.build_onboarding_request_store_from_env", return_value=FakeStore()):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/onboarding/requests", method="POST"),
+                io.BytesIO(b"domain=myjur.de&tenant_slug=myjur&admin_email=ofunk%40myjur.de"),
+                repo_root=REPO_ROOT,
+            )
+        payload = json.loads(result.body.decode("utf-8"))
+
+        self.assertEqual(result.status_code, 201)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(payload["request_id"][:10], "onr_myjur_")
+        self.assertEqual(payload["domain"], "myjur.de")
+        self.assertEqual(payload["admin_email"], "ofunk@myjur.de")
+        self.assertNotIn("client_secret", result.body.decode("utf-8").lower())
+        self.assertNotIn("private_key", result.body.decode("utf-8").lower())
+
     def test_rejects_non_customer_safe_get_routes(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

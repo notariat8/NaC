@@ -4,6 +4,8 @@ Date: 2026-06-10
 
 NaC issue: https://github.com/notariat8/NaC/issues/83
 
+NaC adapter issue: https://github.com/notariat8/NaC/issues/85
+
 OCI issue: https://github.com/notariat8/oci-landing-zone/issues/44
 
 ## Decision

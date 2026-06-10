@@ -24,12 +24,12 @@ The next runtime stage is an OCI Functions Parallel Runtime behind OCI API
 Gateway. It does not replace the VM immediately: the VM remains fallback until
 the Functions path is confirmed by a live smoke test.
 
-The first Functions adapter is intentionally GET/HEAD-only. It calls the same
-`NaCLocalWebApp.handle(...)` contract as the local web server and performs no
-POST, apply, or productive write operations. The entry path is intended for
-`/healthz`, `/onboarding/readiness`, `/onboarding/dns-check`, and other
-read-only customer onboarding pages. The function package stores no mandate data,
-secrets, OCI API keys, or tenant credentials.
+The first Functions adapter is GET/HEAD-only by default. It calls the same
+`NaCLocalWebApp.handle(...)` contract as the local web server. Exactly one POST
+exception is allowed for customer onboarding: `POST /onboarding/requests`.
+This path accepts only the domain, tenant reference, and responsible email
+address. The function package stores no mandate data, secrets, OCI API keys, or
+tenant credentials.
 
 Required apply gate for the Functions parallel path:
 
@@ -47,9 +47,41 @@ until the API Gateway path for `/healthz`, `/onboarding/readiness`,
 `/onboarding/dns-check`, `/login`, and `/api/tenant/login-intent` is live-tested
 and a separate Owner Apply gate approves cutover.
 
-The Function release path remains GET/HEAD-only. Login-intent configuration
-comes only from server-side environment values; query parameters must not set
-identity domain, client, redirect, state, or nonce values.
+The Function release path remains GET/HEAD-only except for
+`POST /onboarding/requests`. Login-intent configuration comes only from
+server-side environment values; query parameters must not set identity domain,
+client, redirect, state, or nonce values.
+
+## ATP Onboarding Request Store
+
+The productive onboarding request store is enabled only through an explicit
+server-side gate:
+
+- `NAC_ONBOARDING_STORE=atp`
+- `NAC_ATP_DSN`
+- `NAC_ATP_USER`
+- `NAC_ATP_PASSWORD_SECRET_OCID`
+
+A plaintext password in `NAC_ATP_PASSWORD` does not enable the store. If any
+required value is missing, the route remains fail-closed and returns
+`onboarding_request_store_disabled`. The password value is read at runtime from
+OCI Vault through Resource Principal; Git, chat, query parameters, HTML, and
+Function config contain only the Secret OCID, never the secret value.
+
+Optional wallet/network paths:
+
+- `NAC_ATP_CONFIG_DIR`
+- `NAC_ATP_WALLET_LOCATION`
+
+The ATP apply, table creation, and secret boundary remain a separate
+Owner-gated infrastructure track through `notariat8/oci-landing-zone#44`. The
+app adapter track is `notariat8/NaC#85`.
+
+The versioned bootstrap artifact for the first table is
+[deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+It creates only `onboarding_requests` with the current contract fields. Running
+it belongs into the Block M runbook step after the ATP target has been reviewed
+and before the final live smoke for `POST /onboarding/requests`.
 
 ## App Release Overlay
 

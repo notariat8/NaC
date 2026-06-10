@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from nac_identity.onboarding_requests import build_onboarding_request_store_from_env
 from nac_web.server import NaCLocalWebApp
 
 
@@ -36,7 +37,7 @@ class OCIHttpResponse:
 def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, repo_root: Path | None = None) -> OCIHttpResponse:
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
-    app = NaCLocalWebApp(_repo_root(repo_root))
+    app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=build_onboarding_request_store_from_env())
 
     if method in {"GET", "HEAD"} and _is_exposed_get_route(request_url):
         status, content_type, response_body = app.handle(request_url)
