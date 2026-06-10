@@ -340,6 +340,25 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 405)
         self.assertIn(b"read-only", result.body)
 
+    def test_allows_customer_onboarding_request_post_without_exposing_other_writes(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        result = dispatch_oci_function_request(
+            FakeFunctionContext(request_url="/onboarding/requests", method="POST"),
+            io.BytesIO(
+                b"domain=kanzlei-notariat.example"
+                b"&tenant_slug=kanzlei-notariat"
+                b"&admin_email=admin%40kanzlei-notariat.example"
+            ),
+            repo_root=REPO_ROOT,
+        )
+
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertIn(b"onboarding_request_store_disabled", result.body)
+        self.assertNotIn(b"client_secret", result.body.lower())
+        self.assertNotIn(b"private_key", result.body.lower())
+
     def test_rejects_non_customer_safe_get_routes(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

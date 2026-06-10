@@ -13,7 +13,12 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
-from nac_identity.customer_onboarding import build_customer_tenant_plan, build_dns_check_result, build_live_dns_check_result
+from nac_identity.customer_onboarding import build_dns_check_result, build_live_dns_check_result
+from nac_identity.onboarding_requests import (
+    DisabledOnboardingRequestStore,
+    OnboardingRequestStoreDisabled,
+    build_onboarding_request,
+)
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -61,9 +66,10 @@ DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
 class NaCLocalWebApp:
-    def __init__(self, repo_root: Path, dns_resolver=None) -> None:
+    def __init__(self, repo_root: Path, dns_resolver=None, onboarding_request_store: Any | None = None) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
+        self.onboarding_request_store = onboarding_request_store or DisabledOnboardingRequestStore()
 
     def handle(self, path: str) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -88,7 +94,7 @@ class NaCLocalWebApp:
             if route == "/admin/onboarding/apply-readiness":
                 return _html_response(build_admin_apply_readiness_page(parsed.query))
             if route == "/admin/onboarding":
-                return _html_response(build_admin_onboarding_page())
+                return _html_response(self._admin_onboarding_page())
             if route == "/healthz":
                 return _json_response({"status": "ok"})
             if route == "/favicon.ico":
@@ -127,6 +133,8 @@ class NaCLocalWebApp:
                 return self._bpmn_api_post(route.removeprefix("/api/bpmn/"), body)
             if route == "/api/gnotkg/quote":
                 return self._gnotkg_quote_api_post(body)
+            if route == "/onboarding/requests":
+                return self._onboarding_request_post(body)
             if route == "/api/tenant/provision-admin/preview":
                 return self._tenant_provision_admin_preview_api_post(body)
         except KeyError as exc:
@@ -136,6 +144,32 @@ class NaCLocalWebApp:
         except ValueError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
         return _json_response({"error": "Diese lokale NaC-POST-Route gibt es nicht."}, HTTPStatus.NOT_FOUND)
+
+    def _onboarding_request_post(self, body: bytes) -> tuple[int, str, bytes]:
+        form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+        request = build_onboarding_request(
+            domain=_query_text(form, "domain"),
+            tenant_slug=_query_text(form, "tenant_slug"),
+            admin_email=_query_text(form, "admin_email"),
+            dns_status="verified",
+        )
+        try:
+            created = self.onboarding_request_store.create_request(request)
+        except OnboardingRequestStoreDisabled:
+            return _json_response(
+                {"error": "onboarding_request_store_disabled", "status": "unavailable"},
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+        return _json_response(created, HTTPStatus.CREATED)
+
+    def _admin_onboarding_page(self) -> str:
+        try:
+            requests = list(self.onboarding_request_store.list_requests())
+            store_available = True
+        except OnboardingRequestStoreDisabled:
+            requests = []
+            store_available = False
+        return build_admin_onboarding_page(requests=requests, store_available=store_available)
 
     def _bpmn_route(self, stem: str) -> tuple[int, str, bytes]:
         if stem.endswith("/edit"):
@@ -294,6 +328,16 @@ class NaCLocalWebApp:
                 else "Der DNS-TXT-Eintrag wurde noch nicht gefunden. Prüfen Sie den Eintrag bei Ihrem DNS-Anbieter und versuchen Sie es später erneut."
             )
             invitation_status = "Einladung noch nicht versendet"
+            request_form = ""
+            if confirmed:
+                request_form = f"""
+                <form class="readiness-form" method="post" action="/onboarding/requests">
+                  <input type="hidden" name="domain" value="{html.escape(readiness["domain"], quote=True)}">
+                  <input type="hidden" name="tenant_slug" value="{html.escape(readiness["tenant_slug"], quote=True)}">
+                  <input type="hidden" name="admin_email" value="{html.escape(readiness["admin_email"], quote=True)}">
+                  <button type="submit">Einrichtung anfragen</button>
+                </form>
+                """
             body = f"""
             {nav}
             <section class="hero">
@@ -317,6 +361,7 @@ class NaCLocalWebApp:
                 <p><strong>Domain:</strong> {html.escape(readiness["domain"])}</p>
                 <p><strong>E-Mail-Adresse:</strong> {html.escape(readiness["admin_email"])}</p>
                 <p><strong>Einladung:</strong> {html.escape(invitation_status)}</p>
+                {request_form}
               </section>
             </div>
             <div class="grid">
@@ -648,13 +693,44 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
     return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body)
 
 
-def build_admin_onboarding_page() -> str:
-    plan = build_customer_tenant_plan(
-        domain="kanzlei-notariat.example",
-        tenant_slug="kanzlei-notariat",
-        admin_email="admin@kanzlei-notariat.example",
-        saas_admin_email="ofunk@funktion8.de",
-    )
+def build_admin_onboarding_page(
+    *, requests: list[dict[str, Any]] | None = None, store_available: bool = False
+) -> str:
+    request_rows = _admin_onboarding_request_rows(requests or [])
+    if request_rows:
+        queue_body = f"""
+        <div class="table-scroll responsive-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Anfrage</th>
+                <th>Domain</th>
+                <th>Einrichtung</th>
+                <th>E-Mail-Adresse</th>
+                <th>DNS</th>
+                <th>Status</th>
+                <th>Einladung</th>
+                <th>Eingegangen</th>
+              </tr>
+            </thead>
+            <tbody>{request_rows}</tbody>
+          </table>
+        </div>
+        """
+    elif store_available:
+        queue_body = """
+        <div class="notice">
+          <h2>Keine offenen Anfragen</h2>
+          <p>Aktuell liegt keine neue Einrichtungsanfrage vor.</p>
+        </div>
+        """
+    else:
+        queue_body = """
+        <div class="notice">
+          <h2>Produktive Queue noch nicht verbunden</h2>
+          <p>Neue Einrichtungsanfragen werden erst gespeichert, wenn der freigegebene Request-Store aktiv ist.</p>
+        </div>
+        """
     states = [
         "submitted",
         "dns_challenge_issued",
@@ -673,29 +749,15 @@ def build_admin_onboarding_page() -> str:
     body = f"""
     <nav class="topline"><a href="/">← Übersicht</a><span><a href="/onboarding/readiness">Readiness</a></span></nav>
     <section class="hero">
-      <p class="eyebrow">SaaS-Admin</p>
+      <p class="eyebrow">notariat8 Betrieb</p>
       <h1>Readiness-Anfragen</h1>
-      <p>Read-only Vorschau für neue NaC-Kunden. Produktive OCI-Schreiboperationen bleiben an Owner-Apply-Freigabe,
-      Audit und Rollback-Plan gebunden.</p>
+      <p>Interne Queue für bestätigte Domain-Hinweise. Schreibende Einrichtungsschritte bleiben an Review,
+      Freigabe, Audit und Rollback-Plan gebunden.</p>
     </section>
-    <div class="grid">
-      <section class="notice">
-        <h2>Aktuelle Anfrage</h2>
-        <p><strong>Domain:</strong> {html.escape(plan["tenant"]["domain"])}</p>
-        <p><strong>Tenant:</strong> {html.escape(plan["tenant"]["slug"])}</p>
-        <p><strong>Initialer Admin:</strong> {html.escape(plan["admin_user"]["email"])}</p>
-        <p><strong>SaaS-Rolle:</strong> {html.escape(plan["saas_admin"]["role"])}</p>
-      </section>
-      <section>
-        <h2>Zielbild</h2>
-        <ul class="link-list">
-          <li><span>OCI Identity: {html.escape(plan["oci"]["identity"]["customer_domain_strategy"])}</span></li>
-          <li><span>Compartment: {html.escape(plan["oci"]["resource_isolation"]["compartment_strategy"])}</span></li>
-          <li><span>ATP: {html.escape(plan["atp"]["strategy"])}</span></li>
-          <li><span>Owner Apply: erforderlich</span></li>
-        </ul>
-      </section>
-    </div>
+    <section>
+      <h2>Aktuelle Anfragen</h2>
+      {queue_body}
+    </section>
     <section>
       <h2>Statusfolge</h2>
       <div class="table-scroll responsive-table">
@@ -709,12 +771,30 @@ def build_admin_onboarding_page() -> str:
     return _layout("NaC Onboarding Admin", body)
 
 
+def _admin_onboarding_request_rows(requests: list[dict[str, Any]]) -> str:
+    rows = []
+    for request in requests:
+        rows.append(
+            "<tr>"
+            f'<td data-label="Anfrage"><code>{html.escape(str(request.get("request_id", "")))}</code></td>'
+            f'<td data-label="Domain">{html.escape(str(request.get("domain", "")))}</td>'
+            f'<td data-label="Einrichtung">{html.escape(str(request.get("tenant_slug", "")))}</td>'
+            f'<td data-label="E-Mail-Adresse">{html.escape(str(request.get("admin_email", "")))}</td>'
+            f'<td data-label="DNS">{html.escape(str(request.get("dns_status", "")))}</td>'
+            f'<td data-label="Status">{html.escape(str(request.get("request_status", "")))}</td>'
+            f'<td data-label="Einladung">{html.escape(str(request.get("invitation_status", "")))}</td>'
+            f'<td data-label="Eingegangen">{html.escape(str(request.get("created_at", "")))}</td>'
+            "</tr>"
+        )
+    return "".join(rows)
+
+
 def _onboarding_state_gate(state: str) -> str:
     labels = {
         "submitted": "Domain-Hinweis aus notariat8 eingegangen",
         "dns_challenge_issued": "DNS-TXT-Challenge ausgegeben",
         "domain_verified": "DNS-TXT bestätigt",
-        "saas_admin_review": "nac-saas-owner prüft Zielbild",
+        "saas_admin_review": "notariat8 prüft Einrichtung und E-Mail-Adresse",
         "owner_apply_ready": "Owner-Apply-Artefakt kann vorbereitet werden",
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }
