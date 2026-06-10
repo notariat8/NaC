@@ -28,9 +28,10 @@ CI:
 
 - `minimal`: Prozessvalidierung + Unit Tests
 - `standard`: `minimal` + Privacy Lint
-- `strict`: `standard` + Governance Policy Sync + Language Parity inklusive
-  Skill-Sprachmarkern + Documentation Links + BPMN-Modellprüfung + Cloud
-  Runbook Parity + Gantt + AI-SBOM + Knowledge Graph
+- `strict`: `standard` + Governance Policy Sync + Spec-Traceability +
+  Language Parity inklusive Skill-Sprachmarkern + Documentation Links +
+  BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM + Knowledge
+  Graph
 
 ## Feste Reihenfolge
 
@@ -39,15 +40,16 @@ CI:
 3. `plugin_validate`
 4. `privacy_lint` (ab `standard`)
 5. `governance_sync` (nur `strict`)
-6. `language_parity` (nur `strict`)
-7. `doc_links` (nur `strict`)
-8. `bpmn_models` (nur `strict`)
-9. `gantt_progress` (nur `strict`; prüft Pflicht-Gantts und
+6. `spec_traceability` (nur `strict`)
+7. `language_parity` (nur `strict`)
+8. `doc_links` (nur `strict`)
+9. `bpmn_models` (nur `strict`)
+10. `gantt_progress` (nur `strict`; prüft Pflicht-Gantts und
    Mermaid-Render-Sicherheit, gibt aber nur Hinweise für fachliche
    Roadmap-/Scope-/Statusupdates)
-10. `cloud_runbook_parity` (nur `strict`)
-11. `ai_sbom` (nur `strict`)
-12. `knowledge_graph` (nur `strict`)
+11. `cloud_runbook_parity` (nur `strict`)
+12. `ai_sbom` (nur `strict`)
+13. `knowledge_graph` (nur `strict`)
 
 ## Artefakte
 

@@ -10,6 +10,7 @@ alwaysApply: true
 - Produktive Forks und sensible Prozessänderungen laufen über Branch + Pull Request + Review.
 - Im aktiven Referenzrepo ist Owner-Direct auf `main` zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
+- Spec-Traceability gilt für neue oder geänderte nichttriviale Specs: Issue, Spec, Plan, AC-IDs und Validierungsbefehle werden nach [workflows/contracts/spec-traceability.contract.json](../../workflows/contracts/spec-traceability.contract.json) verbunden und mit [scripts/validate_spec_traceability.py](../../scripts/validate_spec_traceability.py) geprüft.
 - Nichttriviale agentische Arbeit folgt `plan -> review -> fix` vor der Umsetzung und `implement -> review -> fix` vor der Abnahme; bei wiederholten, unklaren oder schichtübergreifenden Fehlern gilt Diagnose vor Fix.
 - Jede Änderung braucht Zweck, Risiko und Verantwortliche.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.

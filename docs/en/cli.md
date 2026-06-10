@@ -97,7 +97,7 @@ nac qms status
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
-| Workflow contracts | `nac contracts validate` | Validates workflow contracts, secure-link boundaries, OCI tenant identity and legal-research connector candidates. |
+| Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, OCI tenant identity and legal-research connector candidates. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -176,6 +176,8 @@ revocable, matter- and purpose-bound upload or read links. The Legal Research
 Connector contract records external legal research, MCP and publisher-database
 references only as candidates until license, DPA, AI-SBOM, security boundary
 and human review are settled.
+The spec traceability contract connects issue, spec, plan, AC IDs and
+validation commands for spec-driven work.
 
 ```bash
 nac contracts validate
@@ -191,9 +193,10 @@ The GNotKG cost contract is validated there as well. The source basis is
 remains a review gate.
 
 The check ensures that the contract requires purpose, expiry, matter binding,
-storage target, revocation and audit evidence and that connector candidates
-contain no tracking URLs, credentials, mandate data or productive integration
-levels. The target model is described in the
+storage target, revocation and audit evidence, that spec manifests carry valid
+AC IDs and validation commands, and that connector candidates contain no
+tracking URLs, credentials, mandate data or productive integration levels. The
+target model is described in the
 [Authenticated Web-App Operating Model](authenticated-webapp-operating-model.md)
 and the
 [Legal Research Connector backlog](plugin-plans/legal-research-connectors.md).

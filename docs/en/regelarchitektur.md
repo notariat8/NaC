@@ -28,6 +28,7 @@ documentation rule.
 | Completion and finished state | Prevents local intermediate states from being called finished. | hard | `nac doctor --profile strict`, `git status`, `HEAD` versus `origin/main`, `remote_ci_checks` |
 | Git delivery | Separates production PR approval from owner-direct work in the active reference repo. | mode-dependent | branch protection/PR in production mode, push+clean check in reference mode |
 | GitHub-first work control | Ties non-trivial agentic work to a leading issue and visible Project board. | working rule plus completion gate | issue trail, `NaC Control Plane`, Delivery Mode, `remote_ci_checks` |
+| Spec traceability | Connects issue, spec, plan, AC IDs and validation commands so spec-driven work stays checkable. | working rule plus validator gate | [workflows/contracts/spec-traceability.contract.json](../../workflows/contracts/spec-traceability.contract.json), `scripts/validate_spec_traceability.py` |
 | Agentic change discipline | Prevents doom loops caused by unclear requirements, unreviewed agent changes and fixes without diagnosis. | working rule plus validator gate | `agent_workflows` in [policies/process-policy.yaml](../../policies/process-policy.yaml), plan/code review, validation evidence |
 | Roadmap and Gantt | Keeps delivery plan and status visible without blocking small fixes. | guidance plus render gate | `scripts/validate_gantt_progress.py` |
 | Language and localization | German leads for subject matter, English is translation/orientation. | hard | `scripts/validate_language_parity.py` |
@@ -66,6 +67,18 @@ An update is finished only when the Delivery Mode documented in the issue is
 satisfied and the required `remote_ci_checks` are successful. The Project does
 not bypass repository permissions: users see only issues from repositories
 they can already access.
+
+## Spec Traceability
+
+New or changed non-trivial specs keep a checkable trail from issue to spec,
+plan, AC IDs and validation commands. The machine-readable contract lives in
+[workflows/contracts/spec-traceability.contract.json](../../workflows/contracts/spec-traceability.contract.json)
+and is checked by `scripts/validate_spec_traceability.py`.
+
+Historical specs without a manifest remain valid. When a spec is developed
+further, it should receive a `nac-spec-traceability` block. AC IDs appear both
+in the manifest and in the acceptance section so reviews and tests can point at
+the same criteria.
 
 ## Agentic Change Discipline
 

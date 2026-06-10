@@ -275,6 +275,29 @@ github_first_operating_model:
     sync: "sync/<issue-number>-<short-slug>"
     hotfix: "hotfix/<issue-number>-<short-slug>"
 
+spec_traceability:
+  enabled: true
+  contract: workflows/contracts/spec-traceability.contract.json
+  manifest_block: nac-spec-traceability
+  require_acceptance_ids_for_nontrivial_specs: true
+  require_validation_commands_for_nontrivial_specs: true
+  allow_historical_specs_without_manifest: true
+  applies_to:
+    - docs/de/superpowers/specs
+    - docs/en/superpowers/specs
+    - .github/ISSUE_TEMPLATE
+    - .github/PULL_REQUEST_TEMPLATE.md
+  required_manifest_fields:
+    - schema_version
+    - spec_id
+    - leading_issue
+    - risk_gate
+    - delivery_mode
+    - acceptance_ids
+    - validation_commands
+  enforced_by:
+    - scripts/validate_spec_traceability.py
+
 documentation_links:
   require_markdown_links_for_repo_references: true
   applies_to:

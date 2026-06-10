@@ -15,6 +15,15 @@ assignees: ""
 - Validierung:
 - Secrets/Mandatsdaten: keine Secrets, PINs, Tokens, privaten Dokumentinhalte oder echten Mandatsdaten enthalten
 
+## Spec-Traceability
+
+- Spec:
+- Plan:
+- Akzeptanzkriterien:
+  - AC-001:
+- AC-IDs:
+- Test-/Validator-Nachweis:
+
 ## Ziel
 
 <!-- Welches Problem wird geloest? -->
