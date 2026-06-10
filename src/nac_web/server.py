@@ -136,7 +136,7 @@ class NaCLocalWebApp:
             if route == "/api/gnotkg/quote":
                 return self._gnotkg_quote_api_post(body)
             if route == "/onboarding/requests":
-                return self._onboarding_request_post(body)
+                return self._onboarding_request_post(parsed.query, body)
             if route == "/api/tenant/provision-admin/preview":
                 return self._tenant_provision_admin_preview_api_post(body)
         except KeyError as exc:
@@ -147,7 +147,12 @@ class NaCLocalWebApp:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
         return _json_response({"error": "Diese lokale NaC-POST-Route gibt es nicht."}, HTTPStatus.NOT_FOUND)
 
-    def _onboarding_request_post(self, body: bytes) -> tuple[int, str, bytes]:
+    def _onboarding_request_post(self, query: str, body: bytes) -> tuple[int, str, bytes]:
+        params = parse_qs(query, keep_blank_values=True)
+        source = _optional_query_text(params, "source", max_length=40)
+        entry = _optional_query_text(params, "entry", max_length=40)
+        audience = _optional_query_text(params, "audience", max_length=40)
+        public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience)
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
         request = build_onboarding_request(
             domain=_query_text(form, "domain"),
@@ -167,6 +172,8 @@ class NaCLocalWebApp:
                 {"error": "onboarding_request_store_unavailable", "status": "unavailable"},
                 HTTPStatus.SERVICE_UNAVAILABLE,
             )
+        if public_context:
+            return _html_response(build_customer_onboarding_request_page(created), HTTPStatus.CREATED)
         return _json_response(created, HTTPStatus.CREATED)
 
     def _admin_onboarding_page(self) -> str:
@@ -338,7 +345,7 @@ class NaCLocalWebApp:
             request_form = ""
             if confirmed:
                 request_form = f"""
-                <form class="readiness-form" method="post" action="/onboarding/requests">
+                <form class="readiness-form" method="post" action="/onboarding/requests?audience=customer">
                   <input type="hidden" name="domain" value="{html.escape(readiness["domain"], quote=True)}">
                   <input type="hidden" name="tenant_slug" value="{html.escape(readiness["tenant_slug"], quote=True)}">
                   <input type="hidden" name="admin_email" value="{html.escape(readiness["admin_email"], quote=True)}">
@@ -806,6 +813,51 @@ def _onboarding_state_gate(state: str) -> str:
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }
     return labels[state]
+
+
+def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
+    readiness_query = urlencode(
+        _present_query_values(
+            {
+                "audience": "customer",
+                "domain_hint": str(request.get("domain", "")),
+                "tenant_slug": str(request.get("tenant_slug", "")),
+                "admin_email": str(request.get("admin_email", "")),
+            }
+        )
+    )
+    nav = _customer_onboarding_nav(readiness_query)
+    body = f"""
+    {nav}
+    <section class="hero">
+      <p class="eyebrow">notariat8 Einrichtung</p>
+      <h1>Einrichtung angefragt</h1>
+      <p>Ihre Anfrage ist bei notariat8 eingegangen. Wir prüfen jetzt die angegebene E-Mail-Adresse
+      und bereiten die nächsten Schritte vor.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Ihre Angaben</h2>
+        <p><strong>Domain:</strong> {html.escape(str(request.get("domain", "")))}</p>
+        <p><strong>E-Mail-Adresse:</strong> {html.escape(str(request.get("admin_email", "")))}</p>
+        <p><strong>Status:</strong> Anfrage eingegangen</p>
+        <p><strong>Einladung:</strong> Einladung noch nicht versendet</p>
+        <div class="toolbar">
+          <a class="button-link" href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Einrichtungsstatus öffnen</a>
+        </div>
+      </section>
+      <section>
+        <h2>Was passiert als Nächstes?</h2>
+        <ul class="link-list">
+          <li><span><strong>Prüfung:</strong> notariat8 prüft die E-Mail-Adresse der verantwortlichen Person.</span></li>
+          <li><span><strong>Freigabe:</strong> Nach der Prüfung wird die erste Einrichtung vorbereitet.</span></li>
+          <li><span><strong>Nachweis:</strong> Die Referenz dieser Anfrage lautet <code>{html.escape(str(request.get("request_id", "")))}</code>.</span></li>
+          <li><span><strong>Keine Mandatsdaten:</strong> Diese Anfrage enthält keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return _layout("notariat8 Einrichtung angefragt", body)
 
 
 def build_customer_readiness_page(query: str) -> str:
