@@ -142,7 +142,8 @@ does not switch to walletless connectivity merely to simplify the first apply.
 At runtime, the Function reads only through Resource Principal:
 
 - the database password as a Vault secret,
-- optionally the ATP wallet zip as a separate Vault secret.
+- the wallet password as a Vault secret,
+- the ATP wallet zip from a private KMS-encrypted Object Storage bucket.
 
 Secret contents must not be stored in Git, chat, query parameters, HTML,
 Resource Manager variables or Function config. Function config contains only
@@ -150,9 +151,10 @@ secret OCIDs and non-secret connection parameters. The wallet is extracted into
 the ephemeral Function filesystem, paths are not rendered into customer HTML,
 and there is no local productive persistence fallback.
 
-If the wallet zip secret is missing or unreadable, the store remains
-fail-closed or returns `onboarding_request_store_unavailable`. A half-enabled
-state must not persist a request.
+If the wallet object, wallet password secret, or Resource Principal permission
+is missing, the store remains fail-closed or returns
+`onboarding_request_store_unavailable`. A half-enabled state must not persist a
+request.
 
 ## Security Boundaries
 
@@ -171,6 +173,6 @@ state must not persist a request.
 - Tests prove that no internal or provider terms appear in customer HTML.
 - The admin queue can render real request objects.
 - The ATP infrastructure track is separate and Apply-gated.
-- For mTLS ATP, the Function can extract wallet material from Vault
+- For mTLS ATP, the Function can extract wallet material from Object Storage
   ephemerally without writing secret values to Git, HTML, query parameters or
   Function config.
