@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import io
 import os
+import tempfile
+import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 from nac_identity.oci_tenant import check_domain_ready
@@ -43,6 +48,7 @@ class AtpOnboardingRequestStore:
         connector: Callable[..., Any] | None = None,
         config_dir: str = "",
         wallet_location: str = "",
+        wallet_materializer: "AtpWalletZipMaterializer | None" = None,
     ) -> None:
         self.user = user
         self.dsn = dsn
@@ -50,6 +56,7 @@ class AtpOnboardingRequestStore:
         self.connector = connector or _oracledb_connect
         self.config_dir = config_dir
         self.wallet_location = wallet_location
+        self.wallet_materializer = wallet_materializer
 
     def create_request(self, payload: dict) -> dict:
         self._validate_payload(payload)
@@ -98,15 +105,21 @@ class AtpOnboardingRequestStore:
         password = self.password_provider()
         if not password:
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable")
+        config_dir = self.config_dir
+        wallet_location = self.wallet_location
+        if self.wallet_materializer and (not config_dir or not wallet_location):
+            wallet_path = self.wallet_materializer.materialize()
+            config_dir = config_dir or wallet_path
+            wallet_location = wallet_location or wallet_path
         kwargs = {
             "user": self.user,
             "password": password,
             "dsn": self.dsn,
         }
-        if self.config_dir:
-            kwargs["config_dir"] = self.config_dir
-        if self.wallet_location:
-            kwargs["wallet_location"] = self.wallet_location
+        if config_dir:
+            kwargs["config_dir"] = config_dir
+        if wallet_location:
+            kwargs["wallet_location"] = wallet_location
         return self.connector(**kwargs)
 
     @staticmethod
@@ -120,6 +133,7 @@ def build_onboarding_request_store_from_env(
     environ: dict[str, str] | None = None,
     *,
     secret_text_provider: Callable[[str], str] | None = None,
+    secret_bytes_provider: Callable[[str], bytes] | None = None,
     connector: Callable[..., Any] | None = None,
 ) -> DisabledOnboardingRequestStore | AtpOnboardingRequestStore:
     env = environ if environ is not None else os.environ
@@ -134,6 +148,7 @@ def build_onboarding_request_store_from_env(
         return DisabledOnboardingRequestStore()
 
     provider = secret_text_provider or OciVaultSecretTextProvider(password_secret_id)
+    wallet_materializer = _wallet_materializer_from_env(env, secret_bytes_provider=secret_bytes_provider)
     return AtpOnboardingRequestStore(
         user=user,
         dsn=dsn,
@@ -141,6 +156,23 @@ def build_onboarding_request_store_from_env(
         connector=connector,
         config_dir=env.get("NAC_ATP_CONFIG_DIR", "").strip(),
         wallet_location=env.get("NAC_ATP_WALLET_LOCATION", "").strip(),
+        wallet_materializer=wallet_materializer,
+    )
+
+
+def _wallet_materializer_from_env(
+    env: dict[str, str],
+    *,
+    secret_bytes_provider: Callable[[str], bytes] | None = None,
+) -> "AtpWalletZipMaterializer | None":
+    wallet_secret_id = env.get("NAC_ATP_WALLET_ZIP_SECRET_OCID", "").strip()
+    if not wallet_secret_id:
+        return None
+    provider = secret_bytes_provider or OciVaultSecretBytesProvider(wallet_secret_id)
+    return AtpWalletZipMaterializer(
+        wallet_secret_id=wallet_secret_id,
+        wallet_zip_provider=provider,
+        extract_root=env.get("NAC_ATP_WALLET_EXTRACT_DIR", "").strip(),
     )
 
 
@@ -149,17 +181,86 @@ class OciVaultSecretTextProvider:
         self.secret_id = secret_id
 
     def __call__(self, secret_id: str | None = None) -> str:
-        target_secret_id = secret_id or self.secret_id
-        try:
-            import oci
+        return _read_oci_secret_bundle_bytes(secret_id or self.secret_id).decode("utf-8")
 
-            signer = oci.auth.signers.get_resource_principals_signer()
-            client = oci.secrets.SecretsClient(config={}, signer=signer)
-            bundle = client.get_secret_bundle(target_secret_id).data
-            encoded = bundle.secret_bundle_content.content
-            return base64.b64decode(encoded).decode("utf-8")
-        except Exception as exc:  # pragma: no cover - requires OCI Resource Principal integration
+
+class OciVaultSecretBytesProvider:
+    def __init__(self, secret_id: str) -> None:
+        self.secret_id = secret_id
+
+    def __call__(self, secret_id: str | None = None) -> bytes:
+        return _read_oci_secret_bundle_bytes(secret_id or self.secret_id)
+
+
+def _read_oci_secret_bundle_bytes(secret_id: str) -> bytes:
+    try:
+        import oci
+
+        signer = oci.auth.signers.get_resource_principals_signer()
+        client = oci.secrets.SecretsClient(config={}, signer=signer)
+        bundle = client.get_secret_bundle(secret_id).data
+        encoded = bundle.secret_bundle_content.content
+        return base64.b64decode(encoded)
+    except Exception as exc:  # pragma: no cover - requires OCI Resource Principal integration
+        raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
+
+
+class AtpWalletZipMaterializer:
+    def __init__(
+        self,
+        *,
+        wallet_secret_id: str,
+        wallet_zip_provider: Callable[[str], bytes],
+        extract_root: str = "",
+    ) -> None:
+        self.wallet_secret_id = wallet_secret_id
+        self.wallet_zip_provider = wallet_zip_provider
+        self.extract_root = Path(extract_root) if extract_root else Path(tempfile.gettempdir())
+        self._materialized_path: Path | None = None
+
+    def materialize(self) -> str:
+        if self._materialized_path and self._wallet_marker_exists(self._materialized_path):
+            return str(self._materialized_path)
+        try:
+            wallet_zip = self.wallet_zip_provider(self.wallet_secret_id)
+            if not wallet_zip:
+                raise ValueError("empty_wallet_zip")
+            target_dir = self._target_dir()
+            target_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self._extract_wallet_zip(wallet_zip, target_dir)
+            if not self._wallet_marker_exists(target_dir):
+                raise ValueError("wallet_marker_missing")
+            self._materialized_path = target_dir
+            return str(target_dir)
+        except Exception as exc:
+            if isinstance(exc, OnboardingRequestStoreUnavailable):
+                raise
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
+
+    def _target_dir(self) -> Path:
+        digest = hashlib.sha256(self.wallet_secret_id.encode("utf-8")).hexdigest()[:16]
+        return self.extract_root / f"nac-atp-wallet-{digest}"
+
+    @staticmethod
+    def _wallet_marker_exists(path: Path) -> bool:
+        return (path / "cwallet.sso").exists() or (path / "ewallet.pem").exists()
+
+    @staticmethod
+    def _extract_wallet_zip(wallet_zip: bytes, target_dir: Path) -> None:
+        target_root = target_dir.resolve()
+        with zipfile.ZipFile(io.BytesIO(wallet_zip)) as wallet:
+            for info in wallet.infolist():
+                if info.is_dir():
+                    continue
+                target_path = (target_dir / info.filename).resolve()
+                try:
+                    target_path.relative_to(target_root)
+                except ValueError as exc:
+                    raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
+                target_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                with target_path.open("wb") as target:
+                    target.write(wallet.read(info))
+                os.chmod(target_path, 0o600)
 
 
 def build_onboarding_request(
