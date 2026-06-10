@@ -78,6 +78,12 @@ Der ATP-Apply, Tabellenanlage und Secret-Boundary bleiben ein separater
 Owner-gated Infrastruktur-Track über `notariat8/oci-landing-zone#44`. Der
 App-Adapter-Track ist `notariat8/NaC#85`.
 
+Das versionierte Bootstrap-Artefakt für die erste Tabelle liegt in
+[deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+Es legt nur `onboarding_requests` mit den aktuellen Vertragsfeldern an. Die
+Ausführung gehört in den Block-M-Runbook-Schritt nach geprüfter ATP-Zielwahl
+und vor dem finalen Live-Smoke für `POST /onboarding/requests`.
+
 ## App-Release-Overlay
 
 Normale NaC-Software-Releases brauchen nach dem initial stabilen Runtime-Start

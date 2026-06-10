@@ -77,6 +77,12 @@ The ATP apply, table creation, and secret boundary remain a separate
 Owner-gated infrastructure track through `notariat8/oci-landing-zone#44`. The
 app adapter track is `notariat8/NaC#85`.
 
+The versioned bootstrap artifact for the first table is
+[deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+It creates only `onboarding_requests` with the current contract fields. Running
+it belongs into the Block M runbook step after the ATP target has been reviewed
+and before the final live smoke for `POST /onboarding/requests`.
+
 ## App Release Overlay
 
 An ordinary NaC software release does not require VM replacement after the
