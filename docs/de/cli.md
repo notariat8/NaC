@@ -98,7 +98,7 @@ nac qms status
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
-| Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Secure-Link-Grenzen, OCI-Tenant-Identity und Legal-Research-Connector-Kandidaten. |
+| Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Spec-Traceability, Secure-Link-Grenzen, OCI-Tenant-Identity und Legal-Research-Connector-Kandidaten. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
@@ -178,6 +178,8 @@ auf kurzlebige, widerrufbare, akten- und zweckgebundene Upload- oder
 Leselinks. Der Legal-Research-Connector-Vertrag führt externe juristische
 Recherche-, MCP- und Verlagsdatenbank-Hinweise nur als Kandidaten, bis Lizenz,
 AVV, AI-SBOM, Sicherheitsgrenze und menschliche Review geklärt sind.
+Der Spec-Traceability-Vertrag verbindet Issue, Spec, Plan, AC-IDs und
+Validierungsbefehle für spec-driven Arbeit.
 
 ```bash
 nac contracts validate
@@ -193,9 +195,10 @@ Der GNotKG-Kostenvertrag wird dabei ebenfalls geprüft. Grundlage sind
 Kostenprüfung bleibt ein Review-Gate.
 
 Die Prüfung stellt sicher, dass der Vertrag Zweck, Ablauf, Aktenbindung,
-Speicherziel, Widerruf und Auditnachweis fordert und dass Connector-Kandidaten
-keine Tracking-URLs, Credentials, Mandatsdaten oder produktive
-Integrationsstufen enthalten. Details zum Zielbild stehen im
+Speicherziel, Widerruf und Auditnachweis fordert, dass Spec-Manifeste gültige
+AC-IDs und Validierungsbefehle führen und dass Connector-Kandidaten keine
+Tracking-URLs, Credentials, Mandatsdaten oder produktive Integrationsstufen
+enthalten. Details zum Zielbild stehen im
 [Authenticated-Webapp-Betriebsmodell](authenticated-webapp-operating-model.md)
 und im
 [Legal-Research-Connector-Backlog](plugin-plans/legal-research-connectors.md).

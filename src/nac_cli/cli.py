@@ -531,6 +531,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Secure Document Link Contract", "validate_secure_document_links.py"),
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
             ("OCI Tenant Identity Contract", "validate_oci_tenant_identity.py"),
+            ("Spec Traceability Contract", "validate_spec_traceability.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:

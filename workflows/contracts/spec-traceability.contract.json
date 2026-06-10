@@ -1,0 +1,42 @@
+{
+  "schema_version": "nac.spec-traceability/v0.1",
+  "purpose": "Machine-readable traceability contract from leading issue to spec, plan, acceptance criteria and validation evidence.",
+  "required_manifest_fields": [
+    "schema_version",
+    "spec_id",
+    "leading_issue",
+    "risk_gate",
+    "delivery_mode",
+    "acceptance_ids",
+    "validation_commands"
+  ],
+  "optional_manifest_fields": [
+    "plan",
+    "affected_artifacts",
+    "review_gates"
+  ],
+  "acceptance_id_pattern_examples": [
+    "AC-001",
+    "AC-002"
+  ],
+  "allowed_delivery_modes": [
+    "Owner Direct",
+    "Protected PR",
+    "Sync PR"
+  ],
+  "allowed_risk_gates": [
+    "None",
+    "Privacy",
+    "Secrets",
+    "Workflow",
+    "Policy",
+    "External Service",
+    "Human Approval"
+  ],
+  "validation_command": "python scripts/validate_spec_traceability.py",
+  "data_boundary": {
+    "forbid_secrets": true,
+    "forbid_real_matter_data": true,
+    "github_surfaces_are_not_product_state": true
+  }
+}
