@@ -518,7 +518,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Technischer Nachweis", html)
         self.assertIn("Erneut prüfen", html)
         self.assertIn('method="post"', html)
-        self.assertIn('action="/onboarding/requests"', html)
+        self.assertIn('action="/onboarding/requests?audience=customer"', html)
         self.assertIn('name="domain" value="kanzlei-notariat.example"', html)
         self.assertIn('name="admin_email" value="admin@kanzlei-notariat.example"', html)
         self.assertIn("/onboarding/readiness?audience=customer", html)
@@ -541,6 +541,43 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("resolver", html)
         self.assertNotIn("findings", html)
         self.assertNotIn("dns_record", html)
+
+    def test_customer_onboarding_request_post_returns_confirmation_page_with_configured_store(self) -> None:
+        class FakeOnboardingRequestStore:
+            def __init__(self) -> None:
+                self.created: list[dict[str, str]] = []
+
+            def create_request(self, payload: dict[str, str]) -> dict[str, str]:
+                self.created.append(dict(payload))
+                return {
+                    **payload,
+                    "request_id": "onr_myjur_20260610_111500",
+                    "created_at": "2026-06-10T11:15:00Z",
+                }
+
+        store = FakeOnboardingRequestStore()
+        app = NaCLocalWebApp(REPO_ROOT, onboarding_request_store=store)
+
+        status, content_type, body = app.handle_post(
+            "/onboarding/requests?audience=customer",
+            b"domain=myjur.de&tenant_slug=myjur&admin_email=ofunk%40myjur.de",
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 201)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertEqual(len(store.created), 1)
+        self.assertEqual(store.created[0]["domain"], "myjur.de")
+        self.assertEqual(store.created[0]["admin_email"], "ofunk@myjur.de")
+        self.assertIn("Einrichtung angefragt", html)
+        self.assertIn("myjur.de", html)
+        self.assertIn("ofunk@myjur.de", html)
+        self.assertIn("onr_myjur_20260610_111500", html)
+        self.assertIn("Einladung noch nicht versendet", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
 
     def test_customer_onboarding_request_post_fails_closed_without_store(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
