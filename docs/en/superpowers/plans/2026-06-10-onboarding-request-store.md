@@ -263,7 +263,7 @@ GITHUB_BASE_REF=main /home/ubuntu/.venvs/nac/bin/python scripts/quality_gate.py 
 
 Expected: tests OK, whitespace OK, quality gate PASSED.
 
-- [ ] **Step 2: Commit and open protected PR**
+- [x] **Step 2: Commit and open protected PR**
 
 ```bash
 git add src/nac_identity/onboarding_requests.py src/nac_identity/__init__.py src/nac_web/server.py src/nac_web/oci_functions.py tests/test_onboarding_requests.py tests/test_nac_web.py tests/test_oci_functions_adapter.py docs/de/superpowers/specs/2026-06-10-onboarding-request-store-design.md docs/en/superpowers/specs/2026-06-10-onboarding-request-store-design.md docs/de/superpowers/plans/2026-06-10-onboarding-request-store.md docs/en/superpowers/plans/2026-06-10-onboarding-request-store.md
