@@ -62,7 +62,10 @@ serverseitiges Gate aktiviert:
 - `NAC_ATP_DSN`
 - `NAC_ATP_USER`
 - `NAC_ATP_PASSWORD_SECRET_OCID`
-- `NAC_ATP_WALLET_ZIP_SECRET_OCID` bei mTLS-erforderlicher ATP
+- `NAC_ATP_WALLET_OBJECT_STORAGE_NAMESPACE` bei mTLS-erforderlicher ATP
+- `NAC_ATP_WALLET_BUCKET_NAME` bei mTLS-erforderlicher ATP
+- `NAC_ATP_WALLET_OBJECT_NAME` bei mTLS-erforderlicher ATP
+- `NAC_ATP_WALLET_PASSWORD_SECRET_OCID` bei mTLS-erforderlicher ATP
 
 Ein Klartext-Passwort in `NAC_ATP_PASSWORD` aktiviert den Store nicht. Fehlt
 einer der erforderlichen Werte, bleibt die Route fail-closed und antwortet mit
@@ -70,11 +73,14 @@ einer der erforderlichen Werte, bleibt die Route fail-closed und antwortet mit
 OCI Vault und Resource Principal gelesen; in Git, Chat, Query-Parametern,
 HTML und Function-Config steht nur die Secret-OCID, nicht der Secret-Inhalt.
 
-Bei mTLS-erforderlicher ATP wird das Wallet-Zip als separates Vault-Secret
-gelesen und in das ephemere Function-Dateisystem entpackt. Das Secret enthält
-Wallet-Material, nicht Mandatsdaten. Der Inhalt wird nicht in Git, Chat,
+Bei mTLS-erforderlicher ATP wird das Wallet-Zip aus einem privaten Object
+Storage Bucket gelesen und in das ephemere Function-Dateisystem entpackt. Das
+Wallet-Passwort bleibt ein separates Vault-Secret. Das Wallet enthält
+Credential-Material, nicht Mandatsdaten. Der Inhalt wird nicht in Git, Chat,
 Resource-Manager-Variablen, Function-Config, Query-Parametern oder HTML
-geschrieben.
+geschrieben. `NAC_ATP_WALLET_ZIP_SECRET_OCID` bleibt nur als
+Kompatibilitäts-Pfad erhalten, weil ein reales ATP-Wallet nach Base64-Encoding
+nicht zuverlässig in ein einzelnes OCI Vault Secret passt.
 
 Optionale Wallet-/Netzwerkpfade:
 

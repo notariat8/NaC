@@ -213,6 +213,58 @@ class OnboardingRequestTests(unittest.TestCase):
         self.assertEqual(wallet_secret_ids, ["vault-wallet-secret"])
         self.assertEqual(connections[0].connect_kwargs["password"], "vault-db-password")
 
+    def test_env_factory_extracts_object_storage_wallet_zip_with_wallet_password_for_mtls(self) -> None:
+        from nac_identity.onboarding_requests import AtpOnboardingRequestStore, build_onboarding_request_store_from_env
+
+        connections: list[FakeConnection] = []
+        requested_secret_ids: list[str] = []
+        requested_objects: list[tuple[str, str, str]] = []
+        wallet_zip = _build_wallet_zip()
+
+        def secret_text_provider(secret_id: str) -> str:
+            requested_secret_ids.append(secret_id)
+            if secret_id == "wallet-password-secret":
+                return "fixture-wallet-password"
+            return "vault-db-password"
+
+        def object_bytes_provider(namespace: str, bucket_name: str, object_name: str) -> bytes:
+            requested_objects.append((namespace, bucket_name, object_name))
+            return wallet_zip
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = build_onboarding_request_store_from_env(
+                {
+                    "NAC_ONBOARDING_STORE": "atp",
+                    "NAC_ATP_DSN": "nacdb_low",
+                    "NAC_ATP_USER": "nac_app",
+                    "NAC_ATP_PASSWORD_SECRET_OCID": "vault-password-secret",
+                    "NAC_ATP_WALLET_OBJECT_STORAGE_NAMESPACE": "frnyakqskoer",
+                    "NAC_ATP_WALLET_BUCKET_NAME": "nac-dev-atp-wallet",
+                    "NAC_ATP_WALLET_OBJECT_NAME": "wallets/nacdev-wallet.zip",
+                    "NAC_ATP_WALLET_PASSWORD_SECRET_OCID": "wallet-password-secret",
+                    "NAC_ATP_WALLET_EXTRACT_DIR": temp_dir,
+                },
+                secret_text_provider=secret_text_provider,
+                object_bytes_provider=object_bytes_provider,
+                connector=lambda **kwargs: connections.append(FakeConnection(kwargs)) or connections[-1],
+            )
+
+            self.assertIsInstance(store, AtpOnboardingRequestStore)
+            store.create_request(_request_fixture())
+
+            connect_kwargs = connections[0].connect_kwargs
+            config_dir = Path(str(connect_kwargs["config_dir"]))
+            wallet_location = Path(str(connect_kwargs["wallet_location"]))
+            self.assertEqual(config_dir, wallet_location)
+            self.assertEqual(config_dir.parent, Path(temp_dir))
+            self.assertEqual(connect_kwargs["wallet_password"], "fixture-wallet-password")
+            self.assertTrue((config_dir / "tnsnames.ora").exists())
+            self.assertTrue((config_dir / "cwallet.sso").exists())
+
+        self.assertEqual(requested_secret_ids, ["vault-password-secret", "wallet-password-secret"])
+        self.assertEqual(requested_objects, [("frnyakqskoer", "nac-dev-atp-wallet", "wallets/nacdev-wallet.zip")])
+        self.assertEqual(connections[0].connect_kwargs["password"], "vault-db-password")
+
     def test_wallet_zip_materializer_rejects_path_traversal_without_secret_leakage(self) -> None:
         from nac_identity.onboarding_requests import AtpWalletZipMaterializer, OnboardingRequestStoreUnavailable
 
