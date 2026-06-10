@@ -218,7 +218,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "dry_run")
         self.assertTrue(payload["requires_human_approval"])
 
-    def test_admin_queue_page_shows_customer_onboarding_request_without_secrets(self) -> None:
+    def test_admin_queue_page_fails_closed_without_static_demo_request(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
         status, content_type, body = app.handle("/admin/onboarding")
@@ -227,10 +227,44 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
         self.assertIn("Readiness-Anfragen", html)
-        self.assertIn("nac-saas-owner", html)
-        self.assertIn("owner_apply_ready", html)
+        self.assertIn("Produktive Queue noch nicht verbunden", html)
+        self.assertNotIn("kanzlei-notariat.example", html)
+        self.assertNotIn("nac-saas-owner", html)
         self.assertNotIn("api_key", html.lower())
         self.assertNotIn("password", html.lower())
+
+    def test_admin_queue_page_renders_real_onboarding_requests_without_secrets(self) -> None:
+        class FakeOnboardingRequestStore:
+            def list_requests(self) -> list[dict[str, str]]:
+                return [
+                    {
+                        "request_id": "onr_myjur_20260610_000000",
+                        "tenant_slug": "myjur",
+                        "domain": "myjur.de",
+                        "admin_email": "ofunk@myjur.de",
+                        "dns_status": "verified",
+                        "request_status": "submitted",
+                        "invitation_status": "not_sent",
+                        "created_at": "2026-06-10T00:00:00Z",
+                    }
+                ]
+
+        app = NaCLocalWebApp(REPO_ROOT, onboarding_request_store=FakeOnboardingRequestStore())
+
+        status, content_type, body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("onr_myjur_20260610_000000", html)
+        self.assertIn("myjur.de", html)
+        self.assertIn("ofunk@myjur.de", html)
+        self.assertIn("submitted", html)
+        self.assertIn("not_sent", html)
+        self.assertNotIn("kanzlei-notariat.example", html)
+        self.assertNotIn("api_key", html.lower())
+        self.assertNotIn("password", html.lower())
+        self.assertNotIn("client_secret", html.lower())
 
     def test_customer_readiness_page_explains_next_steps(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -479,9 +513,14 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Einrichtungsstatus öffnen", html)
         self.assertIn("E-Mail-Adresse prüfen", html)
         self.assertIn("Einrichtung freigeben", html)
+        self.assertIn("Einrichtung anfragen", html)
         self.assertIn("Einladung noch nicht versendet", html)
         self.assertIn("Technischer Nachweis", html)
         self.assertIn("Erneut prüfen", html)
+        self.assertIn('method="post"', html)
+        self.assertIn('action="/onboarding/requests"', html)
+        self.assertIn('name="domain" value="kanzlei-notariat.example"', html)
+        self.assertIn('name="admin_email" value="admin@kanzlei-notariat.example"', html)
         self.assertIn("/onboarding/readiness?audience=customer", html)
         self.assertNotIn("Domain-Readiness öffnen", html)
         self.assertNotIn("notariat8 führt Sie anschließend", html)
@@ -502,6 +541,26 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("resolver", html)
         self.assertNotIn("findings", html)
         self.assertNotIn("dns_record", html)
+
+    def test_customer_onboarding_request_post_fails_closed_without_store(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle_post(
+            "/onboarding/requests",
+            (
+                "domain=kanzlei-notariat.example"
+                "&tenant_slug=kanzlei-notariat"
+                "&admin_email=admin%40kanzlei-notariat.example"
+            ).encode("utf-8"),
+        )
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 503)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["error"], "onboarding_request_store_disabled")
+        self.assertEqual(payload["status"], "unavailable")
+        self.assertNotIn("client_secret", body.decode("utf-8").lower())
+        self.assertNotIn("private_key", body.decode("utf-8").lower())
 
     def test_www_n8_handoff_escapes_hint_values(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

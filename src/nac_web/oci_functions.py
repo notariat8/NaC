@@ -21,6 +21,10 @@ EXPOSED_GET_ROUTES = {
     "/onboarding/dns-check",
 }
 
+EXPOSED_POST_ROUTES = {
+    "/onboarding/requests",
+}
+
 
 @dataclass(frozen=True)
 class OCIHttpResponse:
@@ -38,6 +42,8 @@ def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, r
         status, content_type, response_body = app.handle(request_url)
         if method == "HEAD":
             response_body = b""
+    elif method == "POST" and _is_exposed_post_route(request_url):
+        status, content_type, response_body = app.handle_post(request_url, data.read() if data is not None else b"")
     elif method in {"GET", "HEAD"}:
         status = HTTPStatus.NOT_FOUND
         content_type = "application/json; charset=utf-8"
@@ -102,6 +108,12 @@ def _is_exposed_get_route(request_url: str) -> bool:
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
     return route in EXPOSED_GET_ROUTES
+
+
+def _is_exposed_post_route(request_url: str) -> bool:
+    parsed = urlparse(request_url)
+    route = unquote(parsed.path) or "/"
+    return route in EXPOSED_POST_ROUTES
 
 
 def _headers(ctx: Any) -> dict[str, str]:
