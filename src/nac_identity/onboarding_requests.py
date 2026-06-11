@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import io
+import logging
 import os
 import tempfile
 import zipfile
@@ -17,6 +18,7 @@ ONBOARDING_REQUEST_SCHEMA_VERSION = "nac.onboarding-request/v0.1"
 DEFAULT_REQUEST_STATUS = "submitted"
 DEFAULT_INVITATION_STATUS = "not_sent"
 DEFAULT_CREATED_BY_SURFACE = "app.notariat8.de"
+LOGGER = logging.getLogger(__name__)
 
 
 class OnboardingRequestStoreDisabled(RuntimeError):
@@ -104,8 +106,15 @@ class AtpOnboardingRequestStore:
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
 
     def _connect(self) -> Any:
-        password = self.password_provider()
+        try:
+            password = self.password_provider()
+        except Exception as exc:
+            _log_store_unavailable("app_password_secret")
+            if isinstance(exc, OnboardingRequestStoreUnavailable):
+                raise
+            raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
         if not password:
+            _log_store_unavailable("app_password_secret")
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable")
         config_dir = self.config_dir
         wallet_location = self.wallet_location
@@ -123,10 +132,22 @@ class AtpOnboardingRequestStore:
         if wallet_location:
             kwargs["wallet_location"] = wallet_location
         if (config_dir or wallet_location) and self.wallet_password_provider:
-            wallet_password = self.wallet_password_provider()
+            try:
+                wallet_password = self.wallet_password_provider()
+            except Exception as exc:
+                _log_store_unavailable("wallet_password_secret")
+                if isinstance(exc, OnboardingRequestStoreUnavailable):
+                    raise
+                raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
             if wallet_password:
                 kwargs["wallet_password"] = wallet_password
-        return self.connector(**kwargs)
+        try:
+            return self.connector(**kwargs)
+        except Exception as exc:
+            _log_store_unavailable("atp_connect")
+            if isinstance(exc, OnboardingRequestStoreUnavailable):
+                raise
+            raise
 
     @staticmethod
     def _validate_payload(payload: dict) -> None:
@@ -311,7 +332,13 @@ class AtpWalletZipMaterializer:
         if self._materialized_path and self._wallet_marker_exists(self._materialized_path):
             return str(self._materialized_path)
         try:
-            wallet_zip = self.wallet_zip_provider(self.wallet_reference)
+            try:
+                wallet_zip = self.wallet_zip_provider(self.wallet_reference)
+            except Exception as exc:
+                _log_store_unavailable(self._provider_stage())
+                if isinstance(exc, OnboardingRequestStoreUnavailable):
+                    raise
+                raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
             if not wallet_zip:
                 raise ValueError("empty_wallet_zip")
             target_dir = self._target_dir()
@@ -324,11 +351,17 @@ class AtpWalletZipMaterializer:
         except Exception as exc:
             if isinstance(exc, OnboardingRequestStoreUnavailable):
                 raise
+            _log_store_unavailable("wallet_materialize")
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
 
     def _target_dir(self) -> Path:
         digest = hashlib.sha256(self.wallet_reference.encode("utf-8")).hexdigest()[:16]
         return self.extract_root / f"nac-atp-wallet-{digest}"
+
+    def _provider_stage(self) -> str:
+        if self.wallet_reference.startswith("oci-object://"):
+            return "wallet_object"
+        return "wallet_secret"
 
     @staticmethod
     def _wallet_marker_exists(path: Path) -> bool:
@@ -479,3 +512,7 @@ def _oracledb_connect(**kwargs: object) -> Any:
     except ImportError as exc:  # pragma: no cover - dependency is packaged for Functions
         raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
     return oracledb.connect(**kwargs)
+
+
+def _log_store_unavailable(stage: str) -> None:
+    LOGGER.warning("nac_onboarding_request_store_unavailable stage=%s", stage)

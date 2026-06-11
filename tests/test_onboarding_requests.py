@@ -265,6 +265,41 @@ class OnboardingRequestTests(unittest.TestCase):
         self.assertEqual(requested_objects, [("frnyakqskoer", "nac-dev-atp-wallet", "wallets/nacdev-wallet.zip")])
         self.assertEqual(connections[0].connect_kwargs["password"], "vault-db-password")
 
+    def test_object_storage_wallet_failure_logs_safe_stage_without_secret_values(self) -> None:
+        from nac_identity.onboarding_requests import (
+            OnboardingRequestStoreUnavailable,
+            build_onboarding_request_store_from_env,
+        )
+
+        def object_bytes_provider(namespace: str, bucket_name: str, object_name: str) -> bytes:
+            raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable")
+
+        store = build_onboarding_request_store_from_env(
+            {
+                "NAC_ONBOARDING_STORE": "atp",
+                "NAC_ATP_DSN": "nacdb_low",
+                "NAC_ATP_USER": "nac_app",
+                "NAC_ATP_PASSWORD_SECRET_OCID": "ocid1.vaultsecret.oc1.eu-frankfurt-1.secret-example",
+                "NAC_ATP_WALLET_OBJECT_STORAGE_NAMESPACE": "frnyakqskoer",
+                "NAC_ATP_WALLET_BUCKET_NAME": "nac-dev-atp-wallet",
+                "NAC_ATP_WALLET_OBJECT_NAME": "wallets/nacdev-wallet.zip",
+                "NAC_ATP_WALLET_PASSWORD_SECRET_OCID": "wallet-password-secret",
+            },
+            secret_text_provider=lambda _secret_id: "vault-db-password",
+            object_bytes_provider=object_bytes_provider,
+            connector=lambda **_kwargs: FakeConnection({}),
+        )
+
+        with self.assertLogs("nac_identity.onboarding_requests", level="WARNING") as logs:
+            with self.assertRaises(OnboardingRequestStoreUnavailable):
+                store.create_request(_request_fixture())
+
+        rendered_logs = "\n".join(logs.output)
+        self.assertIn("stage=wallet_object", rendered_logs)
+        self.assertNotIn("ocid1.vaultsecret", rendered_logs)
+        self.assertNotIn("wallet-password-secret", rendered_logs)
+        self.assertNotIn("vault-db-password", rendered_logs)
+
     def test_wallet_zip_materializer_rejects_path_traversal_without_secret_leakage(self) -> None:
         from nac_identity.onboarding_requests import AtpWalletZipMaterializer, OnboardingRequestStoreUnavailable
 
