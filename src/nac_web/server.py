@@ -9,13 +9,14 @@ from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_dns_check_result, build_live_dns_check_result
 from nac_identity.onboarding_requests import (
     DisabledOnboardingRequestStore,
+    OciVaultSecretTextProvider,
     OnboardingRequestStoreDisabled,
     OnboardingRequestStoreUnavailable,
     build_onboarding_request,
@@ -75,11 +76,13 @@ class NaCLocalWebApp:
         dns_resolver=None,
         onboarding_request_store: Any | None = None,
         operator_access: bool = False,
+        secret_text_provider: Callable[[str], str] | None = None,
     ) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
         self.onboarding_request_store = onboarding_request_store or DisabledOnboardingRequestStore()
         self.operator_access = operator_access
+        self.secret_text_provider = secret_text_provider
 
     def handle(self, path: str) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -93,7 +96,7 @@ class NaCLocalWebApp:
             if route == "/login":
                 return _html_response(build_login_page(parsed.query))
             if route == "/auth/callback":
-                status, page = build_auth_callback_page(parsed.query)
+                status, page = build_auth_callback_page(parsed.query, secret_text_provider=self.secret_text_provider)
                 return _html_response(page, status)
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query))
@@ -256,7 +259,7 @@ class NaCLocalWebApp:
         try:
             params = parse_qs(query, keep_blank_values=True)
             _reject_caller_supplied_login_config(params)
-            config = _login_intent_config_from_env()
+            config = _login_intent_config_from_env(secret_text_provider=self.secret_text_provider)
             payload = build_login_intent(
                 tenant_hint=_optional_query_text(params, "tenant_hint", max_length=120),
                 identity_domain_url=config["identity_domain_url"],
@@ -659,7 +662,11 @@ def build_login_page(query: str) -> str:
     return _layout("notariat8 Anmeldung", body)
 
 
-def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
+def build_auth_callback_page(
+    query: str,
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> tuple[HTTPStatus, str]:
     params = parse_qs(query, keep_blank_values=True)
     provider_error = _optional_query_text(params, "error", max_length=120)
     code = _optional_query_text(params, "code", max_length=4096)
@@ -670,7 +677,7 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
         provider_error=provider_error,
         state_validation_configured=_auth_callback_state_validation_configured(),
         token_exchange_configured=_auth_callback_token_exchange_configured(),
-        state_validation=_auth_callback_state_validation(state),
+        state_validation=_auth_callback_state_validation(state, secret_text_provider=secret_text_provider),
     )
     if callback_result["status"] == "rejected":
         body = """
@@ -2021,12 +2028,15 @@ def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
         raise ValueError("login_intent_config_is_server_side")
 
 
-def _login_intent_config_from_env() -> dict[str, str]:
+def _login_intent_config_from_env(
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> dict[str, str]:
     config = {
         "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
         "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
         "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
-        "state_signing_key": os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip(),
+        "state_signing_key": _oidc_state_signing_key_from_env(secret_text_provider=secret_text_provider),
     }
     if not all(config[field] for field in ("identity_domain_url", "client_id", "redirect_uri")):
         raise ValueError("login_intent_config_missing")
@@ -2036,15 +2046,43 @@ def _login_intent_config_from_env() -> dict[str, str]:
 def _auth_callback_state_validation_configured() -> bool:
     return bool(
         os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
+        or os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID", "").strip()
         or os.environ.get("NAC_OIDC_STATE_VALIDATION_KEY_REF", "").strip()
     )
 
 
-def _auth_callback_state_validation(state: str) -> dict[str, Any] | None:
-    signing_key = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
+def _auth_callback_state_validation(
+    state: str,
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> dict[str, Any] | None:
+    try:
+        signing_key = _oidc_state_signing_key_from_env(secret_text_provider=secret_text_provider)
+    except ValueError:
+        return None
     if not signing_key:
         return None
     return validate_signed_state(state, signing_key=signing_key)
+
+
+def _oidc_state_signing_key_from_env(
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> str:
+    inline_key = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
+    if inline_key:
+        return inline_key
+    secret_id = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID", "").strip()
+    if not secret_id:
+        return ""
+    provider = secret_text_provider or OciVaultSecretTextProvider(secret_id)
+    try:
+        signing_key = provider(secret_id).strip()
+    except Exception as exc:  # pragma: no cover - concrete OCI SDK errors are integration concerns
+        raise ValueError("state_signing_key_unavailable") from exc
+    if not signing_key:
+        raise ValueError("state_signing_key_unavailable")
+    return signing_key
 
 
 def _auth_callback_token_exchange_configured() -> bool:
