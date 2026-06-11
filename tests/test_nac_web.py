@@ -716,6 +716,39 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_auth_callback_validates_signed_state_but_keeps_operator_queue_closed(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        app = NaCLocalWebApp(REPO_ROOT)
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+        )
+
+        with patch.dict(
+            os.environ,
+            {"NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key"},
+            clear=False,
+        ):
+            status, content_type, body = app.handle(
+                f"/auth/callback?code=secret-code-from-idp&state={state}"
+            )
+            admin_status, _admin_content_type, admin_body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+        admin_html = admin_body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung empfangen", html)
+        self.assertIn("Rollen- und Vorgangsprüfung", html)
+        self.assertIn("Sicherheitsprüfung bestätigt", html)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn(state, html)
+        self.assertNotIn("unit-test-state-signing-key", html)
+        self.assertEqual(admin_status, 403)
+        self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
+
     def test_auth_callback_fails_safely_without_provider_error_details(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
@@ -755,6 +788,36 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
         self.assertNotEqual(payload["oidc"]["state"], "state-1234567890")
         self.assertNotEqual(payload["oidc"]["nonce"], "nonce-1234567890")
+
+    def test_app_serves_login_intent_api_with_signed_state_when_runtime_key_is_configured(self) -> None:
+        from nac_identity.oidc_state import validate_signed_state
+
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "nac-web-app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+            },
+        ):
+            status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
+        payload = json.loads(body.decode("utf-8"))
+        validation = validate_signed_state(
+            payload["oidc"]["state"],
+            signing_key="unit-test-state-signing-key",
+        )
+        serialized = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["state_binding"]["status"], "signed")
+        self.assertEqual(validation["status"], "valid")
+        self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertNotIn("unit-test-state-signing-key", serialized)
+        self.assertNotIn("client_secret", serialized)
 
     def test_login_intent_api_rejects_caller_supplied_oidc_config(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

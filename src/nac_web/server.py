@@ -23,6 +23,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
+from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
@@ -261,6 +262,7 @@ class NaCLocalWebApp:
                 identity_domain_url=config["identity_domain_url"],
                 client_id=config["client_id"],
                 redirect_uri=config["redirect_uri"],
+                state_signing_key=config.get("state_signing_key") or None,
             )
         except ValueError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
@@ -668,6 +670,7 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
         provider_error=provider_error,
         state_validation_configured=_auth_callback_state_validation_configured(),
         token_exchange_configured=_auth_callback_token_exchange_configured(),
+        state_validation=_auth_callback_state_validation(state),
     )
     if callback_result["status"] == "rejected":
         body = """
@@ -685,8 +688,8 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
         """
         return HTTPStatus.BAD_REQUEST, _layout("notariat8 Anmeldung nicht abgeschlossen", body)
     state_label = (
-        "Sicherheitsprüfung bereit"
-        if callback_result["state_validation"]["status"] == "configured"
+        "Sicherheitsprüfung bestätigt"
+        if callback_result["state_validation"]["status"] == "valid"
         else "Sicherheitsprüfung offen"
     )
     escaped_state_label = html.escape(state_label)
@@ -2023,14 +2026,25 @@ def _login_intent_config_from_env() -> dict[str, str]:
         "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
         "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
         "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
+        "state_signing_key": os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip(),
     }
-    if not all(config.values()):
+    if not all(config[field] for field in ("identity_domain_url", "client_id", "redirect_uri")):
         raise ValueError("login_intent_config_missing")
     return config
 
 
 def _auth_callback_state_validation_configured() -> bool:
-    return bool(os.environ.get("NAC_OIDC_STATE_VALIDATION_KEY_REF", "").strip())
+    return bool(
+        os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
+        or os.environ.get("NAC_OIDC_STATE_VALIDATION_KEY_REF", "").strip()
+    )
+
+
+def _auth_callback_state_validation(state: str) -> dict[str, Any] | None:
+    signing_key = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
+    if not signing_key:
+        return None
+    return validate_signed_state(state, signing_key=signing_key)
 
 
 def _auth_callback_token_exchange_configured() -> bool:
