@@ -749,6 +749,69 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(admin_status, 403)
         self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
 
+    def test_auth_callback_validates_vault_backed_signed_state_without_leaking_reference(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        requested_secret_ids: list[str] = []
+
+        def secret_text_provider(secret_id: str) -> str:
+            requested_secret_ids.append(secret_id)
+            return "unit-test-state-signing-key"
+
+        app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=secret_text_provider)
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+        )
+        secret_ocid = "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"
+
+        with patch.dict(
+            os.environ,
+            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": secret_ocid},
+            clear=False,
+        ):
+            status, content_type, body = app.handle(
+                f"/auth/callback?code=secret-code-from-idp&state={state}"
+            )
+            admin_status, _admin_content_type, admin_body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+        admin_html = admin_body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertEqual(requested_secret_ids, [secret_ocid])
+        self.assertIn("Sicherheitsprüfung bestätigt", html)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("unit-test-state-signing-key", html)
+        self.assertNotIn(secret_ocid, html)
+        self.assertNotIn(state, html)
+        self.assertEqual(admin_status, 403)
+        self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
+
+    def test_auth_callback_fails_closed_when_vault_state_key_is_unavailable(self) -> None:
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            secret_text_provider=lambda _secret_id: (_ for _ in ()).throw(RuntimeError("vault down")),
+        )
+
+        with patch.dict(
+            os.environ,
+            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"},
+            clear=False,
+        ):
+            status, content_type, body = app.handle(
+                "/auth/callback?code=secret-code-from-idp&state=attacker-state"
+            )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung nicht abgeschlossen", html)
+        self.assertNotIn("vault down", html)
+        self.assertNotIn("ocid1.vaultsecret", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn("attacker-state", html)
+
     def test_auth_callback_fails_safely_without_provider_error_details(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
@@ -818,6 +881,69 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
         self.assertNotIn("unit-test-state-signing-key", serialized)
         self.assertNotIn("client_secret", serialized)
+
+    def test_app_serves_login_intent_api_with_vault_backed_signed_state(self) -> None:
+        from nac_identity.oidc_state import validate_signed_state
+
+        requested_secret_ids: list[str] = []
+
+        def secret_text_provider(secret_id: str) -> str:
+            requested_secret_ids.append(secret_id)
+            return "unit-test-state-signing-key"
+
+        app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=secret_text_provider)
+        secret_ocid = "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "nac-web-app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": secret_ocid,
+            },
+        ):
+            status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
+        payload = json.loads(body.decode("utf-8"))
+        validation = validate_signed_state(
+            payload["oidc"]["state"],
+            signing_key="unit-test-state-signing-key",
+        )
+        serialized = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(requested_secret_ids, [secret_ocid])
+        self.assertEqual(payload["state_binding"]["status"], "signed")
+        self.assertEqual(validation["status"], "valid")
+        self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertNotIn("unit-test-state-signing-key", serialized)
+        self.assertNotIn(secret_ocid, serialized)
+        self.assertNotIn("client_secret", serialized)
+
+    def test_login_intent_api_fails_closed_when_vault_state_key_is_unavailable(self) -> None:
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            secret_text_provider=lambda _secret_id: (_ for _ in ()).throw(RuntimeError("vault down")),
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "nac-web-app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key",
+            },
+        ):
+            status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["error"], "state_signing_key_unavailable")
+        self.assertNotIn("vault down", json.dumps(payload, sort_keys=True))
+        self.assertNotIn("ocid1.vaultsecret", json.dumps(payload, sort_keys=True))
 
     def test_login_intent_api_rejects_caller_supplied_oidc_config(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
