@@ -308,16 +308,22 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
-        self.assertIn("Domain-Readiness", html)
+        self.assertIn("Domain vorbereiten", html)
         self.assertIn("DNS-TXT", html)
-        self.assertIn("DNS jetzt prüfen", html)
-        self.assertIn("/onboarding/dns-check?domain=kanzlei-notariat.example", html)
+        self.assertIn("E-Mail-Adresse angeben", html)
+        self.assertIn("Die DNS-Prüfung startet erst nach Angabe der E-Mail-Adresse", html)
+        self.assertIn("/onboarding/readiness?audience=customer", html)
         self.assertIn("später", html)
         self.assertIn("Keine Mandatsdaten", html)
-        self.assertIn("propagation", html)
+        self.assertIn("DNS-Änderungen", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Admin-Dry-Run", html)
+        self.assertNotIn("Tenant-Slug", html)
+        self.assertNotIn("nac-saas-owner", html)
+        self.assertNotIn("NaC", html)
         self.assertNotIn("OCI Console", html)
 
-    def test_customer_dns_check_page_renders_live_dns_result_without_raw_json(self) -> None:
+    def test_customer_dns_check_page_renders_customer_result_without_raw_json(self) -> None:
         def fake_resolver(record_name: str) -> dict:
             return {
                 "name": record_name,
@@ -338,13 +344,20 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
         self.assertIn("DNS-Prüfergebnis", html)
-        self.assertIn("verified", html)
-        self.assertIn("live_dns", html)
-        self.assertIn("Admin-Dry-Run vorbereiten", html)
+        self.assertIn("Domain bestätigt", html)
+        self.assertIn("bestätigt", html)
+        self.assertIn("Einrichtungsstatus öffnen", html)
+        self.assertIn("E-Mail-Adresse prüfen", html)
+        self.assertNotIn("verified", html)
+        self.assertNotIn("live_dns", html)
+        self.assertNotIn("Admin-Dry-Run vorbereiten", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("OCI", html)
         self.assertNotIn('"schema_version"', html)
         self.assertNotIn("client_secret", html.lower())
 
-    def test_customer_readiness_page_links_admin_provisioning_preview(self) -> None:
+    def test_customer_readiness_page_does_not_link_admin_provisioning_preview(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
         status, _content_type, body = app.handle(
@@ -356,11 +369,14 @@ class NaCLocalWebTests(unittest.TestCase):
         html = body.decode("utf-8")
 
         self.assertEqual(status, 200)
-        self.assertIn("Admin-Dry-Run vorbereiten", html)
-        self.assertIn(
-            "/admin/onboarding/provisioning-preview?domain=kanzlei-notariat.example&amp;tenant_slug=kanzlei-notariat&amp;admin_email=admin%40kanzlei-notariat.example",
-            html,
-        )
+        self.assertIn("Domain vorbereiten", html)
+        self.assertIn("DNS jetzt prüfen", html)
+        self.assertIn("/onboarding/dns-check?audience=customer", html)
+        self.assertNotIn("Admin-Dry-Run vorbereiten", html)
+        self.assertNotIn("/admin/onboarding/provisioning-preview", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Tenant-Slug", html)
+        self.assertNotIn("nac-saas-owner", html)
 
     def test_admin_provisioning_preview_page_renders_dry_run_without_credentials(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
@@ -434,7 +450,7 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertIn(
-            "/onboarding/readiness?domain_hint=kanzlei-notariat.example&amp;tenant_slug=notariat-2026&amp;admin_email=verwaltung%40kanzlei-notariat.example",
+            "/onboarding/readiness?audience=customer&amp;domain_hint=kanzlei-notariat.example&amp;tenant_slug=notariat-2026&amp;admin_email=verwaltung%40kanzlei-notariat.example",
             html,
         )
 
@@ -470,7 +486,7 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
-        self.assertIn("Domain-Readiness", html)
+        self.assertIn("Domain vorbereiten", html)
         self.assertIn("DNS-TXT", html)
         self.assertIn("Keine Mandatsdaten", html)
         self.assertIn("notariat8", html)
