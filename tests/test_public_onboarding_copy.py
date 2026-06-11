@@ -54,6 +54,41 @@ class PublicOnboardingCopyTests(unittest.TestCase):
         self.assertNotIn("NaC-Zugang", html)
         self.assertNotIn("technische Einrichtung", html)
 
+    def test_dns_check_without_audience_stays_customer_facing(self) -> None:
+        record_name = "_nac.myjur.de"
+
+        def fake_resolver(name: str) -> dict[str, object]:
+            self.assertEqual(name, record_name)
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=e6b96f425ef94064ae897decf6a57da5"],
+                "resolver_error": "",
+            }
+
+        app = NaCLocalWebApp(REPO_ROOT, dns_resolver=fake_resolver)
+
+        status, _, body = app.handle(
+            "/onboarding/dns-check"
+            "?domain=myjur.de"
+            "&tenant_slug=myjur"
+            "&admin_email=ofunk@myjur.de"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("notariat8 Domain-Check", html)
+        self.assertIn("Domain bestätigt", html)
+        self.assertIn("Einrichtungsstatus öffnen", html)
+        self.assertIn("E-Mail-Adresse prüfen", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Admin-Dry-Run", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("live_dns", html)
+        self.assertNotIn("Beobachtete Werte", html)
+        self.assertNotIn("Diagnose", html)
+
     def test_customer_readiness_uses_customer_language_for_responsible_email(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 

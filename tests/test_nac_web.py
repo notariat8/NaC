@@ -323,7 +323,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("NaC", html)
         self.assertNotIn("OCI Console", html)
 
-    def test_customer_dns_check_page_renders_live_dns_result_without_raw_json(self) -> None:
+    def test_customer_dns_check_page_renders_customer_result_without_raw_json(self) -> None:
         def fake_resolver(record_name: str) -> dict:
             return {
                 "name": record_name,
@@ -344,9 +344,16 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
         self.assertIn("DNS-Prüfergebnis", html)
-        self.assertIn("verified", html)
-        self.assertIn("live_dns", html)
-        self.assertIn("Admin-Dry-Run vorbereiten", html)
+        self.assertIn("Domain bestätigt", html)
+        self.assertIn("bestätigt", html)
+        self.assertIn("Einrichtungsstatus öffnen", html)
+        self.assertIn("E-Mail-Adresse prüfen", html)
+        self.assertNotIn("verified", html)
+        self.assertNotIn("live_dns", html)
+        self.assertNotIn("Admin-Dry-Run vorbereiten", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("OCI", html)
         self.assertNotIn('"schema_version"', html)
         self.assertNotIn("client_secret", html.lower())
 

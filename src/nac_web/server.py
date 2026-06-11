@@ -293,7 +293,9 @@ class NaCLocalWebApp:
         source = _optional_query_text(params, "source", max_length=40)
         entry = _optional_query_text(params, "entry", max_length=40)
         audience = _optional_query_text(params, "audience", max_length=40)
-        public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience)
+        public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience) or not (
+            source or entry or audience
+        )
         context_query = {"audience": "customer"} if public_context else {}
         readiness = check_domain_ready(
             domain=_query_text(params, "domain"),
