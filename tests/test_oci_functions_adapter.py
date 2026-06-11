@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -100,6 +101,23 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         for content in (func_yaml, func_py, dockerfile, requirements, build_spec):
             for term in forbidden_terms:
                 self.assertNotIn(term, content)
+
+    def test_function_adapter_suppresses_provider_sdk_debug_logs(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        logger_names = ("oci", "oci.circuit_breaker", "urllib3", "urllib3.connectionpool")
+        previous_levels = {name: logging.getLogger(name).level for name in logger_names}
+        try:
+            for name in logger_names:
+                logging.getLogger(name).setLevel(logging.DEBUG)
+
+            dispatch_oci_function_request(FakeFunctionContext(request_url="/healthz"))
+
+            for name in logger_names:
+                self.assertGreaterEqual(logging.getLogger(name).getEffectiveLevel(), logging.WARNING)
+        finally:
+            for name, level in previous_levels.items():
+                logging.getLogger(name).setLevel(level)
 
     def test_buildspec_prefers_checked_out_nac_source_when_primary_source_dir_is_unusable(self) -> None:
         command = self.build_spec_step_command("Run Functions adapter tests")

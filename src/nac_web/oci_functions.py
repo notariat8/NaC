@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import os
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -35,6 +36,7 @@ class OCIHttpResponse:
 
 
 def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, repo_root: Path | None = None) -> OCIHttpResponse:
+    _suppress_provider_sdk_debug_logs()
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
     app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=build_onboarding_request_store_from_env())
@@ -129,3 +131,8 @@ def _call_context_method(ctx: Any, name: str) -> Any:
     if callable(candidate):
         return candidate()
     return None
+
+
+def _suppress_provider_sdk_debug_logs() -> None:
+    for logger_name in ("oci", "oci.circuit_breaker", "urllib3", "urllib3.connectionpool"):
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
