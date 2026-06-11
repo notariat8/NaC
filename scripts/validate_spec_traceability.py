@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 
@@ -36,6 +38,49 @@ REQUIRED_TEMPLATE_MARKERS = (
     "AC-IDs:",
     "Test-/Validator-Nachweis:",
 )
+
+
+def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def changed_files() -> list[str]:
+    base_ref = os.environ.get("GITHUB_BASE_REF")
+    if base_ref:
+        run_git(["fetch", "--no-tags", "origin", base_ref])
+        diff = run_git(["diff", "--name-only", f"origin/{base_ref}...HEAD"])
+    else:
+        diff = run_git(["diff", "--name-only", "HEAD"])
+
+    if diff.returncode != 0:
+        print("ERROR: Konnte geänderte Spec-Dateien nicht bestimmen.")
+        print(diff.stderr.strip())
+        return []
+
+    untracked = run_git(["ls-files", "--others", "--exclude-standard"])
+    if untracked.returncode != 0:
+        print("ERROR: Konnte ungetrackte Spec-Dateien nicht bestimmen.")
+        print(untracked.stderr.strip())
+        return []
+
+    files = {
+        line.strip()
+        for output in (diff.stdout, untracked.stdout)
+        for line in output.splitlines()
+        if line.strip()
+    }
+    return sorted(files)
+
+
+def is_direct_spec_markdown_path(path: str) -> bool:
+    relative_path = Path(path)
+    return relative_path.suffix == ".md" and relative_path.parent in SPEC_ROOTS
 
 
 def strip_yaml_inline_comment(value: str) -> str:
@@ -322,12 +367,33 @@ def validate_manifest_blocks() -> list[str]:
     return errors
 
 
+def validate_changed_spec_manifests() -> list[str]:
+    errors: list[str] = []
+    for relative_path in changed_files():
+        if not is_direct_spec_markdown_path(relative_path):
+            continue
+
+        path = REPO_ROOT / relative_path
+        if not path.exists():
+            continue
+
+        text = path.read_text(encoding="utf-8")
+        blocks, _ = extract_manifest_blocks(text)
+        if not blocks:
+            errors.append(
+                "Spec-Datei ohne nac-spec-traceability-Manifest geändert: "
+                f"{relative_path}"
+            )
+    return errors
+
+
 def main() -> int:
     errors: list[str] = []
     errors.extend(validate_contract_file())
     errors.extend(validate_process_policy_file())
     errors.extend(validate_templates())
     errors.extend(validate_manifest_blocks())
+    errors.extend(validate_changed_spec_manifests())
 
     if errors:
         print("STATUS: FAILED")
