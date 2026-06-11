@@ -39,6 +39,30 @@ Notariatsbetrieb wird deklarativ und versioniert beschrieben:
 - macht das Konzept anschlussfähig für Notariat, Audit und Betriebsverantwortung,
 - erlaubt Drittbetrieb und Ersetzbarkeit ohne Begriffskonflikte.
 
+## AI-native Einordnung
+
+NaC ist nicht "AI-assisted Notariat", bei dem ein Chatbot einzelne
+Arbeitsschritte beschleunigt. NaC ist ein AI-native Betriebsmodell für regulierte
+notarielle Arbeit: Vorgangsarten, Rollen, Freigaben, Kontrollpunkte und
+Nachweise werden so strukturiert, dass Agenten unterstützen können, ohne
+fachliche Wahrheit oder notarielle Verantwortung zu ersetzen.
+
+Die Disziplin liegt nicht im Modell allein, sondern in der NaC-Harness aus
+versioniertem Wissen, Vorgaben und Sensoren. Vorgaben begrenzen Daten, Rollen,
+Tools und erlaubte Aktionen. Sensoren prüfen Schema, Policy, Datenschutz,
+fachliche Konsistenz, Reviewstatus und Nachweisfähigkeit. Agentenwissen lebt
+daher nicht im Chatverlauf, sondern in prüfbaren Dateien: Policies, Rollen,
+Skills, Prozessmodellen, Knowledge Graphs, Verträgen, Validatoren und
+Freigaben.
+
+Die menschliche Rolle verschiebt sich dadurch nicht zur blinden Delegation,
+sondern zur qualifizierten Steuerung: Auftrag klären, Grenzen setzen, Ergebnisse
+prüfen, Abweichungen zurückführen und Freigaben verantworten.
+
+Diese Einordnung nutzt aktuelle AI-native Betriebssprache als NaC-spezifische,
+regulierte Formulierung. Sie ist keine Delegation fachlicher oder notarieller
+Verantwortung an ein Modell.
+
 ## Architekturzuordnung
 
 - `Intent Layer`: Policies, Rollen, Prozessdefinitionen

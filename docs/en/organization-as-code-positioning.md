@@ -43,6 +43,29 @@ in this repository.
 - It supports third-party operation and replaceability without terminology
   conflicts.
 
+## AI-native Positioning
+
+NaC is not "AI-assisted notarial work" where a chatbot merely accelerates
+individual steps. NaC is an AI-native operating model for regulated notarial
+work: case types, roles, approvals, control points and evidence are structured so
+agents can assist without replacing subject-matter truth or notarial
+responsibility.
+
+The discipline does not sit in the model alone, but in the NaC harness of
+versioned knowledge, guides and sensors. Guides constrain data, roles, tools and
+allowed actions. Sensors check schema, policy, privacy, subject-matter
+consistency, review state and evidence readiness. Agent knowledge therefore does
+not live in the chat history, but in checkable files: policies, roles, skills,
+process models, knowledge graphs, contracts, validators and approvals.
+
+The human role therefore does not move toward blind delegation. It moves toward
+qualified direction: clarifying the work order, setting boundaries, checking
+results, feeding deviations back into the system and owning approvals.
+
+This positioning uses current AI-native operating language as a NaC-specific,
+regulated formulation. It is not a delegation of subject-matter or notarial
+responsibility to a model.
+
 ## Architecture Mapping
 
 - `Intent Layer`: policies, roles, process definitions.

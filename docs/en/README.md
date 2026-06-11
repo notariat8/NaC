@@ -94,6 +94,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/openai-enterprise-eu-residency.md](openai-enterprise-eu-residency.md)
   defines the procurement and approval path for ChatGPT Enterprise, API EU data
   residency and Codex costs.
+- [docs/en/itil5-mapping.md](itil5-mapping.md) maps NaC to ITIL 5 as operating,
+  review and audit language without claiming certification.
 - [docs/en/sbom-for-ai.md](sbom-for-ai.md) defines the repository-wide AI-SBOM track aligned with BSI/G7 guidance.
 - [docs/en/kg-editor-workstream.md](kg-editor-workstream.md) defines the no-code KG editor,
   patch principle and sidecar-editor path for subject-matter staff.
@@ -109,7 +111,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.
-- [docs/en/service-model/](service-model) contains notarial scope, provider, tenant and exit docs.
+- [docs/en/service-model/](service-model) contains notarial scope, operating services, tenant and exit docs.
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
