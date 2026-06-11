@@ -358,6 +358,21 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 405)
         self.assertIn(b"read-only", result.body)
 
+    def test_rejects_admin_review_post_in_public_function_runtime(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        result = dispatch_oci_function_request(
+            FakeFunctionContext(request_url="/admin/onboarding/review", method="POST"),
+            io.BytesIO(b"request_id=onr_myjur_20260611_182453&decision=approve"),
+            repo_root=REPO_ROOT,
+        )
+
+        self.assertEqual(result.status_code, 405)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertIn(b"read-only", result.body)
+        self.assertNotIn(b"onr_myjur_20260611_182453", result.body)
+        self.assertNotIn(b"client_secret", result.body.lower())
+
     def test_allows_customer_onboarding_request_post_without_exposing_other_writes(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
