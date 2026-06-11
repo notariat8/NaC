@@ -112,7 +112,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/issues/](issues): Issue-Taxonomie, Issue-Betrieb und Public-Backlog.
 - [docs/de/operations/](operations): Fork/Release, Upstream-Sync, Version-Binding,
   Arbeitsmodell und Repo-Konsolidierung.
-- [docs/de/service-model/](service-model): Notariats-Scope, Provider-Leistungen,
+- [docs/de/service-model/](service-model): Notariats-Scope, Betriebsleistungen,
   Tenant-Ownership und Exit.
 - [docs/de/plugin-plans/](plugin-plans): Plugin- und Connector-Pläne.
 - [docs/de/plugin-operations/](plugin-operations): operative Plugin-Nutzung und Prüfpfade.
@@ -123,6 +123,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/openai-enterprise-eu-residency.md](openai-enterprise-eu-residency.md):
   Beschaffungs- und Freigabepfad für ChatGPT Enterprise, API-EU-Datenresidenz
   und Codex-Kosten.
+- [docs/de/itil5-mapping.md](itil5-mapping.md): Einordnung von NaC gegen ITIL 5 als
+  Betriebs-, Revisions- und Audit-Sprache ohne Zertifizierungsbehauptung.
 - [docs/de/kg-editor-workstream.md](kg-editor-workstream.md): no-code KG-Editor
   für Fachpersonal, Patch-Prinzip und Sidecar-Editor-Pfad.
 - [docs/de/codex-parallel-review-workflow.md](codex-parallel-review-workflow.md):
@@ -142,7 +144,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [plugins/GANTT.md](../../plugins/GANTT.md), [workflows/GANTT.md](../../workflows/GANTT.md) und [usecases/GANTT.md](../../usecases/GANTT.md) zeigen den
   Fortschritt je Themenbereich.
 - [policies/](../../policies) enthält Kultur-, Sprach-, Prozess-, Technik-, Datenschutz-,
-  Rollen-, Zugriffs-, SBOM- und Provider-Regeln.
+  Rollen-, Zugriffs-, SBOM- und Drittbetriebsregeln.
 - [.cursor/rules/](../../.cursor/rules) und [.github/copilot-instructions.md](../../.github/copilot-instructions.md) spiegeln die
   verbindlichen Agentenregeln.
 - [schemas/](../../schemas), [bpmn/](../../bpmn), [processes/](../../processes), [src/](../../src) und [scripts/](../../scripts) enthalten
@@ -184,14 +186,15 @@ python scripts/nac.py bpmn validate
   möglich, wenn der Owner direkte Lieferung ausdrücklich beauftragt; Details
   stehen in [docs/de/regelarchitektur.md](regelarchitektur.md).
 - [roadmap/GANTT.md](../../roadmap/GANTT.md) wird bei Roadmap-, Scope-, Status-, Meilenstein- oder Build-Board-Änderungen aktualisiert; Änderungen unter [plugins/](../../plugins), [workflows/](../../workflows) oder [usecases/](../../usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung.
-- Sensible Schritte wie Steuerabgabe oder Zahlungsfreigabe erhalten manuelle Reviewer-Gates.
+- Sensible Schritte wie Beurkundung, Unterschriftsbeglaubigung oder Auszahlungsvoraussetzungen
+  erhalten manuelle Reviewer-Gates.
 - Tags und Releases repräsentieren Monats- oder Quartalsabschlüsse.
 - Erzeugte Artefakte können als Actions-Artefakte archiviert werden.
 - Laufende Vorgänge bleiben auf der beim Start gebundenen Prozessversion.
 
 ## Hinweise
 
-Dieses Repo ist ein Referenzsystem. Es ersetzt kein vorgeschriebenes Fachsystem, sondern zeigt, wie Git als Orchestrierungs-, Kontroll- und Nachweisschicht für kaufmännische Prozesse dienen kann.
+Dieses Repo ist ein Referenzsystem. Es ersetzt kein vorgeschriebenes Fachsystem, sondern zeigt, wie Git als Orchestrierungs-, Kontroll- und Nachweisschicht für notarielle Vorgänge dienen kann.
 
 ## Lizenz
 
