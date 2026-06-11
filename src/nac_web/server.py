@@ -151,6 +151,11 @@ class NaCLocalWebApp:
                 return self._gnotkg_quote_api_post(body)
             if route == "/onboarding/requests":
                 return self._onboarding_request_post(parsed.query, body)
+            if route == "/admin/onboarding" or route.startswith("/admin/onboarding/"):
+                if not self.operator_access:
+                    return _html_response(build_operator_access_required_page(), HTTPStatus.FORBIDDEN)
+            if route == "/admin/onboarding/review":
+                return self._admin_onboarding_review_post(body)
             if route == "/api/tenant/provision-admin/preview":
                 return self._tenant_provision_admin_preview_api_post(body)
         except KeyError as exc:
@@ -189,6 +194,25 @@ class NaCLocalWebApp:
         if public_context:
             return _html_response(build_customer_onboarding_request_page(created), HTTPStatus.CREATED)
         return _json_response(created, HTTPStatus.CREATED)
+
+    def _admin_onboarding_review_post(self, body: bytes) -> tuple[int, str, bytes]:
+        form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+        try:
+            reviewed = self.onboarding_request_store.review_request(
+                request_id=_query_text(form, "request_id"),
+                decision=_query_text(form, "decision"),
+            )
+        except OnboardingRequestStoreDisabled:
+            return _html_response(
+                build_operator_review_unavailable_page("Produktive Queue noch nicht verbunden."),
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+        except OnboardingRequestStoreUnavailable:
+            return _html_response(
+                build_operator_review_unavailable_page("Einrichtungsanfragen sind gerade nicht erreichbar."),
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+        return _html_response(build_operator_review_result_page(reviewed))
 
     def _admin_onboarding_page(self) -> str:
         try:
@@ -773,6 +797,7 @@ def build_admin_onboarding_page(
                 <th>Status</th>
                 <th>Einladung</th>
                 <th>Eingegangen</th>
+                <th>Aktion</th>
               </tr>
             </thead>
             <tbody>{request_rows}</tbody>
@@ -797,8 +822,9 @@ def build_admin_onboarding_page(
         "submitted",
         "dns_challenge_issued",
         "domain_verified",
-        "saas_admin_review",
-        "owner_apply_ready",
+        "in_review",
+        "approved",
+        "rejected",
         "invited",
     ]
     state_rows = "".join(
@@ -836,6 +862,7 @@ def build_admin_onboarding_page(
 def _admin_onboarding_request_rows(requests: list[dict[str, Any]]) -> str:
     rows = []
     for request in requests:
+        action = _admin_onboarding_review_action(request)
         rows.append(
             "<tr>"
             f'<td data-label="Anfrage"><code>{html.escape(str(request.get("request_id", "")))}</code></td>'
@@ -846,9 +873,26 @@ def _admin_onboarding_request_rows(requests: list[dict[str, Any]]) -> str:
             f'<td data-label="Status">{html.escape(str(request.get("request_status", "")))}</td>'
             f'<td data-label="Einladung">{html.escape(str(request.get("invitation_status", "")))}</td>'
             f'<td data-label="Eingegangen">{html.escape(str(request.get("created_at", "")))}</td>'
+            f'<td data-label="Aktion">{action}</td>'
             "</tr>"
         )
     return "".join(rows)
+
+
+def _admin_onboarding_review_action(request: dict[str, Any]) -> str:
+    request_id = str(request.get("request_id", "")).strip()
+    request_status = str(request.get("request_status", "")).strip()
+    invitation_status = str(request.get("invitation_status", "")).strip()
+    if not request_id or request_status not in {"submitted", "in_review"} or invitation_status != "not_sent":
+        return "<span>Keine offene Aktion</span>"
+    return f"""
+    <form class="readiness-form" method="post" action="/admin/onboarding/review">
+      <input type="hidden" name="request_id" value="{html.escape(request_id, quote=True)}">
+      <input type="hidden" name="decision" value="approve">
+      <button type="submit">E-Mail geprüft</button>
+      <p>Einladung noch nicht senden.</p>
+    </form>
+    """
 
 
 def _onboarding_state_gate(state: str) -> str:
@@ -856,11 +900,58 @@ def _onboarding_state_gate(state: str) -> str:
         "submitted": "Domain-Hinweis aus notariat8 eingegangen",
         "dns_challenge_issued": "DNS-TXT-Challenge ausgegeben",
         "domain_verified": "DNS-TXT bestätigt",
-        "saas_admin_review": "notariat8 prüft Einrichtung und E-Mail-Adresse",
-        "owner_apply_ready": "Owner-Apply-Artefakt kann vorbereitet werden",
+        "in_review": "notariat8 prüft Einrichtung und E-Mail-Adresse",
+        "approved": "Freigabe ist dokumentiert; Einladung bleibt bis zum nächsten Gate offen",
+        "rejected": "Anfrage wurde abgelehnt und nicht eingeladen",
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }
     return labels[state]
+
+
+def build_operator_review_result_page(request: dict[str, Any]) -> str:
+    body = f"""
+    <nav class="topline"><a href="/admin/onboarding">← Readiness-Anfragen</a><span><a href="/">Übersicht</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Betrieb</p>
+      <h1>Prüfung gespeichert</h1>
+      <p>Die Operator-Entscheidung wurde dokumentiert. Eine Einladung wird in diesem Schritt nicht versendet.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Anfrage</h2>
+        <p><strong>Referenz:</strong> <code>{html.escape(str(request.get("request_id", "")))}</code></p>
+        <p><strong>Domain:</strong> {html.escape(str(request.get("domain", "")))}</p>
+        <p><strong>E-Mail-Adresse:</strong> {html.escape(str(request.get("admin_email", "")))}</p>
+        <p><strong>Status:</strong> {html.escape(str(request.get("request_status", "")))}</p>
+        <p><strong>Einladung:</strong> Einladung noch nicht versendet</p>
+      </section>
+      <section>
+        <h2>Nächster Schritt</h2>
+        <ul class="link-list">
+          <li><span>Owner-Review und Apply-Gate bleiben erforderlich.</span></li>
+          <li><span>Die Einladung wird erst in einem separaten freigegebenen Schritt ausgelöst.</span></li>
+          <li><span>Keine Mandatsdaten: Diese Ansicht enthält keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return _layout("notariat8 Prüfung gespeichert", body)
+
+
+def build_operator_review_unavailable_page(message: str) -> str:
+    body = f"""
+    <nav class="topline"><a href="/admin/onboarding">← Readiness-Anfragen</a><span><a href="/">Übersicht</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Betrieb</p>
+      <h1>Prüfung nicht gespeichert</h1>
+      <p>{html.escape(message)}</p>
+    </section>
+    <section class="notice">
+      <h2>Nächster Schritt</h2>
+      <p>Bitte später erneut prüfen. In diesem Schritt wurde keine Einladung ausgelöst.</p>
+    </section>
+    """
+    return _layout("notariat8 Prüfung nicht gespeichert", body)
 
 
 def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:

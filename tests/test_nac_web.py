@@ -263,6 +263,26 @@ class NaCLocalWebTests(unittest.TestCase):
                 self.assertNotIn("api_key", html.lower())
                 self.assertNotIn("client_secret", html.lower())
 
+    def test_admin_review_post_requires_operator_access(self) -> None:
+        class FakeOnboardingRequestStore:
+            def review_request(self, **_kwargs: str) -> dict[str, str]:
+                raise AssertionError("store must not be called without operator access")
+
+        app = NaCLocalWebApp(REPO_ROOT, onboarding_request_store=FakeOnboardingRequestStore())
+
+        status, content_type, body = app.handle_post(
+            "/admin/onboarding/review",
+            b"request_id=onr_myjur_20260611_182453&decision=approve",
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 403)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("notariat8 Anmeldung erforderlich", html)
+        self.assertIn("Rollenprüfung", html)
+        self.assertNotIn("onr_myjur_20260611_182453", html)
+        self.assertNotIn("approved", html)
+
     def test_admin_queue_page_renders_real_onboarding_requests_without_secrets(self) -> None:
         class FakeOnboardingRequestStore:
             def list_requests(self) -> list[dict[str, str]]:
@@ -299,6 +319,86 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("api_key", html.lower())
         self.assertNotIn("password", html.lower())
         self.assertNotIn("client_secret", html.lower())
+
+    def test_admin_queue_page_offers_review_action_without_invitation_send(self) -> None:
+        class FakeOnboardingRequestStore:
+            def list_requests(self) -> list[dict[str, str]]:
+                return [
+                    {
+                        "request_id": "onr_myjur_20260611_182453",
+                        "tenant_slug": "myjur",
+                        "domain": "myjur.de",
+                        "admin_email": "ofunk@myjur.de",
+                        "dns_status": "verified",
+                        "request_status": "submitted",
+                        "invitation_status": "not_sent",
+                        "created_at": "2026-06-11T18:24:53Z",
+                    }
+                ]
+
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            onboarding_request_store=FakeOnboardingRequestStore(),
+            operator_access=True,
+        )
+
+        status, _content_type, body = app.handle("/admin/onboarding")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn('action="/admin/onboarding/review"', html)
+        self.assertIn('name="request_id" value="onr_myjur_20260611_182453"', html)
+        self.assertIn('name="decision" value="approve"', html)
+        self.assertIn("E-Mail geprüft", html)
+        self.assertIn("Einladung noch nicht senden", html)
+        self.assertNotIn("Einladung senden", html)
+
+    def test_admin_review_post_marks_request_ready_without_sending_invitation(self) -> None:
+        class FakeOnboardingRequestStore:
+            def __init__(self) -> None:
+                self.review_calls: list[dict[str, str]] = []
+
+            def review_request(self, **kwargs: str) -> dict[str, str]:
+                self.review_calls.append(kwargs)
+                return {
+                    "request_id": kwargs["request_id"],
+                    "tenant_slug": "myjur",
+                    "domain": "myjur.de",
+                    "admin_email": "ofunk@myjur.de",
+                    "dns_status": "verified",
+                    "request_status": "approved",
+                    "invitation_status": "not_sent",
+                    "created_at": "2026-06-11T18:24:53Z",
+                    "updated_at": "2026-06-11T18:30:00Z",
+                }
+
+        store = FakeOnboardingRequestStore()
+        app = NaCLocalWebApp(REPO_ROOT, onboarding_request_store=store, operator_access=True)
+
+        status, content_type, body = app.handle_post(
+            "/admin/onboarding/review",
+            b"request_id=onr_myjur_20260611_182453&decision=approve",
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertEqual(
+            store.review_calls,
+            [
+                {
+                    "request_id": "onr_myjur_20260611_182453",
+                    "decision": "approve",
+                }
+            ],
+        )
+        self.assertIn("Prüfung gespeichert", html)
+        self.assertIn("myjur.de", html)
+        self.assertIn("ofunk@myjur.de", html)
+        self.assertIn("approved", html)
+        self.assertIn("Einladung noch nicht versendet", html)
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
 
     def test_customer_readiness_page_explains_next_steps(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)

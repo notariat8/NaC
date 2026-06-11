@@ -128,6 +128,73 @@ class OnboardingRequestTests(unittest.TestCase):
         self.assertEqual(binds["domain"], "myjur.de")
         self.assertNotIn("fixture-db-value", json.dumps(binds, sort_keys=True))
 
+    def test_atp_store_review_request_updates_status_without_invitation_send(self) -> None:
+        from nac_identity.onboarding_requests import AtpOnboardingRequestStore
+
+        connection = FakeConnection({})
+
+        def connect(**kwargs: object) -> FakeConnection:
+            connection.connect_kwargs.update(kwargs)
+            connection.cursor_obj.description = [
+                ("REQUEST_ID",),
+                ("TENANT_ID",),
+                ("TENANT_SLUG",),
+                ("DOMAIN",),
+                ("ADMIN_EMAIL",),
+                ("DNS_STATUS",),
+                ("REQUEST_STATUS",),
+                ("INVITATION_STATUS",),
+                ("CREATED_AT",),
+                ("UPDATED_AT",),
+                ("CREATED_BY_SURFACE",),
+            ]
+            connection.cursor_obj.rows = [
+                (
+                    "onr_myjur_20260611_182453",
+                    "tenant.myjur",
+                    "myjur",
+                    "myjur.de",
+                    "ofunk@myjur.de",
+                    "verified",
+                    "approved",
+                    "not_sent",
+                    "2026-06-11T18:24:53Z",
+                    "2026-06-11T18:30:00Z",
+                    "app.notariat8.de",
+                )
+            ]
+            return connection
+
+        store = AtpOnboardingRequestStore(
+            user="nac_app",
+            dsn="nacdb_low",
+            password_provider=lambda: "fixture-db-value",
+            connector=connect,
+        )
+
+        reviewed = store.review_request(
+            request_id="onr_myjur_20260611_182453",
+            decision="approve",
+            now="2026-06-11T18:30:00Z",
+        )
+
+        update_statement, update_binds = connection.cursor_obj.executions[0]
+        select_statement, select_binds = connection.cursor_obj.executions[1]
+        self.assertIn("UPDATE onboarding_requests", update_statement)
+        self.assertIn("request_status = :request_status", update_statement)
+        self.assertIn("invitation_status = :invitation_status", update_statement)
+        self.assertEqual(update_binds["request_id"], "onr_myjur_20260611_182453")
+        self.assertEqual(update_binds["request_status"], "approved")
+        self.assertEqual(update_binds["invitation_status"], "not_sent")
+        self.assertEqual(update_binds["updated_at"], "2026-06-11T18:30:00Z")
+        self.assertIn("SELECT", select_statement)
+        self.assertEqual(select_binds["request_id"], "onr_myjur_20260611_182453")
+        self.assertTrue(connection.committed)
+        self.assertEqual(reviewed["request_status"], "approved")
+        self.assertEqual(reviewed["invitation_status"], "not_sent")
+        self.assertEqual(reviewed["domain"], "myjur.de")
+        self.assertNotIn("fixture-db-value", json.dumps(update_binds, sort_keys=True))
+
     def test_env_factory_builds_atp_store_from_secret_reference(self) -> None:
         from nac_identity.onboarding_requests import AtpOnboardingRequestStore, build_onboarding_request_store_from_env
 

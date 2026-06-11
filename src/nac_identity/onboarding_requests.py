@@ -33,6 +33,9 @@ class DisabledOnboardingRequestStore:
     def create_request(self, payload: dict) -> dict:
         raise OnboardingRequestStoreDisabled("onboarding_request_store_disabled")
 
+    def review_request(self, **_kwargs: str) -> dict:
+        raise OnboardingRequestStoreDisabled("onboarding_request_store_disabled")
+
     def get_request(self, request_id: str) -> dict | None:
         raise OnboardingRequestStoreDisabled("onboarding_request_store_disabled")
 
@@ -74,6 +77,39 @@ class AtpOnboardingRequestStore:
                 raise
             raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
         return dict(payload)
+
+    def review_request(self, *, request_id: str, decision: str, now: str | None = None) -> dict:
+        normalized_request_id = request_id.strip()
+        if not normalized_request_id:
+            raise ValueError("request_id_missing")
+        review = _review_status_from_decision(decision)
+        updated_at = _normalize_timestamp(now)
+        try:
+            with self._connect() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        _ONBOARDING_REQUEST_REVIEW_SQL,
+                        {
+                            "request_id": normalized_request_id,
+                            "request_status": review["request_status"],
+                            "invitation_status": review["invitation_status"],
+                            "updated_at": updated_at,
+                        },
+                    )
+                    cursor.execute(
+                        _ONBOARDING_REQUEST_SELECT_SQL + " WHERE request_id = :request_id",
+                        {"request_id": normalized_request_id},
+                    )
+                    row = cursor.fetchone()
+                    reviewed = _row_to_request(cursor, row) if row else None
+                connection.commit()
+            if reviewed is None:
+                raise ValueError("onboarding_request_not_found")
+            return reviewed
+        except Exception as exc:  # pragma: no cover - concrete driver errors are integration-tested
+            if isinstance(exc, (OnboardingRequestStoreUnavailable, ValueError)):
+                raise
+            raise OnboardingRequestStoreUnavailable("onboarding_request_store_unavailable") from exc
 
     def get_request(self, request_id: str) -> dict | None:
         try:
@@ -480,6 +516,15 @@ INSERT INTO onboarding_requests (
 )
 """
 
+_ONBOARDING_REQUEST_REVIEW_SQL = """
+UPDATE onboarding_requests
+SET
+    request_status = :request_status,
+    invitation_status = :invitation_status,
+    updated_at = :updated_at
+WHERE request_id = :request_id
+"""
+
 _ONBOARDING_REQUEST_SELECT_SQL = """
 SELECT
     request_id,
@@ -499,6 +544,15 @@ FROM onboarding_requests
 
 def _request_binds(payload: dict) -> dict[str, object]:
     return {field: payload[field] for field in _ONBOARDING_REQUEST_FIELDS}
+
+
+def _review_status_from_decision(decision: str) -> dict[str, str]:
+    normalized = decision.strip().lower()
+    if normalized == "approve":
+        return {"request_status": "approved", "invitation_status": "not_sent"}
+    if normalized == "reject":
+        return {"request_status": "rejected", "invitation_status": "not_sent"}
+    raise ValueError("unsupported_onboarding_review_decision")
 
 
 def _row_to_request(cursor: Any, row: tuple[object, ...]) -> dict:
