@@ -911,7 +911,9 @@ def build_customer_readiness_page(query: str) -> str:
     source = _optional_query_text(params, "source", max_length=40)
     entry = _optional_query_text(params, "entry", max_length=40)
     audience = _optional_query_text(params, "audience", max_length=40)
-    public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience)
+    public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience) or not (
+        source or entry or audience
+    )
     context_query = {"audience": "customer"} if public_context else {}
     domain_hint = _optional_query_text(params, "domain_hint", max_length=120) or "kanzlei-notariat.example"
     tenant_slug = _optional_query_text(params, "tenant_slug", max_length=80) or _tenant_slug_from_domain_hint(domain_hint)
@@ -1019,7 +1021,7 @@ def build_customer_readiness_page(query: str) -> str:
     {nav}
     <section class="hero">
       <p class="eyebrow">notariat8 Neukunden-Onboarding</p>
-      <h1>Domain-Readiness</h1>
+      <h1>{'Domain vorbereiten' if public_context else 'Domain-Readiness'}</h1>
       <p>Prüfen Sie hier, ob Ihre Domain für notariat8 vorbereitet ist. Diese Seite verwendet nur Domain,
       E-Mail-Adresse und DNS-TXT-Eintrag. Keine Mandatsdaten und keine Vorgangsdokumente.</p>
     </section>
@@ -1052,7 +1054,7 @@ def build_customer_readiness_page(query: str) -> str:
       </ul>
     </section>
     """
-    return _layout("notariat8 Domain-Readiness" if public_context else "NaC Domain-Readiness", body)
+    return _layout("notariat8 Domain vorbereiten" if public_context else "NaC Domain-Readiness", body)
 
 
 def build_admin_provisioning_preview_page(query: str) -> str:

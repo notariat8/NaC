@@ -76,6 +76,30 @@ class PublicOnboardingCopyTests(unittest.TestCase):
         self.assertNotIn("Administrations-E-Mail", html)
         self.assertNotIn("notariat8-Zugang", html)
 
+    def test_readiness_without_audience_stays_customer_facing(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _, body = app.handle(
+            "/onboarding/readiness"
+            "?domain_hint=myjur.de"
+            "&tenant_slug=myjur"
+            "&admin_email=ofunk@myjur.de"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("Domain vorbereiten", html)
+        self.assertIn("E-Mail-Adresse der verantwortlichen Person", html)
+        self.assertIn("Einrichtungsstatus", html)
+        self.assertNotIn("Domain-Readiness", html)
+        self.assertNotIn("Admin-Queue", html)
+        self.assertNotIn("Admin-Dry-Run", html)
+        self.assertNotIn("Tenant-Slug", html)
+        self.assertNotIn("nac-saas-owner", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_customer_handoff_avoids_internal_provider_and_tenant_terms(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
