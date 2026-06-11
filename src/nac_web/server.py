@@ -68,10 +68,17 @@ DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
 class NaCLocalWebApp:
-    def __init__(self, repo_root: Path, dns_resolver=None, onboarding_request_store: Any | None = None) -> None:
+    def __init__(
+        self,
+        repo_root: Path,
+        dns_resolver=None,
+        onboarding_request_store: Any | None = None,
+        operator_access: bool = False,
+    ) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
         self.onboarding_request_store = onboarding_request_store or DisabledOnboardingRequestStore()
+        self.operator_access = operator_access
 
     def handle(self, path: str) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -91,6 +98,9 @@ class NaCLocalWebApp:
                 return _html_response(build_customer_readiness_page(parsed.query))
             if route == "/onboarding/dns-check":
                 return _html_response(self._tenant_dns_check_page(parsed.query))
+            if route == "/admin/onboarding" or route.startswith("/admin/onboarding/"):
+                if not self.operator_access:
+                    return _html_response(build_operator_access_required_page(), HTTPStatus.FORBIDDEN)
             if route == "/admin/onboarding/provisioning-preview":
                 return _html_response(build_admin_provisioning_preview_page(parsed.query))
             if route == "/admin/onboarding/apply-readiness":
@@ -705,6 +715,32 @@ def build_auth_callback_page(query: str) -> tuple[HTTPStatus, str]:
     </div>
     """
     return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body)
+
+
+def build_operator_access_required_page() -> str:
+    body = """
+    <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Operator-Bereich</p>
+      <h1>notariat8 Anmeldung erforderlich</h1>
+      <p>Dieser Bereich ist nur für berechtigte Personen von notariat8 sichtbar.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Rollenprüfung</h2>
+        <p>Die Übersicht wird erst geöffnet, wenn Anmeldung, Sitzung und Rolle geprüft wurden.</p>
+      </section>
+      <section>
+        <h2>Nächster Schritt</h2>
+        <ul class="link-list">
+          <li><span>Mit einem berechtigten notariat8-Konto anmelden.</span></li>
+          <li><span>Danach prüft notariat8, ob der Operator-Zugriff erlaubt ist.</span></li>
+          <li><span>Mandatsdaten werden auf dieser Seite nicht geladen.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return _layout("notariat8 Anmeldung erforderlich", body)
 
 
 def build_admin_onboarding_page(

@@ -219,7 +219,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertTrue(payload["requires_human_approval"])
 
     def test_admin_queue_page_fails_closed_without_static_demo_request(self) -> None:
-        app = NaCLocalWebApp(REPO_ROOT)
+        app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
         status, content_type, body = app.handle("/admin/onboarding")
         html = body.decode("utf-8")
@@ -232,6 +232,36 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("nac-saas-owner", html)
         self.assertNotIn("api_key", html.lower())
         self.assertNotIn("password", html.lower())
+
+    def test_admin_routes_require_operator_access(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        blocked_paths = [
+            "/admin/onboarding",
+            "/admin/onboarding/provisioning-preview"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example",
+            "/admin/onboarding/apply-readiness"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example",
+        ]
+
+        for path in blocked_paths:
+            with self.subTest(path=path):
+                status, content_type, body = app.handle(path)
+                html = body.decode("utf-8")
+
+                self.assertEqual(status, 403)
+                self.assertIn("text/html", content_type)
+                self.assertIn("notariat8 Anmeldung erforderlich", html)
+                self.assertIn("Rollenprüfung", html)
+                self.assertNotIn("Readiness-Anfragen", html)
+                self.assertNotIn("OCI-Admin-Dry-Run", html)
+                self.assertNotIn("Apply-Readiness", html)
+                self.assertNotIn("api_key", html.lower())
+                self.assertNotIn("client_secret", html.lower())
 
     def test_admin_queue_page_renders_real_onboarding_requests_without_secrets(self) -> None:
         class FakeOnboardingRequestStore:
@@ -249,7 +279,11 @@ class NaCLocalWebTests(unittest.TestCase):
                     }
                 ]
 
-        app = NaCLocalWebApp(REPO_ROOT, onboarding_request_store=FakeOnboardingRequestStore())
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            onboarding_request_store=FakeOnboardingRequestStore(),
+            operator_access=True,
+        )
 
         status, content_type, body = app.handle("/admin/onboarding")
         html = body.decode("utf-8")
@@ -329,7 +363,7 @@ class NaCLocalWebTests(unittest.TestCase):
         )
 
     def test_admin_provisioning_preview_page_renders_dry_run_without_credentials(self) -> None:
-        app = NaCLocalWebApp(REPO_ROOT)
+        app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
         status, content_type, body = app.handle(
             "/admin/onboarding/provisioning-preview"
@@ -357,7 +391,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("client_secret", html.lower())
 
     def test_admin_apply_readiness_preview_page_renders_review_artifact_without_credentials(self) -> None:
-        app = NaCLocalWebApp(REPO_ROOT)
+        app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
         status, content_type, body = app.handle(
             "/admin/onboarding/apply-readiness"
