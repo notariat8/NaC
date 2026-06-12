@@ -17,6 +17,7 @@ from nac_identity.customer_onboarding import build_customer_tenant_plan, build_l
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.patches import build_update_patch
+from nac_legal_graph.sources import legal_graph_source_status
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -226,6 +227,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Zeigt Legal-Graph-Domänen und Reviewstatus.",
     )
     legal_graph_status_parser.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_sources = legal_graph_sub.add_parser(
+        "sources",
+        help="Zeigt Primärquellen-Manifeste und Zugriffspolitik.",
+    )
+    legal_graph_sources.add_argument("--format", choices=["text", "json"], default="text")
     legal_graph_review = legal_graph_sub.add_parser(
         "review",
         help="Zeigt eine Review-Ansicht für eine Legal-Graph-Domäne.",
@@ -379,6 +385,7 @@ def command_status(args: argparse.Namespace) -> int:
             "local_operator": "nac operator --open",
             "kg_status": "nac kg status",
             "legal_graph_status": "nac legal-graph status",
+            "legal_graph_sources": "nac legal-graph sources",
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
             "config_validate": "nac config validate",
@@ -488,6 +495,19 @@ def command_legal_graph(args: argparse.Namespace) -> int:
                 print(
                     f"- {item['id']}: {item['nodes']} Knoten, "
                     f"{item['edges']} Kanten, {item['review_required']} Reviewpunkte"
+                )
+            return 0
+
+        if args.legal_graph_command == "sources":
+            payload = legal_graph_source_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Legal Graph Sources")
+            for item in payload["source_status"]:
+                print(
+                    f"- {item['domain']}: {item['source_id']}, "
+                    f"{item['retrieval_mode']}, Kommentarzugriff: {item['commentary_access_allowed']}"
                 )
             return 0
 

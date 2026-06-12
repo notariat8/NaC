@@ -8,6 +8,7 @@ from pathlib import Path
 
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status, load_domain_graph
 from nac_legal_graph.patches import build_update_patch
+from nac_legal_graph.sources import load_source_manifest, legal_graph_source_status
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -81,18 +82,43 @@ class LegalGraphTests(unittest.TestCase):
         self.assertEqual(patch["status"], "proposed")
         self.assertFalse(patch["auto_merge_allowed"])
         self.assertTrue(patch["human_review_required"])
+        self.assertEqual(patch["source_manifest"]["source_id"], "primary.gesetze-im-internet.bgb.erbrecht")
+        self.assertEqual(patch["source_manifest"]["retrieval_mode"], "metadata_only_fixture")
+        self.assertFalse(patch["source_manifest"]["commentary_access_allowed"])
         self.assertEqual(patch["changes"][0]["action"], "add_node")
         self.assertEqual(patch["changes"][0]["node"]["id"], "norm.bgb.1944")
 
-    def test_update_patch_blocks_commentary_without_contract(self) -> None:
+    def test_update_patch_excludes_commentary_connector_changes_for_primary_source_pilot(self) -> None:
         patch = build_update_patch(REPO_ROOT, "erbrecht")
         commentary_changes = [
             change for change in patch["changes"]
             if change.get("node", {}).get("type") == "commentary_connector"
         ]
 
-        self.assertTrue(commentary_changes)
-        self.assertEqual(commentary_changes[0]["status"], "blocked_contract")
+        self.assertEqual(commentary_changes, [])
+
+    def test_primary_source_manifest_blocks_commentary_access(self) -> None:
+        manifest = load_source_manifest(REPO_ROOT, "erbrecht")
+
+        self.assertEqual(manifest["schema_version"], "nac.legal-graph-source/v0.1")
+        self.assertEqual(manifest["domain"], "erbrecht")
+        self.assertEqual(manifest["source_id"], "primary.gesetze-im-internet.bgb.erbrecht")
+        self.assertEqual(manifest["source_type"], "primary_law")
+        self.assertEqual(manifest["retrieval_mode"], "metadata_only_fixture")
+        self.assertFalse(manifest["commentary_access_allowed"])
+        self.assertFalse(manifest["credentials_required"])
+        self.assertFalse(manifest["provider_query_allowed"])
+        self.assertIn("candidate_node_metadata", manifest["allowed_outputs"])
+        self.assertIn("query_commentary_connector", manifest["blocked_actions"])
+
+    def test_source_status_reports_primary_source_pilot(self) -> None:
+        status = legal_graph_source_status(REPO_ROOT)
+
+        self.assertEqual(status["schema_version"], "nac.legal-graph-source-status/v0.1")
+        self.assertEqual(status["sources"], 1)
+        self.assertEqual(status["source_status"][0]["domain"], "erbrecht")
+        self.assertEqual(status["source_status"][0]["retrieval_mode"], "metadata_only_fixture")
+        self.assertFalse(status["source_status"][0]["commentary_access_allowed"])
 
     def test_update_patch_rejects_fixture_with_mandate_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +130,12 @@ class LegalGraphTests(unittest.TestCase):
             shutil.copyfile(
                 REPO_ROOT / "workflows" / "legal-graph" / "domains" / "erbrecht.graph.json",
                 domain_dir / "erbrecht.graph.json",
+            )
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(
+                REPO_ROOT / "workflows" / "legal-graph" / "sources" / "erbrecht-primary-source.json",
+                source_dir / "erbrecht-primary-source.json",
             )
             fixture = json.loads(
                 (REPO_ROOT / "workflows" / "legal-graph" / "fixtures" / "erbrecht-source-update.json").read_text(
@@ -129,6 +161,12 @@ class LegalGraphTests(unittest.TestCase):
             shutil.copyfile(
                 REPO_ROOT / "workflows" / "legal-graph" / "domains" / "erbrecht.graph.json",
                 domain_dir / "erbrecht.graph.json",
+            )
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(
+                REPO_ROOT / "workflows" / "legal-graph" / "sources" / "erbrecht-primary-source.json",
+                source_dir / "erbrecht-primary-source.json",
             )
             fixture = json.loads(
                 (REPO_ROOT / "workflows" / "legal-graph" / "fixtures" / "erbrecht-source-update.json").read_text(

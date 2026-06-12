@@ -96,7 +96,7 @@ nac qms status
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
 | Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
-| Legal graph | `nac legal-graph status`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, review points and update patches without auto-merge. |
+| Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, review points and update patches without auto-merge. |
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
@@ -116,9 +116,16 @@ create review patches; a merge requires professional review.
 
 ```bash
 nac legal-graph status
+nac legal-graph sources --format json
 nac legal-graph review erbrecht --format json
 nac legal-graph update-dry-run erbrecht --format json
 ```
+
+The first update pilot uses a primary-source manifest for inheritance law with
+`metadata_only_fixture`, `commentary_access_allowed=false`,
+`provider_query_allowed=false` and `credentials_required=false`. This keeps
+commentaries and publisher databases outside the run until a licensed MCP/API
+connector is professionally, contractually and technically approved.
 
 Licensed commentaries and publisher sources do not use scraping or full-text
 imports. They require reviewed MCP/API connectors with license, AVV/DPA,
@@ -201,6 +208,9 @@ patches; the commentary connector contract requires licensed MCP/API access
 without credentials, mandate data or commentary full text in the product
 repository and records provider-level license status, evidence fields, output
 boundaries and activation gates.
+Primary-source manifests are also validated as a separate artifact type so an
+update run cannot introduce commentary access, provider queries or credential
+requirements.
 The spec traceability contract connects issue, spec, plan, AC IDs and
 validation commands for spec-driven work.
 

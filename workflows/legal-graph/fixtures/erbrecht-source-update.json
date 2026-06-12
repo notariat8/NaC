@@ -13,15 +13,6 @@
       "source_ref": "source.gesetze-im-internet.bgb",
       "citation": "§ 1944 BGB",
       "version_status": "current_metadata_only"
-    },
-    {
-      "id": "connector.juris",
-      "type": "commentary_connector",
-      "label": "juris Kommentarzugriff",
-      "provider_id": "juris",
-      "status": "license_review_required",
-      "connection_mode": "mcp_or_api_required",
-      "full_text_storage": "blocked"
     }
   ],
   "candidate_edges": [

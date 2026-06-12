@@ -46,6 +46,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("nac web", output)
         self.assertIn("nac operator --open", output)
         self.assertIn("nac legal-graph status", output)
+        self.assertIn("nac legal-graph sources", output)
 
     def test_config_list_includes_language_policy(self) -> None:
         rc, output = run_cli("config", "list")
@@ -124,6 +125,17 @@ class NaCCliTests(unittest.TestCase):
         domains = {item["id"] for item in payload["domain_status"]}
         self.assertEqual(payload["schema_version"], "nac.legal-graph-status/v0.1")
         self.assertGreaterEqual(domains, {"erbrecht", "familienrecht", "gesellschaftsrecht"})
+
+    def test_legal_graph_sources_cli_returns_primary_source_status(self) -> None:
+        rc, output = run_cli("legal-graph", "sources", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.legal-graph-source-status/v0.1")
+        self.assertEqual(payload["sources"], 1)
+        self.assertEqual(payload["source_status"][0]["domain"], "erbrecht")
+        self.assertEqual(payload["source_status"][0]["retrieval_mode"], "metadata_only_fixture")
+        self.assertFalse(payload["source_status"][0]["commentary_access_allowed"])
 
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")

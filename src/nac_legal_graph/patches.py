@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .catalog import assert_no_prohibited_payload, load_domain_graph
+from .sources import load_source_manifest
 
 
 FIXTURE_ROOT = Path("workflows") / "legal-graph" / "fixtures"
@@ -22,7 +23,8 @@ ALLOWED_EDGE_TYPES = {
 
 def build_update_patch(repo_root: Path, domain: str) -> dict[str, Any]:
     graph = load_domain_graph(repo_root, domain)
-    fixture_path = repo_root / FIXTURE_ROOT / f"{domain}-source-update.json"
+    source_manifest = load_source_manifest(repo_root, domain)
+    fixture_path = repo_root / source_manifest["update_fixture"]
     if not fixture_path.is_file():
         raise KeyError(f"Unknown legal graph update fixture: {domain}")
 
@@ -50,6 +52,8 @@ def build_update_patch(repo_root: Path, domain: str) -> dict[str, Any]:
         node_id = node.get("id")
         if not isinstance(node_id, str) or not node_id:
             raise ValueError("Legal graph update fixture candidate node id must be a string")
+        if node.get("type") == "commentary_connector" and source_manifest.get("commentary_access_allowed") is False:
+            raise ValueError("Legal graph primary source update fixture must not contain commentary connector changes")
         if node_id in existing_nodes:
             continue
         added_nodes.add(node_id)
@@ -92,6 +96,12 @@ def build_update_patch(repo_root: Path, domain: str) -> dict[str, Any]:
         "schema_version": "nac.legal-graph-patch/v0.1",
         "domain": domain,
         "source": fixture.get("source", {}),
+        "source_manifest": {
+            "source_id": source_manifest["source_id"],
+            "retrieval_mode": source_manifest["retrieval_mode"],
+            "commentary_access_allowed": source_manifest["commentary_access_allowed"],
+            "canonical_url": source_manifest["canonical_url"],
+        },
         "status": "proposed",
         "auto_merge_allowed": False,
         "human_review_required": True,

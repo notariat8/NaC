@@ -13,6 +13,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from nac_legal_graph.catalog import assert_no_prohibited_payload  # noqa: E402
 from nac_legal_graph.patches import build_update_patch  # noqa: E402
+from nac_legal_graph.sources import validate_source_manifest_payload  # noqa: E402
 
 
 LEGAL_GRAPH_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-graph.contract.json"
@@ -76,6 +77,7 @@ def validate_legal_graph_artifacts(repo_root: Path = REPO_ROOT) -> list[str]:
     errors: list[str] = []
     domain_root = repo_root / "workflows" / "legal-graph" / "domains"
     fixture_root = repo_root / "workflows" / "legal-graph" / "fixtures"
+    source_root = repo_root / "workflows" / "legal-graph" / "sources"
 
     for graph_path in sorted(domain_root.glob("*.graph.json")) if domain_root.is_dir() else []:
         payload = _read_json(graph_path, errors, repo_root=repo_root)
@@ -88,6 +90,12 @@ def validate_legal_graph_artifacts(repo_root: Path = REPO_ROOT) -> list[str]:
         if not payload:
             continue
         errors.extend(_validate_fixture_payload(fixture_path, payload, repo_root))
+
+    for source_path in sorted(source_root.glob("*.json")) if source_root.is_dir() else []:
+        payload = _read_json(source_path, errors, repo_root=repo_root)
+        if not payload:
+            continue
+        errors.extend(_validate_source_payload(source_path, payload, repo_root))
 
     return errors
 
@@ -299,6 +307,11 @@ def _validate_fixture_payload(path: Path, payload: dict[str, Any], repo_root: Pa
     except (KeyError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"{label}: {exc}")
     return errors
+
+
+def _validate_source_payload(path: Path, payload: dict[str, Any], repo_root: Path) -> list[str]:
+    label = path.relative_to(repo_root).as_posix()
+    return [f"{label}: {error}" for error in validate_source_manifest_payload(payload)]
 
 
 def _strings(value: object) -> list[str]:
