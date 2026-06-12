@@ -26,7 +26,7 @@ gantt
     Workflow-Vertragsformat ergänzen          :active, w4, 2026-05-15, 21d
     Legal-Research-Kandidatenvertrag           :done,   w4k, 2026-05-22, 1d
     GNotKG-Kostenvertrag und Reviewgraph        :done,   w4l, 2026-05-28, 1d
-    Legal-Graph-Primärquellenpilot             :active, w4m, 2026-06-12, 7d
+    Legal-Graph-MVP-Domänenpilot              :active, w4m, 2026-06-12, 7d
 
     section Ausführung
     Skill-Scaffolds für Notariatsworkflows    :        w5, 2026-06-01, 28d
@@ -44,11 +44,11 @@ gantt
 | Schicht | Root | Status | Grenze |
 | --- | --- | --- | --- |
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung führt; englische Summary dient technischer Anschlussfähigkeit, keine finale rechtliche Wahrheit. |
-| Python-Workflows | `workflows/python/` plus `src/notary_kg/`, `src/nac_legal_graph/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien; der Legal-Graph-Pilot erzeugt nur Review-Patches aus einem Erbrechts-Primärquellenmanifest ohne Kommentarzugriff. Beides ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-Fachprüfungs-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
+| Python-Workflows | `workflows/python/` plus `src/notary_kg/`, `src/nac_legal_graph/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Status-Runtime liest usecase-lokale KG-Dateien; der Legal-Graph-Pilot erzeugt nur Review-Patches aus metadata-only Primärquellenmanifesten für Erbrecht, Familienrecht und Gesellschaftsrecht ohne Kommentarzugriff. Beides ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-Fachprüfungs-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Nutzbarer MVP | BPMN ist fachliche Prozessquelle; alle Usecases haben bpmn-js-taugliche Basismodelle mit `nac:channel`, Python validiert NaC-Properties, Sequenzflüsse und Diagrammflächen. |
 | GNotKG-Kostenmodul | `src/nac_gnotkg/` plus `workflows/contracts/gnotkg-cost-review.contract.json` | Nutzbarer MVP | Zentrale Wertgebührenlogik mit GNotKG § 35-Höchstwerten, mandatsdatenfreier Reviewgraph und `xyflow` als reine Visualisierungsschicht. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, BPMN-XML/Editierfläche, KG-Editor-Views, GNotKG-Kostenansichten und KG-JSON lokal im Browser; BPMN-Speichern nutzt SHA-256-Konfliktprüfung, GNotKG-Quotes laufen per POST. |
-| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, GNotKG-Kosten-, lokaler Webpreview-, Secure-Document-Link-, Legal-Research-Connector-Kandidaten-, Legal-Graph- und Kommentar-Connector-Vertrag. |
+| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, GNotKG-Kosten-, lokaler Webpreview-, Secure-Document-Link-, Legal-Research-Connector-Kandidaten-, Legal-Graph- und Kommentar-Connector-Vertrag. Der Kommentar-Connector-Vertrag bleibt vor produktivem Zugriff durch Lizenzbasis-, AVV-/DPA-, Berufsgeheimnis-, AI-SBOM-, Sicherheitsgrenzen- und Credential-Betriebsgates blockiert. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr
