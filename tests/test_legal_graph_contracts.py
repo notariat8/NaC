@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LEGAL_GRAPH_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-graph.contract.json"
+COMMENTARY_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-commentary-connectors.contract.json"
+
+
+class LegalGraphContractTests(unittest.TestCase):
+    def test_legal_graph_contract_blocks_unreviewed_merges(self) -> None:
+        payload = json.loads(LEGAL_GRAPH_CONTRACT.read_text(encoding="utf-8"))
+        domains = {domain["id"] for domain in payload["domains"]}
+
+        self.assertEqual(payload["contract_id"], "workflow.legal_graph")
+        self.assertEqual(payload["status"], "planned_mvp")
+        self.assertFalse(payload["automation_policy"]["auto_merge_allowed"])
+        self.assertTrue(payload["automation_policy"]["human_review_required"])
+        self.assertGreaterEqual(domains, {"erbrecht", "familienrecht", "gesellschaftsrecht"})
+        self.assertIn("source_document", payload["required_node_types"])
+        self.assertIn("graph_patch", payload["required_node_types"])
+
+    def test_commentary_contract_requires_mcp_or_api_and_blocks_full_text(self) -> None:
+        payload = json.loads(COMMENTARY_CONTRACT.read_text(encoding="utf-8"))
+        providers = {provider["id"]: provider for provider in payload["candidate_providers"]}
+
+        self.assertEqual(payload["contract_id"], "workflow.legal_commentary_connectors")
+        self.assertFalse(payload["policy"]["credentials_allowed_in_repo"])
+        self.assertFalse(payload["policy"]["commentary_full_text_allowed_in_repo"])
+        self.assertTrue(payload["policy"]["requires_license_review"])
+        self.assertTrue(payload["policy"]["requires_human_notarial_review"])
+        self.assertEqual(set(payload["allowed_connection_modes"]), {"mcp", "api"})
+        self.assertGreaterEqual(set(providers), {"beck-online", "juris", "wolters-kluwer"})
+        for provider in providers.values():
+            self.assertEqual(provider["license_status"], "license_review_required")
+            self.assertEqual(provider["activation_gate"], "blocked_until_license_api_and_review")
+            self.assertIn("citation", provider["allowed_evidence_fields"])
+            self.assertIn("answer_metadata", provider["permitted_outputs"])
+            self.assertIn("store_commentary_full_text", provider["blocked_actions"])
+
+    def test_validator_accepts_contracts(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/validate_legal_graph_contracts.py"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("STATUS: PASSED", result.stdout)
+
+    def test_strict_quality_gate_runs_legal_graph_contract_validator(self) -> None:
+        from scripts import quality_gate
+
+        checks = {
+            check_id: command
+            for check_id, _title, command in quality_gate.build_checks("strict")
+        }
+
+        self.assertIn("legal_graph_contracts", checks)
+        self.assertIn("scripts/validate_legal_graph_contracts.py", checks["legal_graph_contracts"])
+
+    def test_artifact_validator_rejects_fixture_mandate_values(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            domain_dir = repo_root / "workflows" / "legal-graph" / "domains"
+            fixture_dir = repo_root / "workflows" / "legal-graph" / "fixtures"
+            domain_dir.mkdir(parents=True)
+            fixture_dir.mkdir(parents=True)
+            shutil.copyfile(
+                REPO_ROOT / "workflows" / "legal-graph" / "domains" / "erbrecht.graph.json",
+                domain_dir / "erbrecht.graph.json",
+            )
+            fixture = json.loads(
+                (REPO_ROOT / "workflows" / "legal-graph" / "fixtures" / "erbrecht-source-update.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            fixture["candidate_nodes"][0]["value"] = "UVZ-2026-0001"
+            (fixture_dir / "erbrecht-source-update.json").write_text(
+                json.dumps(fixture, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_legal_graph_artifacts(repo_root)
+
+        self.assertTrue(errors)
+        self.assertIn("must not contain mandate values", "\n".join(errors))
+
+
+if __name__ == "__main__":
+    unittest.main()

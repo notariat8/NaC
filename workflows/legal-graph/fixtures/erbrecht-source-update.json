@@ -1,0 +1,34 @@
+{
+  "schema_version": "nac.legal-graph-source-update/v0.1",
+  "domain": "erbrecht",
+  "source": {
+    "id": "source.gesetze-im-internet.bgb",
+    "retrieved_at": "2026-06-12T00:00:00Z"
+  },
+  "candidate_nodes": [
+    {
+      "id": "norm.bgb.1944",
+      "type": "norm",
+      "label": "BGB § 1944 Ausschlagungsfrist",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1944 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "connector.juris",
+      "type": "commentary_connector",
+      "label": "juris Kommentarzugriff",
+      "provider_id": "juris",
+      "status": "license_review_required",
+      "connection_mode": "mcp_or_api_required",
+      "full_text_storage": "blocked"
+    }
+  ],
+  "candidate_edges": [
+    {
+      "from": "norm.bgb.1944",
+      "to": "usecase.erbausschlagung",
+      "type": "affects_usecase"
+    }
+  ]
+}

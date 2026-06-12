@@ -1,0 +1,149 @@
+{
+  "schema_version": "nac.legal-graph/v0.1",
+  "graph_id": "legal.familienrecht",
+  "last_update": "2026-06-12",
+  "domain": {
+    "id": "familienrecht",
+    "label_de": "Familienrecht",
+    "status": "mvp"
+  },
+  "guardrails": {
+    "real_mandate_data_allowed": false,
+    "commentary_full_text_in_repo": false,
+    "human_review_required": true
+  },
+  "nodes": [
+    {
+      "id": "source.gesetze-im-internet.bgb",
+      "type": "source_document",
+      "label": "Gesetze im Internet: BGB",
+      "url": "https://www.gesetze-im-internet.de/bgb/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "source.gesetze-im-internet.famfg",
+      "type": "source_document",
+      "label": "Gesetze im Internet: FamFG",
+      "url": "https://www.gesetze-im-internet.de/famfg/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "norm.bgb.1408",
+      "type": "norm",
+      "label": "BGB § 1408 Ehevertrag",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1408 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.1410",
+      "type": "norm",
+      "label": "BGB § 1410 Form des Ehevertrags",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1410 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.1587",
+      "type": "norm",
+      "label": "BGB § 1587 Versorgungsausgleich",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1587 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.1741",
+      "type": "norm",
+      "label": "BGB § 1741 Annahme als Kind",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1741 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.famfg.7",
+      "type": "norm",
+      "label": "FamFG § 7 Beteiligte",
+      "source_ref": "source.gesetze-im-internet.famfg",
+      "citation": "§ 7 FamFG",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "usecase.ehevertrag",
+      "type": "notarial_usecase",
+      "label": "Ehevertrag",
+      "usecase_path": "usecases/ehevertrag"
+    },
+    {
+      "id": "usecase.scheidungsfolgenvereinbarung",
+      "type": "notarial_usecase",
+      "label": "Scheidungsfolgenvereinbarung",
+      "usecase_path": "usecases/scheidungsfolgenvereinbarung"
+    },
+    {
+      "id": "usecase.adoption",
+      "type": "notarial_usecase",
+      "label": "Adoption",
+      "usecase_path": "usecases/adoption"
+    },
+    {
+      "id": "review.form",
+      "type": "review_point",
+      "label": "Form- und Beurkundungsprüfung",
+      "status": "review_required"
+    },
+    {
+      "id": "review.beteiligte",
+      "type": "review_point",
+      "label": "Beteiligte und Genehmigungen",
+      "status": "review_required"
+    },
+    {
+      "id": "connector.juris",
+      "type": "commentary_connector",
+      "label": "juris Kommentarzugriff",
+      "provider_id": "juris",
+      "status": "license_review_required",
+      "connection_mode": "mcp_or_api_required",
+      "full_text_storage": "blocked"
+    }
+  ],
+  "edges": [
+    {
+      "from": "norm.bgb.1408",
+      "to": "usecase.ehevertrag",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.1410",
+      "to": "usecase.ehevertrag",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.1587",
+      "to": "usecase.scheidungsfolgenvereinbarung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.1741",
+      "to": "usecase.adoption",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.famfg.7",
+      "to": "review.beteiligte",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "norm.bgb.1410",
+      "to": "review.form",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "connector.juris",
+      "to": "review.form",
+      "type": "needs_commentary_review"
+    }
+  ]
+}

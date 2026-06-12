@@ -1,0 +1,68 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_graph",
+  "title": "NaC Legal Graph",
+  "status": "planned_mvp",
+  "last_update": "2026-06-12",
+  "purpose": "Define the mandate-data-free primary-source legal graph for notarial usecases and its review-only update model.",
+  "domains": [
+    {
+      "id": "erbrecht",
+      "label_de": "Erbrecht",
+      "status": "mvp",
+      "graph_path": "workflows/legal-graph/domains/erbrecht.graph.json"
+    },
+    {
+      "id": "familienrecht",
+      "label_de": "Familienrecht",
+      "status": "mvp",
+      "graph_path": "workflows/legal-graph/domains/familienrecht.graph.json"
+    },
+    {
+      "id": "gesellschaftsrecht",
+      "label_de": "Gesellschaftsrecht",
+      "status": "mvp",
+      "graph_path": "workflows/legal-graph/domains/gesellschaftsrecht.graph.json"
+    }
+  ],
+  "allowed_primary_sources": [
+    "gesetze_im_internet",
+    "rechtsprechung_im_internet",
+    "ris_search_candidate"
+  ],
+  "required_node_types": [
+    "legal_domain",
+    "source_document",
+    "norm",
+    "decision",
+    "notarial_usecase",
+    "review_point",
+    "commentary_connector",
+    "graph_patch"
+  ],
+  "required_edge_types": [
+    "cites",
+    "amends",
+    "valid_from",
+    "valid_until",
+    "affects_usecase",
+    "supports_review_point",
+    "needs_commentary_review",
+    "approved_by"
+  ],
+  "automation_policy": {
+    "source_update_allowed": true,
+    "patch_proposal_allowed": true,
+    "auto_merge_allowed": false,
+    "human_review_required": true,
+    "real_mandate_data_allowed": false,
+    "commentary_full_text_allowed": false
+  },
+  "required_patch_statuses": [
+    "proposed",
+    "needs_human_mapping",
+    "blocked_contract",
+    "approved",
+    "rejected"
+  ]
+}

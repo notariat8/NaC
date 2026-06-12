@@ -45,6 +45,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("nac doctor --profile strict", output)
         self.assertIn("nac web", output)
         self.assertIn("nac operator --open", output)
+        self.assertIn("nac legal-graph status", output)
 
     def test_config_list_includes_language_policy(self) -> None:
         rc, output = run_cli("config", "list")
@@ -74,6 +75,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("GNotKG Cost Review", output)
         self.assertIn("Secure Document Link", output)
         self.assertIn("Legal Research Connectors", output)
+        self.assertIn("Legal Graph Contracts", output)
         self.assertIn("Spec Traceability", output)
         self.assertIn("STATUS: PASSED", output)
 
@@ -113,6 +115,40 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.gnotkg-cost-quote/v0.1")
         self.assertEqual(payload["base_fee"], "4138.00")
         self.assertEqual(payload["fee_amount"], "4138.00")
+
+    def test_legal_graph_status_cli_returns_json(self) -> None:
+        rc, output = run_cli("legal-graph", "status", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        domains = {item["id"] for item in payload["domain_status"]}
+        self.assertEqual(payload["schema_version"], "nac.legal-graph-status/v0.1")
+        self.assertGreaterEqual(domains, {"erbrecht", "familienrecht", "gesellschaftsrecht"})
+
+    def test_legal_graph_review_cli_returns_json(self) -> None:
+        rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.legal-graph-review/v0.1")
+        self.assertFalse(payload["guardrails"]["commentary_full_text_in_repo"])
+
+    def test_legal_graph_update_dry_run_cli_returns_patch(self) -> None:
+        rc, output = run_cli("legal-graph", "update-dry-run", "erbrecht", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.legal-graph-patch/v0.1")
+        self.assertFalse(payload["auto_merge_allowed"])
+
+    def test_legal_graph_json_errors_are_machine_readable(self) -> None:
+        rc, output = run_cli("legal-graph", "review", "unknown", "--format", "json")
+
+        self.assertEqual(rc, 1)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.error/v0.1")
+        self.assertEqual(payload["command"], "legal-graph")
+        self.assertIn("Unknown legal graph domain", payload["error"])
 
     def test_tenant_domain_check_cli_returns_json(self) -> None:
         rc, output = run_cli(

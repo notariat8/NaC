@@ -15,6 +15,8 @@ NaC makes visible more than prompts:
 - SBOM and AI-SBOM components,
 - plugin boundaries and integration assumptions,
 - usecase-local knowledge graphs,
+- the mandate-data-free legal graph for inheritance law, family law and
+  corporate law and its commentary connector boundaries,
 - tests, validators and quality gates.
 
 ## What Should Not Be Assessed Here
