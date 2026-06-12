@@ -30,6 +30,10 @@ POST-Ausnahme ist für das Kunden-Onboarding zugelassen:
 `POST /onboarding/requests`. Dieser Pfad nimmt nur Domain, Tenant-Referenz und
 verantwortliche E-Mail-Adresse entgegen. Es werden keine Mandatsdaten, Secrets,
 OCI-API-Schlüssel oder Tenant-Zugangsdaten im Function-Paket gespeichert.
+Nach erfolgreichem Anlegen antwortet der öffentliche Pfad mit `303 See Other`
+und `Location: /onboarding/requests/<request_id>?audience=customer`. Diese
+Statusseite ist per GET/HEAD öffentlich lesbar und reloadbar; die URL enthält
+keine Administrations-E-Mail und öffnet keine Admin-Queue-Funktionen.
 
 Erforderliches Apply-Gate für den Functions-Parallelpfad:
 
@@ -49,7 +53,9 @@ Fallback, bis der API-Gateway-Pfad für `/healthz`, `/onboarding/readiness`,
 ist und ein separates Owner-Apply-Gate den Cutover freigibt.
 
 Der Function-Release-Pfad bleibt bis auf `POST /onboarding/requests`
-GET/HEAD-only. Login-Intent-Konfiguration kommt ausschließlich aus
+GET/HEAD-only; die reloadbare Kundenseite
+`GET /onboarding/requests/<request_id>?audience=customer` ist die zugehörige
+öffentliche Lese-Route nach dem Redirect. Login-Intent-Konfiguration kommt ausschließlich aus
 serverseitigen Umgebungswerten; Query-Parameter dürfen keine Identity-Domain-,
 Client-, Redirect-, State- oder Nonce-Werte setzen.
 
@@ -97,6 +103,8 @@ Das versionierte Bootstrap-Artefakt für die erste Tabelle liegt in
 Es legt nur `onboarding_requests` mit den aktuellen Vertragsfeldern an. Die
 Ausführung gehört in den Block-M-Runbook-Schritt nach geprüfter ATP-Zielwahl
 und vor dem finalen Live-Smoke für `POST /onboarding/requests`.
+Der Smoke-Test muss zusätzlich den `303`-Redirect und die reloadbare
+GET-Statusseite ohne `admin_email` in der URL prüfen.
 
 ## App-Release-Overlay
 

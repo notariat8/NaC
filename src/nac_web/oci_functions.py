@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from nac_identity.onboarding_requests import build_onboarding_request_store_from_env
 from nac_web.server import NaCLocalWebApp
@@ -40,8 +40,8 @@ def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, r
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
     app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=build_onboarding_request_store_from_env())
-    response_headers: dict[str, str] = {}
 
+    response_headers: dict[str, str] = {}
     if method in {"GET", "HEAD"} and _is_exposed_get_route(request_url):
         app_response = app.handle(request_url)
         status, content_type, response_body = app_response
@@ -113,7 +113,12 @@ def _request_url(ctx: Any) -> str:
 def _is_exposed_get_route(request_url: str) -> bool:
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
-    return route in EXPOSED_GET_ROUTES or route.startswith("/onboarding/requests/")
+    if route in EXPOSED_GET_ROUTES:
+        return True
+    if route.startswith("/onboarding/requests/"):
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        return (params.get("audience") or [""])[0] == "customer"
+    return False
 
 
 def _is_exposed_post_route(request_url: str) -> bool:

@@ -479,6 +479,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "/bpmn/immobilienkaufvertrag/edit",
             "/api/bpmn/immobilienkaufvertrag/xml",
             "/api/tenant/domain-check?domain=myjur.de&tenant_slug=myjur",
+            "/onboarding/requests/onr_myjur_20260610_111500?admin_email=ofunk@myjur.de",
         ]
 
         for path in blocked_paths:

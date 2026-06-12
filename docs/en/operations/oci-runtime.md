@@ -30,6 +30,10 @@ exception is allowed for customer onboarding: `POST /onboarding/requests`.
 This path accepts only the domain, tenant reference, and responsible email
 address. The function package stores no mandate data, secrets, OCI API keys, or
 tenant credentials.
+After successful creation, the public path returns `303 See Other` with
+`Location: /onboarding/requests/<request_id>?audience=customer`. That status
+page is publicly readable through GET/HEAD and can be reloaded; the URL contains
+no administration email and does not expose admin queue functions.
 
 Required apply gate for the Functions parallel path:
 
@@ -48,9 +52,11 @@ until the API Gateway path for `/healthz`, `/onboarding/readiness`,
 and a separate Owner Apply gate approves cutover.
 
 The Function release path remains GET/HEAD-only except for
-`POST /onboarding/requests`. Login-intent configuration comes only from
-server-side environment values; query parameters must not set identity domain,
-client, redirect, state, or nonce values.
+`POST /onboarding/requests`; the reloadable customer page
+`GET /onboarding/requests/<request_id>?audience=customer` is the matching
+public read route after the redirect. Login-intent configuration comes only
+from server-side environment values; query parameters must not set identity
+domain, client, redirect, state, or nonce values.
 
 ## ATP Onboarding Request Store
 
@@ -96,6 +102,8 @@ The versioned bootstrap artifact for the first table is
 It creates only `onboarding_requests` with the current contract fields. Running
 it belongs into the Block M runbook step after the ATP target has been reviewed
 and before the final live smoke for `POST /onboarding/requests`.
+The smoke test must also verify the `303` redirect and the reloadable GET status
+page without `admin_email` in the URL.
 
 ## App Release Overlay
 
