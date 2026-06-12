@@ -207,7 +207,8 @@ family law and corporate law to mandate-data-free primary sources and review
 patches; the commentary connector contract requires licensed MCP/API access
 without credentials, mandate data or commentary full text in the product
 repository and records provider-level license status, evidence fields, output
-boundaries and activation gates.
+boundaries, activation gates, license basis, DPA status, professional-secrecy
+status, AI-SBOM status, security boundary and credential operating model.
 Primary-source manifests are also validated as a separate artifact type so an
 update run cannot introduce commentary access, provider queries or credential
 requirements.

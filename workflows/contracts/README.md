@@ -46,7 +46,9 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/legal-commentary-connectors.contract.json](legal-commentary-connectors.contract.json):
   Vertrag für lizenzierte Kommentar- und Verlagsquellen über MCP/API ohne
   Credentials, Mandatsdaten oder Kommentar-Volltexte im Produktrepo, mit
-  Provider-Matrix für Lizenzstatus, Evidence-Felder und Aktivierungsgates.
+  Provider-Matrix für Lizenzbasis, AVV-/DPA-Status, Berufsgeheimnis,
+  AI-SBOM, Sicherheitsgrenze, Credential-Betrieb, Evidence-Felder und
+  Aktivierungsgates.
 - [workflows/contracts/oci-tenant-identity.contract.json](oci-tenant-identity.contract.json):
   Vertrag für tenant-aware NaC-SaaS-Onboarding mit Oracle OCI Identity Domains,
   Domain-Readiness, Admin-Provisioning-Dry-run und Owner-Apply-Gate vor jedem

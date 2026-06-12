@@ -41,6 +41,15 @@ class LegalGraphContractTests(unittest.TestCase):
         for provider in providers.values():
             self.assertEqual(provider["license_status"], "license_review_required")
             self.assertEqual(provider["activation_gate"], "blocked_until_license_api_and_review")
+            self.assertEqual(provider["license_basis"], "not_reviewed")
+            self.assertEqual(provider["terms_review_status"], "pending_contract_review")
+            self.assertEqual(provider["dpa_status"], "pending_applicability_review")
+            self.assertEqual(provider["professional_secrecy_status"], "pending_review")
+            self.assertEqual(provider["ai_sbom_status"], "pending_decision")
+            self.assertEqual(provider["security_boundary_status"], "pending_architecture_review")
+            self.assertEqual(provider["credential_operating_model"], "external_secret_store_required")
+            self.assertIn("citation_metadata", provider["permitted_data_classes"])
+            self.assertIn("commentary_full_text", provider["prohibited_data_classes"])
             self.assertIn("citation", provider["allowed_evidence_fields"])
             self.assertIn("answer_metadata", provider["permitted_outputs"])
             self.assertIn("store_commentary_full_text", provider["blocked_actions"])
@@ -173,6 +182,42 @@ class LegalGraphContractTests(unittest.TestCase):
 
         self.assertTrue(errors)
         self.assertIn("update_fixture muss unter workflows/legal-graph/fixtures liegen", "\n".join(errors))
+
+    def test_commentary_contract_validator_rejects_missing_professional_gate(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        payload = json.loads(COMMENTARY_CONTRACT.read_text(encoding="utf-8"))
+        payload["candidate_providers"][0].pop("dpa_status", None)
+
+        errors = validator._validate_commentary_contract(payload)
+
+        self.assertTrue(errors)
+        self.assertIn("beck-online Pflichtfeld fehlt dpa_status", "\n".join(errors))
+
+    def test_commentary_contract_validator_rejects_active_provider_status(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        payload = json.loads(COMMENTARY_CONTRACT.read_text(encoding="utf-8"))
+        payload["candidate_providers"][0]["status"] = "active"
+
+        errors = validator._validate_commentary_contract(payload)
+
+        self.assertTrue(errors)
+        self.assertIn("beck-online.status muss license_review_required sein", "\n".join(errors))
+
+    def test_commentary_contract_validator_rejects_outputs_outside_allowlist(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        payload = json.loads(COMMENTARY_CONTRACT.read_text(encoding="utf-8"))
+        payload["candidate_providers"][0]["permitted_outputs"].append("commentary_full_text")
+        payload["candidate_providers"][0]["permitted_data_classes"].append("mandate_contact_email")
+
+        errors = validator._validate_commentary_contract(payload)
+
+        self.assertTrue(errors)
+        joined_errors = "\n".join(errors)
+        self.assertIn("beck-online.permitted_outputs enthaelt unzulaessigen Wert commentary_full_text", joined_errors)
+        self.assertIn("beck-online.permitted_data_classes enthaelt unzulaessigen Wert mandate_contact_email", joined_errors)
 
     def test_artifact_validator_rejects_missing_primary_source_fixture(self) -> None:
         from scripts import validate_legal_graph_contracts as validator

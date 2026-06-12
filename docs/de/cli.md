@@ -209,7 +209,9 @@ Familienrecht und Gesellschaftsrecht auf mandatsdatenfreie Primärquellen und
 Review-Patches; der Kommentar-Connector-Vertrag verlangt lizenzierte
 MCP/API-Zugänge ohne Credentials, Mandatsdaten oder Kommentar-Volltexte im
 Produktrepo und führt pro Provider Lizenzstatus, Evidence-Felder,
-Ausgabegrenzen und Aktivierungsgates.
+Ausgabegrenzen, Aktivierungsgates, Lizenzbasis, AVV-/DPA-Status,
+Berufsgeheimnis-Status, AI-SBOM-Status, Sicherheitsgrenze und
+Credential-Betriebsmodell.
 Primärquellen-Manifeste werden zusätzlich als eigener Artefakttyp validiert,
 damit ein Update-Lauf keinen Kommentarzugriff, keine Provider-Abfrage und keine
 Credential-Pflicht einschleust.

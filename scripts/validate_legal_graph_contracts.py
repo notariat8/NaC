@@ -34,12 +34,21 @@ REQUIRED_PROVIDER_FIELDS = {
     "activation_gate",
     "allowed_connection_modes",
     "allowed_evidence_fields",
+    "ai_sbom_status",
     "blocked_actions",
+    "credential_operating_model",
     "display_name",
+    "dpa_status",
     "id",
+    "license_basis",
     "license_status",
+    "permitted_data_classes",
     "permitted_outputs",
+    "professional_secrecy_status",
+    "prohibited_data_classes",
+    "security_boundary_status",
     "status",
+    "terms_review_status",
 }
 REQUIRED_PROVIDER_EVIDENCE_FIELDS = {
     "provider_id",
@@ -59,6 +68,19 @@ REQUIRED_PROVIDER_BLOCKED_ACTIONS = {
     "treat_commentary_as_sole_notarial_truth",
 }
 REQUIRED_PROVIDER_OUTPUTS = {"citation_reference", "answer_metadata", "license_status", "review_note"}
+REQUIRED_PROVIDER_PERMITTED_DATA_CLASSES = {
+    "source_url",
+    "citation_metadata",
+    "answer_metadata",
+    "license_status",
+    "review_note",
+}
+REQUIRED_PROVIDER_PROHIBITED_DATA_CLASSES = {
+    "mandate_personal_data",
+    "commentary_full_text",
+    "credentials",
+    "license_secrets",
+}
 
 
 def validate() -> list[str]:
@@ -207,11 +229,37 @@ def _validate_commentary_contract(payload: dict[str, Any]) -> list[str]:
             for field in sorted(REQUIRED_PROVIDER_FIELDS):
                 if field not in provider:
                     errors.append(f"legal-commentary-connectors.contract.json: {provider_id} Pflichtfeld fehlt {field}")
+            if provider.get("status") != "license_review_required":
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.status muss license_review_required sein")
             if provider.get("license_status") != "license_review_required":
                 errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.license_status muss license_review_required sein")
             if provider.get("activation_gate") != "blocked_until_license_api_and_review":
                 errors.append(
                     f"legal-commentary-connectors.contract.json: {provider_id}.activation_gate muss blocked_until_license_api_and_review sein"
+                )
+            if provider.get("license_basis") != "not_reviewed":
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.license_basis muss not_reviewed sein")
+            if provider.get("terms_review_status") != "pending_contract_review":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.terms_review_status muss pending_contract_review sein"
+                )
+            if provider.get("dpa_status") != "pending_applicability_review":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.dpa_status muss pending_applicability_review sein"
+                )
+            if provider.get("professional_secrecy_status") != "pending_review":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.professional_secrecy_status muss pending_review sein"
+                )
+            if provider.get("ai_sbom_status") != "pending_decision":
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.ai_sbom_status muss pending_decision sein")
+            if provider.get("security_boundary_status") != "pending_architecture_review":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.security_boundary_status muss pending_architecture_review sein"
+                )
+            if provider.get("credential_operating_model") != "external_secret_store_required":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.credential_operating_model muss external_secret_store_required sein"
                 )
             if set(_strings(provider.get("allowed_connection_modes"))) != {"mcp", "api"}:
                 errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.allowed_connection_modes muss mcp und api enthalten")
@@ -224,6 +272,20 @@ def _validate_commentary_contract(payload: dict[str, Any]) -> list[str]:
             permitted_outputs = set(_strings(provider.get("permitted_outputs")))
             for output in sorted(REQUIRED_PROVIDER_OUTPUTS - permitted_outputs):
                 errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.permitted_outputs fehlt {output}")
+            for output in sorted(permitted_outputs - REQUIRED_PROVIDER_OUTPUTS):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.permitted_outputs enthaelt unzulaessigen Wert {output}")
+            permitted_data_classes = set(_strings(provider.get("permitted_data_classes")))
+            for data_class in sorted(REQUIRED_PROVIDER_PERMITTED_DATA_CLASSES - permitted_data_classes):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.permitted_data_classes fehlt {data_class}")
+            for data_class in sorted(permitted_data_classes - REQUIRED_PROVIDER_PERMITTED_DATA_CLASSES):
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.permitted_data_classes enthaelt unzulaessigen Wert {data_class}"
+                )
+            for data_class in sorted(REQUIRED_PROVIDER_PROHIBITED_DATA_CLASSES & permitted_data_classes):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.permitted_data_classes verbietet {data_class}")
+            prohibited_data_classes = set(_strings(provider.get("prohibited_data_classes")))
+            for data_class in sorted(REQUIRED_PROVIDER_PROHIBITED_DATA_CLASSES - prohibited_data_classes):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.prohibited_data_classes fehlt {data_class}")
     return errors
 
 

@@ -31,6 +31,26 @@
         "api"
       ],
       "activation_gate": "blocked_until_license_api_and_review",
+      "license_basis": "not_reviewed",
+      "terms_review_status": "pending_contract_review",
+      "dpa_status": "pending_applicability_review",
+      "professional_secrecy_status": "pending_review",
+      "ai_sbom_status": "pending_decision",
+      "security_boundary_status": "pending_architecture_review",
+      "credential_operating_model": "external_secret_store_required",
+      "permitted_data_classes": [
+        "source_url",
+        "citation_metadata",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "prohibited_data_classes": [
+        "mandate_personal_data",
+        "commentary_full_text",
+        "credentials",
+        "license_secrets"
+      ],
       "allowed_evidence_fields": [
         "provider_id",
         "source_url",
@@ -65,6 +85,26 @@
         "api"
       ],
       "activation_gate": "blocked_until_license_api_and_review",
+      "license_basis": "not_reviewed",
+      "terms_review_status": "pending_contract_review",
+      "dpa_status": "pending_applicability_review",
+      "professional_secrecy_status": "pending_review",
+      "ai_sbom_status": "pending_decision",
+      "security_boundary_status": "pending_architecture_review",
+      "credential_operating_model": "external_secret_store_required",
+      "permitted_data_classes": [
+        "source_url",
+        "citation_metadata",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "prohibited_data_classes": [
+        "mandate_personal_data",
+        "commentary_full_text",
+        "credentials",
+        "license_secrets"
+      ],
       "allowed_evidence_fields": [
         "provider_id",
         "source_url",
@@ -99,6 +139,26 @@
         "api"
       ],
       "activation_gate": "blocked_until_license_api_and_review",
+      "license_basis": "not_reviewed",
+      "terms_review_status": "pending_contract_review",
+      "dpa_status": "pending_applicability_review",
+      "professional_secrecy_status": "pending_review",
+      "ai_sbom_status": "pending_decision",
+      "security_boundary_status": "pending_architecture_review",
+      "credential_operating_model": "external_secret_store_required",
+      "permitted_data_classes": [
+        "source_url",
+        "citation_metadata",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "prohibited_data_classes": [
+        "mandate_personal_data",
+        "commentary_full_text",
+        "credentials",
+        "license_secrets"
+      ],
       "allowed_evidence_fields": [
         "provider_id",
         "source_url",
