@@ -415,6 +415,38 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("kanzlei-notariat.example", body)
         self.assertIn("Keine Mandatsdaten", body)
 
+    def test_public_customer_get_pages_do_not_initialize_onboarding_store(self) -> None:
+        from nac_identity.customer_onboarding import build_dns_check_result
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        dns_result = build_dns_check_result(
+            expected_name="_nac.kanzlei-notariat.example",
+            expected_value="nac-domain-verification=test-token",
+            observed_name="_nac.kanzlei-notariat.example",
+            observed_values=["nac-domain-verification=test-token"],
+        )
+        public_routes = [
+            "/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example",
+            (
+                "/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example"
+                "&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example"
+            ),
+        ]
+
+        with patch(
+            "nac_web.oci_functions.build_onboarding_request_store_from_env",
+            side_effect=AssertionError("public GET route must not initialize onboarding store"),
+        ), patch("nac_web.server.build_live_dns_check_result", return_value=dns_result):
+            for route in public_routes:
+                with self.subTest(route=route):
+                    result = dispatch_oci_function_request(
+                        FakeFunctionContext(request_url=route, method="GET"),
+                        FailingBody(),
+                        repo_root=REPO_ROOT,
+                    )
+
+                    self.assertEqual(result.status_code, 200)
+
     def test_dispatches_login_intent_api_for_function_login_page(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

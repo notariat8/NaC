@@ -39,7 +39,12 @@ def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, r
     _suppress_provider_sdk_debug_logs()
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
-    app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=build_onboarding_request_store_from_env())
+    onboarding_request_store = (
+        build_onboarding_request_store_from_env()
+        if _requires_onboarding_request_store(method, request_url)
+        else None
+    )
+    app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=onboarding_request_store)
 
     response_headers: dict[str, str] = {}
     if method in {"GET", "HEAD"} and _is_exposed_get_route(request_url):
@@ -125,6 +130,17 @@ def _is_exposed_post_route(request_url: str) -> bool:
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
     return route in EXPOSED_POST_ROUTES
+
+
+def _requires_onboarding_request_store(method: str, request_url: str) -> bool:
+    parsed = urlparse(request_url)
+    route = unquote(parsed.path) or "/"
+    if method == "POST" and route == "/onboarding/requests":
+        return True
+    if method in {"GET", "HEAD"} and route.startswith("/onboarding/requests/"):
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        return (params.get("audience") or [""])[0] == "customer"
+    return False
 
 
 def _headers(ctx: Any) -> dict[str, str]:
