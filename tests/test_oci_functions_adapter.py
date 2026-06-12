@@ -418,6 +418,58 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("client_secret", result.body.decode("utf-8").lower())
         self.assertNotIn("private_key", result.body.decode("utf-8").lower())
 
+    def test_customer_onboarding_request_post_redirects_to_status_page(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        class FakeStore:
+            def __init__(self) -> None:
+                self.requests: dict[str, dict[str, object]] = {}
+
+            def create_request(self, payload: dict[str, object]) -> dict[str, object]:
+                created = {
+                    **payload,
+                    "request_id": "onr_myjur_20260610_111500",
+                    "created_at": "2026-06-10T11:15:00Z",
+                }
+                self.requests[str(created["request_id"])] = created
+                return created
+
+            def get_request(self, request_id: str) -> dict[str, object] | None:
+                return self.requests.get(request_id)
+
+            def list_requests(self, limit: int = 50) -> list[dict[str, object]]:
+                return []
+
+        store = FakeStore()
+        with patch("nac_web.oci_functions.build_onboarding_request_store_from_env", return_value=store):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/onboarding/requests?audience=customer", method="POST"),
+                io.BytesIO(b"domain=myjur.de&tenant_slug=myjur&admin_email=ofunk%40myjur.de"),
+                repo_root=REPO_ROOT,
+            )
+            status_result = dispatch_oci_function_request(
+                FakeFunctionContext(
+                    request_url="/onboarding/requests/onr_myjur_20260610_111500?audience=customer",
+                    method="GET",
+                ),
+                repo_root=REPO_ROOT,
+            )
+
+        self.assertEqual(result.status_code, 303)
+        self.assertEqual(
+            result.headers["Location"],
+            "/onboarding/requests/onr_myjur_20260610_111500?audience=customer",
+        )
+        self.assertNotIn("ofunk", result.headers["Location"])
+        self.assertEqual(status_result.status_code, 200)
+        self.assertEqual(status_result.headers["Content-Type"], "text/html; charset=utf-8")
+        html = status_result.body.decode("utf-8")
+        self.assertIn("Einrichtung angefragt", html)
+        self.assertIn("myjur.de", html)
+        self.assertIn("ofunk@myjur.de", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_rejects_non_customer_safe_get_routes(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

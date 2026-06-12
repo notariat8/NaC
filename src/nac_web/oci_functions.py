@@ -40,13 +40,18 @@ def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, r
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
     app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=build_onboarding_request_store_from_env())
+    response_headers: dict[str, str] = {}
 
     if method in {"GET", "HEAD"} and _is_exposed_get_route(request_url):
-        status, content_type, response_body = app.handle(request_url)
+        app_response = app.handle(request_url)
+        status, content_type, response_body = app_response
+        response_headers.update(getattr(app_response, "headers", {}))
         if method == "HEAD":
             response_body = b""
     elif method == "POST" and _is_exposed_post_route(request_url):
-        status, content_type, response_body = app.handle_post(request_url, data.read() if data is not None else b"")
+        app_response = app.handle_post(request_url, data.read() if data is not None else b"")
+        status, content_type, response_body = app_response
+        response_headers.update(getattr(app_response, "headers", {}))
     elif method in {"GET", "HEAD"}:
         status = HTTPStatus.NOT_FOUND
         content_type = "application/json; charset=utf-8"
@@ -58,14 +63,12 @@ def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, r
             b'{"error": "OCI Functions public runtime is read-only in this release slice."}'
         )
 
-    return OCIHttpResponse(
-        status_code=int(status),
-        headers={
-            "Content-Type": content_type,
-            "X-Content-Type-Options": "nosniff",
-        },
-        body=response_body,
-    )
+    headers = {
+        "Content-Type": content_type,
+        "X-Content-Type-Options": "nosniff",
+    }
+    headers.update(response_headers)
+    return OCIHttpResponse(status_code=int(status), headers=headers, body=response_body)
 
 
 def handler(ctx: Any, data: io.BytesIO | None = None) -> Any:
@@ -110,7 +113,7 @@ def _request_url(ctx: Any) -> str:
 def _is_exposed_get_route(request_url: str) -> bool:
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
-    return route in EXPOSED_GET_ROUTES
+    return route in EXPOSED_GET_ROUTES or route.startswith("/onboarding/requests/")
 
 
 def _is_exposed_post_route(request_url: str) -> bool:
