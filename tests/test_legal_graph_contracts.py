@@ -17,17 +17,19 @@ COMMENTARY_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-commentary-
 class LegalGraphContractTests(unittest.TestCase):
     def test_legal_graph_contract_blocks_unreviewed_merges(self) -> None:
         payload = json.loads(LEGAL_GRAPH_CONTRACT.read_text(encoding="utf-8"))
+        domains = {domain["id"] for domain in payload["domains"]}
 
         self.assertEqual(payload["contract_id"], "workflow.legal_graph")
         self.assertEqual(payload["status"], "planned_mvp")
         self.assertFalse(payload["automation_policy"]["auto_merge_allowed"])
         self.assertTrue(payload["automation_policy"]["human_review_required"])
-        self.assertIn("erbrecht", payload["domains"][0]["id"])
+        self.assertGreaterEqual(domains, {"erbrecht", "familienrecht", "gesellschaftsrecht"})
         self.assertIn("source_document", payload["required_node_types"])
         self.assertIn("graph_patch", payload["required_node_types"])
 
     def test_commentary_contract_requires_mcp_or_api_and_blocks_full_text(self) -> None:
         payload = json.loads(COMMENTARY_CONTRACT.read_text(encoding="utf-8"))
+        providers = {provider["id"]: provider for provider in payload["candidate_providers"]}
 
         self.assertEqual(payload["contract_id"], "workflow.legal_commentary_connectors")
         self.assertFalse(payload["policy"]["credentials_allowed_in_repo"])
@@ -35,6 +37,13 @@ class LegalGraphContractTests(unittest.TestCase):
         self.assertTrue(payload["policy"]["requires_license_review"])
         self.assertTrue(payload["policy"]["requires_human_notarial_review"])
         self.assertEqual(set(payload["allowed_connection_modes"]), {"mcp", "api"})
+        self.assertGreaterEqual(set(providers), {"beck-online", "juris", "wolters-kluwer"})
+        for provider in providers.values():
+            self.assertEqual(provider["license_status"], "license_review_required")
+            self.assertEqual(provider["activation_gate"], "blocked_until_license_api_and_review")
+            self.assertIn("citation", provider["allowed_evidence_fields"])
+            self.assertIn("answer_metadata", provider["permitted_outputs"])
+            self.assertIn("store_commentary_full_text", provider["blocked_actions"])
 
     def test_validator_accepts_contracts(self) -> None:
         result = subprocess.run(

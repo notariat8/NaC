@@ -24,14 +24,18 @@ class LegalGraphTests(unittest.TestCase):
         self.assertFalse(_contains_key(graph, "value"))
         self.assertFalse(_contains_text(graph, "Max Mustermann"))
 
-    def test_erbrecht_status_counts_nodes_edges_and_review_items(self) -> None:
+    def test_status_counts_all_legal_graph_domains(self) -> None:
         status = legal_graph_status(REPO_ROOT)
+        domains = {item["id"]: item for item in status["domain_status"]}
 
         self.assertEqual(status["schema_version"], "nac.legal-graph-status/v0.1")
-        self.assertEqual(status["domains"], 1)
-        self.assertEqual(status["domain_status"][0]["id"], "erbrecht")
-        self.assertGreaterEqual(status["domain_status"][0]["nodes"], 10)
-        self.assertGreaterEqual(status["domain_status"][0]["review_required"], 1)
+        self.assertEqual(status["domains"], 3)
+        self.assertGreaterEqual(domains["erbrecht"]["nodes"], 10)
+        self.assertGreaterEqual(domains["familienrecht"]["nodes"], 10)
+        self.assertGreaterEqual(domains["gesellschaftsrecht"]["nodes"], 10)
+        self.assertGreaterEqual(domains["erbrecht"]["review_required"], 1)
+        self.assertGreaterEqual(domains["familienrecht"]["review_required"], 1)
+        self.assertGreaterEqual(domains["gesellschaftsrecht"]["review_required"], 1)
 
     def test_review_payload_exposes_sources_and_commentary_boundary(self) -> None:
         payload = build_review_payload(REPO_ROOT, "erbrecht")
@@ -50,6 +54,24 @@ class LegalGraphTests(unittest.TestCase):
         self.assertIn("norm.bgb.1945", node_ids)
         self.assertIn("usecase.erbausschlagung", node_ids)
         self.assertIn("connector.beck-online", node_ids)
+
+    def test_familienrecht_graph_json_is_stable(self) -> None:
+        payload = load_domain_graph(REPO_ROOT, "familienrecht")
+        node_ids = {node["id"] for node in payload["nodes"]}
+
+        self.assertEqual(payload["domain"]["id"], "familienrecht")
+        self.assertIn("norm.bgb.1408", node_ids)
+        self.assertIn("usecase.ehevertrag", node_ids)
+        self.assertIn("connector.juris", node_ids)
+
+    def test_gesellschaftsrecht_graph_json_is_stable(self) -> None:
+        payload = load_domain_graph(REPO_ROOT, "gesellschaftsrecht")
+        node_ids = {node["id"] for node in payload["nodes"]}
+
+        self.assertEqual(payload["domain"]["id"], "gesellschaftsrecht")
+        self.assertIn("norm.gmbhg.2", node_ids)
+        self.assertIn("usecase.gmbh-gruendung", node_ids)
+        self.assertIn("connector.wolters-kluwer", node_ids)
 
     def test_update_patch_is_review_only_and_does_not_merge(self) -> None:
         patch = build_update_patch(REPO_ROOT, "erbrecht")

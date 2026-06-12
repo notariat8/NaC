@@ -121,8 +121,9 @@ class NaCCliTests(unittest.TestCase):
 
         self.assertEqual(rc, 0, output)
         payload = json.loads(output)
+        domains = {item["id"] for item in payload["domain_status"]}
         self.assertEqual(payload["schema_version"], "nac.legal-graph-status/v0.1")
-        self.assertEqual(payload["domain_status"][0]["id"], "erbrecht")
+        self.assertGreaterEqual(domains, {"erbrecht", "familienrecht", "gesellschaftsrecht"})
 
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")

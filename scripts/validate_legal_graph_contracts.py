@@ -28,6 +28,36 @@ PROHIBITED_MARKERS = {
     "password",
     "cookie",
 }
+REQUIRED_LEGAL_GRAPH_DOMAINS = {"erbrecht", "familienrecht", "gesellschaftsrecht"}
+REQUIRED_PROVIDER_FIELDS = {
+    "activation_gate",
+    "allowed_connection_modes",
+    "allowed_evidence_fields",
+    "blocked_actions",
+    "display_name",
+    "id",
+    "license_status",
+    "permitted_outputs",
+    "status",
+}
+REQUIRED_PROVIDER_EVIDENCE_FIELDS = {
+    "provider_id",
+    "source_url",
+    "citation",
+    "checked_at",
+    "checked_by",
+    "license_status",
+    "data_classes",
+    "review_note",
+}
+REQUIRED_PROVIDER_BLOCKED_ACTIONS = {
+    "scrape_protected_portal",
+    "store_credentials",
+    "store_commentary_full_text",
+    "send_mandate_data_without_avv",
+    "treat_commentary_as_sole_notarial_truth",
+}
+REQUIRED_PROVIDER_OUTPUTS = {"citation_reference", "answer_metadata", "license_status", "review_note"}
 
 
 def validate() -> list[str]:
@@ -105,6 +135,14 @@ def _validate_legal_graph_contract(payload: dict[str, Any]) -> list[str]:
     required_nodes = set(_strings(payload.get("required_node_types")))
     for node_type in sorted({"source_document", "norm", "decision", "notarial_usecase", "graph_patch"} - required_nodes):
         errors.append(f"legal-graph.contract.json: required_node_types fehlt {node_type}")
+
+    domains = payload.get("domains")
+    if not isinstance(domains, list) or not domains:
+        errors.append("legal-graph.contract.json: domains muss eine nicht leere Liste sein")
+    else:
+        domain_ids = {domain.get("id") for domain in domains if isinstance(domain, dict)}
+        for domain_id in sorted(REQUIRED_LEGAL_GRAPH_DOMAINS - domain_ids):
+            errors.append(f"legal-graph.contract.json: domains fehlt {domain_id}")
     return errors
 
 
@@ -140,6 +178,44 @@ def _validate_commentary_contract(payload: dict[str, Any]) -> list[str]:
         for key in sorted(true_keys):
             if policy.get(key) is not True:
                 errors.append(f"legal-commentary-connectors.contract.json: policy.{key} muss true sein")
+
+    providers = payload.get("candidate_providers")
+    if not isinstance(providers, list) or not providers:
+        errors.append("legal-commentary-connectors.contract.json: candidate_providers muss eine nicht leere Liste sein")
+    else:
+        provider_ids: set[str] = set()
+        for index, provider in enumerate(providers, start=1):
+            if not isinstance(provider, dict):
+                errors.append(f"legal-commentary-connectors.contract.json: candidate_providers[{index}] muss ein Objekt sein")
+                continue
+            provider_id = provider.get("id", f"#{index}")
+            if not isinstance(provider_id, str) or not provider_id:
+                errors.append(f"legal-commentary-connectors.contract.json: candidate_providers[{index}].id muss gesetzt sein")
+                continue
+            if provider_id in provider_ids:
+                errors.append(f"legal-commentary-connectors.contract.json: Provider-ID doppelt: {provider_id}")
+            provider_ids.add(provider_id)
+
+            for field in sorted(REQUIRED_PROVIDER_FIELDS):
+                if field not in provider:
+                    errors.append(f"legal-commentary-connectors.contract.json: {provider_id} Pflichtfeld fehlt {field}")
+            if provider.get("license_status") != "license_review_required":
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.license_status muss license_review_required sein")
+            if provider.get("activation_gate") != "blocked_until_license_api_and_review":
+                errors.append(
+                    f"legal-commentary-connectors.contract.json: {provider_id}.activation_gate muss blocked_until_license_api_and_review sein"
+                )
+            if set(_strings(provider.get("allowed_connection_modes"))) != {"mcp", "api"}:
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.allowed_connection_modes muss mcp und api enthalten")
+            evidence_fields = set(_strings(provider.get("allowed_evidence_fields")))
+            for field in sorted(REQUIRED_PROVIDER_EVIDENCE_FIELDS - evidence_fields):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.allowed_evidence_fields fehlt {field}")
+            blocked_actions = set(_strings(provider.get("blocked_actions")))
+            for action in sorted(REQUIRED_PROVIDER_BLOCKED_ACTIONS - blocked_actions):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.blocked_actions fehlt {action}")
+            permitted_outputs = set(_strings(provider.get("permitted_outputs")))
+            for output in sorted(REQUIRED_PROVIDER_OUTPUTS - permitted_outputs):
+                errors.append(f"legal-commentary-connectors.contract.json: {provider_id}.permitted_outputs fehlt {output}")
     return errors
 
 

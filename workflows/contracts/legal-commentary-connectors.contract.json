@@ -24,17 +24,104 @@
     {
       "id": "beck-online",
       "display_name": "beck-online",
-      "status": "license_review_required"
+      "status": "license_review_required",
+      "license_status": "license_review_required",
+      "allowed_connection_modes": [
+        "mcp",
+        "api"
+      ],
+      "activation_gate": "blocked_until_license_api_and_review",
+      "allowed_evidence_fields": [
+        "provider_id",
+        "source_url",
+        "citation",
+        "checked_at",
+        "checked_by",
+        "license_status",
+        "data_classes",
+        "review_note"
+      ],
+      "permitted_outputs": [
+        "citation_reference",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "blocked_actions": [
+        "scrape_protected_portal",
+        "store_credentials",
+        "store_commentary_full_text",
+        "send_mandate_data_without_avv",
+        "treat_commentary_as_sole_notarial_truth"
+      ]
     },
     {
       "id": "juris",
       "display_name": "juris",
-      "status": "license_review_required"
+      "status": "license_review_required",
+      "license_status": "license_review_required",
+      "allowed_connection_modes": [
+        "mcp",
+        "api"
+      ],
+      "activation_gate": "blocked_until_license_api_and_review",
+      "allowed_evidence_fields": [
+        "provider_id",
+        "source_url",
+        "citation",
+        "checked_at",
+        "checked_by",
+        "license_status",
+        "data_classes",
+        "review_note"
+      ],
+      "permitted_outputs": [
+        "citation_reference",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "blocked_actions": [
+        "scrape_protected_portal",
+        "store_credentials",
+        "store_commentary_full_text",
+        "send_mandate_data_without_avv",
+        "treat_commentary_as_sole_notarial_truth"
+      ]
     },
     {
       "id": "wolters-kluwer",
       "display_name": "Wolters Kluwer Online",
-      "status": "license_review_required"
+      "status": "license_review_required",
+      "license_status": "license_review_required",
+      "allowed_connection_modes": [
+        "mcp",
+        "api"
+      ],
+      "activation_gate": "blocked_until_license_api_and_review",
+      "allowed_evidence_fields": [
+        "provider_id",
+        "source_url",
+        "citation",
+        "checked_at",
+        "checked_by",
+        "license_status",
+        "data_classes",
+        "review_note"
+      ],
+      "permitted_outputs": [
+        "citation_reference",
+        "answer_metadata",
+        "license_status",
+        "review_note"
+      ],
+      "blocked_actions": [
+        "scrape_protected_portal",
+        "store_credentials",
+        "store_commentary_full_text",
+        "send_mandate_data_without_avv",
+        "treat_commentary_as_sole_notarial_truth"
+      ]
     }
   ],
   "allowed_evidence_fields": [

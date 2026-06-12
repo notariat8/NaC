@@ -1,0 +1,162 @@
+{
+  "schema_version": "nac.legal-graph/v0.1",
+  "graph_id": "legal.gesellschaftsrecht",
+  "last_update": "2026-06-12",
+  "domain": {
+    "id": "gesellschaftsrecht",
+    "label_de": "Gesellschaftsrecht",
+    "status": "mvp"
+  },
+  "guardrails": {
+    "real_mandate_data_allowed": false,
+    "commentary_full_text_in_repo": false,
+    "human_review_required": true
+  },
+  "nodes": [
+    {
+      "id": "source.gesetze-im-internet.gmbhg",
+      "type": "source_document",
+      "label": "Gesetze im Internet: GmbHG",
+      "url": "https://www.gesetze-im-internet.de/gmbhg/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "source.gesetze-im-internet.hgb",
+      "type": "source_document",
+      "label": "Gesetze im Internet: HGB",
+      "url": "https://www.gesetze-im-internet.de/hgb/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "source.gesetze-im-internet.umwg",
+      "type": "source_document",
+      "label": "Gesetze im Internet: UmwG",
+      "url": "https://www.gesetze-im-internet.de/umwg/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "norm.gmbhg.2",
+      "type": "norm",
+      "label": "GmbHG § 2 Form des Gesellschaftsvertrags",
+      "source_ref": "source.gesetze-im-internet.gmbhg",
+      "citation": "§ 2 GmbHG",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.gmbhg.3",
+      "type": "norm",
+      "label": "GmbHG § 3 Inhalt des Gesellschaftsvertrags",
+      "source_ref": "source.gesetze-im-internet.gmbhg",
+      "citation": "§ 3 GmbHG",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.gmbhg.8",
+      "type": "norm",
+      "label": "GmbHG § 8 Anmeldung der Gesellschaft",
+      "source_ref": "source.gesetze-im-internet.gmbhg",
+      "citation": "§ 8 GmbHG",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.hgb.12",
+      "type": "norm",
+      "label": "HGB § 12 Anmeldungen zur Eintragung",
+      "source_ref": "source.gesetze-im-internet.hgb",
+      "citation": "§ 12 HGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.umwg.6",
+      "type": "norm",
+      "label": "UmwG § 6 Form des Verschmelzungsvertrags",
+      "source_ref": "source.gesetze-im-internet.umwg",
+      "citation": "§ 6 UmwG",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "usecase.gmbh-gruendung",
+      "type": "notarial_usecase",
+      "label": "GmbH-Gründung",
+      "usecase_path": "usecases/gmbh-gruendung"
+    },
+    {
+      "id": "usecase.handelsregisteranmeldung",
+      "type": "notarial_usecase",
+      "label": "Handelsregisteranmeldung",
+      "usecase_path": "usecases/handelsregisteranmeldung"
+    },
+    {
+      "id": "usecase.umwandlung",
+      "type": "notarial_usecase",
+      "label": "Umwandlung",
+      "usecase_path": "usecases/umwandlung"
+    },
+    {
+      "id": "review.form",
+      "type": "review_point",
+      "label": "Form und Satzungsinhalt",
+      "status": "review_required"
+    },
+    {
+      "id": "review.register",
+      "type": "review_point",
+      "label": "Registerbezug und Vertretung",
+      "status": "review_required"
+    },
+    {
+      "id": "connector.wolters-kluwer",
+      "type": "commentary_connector",
+      "label": "Wolters Kluwer Kommentarzugriff",
+      "provider_id": "wolters-kluwer",
+      "status": "license_review_required",
+      "connection_mode": "mcp_or_api_required",
+      "full_text_storage": "blocked"
+    }
+  ],
+  "edges": [
+    {
+      "from": "norm.gmbhg.2",
+      "to": "usecase.gmbh-gruendung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.gmbhg.3",
+      "to": "usecase.gmbh-gruendung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.gmbhg.8",
+      "to": "usecase.handelsregisteranmeldung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.hgb.12",
+      "to": "usecase.handelsregisteranmeldung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.umwg.6",
+      "to": "usecase.umwandlung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.gmbhg.2",
+      "to": "review.form",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "norm.hgb.12",
+      "to": "review.register",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "connector.wolters-kluwer",
+      "to": "review.form",
+      "type": "needs_commentary_review"
+    }
+  ]
+}

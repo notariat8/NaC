@@ -111,9 +111,9 @@ nac qms status
 
 ## `nac legal-graph`
 
-Der Befehl steuert den mandatsdatenfreien NaC-Rechtsgraphen. Der erste MVP ist
-Erbrecht. Automatische Quellenläufe erzeugen nur Review-Patches; ein Merge
-braucht fachliche Prüfung.
+Der Befehl steuert den mandatsdatenfreien NaC-Rechtsgraphen. Die ersten MVPs
+sind Erbrecht, Familienrecht und Gesellschaftsrecht. Automatische Quellenläufe
+erzeugen nur Review-Patches; ein Merge braucht fachliche Prüfung.
 
 ```bash
 nac legal-graph status
@@ -197,10 +197,12 @@ auf kurzlebige, widerrufbare, akten- und zweckgebundene Upload- oder
 Leselinks. Der Legal-Research-Connector-Vertrag führt externe juristische
 Recherche-, MCP- und Verlagsdatenbank-Hinweise nur als Kandidaten, bis Lizenz,
 AVV, AI-SBOM, Sicherheitsgrenze und menschliche Review geklärt sind.
-Der Legal-Graph-Vertrag begrenzt Rechtsgraph-Aktualisierungen auf
-mandatsdatenfreie Primärquellen und Review-Patches; der Kommentar-Connector-
-Vertrag verlangt lizenzierte MCP/API-Zugänge ohne Credentials, Mandatsdaten
-oder Kommentar-Volltexte im Produktrepo.
+Der Legal-Graph-Vertrag begrenzt Rechtsgraph-Aktualisierungen für Erbrecht,
+Familienrecht und Gesellschaftsrecht auf mandatsdatenfreie Primärquellen und
+Review-Patches; der Kommentar-Connector-Vertrag verlangt lizenzierte
+MCP/API-Zugänge ohne Credentials, Mandatsdaten oder Kommentar-Volltexte im
+Produktrepo und führt pro Provider Lizenzstatus, Evidence-Felder,
+Ausgabegrenzen und Aktivierungsgates.
 Der Spec-Traceability-Vertrag verbindet Issue, Spec, Plan, AC-IDs und
 Validierungsbefehle für spec-driven Arbeit.
 

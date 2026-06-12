@@ -110,9 +110,9 @@ nac qms status
 
 ## `nac legal-graph`
 
-This command controls the mandate-data-free NaC legal graph. The first MVP is
-inheritance law. Automatic source runs only create review patches; a merge
-requires professional review.
+This command controls the mandate-data-free NaC legal graph. The first MVPs are
+inheritance law, family law and corporate law. Automatic source runs only
+create review patches; a merge requires professional review.
 
 ```bash
 nac legal-graph status
@@ -195,10 +195,12 @@ revocable, matter- and purpose-bound upload or read links. The Legal Research
 Connector contract records external legal research, MCP and publisher-database
 references only as candidates until license, DPA, AI-SBOM, security boundary
 and human review are settled.
-The legal graph contract limits legal graph updates to mandate-data-free
-primary sources and review patches; the commentary connector contract requires
-licensed MCP/API access without credentials, mandate data or commentary full
-text in the product repository.
+The legal graph contract limits legal graph updates for inheritance law,
+family law and corporate law to mandate-data-free primary sources and review
+patches; the commentary connector contract requires licensed MCP/API access
+without credentials, mandate data or commentary full text in the product
+repository and records provider-level license status, evidence fields, output
+boundaries and activation gates.
 The spec traceability contract connects issue, spec, plan, AC IDs and
 validation commands for spec-driven work.
 

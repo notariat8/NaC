@@ -15,8 +15,8 @@ NaC macht nicht nur Prompts sichtbar, sondern auch:
 - SBOM- und AI-SBOM-Bestandteile,
 - Plugin-Grenzen und Integrationsannahmen,
 - usecase-lokale Knowledge Graphs,
-- der mandatsdatenfreie Legal Graph für Erbrecht und seine
-  Kommentar-Connector-Grenzen,
+- der mandatsdatenfreie Legal Graph für Erbrecht, Familienrecht und
+  Gesellschaftsrecht und seine Kommentar-Connector-Grenzen,
 - Tests, Validatoren und Quality Gates.
 
 ## Was Nicht Bewertet Werden Sollte

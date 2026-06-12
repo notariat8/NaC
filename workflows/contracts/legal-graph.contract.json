@@ -11,6 +11,18 @@
       "label_de": "Erbrecht",
       "status": "mvp",
       "graph_path": "workflows/legal-graph/domains/erbrecht.graph.json"
+    },
+    {
+      "id": "familienrecht",
+      "label_de": "Familienrecht",
+      "status": "mvp",
+      "graph_path": "workflows/legal-graph/domains/familienrecht.graph.json"
+    },
+    {
+      "id": "gesellschaftsrecht",
+      "label_de": "Gesellschaftsrecht",
+      "status": "mvp",
+      "graph_path": "workflows/legal-graph/domains/gesellschaftsrecht.graph.json"
     }
   ],
   "allowed_primary_sources": [
