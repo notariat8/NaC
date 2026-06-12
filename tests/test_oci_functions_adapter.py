@@ -77,6 +77,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("fdk", requirements)
         self.assertIn("exportedVariables:", build_spec)
         self.assertIn("BUILDRUN_HASH", build_spec)
+        self.assertIn("NAC_RELEASE_COMMIT", build_spec)
         self.assertIn("resolve_nac_source_dir()", build_spec)
         self.assertIn('for candidate in "${OCI_PRIMARY_SOURCE_DIR:-}" nac .; do', build_spec)
         self.assertIn('test -d "$candidate/tests"', build_spec)
@@ -101,6 +102,114 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         for content in (func_yaml, func_py, dockerfile, requirements, build_spec):
             for term in forbidden_terms:
                 self.assertNotIn(term, content)
+
+    def create_minimal_git_checkout(self, parent: Path) -> tuple[Path, str]:
+        checkout = parent / "nac"
+        test_dir = checkout / "tests"
+        test_dir.mkdir(parents=True)
+        dockerfile = checkout / "deploy" / "functions" / "nac-app" / "Dockerfile"
+        dockerfile.parent.mkdir(parents=True)
+        dockerfile.write_text("FROM scratch\n", encoding="utf-8")
+        (test_dir / "test_oci_functions_adapter.py").write_text(
+            "\n".join(
+                [
+                    "import unittest",
+                    "",
+                    "class SmokeTests(unittest.TestCase):",
+                    "    def test_buildspec_source_dir_resolution(self) -> None:",
+                    "        self.assertTrue(True)",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "init"], cwd=checkout, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "add", "."], cwd=checkout, check=True, capture_output=True, text=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=NaC Test",
+                "-c",
+                "user.email=nac@example.invalid",
+                "commit",
+                "-m",
+                "initial test checkout",
+            ],
+            cwd=checkout,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
+        return checkout, commit
+
+    def test_buildspec_requires_owner_approved_release_commit(self) -> None:
+        command = self.build_spec_step_command("Prepare immutable image tag")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.create_minimal_git_checkout(tmp_path)
+            env = os.environ.copy()
+            env.pop("NAC_RELEASE_COMMIT", None)
+            env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
+
+            result = subprocess.run(
+                ["bash", "-lc", command],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("NAC_RELEASE_COMMIT", result.stderr + result.stdout)
+
+    def test_buildspec_checks_out_owner_approved_release_commit(self) -> None:
+        command = self.build_spec_step_command("Prepare immutable image tag")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            checkout, commit = self.create_minimal_git_checkout(tmp_path)
+            env = os.environ.copy()
+            env["NAC_RELEASE_COMMIT"] = commit
+            env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
+
+            result = subprocess.run(
+                ["bash", "-lc", command],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            active_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
+
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(active_commit, commit)
+        self.assertIn(commit[:12], result.stdout)
+
+    def test_buildspec_rejects_unavailable_release_commit(self) -> None:
+        command = self.build_spec_step_command("Prepare immutable image tag")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.create_minimal_git_checkout(tmp_path)
+            env = os.environ.copy()
+            env["NAC_RELEASE_COMMIT"] = "0" * 40
+
+            result = subprocess.run(
+                ["bash", "-lc", command],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Owner-approved release commit is not available", result.stderr + result.stdout)
 
     def test_function_adapter_suppresses_provider_sdk_debug_logs(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
@@ -233,6 +342,9 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "OCIR-Digest",
             "API-Gateway-Smoke-Test",
             "keinen Bastion- oder SSH-Zugriff",
+            "NAC_RELEASE_COMMIT",
+            "commit-info",
+            "pinnt den Build-Checkout nicht",
         ]
         english_terms = [
             "OCI Functions Parallel Runtime",
@@ -245,6 +357,9 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             "OCIR digest",
             "API Gateway smoke test",
             "no Bastion or SSH access",
+            "NAC_RELEASE_COMMIT",
+            "commit-info",
+            "does not pin the build",
         ]
 
         for term in german_terms:

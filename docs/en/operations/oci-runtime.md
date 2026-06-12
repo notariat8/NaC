@@ -46,6 +46,13 @@ protected, merged GitHub commit is built by OCI DevOps, stored as a container
 image in OCIR, and pinned by an OCIR digest. The OCI Function is updated to
 that digest and then verified through an API Gateway smoke test.
 
+The release is commit-bound: the OCI DevOps build run must pass the
+owner-approved commit as the `NAC_RELEASE_COMMIT` build argument in addition to
+`commit-info`. The build spec detaches the checkout to that commit and fails
+fast if the commit is unavailable in the OCI mirror or if the active checkout
+does not match. `commit-info` alone is audit metadata; it does not pin the build
+checkout.
+
 This path needs no Bastion or SSH access to the VM. The VM remains fallback
 until the API Gateway path for `/healthz`, `/onboarding/readiness`,
 `/onboarding/dns-check`, `/login`, and `/api/tenant/login-intent` is live-tested

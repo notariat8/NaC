@@ -47,6 +47,13 @@ Container-Image in OCIR abgelegt und dort über einen OCIR-Digest gebunden. Die
 OCI Function wird auf diesen Digest aktualisiert und anschließend über einen
 API-Gateway-Smoke-Test geprüft.
 
+Der Release ist commitgebunden: Der OCI DevOps Build-Run muss den
+owner-freigegebenen Commit zusätzlich zu `commit-info` als Build-Argument
+`NAC_RELEASE_COMMIT` erhalten. Die Build-Spec detacht den Checkout auf diesen
+Commit und bricht ab, wenn der Commit nicht im OCI-Mirror verfügbar ist oder der
+aktive Checkout davon abweicht. `commit-info` allein ist nur Audit-Metadatum und
+pinnt den Build-Checkout nicht.
+
 Dieser Pfad benötigt keinen Bastion- oder SSH-Zugriff auf die VM. Die VM bleibt
 Fallback, bis der API-Gateway-Pfad für `/healthz`, `/onboarding/readiness`,
 `/onboarding/dns-check`, `/login` und `/api/tenant/login-intent` live geprüft
