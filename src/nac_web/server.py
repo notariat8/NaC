@@ -69,6 +69,26 @@ DEFAULT_AUDIT_EVENT_ID = "AUDIT-2026-0001"
 DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
+class AppResponse:
+    def __init__(
+        self,
+        status: int | HTTPStatus,
+        content_type: str,
+        body: bytes,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        self.status = int(status)
+        self.content_type = content_type
+        self.body = body
+        self.headers = dict(headers or {})
+
+    def __iter__(self):
+        yield self.status
+        yield self.content_type
+        yield self.body
+
+
 class NaCLocalWebApp:
     def __init__(
         self,
@@ -102,6 +122,8 @@ class NaCLocalWebApp:
                 return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
                 return _html_response(self._tenant_dns_check_page(parsed.query))
+            if route.startswith("/onboarding/requests/"):
+                return self._customer_onboarding_request_status_get(route)
             if route == "/admin/onboarding" or route.startswith("/admin/onboarding/"):
                 if not self.operator_access:
                     return _html_response(build_operator_access_required_page(), HTTPStatus.FORBIDDEN)
@@ -114,7 +136,7 @@ class NaCLocalWebApp:
             if route == "/healthz":
                 return _json_response({"status": "ok"})
             if route == "/favicon.ico":
-                return (HTTPStatus.NO_CONTENT, "image/x-icon", b"")
+                return AppResponse(HTTPStatus.NO_CONTENT, "image/x-icon", b"")
             if route == "/api/tenant/domain-check":
                 return self._tenant_domain_check_api(parsed.query)
             if route == "/api/tenant/login-intent":
@@ -192,8 +214,31 @@ class NaCLocalWebApp:
                 HTTPStatus.SERVICE_UNAVAILABLE,
             )
         if public_context:
-            return _html_response(build_customer_onboarding_request_page(created), HTTPStatus.CREATED)
+            status_query = urlencode({"audience": "customer"})
+            location = f"/onboarding/requests/{_safe_segment(str(created['request_id']))}?{status_query}"
+            return _redirect_response(location)
         return _json_response(created, HTTPStatus.CREATED)
+
+    def _customer_onboarding_request_status_get(self, route: str) -> AppResponse:
+        request_id = _safe_segment(route.removeprefix("/onboarding/requests/"))
+        try:
+            request = self.onboarding_request_store.get_request(request_id)
+        except OnboardingRequestStoreDisabled:
+            return _html_response(
+                build_customer_onboarding_request_unavailable_page("Einrichtungsstatus derzeit nicht verfügbar."),
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+        except OnboardingRequestStoreUnavailable:
+            return _html_response(
+                build_customer_onboarding_request_unavailable_page("Einrichtungsstatus derzeit nicht verfügbar."),
+                HTTPStatus.SERVICE_UNAVAILABLE,
+            )
+        if request is None:
+            return _html_response(
+                build_customer_onboarding_request_unavailable_page("Diese Einrichtungsanfrage wurde nicht gefunden."),
+                HTTPStatus.NOT_FOUND,
+            )
+        return _html_response(build_customer_onboarding_request_page(request))
 
     def _admin_onboarding_review_post(self, body: bytes) -> tuple[int, str, bytes]:
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
@@ -496,9 +541,12 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
     app = NaCLocalWebApp(repo_root, onboarding_request_store=build_onboarding_request_store_from_env())
 
     class Handler(BaseHTTPRequestHandler):
-        def _send_app_response(self, status: int, content_type: str, body: bytes, *, include_body: bool = True) -> None:
+        def _send_app_response(self, response: AppResponse, *, include_body: bool = True) -> None:
+            status, content_type, body = response
             self.send_response(status)
             self.send_header("Content-Type", content_type)
+            for name, value in response.headers.items():
+                self.send_header(name, value)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
@@ -506,14 +554,14 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
                 self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
-            self._send_app_response(*app.handle(self.path))
+            self._send_app_response(app.handle(self.path))
 
         def do_HEAD(self) -> None:  # noqa: N802
-            self._send_app_response(*app.handle(self.path), include_body=False)
+            self._send_app_response(app.handle(self.path), include_body=False)
 
         def do_POST(self) -> None:  # noqa: N802
             length = int(self.headers.get("Content-Length", "0"))
-            self._send_app_response(*app.handle_post(self.path, self.rfile.read(length)))
+            self._send_app_response(app.handle_post(self.path, self.rfile.read(length)))
 
         def log_message(self, format: str, *args: Any) -> None:
             sanitized_args = tuple(_sanitize_request_log_text(str(arg)) for arg in args)
@@ -1010,6 +1058,22 @@ def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
     </div>
     """
     return _layout("notariat8 Einrichtung angefragt", body)
+
+
+def build_customer_onboarding_request_unavailable_page(message: str) -> str:
+    body = f"""
+    <nav class="topline"><a href="/">← notariat8.de</a><span><a href="/onboarding/readiness?audience=customer">Einrichtungsstatus</a></span></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Einrichtung</p>
+      <h1>Einrichtungsstatus nicht verfügbar</h1>
+      <p>{html.escape(message)}</p>
+    </section>
+    <section class="notice">
+      <h2>Nächster Schritt</h2>
+      <p>Bitte öffnen Sie den Einrichtungsstatus später erneut. Es wurden keine Mandatsdaten verarbeitet.</p>
+    </section>
+    """
+    return _layout("notariat8 Einrichtungsstatus", body)
 
 
 def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
@@ -2332,16 +2396,25 @@ def _css() -> str:
     """
 
 
-def _html_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> tuple[int, str, bytes]:
-    return int(status), "text/html; charset=utf-8", text.encode("utf-8")
+def _html_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> AppResponse:
+    return AppResponse(status, "text/html; charset=utf-8", text.encode("utf-8"))
 
 
-def _json_response(payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> tuple[int, str, bytes]:
+def _json_response(payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> AppResponse:
     return _json_text_response(json.dumps(payload, ensure_ascii=False, indent=2), status)
 
 
-def _json_text_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> tuple[int, str, bytes]:
-    return int(status), "application/json; charset=utf-8", text.encode("utf-8")
+def _json_text_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> AppResponse:
+    return AppResponse(status, "application/json; charset=utf-8", text.encode("utf-8"))
+
+
+def _redirect_response(location: str) -> AppResponse:
+    return AppResponse(
+        HTTPStatus.SEE_OTHER,
+        "text/html; charset=utf-8",
+        b"",
+        headers={"Location": location},
+    )
 
 
 def _safe_segment(value: str) -> str:
