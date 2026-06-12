@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-05-15
+Last update: 2026-06-12
 Branch: `main`
 
 ## What Is Being Built
@@ -29,6 +29,8 @@ for Fachpersonal without exposing `value` fields.
 | KG runtime package | Implemented | `src/notary_kg/` |
 | KG CLI | Implemented | `scripts/notary_kg.py`, `notary-kg` after package install |
 | KG editor view | Implemented | `src/notary_kg/editor.py`, `schemas/kg-editor-patch.schema.json`, `workflows/contracts/kg-editor.contract.json` |
+| Legal Graph source pilot | In review | `workflows/legal-graph/sources/erbrecht-primary-source.json`, `nac legal-graph sources` |
+| Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 
@@ -45,6 +47,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0007 | First pilot workflow: GmbH/UG formation | Next | Reads KG node and creates deterministic intake checklist. |
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `nac-bnotk-xnp` readiness evidence. |
 | DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
+| DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
 
 ## Local Developer Commands
 
@@ -52,6 +55,7 @@ for Fachpersonal without exposing `value` fields.
 python scripts/quality_gate.py --profile strict
 python scripts/validate_kg_editor.py
 python scripts/validate_knowledge_graph.py
+python scripts/nac.py legal-graph sources --format json
 python scripts/notary_kg.py --repo-root . --format json status
 python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag
 ```

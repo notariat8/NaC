@@ -97,6 +97,83 @@ class LegalGraphContractTests(unittest.TestCase):
         self.assertTrue(errors)
         self.assertIn("must not contain mandate values", "\n".join(errors))
 
+    def test_artifact_validator_rejects_commentary_access_for_primary_source(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            source_dir.mkdir(parents=True)
+            manifest = {
+                "schema_version": "nac.legal-graph-source/v0.1",
+                "source_id": "primary.gesetze-im-internet.bgb.erbrecht",
+                "domain": "erbrecht",
+                "source_type": "primary_law",
+                "retrieval_mode": "metadata_only_fixture",
+                "canonical_url": "https://www.gesetze-im-internet.de/bgb/",
+                "update_fixture": "workflows/legal-graph/fixtures/erbrecht-source-update.json",
+                "commentary_access_allowed": True,
+                "credentials_required": False,
+                "provider_query_allowed": False,
+                "allowed_outputs": ["candidate_node_metadata"],
+                "blocked_actions": ["store_source_full_text"],
+                "review_required": True,
+            }
+            (source_dir / "erbrecht-primary-source.json").write_text(
+                json.dumps(manifest, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_legal_graph_artifacts(repo_root)
+
+        self.assertTrue(errors)
+        self.assertIn("commentary_access_allowed muss false sein", "\n".join(errors))
+
+    def test_artifact_validator_rejects_primary_source_fixture_outside_update_area(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            source_dir.mkdir(parents=True)
+            manifest = {
+                "schema_version": "nac.legal-graph-source/v0.1",
+                "source_id": "primary.gesetze-im-internet.bgb.erbrecht",
+                "domain": "erbrecht",
+                "source_type": "primary_law",
+                "retrieval_mode": "metadata_only_fixture",
+                "canonical_url": "https://www.gesetze-im-internet.de/bgb/",
+                "update_fixture": "../outside.json",
+                "commentary_access_allowed": False,
+                "credentials_required": False,
+                "provider_query_allowed": False,
+                "allowed_outputs": [
+                    "source_url",
+                    "retrieved_at",
+                    "citation",
+                    "candidate_node_metadata",
+                    "candidate_edge_metadata",
+                ],
+                "blocked_actions": [
+                    "query_commentary_connector",
+                    "store_source_full_text",
+                    "store_commentary_full_text",
+                    "store_credentials",
+                    "send_mandate_data",
+                    "auto_merge_graph_patch",
+                ],
+                "review_required": True,
+            }
+            (source_dir / "erbrecht-primary-source.json").write_text(
+                json.dumps(manifest, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_legal_graph_artifacts(repo_root)
+
+        self.assertTrue(errors)
+        self.assertIn("update_fixture muss unter workflows/legal-graph/fixtures liegen", "\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()
