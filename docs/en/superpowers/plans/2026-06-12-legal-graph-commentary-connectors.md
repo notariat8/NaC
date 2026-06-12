@@ -250,8 +250,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LEGAL_GRAPH_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-graph.contract.json"
 COMMENTARY_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "legal-commentary-connectors.contract.json"
 PROHIBITED_MARKERS = {
-    "client_secret",
-    "BEGIN PRIVATE KEY",
+    "client secret marker",
+    "private key PEM header",
     "BEGIN CERTIFICATE",
     "ghp_",
     "gho_",

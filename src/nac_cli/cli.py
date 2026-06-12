@@ -15,6 +15,8 @@ from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from nac_legal_graph.catalog import build_review_payload, legal_graph_status
+from nac_legal_graph.patches import build_update_patch
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -217,6 +219,24 @@ def build_parser() -> argparse.ArgumentParser:
     qms_evidence.add_argument("--format", choices=["text", "json"], default="text")
     qms.set_defaults(func=command_qms)
 
+    legal_graph = subparsers.add_parser("legal-graph", help="Steuert den NaC-Rechtsgraphen.")
+    legal_graph_sub = legal_graph.add_subparsers(dest="legal_graph_command", required=True)
+    legal_graph_status_parser = legal_graph_sub.add_parser(
+        "status",
+        help="Zeigt Legal-Graph-Domänen und Reviewstatus.",
+    )
+    legal_graph_status_parser.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_review = legal_graph_sub.add_parser(
+        "review",
+        help="Zeigt eine Review-Ansicht für eine Legal-Graph-Domäne.",
+    )
+    legal_graph_review.add_argument("domain")
+    legal_graph_review.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_update = legal_graph_sub.add_parser("update-dry-run", help="Erzeugt einen Review-Patch ohne Merge.")
+    legal_graph_update.add_argument("domain")
+    legal_graph_update.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph.set_defaults(func=command_legal_graph)
+
     tenant = subparsers.add_parser("tenant", help="Steuert getrennte NaC-Datenrepositories.")
     tenant_sub = tenant.add_subparsers(dest="tenant_command", required=True)
     tenant_init = tenant_sub.add_parser("init", help="Initialisiert ein getrenntes NaC-Datenrepo.")
@@ -358,6 +378,7 @@ def command_status(args: argparse.Namespace) -> int:
             "local_web": "nac web",
             "local_operator": "nac operator --open",
             "kg_status": "nac kg status",
+            "legal_graph_status": "nac legal-graph status",
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
             "config_validate": "nac config validate",
@@ -454,6 +475,58 @@ def command_gnotkg(args: argparse.Namespace) -> int:
     raise AssertionError(f"Unknown GNotKG command: {args.gnotkg_command}")
 
 
+def command_legal_graph(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    try:
+        if args.legal_graph_command == "status":
+            payload = legal_graph_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Legal Graph")
+            for item in payload["domain_status"]:
+                print(
+                    f"- {item['id']}: {item['nodes']} Knoten, "
+                    f"{item['edges']} Kanten, {item['review_required']} Reviewpunkte"
+                )
+            return 0
+
+        if args.legal_graph_command == "review":
+            payload = build_review_payload(repo_root, args.domain)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print(f"NaC Legal Graph Review: {payload['domain']}")
+            for item in payload["review_items"]:
+                print(f"- {item['id']}: {item['status']}")
+            return 0
+
+        if args.legal_graph_command == "update-dry-run":
+            payload = build_update_patch(repo_root, args.domain)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print(f"NaC Legal Graph Update-Dry-run: {payload['domain']}")
+            print(f"- Änderungen: {len(payload['changes'])}")
+            print(f"- Auto-Merge: {payload['auto_merge_allowed']}")
+            return 0
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        message = str(exc.args[0]) if isinstance(exc, KeyError) and exc.args else str(exc)
+        if args.format == "json":
+            print_json(
+                {
+                    "schema_version": "nac.error/v0.1",
+                    "command": "legal-graph",
+                    "error": message,
+                }
+            )
+            return 1
+        print(f"ERROR: {message}")
+        return 1
+
+    raise AssertionError(f"Unknown legal graph command: {args.legal_graph_command}")
+
+
 def command_bpmn(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.bpmn_command == "validate":
@@ -530,6 +603,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("GNotKG Cost Review Contract", "validate_gnotkg_costs.py"),
             ("Secure Document Link Contract", "validate_secure_document_links.py"),
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
+            ("Legal Graph Contracts", "validate_legal_graph_contracts.py"),
             ("OCI Tenant Identity Contract", "validate_oci_tenant_identity.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
         ]

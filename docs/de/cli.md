@@ -58,6 +58,7 @@ python scripts/nac.py doctor --profile strict
 python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py kg cost-view immobilienkaufvertrag
+python scripts/nac.py legal-graph status
 python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
@@ -74,6 +75,7 @@ nac doctor --profile strict
 nac web
 nac kg status
 nac kg cost-view immobilienkaufvertrag
+nac legal-graph status
 nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
@@ -95,6 +97,7 @@ nac qms status
 | Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status` | Zeigt den Stand der usecase-lokalen Wissensgraphen. |
+| Legal Graph | `nac legal-graph status`, `nac legal-graph review erbrecht` und `nac legal-graph update-dry-run erbrecht` | Zeigt den mandatsdatenfreien Rechtsgraphen, Reviewpunkte und Update-Patches ohne Auto-Merge. |
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
@@ -105,6 +108,22 @@ nac qms status
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
 | Tenant-Identity | `nac tenant domain-check`, `nac tenant provision-admin --dry-run` und `nac tenant apply-request --dry-run` | Prüft Neukunden-Domains und erzeugt OCI-Identity-Dry-run- und Apply-Readiness-Artefakte ohne produktive Schreiboperation. |
 | QMS | `nac qms status` und `nac qms evidence --repo ../demo8notariat` | Zeigt ISO-9001/QMS-Artefakte und Nachweiszahlen aus dem Datenrepo. |
+
+## `nac legal-graph`
+
+Der Befehl steuert den mandatsdatenfreien NaC-Rechtsgraphen. Der erste MVP ist
+Erbrecht. Automatische Quellenläufe erzeugen nur Review-Patches; ein Merge
+braucht fachliche Prüfung.
+
+```bash
+nac legal-graph status
+nac legal-graph review erbrecht --format json
+nac legal-graph update-dry-run erbrecht --format json
+```
+
+Lizenzierte Kommentare und Verlagsquellen laufen nicht über Scraping oder
+Volltextimport, sondern nur über geprüfte MCP-/API-Connectoren mit Lizenz-,
+AVV-/DPA-, Berufsgeheimnis-, AI-SBOM- und Review-Gate.
 
 ## QMS- und ISO-9001-Schicht
 
@@ -178,6 +197,10 @@ auf kurzlebige, widerrufbare, akten- und zweckgebundene Upload- oder
 Leselinks. Der Legal-Research-Connector-Vertrag führt externe juristische
 Recherche-, MCP- und Verlagsdatenbank-Hinweise nur als Kandidaten, bis Lizenz,
 AVV, AI-SBOM, Sicherheitsgrenze und menschliche Review geklärt sind.
+Der Legal-Graph-Vertrag begrenzt Rechtsgraph-Aktualisierungen auf
+mandatsdatenfreie Primärquellen und Review-Patches; der Kommentar-Connector-
+Vertrag verlangt lizenzierte MCP/API-Zugänge ohne Credentials, Mandatsdaten
+oder Kommentar-Volltexte im Produktrepo.
 Der Spec-Traceability-Vertrag verbindet Issue, Spec, Plan, AC-IDs und
 Validierungsbefehle für spec-driven Arbeit.
 

@@ -1,0 +1,160 @@
+{
+  "schema_version": "nac.legal-graph/v0.1",
+  "graph_id": "legal.erbrecht",
+  "last_update": "2026-06-12",
+  "domain": {
+    "id": "erbrecht",
+    "label_de": "Erbrecht",
+    "status": "mvp"
+  },
+  "guardrails": {
+    "real_mandate_data_allowed": false,
+    "commentary_full_text_in_repo": false,
+    "human_review_required": true
+  },
+  "nodes": [
+    {
+      "id": "source.gesetze-im-internet.bgb",
+      "type": "source_document",
+      "label": "Gesetze im Internet: BGB",
+      "url": "https://www.gesetze-im-internet.de/bgb/",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "source.rechtsprechung-im-internet",
+      "type": "source_document",
+      "label": "Rechtsprechung im Internet",
+      "url": "https://www.rechtsprechung-im-internet.de/jportal/portal/page/bsjrsprod.psml",
+      "usage_status": "primary_source_candidate",
+      "content_hash": "metadata-only"
+    },
+    {
+      "id": "norm.bgb.1945",
+      "type": "norm",
+      "label": "BGB § 1945 Form der Ausschlagung",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 1945 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.2231",
+      "type": "norm",
+      "label": "BGB § 2231 Ordentliche Testamente",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 2231 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.2276",
+      "type": "norm",
+      "label": "BGB § 2276 Form des Erbvertrags",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 2276 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.2346",
+      "type": "norm",
+      "label": "BGB § 2346 Wirkung des Erbverzichts",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 2346 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "norm.bgb.2353",
+      "type": "norm",
+      "label": "BGB § 2353 Zuständigkeit und Antrag",
+      "source_ref": "source.gesetze-im-internet.bgb",
+      "citation": "§ 2353 BGB",
+      "version_status": "current_metadata_only"
+    },
+    {
+      "id": "usecase.testament-erbvertrag",
+      "type": "notarial_usecase",
+      "label": "Testament / Erbvertrag",
+      "usecase_path": "usecases/testament-erbvertrag"
+    },
+    {
+      "id": "usecase.erbausschlagung",
+      "type": "notarial_usecase",
+      "label": "Erbausschlagung",
+      "usecase_path": "usecases/erbausschlagung"
+    },
+    {
+      "id": "usecase.erbscheinsantrag-nachlass",
+      "type": "notarial_usecase",
+      "label": "Erbscheinsantrag / Nachlass",
+      "usecase_path": "usecases/erbscheinsantrag-nachlass"
+    },
+    {
+      "id": "usecase.pflichtteilsverzicht-erbverzicht",
+      "type": "notarial_usecase",
+      "label": "Pflichtteilsverzicht / Erbverzicht",
+      "usecase_path": "usecases/pflichtteilsverzicht-erbverzicht"
+    },
+    {
+      "id": "review.form",
+      "type": "review_point",
+      "label": "Formprüfung",
+      "status": "review_required"
+    },
+    {
+      "id": "review.capacity",
+      "type": "review_point",
+      "label": "Geschäftsfähigkeit und Testierfähigkeit",
+      "status": "review_required"
+    },
+    {
+      "id": "connector.beck-online",
+      "type": "commentary_connector",
+      "label": "beck-online Kommentarzugriff",
+      "provider_id": "beck-online",
+      "status": "license_review_required",
+      "connection_mode": "mcp_or_api_required",
+      "full_text_storage": "blocked"
+    }
+  ],
+  "edges": [
+    {
+      "from": "norm.bgb.2231",
+      "to": "usecase.testament-erbvertrag",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.2276",
+      "to": "usecase.testament-erbvertrag",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.1945",
+      "to": "usecase.erbausschlagung",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.2353",
+      "to": "usecase.erbscheinsantrag-nachlass",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.2346",
+      "to": "usecase.pflichtteilsverzicht-erbverzicht",
+      "type": "affects_usecase"
+    },
+    {
+      "from": "norm.bgb.2231",
+      "to": "review.form",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "norm.bgb.2276",
+      "to": "review.form",
+      "type": "supports_review_point"
+    },
+    {
+      "from": "connector.beck-online",
+      "to": "review.form",
+      "type": "needs_commentary_review"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_commentary_connectors",
+  "title": "Licensed Legal Commentary Connectors",
+  "status": "candidate_backlog",
+  "last_update": "2026-06-12",
+  "purpose": "Prepare licensed commentary and publisher sources for MCP/API access without scraping, credentials in repo, full-text storage or mandate-data processing.",
+  "allowed_connection_modes": [
+    "mcp",
+    "api"
+  ],
+  "policy": {
+    "credentials_allowed_in_repo": false,
+    "commentary_full_text_allowed_in_repo": false,
+    "production_mandate_data_allowed": false,
+    "requires_license_review": true,
+    "requires_avv_review_for_personal_data": true,
+    "requires_professional_secrecy_review": true,
+    "requires_ai_sbom_decision": true,
+    "requires_source_attribution": true,
+    "requires_human_notarial_review": true
+  },
+  "candidate_providers": [
+    {
+      "id": "beck-online",
+      "display_name": "beck-online",
+      "status": "license_review_required"
+    },
+    {
+      "id": "juris",
+      "display_name": "juris",
+      "status": "license_review_required"
+    },
+    {
+      "id": "wolters-kluwer",
+      "display_name": "Wolters Kluwer Online",
+      "status": "license_review_required"
+    }
+  ],
+  "allowed_evidence_fields": [
+    "provider_id",
+    "source_url",
+    "citation",
+    "checked_at",
+    "checked_by",
+    "license_status",
+    "data_classes",
+    "review_note"
+  ],
+  "blocked_actions": [
+    "scrape_protected_portal",
+    "store_credentials",
+    "store_commentary_full_text",
+    "send_mandate_data_without_avv",
+    "treat_commentary_as_sole_notarial_truth"
+  ]
+}
