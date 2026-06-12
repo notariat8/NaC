@@ -1,0 +1,10 @@
+{
+  "schema_version": "nac.legal-graph-source-update/v0.1",
+  "domain": "gesellschaftsrecht",
+  "source": {
+    "id": "source.gesetze-im-internet.gmbhg",
+    "retrieved_at": "2026-06-12T00:00:00Z"
+  },
+  "candidate_nodes": [],
+  "candidate_edges": []
+}

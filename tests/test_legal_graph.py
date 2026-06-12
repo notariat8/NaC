@@ -113,12 +113,28 @@ class LegalGraphTests(unittest.TestCase):
 
     def test_source_status_reports_primary_source_pilot(self) -> None:
         status = legal_graph_source_status(REPO_ROOT)
+        sources = {item["domain"]: item for item in status["source_status"]}
 
         self.assertEqual(status["schema_version"], "nac.legal-graph-source-status/v0.1")
-        self.assertEqual(status["sources"], 1)
-        self.assertEqual(status["source_status"][0]["domain"], "erbrecht")
-        self.assertEqual(status["source_status"][0]["retrieval_mode"], "metadata_only_fixture")
-        self.assertFalse(status["source_status"][0]["commentary_access_allowed"])
+        self.assertEqual(status["sources"], 3)
+        self.assertEqual(set(sources), {"erbrecht", "familienrecht", "gesellschaftsrecht"})
+        for source in sources.values():
+            self.assertEqual(source["retrieval_mode"], "metadata_only_fixture")
+            self.assertFalse(source["commentary_access_allowed"])
+
+    def test_update_patch_works_for_all_primary_source_domains_without_commentary_changes(self) -> None:
+        for domain in ("erbrecht", "familienrecht", "gesellschaftsrecht"):
+            with self.subTest(domain=domain):
+                patch = build_update_patch(REPO_ROOT, domain)
+                commentary_changes = [
+                    change for change in patch["changes"]
+                    if change.get("node", {}).get("type") == "commentary_connector"
+                ]
+
+                self.assertEqual(patch["domain"], domain)
+                self.assertEqual(patch["source_manifest"]["retrieval_mode"], "metadata_only_fixture")
+                self.assertFalse(patch["source_manifest"]["commentary_access_allowed"])
+                self.assertEqual(commentary_changes, [])
 
     def test_update_patch_rejects_fixture_with_mandate_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

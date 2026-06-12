@@ -174,6 +174,64 @@ class LegalGraphContractTests(unittest.TestCase):
         self.assertTrue(errors)
         self.assertIn("update_fixture muss unter workflows/legal-graph/fixtures liegen", "\n".join(errors))
 
+    def test_artifact_validator_rejects_missing_primary_source_fixture(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            source_dir.mkdir(parents=True)
+            manifest = json.loads(
+                (REPO_ROOT / "workflows" / "legal-graph" / "sources" / "erbrecht-primary-source.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            manifest["update_fixture"] = "workflows/legal-graph/fixtures/missing-source-update.json"
+            (source_dir / "erbrecht-primary-source.json").write_text(
+                json.dumps(manifest, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_legal_graph_artifacts(repo_root)
+
+        self.assertTrue(errors)
+        self.assertIn("update_fixture muss existieren", "\n".join(errors))
+
+    def test_artifact_validator_rejects_unknown_source_document_refs(self) -> None:
+        from scripts import validate_legal_graph_contracts as validator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            domain_dir = repo_root / "workflows" / "legal-graph" / "domains"
+            fixture_dir = repo_root / "workflows" / "legal-graph" / "fixtures"
+            source_dir = repo_root / "workflows" / "legal-graph" / "sources"
+            domain_dir.mkdir(parents=True)
+            fixture_dir.mkdir(parents=True)
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(
+                REPO_ROOT / "workflows" / "legal-graph" / "domains" / "erbrecht.graph.json",
+                domain_dir / "erbrecht.graph.json",
+            )
+            shutil.copyfile(
+                REPO_ROOT / "workflows" / "legal-graph" / "fixtures" / "erbrecht-source-update.json",
+                fixture_dir / "erbrecht-source-update.json",
+            )
+            manifest = json.loads(
+                (REPO_ROOT / "workflows" / "legal-graph" / "sources" / "erbrecht-primary-source.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            manifest["source_document_refs"] = ["source.gesetze-im-internet.unknown"]
+            (source_dir / "erbrecht-primary-source.json").write_text(
+                json.dumps(manifest, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_legal_graph_artifacts(repo_root)
+
+        self.assertTrue(errors)
+        self.assertIn("source_document_refs verweist auf unbekannten Knoten", "\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()

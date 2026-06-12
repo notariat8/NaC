@@ -1,0 +1,33 @@
+{
+  "schema_version": "nac.legal-graph-source/v0.1",
+  "source_id": "primary.gesetze-im-internet.gmbhg-hgb-umwg.gesellschaftsrecht",
+  "domain": "gesellschaftsrecht",
+  "source_type": "primary_law",
+  "retrieval_mode": "metadata_only_fixture",
+  "canonical_url": "https://www.gesetze-im-internet.de/gmbhg/",
+  "source_document_refs": [
+    "source.gesetze-im-internet.gmbhg",
+    "source.gesetze-im-internet.hgb",
+    "source.gesetze-im-internet.umwg"
+  ],
+  "update_fixture": "workflows/legal-graph/fixtures/gesellschaftsrecht-source-update.json",
+  "commentary_access_allowed": false,
+  "credentials_required": false,
+  "provider_query_allowed": false,
+  "review_required": true,
+  "allowed_outputs": [
+    "source_url",
+    "retrieved_at",
+    "citation",
+    "candidate_node_metadata",
+    "candidate_edge_metadata"
+  ],
+  "blocked_actions": [
+    "query_commentary_connector",
+    "store_source_full_text",
+    "store_commentary_full_text",
+    "store_credentials",
+    "send_mandate_data",
+    "auto_merge_graph_patch"
+  ]
+}

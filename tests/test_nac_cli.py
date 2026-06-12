@@ -131,11 +131,13 @@ class NaCCliTests(unittest.TestCase):
 
         self.assertEqual(rc, 0, output)
         payload = json.loads(output)
+        sources = {item["domain"]: item for item in payload["source_status"]}
         self.assertEqual(payload["schema_version"], "nac.legal-graph-source-status/v0.1")
-        self.assertEqual(payload["sources"], 1)
-        self.assertEqual(payload["source_status"][0]["domain"], "erbrecht")
-        self.assertEqual(payload["source_status"][0]["retrieval_mode"], "metadata_only_fixture")
-        self.assertFalse(payload["source_status"][0]["commentary_access_allowed"])
+        self.assertEqual(payload["sources"], 3)
+        self.assertEqual(set(sources), {"erbrecht", "familienrecht", "gesellschaftsrecht"})
+        for source in sources.values():
+            self.assertEqual(source["retrieval_mode"], "metadata_only_fixture")
+            self.assertFalse(source["commentary_access_allowed"])
 
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")
@@ -146,12 +148,16 @@ class NaCCliTests(unittest.TestCase):
         self.assertFalse(payload["guardrails"]["commentary_full_text_in_repo"])
 
     def test_legal_graph_update_dry_run_cli_returns_patch(self) -> None:
-        rc, output = run_cli("legal-graph", "update-dry-run", "erbrecht", "--format", "json")
+        for domain in ("erbrecht", "familienrecht", "gesellschaftsrecht"):
+            with self.subTest(domain=domain):
+                rc, output = run_cli("legal-graph", "update-dry-run", domain, "--format", "json")
 
-        self.assertEqual(rc, 0, output)
-        payload = json.loads(output)
-        self.assertEqual(payload["schema_version"], "nac.legal-graph-patch/v0.1")
-        self.assertFalse(payload["auto_merge_allowed"])
+                self.assertEqual(rc, 0, output)
+                payload = json.loads(output)
+                self.assertEqual(payload["schema_version"], "nac.legal-graph-patch/v0.1")
+                self.assertEqual(payload["domain"], domain)
+                self.assertFalse(payload["auto_merge_allowed"])
+                self.assertFalse(payload["source_manifest"]["commentary_access_allowed"])
 
     def test_legal_graph_json_errors_are_machine_readable(self) -> None:
         rc, output = run_cli("legal-graph", "review", "unknown", "--format", "json")

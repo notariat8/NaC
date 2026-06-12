@@ -311,7 +311,42 @@ def _validate_fixture_payload(path: Path, payload: dict[str, Any], repo_root: Pa
 
 def _validate_source_payload(path: Path, payload: dict[str, Any], repo_root: Path) -> list[str]:
     label = path.relative_to(repo_root).as_posix()
-    return [f"{label}: {error}" for error in validate_source_manifest_payload(payload)]
+    errors = [f"{label}: {error}" for error in validate_source_manifest_payload(payload)]
+    if errors:
+        return errors
+
+    update_fixture = payload.get("update_fixture")
+    if isinstance(update_fixture, str) and not (repo_root / update_fixture).is_file():
+        errors.append(f"{label}: source manifest update_fixture muss existieren")
+    errors.extend(_validate_source_document_refs(label, payload, repo_root))
+    return errors
+
+
+def _validate_source_document_refs(label: str, payload: dict[str, Any], repo_root: Path) -> list[str]:
+    errors: list[str] = []
+    source_refs = payload.get("source_document_refs")
+    if not isinstance(source_refs, list) or not source_refs:
+        return [f"{label}: source manifest source_document_refs muss eine nicht leere Liste sein"]
+    if not all(isinstance(source_ref, str) and source_ref for source_ref in source_refs):
+        return [f"{label}: source manifest source_document_refs muss Strings enthalten"]
+
+    domain = payload.get("domain")
+    if not isinstance(domain, str) or not domain:
+        return errors
+    graph_path = repo_root / "workflows" / "legal-graph" / "domains" / f"{domain}.graph.json"
+    graph_payload = _read_json(graph_path, errors, repo_root=repo_root)
+    if not graph_payload:
+        return errors
+
+    source_document_ids = {
+        node.get("id")
+        for node in graph_payload.get("nodes", [])
+        if isinstance(node, dict) and node.get("type") == "source_document"
+    }
+    for source_ref in source_refs:
+        if source_ref not in source_document_ids:
+            errors.append(f"{label}: source_document_refs verweist auf unbekannten Knoten {source_ref}")
+    return errors
 
 
 def _strings(value: object) -> list[str]:
