@@ -111,6 +111,37 @@ class PublicOnboardingCopyTests(unittest.TestCase):
         self.assertNotIn("Administrations-E-Mail", html)
         self.assertNotIn("notariat8-Zugang", html)
 
+    def test_customer_readiness_reuses_live_dns_result_when_record_exists(self) -> None:
+        record_name = "_nac.myjur.de"
+
+        def fake_resolver(name: str) -> dict[str, object]:
+            self.assertEqual(name, record_name)
+            return {
+                "name": record_name,
+                "values": ["nac-domain-verification=e6b96f425ef94064ae897decf6a57da5"],
+                "resolver_error": "",
+            }
+
+        app = NaCLocalWebApp(REPO_ROOT, dns_resolver=fake_resolver)
+
+        status, _, body = app.handle(
+            "/onboarding/readiness"
+            "?audience=customer"
+            "&domain_hint=myjur.de"
+            "&tenant_slug=myjur"
+            "&admin_email=ofunk@myjur.de"
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("DNS-Status:</strong> bestätigt", html)
+        self.assertIn("DNS-TXT wurde gefunden", html)
+        self.assertIn("für notariat8 bestätigt", html)
+        self.assertNotIn("DNS-TXT-Eintrag wurde noch nicht gefunden", html)
+        self.assertNotIn("NaC", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_readiness_without_audience_stays_customer_facing(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
