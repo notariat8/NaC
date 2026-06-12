@@ -89,7 +89,7 @@ class NaCLocalWebApp:
         route = unquote(parsed.path)
         try:
             if route == "/" or route == "":
-                handoff_page = build_www_n8_handoff_page(parsed.query)
+                handoff_page = build_www_n8_handoff_page(parsed.query, dns_resolver=self.dns_resolver)
                 if handoff_page is not None:
                     return _html_response(handoff_page)
                 return _html_response(build_home_page(self.repo_root))
@@ -99,7 +99,7 @@ class NaCLocalWebApp:
                 status, page = build_auth_callback_page(parsed.query, secret_text_provider=self.secret_text_provider)
                 return _html_response(page, status)
             if route == "/onboarding/readiness":
-                return _html_response(build_customer_readiness_page(parsed.query))
+                return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
                 return _html_response(self._tenant_dns_check_page(parsed.query))
             if route == "/admin/onboarding" or route.startswith("/admin/onboarding/"):
@@ -573,7 +573,7 @@ def build_home_page(repo_root: Path) -> str:
     return _layout("NaC Lokaler Webserver", body)
 
 
-def build_www_n8_handoff_page(query: str) -> str | None:
+def build_www_n8_handoff_page(query: str, *, dns_resolver=None) -> str | None:
     params = parse_qs(query, keep_blank_values=True)
     if not _is_notariat8_source(_optional_query_text(params, "source")):
         return None
@@ -613,7 +613,7 @@ def build_www_n8_handoff_page(query: str) -> str | None:
         if domain_hint:
             readiness_params["domain_hint"] = domain_hint
         readiness_query = urlencode(readiness_params)
-        return build_customer_readiness_page(readiness_query)
+        return build_customer_readiness_page(readiness_query, dns_resolver=dns_resolver)
     return None
 
 
@@ -908,6 +908,19 @@ def _onboarding_state_gate(state: str) -> str:
     return labels[state]
 
 
+def _customer_dns_check_copy(dns_check: dict[str, Any]) -> tuple[str, str]:
+    status = str(dns_check.get("status", ""))
+    if status == "verified":
+        return "bestätigt", "DNS-TXT wurde gefunden. Ihre Domain ist für notariat8 bestätigt."
+    if status == "wrong_name":
+        return "nicht bestätigt", "Der DNS-TXT-Eintrag steht unter einem anderen Namen. Bitte prüfen Sie den Recordnamen."
+    if status == "wrong_value":
+        return "nicht bestätigt", "Der DNS-TXT-Eintrag wurde gefunden, der Wert passt aber noch nicht."
+    if status == "resolver_error":
+        return "später erneut prüfen", "Die DNS-Prüfung konnte gerade nicht abgeschlossen werden. Bitte versuchen Sie es später erneut."
+    return "noch offen", "Der DNS-TXT-Eintrag wurde noch nicht gefunden. DNS-Änderungen können einige Minuten dauern; später erneut prüfen."
+
+
 def build_operator_review_result_page(request: dict[str, Any]) -> str:
     body = f"""
     <nav class="topline"><a href="/admin/onboarding">← Readiness-Anfragen</a><span><a href="/">Übersicht</a></span></nav>
@@ -999,7 +1012,7 @@ def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
     return _layout("notariat8 Einrichtung angefragt", body)
 
 
-def build_customer_readiness_page(query: str) -> str:
+def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
     params = parse_qs(query, keep_blank_values=True)
     source = _optional_query_text(params, "source", max_length=40)
     entry = _optional_query_text(params, "entry", max_length=40)
@@ -1014,12 +1027,19 @@ def build_customer_readiness_page(query: str) -> str:
     admin_email_provided = bool(admin_email)
     readiness = check_domain_ready(domain=domain_hint, tenant_slug=tenant_slug, admin_email=admin_email)
     verification = readiness["verification"]
-    dns_check = build_dns_check_result(
-        expected_name=verification["dns_record_name"],
-        expected_value=verification["dns_record_value"],
-        observed_values=[],
-        resolver_error="not_found",
-    )
+    if admin_email_provided:
+        dns_check = build_live_dns_check_result(
+            expected_name=verification["dns_record_name"],
+            expected_value=verification["dns_record_value"],
+            resolver=dns_resolver,
+        )
+    else:
+        dns_check = build_dns_check_result(
+            expected_name=verification["dns_record_name"],
+            expected_value=verification["dns_record_value"],
+            observed_values=[],
+            resolver_error="not_found",
+        )
     check_query = urlencode(
         _present_query_values({
             **context_query,
@@ -1107,9 +1127,8 @@ def build_customer_readiness_page(query: str) -> str:
     )
     dns_status_label = dns_check["status"]
     dns_guidance = dns_check["customer_guidance"]
-    if public_context and dns_check["status"] == "pending":
-        dns_status_label = "noch offen"
-        dns_guidance = "Der DNS-TXT-Eintrag wurde noch nicht gefunden. DNS-Änderungen können einige Minuten dauern; später erneut prüfen."
+    if public_context:
+        dns_status_label, dns_guidance = _customer_dns_check_copy(dns_check)
     body = f"""
     {nav}
     <section class="hero">
