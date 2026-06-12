@@ -144,13 +144,18 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
         return checkout, commit
 
+    def build_spec_fixture_env(self, checkout: Path) -> dict[str, str]:
+        env = os.environ.copy()
+        env["OCI_PRIMARY_SOURCE_DIR"] = str(checkout)
+        return env
+
     def test_buildspec_requires_owner_approved_release_commit(self) -> None:
         command = self.build_spec_step_command("Prepare immutable image tag")
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-            self.create_minimal_git_checkout(tmp_path)
-            env = os.environ.copy()
+            checkout, _ = self.create_minimal_git_checkout(tmp_path)
+            env = self.build_spec_fixture_env(checkout)
             env.pop("NAC_RELEASE_COMMIT", None)
             env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
 
@@ -172,7 +177,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             checkout, commit = self.create_minimal_git_checkout(tmp_path)
-            env = os.environ.copy()
+            env = self.build_spec_fixture_env(checkout)
             env["NAC_RELEASE_COMMIT"] = commit
             env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
 
@@ -195,8 +200,8 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-            self.create_minimal_git_checkout(tmp_path)
-            env = os.environ.copy()
+            checkout, _ = self.create_minimal_git_checkout(tmp_path)
+            env = self.build_spec_fixture_env(checkout)
             env["NAC_RELEASE_COMMIT"] = "0" * 40
 
             result = subprocess.run(
