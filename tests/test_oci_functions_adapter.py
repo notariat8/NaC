@@ -50,8 +50,12 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             raise AssertionError(f"{path} is missing")
         return file_path.read_text(encoding="utf-8")
 
-    def build_spec_step_command(self, step_name: str) -> str:
-        build_spec = self.read("deploy/functions/nac-app/build_spec.yaml")
+    def build_spec_step_command(
+        self,
+        step_name: str,
+        build_spec_path: str = "deploy/functions/nac-app/build_spec.yaml",
+    ) -> str:
+        build_spec = self.read(build_spec_path)
         marker = f'    name: "{step_name}"'
         step_start = build_spec.index(marker)
         command_start = build_spec.index("    command: |\n", step_start) + len("    command: |\n")
@@ -110,6 +114,9 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         dockerfile = checkout / "deploy" / "functions" / "nac-app" / "Dockerfile"
         dockerfile.parent.mkdir(parents=True)
         dockerfile.write_text("FROM scratch\n", encoding="utf-8")
+        public_dockerfile = checkout / "deploy" / "functions" / "nac-public-app" / "Dockerfile"
+        public_dockerfile.parent.mkdir(parents=True)
+        public_dockerfile.write_text("FROM scratch\n", encoding="utf-8")
         (test_dir / "test_oci_functions_adapter.py").write_text(
             "\n".join(
                 [
@@ -338,6 +345,62 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         for content in (func_yaml, func_py, dockerfile, requirements):
             for term in forbidden_terms:
                 self.assertNotIn(term, content)
+
+    def test_public_get_buildspec_builds_only_lean_public_image(self) -> None:
+        build_spec = self.read("deploy/functions/nac-public-app/build_spec.yaml")
+
+        self.assertIn("exportedVariables:", build_spec)
+        self.assertIn("BUILDRUN_HASH", build_spec)
+        self.assertIn("NAC_RELEASE_COMMIT", build_spec)
+        self.assertIn("resolve_nac_source_dir()", build_spec)
+        self.assertIn('test -f "$candidate/deploy/functions/nac-public-app/Dockerfile"', build_spec)
+        self.assertIn('cd "$NAC_SOURCE_DIR"', build_spec)
+        self.assertIn('test -f tests/test_oci_functions_adapter.py', build_spec)
+        self.assertIn("python3 -m unittest discover -s tests -p 'test_oci_functions_adapter.py' -v", build_spec)
+        self.assertIn("docker build -f deploy/functions/nac-public-app/Dockerfile -t nac-public-app .", build_spec)
+        self.assertIn("name: nac_public_app_image", build_spec)
+        self.assertIn("type: DOCKER_IMAGE", build_spec)
+        self.assertIn("location: nac-public-app", build_spec)
+        self.assertNotIn("nac_app_image", build_spec)
+
+        forbidden_terms = [
+            "BEGIN PRIVATE KEY",
+            "client_secret",
+            "password=",
+            "key_file",
+            "ocid1.user",
+            "NAC_ATP_",
+            "NAC_ONBOARDING_STORE",
+        ]
+        for term in forbidden_terms:
+            self.assertNotIn(term, build_spec)
+
+    def test_public_get_buildspec_checks_out_owner_approved_release_commit(self) -> None:
+        command = self.build_spec_step_command(
+            "Prepare immutable public image tag",
+            "deploy/functions/nac-public-app/build_spec.yaml",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            checkout, commit = self.create_minimal_git_checkout(tmp_path)
+            env = self.build_spec_fixture_env(checkout)
+            env["NAC_RELEASE_COMMIT"] = commit
+            env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
+
+            result = subprocess.run(
+                ["bash", "-lc", command],
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            active_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
+
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(active_commit, commit)
+        self.assertIn(commit[:12], result.stdout)
 
     def test_public_get_function_entrypoint_imports_adapter_without_external_pythonpath(self) -> None:
         function_dir = REPO_ROOT / "deploy" / "functions" / "nac-public-app"

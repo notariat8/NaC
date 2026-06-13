@@ -1,0 +1,109 @@
+version: 0.1
+component: build
+timeoutInSeconds: 3600
+shell: bash
+failImmediatelyOnError: true
+
+env:
+  exportedVariables:
+    - BUILDRUN_HASH
+
+steps:
+  - type: Command
+    name: "Prepare immutable public image tag"
+    timeoutInSeconds: 120
+    command: |
+      : "${NAC_RELEASE_COMMIT:?set NAC_RELEASE_COMMIT to the owner-approved 40-character Git commit}"
+      case "$NAC_RELEASE_COMMIT" in
+        *[!0123456789abcdefABCDEF]*)
+          echo "NAC_RELEASE_COMMIT must be a hexadecimal Git commit" >&2
+          exit 1
+          ;;
+      esac
+      if [ "${#NAC_RELEASE_COMMIT}" -ne 40 ]; then
+        echo "NAC_RELEASE_COMMIT must be the full 40-character owner-approved Git commit" >&2
+        exit 1
+      fi
+      resolve_nac_source_dir() {
+        for candidate in "${OCI_PRIMARY_SOURCE_DIR:-}" nac .; do
+          test -n "$candidate" || continue
+          if test -d "$candidate/tests" && test -f "$candidate/deploy/functions/nac-public-app/Dockerfile"; then
+            printf '%s\n' "$candidate"
+            return 0
+          fi
+        done
+        echo "Unable to locate NaC source checkout" >&2
+        find . -maxdepth 2 -type d -name tests -print >&2 || true
+        return 1
+      }
+      NAC_SOURCE_DIR="$(resolve_nac_source_dir)"
+      echo "Using NaC source directory: $NAC_SOURCE_DIR"
+      cd "$NAC_SOURCE_DIR"
+      if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "NaC source checkout must include Git metadata for commit-bound release validation" >&2
+        exit 1
+      fi
+      if ! git cat-file -e "${NAC_RELEASE_COMMIT}^{commit}" 2>/dev/null; then
+        echo "Owner-approved release commit is not available in OCI DevOps source checkout: ${NAC_RELEASE_COMMIT}" >&2
+        exit 1
+      fi
+      if [ -n "${OCI_PRIMARY_SOURCE_COMMIT_HASH:-}" ] && [ "$OCI_PRIMARY_SOURCE_COMMIT_HASH" != "$NAC_RELEASE_COMMIT" ]; then
+        echo "OCI primary source commit ${OCI_PRIMARY_SOURCE_COMMIT_HASH} differs from owner-approved ${NAC_RELEASE_COMMIT}; detaching to owner-approved commit"
+      fi
+      git checkout --detach "$NAC_RELEASE_COMMIT"
+      ACTIVE_COMMIT="$(git rev-parse HEAD)"
+      if [ "$ACTIVE_COMMIT" != "$NAC_RELEASE_COMMIT" ]; then
+        echo "Active checkout ${ACTIVE_COMMIT} does not match owner-approved ${NAC_RELEASE_COMMIT}" >&2
+        exit 1
+      fi
+      BUILDRUN_HASH="$(printf '%s' "$NAC_RELEASE_COMMIT" | cut -c 1-12)"
+      export BUILDRUN_HASH
+      echo "Building notariat8 NaC public OCI Functions image ${BUILDRUN_HASH}"
+
+  - type: Command
+    name: "Run public Functions adapter tests"
+    timeoutInSeconds: 600
+    command: |
+      resolve_nac_source_dir() {
+        for candidate in "${OCI_PRIMARY_SOURCE_DIR:-}" nac .; do
+          test -n "$candidate" || continue
+          if test -d "$candidate/tests" && test -f "$candidate/deploy/functions/nac-public-app/Dockerfile"; then
+            printf '%s\n' "$candidate"
+            return 0
+          fi
+        done
+        echo "Unable to locate NaC source checkout" >&2
+        find . -maxdepth 2 -type d -name tests -print >&2 || true
+        return 1
+      }
+      NAC_SOURCE_DIR="$(resolve_nac_source_dir)"
+      echo "Using NaC source directory: $NAC_SOURCE_DIR"
+      cd "$NAC_SOURCE_DIR"
+      test -f tests/test_oci_functions_adapter.py
+      python3 -m unittest discover -s tests -p 'test_oci_functions_adapter.py' -v
+
+  - type: Command
+    name: "Build public Functions image"
+    timeoutInSeconds: 1800
+    command: |
+      resolve_nac_source_dir() {
+        for candidate in "${OCI_PRIMARY_SOURCE_DIR:-}" nac .; do
+          test -n "$candidate" || continue
+          if test -d "$candidate/tests" && test -f "$candidate/deploy/functions/nac-public-app/Dockerfile"; then
+            printf '%s\n' "$candidate"
+            return 0
+          fi
+        done
+        echo "Unable to locate NaC source checkout" >&2
+        find . -maxdepth 2 -type d -name tests -print >&2 || true
+        return 1
+      }
+      NAC_SOURCE_DIR="$(resolve_nac_source_dir)"
+      echo "Using NaC source directory: $NAC_SOURCE_DIR"
+      cd "$NAC_SOURCE_DIR"
+      docker build -f deploy/functions/nac-public-app/Dockerfile -t nac-public-app .
+
+outputArtifacts:
+  - name: nac_public_app_image
+    type: DOCKER_IMAGE
+    location: nac-public-app
