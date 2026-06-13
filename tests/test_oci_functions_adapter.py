@@ -330,7 +330,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("COPY deploy/functions/nac-public-app/requirements.txt /function/requirements.txt", dockerfile)
         self.assertIn("ENV PYTHONPATH=/python:/function/src", dockerfile)
         self.assertIn("fdk", requirements)
-        self.assertNotIn("oci", requirements)
+        self.assertIn("oci>=2,<3", requirements)
         self.assertNotIn("oracledb", requirements)
 
         forbidden_terms = [
