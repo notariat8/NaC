@@ -35,25 +35,37 @@ class OCIHttpResponse:
     body: bytes
 
 
-def dispatch_oci_function_request(ctx: Any, data: io.BytesIO | None = None, *, repo_root: Path | None = None) -> OCIHttpResponse:
+def dispatch_oci_function_request(
+    ctx: Any,
+    data: io.BytesIO | None = None,
+    *,
+    repo_root: Path | None = None,
+    expose_stateful_onboarding_routes: bool = True,
+) -> OCIHttpResponse:
     _suppress_provider_sdk_debug_logs()
     request_url = _request_url(ctx)
     method = _request_method(ctx).upper()
     onboarding_request_store = (
         build_onboarding_request_store_from_env()
-        if _requires_onboarding_request_store(method, request_url)
+        if expose_stateful_onboarding_routes and _requires_onboarding_request_store(method, request_url)
         else None
     )
     app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=onboarding_request_store)
 
     response_headers: dict[str, str] = {}
-    if method in {"GET", "HEAD"} and _is_exposed_get_route(request_url):
+    if method in {"GET", "HEAD"} and _is_exposed_get_route(
+        request_url,
+        expose_stateful_onboarding_routes=expose_stateful_onboarding_routes,
+    ):
         app_response = app.handle(request_url)
         status, content_type, response_body = app_response
         response_headers.update(getattr(app_response, "headers", {}))
         if method == "HEAD":
             response_body = b""
-    elif method == "POST" and _is_exposed_post_route(request_url):
+    elif method == "POST" and _is_exposed_post_route(
+        request_url,
+        expose_stateful_onboarding_routes=expose_stateful_onboarding_routes,
+    ):
         app_response = app.handle_post(request_url, data.read() if data is not None else b"")
         status, content_type, response_body = app_response
         response_headers.update(getattr(app_response, "headers", {}))
@@ -115,18 +127,22 @@ def _request_url(ctx: Any) -> str:
     return headers.get("fn-http-request-url") or headers.get("Fn-Http-Request-Url") or "/"
 
 
-def _is_exposed_get_route(request_url: str) -> bool:
+def _is_exposed_get_route(request_url: str, *, expose_stateful_onboarding_routes: bool = True) -> bool:
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
     if route in EXPOSED_GET_ROUTES:
         return True
     if route.startswith("/onboarding/requests/"):
+        if not expose_stateful_onboarding_routes:
+            return False
         params = parse_qs(parsed.query, keep_blank_values=True)
         return (params.get("audience") or [""])[0] == "customer"
     return False
 
 
-def _is_exposed_post_route(request_url: str) -> bool:
+def _is_exposed_post_route(request_url: str, *, expose_stateful_onboarding_routes: bool = True) -> bool:
+    if not expose_stateful_onboarding_routes:
+        return False
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
     return route in EXPOSED_POST_ROUTES

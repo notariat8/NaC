@@ -308,6 +308,54 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("True", result.stdout)
 
+    def test_public_get_function_packaging_is_lean_and_state_free(self) -> None:
+        func_yaml = self.read("deploy/functions/nac-public-app/func.yaml")
+        func_py = self.read("deploy/functions/nac-public-app/func.py")
+        dockerfile = self.read("deploy/functions/nac-public-app/Dockerfile")
+        requirements = self.read("deploy/functions/nac-public-app/requirements.txt")
+
+        self.assertIn("name: nac-public-app", func_yaml)
+        self.assertIn("runtime: python", func_yaml)
+        self.assertIn("entrypoint: /python/bin/fdk /function/func.py handler", func_yaml)
+        self.assertIn("from nac_web.oci_public_functions import handler", func_py)
+        self.assertIn("COPY src /function/src", dockerfile)
+        self.assertIn("COPY deploy/functions/nac-public-app/func.py /function/func.py", dockerfile)
+        self.assertIn("COPY deploy/functions/nac-public-app/requirements.txt /function/requirements.txt", dockerfile)
+        self.assertIn("ENV PYTHONPATH=/python:/function/src", dockerfile)
+        self.assertIn("fdk", requirements)
+        self.assertNotIn("oci", requirements)
+        self.assertNotIn("oracledb", requirements)
+
+        forbidden_terms = [
+            "BEGIN PRIVATE KEY",
+            "client_secret",
+            "password=",
+            "key_file",
+            "ocid1.user",
+            "NAC_ATP_",
+            "NAC_ONBOARDING_STORE",
+        ]
+        for content in (func_yaml, func_py, dockerfile, requirements):
+            for term in forbidden_terms:
+                self.assertNotIn(term, content)
+
+    def test_public_get_function_entrypoint_imports_adapter_without_external_pythonpath(self) -> None:
+        function_dir = REPO_ROOT / "deploy" / "functions" / "nac-public-app"
+        env = os.environ.copy()
+        env.pop("PYTHONPATH", None)
+
+        result = subprocess.run(
+            [sys.executable, "-c", "import func; print(callable(func.handler))"],
+            cwd=function_dir,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("True", result.stdout)
+
     def test_function_docker_context_excludes_local_secret_and_vcs_paths(self) -> None:
         dockerignore = self.read(".dockerignore")
 
@@ -543,6 +591,32 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn(b"onboarding_request_store_disabled", result.body)
         self.assertNotIn(b"client_secret", result.body.lower())
         self.assertNotIn(b"private_key", result.body.lower())
+
+    def test_public_get_runtime_rejects_stateful_onboarding_routes_without_store(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        with patch(
+            "nac_web.oci_functions.build_onboarding_request_store_from_env",
+            side_effect=AssertionError("public GET runtime must never initialize onboarding store"),
+        ):
+            post_result = dispatch_oci_public_function_request(
+                FakeFunctionContext(request_url="/onboarding/requests", method="POST"),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+            status_result = dispatch_oci_public_function_request(
+                FakeFunctionContext(
+                    request_url="/onboarding/requests/onr_myjur_20260610_111500?audience=customer",
+                    method="GET",
+                ),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+
+        self.assertEqual(post_result.status_code, 405)
+        self.assertIn(b"read-only", post_result.body)
+        self.assertEqual(status_result.status_code, 404)
+        self.assertIn(b"not exposed", status_result.body)
 
     def test_configured_store_accepts_customer_onboarding_request_post(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
