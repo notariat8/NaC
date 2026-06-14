@@ -69,7 +69,7 @@ def build_auth_callback_result(
             "callback_values_exposed": False,
             "workspace_opened": False,
         },
-        "next_step": "validate_state_then_exchange_token_then_apply_nac_role_gate",
+        "next_step": "exchange_token_then_evaluate_oidc_role_gate_contract",
     }
 
 

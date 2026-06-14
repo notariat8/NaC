@@ -12,6 +12,9 @@ acceptance_ids:
   - AC-001
   - AC-002
   - AC-003
+  - AC-004
+  - AC-005
+  - AC-006
 validation_commands:
   - env PYTHONPATH=src /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_oci_functions_adapter
   - env GITHUB_BASE_REF=main /home/ubuntu/.venvs/nac/bin/python scripts/quality_gate.py --profile strict
@@ -102,6 +105,27 @@ begründet aber keine Berechtigung.
   Token-Austausch, Session-Aufbau und Rollengate dort ergänzt werden können.
 - AC-003: Callback-Werte, Tokens und Secrets werden in Public- und Stateful-
   Antworten nicht offengelegt.
+- AC-004: Q2C führt einen reinen, lokal testbaren Token-Claim- und
+  Rollen-Gate-Vertrag ein. Er prüft Issuer, Audience, Nonce-Bindung und
+  `nac-tenant-admin`, öffnet aber noch keine Sitzung und führt keinen Live-
+  Token-Austausch aus.
+- AC-005: Der Q2C-Vertrag schlägt geschlossen fehl, wenn Issuer, Audience,
+  Nonce-Bindung oder Rolle fehlen oder nicht passen.
+- AC-006: Der Q2C-Vertrag gibt keine Roh-Tokens, Callback-Codes, States,
+  Nonces, Nonce-Hashes oder Secret-Referenzen in browsernahe Ergebnisse aus.
+
+## Q2C-Schnitt
+
+Q2C ist bewusst kein OCI-Apply und kein Live-Token-Austausch. Der Schnitt
+modelliert die serverseitige Entscheidung, die nach einer späteren Token-
+Exchange-Schicht benötigt wird: Aus bereits verifizierten Claims entsteht nur
+dann eine NaC-Rollenentscheidung, wenn die Claims zur erwarteten Identity
+Domain, zum erwarteten OIDC-Client, zur nonce-gebundenen State-Validierung und
+zur Rolle `nac-tenant-admin` passen.
+
+Damit wird die spätere Live-Anbindung kleiner und sicherer: Token-Austausch und
+JWT-Signaturprüfung liefern dann nur noch Eingaben an diesen Vertrag. Jede
+Abweichung bleibt fail-closed und öffnet keinen Arbeitsbereich.
 
 ## Tests
 

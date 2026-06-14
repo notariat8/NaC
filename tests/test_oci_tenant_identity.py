@@ -461,6 +461,254 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(result["public_message"], "Anmeldung nicht abgeschlossen.")
         self.assertNotIn("access_denied", serialized)
 
+    def test_oidc_role_gate_opens_only_for_verified_admin_claims(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin", "other-group"],
+                "email": "ofunk@myjur.de",
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["schema_version"], "nac.oidc-role-gate/v0.1")
+        self.assertEqual(result["status"], "open")
+        self.assertEqual(result["reason"], "authorized")
+        self.assertEqual(result["role"], "nac-tenant-admin")
+        self.assertTrue(result["session_allowed"])
+        self.assertFalse(result["guardrails"]["contains_credentials"])
+        self.assertFalse(result["guardrails"]["tokens_returned"])
+        self.assertFalse(result["guardrails"]["callback_values_exposed"])
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn(hashlib.sha256(nonce.encode("utf-8")).hexdigest(), serialized)
+        self.assertNotIn("ofunk@myjur.de", serialized)
+
+    def test_oidc_role_gate_closes_when_admin_role_is_missing(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["viewer"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation={
+                "status": "valid",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+        )
+
+        self.assertEqual(result["status"], "closed")
+        self.assertEqual(result["reason"], "role_missing")
+        self.assertFalse(result["session_allowed"])
+
+    def test_oidc_role_gate_closes_on_issuer_or_audience_mismatch(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        nonce = "nonce-from-id-token"
+        state_validation = {
+            "status": "valid",
+            "nonce_bound": True,
+            "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+        }
+        wrong_issuer = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://wrong.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+        wrong_audience = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "wrong-client",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+
+        self.assertEqual(wrong_issuer["status"], "closed")
+        self.assertEqual(wrong_issuer["reason"], "issuer_mismatch")
+        self.assertEqual(wrong_audience["status"], "closed")
+        self.assertEqual(wrong_audience["reason"], "audience_mismatch")
+
+    def test_oidc_role_gate_closes_on_missing_or_mismatched_nonce_binding(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        result_without_binding = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": "nonce-from-id-token",
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation={"status": "valid", "nonce_bound": False},
+        )
+        result_with_mismatch = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": "nonce-from-id-token",
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation={
+                "status": "valid",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(b"different-nonce").hexdigest(),
+            },
+        )
+
+        self.assertEqual(result_without_binding["status"], "closed")
+        self.assertEqual(result_without_binding["reason"], "nonce_not_bound")
+        self.assertEqual(result_with_mismatch["status"], "closed")
+        self.assertEqual(result_with_mismatch["reason"], "nonce_mismatch")
+
+    def test_oidc_role_gate_closes_on_missing_expected_issuer_or_audience(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        nonce = "nonce-from-id-token"
+        claims = {
+            "iss": "https://idcs.example.identity.oraclecloud.com:443",
+            "aud": "notariat8_nac_app",
+            "nonce": nonce,
+            "groups": ["nac-tenant-admin"],
+        }
+        state_validation = {
+            "status": "valid",
+            "nonce_bound": True,
+            "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+        }
+        missing_issuer = evaluate_oidc_role_gate(
+            claims=claims,
+            expected_issuer="",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+        missing_audience = evaluate_oidc_role_gate(
+            claims=claims,
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="",
+            state_validation=state_validation,
+        )
+        all_empty = evaluate_oidc_role_gate(
+            claims={
+                "iss": "",
+                "aud": "",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="",
+            expected_audience="",
+            state_validation=state_validation,
+        )
+
+        self.assertEqual(missing_issuer["status"], "closed")
+        self.assertEqual(missing_issuer["reason"], "issuer_mismatch")
+        self.assertEqual(missing_audience["status"], "closed")
+        self.assertEqual(missing_audience["reason"], "audience_mismatch")
+        self.assertEqual(all_empty["status"], "closed")
+        self.assertEqual(all_empty["reason"], "issuer_mismatch")
+
+    def test_oidc_role_gate_closes_on_whitespace_modified_claims(self) -> None:
+        from nac_identity.oidc_role_gate import evaluate_oidc_role_gate
+
+        nonce = "nonce-from-id-token"
+        state_validation = {
+            "status": "valid",
+            "nonce_bound": True,
+            "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+        }
+        issuer_with_space = evaluate_oidc_role_gate(
+            claims={
+                "iss": " https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+        audience_with_space = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app ",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+        nonce_with_space = evaluate_oidc_role_gate(
+            claims={
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": f" {nonce}",
+                "groups": ["nac-tenant-admin"],
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            state_validation=state_validation,
+        )
+
+        self.assertEqual(issuer_with_space["status"], "closed")
+        self.assertEqual(issuer_with_space["reason"], "issuer_mismatch")
+        self.assertEqual(audience_with_space["status"], "closed")
+        self.assertEqual(audience_with_space["reason"], "audience_mismatch")
+        self.assertEqual(nonce_with_space["status"], "closed")
+        self.assertEqual(nonce_with_space["reason"], "nonce_mismatch")
+
+    def test_auth_callback_result_points_to_token_claim_role_gate_contract(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(b"nonce-secret-for-id-token").hexdigest(),
+            },
+        )
+
+        self.assertEqual(result["status"], "received")
+        self.assertEqual(result["role_gate"]["status"], "closed")
+        self.assertEqual(result["next_step"], "exchange_token_then_evaluate_oidc_role_gate_contract")
+
     def test_login_intent_rejects_non_https_redirect_uri(self) -> None:
         from nac_identity.oci_login import build_login_intent
 

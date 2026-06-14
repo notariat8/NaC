@@ -12,6 +12,9 @@ acceptance_ids:
   - AC-001
   - AC-002
   - AC-003
+  - AC-004
+  - AC-005
+  - AC-006
 validation_commands:
   - env PYTHONPATH=src /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_oci_functions_adapter
   - env GITHUB_BASE_REF=main /home/ubuntu/.venvs/nac/bin/python scripts/quality_gate.py --profile strict
@@ -97,6 +100,26 @@ does not create authorization.
   token exchange, session creation and the role gate can be added there.
 - AC-003: Callback values, tokens and secrets are not disclosed in public or
   stateful responses.
+- AC-004: Q2C introduces a pure, locally testable token-claim and role-gate
+  contract. It validates issuer, audience, nonce binding and
+  `nac-tenant-admin`, but does not yet open a session or perform live token
+  exchange.
+- AC-005: The Q2C contract fails closed when issuer, audience, nonce binding or
+  role are missing or do not match.
+- AC-006: The Q2C contract does not return raw tokens, callback codes, states,
+  nonces, nonce hashes or secret references in browser-adjacent results.
+
+## Q2C Slice
+
+Q2C is deliberately neither an OCI apply nor live token exchange. The slice
+models the server-side decision needed after a later token-exchange layer: a
+NaC role decision is created from already verified claims only when those claims
+match the expected Identity Domain, expected OIDC client, nonce-bound state
+validation and the `nac-tenant-admin` role.
+
+This makes the later live integration smaller and safer: token exchange and JWT
+signature validation will only feed this contract. Every mismatch remains
+fail-closed and does not open the workspace.
 
 ## Tests
 
