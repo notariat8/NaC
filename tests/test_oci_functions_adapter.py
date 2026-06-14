@@ -609,6 +609,26 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("Oracle", body)
         self.assertNotIn("OCI", body)
 
+    def test_public_function_does_not_expose_auth_callback(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        request = FakeFunctionContext(
+            request_url="/auth/callback?code=secret-code-from-idp&state=state-secret-from-nac",
+            method="GET",
+        )
+
+        public_result = dispatch_oci_public_function_request(request, repo_root=REPO_ROOT)
+        stateful_result = dispatch_oci_function_request(request, repo_root=REPO_ROOT)
+
+        self.assertEqual(public_result.status_code, 404)
+        self.assertNotIn(b"secret-code-from-idp", public_result.body)
+        self.assertNotIn(b"state-secret-from-nac", public_result.body)
+        self.assertEqual(stateful_result.status_code, 200)
+        self.assertIn(b"Anmeldung empfangen", stateful_result.body)
+        self.assertNotIn(b"secret-code-from-idp", stateful_result.body)
+        self.assertNotIn(b"state-secret-from-nac", stateful_result.body)
+
     def test_rejects_post_routes_in_public_function_runtime(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

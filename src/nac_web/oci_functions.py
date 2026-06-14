@@ -17,10 +17,13 @@ EXPOSED_GET_ROUTES = {
     "/",
     "/healthz",
     "/login",
-    "/auth/callback",
     "/api/tenant/login-intent",
     "/onboarding/readiness",
     "/onboarding/dns-check",
+}
+
+STATEFUL_GET_ROUTES = {
+    "/auth/callback",
 }
 
 EXPOSED_POST_ROUTES = {
@@ -131,6 +134,8 @@ def _is_exposed_get_route(request_url: str, *, expose_stateful_onboarding_routes
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
     if route in EXPOSED_GET_ROUTES:
+        return True
+    if expose_stateful_onboarding_routes and route in STATEFUL_GET_ROUTES:
         return True
     if route.startswith("/onboarding/requests/"):
         if not expose_stateful_onboarding_routes:
