@@ -747,6 +747,27 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("client_secret", html.lower())
         self.assertNotIn("private_key", html.lower())
 
+    def test_customer_onboarding_request_post_validation_error_renders_customer_page(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle_post(
+            "/onboarding/requests?audience=customer",
+            b"domain=myjur.de&tenant_slug=myjur&admin_email=ofunk%40funktion8.de",
+        )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 400)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("E-Mail-Adresse prüfen", html)
+        self.assertIn("myjur.de", html)
+        self.assertIn("ofunk@funktion8.de", html)
+        self.assertIn("/onboarding/readiness?audience=customer", html)
+        self.assertNotIn('"admin_email_domain_mismatch"', html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
+
     def test_customer_onboarding_request_post_fails_closed_without_store(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 

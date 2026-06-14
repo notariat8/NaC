@@ -195,12 +195,28 @@ class NaCLocalWebApp:
         audience = _optional_query_text(params, "audience", max_length=40)
         public_context = _is_public_prospect_context(source=source, entry=entry, audience=audience)
         form = parse_qs(body.decode("utf-8"), keep_blank_values=True)
-        request = build_onboarding_request(
-            domain=_query_text(form, "domain"),
-            tenant_slug=_query_text(form, "tenant_slug"),
-            admin_email=_query_text(form, "admin_email"),
-            dns_status="verified",
-        )
+        domain = _optional_query_text(form, "domain", max_length=120)
+        tenant_slug = _optional_query_text(form, "tenant_slug", max_length=80)
+        admin_email = _optional_query_text(form, "admin_email", max_length=160)
+        try:
+            request = build_onboarding_request(
+                domain=domain,
+                tenant_slug=tenant_slug,
+                admin_email=admin_email,
+                dns_status="verified",
+            )
+        except ValueError as exc:
+            if public_context:
+                return _html_response(
+                    build_customer_onboarding_request_validation_page(
+                        domain=domain,
+                        tenant_slug=tenant_slug,
+                        admin_email=admin_email,
+                        error=str(exc),
+                    ),
+                    HTTPStatus.BAD_REQUEST,
+                )
+            raise
         try:
             created = self.onboarding_request_store.create_request(request)
         except OnboardingRequestStoreDisabled:
@@ -1074,6 +1090,65 @@ def build_customer_onboarding_request_unavailable_page(message: str) -> str:
     </section>
     """
     return _layout("notariat8 Einrichtungsstatus", body)
+
+
+def build_customer_onboarding_request_validation_page(
+    *,
+    domain: str,
+    tenant_slug: str,
+    admin_email: str,
+    error: str,
+) -> str:
+    readiness_query = urlencode(
+        _present_query_values(
+            {
+                "audience": "customer",
+                "domain_hint": domain,
+                "tenant_slug": tenant_slug,
+            }
+        )
+    )
+    nav = _customer_onboarding_nav(readiness_query)
+    if "admin_email_domain_mismatch" in error:
+        guidance = (
+            "Die E-Mail-Adresse muss zur angegebenen Domain passen. "
+            "Bitte verwenden Sie eine Adresse der verantwortlichen Person in diesem Notariat."
+        )
+    elif "admin_email_invalid" in error:
+        guidance = "Bitte geben Sie eine gültige E-Mail-Adresse der verantwortlichen Person an."
+    elif "admin_email_freemail_domain" in error:
+        guidance = "Bitte verwenden Sie keine private Freemail-Adresse, sondern eine Adresse des Notariats."
+    else:
+        guidance = "Bitte prüfen Sie Ihre Angaben und starten Sie die Einrichtung erneut."
+    body = f"""
+    {nav}
+    <section class="hero">
+      <p class="eyebrow">notariat8 Einrichtung</p>
+      <h1>E-Mail-Adresse prüfen</h1>
+      <p>{html.escape(guidance)}</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Ihre Angaben</h2>
+        <p><strong>Domain:</strong> {html.escape(domain)}</p>
+        <p><strong>E-Mail-Adresse:</strong> {html.escape(admin_email) if admin_email else "nicht angegeben"}</p>
+        <p><strong>Status:</strong> Einrichtung noch nicht angefragt</p>
+        <div class="toolbar">
+          <a class="button-link" href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">E-Mail-Adresse korrigieren</a>
+        </div>
+      </section>
+      <section>
+        <h2>Was passiert als Nächstes?</h2>
+        <ul class="link-list">
+          <li><span>notariat8 übernimmt keine E-Mail-Adresse automatisch aus der Domain.</span></li>
+          <li><span>Nach der Korrektur prüfen Sie den DNS-TXT-Eintrag erneut.</span></li>
+          <li><span>Eine Einladung wird erst nach erfolgreicher Prüfung und Freigabe vorbereitet.</span></li>
+          <li><span>Keine Mandatsdaten: Diese Seite sammelt keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return _layout("notariat8 E-Mail-Adresse prüfen", body)
 
 
 def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
