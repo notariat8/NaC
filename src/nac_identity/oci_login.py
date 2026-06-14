@@ -24,10 +24,12 @@ def build_login_intent(
     normalized_client_id = _required_text(client_id, "client_id")
     normalized_redirect_uri = _normalize_redirect_uri(redirect_uri)
     normalized_hint = tenant_hint.strip()[:120]
+    normalized_nonce = _server_nonce("nonce")
     if state_signing_key:
         normalized_state = build_signed_state(
             tenant_hint=normalized_hint,
             signing_key=state_signing_key,
+            nonce=normalized_nonce,
             now=now,
             ttl_seconds=state_ttl_seconds,
         )
@@ -35,6 +37,7 @@ def build_login_intent(
             "status": "signed",
             "ttl_seconds": state_ttl_seconds,
             "tenant_hint_bound": True,
+            "nonce_bound": True,
         }
     else:
         normalized_state = _server_nonce("state")
@@ -42,8 +45,8 @@ def build_login_intent(
             "status": "opaque_server_generated",
             "ttl_seconds": None,
             "tenant_hint_bound": False,
+            "nonce_bound": False,
         }
-    normalized_nonce = _server_nonce("nonce")
     scope = " ".join(scope.strip() for scope in scopes if scope.strip())
     if "openid" not in scope.split():
         raise ValueError("scope_openid_missing")

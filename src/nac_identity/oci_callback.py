@@ -84,4 +84,6 @@ def _state_validation_result(*, configured: bool, validation: dict[str, Any] | N
     result: dict[str, Any] = {"status": status}
     if status == "valid" and validation.get("tenant_hint"):
         result["tenant_hint"] = str(validation["tenant_hint"])[:120]
+    if status == "valid":
+        result["nonce_bound"] = bool(validation.get("nonce_bound"))
     return result

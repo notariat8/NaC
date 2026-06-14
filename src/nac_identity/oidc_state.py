@@ -16,6 +16,7 @@ def build_signed_state(
     *,
     tenant_hint: str,
     signing_key: str,
+    nonce: str | None = None,
     now: int | None = None,
     ttl_seconds: int = DEFAULT_STATE_TTL_SECONDS,
 ) -> str:
@@ -30,6 +31,9 @@ def build_signed_state(
         "exp": issued_at + int(ttl_seconds),
         "jti": secrets.token_urlsafe(18),
     }
+    nonce_hash = _nonce_hash(nonce)
+    if nonce_hash:
+        payload["nonce_hash"] = nonce_hash
     encoded_payload = _b64url_encode(_canonical_json(payload))
     signature = _sign(encoded_payload, normalized_key)
     return f"state.{encoded_payload}.{signature}"
@@ -71,6 +75,8 @@ def validate_signed_state(state: str, *, signing_key: str, now: int | None = Non
             "schema_version": "nac.oidc-state/v0.1",
             "status": "valid",
             "tenant_hint": str(payload.get("tenant_hint", ""))[:120],
+            "nonce_bound": bool(payload.get("nonce_hash")),
+            **({"nonce_hash": str(payload["nonce_hash"])} if payload.get("nonce_hash") else {}),
             "issued_at": issued_at,
             "expires_at": expires_at,
             "guardrails": guardrails,
@@ -93,6 +99,13 @@ def _canonical_json(payload: dict[str, Any]) -> bytes:
 def _sign(encoded_payload: str, signing_key: str) -> str:
     digest = hmac.new(signing_key.encode("utf-8"), encoded_payload.encode("ascii"), hashlib.sha256).digest()
     return _b64url_encode(digest)
+
+
+def _nonce_hash(nonce: str | None) -> str:
+    normalized = (nonce or "").strip()
+    if not normalized:
+        return ""
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def _b64url_encode(value: bytes) -> str:

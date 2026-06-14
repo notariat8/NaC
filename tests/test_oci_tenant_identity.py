@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 import unittest
 from pathlib import Path
@@ -226,8 +227,41 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         self.assertEqual(intent["state_binding"]["status"], "signed")
         self.assertEqual(intent["state_binding"]["ttl_seconds"], 600)
+        self.assertTrue(intent["state_binding"]["nonce_bound"])
         self.assertEqual(validation["status"], "valid")
         self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertTrue(validation["nonce_bound"])
+        self.assertEqual(
+            validation["nonce_hash"],
+            hashlib.sha256(intent["oidc"]["nonce"].encode("utf-8")).hexdigest(),
+        )
+        self.assertNotIn("unit-test-state-signing-key", serialized)
+
+    def test_signed_state_binds_nonce_without_returning_raw_nonce(self) -> None:
+        from nac_identity.oidc_state import build_signed_state, validate_signed_state
+
+        state = build_signed_state(
+            tenant_hint="notariat-musterstadt",
+            signing_key="unit-test-state-signing-key",
+            nonce="nonce-secret-for-id-token",
+            now=1_800_000_000,
+            ttl_seconds=120,
+        )
+        validation = validate_signed_state(
+            state,
+            signing_key="unit-test-state-signing-key",
+            now=1_800_000_060,
+        )
+        serialized = json.dumps(validation, sort_keys=True)
+
+        self.assertEqual(validation["status"], "valid")
+        self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertTrue(validation["nonce_bound"])
+        self.assertEqual(
+            validation["nonce_hash"],
+            hashlib.sha256(b"nonce-secret-for-id-token").hexdigest(),
+        )
+        self.assertNotIn("nonce-secret-for-id-token", serialized)
         self.assertNotIn("unit-test-state-signing-key", serialized)
 
     def test_signed_state_rejects_tampering_and_expiry_without_returning_secret(self) -> None:
@@ -330,6 +364,30 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(result["role_gate"]["status"], "closed")
         self.assertNotIn("secret-code-from-idp", serialized)
         self.assertNotIn("state-redacted", serialized)
+
+    def test_auth_callback_result_preserves_nonce_binding_without_hash(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=False,
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "notariat-musterstadt",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(b"nonce-secret-for-id-token").hexdigest(),
+            },
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "received")
+        self.assertTrue(result["state_validation"]["nonce_bound"])
+        self.assertNotIn("nonce-secret-for-id-token", serialized)
+        self.assertNotIn(hashlib.sha256(b"nonce-secret-for-id-token").hexdigest(), serialized)
+        self.assertEqual(result["role_gate"]["status"], "closed")
 
     def test_auth_callback_result_rejects_configured_but_missing_state_validation(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result

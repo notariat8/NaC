@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http.client
+import hashlib
 import io
 import json
 import os
@@ -875,9 +876,12 @@ class NaCLocalWebTests(unittest.TestCase):
         from nac_identity.oidc_state import build_signed_state
 
         app = NaCLocalWebApp(REPO_ROOT)
+        nonce = "nonce-secret-for-id-token"
+        nonce_hash = hashlib.sha256(nonce.encode("utf-8")).hexdigest()
         state = build_signed_state(
             tenant_hint="myjur",
             signing_key="unit-test-state-signing-key",
+            nonce=nonce,
         )
 
         with patch.dict(
@@ -900,6 +904,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Arbeitsbereich bleibt geschlossen", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
+        self.assertNotIn(nonce, html)
+        self.assertNotIn(nonce_hash, html)
         self.assertNotIn("unit-test-state-signing-key", html)
         self.assertEqual(admin_status, 403)
         self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
@@ -1032,8 +1038,14 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "application/json; charset=utf-8")
         self.assertEqual(payload["state_binding"]["status"], "signed")
+        self.assertTrue(payload["state_binding"]["nonce_bound"])
         self.assertEqual(validation["status"], "valid")
         self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertTrue(validation["nonce_bound"])
+        self.assertEqual(
+            validation["nonce_hash"],
+            hashlib.sha256(payload["oidc"]["nonce"].encode("utf-8")).hexdigest(),
+        )
         self.assertNotIn("unit-test-state-signing-key", serialized)
         self.assertNotIn("client_secret", serialized)
 
@@ -1070,8 +1082,14 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(content_type, "application/json; charset=utf-8")
         self.assertEqual(requested_secret_ids, [secret_ocid])
         self.assertEqual(payload["state_binding"]["status"], "signed")
+        self.assertTrue(payload["state_binding"]["nonce_bound"])
         self.assertEqual(validation["status"], "valid")
         self.assertEqual(validation["tenant_hint"], "notariat-musterstadt")
+        self.assertTrue(validation["nonce_bound"])
+        self.assertEqual(
+            validation["nonce_hash"],
+            hashlib.sha256(payload["oidc"]["nonce"].encode("utf-8")).hexdigest(),
+        )
         self.assertNotIn("unit-test-state-signing-key", serialized)
         self.assertNotIn(secret_ocid, serialized)
         self.assertNotIn("client_secret", serialized)
