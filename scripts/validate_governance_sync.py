@@ -118,6 +118,7 @@ EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
     "require_plan_review_fix_for_nontrivial_work",
     "require_implementation_review_before_user_acceptance",
     "require_diagnosis_before_fix_for_repeated_or_unclear_failures",
+    "require_full_pr_diff_review_before_merge",
     "require_layer_sync_check_for_data_controller_view_changes",
     "require_error_test_security_review_for_code_reviewer",
 )

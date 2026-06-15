@@ -132,6 +132,7 @@ agent_workflows:
   require_plan_review_fix_for_nontrivial_work: true
   require_implementation_review_before_user_acceptance: true
   require_diagnosis_before_fix_for_repeated_or_unclear_failures: true
+  require_full_pr_diff_review_before_merge: true
   repeated_friction_optimization:
     enabled: true
     session_threshold: 2

@@ -100,6 +100,7 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "  require_plan_review_fix_for_nontrivial_work: true",
                 "  require_implementation_review_before_user_acceptance: true",
                 "  require_diagnosis_before_fix_for_repeated_or_unclear_failures: true",
+                "  require_full_pr_diff_review_before_merge: true",
                 "  require_layer_sync_check_for_data_controller_view_changes: true",
                 "  require_error_test_security_review_for_code_reviewer: true",
                 "rule_architecture:",
@@ -293,6 +294,24 @@ class GovernanceSyncValidationTest(unittest.TestCase):
         self.assertIn(
             "Pflichtwert fehlt in process-policy: "
             "agent_workflows.require_diagnosis_before_fix_for_repeated_or_unclear_failures.true",
+            errors,
+        )
+
+    def test_process_policy_reports_missing_full_pr_diff_check(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = self._minimal_valid_process_policy().replace(
+                "  require_full_pr_diff_review_before_merge: true\n",
+                "",
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.require_full_pr_diff_review_before_merge.true",
             errors,
         )
 

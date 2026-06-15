@@ -36,9 +36,21 @@ Nach der Umsetzung prüft ein Code-Review mindestens:
 - ob Fehlerfälle, Tests und Sicherheitsaspekte angemessen abgedeckt sind
 - ob keine unnötige neue Technik, Doppelstruktur oder Überkomplexität entsteht
 
+Vor einem Merge, auch bei Owner-Freigabe, wird immer die vollständige PR-Diff
+gegen den Zielbranch geprüft. Maßgeblich ist nicht nur der letzte Commit,
+sondern `base...head` mit Datei- und Commitliste. Wenn ein PR-Branch von einem
+anderen Feature-Branch statt vom Zielbranch abzweigt, wird der PR vor dem Merge
+gestoppt, neu geschnitten oder ausdrücklich als kombinierter Scope dokumentiert.
+
 Bei hartnäckigen oder unklaren Fehlern gilt: erst Diagnose, dann Fix. Ein
 Agent darf in dieser Situation nicht weiterprobieren, bis die Ursache
 benannt und der kleinste sinnvolle Fix-Pfad beschrieben ist.
+
+Governance-Abweichung vom 15.06.2026: PR #139 wurde akzeptiert, obwohl der
+Observability-Branch irrtümlich auf dem Q2D-Branch basierte und dadurch Q2D
+zusammen mit dem Time-Ledger nach `main` brachte. PR #138 wurde als
+superseded geschlossen. Die dauerhafte Korrektur ist die Pflicht zur
+vollständigen PR-Diff-Prüfung vor jedem Merge.
 
 ## Environment-Mapping
 

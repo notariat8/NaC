@@ -97,6 +97,12 @@ Diagnose vor Fix. Eine Agentenänderung darf erst erfolgen, wenn die Ursache
 benannt ist. Änderungen, die Daten-, Controller-/Logik- oder View-Schicht
 berühren, brauchen einen expliziten Abgleich dieser Schichten.
 
+Vor einem Merge gehört die vollständige PR-Diff gegen den Zielbranch zur
+agentischen Änderungsdisziplin. Agents prüfen `base...head`, Datei- und
+Commitliste; ein einzelner HEAD-Commit reicht nicht als Merge-Nachweis. Wenn
+die Diff mehr Scope enthält als freigegeben, wird gestoppt und der Branch neu
+geschnitten oder der kombinierte Scope ausdrücklich dokumentiert.
+
 Die Agentic-Delivery-Lesart lautet: Nicht menschliche Übergaben schneller
 machen, sondern Übergaben maschinenlesbar und prüfbar machen. Ein agentischer
 Arbeitsauftrag soll deshalb die fachliche Quelle, den betroffenen Usecase, die

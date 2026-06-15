@@ -37,9 +37,21 @@ After implementation, code review checks at least:
 - whether no unnecessary new technology, duplicate structure or over-complexity
   has been introduced.
 
+Before a merge, including owner-approved merges, the complete PR diff against
+the target branch is checked. The relevant evidence is not just the last
+commit, but `base...head` with file and commit list. If a PR branch starts from
+another feature branch instead of the target branch, the merge is stopped, the
+PR is recut, or the combined scope is documented explicitly.
+
 For persistent or unclear failures, diagnosis comes before fixing. In that
 situation, an agent must not keep trying changes until the cause is named and
 the smallest sensible fix path is described.
+
+Governance deviation on 2026-06-15: PR #139 was accepted even though the
+observability branch had accidentally been based on the Q2D branch and
+therefore brought Q2D into `main` together with the time ledger. PR #138 was
+closed as superseded. The durable correction is the mandatory full-PR-diff
+check before every merge.
 
 ## Environment Mapping
 

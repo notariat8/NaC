@@ -97,6 +97,12 @@ An agent may change code only after the cause has been named. Changes that
 touch the data, controller/logic or view layer need an explicit check that
 those layers stay synchronized.
 
+Before a merge, the full PR diff against the target branch is part of agentic
+change discipline. Agents check `base...head`, the file list and the commit
+list; a single HEAD commit is not enough merge evidence. If the diff contains
+more scope than approved, the run stops and the branch is recut or the combined
+scope is documented explicitly.
+
 The agentic-delivery reading is: do not merely make human handoffs faster; make
 handoffs machine-readable and checkable. An agentic work order should therefore
 name the subject-matter source, affected usecase, relevant KG/BPMN/contract
