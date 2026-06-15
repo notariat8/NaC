@@ -132,6 +132,35 @@ agent_workflows:
   require_plan_review_fix_for_nontrivial_work: true
   require_implementation_review_before_user_acceptance: true
   require_diagnosis_before_fix_for_repeated_or_unclear_failures: true
+  repeated_friction_optimization:
+    enabled: true
+    session_threshold: 2
+    cross_issue_or_pr_threshold: 3
+    triggers:
+      - repeated_approval_request
+      - repeated_error_path
+      - repeated_work_interruption
+      - repeated_sandbox_or_operator_friction
+      - repeated_manual_retry_without_new_information
+    required_action_before_retry:
+      - stop_and_name_the_repeated_pattern
+      - explain_why_the_current_rule_or_runbook_was_insufficient
+      - propose_a_small_durable_optimization
+      - state_whether_owner_design_or_apply_approval_is_required
+    allowed_optimization_targets:
+      - runbook
+      - policy_rule
+      - agent_mirror
+      - approval_text
+      - validator_or_test
+      - command_prefix_request
+      - tooling_wrapper
+    allow_read_only_background_optimization_agent: true
+    background_agent_limits:
+      write_access: false
+      oci_write_access: false
+      may_propose_changes: true
+      may_apply_changes_without_owner_approval: false
   require_layer_sync_check_for_data_controller_view_changes: true
   require_error_test_security_review_for_code_reviewer: true
   require_user_confirmation_before_code_for_ambiguous_requests: true
