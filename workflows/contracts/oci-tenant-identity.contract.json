@@ -71,6 +71,20 @@
     "tenant_hint_authorizes_access": false,
     "requires_server_generated_state_and_nonce": true
   },
+  "callback_session_contract_schema": {
+    "schema_version": "nac.oidc-session-boundary/v0.1",
+    "required": [
+      "token_exchange",
+      "jwt_validation",
+      "role_gate",
+      "session",
+      "guardrails"
+    ],
+    "live_token_exchange_in_contract_slice": false,
+    "session_cookie_issued_in_contract_slice": false,
+    "workspace_opened_in_contract_slice": false,
+    "requires_verified_claims_before_role_gate": true
+  },
   "domain_readiness_schema": {
     "schema_version": "nac.tenant-domain-readiness/v0.1",
     "required": [

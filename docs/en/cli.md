@@ -64,6 +64,7 @@ python scripts/nac.py config list
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
+python scripts/nac.py time-ledger summary
 ```
 
 After installation:
@@ -85,6 +86,7 @@ nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notaria
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
+nac time-ledger summary
 ```
 
 ## Technical Operating Areas
@@ -107,6 +109,23 @@ nac qms status
 | Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
 | Tenant identity | `nac tenant domain-check`, `nac tenant provision-admin --dry-run` and `nac tenant apply-request --dry-run` | Checks new-customer domains and creates OCI Identity dry-run and apply-readiness artifacts without productive writes. |
 | QMS | `nac qms status` and `nac qms evidence --repo ../demo8notariat` | Shows ISO 9001/QMS artifacts and evidence counts from the data repository. |
+| Codex Time Ledger | `nac time-ledger add`, `nac time-ledger run` and `nac time-ledger summary` | Records agentic work blocks and summarizes tool time, approvals, waiting time, local CPU/I/O and estimated LLM time. |
+
+## Codex Time Ledger
+
+The Time Ledger is the local measurement layer for longer Codex sessions. It
+writes completed work blocks as JSONL under
+`out/observability/codex-time-ledger.jsonl` and summarizes them by category and
+phase.
+
+```bash
+nac time-ledger add --session-id 2026-06-15-nac --task "NaC Time Ledger" --phase context-read --category local_io --started-at 2026-06-15T10:00:00Z --ended-at 2026-06-15T10:08:00Z
+nac time-ledger run --session-id 2026-06-15-nac --task "NaC Time Ledger" --phase unit-tests --category local_cpu -- python -m unittest tests/test_codex_time_ledger.py
+nac time-ledger summary --session-id 2026-06-15-nac
+```
+
+Usage and privacy boundaries are documented in
+[operations/codex-time-ledger.md](operations/codex-time-ledger.md).
 
 ## `nac legal-graph`
 

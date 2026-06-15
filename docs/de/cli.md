@@ -65,6 +65,7 @@ python scripts/nac.py config list
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
+python scripts/nac.py time-ledger summary
 ```
 
 Nach Installation entsprechend:
@@ -86,6 +87,7 @@ nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notaria
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
+nac time-ledger summary
 ```
 
 ## Technische Bedienflächen
@@ -108,6 +110,23 @@ nac qms status
 | Datenrepo | `nac tenant status --repo ../demo8notariat` | Prüft ein getrenntes NaC-Datenrepo für Demo- oder spätere Produktivdaten. |
 | Tenant-Identity | `nac tenant domain-check`, `nac tenant provision-admin --dry-run` und `nac tenant apply-request --dry-run` | Prüft Neukunden-Domains und erzeugt OCI-Identity-Dry-run- und Apply-Readiness-Artefakte ohne produktive Schreiboperation. |
 | QMS | `nac qms status` und `nac qms evidence --repo ../demo8notariat` | Zeigt ISO-9001/QMS-Artefakte und Nachweiszahlen aus dem Datenrepo. |
+| Codex Time Ledger | `nac time-ledger add`, `nac time-ledger run` und `nac time-ledger summary` | Protokolliert agentische Arbeitsblöcke und summiert Toolzeit, Freigaben, Wartezeit, lokale CPU/I/O und geschätzte LLM-Zeit. |
+
+## Codex Time Ledger
+
+Das Time Ledger ist die lokale Messschicht für längere Codex-Sessions. Es
+schreibt abgeschlossene Arbeitsblöcke als JSONL unter
+`out/observability/codex-time-ledger.jsonl` und fasst sie nach Kategorie und
+Phase zusammen.
+
+```bash
+nac time-ledger add --session-id 2026-06-15-nac --task "NaC Time Ledger" --phase context-read --category local_io --started-at 2026-06-15T10:00:00Z --ended-at 2026-06-15T10:08:00Z
+nac time-ledger run --session-id 2026-06-15-nac --task "NaC Time Ledger" --phase unit-tests --category local_cpu -- python -m unittest tests/test_codex_time_ledger.py
+nac time-ledger summary --session-id 2026-06-15-nac
+```
+
+Die Bedien- und Datenschutzgrenzen stehen in
+[operations/codex-time-ledger.md](operations/codex-time-ledger.md).
 
 ## `nac legal-graph`
 

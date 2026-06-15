@@ -13,6 +13,8 @@ model and repository consolidation.
 - [parallelbetrieb-version-binding.md](parallelbetrieb-version-binding.md): mixed old/new operation with version
   binding.
 - [agile-cadence.md](agile-cadence.md): work method and team cadence.
+- [codex-time-ledger.md](codex-time-ledger.md): local time ledger for Codex work blocks,
+  tool time, approvals and repeated waiting time.
 - [oci-runtime.md](oci-runtime.md): live runtime contract, App Release Overlay
   and VM replacement boundary for `app.notariat8.de`.
 - [repository-consolidation.md](repository-consolidation.md): migrated, open and retire-ready standalone

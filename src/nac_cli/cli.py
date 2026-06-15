@@ -18,6 +18,16 @@ from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_r
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status
+from nac_observability.time_ledger import (
+    CATEGORY_CHOICES,
+    append_entry,
+    build_entry,
+    format_summary_text,
+    load_entries,
+    parse_timestamp,
+    run_timed_command,
+    summarize_entries,
+)
 from nac_web.bpmn import bpmn_model_json, find_bpmn_model, list_bpmn_models, render_bpmn_svg
 from nac_web.server import run_server
 from notary_kg.catalog import all_case_summaries, load_catalogs
@@ -220,6 +230,28 @@ def build_parser() -> argparse.ArgumentParser:
     qms_evidence.add_argument("--format", choices=["text", "json"], default="text")
     qms.set_defaults(func=command_qms)
 
+    time_ledger = subparsers.add_parser(
+        "time-ledger",
+        help="Protokolliert und summiert Codex-Arbeitszeiten.",
+    )
+    time_ledger_sub = time_ledger.add_subparsers(dest="time_ledger_command", required=True)
+    time_ledger_add = time_ledger_sub.add_parser("add", help="Schreibt einen abgeschlossenen Zeitblock.")
+    add_time_ledger_common_args(time_ledger_add)
+    time_ledger_add.add_argument("--started-at", required=True, help="Startzeit als ISO-8601, z.B. 2026-06-15T10:00:00Z.")
+    time_ledger_add.add_argument("--ended-at", required=True, help="Endzeit als ISO-8601, z.B. 2026-06-15T10:05:00Z.")
+    time_ledger_add.add_argument("--outcome", choices=["completed", "failed", "interrupted"], default="completed")
+    time_ledger_add.add_argument("--command", default="", help="Optionaler Command-String ohne Secrets.")
+    time_ledger_add.add_argument("--format", choices=["text", "json"], default="text")
+    time_ledger_run = time_ledger_sub.add_parser("run", help="Führt ein Kindkommando aus und misst die Dauer.")
+    add_time_ledger_common_args(time_ledger_run)
+    time_ledger_run.add_argument("--format", choices=["text", "json"], default="text")
+    time_ledger_run.add_argument("child_command", nargs=argparse.REMAINDER)
+    time_ledger_summary = time_ledger_sub.add_parser("summary", help="Summiert ein Codex-Time-Ledger.")
+    time_ledger_summary.add_argument("--log", type=Path, default=Path("out/observability/codex-time-ledger.jsonl"))
+    time_ledger_summary.add_argument("--session-id", help="Optional nur eine Session auswerten.")
+    time_ledger_summary.add_argument("--format", choices=["text", "json"], default="text")
+    time_ledger.set_defaults(func=command_time_ledger)
+
     legal_graph = subparsers.add_parser("legal-graph", help="Steuert den NaC-Rechtsgraphen.")
     legal_graph_sub = legal_graph.add_subparsers(dest="legal_graph_command", required=True)
     legal_graph_status_parser = legal_graph_sub.add_parser(
@@ -365,6 +397,16 @@ def add_pkcs7_inspect_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--strict", action="store_true", help="Nur bei bereitem Zertifikatsbündel-Gate mit 0 beenden.")
 
 
+def add_time_ledger_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--log", type=Path, default=Path("out/observability/codex-time-ledger.jsonl"))
+    parser.add_argument("--session-id", required=True, help="Stabile Session-ID, z.B. 2026-06-15-nac.")
+    parser.add_argument("--task", required=True, help="Kurzer Arbeitsauftrag oder Issue-/Plan-Bezug.")
+    parser.add_argument("--phase", required=True, help="Messphase, z.B. context-read, tests oder approval.")
+    parser.add_argument("--category", choices=CATEGORY_CHOICES, required=True)
+    parser.add_argument("--actor", default="codex", help="Ausführer des Zeitblocks, Standard: codex.")
+    parser.add_argument("--notes", default="", help="Optionale knappe Notiz ohne Mandatsdaten oder Secrets.")
+
+
 def command_status(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     catalogs = load_catalogs(repo_root)
@@ -391,6 +433,7 @@ def command_status(args: argparse.Namespace) -> int:
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
             "tenant_status": "nac tenant status --repo ../demo8notariat",
+            "time_ledger_summary": "nac time-ledger summary",
         },
     }
     if args.format == "json":
@@ -905,6 +948,74 @@ def command_qms(args: argparse.Namespace) -> int:
     raise AssertionError(f"Unknown QMS command: {args.qms_command}")
 
 
+def command_time_ledger(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    log_path = resolve_repo_path(repo_root, args.log)
+    try:
+        if args.time_ledger_command == "add":
+            entry = build_entry(
+                session_id=args.session_id,
+                task=args.task,
+                phase=args.phase,
+                category=args.category,
+                started_at=parse_timestamp(args.started_at),
+                ended_at=parse_timestamp(args.ended_at),
+                actor=args.actor,
+                outcome=args.outcome,
+                command=args.command,
+                notes=args.notes,
+            )
+            append_entry(log_path, entry)
+            if args.format == "json":
+                print_json(entry)
+                return 0
+            print("NaC Codex Time Ledger")
+            print(f"- Log: {log_path}")
+            print(f"- Session: {entry['session_id']}")
+            print(f"- Phase: {entry['phase']}")
+            print(f"- Kategorie: {entry['category']}")
+            print(f"- Dauer: {entry['duration_ms']} ms")
+            return 0
+
+        if args.time_ledger_command == "run":
+            rc, entry = run_timed_command(
+                log_path=log_path,
+                session_id=args.session_id,
+                task=args.task,
+                phase=args.phase,
+                category=args.category,
+                command=args.child_command,
+                cwd=repo_root,
+                actor=args.actor,
+                notes=args.notes,
+            )
+            payload = {**entry, "child_return_code": rc}
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print("NaC Codex Time Ledger")
+                print(f"- Log: {log_path}")
+                print(f"- Session: {entry['session_id']}")
+                print(f"- Phase: {entry['phase']}")
+                print(f"- Kategorie: {entry['category']}")
+                print(f"- Dauer: {entry['duration_ms']} ms")
+                print(f"- Kindprozess: {rc}")
+            return rc
+
+        if args.time_ledger_command == "summary":
+            summary = summarize_entries(load_entries(log_path), session_id=args.session_id)
+            if args.format == "json":
+                print_json(summary)
+                return 0
+            print(format_summary_text(summary))
+            return 0
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    raise AssertionError(f"Unknown time-ledger command: {args.time_ledger_command}")
+
+
 def command_tenant(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     try:
@@ -1147,6 +1258,13 @@ def resolve_repo_root(path: Path) -> Path:
     if not (repo_root / "pyproject.toml").is_file():
         raise SystemExit(f"ERROR: Kein NaC-Repository gefunden: {repo_root}")
     return repo_root
+
+
+def resolve_repo_path(repo_root: Path, path: Path) -> Path:
+    expanded = path.expanduser()
+    if expanded.is_absolute():
+        return expanded
+    return repo_root / expanded
 
 
 def discover_config_entries(repo_root: Path) -> list[ConfigEntry]:
