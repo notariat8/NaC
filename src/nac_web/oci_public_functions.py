@@ -4,7 +4,7 @@ import io
 from pathlib import Path
 from typing import Any
 
-from nac_web.oci_functions import OCIHttpResponse, dispatch_oci_function_request
+from nac_web.oci_minimal_public import PublicHttpResponse, dispatch_minimal_public_get_request
 
 
 def dispatch_oci_public_function_request(
@@ -12,12 +12,11 @@ def dispatch_oci_public_function_request(
     data: io.BytesIO | None = None,
     *,
     repo_root: Path | None = None,
-) -> OCIHttpResponse:
-    return dispatch_oci_function_request(
+) -> PublicHttpResponse:
+    return dispatch_minimal_public_get_request(
         ctx,
         data,
         repo_root=repo_root,
-        expose_stateful_onboarding_routes=False,
     )
 
 

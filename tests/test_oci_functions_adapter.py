@@ -320,11 +320,16 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         func_py = self.read("deploy/functions/nac-public-app/func.py")
         dockerfile = self.read("deploy/functions/nac-public-app/Dockerfile")
         requirements = self.read("deploy/functions/nac-public-app/requirements.txt")
+        adapter = self.read("src/nac_web/oci_public_functions.py")
 
         self.assertIn("name: nac-public-app", func_yaml)
         self.assertIn("runtime: python", func_yaml)
         self.assertIn("entrypoint: /python/bin/fdk /function/func.py handler", func_yaml)
         self.assertIn("from nac_web.oci_public_functions import handler", func_py)
+        self.assertIn("dispatch_minimal_public_get_request", adapter)
+        self.assertNotIn("from nac_web.oci_functions import", adapter)
+        self.assertNotIn("dispatch_oci_function_request", adapter)
+        self.assertNotIn("NaCLocalWebApp", adapter)
         self.assertIn("COPY src /function/src", dockerfile)
         self.assertIn("COPY deploy/functions/nac-public-app/func.py /function/func.py", dockerfile)
         self.assertIn("COPY deploy/functions/nac-public-app/requirements.txt /function/requirements.txt", dockerfile)
@@ -508,6 +513,88 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
         self.assertEqual(result.body, b"")
+
+    def test_minimal_public_get_runtime_serves_healthz_without_webapp_boot(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        result = dispatch_oci_public_function_request(
+            FakeFunctionContext(request_url="/healthz", method="GET"),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(json.loads(result.body.decode("utf-8")), {"status": "ok"})
+
+    def test_minimal_public_get_runtime_serves_customer_readiness_without_vendor_copy(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        result = dispatch_oci_public_function_request(
+            FakeFunctionContext(
+                request_url=(
+                    "/onboarding/readiness?audience=customer&domain_hint=myjur.de"
+                    "&tenant_slug=myjur&admin_email=ofunk%40myjur.de"
+                ),
+                method="GET",
+            ),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertIn("notariat8", body)
+        self.assertIn("myjur.de", body)
+        self.assertIn("_nac.myjur.de", body)
+        self.assertIn("Keine Mandatsdaten", body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
+
+    def test_minimal_public_get_runtime_marks_missing_customer_email_as_open(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        result = dispatch_oci_public_function_request(
+            FakeFunctionContext(
+                request_url="/onboarding/readiness?audience=customer&domain_hint=myjur.de&tenant_slug=myjur",
+                method="GET",
+            ),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertIn("E-Mail offen", body)
+        self.assertNotIn("<strong>Status:</strong> blockiert", body)
+
+    def test_minimal_public_get_runtime_serves_signed_login_intent(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_OIDC_STATE_SIGNING_KEY": "test-signing-key",
+            },
+        ):
+            result = dispatch_oci_public_function_request(
+                FakeFunctionContext(
+                    request_url="/api/tenant/login-intent?tenant_hint=myjur",
+                    method="GET",
+                ),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+        payload = json.loads(result.body.decode("utf-8"))
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(payload["schema_version"], "nac.oci-login-intent/v0.1")
+        self.assertEqual(payload["tenant_context"]["tenant_hint"], "myjur")
+        self.assertEqual(payload["state_binding"]["status"], "signed")
+        self.assertFalse(payload["guardrails"]["contains_credentials"])
 
     def test_dispatches_get_request_with_query_string(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
