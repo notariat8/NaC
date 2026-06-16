@@ -41,6 +41,13 @@ This state still does not open a workspace and does not issue a session cookie.
 Productive operation additionally needs the reviewed secret path and
 server-side ID-token signature verification.
 
+Q2G wires the stateful callback to this adapter, but it still does not open a
+workspace and does not issue a session cookie. The callback reads the
+Vault-backed client-secret path only when `state` is valid, `code`,
+redirect URI, token endpoint, and client ID are complete, and a server-side
+ID-token verifier is configured. If one of these conditions is missing, the
+path stays closed and no productive workspace is opened.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-09:

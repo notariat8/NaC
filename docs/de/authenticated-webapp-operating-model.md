@@ -124,6 +124,13 @@ und Client-Secret nur intern entgegen, gibt keine Roh-Tokens zurück und liefert
 erst nach ID-Token-Verifikation Claims an das notariat8-Rollengate. Fehlen
 Secret, Metadaten oder Verifier, bleibt die Anmeldung geschlossen.
 
+Der zustandsbehaftete Auth-Callback ist mit diesem Adapter verbunden, bleibt
+aber fail-closed: Secret-Lesen und Token-Austausch starten nur nach gültigem
+State, vorhandenem Authorization Code, vollständigen OIDC-Metadaten und
+konfigurierter serverseitiger ID-Token-Prüfung. Auch bei intern erlaubter
+Sitzungsgrenze wird in diesem Stand kein Session-Cookie gesetzt und kein
+Arbeitsbereich geöffnet.
+
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
 

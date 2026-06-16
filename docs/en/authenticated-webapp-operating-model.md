@@ -119,6 +119,12 @@ client secret only internally, returns no raw tokens, and forwards claims to the
 notariat8 role gate only after ID-token verification. If the secret, metadata,
 or verifier is missing, the login remains closed.
 
+The stateful auth callback is wired to this adapter, but remains fail-closed:
+secret reads and token exchange start only after valid state, a present
+authorization code, complete OIDC metadata, and configured server-side ID-token
+verification. Even when the internal session boundary allows the claim set,
+this state issues no session cookie and opens no workspace.
+
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 

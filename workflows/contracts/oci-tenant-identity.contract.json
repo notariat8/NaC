@@ -82,7 +82,9 @@
       "session",
       "guardrails"
     ],
-    "live_token_exchange_in_contract_slice": false,
+    "live_token_exchange_in_contract_slice": true,
+    "live_token_exchange_requires_valid_state": true,
+    "live_token_exchange_requires_server_side_adapter": true,
     "session_cookie_issued_in_contract_slice": false,
     "workspace_opened_in_contract_slice": false,
     "requires_verified_claims_before_role_gate": true
@@ -105,8 +107,9 @@
     ],
     "server_side_live_adapter_available": true,
     "live_token_exchange_requires_injected_client_secret_and_id_token_verifier": true,
-    "live_token_exchange_performed": false,
-    "vault_secret_read_in_contract_slice": false,
+    "live_token_exchange_performed_by_default": false,
+    "vault_secret_read_in_contract_slice": true,
+    "vault_secret_read_requires_valid_state_code_metadata_and_id_token_verifier": true,
     "tokens_returned_in_public_result": false,
     "provider_error_details_exposed": false,
     "workspace_opened_in_token_exchange_slice": false,

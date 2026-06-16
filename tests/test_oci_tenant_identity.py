@@ -36,9 +36,15 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             "nac.oidc-token-exchange/v0.1",
         )
         self.assertTrue(contract["token_exchange_contract_schema"]["server_side_live_adapter_available"])
-        self.assertFalse(contract["token_exchange_contract_schema"]["live_token_exchange_performed"])
-        self.assertFalse(contract["token_exchange_contract_schema"]["vault_secret_read_in_contract_slice"])
-        self.assertFalse(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
+        self.assertFalse(contract["token_exchange_contract_schema"]["live_token_exchange_performed_by_default"])
+        self.assertTrue(contract["token_exchange_contract_schema"]["vault_secret_read_in_contract_slice"])
+        self.assertTrue(
+            contract["token_exchange_contract_schema"][
+                "vault_secret_read_requires_valid_state_code_metadata_and_id_token_verifier"
+            ]
+        )
+        self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
+        self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_requires_valid_state"])
         self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_issued_in_contract_slice"])
         self.assertTrue(contract["guardrails"]["nac_role_gate_required_after_idp_login"])
 
