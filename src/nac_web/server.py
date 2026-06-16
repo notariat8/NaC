@@ -24,6 +24,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
+from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_gnotkg.views import build_cost_review_view
@@ -761,14 +762,22 @@ def build_auth_callback_page(
     provider_error = _optional_query_text(params, "error", max_length=120)
     code = _optional_query_text(params, "code", max_length=4096)
     state = _optional_query_text(params, "state", max_length=4096)
+    state_validation = _auth_callback_state_validation(state, secret_text_provider=secret_text_provider)
+    token_exchange_metadata = _auth_callback_token_exchange_metadata()
     callback_result = build_auth_callback_result(
         code=code,
         state=state,
         provider_error=provider_error,
         state_validation_configured=_auth_callback_state_validation_configured(),
         token_exchange_configured=_auth_callback_token_exchange_configured(),
-        state_validation=_auth_callback_state_validation(state, secret_text_provider=secret_text_provider),
-        **_auth_callback_token_exchange_metadata(),
+        state_validation=state_validation,
+        token_exchange_result=_auth_callback_token_exchange_result(
+            code=code,
+            state_validation=state_validation,
+            secret_text_provider=secret_text_provider,
+            **token_exchange_metadata,
+        ),
+        **token_exchange_metadata,
     )
     if callback_result["status"] == "rejected":
         body = """
@@ -2341,6 +2350,65 @@ def _oidc_state_signing_key_from_env(
 
 def _auth_callback_token_exchange_configured() -> bool:
     return bool(os.environ.get("NAC_OIDC_CLIENT_SECRET_REF", "").strip())
+
+
+def _auth_callback_token_exchange_result(
+    *,
+    code: str,
+    state_validation: dict[str, Any] | None,
+    redirect_uri: str,
+    token_endpoint: str,
+    client_id: str,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> dict[str, Any] | None:
+    if not _auth_callback_token_exchange_configured():
+        return None
+    if not isinstance(state_validation, dict) or state_validation.get("status") != "valid":
+        return None
+    verifier = _auth_callback_id_token_verifier()
+    if not code or not redirect_uri or not token_endpoint or not client_id or verifier is None:
+        return exchange_oidc_authorization_code(
+            code=code,
+            redirect_uri=redirect_uri,
+            token_endpoint=token_endpoint,
+            client_id=client_id,
+            client_secret="",
+            id_token_verifier=verifier,
+        )
+    client_secret = ""
+    try:
+        client_secret = _auth_callback_oidc_client_secret_from_env(secret_text_provider=secret_text_provider)
+    except ValueError:
+        client_secret = ""
+    return exchange_oidc_authorization_code(
+        code=code,
+        redirect_uri=redirect_uri,
+        token_endpoint=token_endpoint,
+        client_id=client_id,
+        client_secret=client_secret,
+        id_token_verifier=verifier,
+    )
+
+
+def _auth_callback_oidc_client_secret_from_env(
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> str:
+    secret_ref = os.environ.get("NAC_OIDC_CLIENT_SECRET_REF", "").strip()
+    if not secret_ref:
+        return ""
+    provider = secret_text_provider or OciVaultSecretTextProvider(secret_ref)
+    try:
+        client_secret = provider(secret_ref).strip()
+    except Exception as exc:  # pragma: no cover - concrete OCI SDK errors are integration concerns
+        raise ValueError("oidc_client_secret_unavailable") from exc
+    if not client_secret:
+        raise ValueError("oidc_client_secret_unavailable")
+    return client_secret
+
+
+def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None] | None:
+    return None
 
 
 def _auth_callback_token_exchange_metadata() -> dict[str, str]:

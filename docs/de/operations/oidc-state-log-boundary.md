@@ -42,6 +42,14 @@ Dieser Stand öffnet noch keinen Arbeitsbereich und setzt kein Session-Cookie.
 Der Produktivbetrieb braucht zusätzlich den geprüften Secret-Pfad und die
 serverseitige ID-Token-Signaturprüfung.
 
+Q2G verdrahtet den zustandsbehafteten Callback mit diesem Adapter, öffnet aber
+weiterhin keinen Arbeitsbereich und setzt kein Session-Cookie. Der Callback
+liest den Vault-basierten Client-Secret-Pfad nur, wenn `state` gültig ist,
+`code`, Redirect-URI, Token-Endpoint und Client-ID vollständig vorliegen und
+eine serverseitige ID-Token-Prüfung konfiguriert ist. Fehlt eine dieser
+Bedingungen, bleibt der Pfad geschlossen und es wird kein produktiver
+Arbeitsbereich geöffnet.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-09:

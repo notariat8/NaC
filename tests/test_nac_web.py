@@ -953,6 +953,87 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_auth_callback_invokes_token_exchange_adapter_with_vault_client_secret(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        requested_secret_ids: list[str] = []
+
+        def secret_text_provider(secret_id: str) -> str:
+            requested_secret_ids.append(secret_id)
+            return "unit-test-client-secret"
+
+        app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=secret_text_provider)
+        nonce = "nonce-secret-for-id-token"
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+            nonce=nonce,
+        )
+        client_secret_ref = "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret"
+        exchange_result = {
+            "status": "verified",
+            "mode": "server_side_token_exchange",
+            "live_token_exchange_performed": True,
+            "claims": {
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+                "email": "admin@example.test",
+            },
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+                "NAC_OIDC_CLIENT_SECRET_REF": client_secret_ref,
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+            },
+            clear=False,
+        ), patch.object(
+            nac_server,
+            "_auth_callback_id_token_verifier",
+            return_value=lambda _id_token: exchange_result["claims"],
+            create=True,
+        ), patch.object(
+            nac_server,
+            "exchange_oidc_authorization_code",
+            return_value=exchange_result,
+            create=True,
+        ) as exchange:
+            status, content_type, body = app.handle(
+                f"/auth/callback?code=secret-code-from-idp&state={state}"
+            )
+        html = body.decode("utf-8")
+        exchange.assert_called_once()
+        _args, kwargs = exchange.call_args
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertEqual(requested_secret_ids, [client_secret_ref])
+        self.assertEqual(kwargs["code"], "secret-code-from-idp")
+        self.assertEqual(kwargs["redirect_uri"], "https://app.notariat8.de/auth/callback")
+        self.assertEqual(
+            kwargs["token_endpoint"],
+            "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+        )
+        self.assertEqual(kwargs["client_id"], "notariat8_nac_app")
+        self.assertEqual(kwargs["client_secret"], "unit-test-client-secret")
+        self.assertIsNotNone(kwargs["id_token_verifier"])
+        self.assertIn("Anmeldung empfangen", html)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn(state, html)
+        self.assertNotIn(nonce, html)
+        self.assertNotIn("unit-test-client-secret", html)
+        self.assertNotIn(client_secret_ref, html)
+        self.assertNotIn("admin@example.test", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("notariat8_nac_app", html)
+
     def test_auth_callback_validates_vault_backed_signed_state_without_leaking_reference(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 
