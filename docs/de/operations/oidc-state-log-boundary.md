@@ -1,6 +1,6 @@
 # OIDC State- Und Log-Grenze
 
-Stand: 2026-06-09.
+Stand: 2026-06-16.
 
 ## Zweck
 
@@ -28,6 +28,20 @@ Wenn State-Prüfung als konfiguriert markiert ist, aber kein validiertes
 State-Ergebnis vorliegt, muss der Callback fail-closed abgelehnt werden. Ein
 Konfigurationshinweis allein gilt nicht als erfolgreiche Prüfung.
 
+## Token-Exchange-Adapter
+
+NaC stellt einen serverseitigen Token-Exchange-Adapter bereit, der den
+Authorization Code nur serverseitig gegen den Token-Endpoint tauscht. Der
+Adapter ist fail-closed: ohne vollständige Metadaten, Client-Secret und
+ID-Token-Verifier wird kein HTTP-Aufruf gestartet. Provider-Fehler, Access
+Tokens, Refresh Tokens und ID Tokens werden nicht in browsernahe Ergebnisse
+übernommen. Erfolgreich geprüfte Claims dürfen nur als interne Eingabe für das
+notariat8-Rollengate weitergereicht werden.
+
+Dieser Stand öffnet noch keinen Arbeitsbereich und setzt kein Session-Cookie.
+Der Produktivbetrieb braucht zusätzlich den geprüften Secret-Pfad und die
+serverseitige ID-Token-Signaturprüfung.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-09:
@@ -48,7 +62,8 @@ gespeichert werden.
 
 ## Nächste Grenze
 
-Vor produktivem Token-Austausch ist eine der folgenden Varianten erforderlich:
+Vor produktivem Token-Austausch auf der Live-Route ist eine der folgenden
+Varianten erforderlich:
 
 1. Nachweis, dass alle beteiligten Logs Callback-Queries redigieren oder gar
    nicht speichern.

@@ -42,6 +42,7 @@
     "oci_identity_apply_request_dry_run",
     "oci_oidc_login_intent",
     "oci_oidc_token_exchange_contract",
+    "oci_oidc_token_exchange_server_adapter",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
   ],
@@ -102,10 +103,14 @@
       "failed",
       "unavailable"
     ],
+    "server_side_live_adapter_available": true,
+    "live_token_exchange_requires_injected_client_secret_and_id_token_verifier": true,
     "live_token_exchange_performed": false,
     "vault_secret_read_in_contract_slice": false,
     "tokens_returned_in_public_result": false,
-    "provider_error_details_exposed": false
+    "provider_error_details_exposed": false,
+    "workspace_opened_in_token_exchange_slice": false,
+    "session_cookie_issued_in_token_exchange_slice": false
   },
   "domain_readiness_schema": {
     "schema_version": "nac.tenant-domain-readiness/v0.1",

@@ -114,6 +114,11 @@ customer-facing text, and not treated as authorization. Without configured
 server-side state validation and token exchange, the notariat8 workspace stays
 closed; only after that may the NaC role and case gate decide access.
 
+Token exchange is prepared as a server-side adapter. It accepts the code and
+client secret only internally, returns no raw tokens, and forwards claims to the
+notariat8 role gate only after ID-token verification. If the secret, metadata,
+or verifier is missing, the login remains closed.
+
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 

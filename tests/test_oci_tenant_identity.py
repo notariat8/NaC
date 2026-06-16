@@ -35,6 +35,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             contract["token_exchange_contract_schema"]["schema_version"],
             "nac.oidc-token-exchange/v0.1",
         )
+        self.assertTrue(contract["token_exchange_contract_schema"]["server_side_live_adapter_available"])
         self.assertFalse(contract["token_exchange_contract_schema"]["live_token_exchange_performed"])
         self.assertFalse(contract["token_exchange_contract_schema"]["vault_secret_read_in_contract_slice"])
         self.assertFalse(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
@@ -876,6 +877,232 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("provider detail", serialized_public)
         self.assertNotIn(nonce, serialized_public)
         self.assertNotIn("admin@example.test", serialized_public)
+
+    def test_oidc_token_exchange_adapter_exchanges_code_without_returning_tokens(self) -> None:
+        from nac_identity.oidc_token_exchange import (
+            build_oidc_token_exchange_contract,
+            exchange_oidc_authorization_code,
+        )
+
+        calls: list[dict[str, object]] = []
+
+        def http_post(
+            url: str,
+            body: bytes,
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            calls.append(
+                {
+                    "url": url,
+                    "body": body,
+                    "headers": headers,
+                    "timeout_seconds": timeout_seconds,
+                }
+            )
+            return {
+                "status_code": 200,
+                "body": json.dumps(
+                    {
+                        "access_token": "sample-access-token-value",
+                        "refresh_token": "sample-refresh-token-value",
+                        "id_token": "sample-id-token-value",
+                    }
+                ).encode("utf-8"),
+            }
+
+        def verify_id_token(id_token: str) -> dict[str, object]:
+            self.assertEqual(id_token, "sample-id-token-value")
+            return {
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": "nonce-from-id-token",
+                "groups": ["nac-tenant-admin"],
+                "email": "admin@example.test",
+            }
+
+        exchange = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="client-secret-value",
+            id_token_verifier=verify_id_token,
+            http_post=http_post,
+        )
+        contract = build_oidc_token_exchange_contract(
+            configured=True,
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            exchanger_result=exchange,
+        )
+        public_result = contract.public_result()
+        request_body = calls[0]["body"].decode("utf-8")
+        serialized_exchange = json.dumps(exchange, sort_keys=True)
+        serialized_public = json.dumps(public_result, sort_keys=True)
+
+        self.assertEqual(exchange["status"], "verified")
+        self.assertEqual(exchange["claims"]["aud"], "notariat8_nac_app")
+        self.assertEqual(public_result["status"], "verified")
+        self.assertEqual(public_result["mode"], "server_side_token_exchange")
+        self.assertTrue(public_result["guardrails"]["live_token_exchange_performed"])
+        self.assertEqual(calls[0]["url"], "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token")
+        self.assertIn("grant_type=authorization_code", request_body)
+        self.assertIn("code=secret-code-from-idp", request_body)
+        self.assertIn("client_secret=client-secret-value", request_body)
+        self.assertNotIn("sample-access-token-value", serialized_exchange)
+        self.assertNotIn("sample-refresh-token-value", serialized_exchange)
+        self.assertNotIn("sample-id-token-value", serialized_exchange)
+        self.assertNotIn("secret-code-from-idp", serialized_public)
+        self.assertNotIn("client-secret-value", serialized_public)
+        self.assertNotIn("sample-access-token-value", serialized_public)
+        self.assertNotIn("sample-refresh-token-value", serialized_public)
+        self.assertNotIn("sample-id-token-value", serialized_public)
+        self.assertNotIn("nonce-from-id-token", serialized_public)
+        self.assertNotIn("admin@example.test", serialized_public)
+
+    def test_oidc_token_exchange_adapter_fails_closed_without_secret_or_verifier(self) -> None:
+        from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
+
+        calls: list[dict[str, object]] = []
+
+        def http_post(
+            url: str,
+            body: bytes,
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            calls.append({"url": url, "body": body, "headers": headers, "timeout_seconds": timeout_seconds})
+            return {"status_code": 200, "body": b'{"id_token":"sample-id-token-value"}'}
+
+        missing_secret = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="",
+            id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
+            http_post=http_post,
+        )
+        missing_verifier = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="client-secret-value",
+            id_token_verifier=None,
+            http_post=http_post,
+        )
+        serialized = json.dumps({"missing_secret": missing_secret, "missing_verifier": missing_verifier}, sort_keys=True)
+
+        self.assertEqual(missing_secret["status"], "not_configured")
+        self.assertEqual(missing_verifier["status"], "not_configured")
+        self.assertEqual(calls, [])
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("client-secret-value", serialized)
+        self.assertNotIn("sample-id-token-value", serialized)
+
+    def test_oidc_token_exchange_adapter_redacts_provider_failures(self) -> None:
+        from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
+
+        def http_post(
+            url: str,
+            body: bytes,
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            return {
+                "status_code": 400,
+                "body": json.dumps(
+                    {
+                        "error": "invalid_grant",
+                        "error_description": "secret-code-from-idp client-secret-value rejected",
+                    }
+                ).encode("utf-8"),
+            }
+
+        result = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="client-secret-value",
+            id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
+            http_post=http_post,
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["guardrails"]["provider_error_details_exposed"])
+        self.assertNotIn("invalid_grant", serialized)
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("client-secret-value", serialized)
+
+    def test_auth_callback_result_consumes_live_exchange_adapter_without_opening_workspace(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+        from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
+
+        nonce = "nonce-from-id-token"
+
+        def http_post(
+            url: str,
+            body: bytes,
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            return {"status_code": 200, "body": b'{"id_token":"sample-id-token-value"}'}
+
+        exchange = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="client-secret-value",
+            id_token_verifier=lambda _id_token: {
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+                "email": "admin@example.test",
+            },
+            http_post=http_post,
+        )
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=True,
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result=exchange,
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "received")
+        self.assertEqual(result["token_exchange"]["status"], "verified")
+        self.assertEqual(result["token_exchange"]["mode"], "server_side_token_exchange")
+        self.assertEqual(result["session_boundary"]["status"], "session_allowed")
+        self.assertEqual(result["role_gate"]["status"], "open")
+        self.assertFalse(result["guardrails"]["workspace_opened"])
+        self.assertFalse(result["guardrails"]["session_cookie_issued"])
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("state-redacted", serialized)
+        self.assertNotIn("client-secret-value", serialized)
+        self.assertNotIn("sample-id-token-value", serialized)
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn("admin@example.test", serialized)
 
     def test_auth_callback_result_points_to_token_claim_role_gate_contract(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result
