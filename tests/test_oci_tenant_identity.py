@@ -46,6 +46,15 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_requires_valid_state"])
         self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_issued_in_contract_slice"])
+        self.assertEqual(
+            contract["callback_session_contract_schema"]["claim_boundary_schema"]["schema_version"],
+            "nac.oidc-claim-boundary/v0.1",
+        )
+        self.assertTrue(
+            contract["callback_session_contract_schema"]["claim_boundary_schema"][
+                "verified_claims_forwarded_to_role_gate_only"
+            ]
+        )
         self.assertTrue(contract["guardrails"]["nac_role_gate_required_after_idp_login"])
 
     def test_domain_check_accepts_notary_domain_and_admin_email(self) -> None:
@@ -1211,6 +1220,54 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("provider detail", serialized)
         self.assertNotIn(nonce, serialized)
         self.assertNotIn("admin@example.test", serialized)
+
+    def test_auth_callback_result_marks_verified_claims_forwarded_to_role_gate_without_exposure(self) -> None:
+        from nac_identity.oci_callback import build_auth_callback_result
+
+        nonce = "nonce-from-id-token"
+        result = build_auth_callback_result(
+            code="secret-code-from-idp",
+            state="state-redacted",
+            provider_error="",
+            state_validation_configured=True,
+            token_exchange_configured=True,
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "mode": "server_side_token_exchange",
+                "live_token_exchange_performed": True,
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["claim_boundary"]["schema_version"], "nac.oidc-claim-boundary/v0.1")
+        self.assertEqual(result["claim_boundary"]["status"], "verified")
+        self.assertTrue(result["claim_boundary"]["claims_forwarded_to_role_gate"])
+        self.assertTrue(result["claim_boundary"]["role_gate_evaluated"])
+        self.assertFalse(result["claim_boundary"]["claims_exposed"])
+        self.assertFalse(result["claim_boundary"]["tokens_returned"])
+        self.assertEqual(result["session_boundary"]["claim_boundary"], result["claim_boundary"])
+        self.assertEqual(result["role_gate"]["status"], "open")
+        self.assertNotIn("admin@example.test", serialized)
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn("secret-code-from-idp", serialized)
 
     def test_auth_callback_result_ignores_verified_exchange_when_metadata_is_missing(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result

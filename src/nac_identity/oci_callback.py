@@ -88,6 +88,7 @@ def build_auth_callback_result(
         "state_validation": normalized_state_validation,
         "token_exchange": token_exchange,
         "jwt_validation": session_boundary["jwt_validation"],
+        "claim_boundary": session_boundary["claim_boundary"],
         "role_gate": session_boundary["role_gate"],
         "session_boundary": session_boundary,
         "guardrails": {

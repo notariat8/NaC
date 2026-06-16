@@ -50,6 +50,14 @@ eine serverseitige ID-Token-Prüfung konfiguriert ist. Fehlt eine dieser
 Bedingungen, bleibt der Pfad geschlossen und es wird kein produktiver
 Arbeitsbereich geöffnet.
 
+Q2H macht die Claim-Grenze explizit: Erfolgreich geprüfte Claims dürfen intern
+an das notariat8-Rollengate weitergereicht werden. Browsernahe Ergebnisse
+zeigen nur, ob die Claims verifiziert und an das Rollengate übergeben wurden.
+E-Mail-Adressen, Gruppenlisten, Tokens, Nonces, Providerdetails und
+Callback-Werte bleiben aus Kundentexten, Reports und normalen Logs heraus.
+Auch bei bestätigter Rolle setzt NaC in diesem Slice kein Session-Cookie und
+öffnet keinen Arbeitsbereich.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-09:
