@@ -162,6 +162,20 @@ agent_workflows:
       oci_write_access: false
       may_propose_changes: true
       may_apply_changes_without_owner_approval: false
+  release_memory:
+    enabled: true
+    skill_path: workflows/skills/nac-release-memory/SKILL.md
+    require_before_oci_release_work: true
+    applies_to:
+      - oci_devops
+      - oci_functions
+      - ocir
+      - api_gateway
+      - release_monitor
+    require_commit_bound_release_lane: true
+    require_time_ledger_for_larger_release_blocks: true
+    prohibit_broad_discovery_as_release_hotpath: true
+    no_oci_apply_from_skill_without_owner_apply_approval: true
   require_layer_sync_check_for_data_controller_view_changes: true
   require_error_test_security_review_for_code_reviewer: true
   require_user_confirmation_before_code_for_ambiguous_requests: true

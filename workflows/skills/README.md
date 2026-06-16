@@ -14,6 +14,12 @@ Workflow skills are maintained with German subject-matter instructions and a
 short English summary. Technical names, paths, commands and IDs remain stable in
 English/ASCII where needed.
 
+## Vorhandene Skills
+
+- [nac-release-memory](nac-release-memory/SKILL.md): commitgebundene
+  NaC-Release-Erinnerung für OCI DevOps, Functions, Release Monitor,
+  wiederholte Reibungspunkte und Time-Ledger-Nutzung.
+
 Jeder Workflow-Skill muss dokumentieren:
 
 - ausloesende Usecases,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "NaC Release Memory"
+  short_description: "Commit-bound NaC release memory and repeated-friction guardrails"
+  default_prompt: "Use NaC Release Memory for a commit-bound OCI DevOps release."
