@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-06-12
+Last update: 2026-06-16
 Branch: `main`
 
 ## What Is Being Built
@@ -48,6 +48,12 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `nac-bnotk-xnp` readiness evidence. |
 | DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
 | DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
+
+## Roadmap Review Notes
+
+| Date | Topic | Decision | Follow-up trigger |
+| --- | --- | --- | --- |
+| 2026-06-16 | Fabro / Graphviz workflow orchestration | Not an active NaC roadmap item. Fabro complements the NaC BPMN line only as a possible future agentic execution and review harness; it does not replace BPMN 2.0 as the canonical subject-matter process source. | Revisit only if Codex Parallel Review, Time Ledger, Quality Gate or PR handoff work shows a repeated need for a durable external workflow engine. |
 
 ## Local Developer Commands
 
