@@ -777,6 +777,8 @@ def build_auth_callback_page(
             secret_text_provider=secret_text_provider,
             **token_exchange_metadata,
         ),
+        expected_issuer=_auth_callback_expected_issuer(),
+        expected_audience=token_exchange_metadata["client_id"],
         **token_exchange_metadata,
     )
     if callback_result["status"] == "rejected":
@@ -799,7 +801,13 @@ def build_auth_callback_page(
         if callback_result["state_validation"]["status"] == "valid"
         else "Sicherheitsprüfung offen"
     )
+    role_label = (
+        "Rollenprüfung bestätigt"
+        if callback_result.get("role_gate", {}).get("status") == "open"
+        else "Rollenprüfung offen"
+    )
     escaped_state_label = html.escape(state_label)
+    escaped_role_label = html.escape(role_label)
     body = f"""
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
@@ -812,6 +820,7 @@ def build_auth_callback_page(
       <section class="notice">
         <h2>Rollen- und Vorgangsprüfung</h2>
         <p><strong>{escaped_state_label}</strong></p>
+        <p><strong>{escaped_role_label}</strong></p>
         <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn notariat8 die Sitzung aufgebaut
         und die Rolle geprüft hat.</p>
       </section>
@@ -2418,6 +2427,10 @@ def _auth_callback_token_exchange_metadata() -> dict[str, str]:
         "token_endpoint": f"{identity_domain_url}/oauth2/v1/token" if identity_domain_url else "",
         "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
     }
+
+
+def _auth_callback_expected_issuer() -> str:
+    return os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
 
 
 def _sanitize_request_log_text(value: str) -> str:

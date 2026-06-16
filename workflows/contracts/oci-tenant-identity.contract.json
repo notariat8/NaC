@@ -87,7 +87,15 @@
     "live_token_exchange_requires_server_side_adapter": true,
     "session_cookie_issued_in_contract_slice": false,
     "workspace_opened_in_contract_slice": false,
-    "requires_verified_claims_before_role_gate": true
+    "requires_verified_claims_before_role_gate": true,
+    "claim_boundary_schema": {
+      "schema_version": "nac.oidc-claim-boundary/v0.1",
+      "verified_claims_forwarded_to_role_gate_only": true,
+      "claims_exposed_in_public_result": false,
+      "tokens_returned_in_public_result": false,
+      "session_cookie_issued_in_claim_boundary_slice": false,
+      "workspace_opened_in_claim_boundary_slice": false
+    }
   },
   "token_exchange_contract_schema": {
     "schema_version": "nac.oidc-token-exchange/v0.1",

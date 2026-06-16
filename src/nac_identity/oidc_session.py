@@ -47,6 +47,12 @@ def evaluate_oidc_session_boundary(
         return _result(
             status="closed",
             token_exchange=token_exchange,
+            claim_boundary=_claim_boundary(
+                status="verified",
+                reason="forwarded_to_role_gate",
+                claims_forwarded_to_role_gate=True,
+                role_gate_evaluated=True,
+            ),
             role_gate=role_gate,
             session_allowed=False,
             jwt_validation_status=_jwt_validation_status(role_gate["reason"]),
@@ -54,6 +60,12 @@ def evaluate_oidc_session_boundary(
     return _result(
         status="session_allowed",
         token_exchange=token_exchange,
+        claim_boundary=_claim_boundary(
+            status="verified",
+            reason="forwarded_to_role_gate",
+            claims_forwarded_to_role_gate=True,
+            role_gate_evaluated=True,
+        ),
         role_gate=role_gate,
         session_allowed=True,
         jwt_validation_status="verified",
@@ -110,6 +122,12 @@ def _closed(
     return _result(
         status="closed",
         token_exchange=token_exchange,
+        claim_boundary=_claim_boundary(
+            status="closed",
+            reason=reason,
+            claims_forwarded_to_role_gate=False,
+            role_gate_evaluated=False,
+        ),
         role_gate=role_gate,
         session_allowed=False,
         jwt_validation_status=jwt_validation_status,
@@ -120,6 +138,7 @@ def _result(
     *,
     status: str,
     token_exchange: dict[str, str],
+    claim_boundary: dict[str, Any],
     role_gate: dict[str, Any],
     session_allowed: bool,
     jwt_validation_status: str,
@@ -131,6 +150,7 @@ def _result(
         "jwt_validation": {
             "status": jwt_validation_status,
         },
+        "claim_boundary": claim_boundary,
         "role_gate": role_gate,
         "session": {
             "session_allowed": bool(session_allowed),
@@ -149,4 +169,29 @@ def _guardrails() -> dict[str, bool]:
         "workspace_opened": False,
         "session_cookie_issued": False,
         "live_token_exchange_performed": False,
+    }
+
+
+def _claim_boundary(
+    *,
+    status: str,
+    reason: str,
+    claims_forwarded_to_role_gate: bool,
+    role_gate_evaluated: bool,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "nac.oidc-claim-boundary/v0.1",
+        "status": status,
+        "reason": reason,
+        "claims_forwarded_to_role_gate": bool(claims_forwarded_to_role_gate),
+        "role_gate_evaluated": bool(role_gate_evaluated),
+        "claims_exposed": False,
+        "tokens_returned": False,
+        "guardrails": {
+            "contains_credentials": False,
+            "tokens_returned": False,
+            "claims_exposed": False,
+            "workspace_opened": False,
+            "session_cookie_issued": False,
+        },
     }

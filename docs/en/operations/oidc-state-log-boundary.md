@@ -48,6 +48,14 @@ redirect URI, token endpoint, and client ID are complete, and a server-side
 ID-token verifier is configured. If one of these conditions is missing, the
 path stays closed and no productive workspace is opened.
 
+Q2H makes the claim boundary explicit: successfully verified claims may be
+forwarded internally to the notariat8 role gate. Browser-facing results only
+show whether claims were verified and handed to the role gate. Email
+addresses, group lists, tokens, nonces, provider details, and callback values
+stay out of customer-facing text, reports, and ordinary logs. Even with a
+confirmed role, this slice does not issue a session cookie and does not open a
+workspace.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-09:
