@@ -119,6 +119,11 @@ ausgelegt. Ohne konfigurierte serverseitige State-Prüfung und Token-Austausch
 bleibt der notariat8-Arbeitsbereich geschlossen; erst danach darf das
 NaC-Rollen- und Vorgangs-Gate entscheiden.
 
+Der Token-Austausch ist als serverseitiger Adapter vorbereitet. Er nimmt Code
+und Client-Secret nur intern entgegen, gibt keine Roh-Tokens zurück und liefert
+erst nach ID-Token-Verifikation Claims an das notariat8-Rollengate. Fehlen
+Secret, Metadaten oder Verifier, bleibt die Anmeldung geschlossen.
+
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
 

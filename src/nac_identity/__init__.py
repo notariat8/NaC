@@ -14,7 +14,11 @@ from .oci_tenant import NAC_TENANT_ROLES, build_admin_provisioning_plan, build_a
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
 from .oidc_session import evaluate_oidc_session_boundary
 from .oidc_state import DEFAULT_STATE_TTL_SECONDS, build_signed_state, validate_signed_state
-from .oidc_token_exchange import OidcTokenExchangeContract, build_oidc_token_exchange_contract
+from .oidc_token_exchange import (
+    OidcTokenExchangeContract,
+    build_oidc_token_exchange_contract,
+    exchange_oidc_authorization_code,
+)
 
 __all__ = [
     "DEFAULT_OIDC_SCOPES",
@@ -33,6 +37,7 @@ __all__ = [
     "build_customer_tenant_plan",
     "build_dns_check_result",
     "build_oidc_token_exchange_contract",
+    "exchange_oidc_authorization_code",
     "build_live_dns_check_result",
     "build_login_intent",
     "build_onboarding_request",

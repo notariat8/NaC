@@ -1,6 +1,6 @@
 # OIDC State And Log Boundary
 
-Status: 2026-06-09.
+Status: 2026-06-16.
 
 ## Purpose
 
@@ -28,6 +28,19 @@ If state validation is marked as configured but no validated state result is
 available, the callback must fail closed. A configuration marker alone does not
 count as successful validation.
 
+## Token Exchange Adapter
+
+NaC provides a server-side token exchange adapter that exchanges the
+authorization code only on the server side. The adapter is fail-closed: without
+complete metadata, a client secret, and an ID-token verifier, it does not start
+an HTTP call. Provider failures, access tokens, refresh tokens, and ID tokens
+are not copied into browser-facing results. Successfully verified claims may
+only be forwarded as internal input for the notariat8 role gate.
+
+This state still does not open a workspace and does not issue a session cookie.
+Productive operation additionally needs the reviewed secret path and
+server-side ID-token signature verification.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-09:
@@ -47,7 +60,8 @@ Function, proxy, or CDN access logs are enabled, NaC must first prove that
 
 ## Next Boundary
 
-Before productive token exchange, one of these variants is required:
+Before productive token exchange on the live route, one of these variants is
+required:
 
 1. Evidence that every involved log path redacts callback queries or does not
    store them.
