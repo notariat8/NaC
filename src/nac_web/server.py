@@ -768,6 +768,7 @@ def build_auth_callback_page(
         state_validation_configured=_auth_callback_state_validation_configured(),
         token_exchange_configured=_auth_callback_token_exchange_configured(),
         state_validation=_auth_callback_state_validation(state, secret_text_provider=secret_text_provider),
+        **_auth_callback_token_exchange_metadata(),
     )
     if callback_result["status"] == "rejected":
         body = """
@@ -2340,6 +2341,15 @@ def _oidc_state_signing_key_from_env(
 
 def _auth_callback_token_exchange_configured() -> bool:
     return bool(os.environ.get("NAC_OIDC_CLIENT_SECRET_REF", "").strip())
+
+
+def _auth_callback_token_exchange_metadata() -> dict[str, str]:
+    identity_domain_url = os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
+    return {
+        "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
+        "token_endpoint": f"{identity_domain_url}/oauth2/v1/token" if identity_domain_url else "",
+        "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
+    }
 
 
 def _sanitize_request_log_text(value: str) -> str:

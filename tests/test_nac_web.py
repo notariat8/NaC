@@ -910,6 +910,49 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(admin_status, 403)
         self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
 
+    def test_auth_callback_with_token_exchange_metadata_stays_closed_and_redacted(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        app = NaCLocalWebApp(REPO_ROOT)
+        nonce = "nonce-secret-for-id-token"
+        nonce_hash = hashlib.sha256(nonce.encode("utf-8")).hexdigest()
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+            nonce=nonce,
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+                "NAC_OIDC_CLIENT_SECRET_REF": "vault://nac/oidc-client-secret",
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+            },
+            clear=False,
+        ):
+            status, content_type, body = app.handle(
+                f"/auth/callback?code=secret-code-from-idp&state={state}"
+            )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Anmeldung empfangen", html)
+        self.assertIn("Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn(state, html)
+        self.assertNotIn(nonce, html)
+        self.assertNotIn(nonce_hash, html)
+        self.assertNotIn("vault://nac/oidc-client-secret", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("unit-test-state-signing-key", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_auth_callback_validates_vault_backed_signed_state_without_leaking_reference(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 

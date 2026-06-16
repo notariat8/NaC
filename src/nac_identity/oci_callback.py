@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .oidc_token_exchange import build_oidc_token_exchange_contract
 from .oidc_session import evaluate_oidc_session_boundary
 
 
@@ -16,6 +17,9 @@ def build_auth_callback_result(
     token_exchange_result: dict[str, Any] | None = None,
     expected_issuer: str = "",
     expected_audience: str = "",
+    redirect_uri: str = "",
+    token_endpoint: str = "",
+    client_id: str = "",
 ) -> dict:
     if provider_error or not code or not state:
         return {
@@ -56,8 +60,13 @@ def build_auth_callback_result(
             },
         }
 
-    effective_token_exchange_result = (
-        token_exchange_result if token_exchange_configured else {"status": "not_configured"}
+    token_exchange_contract = build_oidc_token_exchange_contract(
+        configured=token_exchange_configured,
+        code=code,
+        redirect_uri=redirect_uri,
+        token_endpoint=token_endpoint,
+        client_id=client_id or expected_audience,
+        exchanger_result=token_exchange_result,
     )
     effective_state_validation = (
         state_validation
@@ -66,12 +75,11 @@ def build_auth_callback_result(
     )
     session_boundary = evaluate_oidc_session_boundary(
         state_validation=effective_state_validation,
-        token_exchange_result=effective_token_exchange_result,
+        token_exchange_result=token_exchange_contract.session_input(),
         expected_issuer=expected_issuer,
         expected_audience=expected_audience,
     )
-    token_exchange = dict(session_boundary["token_exchange"])
-    token_exchange["configuration"] = "configured" if token_exchange_configured else "not_configured"
+    token_exchange = token_exchange_contract.public_result()
 
     return {
         "schema_version": "nac.auth-callback/v0.1",
