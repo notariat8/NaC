@@ -24,6 +24,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
+from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -117,8 +118,11 @@ class NaCLocalWebApp:
             if route == "/login":
                 return _html_response(build_login_page(parsed.query))
             if route == "/auth/callback":
-                status, page = build_auth_callback_page(parsed.query, secret_text_provider=self.secret_text_provider)
-                return _html_response(page, status)
+                status, page, headers = build_auth_callback_page(
+                    parsed.query,
+                    secret_text_provider=self.secret_text_provider,
+                )
+                return _html_response(page, status, headers=headers)
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
@@ -757,7 +761,7 @@ def build_auth_callback_page(
     query: str,
     *,
     secret_text_provider: Callable[[str], str] | None = None,
-) -> tuple[HTTPStatus, str]:
+) -> tuple[HTTPStatus, str, dict[str, str]]:
     params = parse_qs(query, keep_blank_values=True)
     provider_error = _optional_query_text(params, "error", max_length=120)
     code = _optional_query_text(params, "code", max_length=4096)
@@ -779,6 +783,8 @@ def build_auth_callback_page(
         ),
         expected_issuer=_auth_callback_expected_issuer(),
         expected_audience=token_exchange_metadata["client_id"],
+        session_signing_key=_auth_callback_session_signing_key(secret_text_provider=secret_text_provider),
+        session_ttl_seconds=_auth_callback_session_ttl_seconds(),
         **token_exchange_metadata,
     )
     if callback_result["status"] == "rejected":
@@ -795,7 +801,7 @@ def build_auth_callback_page(
           <p><a class="button-link" href="/login">Erneut anmelden</a></p>
         </section>
         """
-        return HTTPStatus.BAD_REQUEST, _layout("notariat8 Anmeldung nicht abgeschlossen", body)
+        return HTTPStatus.BAD_REQUEST, _layout("notariat8 Anmeldung nicht abgeschlossen", body), {}
     state_label = (
         "Sicherheitsprüfung bestätigt"
         if callback_result["state_validation"]["status"] == "valid"
@@ -806,8 +812,12 @@ def build_auth_callback_page(
         if callback_result.get("role_gate", {}).get("status") == "open"
         else "Rollenprüfung offen"
     )
+    session_bound = bool(callback_result.get("session_boundary", {}).get("session", {}).get("cookie_issued"))
+    session_label = "Sitzung vorbereitet" if session_bound else "Sitzung offen"
     escaped_state_label = html.escape(state_label)
     escaped_role_label = html.escape(role_label)
+    escaped_session_label = html.escape(session_label)
+    headers = _auth_callback_response_headers(callback_result)
     body = f"""
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
@@ -821,6 +831,7 @@ def build_auth_callback_page(
         <h2>Rollen- und Vorgangsprüfung</h2>
         <p><strong>{escaped_state_label}</strong></p>
         <p><strong>{escaped_role_label}</strong></p>
+        <p><strong>{escaped_session_label}</strong></p>
         <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn notariat8 die Sitzung aufgebaut
         und die Rolle geprüft hat.</p>
       </section>
@@ -833,7 +844,7 @@ def build_auth_callback_page(
       </section>
     </div>
     """
-    return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body)
+    return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body), headers
 
 
 def build_operator_access_required_page() -> str:
@@ -2433,6 +2444,41 @@ def _auth_callback_expected_issuer() -> str:
     return os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
 
 
+def _auth_callback_session_signing_key(
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> str:
+    inline_key = os.environ.get("NAC_SESSION_SIGNING_KEY", "").strip()
+    if inline_key:
+        return inline_key
+    secret_ref = os.environ.get("NAC_SESSION_SIGNING_KEY_REF", "").strip()
+    if not secret_ref:
+        return ""
+    provider = secret_text_provider or OciVaultSecretTextProvider(secret_ref)
+    try:
+        return provider(secret_ref).strip()
+    except Exception:
+        return ""
+
+
+def _auth_callback_session_ttl_seconds() -> int:
+    raw_value = os.environ.get("NAC_SESSION_TTL_SECONDS", "").strip()
+    if not raw_value:
+        return DEFAULT_SESSION_TTL_SECONDS
+    try:
+        return int(raw_value)
+    except ValueError:
+        return DEFAULT_SESSION_TTL_SECONDS
+
+
+def _auth_callback_response_headers(callback_result: dict[str, Any]) -> dict[str, str]:
+    session = callback_result.get("session_boundary", {}).get("session", {})
+    set_cookie = session.get("set_cookie") if isinstance(session, dict) else None
+    if not isinstance(set_cookie, str) or not set_cookie:
+        return {}
+    return {"Set-Cookie": set_cookie}
+
+
 def _sanitize_request_log_text(value: str) -> str:
     marker = "/auth/callback?"
     if marker not in value:
@@ -2562,8 +2608,13 @@ def _css() -> str:
     """
 
 
-def _html_response(text: str, status: HTTPStatus = HTTPStatus.OK) -> AppResponse:
-    return AppResponse(status, "text/html; charset=utf-8", text.encode("utf-8"))
+def _html_response(
+    text: str,
+    status: HTTPStatus = HTTPStatus.OK,
+    *,
+    headers: dict[str, str] | None = None,
+) -> AppResponse:
+    return AppResponse(status, "text/html; charset=utf-8", text.encode("utf-8"), headers=headers)
 
 
 def _json_response(payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> AppResponse:

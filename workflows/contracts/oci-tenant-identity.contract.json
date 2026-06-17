@@ -3,7 +3,7 @@
   "contract_id": "workflow.oci_tenant_identity",
   "title": "OCI Identity Domains Tenant-Onboarding",
   "status": "planned_mvp",
-  "last_update": "2026-06-16",
+  "last_update": "2026-06-17",
   "purpose": "Definiert die prüfbare Grenze für tenant-aware NaC-SaaS-Onboarding mit Oracle OCI Identity Domains als IdP. Der erste Stand erzeugt Domain-Readiness und Admin-Provisioning-Pläne ohne produktive Identity-Writes.",
   "idp": "oracle_oci_identity_domains",
   "productive_identity_writes_allowed": false,
@@ -43,6 +43,7 @@
     "oci_oidc_login_intent",
     "oci_oidc_token_exchange_contract",
     "oci_oidc_token_exchange_server_adapter",
+    "oci_oidc_session_cookie_boundary",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
   ],
@@ -74,7 +75,7 @@
     "requires_server_generated_state_and_nonce": true
   },
   "callback_session_contract_schema": {
-    "schema_version": "nac.oidc-session-boundary/v0.1",
+    "schema_version": "nac.oidc-session-boundary/v0.2",
     "required": [
       "token_exchange",
       "jwt_validation",
@@ -85,7 +86,10 @@
     "live_token_exchange_in_contract_slice": true,
     "live_token_exchange_requires_valid_state": true,
     "live_token_exchange_requires_server_side_adapter": true,
-    "session_cookie_issued_in_contract_slice": false,
+    "session_cookie_issued_in_contract_slice": true,
+    "session_cookie_requires_positive_role_gate": true,
+    "session_cookie_contains_tokens_or_claims": false,
+    "session_cookie_max_ttl_seconds": 3600,
     "workspace_opened_in_contract_slice": false,
     "requires_verified_claims_before_role_gate": true,
     "claim_boundary_schema": {

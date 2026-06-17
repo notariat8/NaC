@@ -127,9 +127,11 @@ Secret, Metadaten oder Verifier, bleibt die Anmeldung geschlossen.
 Der zustandsbehaftete Auth-Callback ist mit diesem Adapter verbunden, bleibt
 aber fail-closed: Secret-Lesen und Token-Austausch starten nur nach gültigem
 State, vorhandenem Authorization Code, vollständigen OIDC-Metadaten und
-konfigurierter serverseitiger ID-Token-Prüfung. Auch bei intern erlaubter
-Sitzungsgrenze wird in diesem Stand kein Session-Cookie gesetzt und kein
-Arbeitsbereich geöffnet.
+konfigurierter serverseitiger ID-Token-Prüfung. Bei positivem
+notariat8-Rollengate darf ein kurzlebiges, signiertes Session-Cookie gesetzt
+werden; Tokens, Claims, Nonces, Providerdetails und Callback-Werte bleiben aus
+dem Cookie heraus. Ein Arbeitsbereich wird in diesem Stand weiterhin nicht
+geöffnet.
 
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).

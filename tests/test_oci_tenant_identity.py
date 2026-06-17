@@ -29,7 +29,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(contract["login_intent_schema"]["schema_version"], "nac.oci-login-intent/v0.1")
         self.assertEqual(
             contract["callback_session_contract_schema"]["schema_version"],
-            "nac.oidc-session-boundary/v0.1",
+            "nac.oidc-session-boundary/v0.2",
         )
         self.assertEqual(
             contract["token_exchange_contract_schema"]["schema_version"],
@@ -45,7 +45,11 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         )
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_requires_valid_state"])
-        self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_issued_in_contract_slice"])
+        self.assertTrue(contract["callback_session_contract_schema"]["session_cookie_issued_in_contract_slice"])
+        self.assertTrue(contract["callback_session_contract_schema"]["session_cookie_requires_positive_role_gate"])
+        self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_contains_tokens_or_claims"])
+        self.assertEqual(contract["callback_session_contract_schema"]["session_cookie_max_ttl_seconds"], 3600)
+        self.assertFalse(contract["callback_session_contract_schema"]["workspace_opened_in_contract_slice"])
         self.assertEqual(
             contract["callback_session_contract_schema"]["claim_boundary_schema"]["schema_version"],
             "nac.oidc-claim-boundary/v0.1",
@@ -781,6 +785,93 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn(nonce, serialized)
         self.assertNotIn(hashlib.sha256(nonce.encode("utf-8")).hexdigest(), serialized)
         self.assertNotIn("admin@example.test", serialized)
+
+    def test_oidc_session_boundary_issues_secure_cookie_after_verified_role_gate(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        session = result["session"]
+        set_cookie = session["set_cookie"]
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["schema_version"], "nac.oidc-session-boundary/v0.2")
+        self.assertEqual(result["status"], "session_bound")
+        self.assertTrue(session["session_allowed"])
+        self.assertTrue(session["cookie_issued"])
+        self.assertEqual(session["cookie_name"], "__Host-nac_session")
+        self.assertEqual(session["ttl_seconds"], 600)
+        self.assertFalse(session["workspace_opened"])
+        self.assertIn("__Host-nac_session=", set_cookie)
+        self.assertIn("HttpOnly", set_cookie)
+        self.assertIn("Secure", set_cookie)
+        self.assertIn("SameSite=Lax", set_cookie)
+        self.assertIn("Path=/", set_cookie)
+        self.assertIn("Max-Age=600", set_cookie)
+        self.assertFalse(result["guardrails"]["tokens_returned"])
+        self.assertTrue(result["guardrails"]["session_cookie_issued"])
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn(hashlib.sha256(nonce.encode("utf-8")).hexdigest(), serialized)
+        self.assertNotIn("admin@example.test", serialized)
+        self.assertNotIn("notariat8_nac_app", set_cookie)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", set_cookie)
+        self.assertNotIn("nac-tenant-admin", set_cookie)
+        self.assertNotIn(nonce, set_cookie)
+        self.assertNotIn("admin@example.test", set_cookie)
+
+    def test_oidc_session_boundary_does_not_issue_cookie_when_role_gate_is_closed(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["wrong-role"],
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+        )
+
+        self.assertEqual(result["status"], "closed")
+        self.assertEqual(result["role_gate"]["status"], "closed")
+        self.assertEqual(result["role_gate"]["reason"], "role_missing")
+        self.assertFalse(result["session"]["session_allowed"])
+        self.assertFalse(result["session"]["cookie_issued"])
+        self.assertNotIn("set_cookie", result["session"])
 
     def test_oidc_session_boundary_closes_for_invalid_token_result(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary

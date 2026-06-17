@@ -37,12 +37,14 @@ an HTTP call. Provider failures, access tokens, refresh tokens, and ID tokens
 are not copied into browser-facing results. Successfully verified claims may
 only be forwarded as internal input for the notariat8 role gate.
 
-This state still does not open a workspace and does not issue a session cookie.
-Productive operation additionally needs the reviewed secret path and
-server-side ID-token signature verification.
+Q2I still does not open a workspace, but it may issue a short-lived, signed
+session cookie after valid state, successful token exchange, verified claims,
+and a positive notariat8 role gate. The cookie contains no tokens, claims,
+nonces, provider details, or callback values. Productive operation additionally
+needs the reviewed secret path and server-side ID-token signature verification.
 
 Q2G wires the stateful callback to this adapter, but it still does not open a
-workspace and does not issue a session cookie. The callback reads the
+workspace. The callback reads the
 Vault-backed client-secret path only when `state` is valid, `code`,
 redirect URI, token endpoint, and client ID are complete, and a server-side
 ID-token verifier is configured. If one of these conditions is missing, the
@@ -53,8 +55,8 @@ forwarded internally to the notariat8 role gate. Browser-facing results only
 show whether claims were verified and handed to the role gate. Email
 addresses, group lists, tokens, nonces, provider details, and callback values
 stay out of customer-facing text, reports, and ordinary logs. Even with a
-confirmed role, this slice does not issue a session cookie and does not open a
-workspace.
+confirmed role, this slice does not open a workspace; Q2I only adds the signed
+session boundary.
 
 ## Current OCI Finding
 
