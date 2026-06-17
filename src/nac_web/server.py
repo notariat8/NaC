@@ -24,6 +24,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
+from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
@@ -2489,7 +2490,9 @@ def _auth_callback_oidc_client_secret_from_env(
 
 
 def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None] | None:
-    return None
+    issuer = _auth_callback_expected_issuer()
+    audience = os.environ.get("NAC_OIDC_CLIENT_ID", "").strip()
+    return build_oidc_id_token_verifier(issuer=issuer, audience=audience)
 
 
 def _auth_callback_token_exchange_metadata() -> dict[str, str]:

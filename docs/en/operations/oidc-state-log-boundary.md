@@ -64,6 +64,15 @@ unconfigured cookies fail closed. The validation result exposes no cookie
 value, token, claim, nonce, provider detail, or callback value. The full
 workspace and all mandate data remain closed.
 
+Q2K adds the production-capable server-side ID-token check. The verifier uses
+the configured identity-domain URL as issuer, the configured client ID as
+audience, and loads signing keys through OIDC discovery and JWKS. Only
+RS256-signed ID tokens with matching issuer, matching audience, and valid time
+claims may be forwarded internally as verified claims to the notariat8 role
+gate. Missing configuration, invalid signatures, wrong audience, wrong issuer,
+or expired tokens keep the path closed. Browser-facing results still expose no
+tokens, claims, nonces, provider details, or callback values.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-09:
@@ -90,8 +99,9 @@ required:
    store them.
 2. Move the callback to a suitable POST edge, for example a separately reviewed
    `response_mode=form_post` path.
-3. Reviewed secret/key path for state signing before the live route may treat
-   real state validation as configured.
+3. Reviewed secret/key paths for state signing, the OIDC client secret, and
+   session signing before the live route may treat real state, token, and
+   session validation as configured.
 
 Both variants need their own Protected PR. If this changes API Gateway routes,
 logging policies, or secret access, the apply also needs explicit owner

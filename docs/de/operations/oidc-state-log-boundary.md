@@ -68,6 +68,16 @@ Prüfergebnis gibt keinen Cookie-Wert, Token, Claim, Nonce, Providerdetail oder
 Callback-Wert aus. Der vollständige Arbeitsbereich und alle Mandatsdaten
 bleiben geschlossen.
 
+Q2K ergänzt die produktionsfähige ID-Token-Prüfung auf der Serverseite. Der
+Verifier verwendet die konfigurierte Identity-Domain-URL als Issuer, die
+konfigurierte Client-ID als Audience und lädt die Signaturschlüssel über
+OIDC-Discovery und JWKS. Nur RS256-signierte ID Tokens mit passendem Issuer,
+passender Audience und gültigem Ablauf werden intern als geprüfte Claims an das
+notariat8-Rollengate weitergegeben. Bei fehlender Konfiguration, ungültiger
+Signatur, falscher Audience, falschem Issuer oder abgelaufenem Token bleibt der
+Pfad geschlossen. Browsernahe Ergebnisse enthalten weiterhin keine Tokens,
+Claims, Nonces, Providerdetails oder Callback-Werte.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-09:
@@ -95,8 +105,9 @@ Varianten erforderlich:
    nicht speichern.
 2. Wechsel des Callback-Modus auf eine geeignete POST-Kante, zum Beispiel einen
    separat geprüften `response_mode=form_post`-Pfad.
-3. Geprüfter Secret-/Key-Pfad für die State-Signatur, bevor die Live-Route
-   eine echte State-Prüfung als konfiguriert behandeln darf.
+3. Geprüfter Secret-/Key-Pfad für die State-Signatur, das OIDC-Client-Secret
+   und die Session-Signatur, bevor die Live-Route eine echte State-, Token-
+   und Session-Prüfung als konfiguriert behandeln darf.
 
 Beide Varianten brauchen einen eigenen Protected PR. Falls dafür API-Gateway-
 Routen, Logging-Policies oder Secret-Zugriffe geändert werden, braucht der
