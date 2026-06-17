@@ -1034,6 +1034,39 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
         self.assertNotIn("notariat8_nac_app", html)
 
+    def test_auth_callback_builds_runtime_id_token_verifier_from_env(self) -> None:
+        created: list[dict[str, str]] = []
+
+        def build_verifier(*, issuer: str, audience: str):
+            created.append({"issuer": issuer, "audience": audience})
+            return lambda _id_token: {"iss": issuer, "aud": audience}
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+            },
+            clear=False,
+        ), patch.object(
+            nac_server,
+            "build_oidc_id_token_verifier",
+            side_effect=build_verifier,
+            create=True,
+        ):
+            verifier = nac_server._auth_callback_id_token_verifier()
+
+        self.assertIsNotNone(verifier)
+        self.assertEqual(
+            created,
+            [
+                {
+                    "issuer": "https://idcs.example.identity.oraclecloud.com:443",
+                    "audience": "notariat8_nac_app",
+                }
+            ],
+        )
+
     def test_auth_callback_shows_role_gate_confirmed_without_opening_workspace(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import hashlib
 import sys
@@ -11,6 +12,53 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+
+
+_TEST_RSA_N = 60290864802346228052373842506010458173966209336683677551090586324542057079549228854349222820208753926620218796263542965581242407526149580695574568271645442151543746443266285352844502009509804166840559101498386186628283747338680995712921543972624707983532965790736363470772309180782392068865075054488348654111
+_TEST_RSA_E = 65537
+_TEST_RSA_D = 44044520410484617246189213080553926880921925086781580330402124013306987912134800644821669300748195854933796409794614440135086176436661175747471254484361018752788764680484856240334993542981039820309435002130903876692383392605366887582127376452577112987587644549766431208915510460186709613716948053911309728473
+_TEST_RSA_KID = "nac-test-key"
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _int_b64url(value: int) -> str:
+    length = max(1, (value.bit_length() + 7) // 8)
+    return _b64url(value.to_bytes(length, "big"))
+
+
+def _json_segment(payload: dict[str, object]) -> str:
+    return _b64url(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+
+
+def _rs256_test_signature(signing_input: str) -> str:
+    key_length = (_TEST_RSA_N.bit_length() + 7) // 8
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(
+        signing_input.encode("ascii")
+    ).digest()
+    padding_length = key_length - len(digest_info) - 3
+    encoded = b"\x00\x01" + (b"\xff" * padding_length) + b"\x00" + digest_info
+    signature = pow(int.from_bytes(encoded, "big"), _TEST_RSA_D, _TEST_RSA_N).to_bytes(key_length, "big")
+    return _b64url(signature)
+
+
+def _signed_test_id_token(claims: dict[str, object], *, kid: str = _TEST_RSA_KID) -> str:
+    header = {"alg": "RS256", "kid": kid, "typ": "JWT"}
+    signing_input = f"{_json_segment(header)}.{_json_segment(claims)}"
+    return f"{signing_input}.{_rs256_test_signature(signing_input)}"
+
+
+def _test_jwk(*, kid: str = _TEST_RSA_KID) -> dict[str, str]:
+    return {
+        "kty": "RSA",
+        "kid": kid,
+        "use": "sig",
+        "alg": "RS256",
+        "n": _int_b64url(_TEST_RSA_N),
+        "e": _int_b64url(_TEST_RSA_E),
+    }
 
 
 class NaCOciTenantIdentityTests(unittest.TestCase):
@@ -37,6 +85,10 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         )
         self.assertTrue(contract["token_exchange_contract_schema"]["server_side_live_adapter_available"])
         self.assertFalse(contract["token_exchange_contract_schema"]["live_token_exchange_performed_by_default"])
+        self.assertTrue(contract["token_exchange_contract_schema"]["id_token_verifier_uses_oidc_discovery_jwks"])
+        self.assertTrue(
+            contract["token_exchange_contract_schema"]["id_token_verifier_validates_rs256_issuer_audience_and_expiry"]
+        )
         self.assertTrue(contract["token_exchange_contract_schema"]["vault_secret_read_in_contract_slice"])
         self.assertTrue(
             contract["token_exchange_contract_schema"][
@@ -45,6 +97,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         )
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_in_contract_slice"])
         self.assertTrue(contract["callback_session_contract_schema"]["live_token_exchange_requires_valid_state"])
+        self.assertTrue(contract["callback_session_contract_schema"]["verified_id_token_required_before_role_gate"])
+        self.assertFalse(contract["callback_session_contract_schema"]["verified_id_token_claims_exposed_in_public_result"])
         self.assertTrue(contract["callback_session_contract_schema"]["session_cookie_issued_in_contract_slice"])
         self.assertTrue(contract["callback_session_contract_schema"]["session_cookie_requires_positive_role_gate"])
         self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_contains_tokens_or_claims"])
@@ -1269,6 +1323,96 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("invalid_grant", serialized)
         self.assertNotIn("secret-code-from-idp", serialized)
         self.assertNotIn("client-secret-value", serialized)
+
+    def test_oidc_id_token_verifier_accepts_rs256_jwks_claims(self) -> None:
+        from nac_identity.oidc_jwt import build_oidc_id_token_verifier
+
+        issuer = "https://idcs.example.identity.oraclecloud.com:443"
+        audience = "notariat8_nac_app"
+        fetch_urls: list[str] = []
+
+        def fetch_json(url: str) -> dict[str, object]:
+            fetch_urls.append(url)
+            if url.endswith("/.well-known/openid-configuration"):
+                return {"jwks_uri": f"{issuer}/admin/v1/SigningCert/jwk"}
+            if url.endswith("/admin/v1/SigningCert/jwk"):
+                return {"keys": [_test_jwk()]}
+            raise AssertionError(f"unexpected fetch URL: {url}")
+
+        token = _signed_test_id_token(
+            {
+                "iss": issuer,
+                "aud": audience,
+                "nonce": "nonce-from-id-token",
+                "exp": 4102444800,
+                "iat": 1900000000,
+                "groups": ["nac-tenant-admin"],
+                "email": "admin@example.test",
+            }
+        )
+        verifier = build_oidc_id_token_verifier(
+            issuer=issuer,
+            audience=audience,
+            jwks_fetcher=fetch_json,
+            now=1900000100,
+        )
+
+        self.assertIsNotNone(verifier)
+        claims = verifier(token) if verifier else None
+
+        self.assertIsInstance(claims, dict)
+        self.assertEqual(claims["iss"], issuer)
+        self.assertEqual(claims["aud"], audience)
+        self.assertEqual(claims["groups"], ["nac-tenant-admin"])
+        self.assertEqual(
+            fetch_urls,
+            [
+                f"{issuer}/.well-known/openid-configuration",
+                f"{issuer}/admin/v1/SigningCert/jwk",
+            ],
+        )
+
+    def test_oidc_id_token_verifier_fails_closed_for_bad_signature_or_claims(self) -> None:
+        from nac_identity.oidc_jwt import build_oidc_id_token_verifier
+
+        issuer = "https://idcs.example.identity.oraclecloud.com:443"
+        audience = "notariat8_nac_app"
+
+        def fetch_json(url: str) -> dict[str, object]:
+            if url.endswith("/.well-known/openid-configuration"):
+                return {"jwks_uri": f"{issuer}/admin/v1/SigningCert/jwk"}
+            return {"keys": [_test_jwk()]}
+
+        verifier = build_oidc_id_token_verifier(
+            issuer=issuer,
+            audience=audience,
+            jwks_fetcher=fetch_json,
+            now=1900000100,
+        )
+        self.assertIsNotNone(verifier)
+        valid_claims = {
+            "iss": issuer,
+            "aud": audience,
+            "exp": 4102444800,
+            "iat": 1900000000,
+            "groups": ["nac-tenant-admin"],
+        }
+        token = _signed_test_id_token(valid_claims)
+        wrong_audience = _signed_test_id_token({**valid_claims, "aud": "other-client"})
+        expired = _signed_test_id_token({**valid_claims, "exp": 1899999999})
+        bad_signature = token[:-2] + "aa"
+
+        self.assertIsNone(verifier(wrong_audience) if verifier else None)
+        self.assertIsNone(verifier(expired) if verifier else None)
+        self.assertIsNone(verifier(bad_signature) if verifier else None)
+
+        unavailable_verifier = build_oidc_id_token_verifier(
+            issuer=issuer,
+            audience=audience,
+            jwks_fetcher=lambda _url: (_ for _ in ()).throw(RuntimeError("idp unavailable")),
+            now=1900000100,
+        )
+        self.assertIsNone(unavailable_verifier(token) if unavailable_verifier else None)
 
     def test_auth_callback_result_consumes_live_exchange_adapter_without_opening_workspace(self) -> None:
         from nac_identity.oci_callback import build_auth_callback_result

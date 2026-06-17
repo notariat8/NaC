@@ -11,6 +11,7 @@ from .onboarding_requests import (
 from .oci_callback import build_auth_callback_result
 from .oci_login import DEFAULT_OIDC_SCOPES, build_login_intent
 from .oci_tenant import NAC_TENANT_ROLES, build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from .oidc_jwt import build_oidc_id_token_verifier
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
 from .oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
 from .oidc_state import DEFAULT_STATE_TTL_SECONDS, build_signed_state, validate_signed_state
@@ -36,6 +37,7 @@ __all__ = [
     "build_auth_callback_result",
     "build_customer_tenant_plan",
     "build_dns_check_result",
+    "build_oidc_id_token_verifier",
     "build_oidc_token_exchange_contract",
     "exchange_oidc_authorization_code",
     "build_live_dns_check_result",
