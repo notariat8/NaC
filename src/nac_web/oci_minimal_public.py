@@ -340,6 +340,7 @@ def _login_page(query: str) -> str:
     tenant_hint = _optional_query_text(params, "tenant_hint", max_length=120)
     intent_query = urlencode(_present_query_values({"tenant_hint": tenant_hint}))
     intent_href = "/api/tenant/login-intent" + (f"?{intent_query}" if intent_query else "")
+    login_intent_js = json.dumps(intent_href)
     body = f"""
     <nav class="topline"><a href="https://www.notariat8.de/">← notariat8.de</a></nav>
     <section class="hero">
@@ -347,9 +348,38 @@ def _login_page(query: str) -> str:
       <h1>Anmeldung vorbereiten</h1>
       <p>notariat8 erstellt im nächsten Schritt die sichere Anmeldung für Ihr Notariat.</p>
       <div class="toolbar">
-        <a class="button-link" href="{html.escape(intent_href, quote=True)}">Anmeldung starten</a>
+        <button class="button-link" id="nac-login-button" type="button">Anmeldung starten</button>
+        <span id="nac-login-status" aria-live="polite"></span>
       </div>
     </section>
+    <script>
+    (() => {{
+      const button = document.getElementById("nac-login-button");
+      const status = document.getElementById("nac-login-status");
+      const intentUrl = {login_intent_js};
+      if (!button || !status) {{
+        return;
+      }}
+      button.addEventListener("click", async () => {{
+        button.disabled = true;
+        status.textContent = "Anmeldung wird vorbereitet ...";
+        try {{
+          const response = await fetch(intentUrl, {{ headers: {{ "Accept": "application/json" }} }});
+          if (!response.ok) {{
+            throw new Error("intent failed");
+          }}
+          const payload = await response.json();
+          if (!payload || typeof payload.authorization_url !== "string" || payload.authorization_url.length === 0) {{
+            throw new Error("intent incomplete");
+          }}
+          window.location.assign(payload.authorization_url);
+        }} catch (error) {{
+          status.textContent = "Anmeldung konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut.";
+          button.disabled = false;
+        }}
+      }});
+    }})();
+    </script>
     """
     return _layout("notariat8 Anmeldung", body)
 

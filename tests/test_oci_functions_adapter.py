@@ -676,6 +676,30 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("/oauth2/v1/authorize", payload["authorization_url"])
         self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
 
+    def test_dispatches_public_login_page_without_visible_json_intent_link(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        result = dispatch_oci_public_function_request(
+            FakeFunctionContext(
+                request_url="/login?tenant_hint=notariat-musterstadt",
+                method="GET",
+            ),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("notariat8 Anmeldung", body)
+        self.assertIn("Anmeldung starten", body)
+        self.assertIn("fetch(", body)
+        self.assertIn("window.location.assign", body)
+        self.assertIn("/api/tenant/login-intent?tenant_hint=notariat-musterstadt", body)
+        self.assertNotIn('href="/api/tenant/login-intent', body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
+
     def test_dispatches_auth_callback_without_exposing_callback_values(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
