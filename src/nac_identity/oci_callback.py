@@ -20,6 +20,8 @@ def build_auth_callback_result(
     redirect_uri: str = "",
     token_endpoint: str = "",
     client_id: str = "",
+    session_signing_key: str = "",
+    session_ttl_seconds: int = 600,
 ) -> dict:
     if provider_error or not code or not state:
         return {
@@ -78,6 +80,8 @@ def build_auth_callback_result(
         token_exchange_result=token_exchange_contract.session_input(),
         expected_issuer=expected_issuer,
         expected_audience=expected_audience,
+        session_signing_key=session_signing_key,
+        session_ttl_seconds=session_ttl_seconds,
     )
     token_exchange = token_exchange_contract.public_result()
 
@@ -96,9 +100,13 @@ def build_auth_callback_result(
             "callback_values_exposed": False,
             "workspace_opened": False,
             "tokens_returned": False,
-            "session_cookie_issued": False,
+            "session_cookie_issued": bool(session_boundary["session"]["cookie_issued"]),
         },
-        "next_step": "exchange_token_then_evaluate_oidc_role_gate_contract",
+        "next_step": (
+            "session_bound_workspace_stays_closed"
+            if session_boundary["session"]["cookie_issued"]
+            else "exchange_token_then_evaluate_oidc_role_gate_contract"
+        ),
     }
 
 

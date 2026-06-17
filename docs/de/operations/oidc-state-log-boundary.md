@@ -38,12 +38,15 @@ Tokens, Refresh Tokens und ID Tokens werden nicht in browsernahe Ergebnisse
 übernommen. Erfolgreich geprüfte Claims dürfen nur als interne Eingabe für das
 notariat8-Rollengate weitergereicht werden.
 
-Dieser Stand öffnet noch keinen Arbeitsbereich und setzt kein Session-Cookie.
-Der Produktivbetrieb braucht zusätzlich den geprüften Secret-Pfad und die
-serverseitige ID-Token-Signaturprüfung.
+Q2I öffnet weiterhin keinen Arbeitsbereich, darf aber nach gültigem State,
+erfolgreichem Token-Austausch, geprüften Claims und positivem
+notariat8-Rollengate ein kurzlebiges, signiertes Session-Cookie setzen. Das
+Cookie enthält keine Tokens, Claims, Nonces, Providerdetails oder
+Callback-Werte. Der Produktivbetrieb braucht zusätzlich den geprüften
+Secret-Pfad und die serverseitige ID-Token-Signaturprüfung.
 
 Q2G verdrahtet den zustandsbehafteten Callback mit diesem Adapter, öffnet aber
-weiterhin keinen Arbeitsbereich und setzt kein Session-Cookie. Der Callback
+weiterhin keinen Arbeitsbereich. Der Callback
 liest den Vault-basierten Client-Secret-Pfad nur, wenn `state` gültig ist,
 `code`, Redirect-URI, Token-Endpoint und Client-ID vollständig vorliegen und
 eine serverseitige ID-Token-Prüfung konfiguriert ist. Fehlt eine dieser
@@ -55,8 +58,8 @@ an das notariat8-Rollengate weitergereicht werden. Browsernahe Ergebnisse
 zeigen nur, ob die Claims verifiziert und an das Rollengate übergeben wurden.
 E-Mail-Adressen, Gruppenlisten, Tokens, Nonces, Providerdetails und
 Callback-Werte bleiben aus Kundentexten, Reports und normalen Logs heraus.
-Auch bei bestätigter Rolle setzt NaC in diesem Slice kein Session-Cookie und
-öffnet keinen Arbeitsbereich.
+Auch bei bestätigter Rolle öffnet NaC in diesem Slice keinen Arbeitsbereich;
+Q2I ergänzt nur die signierte Session-Grenze.
 
 ## Aktueller OCI-Befund
 

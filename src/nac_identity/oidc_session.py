@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
+import secrets
+import time
 from typing import Any
 
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
+
+DEFAULT_SESSION_COOKIE_NAME = "__Host-nac_session"
+DEFAULT_SESSION_TTL_SECONDS = 600
 
 
 def evaluate_oidc_session_boundary(
@@ -12,6 +21,9 @@ def evaluate_oidc_session_boundary(
     expected_issuer: str,
     expected_audience: str,
     required_role: str = DEFAULT_REQUIRED_ROLE,
+    session_signing_key: str = "",
+    now: int | None = None,
+    session_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
 ) -> dict[str, Any]:
     token_exchange = _token_exchange_summary(token_exchange_result)
     if state_validation.get("status") != "valid":
@@ -57,8 +69,13 @@ def evaluate_oidc_session_boundary(
             session_allowed=False,
             jwt_validation_status=_jwt_validation_status(role_gate["reason"]),
         )
+    issued_session = _issued_session_cookie(
+        signing_key=session_signing_key,
+        now=now,
+        ttl_seconds=session_ttl_seconds,
+    )
     return _result(
-        status="session_allowed",
+        status="session_bound" if issued_session else "session_allowed",
         token_exchange=token_exchange,
         claim_boundary=_claim_boundary(
             status="verified",
@@ -69,6 +86,7 @@ def evaluate_oidc_session_boundary(
         role_gate=role_gate,
         session_allowed=True,
         jwt_validation_status="verified",
+        issued_session=issued_session,
     )
 
 
@@ -142,9 +160,17 @@ def _result(
     role_gate: dict[str, Any],
     session_allowed: bool,
     jwt_validation_status: str,
+    issued_session: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    session = {
+        "session_allowed": bool(session_allowed),
+        "cookie_issued": bool(issued_session),
+        "workspace_opened": False,
+    }
+    if issued_session:
+        session.update(issued_session)
     return {
-        "schema_version": "nac.oidc-session-boundary/v0.1",
+        "schema_version": "nac.oidc-session-boundary/v0.2" if issued_session else "nac.oidc-session-boundary/v0.1",
         "status": status,
         "token_exchange": token_exchange,
         "jwt_validation": {
@@ -152,24 +178,70 @@ def _result(
         },
         "claim_boundary": claim_boundary,
         "role_gate": role_gate,
-        "session": {
-            "session_allowed": bool(session_allowed),
-            "cookie_issued": False,
-            "workspace_opened": False,
-        },
-        "guardrails": _guardrails(),
+        "session": session,
+        "guardrails": _guardrails(session_cookie_issued=bool(issued_session)),
     }
 
 
-def _guardrails() -> dict[str, bool]:
+def _guardrails(*, session_cookie_issued: bool = False) -> dict[str, bool]:
     return {
         "contains_credentials": False,
         "tokens_returned": False,
         "callback_values_exposed": False,
         "workspace_opened": False,
-        "session_cookie_issued": False,
+        "session_cookie_issued": bool(session_cookie_issued),
         "live_token_exchange_performed": False,
     }
+
+
+def _issued_session_cookie(
+    *,
+    signing_key: str,
+    now: int | None,
+    ttl_seconds: int,
+) -> dict[str, Any] | None:
+    key = signing_key.strip()
+    if not key:
+        return None
+    issued_at = int(time.time() if now is None else now)
+    ttl = _normalized_ttl_seconds(ttl_seconds)
+    expires_at = issued_at + ttl
+    payload = {
+        "schema_version": "nac.session-cookie/v0.1",
+        "sid": secrets.token_urlsafe(24),
+        "iat": issued_at,
+        "exp": expires_at,
+    }
+    payload_text = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    payload_part = _base64url(payload_text)
+    signature = hmac.new(key.encode("utf-8"), payload_part.encode("ascii"), hashlib.sha256).digest()
+    value = f"{payload_part}.{_base64url(signature)}"
+    return {
+        "cookie_name": DEFAULT_SESSION_COOKIE_NAME,
+        "ttl_seconds": ttl,
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "set_cookie": (
+            f"{DEFAULT_SESSION_COOKIE_NAME}={value}; "
+            f"Max-Age={ttl}; Path=/; HttpOnly; Secure; SameSite=Lax"
+        ),
+    }
+
+
+def _normalized_ttl_seconds(value: int) -> int:
+    try:
+        ttl = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_SESSION_TTL_SECONDS
+    if ttl < 60:
+        return 60
+    if ttl > 3600:
+        return 3600
+    return ttl
+
+
+def _base64url(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
 
 
 def _claim_boundary(
