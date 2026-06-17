@@ -824,6 +824,7 @@ def build_auth_callback_page(
     escaped_state_label = html.escape(state_label)
     escaped_role_label = html.escape(role_label)
     escaped_session_label = html.escape(session_label)
+    diagnostics_html = _auth_callback_diagnostics_html(callback_result)
     headers = _auth_callback_response_headers(callback_result)
     body = f"""
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
@@ -850,6 +851,7 @@ def build_auth_callback_page(
         </ul>
       </section>
     </div>
+    {diagnostics_html}
     """
     return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body), headers
 
@@ -2541,6 +2543,52 @@ def _auth_callback_response_headers(callback_result: dict[str, Any]) -> dict[str
     if not isinstance(set_cookie, str) or not set_cookie:
         return {}
     return {"Set-Cookie": set_cookie}
+
+
+def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:
+    session_boundary = callback_result.get("session_boundary", {})
+    token_exchange = callback_result.get("token_exchange", {})
+    jwt_validation = callback_result.get("jwt_validation", {})
+    role_gate = callback_result.get("role_gate", {})
+    session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
+    items = [
+        ("Token-Austausch", _safe_status_label(token_exchange.get("status"))),
+        ("Token-Prüfung", _safe_status_label(jwt_validation.get("status"))),
+        ("Rollenprüfung", _safe_status_label(role_gate.get("status"))),
+        ("Sitzung", "erstellt" if isinstance(session, dict) and session.get("cookie_issued") else "nicht erstellt"),
+    ]
+    rows = "\n".join(
+        f"<li><span>{html.escape(name)}: {html.escape(value)}</span></li>"
+        for name, value in items
+    )
+    return f"""
+    <section>
+      <h2>Technische Statusdiagnose</h2>
+      <ul class="link-list">
+        {rows}
+      </ul>
+    </section>
+    """
+
+
+def _safe_status_label(value: Any) -> str:
+    return {
+        "closed": "geschlossen",
+        "expired": "abgelaufen",
+        "failed": "fehlgeschlagen",
+        "invalid": "ungültig",
+        "missing": "fehlt",
+        "not_configured": "nicht konfiguriert",
+        "not_started": "nicht gestartet",
+        "open": "bestätigt",
+        "received": "empfangen",
+        "rejected": "abgelehnt",
+        "session_allowed": "freigegeben",
+        "session_bound": "vorbereitet",
+        "unavailable": "nicht verfügbar",
+        "valid": "bestätigt",
+        "verified": "bestätigt",
+    }.get(str(value or ""), "unbekannt")
 
 
 def _request_header(headers: dict[str, str], name: str) -> str:
