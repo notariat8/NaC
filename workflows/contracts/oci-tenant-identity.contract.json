@@ -44,6 +44,8 @@
     "oci_oidc_token_exchange_contract",
     "oci_oidc_token_exchange_server_adapter",
     "oci_oidc_session_cookie_boundary",
+    "oci_oidc_session_cookie_validation",
+    "protected_start_status_page",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
   ],
@@ -91,7 +93,20 @@
     "session_cookie_contains_tokens_or_claims": false,
     "session_cookie_max_ttl_seconds": 3600,
     "workspace_opened_in_contract_slice": false,
+    "session_cookie_validation_in_contract_slice": true,
+    "session_cookie_validation_opens_only_protected_start_status": true,
+    "session_cookie_validation_loads_mandate_data": false,
+    "full_workspace_opened_after_session_validation": false,
     "requires_verified_claims_before_role_gate": true,
+    "session_validation_schema": {
+      "schema_version": "nac.session-validation/v0.1",
+      "valid_session_allows_protected_start_page": true,
+      "invalid_missing_tampered_or_expired_cookie_fails_closed": true,
+      "session_cookie_exposed_in_result": false,
+      "claims_exposed_in_result": false,
+      "tokens_returned_in_result": false,
+      "mandate_data_loaded_in_result": false
+    },
     "claim_boundary_schema": {
       "schema_version": "nac.oidc-claim-boundary/v0.1",
       "verified_claims_forwarded_to_role_gate_only": true,

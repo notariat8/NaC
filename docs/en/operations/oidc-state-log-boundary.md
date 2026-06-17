@@ -58,6 +58,12 @@ stay out of customer-facing text, reports, and ordinary logs. Even with a
 confirmed role, this slice does not open a workspace; Q2I only adds the signed
 session boundary.
 
+Q2J validates the signed session cookie server-side and may open only a
+protected notariat8 start/status page. Missing, tampered, expired, or
+unconfigured cookies fail closed. The validation result exposes no cookie
+value, token, claim, nonce, provider detail, or callback value. The full
+workspace and all mandate data remain closed.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-09:

@@ -133,6 +133,12 @@ werden; Tokens, Claims, Nonces, Providerdetails und Callback-Werte bleiben aus
 dem Cookie heraus. Ein Arbeitsbereich wird in diesem Stand weiterhin nicht
 geöffnet.
 
+Die nächste Q2J-Grenze prüft dieses signierte Session-Cookie vor `/workspace`.
+Ein gültiges Cookie öffnet nur eine geschützte notariat8-Start-/Statusseite;
+Mandatsdaten werden nicht geladen und der vollständige Arbeitsbereich bleibt
+geschlossen. Fehlende, manipulierte, abgelaufene oder unkonfigurierte Cookies
+führen zur Anmeldeseite.
+
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
 

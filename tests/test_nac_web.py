@@ -1174,6 +1174,98 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_workspace_requires_signed_session_cookie(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(
+            os.environ,
+            {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"},
+            clear=False,
+        ):
+            status, content_type, body = app.handle("/workspace")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 401)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("notariat8 Anmeldung erforderlich", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("token", html.lower())
+        self.assertNotIn("claim", html.lower())
+
+    def test_workspace_opens_protected_start_page_with_valid_session_cookie_only(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=lambda _secret_id: "unit-test-client-secret")
+        nonce = "nonce-secret-for-id-token"
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+            nonce=nonce,
+        )
+        exchange_result = {
+            "status": "verified",
+            "mode": "server_side_token_exchange",
+            "live_token_exchange_performed": True,
+            "claims": {
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": nonce,
+                "groups": ["nac-tenant-admin"],
+                "email": "admin@example.test",
+            },
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
+                "NAC_SESSION_TTL_SECONDS": "600",
+            },
+            clear=False,
+        ), patch.object(
+            nac_server,
+            "_auth_callback_id_token_verifier",
+            return_value=lambda _id_token: exchange_result["claims"],
+            create=True,
+        ), patch.object(
+            nac_server,
+            "exchange_oidc_authorization_code",
+            return_value=exchange_result,
+            create=True,
+        ):
+            callback_response = app.handle(f"/auth/callback?code=secret-code-from-idp&state={state}")
+            cookie_header = callback_response.headers["Set-Cookie"].split(";", 1)[0]
+            status, content_type, body = app.handle(
+                "/workspace",
+                headers={"Cookie": cookie_header},
+            )
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("notariat8 Start", html)
+        self.assertIn("Sitzung geprüft", html)
+        self.assertIn("Geschützter Startstatus", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn(state, html)
+        self.assertNotIn(nonce, html)
+        self.assertNotIn(cookie_header, html)
+        self.assertNotIn("unit-test-client-secret", html)
+        self.assertNotIn("ocid1.vaultsecret", html)
+        self.assertNotIn("admin@example.test", html)
+        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_auth_callback_validates_vault_backed_signed_state_without_leaking_reference(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 

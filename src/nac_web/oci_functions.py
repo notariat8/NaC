@@ -24,6 +24,7 @@ EXPOSED_GET_ROUTES = {
 
 STATEFUL_GET_ROUTES = {
     "/auth/callback",
+    "/workspace",
 }
 
 EXPOSED_POST_ROUTES = {
@@ -60,7 +61,7 @@ def dispatch_oci_function_request(
         request_url,
         expose_stateful_onboarding_routes=expose_stateful_onboarding_routes,
     ):
-        app_response = app.handle(request_url)
+        app_response = app.handle(request_url, headers=_headers(ctx))
         status, content_type, response_body = app_response
         response_headers.update(getattr(app_response, "headers", {}))
         if method == "HEAD":

@@ -127,6 +127,12 @@ short-lived, signed session cookie; tokens, claims, nonces, provider details,
 and callback values stay out of the cookie. This state still opens no
 workspace.
 
+The next Q2J boundary validates that signed session cookie before serving
+`/workspace`. A valid cookie opens only a protected notariat8 start/status
+page; it does not load mandate data and it does not open the full workspace.
+Missing, tampered, expired or unconfigured cookies return the login-required
+page.
+
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 
