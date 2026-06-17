@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import hashlib
 import logging
 import os
 import shutil
@@ -21,9 +22,10 @@ if str(SRC_ROOT) not in sys.path:
 
 
 class FakeFunctionContext:
-    def __init__(self, *, request_url: str, method: str = "GET") -> None:
+    def __init__(self, *, request_url: str, method: str = "GET", headers: dict[str, str] | None = None) -> None:
         self._request_url = request_url
         self._method = method
+        self._headers = dict(headers or {})
 
     def RequestURL(self) -> str:  # noqa: N802 - FDK API shape
         return self._request_url
@@ -32,7 +34,9 @@ class FakeFunctionContext:
         return self._method
 
     def Headers(self) -> dict[str, str]:  # noqa: N802 - FDK API shape
-        return {"fn-http-method": self._method, "fn-http-request-url": self._request_url}
+        headers = {"fn-http-method": self._method, "fn-http-request-url": self._request_url}
+        headers.update(self._headers)
+        return headers
 
 
 class FailingBody:
@@ -693,6 +697,75 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("Sicherheitsprüfung offen", body)
         self.assertNotIn("secret-code-from-idp", body)
         self.assertNotIn("state-secret-from-nac", body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
+
+    def test_dispatches_workspace_as_protected_stateful_get_route(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        session = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256("nonce-from-id-token".encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": "nonce-from-id-token",
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(
+                    request_url="/workspace",
+                    method="GET",
+                    headers={"Cookie": cookie_header},
+                ),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("notariat8 Start", body)
+        self.assertIn("Geschützter Startstatus", body)
+        self.assertIn("Keine Mandatsdaten geladen", body)
+        self.assertNotIn(cookie_header, body)
+        self.assertNotIn("admin@example.test", body)
+        self.assertNotIn("notariat8_nac_app", body)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", body)
+
+    def test_dispatches_workspace_fail_closed_without_cookie(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/workspace", method="GET"),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 401)
+        self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("notariat8 Anmeldung erforderlich", body)
+        self.assertIn("Keine Mandatsdaten geladen", body)
         self.assertNotIn("Oracle", body)
         self.assertNotIn("OCI", body)
 

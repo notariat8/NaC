@@ -61,6 +61,13 @@ Callback-Werte bleiben aus Kundentexten, Reports und normalen Logs heraus.
 Auch bei bestätigter Rolle öffnet NaC in diesem Slice keinen Arbeitsbereich;
 Q2I ergänzt nur die signierte Session-Grenze.
 
+Q2J prüft das signierte Session-Cookie serverseitig und darf nur eine
+geschützte notariat8-Start-/Statusseite öffnen. Fehlende, manipulierte,
+abgelaufene oder unkonfigurierte Cookies bleiben fail-closed. Das
+Prüfergebnis gibt keinen Cookie-Wert, Token, Claim, Nonce, Providerdetail oder
+Callback-Wert aus. Der vollständige Arbeitsbereich und alle Mandatsdaten
+bleiben geschlossen.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-09:

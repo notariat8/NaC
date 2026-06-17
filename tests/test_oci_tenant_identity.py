@@ -50,6 +50,25 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_contains_tokens_or_claims"])
         self.assertEqual(contract["callback_session_contract_schema"]["session_cookie_max_ttl_seconds"], 3600)
         self.assertFalse(contract["callback_session_contract_schema"]["workspace_opened_in_contract_slice"])
+        self.assertTrue(contract["callback_session_contract_schema"]["session_cookie_validation_in_contract_slice"])
+        self.assertTrue(
+            contract["callback_session_contract_schema"]["session_cookie_validation_opens_only_protected_start_status"]
+        )
+        self.assertFalse(contract["callback_session_contract_schema"]["session_cookie_validation_loads_mandate_data"])
+        self.assertFalse(contract["callback_session_contract_schema"]["full_workspace_opened_after_session_validation"])
+        self.assertEqual(
+            contract["callback_session_contract_schema"]["session_validation_schema"]["schema_version"],
+            "nac.session-validation/v0.1",
+        )
+        self.assertTrue(
+            contract["callback_session_contract_schema"]["session_validation_schema"][
+                "invalid_missing_tampered_or_expired_cookie_fails_closed"
+            ]
+        )
+        self.assertFalse(
+            contract["callback_session_contract_schema"]["session_validation_schema"]["session_cookie_exposed_in_result"]
+        )
+        self.assertIn("protected_start_status_page", contract["allowed_operations"])
         self.assertEqual(
             contract["callback_session_contract_schema"]["claim_boundary_schema"]["schema_version"],
             "nac.oidc-claim-boundary/v0.1",
@@ -840,6 +859,111 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("nac-tenant-admin", set_cookie)
         self.assertNotIn(nonce, set_cookie)
         self.assertNotIn("admin@example.test", set_cookie)
+
+    def test_session_cookie_validation_allows_protected_start_page_without_opening_workspace(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = result["session"]["set_cookie"].split(";", 1)[0]
+
+        validation = validate_session_cookie(
+            cookie_header,
+            signing_key="unit-test-session-signing-key",
+            now=1_800_000_010,
+        )
+        serialized = json.dumps(validation, sort_keys=True)
+
+        self.assertEqual(validation["schema_version"], "nac.session-validation/v0.1")
+        self.assertEqual(validation["status"], "valid")
+        self.assertTrue(validation["session"]["session_allowed"])
+        self.assertTrue(validation["session"]["protected_start_page_allowed"])
+        self.assertFalse(validation["session"]["workspace_opened"])
+        self.assertFalse(validation["session"]["mandate_data_loaded"])
+        self.assertEqual(validation["session"]["ttl_remaining_seconds"], 590)
+        self.assertFalse(validation["guardrails"]["tokens_returned"])
+        self.assertFalse(validation["guardrails"]["claims_exposed"])
+        self.assertFalse(validation["guardrails"]["session_cookie_exposed"])
+        self.assertFalse(validation["guardrails"]["mandate_data_loaded"])
+        self.assertNotIn(cookie_header, serialized)
+        self.assertNotIn("__Host-nac_session=", serialized)
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn("admin@example.test", serialized)
+        self.assertNotIn("nac-tenant-admin", serialized)
+        self.assertNotIn("notariat8_nac_app", serialized)
+
+    def test_session_cookie_validation_fails_closed_for_tampered_or_expired_cookie(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = result["session"]["set_cookie"].split(";", 1)[0]
+        tampered_cookie = f"{cookie_header}x"
+
+        tampered = validate_session_cookie(
+            tampered_cookie,
+            signing_key="unit-test-session-signing-key",
+            now=1_800_000_010,
+        )
+        expired = validate_session_cookie(
+            cookie_header,
+            signing_key="unit-test-session-signing-key",
+            now=1_800_000_601,
+        )
+
+        self.assertEqual(tampered["status"], "invalid")
+        self.assertEqual(expired["status"], "expired")
+        self.assertFalse(tampered["session"]["session_allowed"])
+        self.assertFalse(tampered["session"]["protected_start_page_allowed"])
+        self.assertFalse(expired["session"]["session_allowed"])
+        self.assertFalse(expired["session"]["protected_start_page_allowed"])
+        self.assertFalse(tampered["session"]["workspace_opened"])
+        self.assertFalse(expired["session"]["workspace_opened"])
+        self.assertFalse(tampered["guardrails"]["session_cookie_exposed"])
+        self.assertFalse(expired["guardrails"]["session_cookie_exposed"])
 
     def test_oidc_session_boundary_does_not_issue_cookie_when_role_gate_is_closed(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary

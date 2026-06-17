@@ -6,6 +6,7 @@ import hmac
 import json
 import secrets
 import time
+from http.cookies import CookieError, SimpleCookie
 from typing import Any
 
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
@@ -87,6 +88,65 @@ def evaluate_oidc_session_boundary(
         session_allowed=True,
         jwt_validation_status="verified",
         issued_session=issued_session,
+    )
+
+
+def validate_session_cookie(
+    cookie_header: str,
+    *,
+    signing_key: str,
+    now: int | None = None,
+) -> dict[str, Any]:
+    key = signing_key.strip()
+    if not key:
+        return _session_validation_result("not_configured", "session_signing_key_missing")
+    cookie_value = _session_cookie_value(cookie_header)
+    if not cookie_value:
+        return _session_validation_result("missing", "session_cookie_missing")
+
+    parts = cookie_value.split(".")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        return _session_validation_result("invalid", "session_cookie_invalid")
+    payload_part, signature_part = parts
+    try:
+        expected_signature = hmac.new(
+            key.encode("utf-8"),
+            payload_part.encode("ascii"),
+            hashlib.sha256,
+        ).digest()
+        supplied_signature = _base64url_decode(signature_part)
+        if not hmac.compare_digest(expected_signature, supplied_signature):
+            return _session_validation_result("invalid", "session_cookie_signature_invalid")
+        payload = json.loads(_base64url_decode(payload_part).decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, TypeError, json.JSONDecodeError):
+        return _session_validation_result("invalid", "session_cookie_invalid")
+
+    if not isinstance(payload, dict) or payload.get("schema_version") != "nac.session-cookie/v0.1":
+        return _session_validation_result("invalid", "session_cookie_schema_invalid")
+    if not isinstance(payload.get("sid"), str) or not payload["sid"]:
+        return _session_validation_result("invalid", "session_cookie_subject_invalid")
+    issued_at = _integer_or_none(payload.get("iat"))
+    expires_at = _integer_or_none(payload.get("exp"))
+    if issued_at is None or expires_at is None or expires_at <= issued_at:
+        return _session_validation_result("invalid", "session_cookie_time_invalid")
+
+    checked_at = int(time.time() if now is None else now)
+    if checked_at >= expires_at:
+        return _session_validation_result(
+            "expired",
+            "session_cookie_expired",
+            issued_at=issued_at,
+            expires_at=expires_at,
+            ttl_remaining_seconds=0,
+        )
+    return _session_validation_result(
+        "valid",
+        "session_cookie_valid",
+        session_allowed=True,
+        protected_start_page_allowed=True,
+        issued_at=issued_at,
+        expires_at=expires_at,
+        ttl_remaining_seconds=expires_at - checked_at,
     )
 
 
@@ -242,6 +302,73 @@ def _normalized_ttl_seconds(value: int) -> int:
 
 def _base64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _base64url_decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(f"{value}{padding}".encode("ascii"))
+
+
+def _session_cookie_value(cookie_header: str) -> str:
+    if not isinstance(cookie_header, str) or not cookie_header.strip():
+        return ""
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header)
+    except CookieError:
+        return ""
+    morsel = cookie.get(DEFAULT_SESSION_COOKIE_NAME)
+    if morsel is None:
+        return ""
+    return morsel.value.strip()
+
+
+def _integer_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _session_validation_result(
+    status: str,
+    reason: str,
+    *,
+    session_allowed: bool = False,
+    protected_start_page_allowed: bool = False,
+    issued_at: int | None = None,
+    expires_at: int | None = None,
+    ttl_remaining_seconds: int | None = None,
+) -> dict[str, Any]:
+    session: dict[str, Any] = {
+        "session_allowed": bool(session_allowed),
+        "protected_start_page_allowed": bool(protected_start_page_allowed),
+        "workspace_opened": False,
+        "mandate_data_loaded": False,
+    }
+    if issued_at is not None:
+        session["issued_at"] = int(issued_at)
+    if expires_at is not None:
+        session["expires_at"] = int(expires_at)
+    if ttl_remaining_seconds is not None:
+        session["ttl_remaining_seconds"] = int(ttl_remaining_seconds)
+    return {
+        "schema_version": "nac.session-validation/v0.1",
+        "status": status,
+        "reason": reason,
+        "cookie_name": DEFAULT_SESSION_COOKIE_NAME,
+        "session": session,
+        "guardrails": {
+            "contains_credentials": False,
+            "tokens_returned": False,
+            "claims_exposed": False,
+            "session_cookie_exposed": False,
+            "workspace_opened": False,
+            "mandate_data_loaded": False,
+        },
+    }
 
 
 def _claim_boundary(

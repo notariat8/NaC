@@ -24,7 +24,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
-from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS
+from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -106,7 +106,7 @@ class NaCLocalWebApp:
         self.operator_access = operator_access
         self.secret_text_provider = secret_text_provider
 
-    def handle(self, path: str) -> tuple[int, str, bytes]:
+    def handle(self, path: str, headers: dict[str, str] | None = None) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
         route = unquote(parsed.path)
         try:
@@ -123,6 +123,12 @@ class NaCLocalWebApp:
                     secret_text_provider=self.secret_text_provider,
                 )
                 return _html_response(page, status, headers=headers)
+            if route == "/workspace":
+                status, page = build_protected_workspace_start_page(
+                    headers or {},
+                    secret_text_provider=self.secret_text_provider,
+                )
+                return _html_response(page, status)
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
@@ -575,10 +581,10 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
                 self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802
-            self._send_app_response(app.handle(self.path))
+            self._send_app_response(app.handle(self.path, headers=dict(self.headers.items())))
 
         def do_HEAD(self) -> None:  # noqa: N802
-            self._send_app_response(app.handle(self.path), include_body=False)
+            self._send_app_response(app.handle(self.path, headers=dict(self.headers.items())), include_body=False)
 
         def do_POST(self) -> None:  # noqa: N802
             length = int(self.headers.get("Content-Length", "0"))
@@ -845,6 +851,61 @@ def build_auth_callback_page(
     </div>
     """
     return HTTPStatus.OK, _layout("notariat8 Anmeldung empfangen", body), headers
+
+
+def build_protected_workspace_start_page(
+    request_headers: dict[str, str],
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+) -> tuple[HTTPStatus, str]:
+    signing_key = _auth_callback_session_signing_key(secret_text_provider=secret_text_provider)
+    validation = validate_session_cookie(
+        _request_header(request_headers, "Cookie"),
+        signing_key=signing_key,
+    )
+    if validation["status"] != "valid":
+        body = """
+        <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+        <section class="hero">
+          <p class="eyebrow">notariat8 Start</p>
+          <h1>notariat8 Anmeldung erforderlich</h1>
+          <p>Bitte melden Sie sich erneut an. Der geschützte Startstatus bleibt geschlossen,
+          bis die Sitzung geprüft ist.</p>
+        </section>
+        <section class="notice">
+          <h2>Geschützter Startstatus</h2>
+          <ul class="link-list">
+            <li><span>Sitzung nicht geprüft.</span></li>
+            <li><span>Keine Mandatsdaten geladen.</span></li>
+          </ul>
+          <p><a class="button-link" href="/login">Anmeldung öffnen</a></p>
+        </section>
+        """
+        return HTTPStatus.UNAUTHORIZED, _layout("notariat8 Anmeldung erforderlich", body)
+
+    body = """
+    <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Start</p>
+      <h1>Geschützter Startstatus</h1>
+      <p>Ihre Sitzung wurde geprüft. notariat8 zeigt hier nur den geschützten Startstatus.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Sitzung geprüft</h2>
+        <p><strong>Startseite freigegeben</strong></p>
+        <p>Der vollständige Arbeitsbereich bleibt geschlossen, bis der nächste Freigabeschritt umgesetzt ist.</p>
+      </section>
+      <section>
+        <h2>Nächster Schritt</h2>
+        <ul class="link-list">
+          <li><span>NaC-Rollengate bleibt maßgeblich für weitere Arbeitsbereiche.</span></li>
+          <li><span>Keine Mandatsdaten geladen.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return HTTPStatus.OK, _layout("notariat8 Start", body)
 
 
 def build_operator_access_required_page() -> str:
@@ -2477,6 +2538,14 @@ def _auth_callback_response_headers(callback_result: dict[str, Any]) -> dict[str
     if not isinstance(set_cookie, str) or not set_cookie:
         return {}
     return {"Set-Cookie": set_cookie}
+
+
+def _request_header(headers: dict[str, str], name: str) -> str:
+    expected = name.lower()
+    for key, value in headers.items():
+        if key.lower() == expected and isinstance(value, str):
+            return value
+    return ""
 
 
 def _sanitize_request_log_text(value: str) -> str:
