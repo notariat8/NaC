@@ -82,16 +82,16 @@ Claims, Nonces, Providerdetails oder Callback-Werte.
 
 Read-only geprüft am 2026-06-18:
 
-- Der aktive OCI-Logging-Pfad fuer die zustandsbehaftete Function ist die
+- Der aktive OCI-Logging-Pfad für die zustandsbehaftete Function ist die
   Functions invoke Log-Gruppe `nac-dev-functions-logs` mit dem Log
   `nac-dev-functions-invoke`.
-- Die abgefragten Eintraege fuer die Function `nac-dev-nac-app` enthalten nur
+- Die abgefragten Einträge für die Function `nac-dev-nac-app` enthalten nur
   feste Service-Meldungen wie `Received function invocation request` und
   `Served function invocation request ...` sowie Function- und
   Request-Metadaten.
 - Die Logging Search lieferte keine Callback-URL und keine browserseitigen
   Callback-Werte wie `code`, `state`, `nonce`, `token` oder `claim` in den
-  zurueckgegebenen Feldern.
+  zurückgegebenen Feldern.
 - Der lokale NaC-Webserver redigiert `/auth/callback`-callback query Werte in
   seinen Requestlogs.
 
@@ -106,15 +106,15 @@ Der Proof bleibt read-only und braucht Kein OCI Apply:
 
 1. Live-Routen nur lesend aufrufen: `/healthz`, `/login`, `/workspace` und
    `/api/tenant/login-intent`.
-2. OCI Logging Search fuer das aktive Functions invoke Log
+2. OCI Logging Search für das aktive Functions invoke Log
    `nac-dev-functions-invoke` auf die Function `nac-dev-nac-app` begrenzen.
 3. Ergebnis nur als redigierte Evidenz dokumentieren: Service-Meldungen,
    Function-Name, Zeitfenster und dass keine callback query Werte (`code`,
-   `state`, `nonce`, `token`, `claim`) in den zurueckgegebenen Feldern
+   `state`, `nonce`, `token`, `claim`) in den zurückgegebenen Feldern
    auftauchen.
-4. Die Evidenz per Protected PR versionieren. Ein Apply-Gate ist erst noetig,
+4. Die Evidenz per Protected PR versionieren. Ein Apply-Gate ist erst nötig,
    wenn Logging-Policies, API-Gateway-Routen, Secret-Zugriffe oder Runtime-
-   Konfiguration geaendert werden.
+   Konfiguration geändert werden.
 
 ## Nächste Grenze
 
