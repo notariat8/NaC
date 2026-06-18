@@ -6,6 +6,7 @@ import hmac
 import json
 import secrets
 import time
+from collections.abc import Mapping, MutableSequence
 from http.cookies import CookieError, SimpleCookie
 from typing import Any
 
@@ -96,6 +97,8 @@ def validate_session_cookie(
     *,
     signing_key: str,
     now: int | None = None,
+    session_store: Mapping[str, Mapping[str, Any]] | None = None,
+    audit_log: MutableSequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     key = signing_key.strip()
     if not key:
@@ -139,6 +142,28 @@ def validate_session_cookie(
             expires_at=expires_at,
             ttl_remaining_seconds=0,
         )
+    server_session = None
+    if session_store is not None:
+        server_session = _validate_server_session_record(
+            session_store=session_store,
+            session_id=payload["sid"],
+            checked_at=checked_at,
+        )
+        server_session_status = server_session["status"]
+        server_session_reason = server_session["reason"]
+        _append_session_audit_event(
+            audit_log=audit_log,
+            status="valid" if server_session_status == "active" else server_session_status,
+            reason="session_cookie_valid" if server_session_status == "active" else server_session_reason,
+            checked_at=checked_at,
+            audit_event_id=server_session.get("audit_event_id"),
+        )
+        if server_session_status != "active":
+            return _session_validation_result(
+                server_session_status,
+                server_session_reason,
+                server_session=server_session,
+            )
     return _session_validation_result(
         "valid",
         "session_cookie_valid",
@@ -147,6 +172,7 @@ def validate_session_cookie(
         issued_at=issued_at,
         expires_at=expires_at,
         ttl_remaining_seconds=expires_at - checked_at,
+        server_session=server_session,
     )
 
 
@@ -341,6 +367,7 @@ def _session_validation_result(
     issued_at: int | None = None,
     expires_at: int | None = None,
     ttl_remaining_seconds: int | None = None,
+    server_session: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     session: dict[str, Any] = {
         "session_allowed": bool(session_allowed),
@@ -354,7 +381,7 @@ def _session_validation_result(
         session["expires_at"] = int(expires_at)
     if ttl_remaining_seconds is not None:
         session["ttl_remaining_seconds"] = int(ttl_remaining_seconds)
-    return {
+    result = {
         "schema_version": "nac.session-validation/v0.1",
         "status": status,
         "reason": reason,
@@ -369,6 +396,99 @@ def _session_validation_result(
             "mandate_data_loaded": False,
         },
     }
+    if server_session is not None:
+        result["server_session"] = server_session
+    return result
+
+
+def _validate_server_session_record(
+    *,
+    session_store: Mapping[str, Mapping[str, Any]],
+    session_id: str,
+    checked_at: int,
+) -> dict[str, Any]:
+    record = session_store.get(session_id)
+    if not isinstance(record, Mapping):
+        return _server_session_result("missing", "server_session_missing")
+    if not _record_boolean_is_false(record, "contains_credentials"):
+        return _server_session_result("invalid", "server_session_unsafe")
+    if not _record_boolean_is_false(record, "tokens_stored"):
+        return _server_session_result("invalid", "server_session_unsafe")
+    if not _record_boolean_is_false(record, "claims_stored"):
+        return _server_session_result("invalid", "server_session_unsafe")
+    recorded_session_id = record.get("session_id")
+    if isinstance(recorded_session_id, str) and recorded_session_id and recorded_session_id != session_id:
+        return _server_session_result("invalid", "server_session_mismatch")
+    audit_event_id = _safe_audit_event_id(record.get("audit_event_id"))
+    revoked_at = _integer_or_none(record.get("revoked_at"))
+    if revoked_at is not None and revoked_at <= checked_at:
+        return _server_session_result("revoked", "server_session_revoked", audit_event_id=audit_event_id)
+    expires_at = _integer_or_none(record.get("expires_at"))
+    if expires_at is None:
+        return _server_session_result("invalid", "server_session_time_invalid", audit_event_id=audit_event_id)
+    if checked_at >= expires_at:
+        return _server_session_result("expired", "server_session_expired", audit_event_id=audit_event_id)
+    return _server_session_result("active", "server_session_active", audit_event_id=audit_event_id)
+
+
+def _server_session_result(status: str, reason: str, *, audit_event_id: str = "") -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "schema_version": "nac.server-session/v0.1",
+        "status": status,
+        "reason": reason,
+        "record_required": True,
+        "session_id_exposed": False,
+        "contains_credentials": False,
+        "tokens_stored": False,
+        "claims_stored": False,
+        "workspace_opened": False,
+        "mandate_data_loaded": False,
+    }
+    if audit_event_id:
+        result["audit_event_id"] = audit_event_id
+    return result
+
+
+def _append_session_audit_event(
+    *,
+    audit_log: MutableSequence[dict[str, Any]] | None,
+    status: str,
+    reason: str,
+    checked_at: int,
+    audit_event_id: Any,
+) -> None:
+    if audit_log is None:
+        return
+    event = {
+        "schema_version": "nac.session-audit/v0.1",
+        "event_type": "session_validation",
+        "status": status,
+        "reason": reason,
+        "checked_at": int(checked_at),
+        "contains_credentials": False,
+        "tokens_returned": False,
+        "claims_exposed": False,
+        "session_cookie_exposed": False,
+        "workspace_opened": False,
+        "mandate_data_loaded": False,
+    }
+    safe_audit_event_id = _safe_audit_event_id(audit_event_id)
+    if safe_audit_event_id:
+        event["audit_event_id"] = safe_audit_event_id
+    audit_log.append(event)
+
+
+def _record_boolean_is_false(record: Mapping[str, Any], key: str) -> bool:
+    return record.get(key) is False
+
+
+def _safe_audit_event_id(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    return "".join(char for char in stripped[:80] if char.isalnum() or char in {"-", "_", "."})
 
 
 def _claim_boundary(
