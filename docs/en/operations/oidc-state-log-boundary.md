@@ -1,6 +1,6 @@
 # OIDC State And Log Boundary
 
-Status: 2026-06-16.
+Status: 2026-06-18.
 
 ## Purpose
 
@@ -75,20 +75,39 @@ tokens, claims, nonces, provider details, or callback values.
 
 ## Current OCI Finding
 
-Read-only checked on 2026-06-09:
+Read-only checked on 2026-06-18:
 
-- The `nac-dev-nac-app` API Gateway deployment has no logging policies on the
-  deployment or route level.
-- The only active log group in the `nac-dev` compartment is the DevOps service
-  log group: `nac-dev-devops-logs`.
-- No API Gateway or Functions access-log group was found for the public app
-  edge.
-- The local NaC web server redacts `/auth/callback` queries in its request
-  logs.
+- The active OCI Logging path for the stateful Function is the Functions
+  invoke log group `nac-dev-functions-logs` with log
+  `nac-dev-functions-invoke`.
+- The queried entries for Function `nac-dev-nac-app` contain only fixed
+  service messages such as `Received function invocation request` and
+  `Served function invocation request ...`, plus Function and request
+  metadata.
+- Logging Search returned no callback URL and no browser-side callback values
+  such as `code`, `state`, `nonce`, `token`, or `claim` in the returned
+  fields.
+- The local NaC web server redacts `/auth/callback` callback query values in
+  its request logs.
 
 This is a point-in-time finding, not a permanent approval. If API Gateway,
 Function, proxy, or CDN access logs are enabled, NaC must first prove that
 `code` and `state` are not stored as query strings.
+
+## Repeatable Proof
+
+The proof stays read-only and needs No OCI apply:
+
+1. Call live routes read-only: `/healthz`, `/login`, `/workspace`, and
+   `/api/tenant/login-intent`.
+2. Scope OCI Logging Search to the active Functions invoke log
+   `nac-dev-functions-invoke` and Function `nac-dev-nac-app`.
+3. Document only redacted evidence: service messages, Function name, time
+   window, and that no callback query values (`code`, `state`, `nonce`,
+   `token`, `claim`) appear in the returned fields.
+4. Version the evidence through a Protected PR. An apply gate is only needed
+   when changing logging policies, API Gateway routes, secret access, or
+   runtime configuration.
 
 ## Next Boundary
 
