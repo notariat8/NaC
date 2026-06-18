@@ -48,6 +48,10 @@ und zu einem wiederholbaren Umgang mit Timeouts und Reibungspunkten.
   geprüften Commit zusätzlich als `NAC_RELEASE_COMMIT` erhalten.
 - Der Release-Hotpath nutzt gezielte Kommandos mit bekannten Inputs. Breite
   `list`-Discovery ist Diagnose, nicht Standardpfad.
+- Read-only OCI-Hotpath-Kommandos werden direkt ausgeführt, damit genehmigte
+  CLI-Prefixe greifen: kein `bash -lc`, keine Pipes, keine Environment-
+  Präfixe und kein `nac time-ledger run` als Wrapper um OCI/GitHub-Reads.
+  Observability wird danach mit `time-ledger add` oder `summary` nachgetragen.
 
 ## Standardablauf
 
@@ -95,6 +99,12 @@ PYTHONPATH=src /home/ubuntu/.venvs/nac/bin/nac time-ledger run \
 Bei manuell protokollierten Phasen `time-ledger add` nutzen. Am Ende eines
 Blocks `time-ledger summary` ausführen und die wichtigsten Warte- oder
 Reibungspunkte in GitHub oder im Abschlussstatus zusammenfassen.
+
+Wichtig: Remote-Read-Kommandos gegen OCI oder GitHub nicht mit
+`time-ledger run` umwickeln, wenn dadurch Sandbox-/Approval-Prefixe nicht mehr
+greifen. Erst das direkte Read-only-Kommando ausführen, dann die Phase separat
+protokollieren. `time-ledger run` bleibt für lokale, bereits prefix-kompatible
+Kommandos zulässig.
 
 ## Wiederholte Reibung
 
