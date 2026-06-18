@@ -826,13 +826,42 @@ def build_auth_callback_page(
     escaped_session_label = html.escape(session_label)
     diagnostics_html = _auth_callback_diagnostics_html(callback_result)
     headers = _auth_callback_response_headers(callback_result)
+    if session_bound:
+        callback_summary = (
+            "notariat8 hat die Rückmeldung zur Anmeldung empfangen. Der Startstatus ist "
+            "freigegeben. Vollständiger Arbeitsbereich bleibt geschlossen."
+        )
+        role_gate_detail = (
+            "Die Sitzung ist aufgebaut und das notariat8-Rollengate bestätigt. "
+            "Dieser Schritt öffnet nur den geschützten Startstatus."
+        )
+        next_step_html = """
+          <li><a class="inline-link" href="/workspace">Geschützten Startstatus öffnen</a>
+          <span>Die Startseite zeigt nur Sitzungsstatus und keine Mandatsdaten.</span></li>
+          <li><span>Vollständiger Arbeitsbereich bleibt geschlossen.</span></li>
+          <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
+        """
+        startstatus_label_html = "<p><strong>Startstatus freigegeben</strong></p>"
+    else:
+        callback_summary = (
+            "notariat8 hat die Rückmeldung zur Anmeldung empfangen. Der Arbeitsbereich bleibt "
+            "geschlossen, bis Sitzung und Rolle geprüft sind."
+        )
+        role_gate_detail = (
+            "Der geschützte Arbeitsbereich wird erst geöffnet, wenn notariat8 die Sitzung "
+            "aufgebaut und die Rolle geprüft hat."
+        )
+        next_step_html = """
+          <li><span>Sitzung prüfen und notariat8-Rollengate anwenden.</span></li>
+          <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
+        """
+        startstatus_label_html = ""
     body = f"""
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
       <p class="eyebrow">notariat8 Anmeldung</p>
       <h1>Anmeldung empfangen</h1>
-      <p>notariat8 hat die Rückmeldung zur Anmeldung empfangen. Der Arbeitsbereich bleibt geschlossen,
-      bis Sitzung und Rolle geprüft sind.</p>
+      <p>{html.escape(callback_summary)}</p>
     </section>
     <div class="grid">
       <section class="notice">
@@ -840,14 +869,13 @@ def build_auth_callback_page(
         <p><strong>{escaped_state_label}</strong></p>
         <p><strong>{escaped_role_label}</strong></p>
         <p><strong>{escaped_session_label}</strong></p>
-        <p>Der geschützte Arbeitsbereich wird erst geöffnet, wenn notariat8 die Sitzung aufgebaut
-        und die Rolle geprüft hat.</p>
+        {startstatus_label_html}
+        <p>{html.escape(role_gate_detail)}</p>
       </section>
       <section>
         <h2>Nächster Schritt</h2>
         <ul class="link-list">
-          <li><span>Sitzung prüfen und notariat8-Rollengate anwenden.</span></li>
-          <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
+          {next_step_html}
         </ul>
       </section>
     </div>
