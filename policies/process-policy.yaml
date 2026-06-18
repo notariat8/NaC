@@ -133,6 +133,14 @@ agent_workflows:
   require_implementation_review_before_user_acceptance: true
   require_diagnosis_before_fix_for_repeated_or_unclear_failures: true
   require_full_pr_diff_review_before_merge: true
+  routine_read_only_github_oci_checks_do_not_need_owner_approval: true
+  parallel_gate_preparation_required_when_independent_inputs_known: true
+  preserve_owner_gates_for:
+    - design_approval
+    - release_approval
+    - apply_approval
+    - secret_access
+    - destructive_operation
   repeated_friction_optimization:
     enabled: true
     session_threshold: 2

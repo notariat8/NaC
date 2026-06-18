@@ -119,6 +119,8 @@ EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
     "require_implementation_review_before_user_acceptance",
     "require_diagnosis_before_fix_for_repeated_or_unclear_failures",
     "require_full_pr_diff_review_before_merge",
+    "routine_read_only_github_oci_checks_do_not_need_owner_approval",
+    "parallel_gate_preparation_required_when_independent_inputs_known",
     "require_layer_sync_check_for_data_controller_view_changes",
     "require_error_test_security_review_for_code_reviewer",
 )

@@ -101,6 +101,8 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "  require_implementation_review_before_user_acceptance: true",
                 "  require_diagnosis_before_fix_for_repeated_or_unclear_failures: true",
                 "  require_full_pr_diff_review_before_merge: true",
+                "  routine_read_only_github_oci_checks_do_not_need_owner_approval: true",
+                "  parallel_gate_preparation_required_when_independent_inputs_known: true",
                 "  require_layer_sync_check_for_data_controller_view_changes: true",
                 "  require_error_test_security_review_for_code_reviewer: true",
                 "rule_architecture:",
