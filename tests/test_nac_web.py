@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import http.client
 import hashlib
 import io
@@ -22,6 +23,13 @@ import nac_web.server as nac_server  # noqa: E402
 from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_cost_page, build_home_page, build_kg_page  # noqa: E402
 from nac_gnotkg.views import build_cost_review_view  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
+
+
+def _session_cookie_payload(cookie_header: str) -> dict[str, object]:
+    cookie_value = cookie_header.split("=", 1)[1]
+    payload_part = cookie_value.split(".", 1)[0]
+    padding = "=" * (-len(payload_part) % 4)
+    return json.loads(base64.urlsafe_b64decode(f"{payload_part}{padding}".encode("ascii")).decode("utf-8"))
 
 
 class NaCLocalWebTests(unittest.TestCase):
@@ -1371,7 +1379,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("token", html.lower())
         self.assertNotIn("claim", html.lower())
 
-    def test_workspace_requires_role_case_and_purpose_binding_with_valid_session_cookie_only(self) -> None:
+    def test_workspace_requires_server_session_store_even_with_valid_session_cookie(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 
         app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=lambda _secret_id: "unit-test-client-secret")
@@ -1425,11 +1433,11 @@ class NaCLocalWebTests(unittest.TestCase):
             )
         html = body.decode("utf-8")
 
-        self.assertEqual(status, 403)
+        self.assertEqual(status, 401)
         self.assertEqual(content_type, "text/html; charset=utf-8")
         self.assertIn("notariat8 Start", html)
-        self.assertIn("Rollen- und Vorgangsprüfung offen", html)
-        self.assertIn("Rolle fehlt", html)
+        self.assertIn("notariat8 Anmeldung erforderlich", html)
+        self.assertIn("Sitzung nicht geprüft", html)
         self.assertIn("Keine Mandatsdaten geladen", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
@@ -1444,8 +1452,8 @@ class NaCLocalWebTests(unittest.TestCase):
 
     def test_workspace_requires_q2q_role_case_and_purpose_binding_after_session(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
+        from nac_identity.session_store import MappingSessionStoreAdapter
 
-        app = NaCLocalWebApp(REPO_ROOT)
         session = evaluate_oidc_session_boundary(
             state_validation={
                 "status": "valid",
@@ -1471,6 +1479,25 @@ class NaCLocalWebTests(unittest.TestCase):
             session_ttl_seconds=600,
         )
         cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+        payload = _session_cookie_payload(cookie_header)
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            session_store=MappingSessionStoreAdapter(
+                {
+                    payload["sid"]: {
+                        "schema_version": "nac.server-session/v0.1",
+                        "session_id": payload["sid"],
+                        "issued_at": payload["iat"],
+                        "expires_at": payload["exp"],
+                        "revoked_at": None,
+                        "audit_event_id": "audit-event-1",
+                        "contains_credentials": False,
+                        "tokens_stored": False,
+                        "claims_stored": False,
+                    }
+                }
+            ),
+        )
 
         headers = {
             "Cookie": cookie_header,
@@ -1497,8 +1524,8 @@ class NaCLocalWebTests(unittest.TestCase):
 
     def test_workspace_shows_metadata_only_after_q2q_role_case_and_purpose_gate(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
+        from nac_identity.session_store import MappingSessionStoreAdapter
 
-        app = NaCLocalWebApp(REPO_ROOT)
         session = evaluate_oidc_session_boundary(
             state_validation={
                 "status": "valid",
@@ -1524,6 +1551,25 @@ class NaCLocalWebTests(unittest.TestCase):
             session_ttl_seconds=600,
         )
         cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+        payload = _session_cookie_payload(cookie_header)
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            session_store=MappingSessionStoreAdapter(
+                {
+                    payload["sid"]: {
+                        "schema_version": "nac.server-session/v0.1",
+                        "session_id": payload["sid"],
+                        "issued_at": payload["iat"],
+                        "expires_at": payload["exp"],
+                        "revoked_at": None,
+                        "audit_event_id": "audit-event-1",
+                        "contains_credentials": False,
+                        "tokens_stored": False,
+                        "claims_stored": False,
+                    }
+                }
+            ),
+        )
         headers = {
             "Cookie": cookie_header,
             "X-NaC-Role": "nac-notary",

@@ -99,6 +99,7 @@ def validate_session_cookie(
     signing_key: str,
     now: int | None = None,
     session_store: Mapping[str, Mapping[str, Any]] | RuntimeSessionStoreAdapter | None = None,
+    require_server_session_store: bool = False,
     audit_log: MutableSequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     key = signing_key.strip()
@@ -144,6 +145,15 @@ def validate_session_cookie(
             ttl_remaining_seconds=0,
         )
     server_session = None
+    if require_server_session_store and session_store is None:
+        _append_session_audit_event(
+            audit_log=audit_log,
+            status="unavailable",
+            reason="server_session_store_required",
+            checked_at=checked_at,
+            audit_event_id="",
+        )
+        return _session_validation_result("unavailable", "server_session_store_required")
     if session_store is not None:
         server_session = _validate_server_session_record(
             session_store=session_store,

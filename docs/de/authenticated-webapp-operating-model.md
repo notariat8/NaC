@@ -153,6 +153,14 @@ Metadaten zum geschützten Status. Mandatsinhalte, Vorgangskennungen,
 Sessionwerte, Providerdetails und Rohdaten werden nicht in die Browserausgabe
 übernommen.
 
+Der nächste Workspace/Auth-Track verschärft diese Grenze: Für `/workspace` und
+jede Route jenseits der geschützten Startseite reicht ein signiertes Cookie
+nicht mehr aus. Zusätzlich muss ein aktiver serverseitiger Session-Store-
+Eintrag vorhanden sein. Fehlende, nicht verfügbare, widerrufene, abgelaufene
+oder unsichere Store-Einträge führen fail-closed zur Anmeldeseite. Die
+Audit-Spur bleibt auf redigierte Metadaten begrenzt; vollständiger
+Arbeitsbereich und Mandatsdaten bleiben geschlossen.
+
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
 

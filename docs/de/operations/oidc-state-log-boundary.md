@@ -89,6 +89,13 @@ browsernahe Ergebnisse übernommen. Auch bei positivem Gate ist die erste
 freigegebene Oberfläche nur geschützte Status-Metadaten, kein vollständiger
 Arbeitsbereich mit Rohdaten.
 
+Der nachfolgende Workspace/Auth-Track macht den serverseitigen Session-Store
+für `/workspace` und jede Route jenseits der geschützten Startseite zur Pflicht.
+Ein signiertes Cookie ohne aktiven Store-Eintrag bleibt geschlossen. Fehlende,
+nicht verfügbare, widerrufene, abgelaufene oder unsichere Store-Einträge werden
+nur als redigierte Statusgründe behandelt; Tokens, Claims, Providerdetails,
+Session-IDs, Vorgangskennungen und Mandatsdaten werden nicht ausgegeben.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-18:

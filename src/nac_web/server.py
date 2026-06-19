@@ -26,6 +26,7 @@ from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
+from nac_identity.session_store import RuntimeSessionStoreAdapter
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -105,12 +106,14 @@ class NaCLocalWebApp:
         repo_root: Path,
         dns_resolver=None,
         onboarding_request_store: Any | None = None,
+        session_store: RuntimeSessionStoreAdapter | None = None,
         operator_access: bool = False,
         secret_text_provider: Callable[[str], str] | None = None,
     ) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
         self.onboarding_request_store = onboarding_request_store or DisabledOnboardingRequestStore()
+        self.session_store = session_store
         self.operator_access = operator_access
         self.secret_text_provider = secret_text_provider
 
@@ -135,6 +138,7 @@ class NaCLocalWebApp:
                 status, page = build_protected_workspace_start_page(
                     headers or {},
                     secret_text_provider=self.secret_text_provider,
+                    session_store=self.session_store,
                 )
                 return _html_response(page, status)
             if route == "/onboarding/readiness":
@@ -895,11 +899,14 @@ def build_protected_workspace_start_page(
     request_headers: dict[str, str],
     *,
     secret_text_provider: Callable[[str], str] | None = None,
+    session_store: RuntimeSessionStoreAdapter | None = None,
 ) -> tuple[HTTPStatus, str]:
     signing_key = _auth_callback_session_signing_key(secret_text_provider=secret_text_provider)
     validation = validate_session_cookie(
         _request_header(request_headers, "Cookie"),
         signing_key=signing_key,
+        session_store=session_store,
+        require_server_session_store=True,
     )
     if validation["status"] != "valid":
         body = """
