@@ -174,6 +174,7 @@ agent_workflows:
     enabled: true
     skill_path: workflows/skills/nac-release-memory/SKILL.md
     dev_release_lane_context_pack: /home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json
+    dev_release_lane_context_pack_review_url: https://github.com/notariat8/oci-landing-zone/blob/main/runbooks/release-lane-context.dev.json
     require_before_oci_release_work: true
     applies_to:
       - oci_devops
