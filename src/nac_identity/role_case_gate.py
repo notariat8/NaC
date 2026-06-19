@@ -8,6 +8,35 @@ ROLE_CASE_GATE_SCHEMA_VERSION = "nac.role-case-gate/v0.1"
 PROTECTED_STATUS_METADATA_SURFACE = "protected_status_metadata"
 
 
+def normalize_workspace_role_gate_context(*, role: str, role_gate_open: bool) -> dict[str, Any]:
+    return {
+        "status": "open" if role_gate_open is True else "closed",
+        "role": role,
+        "session_allowed": role_gate_open is True,
+    }
+
+
+def normalize_workspace_tenant_binding_context(*, tenant_bound: bool) -> dict[str, Any]:
+    return {
+        "status": "bound" if tenant_bound is True else "unbound",
+        "tenant_authorized": tenant_bound is True,
+    }
+
+
+def normalize_workspace_case_binding_context(*, case_bound: bool) -> dict[str, Any]:
+    return {
+        "status": "bound" if case_bound is True else "unbound",
+        "case_authorized": case_bound is True,
+    }
+
+
+def normalize_workspace_purpose_binding_context(*, purpose_bound: bool) -> dict[str, Any]:
+    return {
+        "status": "bound" if purpose_bound is True else "unbound",
+        "purpose_allowed": purpose_bound is True,
+    }
+
+
 def evaluate_role_case_gate(
     *,
     session_validation: Mapping[str, Any] | None,

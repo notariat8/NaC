@@ -20,7 +20,13 @@ from .oidc_token_exchange import (
     build_oidc_token_exchange_contract,
     exchange_oidc_authorization_code,
 )
-from .role_case_gate import evaluate_role_case_gate
+from .role_case_gate import (
+    evaluate_role_case_gate,
+    normalize_workspace_case_binding_context,
+    normalize_workspace_purpose_binding_context,
+    normalize_workspace_role_gate_context,
+    normalize_workspace_tenant_binding_context,
+)
 from .session_store import MappingSessionStoreAdapter, RuntimeSessionStoreAdapter
 
 __all__ = [
@@ -52,6 +58,10 @@ __all__ = [
     "evaluate_oidc_role_gate",
     "evaluate_oidc_session_boundary",
     "evaluate_role_case_gate",
+    "normalize_workspace_case_binding_context",
+    "normalize_workspace_purpose_binding_context",
+    "normalize_workspace_role_gate_context",
+    "normalize_workspace_tenant_binding_context",
     "RuntimeSessionStoreAdapter",
     "validate_session_cookie",
     "validate_signed_state",
