@@ -15,6 +15,7 @@ from nac_identity.oci_tenant import check_domain_ready
 
 
 ONBOARDING_REQUEST_SCHEMA_VERSION = "nac.onboarding-request/v0.1"
+ONBOARDING_REVIEW_AUDIT_SCHEMA_VERSION = "nac.onboarding-review-audit/v0.1"
 DEFAULT_REQUEST_STATUS = "submitted"
 DEFAULT_INVITATION_STATUS = "not_sent"
 DEFAULT_CREATED_BY_SURFACE = "app.notariat8.de"
@@ -105,6 +106,12 @@ class AtpOnboardingRequestStore:
                 connection.commit()
             if reviewed is None:
                 raise ValueError("onboarding_request_not_found")
+            reviewed = dict(reviewed)
+            reviewed["review_audit"] = build_onboarding_review_audit_metadata(
+                request_id=normalized_request_id,
+                decision=decision,
+                reviewed_at=updated_at,
+            )
             return reviewed
         except Exception as exc:  # pragma: no cover - concrete driver errors are integration-tested
             if isinstance(exc, (OnboardingRequestStoreUnavailable, ValueError)):
@@ -454,6 +461,26 @@ def build_onboarding_request(
         "created_at": timestamp,
         "updated_at": timestamp,
         "created_by_surface": created_by_surface.strip() or DEFAULT_CREATED_BY_SURFACE,
+    }
+
+
+def build_onboarding_review_audit_metadata(
+    *,
+    request_id: str,
+    decision: str,
+    reviewed_at: str,
+    review_surface: str = "admin.onboarding.review",
+) -> dict[str, Any]:
+    return {
+        "schema_version": ONBOARDING_REVIEW_AUDIT_SCHEMA_VERSION,
+        "request_id": request_id.strip(),
+        "decision": decision.strip().lower(),
+        "reviewed_at": reviewed_at.strip(),
+        "review_surface": review_surface,
+        "contains_mandate_data": False,
+        "customer_mail_dispatched": False,
+        "oci_write_executed": False,
+        "atp_schema_change_required": False,
     }
 
 

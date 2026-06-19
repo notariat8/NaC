@@ -1182,6 +1182,21 @@ def _customer_dns_check_copy(dns_check: dict[str, Any]) -> tuple[str, str]:
 
 
 def build_operator_review_result_page(request: dict[str, Any]) -> str:
+    audit = request.get("review_audit")
+    audit_section = ""
+    if isinstance(audit, dict):
+        audit_section = f"""
+      <section>
+        <h2>Audit-Metadaten</h2>
+        <ul class="link-list">
+          <li><span><strong>Schema:</strong> <code>{html.escape(str(audit.get("schema_version", "")))}</code></span></li>
+          <li><span>Keine Mandatsdaten im Review-Audit</span></li>
+          <li><span>Keine E-Mail ausgelöst</span></li>
+          <li><span>Keine Cloud-Schreiboperation</span></li>
+          <li><span>Keine Datenbank-Schemaänderung</span></li>
+        </ul>
+      </section>
+        """
     body = f"""
     <nav class="topline"><a href="/admin/onboarding">← Readiness-Anfragen</a><span><a href="/">Übersicht</a></span></nav>
     <section class="hero">
@@ -1206,6 +1221,7 @@ def build_operator_review_result_page(request: dict[str, Any]) -> str:
           <li><span>Keine Mandatsdaten: Diese Ansicht enthält keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
         </ul>
       </section>
+      {audit_section}
     </div>
     """
     return _layout("notariat8 Prüfung gespeichert", body)
