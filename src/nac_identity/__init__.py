@@ -21,6 +21,7 @@ from .oidc_token_exchange import (
     exchange_oidc_authorization_code,
 )
 from .role_case_gate import evaluate_role_case_gate
+from .session_store import MappingSessionStoreAdapter, RuntimeSessionStoreAdapter
 
 __all__ = [
     "DEFAULT_OIDC_SCOPES",
@@ -33,6 +34,7 @@ __all__ = [
     "OnboardingRequestStoreDisabled",
     "OnboardingRequestStoreUnavailable",
     "OidcTokenExchangeContract",
+    "MappingSessionStoreAdapter",
     "build_admin_provisioning_plan",
     "build_apply_request",
     "build_auth_callback_result",
@@ -50,6 +52,7 @@ __all__ = [
     "evaluate_oidc_role_gate",
     "evaluate_oidc_session_boundary",
     "evaluate_role_case_gate",
+    "RuntimeSessionStoreAdapter",
     "validate_session_cookie",
     "validate_signed_state",
 ]

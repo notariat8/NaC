@@ -11,6 +11,7 @@ from http.cookies import CookieError, SimpleCookie
 from typing import Any
 
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
+from .session_store import RuntimeSessionStoreAdapter
 
 DEFAULT_SESSION_COOKIE_NAME = "__Host-nac_session"
 DEFAULT_SESSION_TTL_SECONDS = 600
@@ -97,7 +98,7 @@ def validate_session_cookie(
     *,
     signing_key: str,
     now: int | None = None,
-    session_store: Mapping[str, Mapping[str, Any]] | None = None,
+    session_store: Mapping[str, Mapping[str, Any]] | RuntimeSessionStoreAdapter | None = None,
     audit_log: MutableSequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     key = signing_key.strip()
@@ -403,11 +404,13 @@ def _session_validation_result(
 
 def _validate_server_session_record(
     *,
-    session_store: Mapping[str, Mapping[str, Any]],
+    session_store: Mapping[str, Mapping[str, Any]] | RuntimeSessionStoreAdapter,
     session_id: str,
     checked_at: int,
 ) -> dict[str, Any]:
-    record = session_store.get(session_id)
+    record = _lookup_server_session_record(session_store=session_store, session_id=session_id)
+    if record is _SESSION_STORE_UNAVAILABLE:
+        return _server_session_result("unavailable", "server_session_store_unavailable")
     if not isinstance(record, Mapping):
         return _server_session_result("missing", "server_session_missing")
     if not _record_boolean_is_false(record, "contains_credentials"):
@@ -429,6 +432,22 @@ def _validate_server_session_record(
     if checked_at >= expires_at:
         return _server_session_result("expired", "server_session_expired", audit_event_id=audit_event_id)
     return _server_session_result("active", "server_session_active", audit_event_id=audit_event_id)
+
+
+_SESSION_STORE_UNAVAILABLE = object()
+
+
+def _lookup_server_session_record(
+    *,
+    session_store: Mapping[str, Mapping[str, Any]] | RuntimeSessionStoreAdapter,
+    session_id: str,
+) -> Mapping[str, Any] | object | None:
+    try:
+        if hasattr(session_store, "get_session_record"):
+            return session_store.get_session_record(session_id)  # type: ignore[union-attr]
+        return session_store.get(session_id)  # type: ignore[union-attr]
+    except Exception:
+        return _SESSION_STORE_UNAVAILABLE
 
 
 def _server_session_result(status: str, reason: str, *, audit_event_id: str = "") -> dict[str, Any]:
