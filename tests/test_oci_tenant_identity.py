@@ -1218,6 +1218,60 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("nac-tenant-admin", serialized)
         self.assertNotIn("notariat8_nac_app", serialized)
 
+    def test_session_cookie_validation_can_require_server_session_store(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = result["session"]["set_cookie"].split(";", 1)[0]
+        audit_log: list[dict[str, object]] = []
+
+        validation = validate_session_cookie(
+            cookie_header,
+            signing_key="unit-test-session-signing-key",
+            now=1_800_000_010,
+            require_server_session_store=True,
+            audit_log=audit_log,
+        )
+        serialized = json.dumps(validation, sort_keys=True)
+
+        self.assertEqual(validation["status"], "unavailable")
+        self.assertEqual(validation["reason"], "server_session_store_required")
+        self.assertFalse(validation["session"]["session_allowed"])
+        self.assertFalse(validation["session"]["protected_start_page_allowed"])
+        self.assertFalse(validation["session"]["workspace_opened"])
+        self.assertFalse(validation["session"]["mandate_data_loaded"])
+        self.assertEqual(audit_log[-1]["event_type"], "session_validation")
+        self.assertEqual(audit_log[-1]["status"], "unavailable")
+        self.assertEqual(audit_log[-1]["reason"], "server_session_store_required")
+        self.assertNotIn(cookie_header, serialized)
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn("admin@example.test", serialized)
+        self.assertNotIn("nac-tenant-admin", serialized)
+        self.assertNotIn("notariat8_nac_app", serialized)
+
     def test_session_cookie_validation_fails_closed_when_server_session_is_missing_revoked_or_expired(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
 

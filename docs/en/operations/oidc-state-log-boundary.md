@@ -82,6 +82,13 @@ claims, tokens, provider details and mandate content are not copied into
 browser-facing results. Even after a positive gate, the first allowed surface is
 protected status metadata, not a full workspace with raw data.
 
+The following Workspace/Auth track makes the server-side session store
+mandatory for `/workspace` and every route beyond the protected start page. A
+signed cookie without an active store record remains closed. Missing,
+unavailable, revoked, expired, or unsafe store records are exposed only as
+redacted status reasons; tokens, claims, provider details, session IDs, case
+identifiers, and mandate data are not returned.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-18:

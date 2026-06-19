@@ -146,6 +146,13 @@ closed. After a positive check, `/workspace` returns metadata-only protected
 status. Mandate content, case identifiers, session values, provider details and
 raw data are not copied into browser output.
 
+The next Workspace/Auth track tightens this boundary: for `/workspace` and every
+route beyond the protected start page, a signed cookie is no longer sufficient.
+An active server-side session-store record must also exist. Missing,
+unavailable, revoked, expired, or unsafe store records fail closed to the login
+page. Audit evidence remains redacted metadata only; the full workspace and
+mandate data remain closed.
+
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 
