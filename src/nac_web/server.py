@@ -1262,21 +1262,21 @@ def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
         )
     )
     nav = _customer_onboarding_nav(readiness_query)
+    status_copy = _customer_onboarding_status_copy(request)
     body = f"""
     {nav}
     <section class="hero">
       <p class="eyebrow">notariat8 Einrichtung</p>
-      <h1>Einrichtung angefragt</h1>
-      <p>Ihre Anfrage ist bei notariat8 eingegangen. Wir prüfen jetzt die angegebene E-Mail-Adresse
-      und bereiten die nächsten Schritte vor.</p>
+      <h1>{html.escape(status_copy["headline"])}</h1>
+      <p>{html.escape(status_copy["summary"])}</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Ihre Angaben</h2>
         <p><strong>Domain:</strong> {html.escape(str(request.get("domain", "")))}</p>
         <p><strong>E-Mail-Adresse:</strong> {html.escape(str(request.get("admin_email", "")))}</p>
-        <p><strong>Status:</strong> Anfrage eingegangen</p>
-        <p><strong>Einladung:</strong> Einladung noch nicht versendet</p>
+        <p><strong>Status:</strong> {html.escape(status_copy["status_label"])}</p>
+        <p><strong>Einladung:</strong> {html.escape(status_copy["invitation_label"])}</p>
         <div class="toolbar">
           <a class="button-link" href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Einrichtungsstatus öffnen</a>
         </div>
@@ -1284,8 +1284,9 @@ def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
       <section>
         <h2>Was passiert als Nächstes?</h2>
         <ul class="link-list">
-          <li><span><strong>Prüfung:</strong> notariat8 prüft die E-Mail-Adresse der verantwortlichen Person.</span></li>
-          <li><span><strong>Freigabe:</strong> Nach der Prüfung wird die erste Einrichtung vorbereitet.</span></li>
+          <li><span><strong>Prüfung:</strong> {html.escape(status_copy["review_step"])}</span></li>
+          <li><span><strong>Freigabe:</strong> {html.escape(status_copy["release_step"])}</span></li>
+          <li><span><strong>Einladung:</strong> {html.escape(status_copy["invitation_step"])}</span></li>
           <li><span><strong>Nachweis:</strong> Die Referenz dieser Anfrage lautet <code>{html.escape(str(request.get("request_id", "")))}</code>.</span></li>
           <li><span><strong>Keine Mandatsdaten:</strong> Diese Anfrage enthält keine Urkunden, Ausweise, Akten oder Geschäftswerte.</span></li>
         </ul>
@@ -1293,6 +1294,48 @@ def build_customer_onboarding_request_page(request: dict[str, Any]) -> str:
     </div>
     """
     return _layout("notariat8 Einrichtung angefragt", body)
+
+
+def _customer_onboarding_status_copy(request: dict[str, Any]) -> dict[str, str]:
+    request_status = str(request.get("request_status") or "").strip().lower()
+    invitation_status = str(request.get("invitation_status") or "").strip().lower()
+    invitation_label = "Einladung noch nicht versendet"
+    invitation_step = "Eine E-Mail wird erst nach Freigabe ausgelöst."
+    if invitation_status and invitation_status != "not_sent":
+        invitation_label = "Einladungsstatus wird geprüft"
+        invitation_step = "notariat8 prüft den nächsten sicheren Einladungsschritt."
+    if request_status == "approved":
+        return {
+            "headline": "Einrichtung freigegeben",
+            "summary": "Die Prüfung ist dokumentiert. notariat8 bereitet die nächsten sicheren Schritte vor.",
+            "status_label": "Prüfung dokumentiert",
+            "invitation_label": invitation_label,
+            "review_step": "Die E-Mail-Adresse der verantwortlichen Person wurde geprüft.",
+            "release_step": "Die erste Einrichtung kann vorbereitet werden.",
+            "invitation_step": invitation_step,
+        }
+    if request_status == "rejected":
+        return {
+            "headline": "Einrichtung noch nicht freigegeben",
+            "summary": "Die Prüfung ist dokumentiert. notariat8 meldet sich mit den nächsten Schritten.",
+            "status_label": "Prüfung dokumentiert",
+            "invitation_label": invitation_label,
+            "review_step": "Die E-Mail-Adresse der verantwortlichen Person wurde geprüft.",
+            "release_step": "Die Einrichtung ist noch nicht freigegeben.",
+            "invitation_step": invitation_step,
+        }
+    return {
+        "headline": "Einrichtung angefragt",
+        "summary": (
+            "Ihre Anfrage ist bei notariat8 eingegangen. Wir prüfen jetzt die angegebene E-Mail-Adresse "
+            "und bereiten die nächsten Schritte vor."
+        ),
+        "status_label": "Anfrage eingegangen",
+        "invitation_label": invitation_label,
+        "review_step": "notariat8 prüft die E-Mail-Adresse der verantwortlichen Person.",
+        "release_step": "Nach der Prüfung wird die erste Einrichtung vorbereitet.",
+        "invitation_step": invitation_step,
+    }
 
 
 def build_customer_onboarding_request_unavailable_page(message: str) -> str:
