@@ -173,6 +173,7 @@ agent_workflows:
   release_memory:
     enabled: true
     skill_path: workflows/skills/nac-release-memory/SKILL.md
+    dev_release_lane_context_pack: /home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json
     require_before_oci_release_work: true
     applies_to:
       - oci_devops
@@ -181,9 +182,12 @@ agent_workflows:
       - api_gateway
       - release_monitor
     require_commit_bound_release_lane: true
+    require_nac_release_commit_build_argument: true
+    commit_info_is_audit_only: true
     require_time_ledger_for_larger_release_blocks: true
     prohibit_broad_discovery_as_release_hotpath: true
     require_direct_prefix_compatible_read_only_hotpath: true
+    dev_only_non_sensitive_context_pack_ocids_allowed: true
     prohibit_time_ledger_wrapper_for_remote_reads_when_prefix_mismatch: true
     require_observability_after_direct_read: true
     no_oci_apply_from_skill_without_owner_apply_approval: true

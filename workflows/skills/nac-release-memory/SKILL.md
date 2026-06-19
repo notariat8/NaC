@@ -56,6 +56,10 @@ und zu einem wiederholbaren Umgang mit Timeouts und Reibungspunkten.
   CLI-Prefixe greifen: kein `bash -lc`, keine Pipes, keine Environment-
   Präfixe und kein `nac time-ledger run` als Wrapper um OCI/GitHub-Reads.
   Observability wird danach mit `time-ledger add` oder `summary` nachgetragen.
+- routine GitHub/OCI read-only checks do not need Owner approval, wenn sie nur
+  Status, Metadaten, Logs oder GitHub-Informationen lesen, keine Secrets
+  ausgeben und keine GitHub- oder OCI-Schreiboperation starten.
+- Design/Release/Apply/Secret/destructive gates remain Owner-gated.
 
 ## Standardablauf
 
