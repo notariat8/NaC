@@ -903,6 +903,21 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(status_result.status_code, 404)
         self.assertIn(b"not exposed", status_result.body)
 
+    def test_public_get_runtime_does_not_expose_workspace(self) -> None:
+        from nac_web.oci_public_functions import dispatch_oci_public_function_request
+
+        result = dispatch_oci_public_function_request(
+            FakeFunctionContext(request_url="/workspace", method="GET"),
+            FailingBody(),
+            repo_root=REPO_ROOT,
+        )
+
+        self.assertEqual(result.status_code, 404)
+        self.assertEqual(result.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertIn(b"not exposed", result.body)
+        self.assertNotIn(b"workspace", result.body.lower())
+        self.assertNotIn(b"session", result.body.lower())
+
     def test_configured_store_accepts_customer_onboarding_request_post(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
