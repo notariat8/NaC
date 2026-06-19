@@ -139,6 +139,13 @@ Mandatsdaten werden nicht geladen und der vollständige Arbeitsbereich bleibt
 geschlossen. Fehlende, manipulierte, abgelaufene oder unkonfigurierte Cookies
 führen zur Anmeldeseite.
 
+Q2Q definiert die nächste fachliche Grenze vor jedem Pfad jenseits dieses
+Startstatus: geprüfte Session plus fachliche Rolle, Tenant-Bindung,
+Vorgangsbindung und Zweckbindung. Der Vertrag öffnet zunächst nur geschützte
+Status-Metadaten; Rohdaten, Dokumente und vollständige Arbeitsbereiche bleiben
+geschlossen. Für sensible Schritte kann das Gate eine Vier-Augen-Freigabe als
+zusätzliche Bedingung verlangen.
+
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).
 

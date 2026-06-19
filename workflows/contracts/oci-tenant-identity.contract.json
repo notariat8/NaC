@@ -27,7 +27,10 @@
     "server_generated_state",
     "server_generated_nonce",
     "idp_login_validated",
-    "nac_role_gate"
+    "nac_role_gate",
+    "tenant_binding",
+    "case_binding",
+    "purpose_binding"
   ],
   "nac_roles": [
     "nac-tenant-admin",
@@ -46,6 +49,7 @@
     "oci_oidc_token_exchange_server_adapter",
     "oci_oidc_session_cookie_boundary",
     "oci_oidc_session_cookie_validation",
+    "nac_role_case_gate_contract",
     "protected_start_status_page",
     "role_mapping_preview",
     "read_only_oci_diagnostics"
@@ -59,6 +63,8 @@
     "store_oidc_client_secret_in_product_repo",
     "authorize_tenant_from_query_hint",
     "skip_nac_role_gate_after_idp_login",
+    "open_full_workspace_without_tenant_case_and_purpose_binding",
+    "load_raw_mandate_content_in_role_case_gate_contract_slice",
     "require_end_user_oci_console_work",
     "store_mandate_data_in_public_site"
   ],
@@ -123,6 +129,38 @@
       "session_cookie_issued_in_claim_boundary_slice": false,
       "workspace_opened_in_claim_boundary_slice": false
     }
+  },
+  "role_case_gate_contract_schema": {
+    "schema_version": "nac.role-case-gate/v0.1",
+    "required": [
+      "session_validation",
+      "role_gate",
+      "tenant_context",
+      "case_context",
+      "purpose_context",
+      "guardrails"
+    ],
+    "verified_session_required": true,
+    "subject_matter_role_required": true,
+    "tenant_binding_required_before_workspace_route": true,
+    "case_binding_required_before_workspace_route": true,
+    "purpose_binding_required_before_workspace_route": true,
+    "four_eyes_gate_supported": true,
+    "allowed_surface": "protected_status_metadata",
+    "raw_mandate_content_allowed": false,
+    "browser_payload_contains_case_or_session_identifiers": false,
+    "full_workspace_opened_in_contract_slice": false,
+    "mandate_data_loaded_in_contract_slice": false,
+    "fail_closed_reasons": [
+      "session_missing",
+      "session_revoked",
+      "session_expired",
+      "role_missing",
+      "tenant_mismatch",
+      "case_missing",
+      "purpose_missing",
+      "four_eyes_required"
+    ]
   },
   "token_exchange_contract_schema": {
     "schema_version": "nac.oidc-token-exchange/v0.1",

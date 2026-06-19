@@ -73,6 +73,15 @@ gate. Missing configuration, invalid signatures, wrong audience, wrong issuer,
 or expired tokens keep the path closed. Browser-facing results still expose no
 tokens, claims, nonces, provider details, or callback values.
 
+Q2Q adds a separate role-and-case gate before any route beyond the protected
+start/status page. A valid session cookie is not enough. NaC also needs a
+subject-matter role, tenant binding, case binding and purpose binding; sensitive
+steps may require four-eyes approval. The gate contract returns only status
+classes and booleans. Tenant hints, case IDs, session IDs, email addresses,
+claims, tokens, provider details and mandate content are not copied into
+browser-facing results. Even after a positive gate, the first allowed surface is
+protected status metadata, not a full workspace with raw data.
+
 ## Current OCI Finding
 
 Read-only checked on 2026-06-18:

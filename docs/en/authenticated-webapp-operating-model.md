@@ -133,6 +133,13 @@ page; it does not load mandate data and it does not open the full workspace.
 Missing, tampered, expired or unconfigured cookies return the login-required
 page.
 
+Q2Q defines the next subject-matter boundary before any path beyond that start
+status: verified session plus subject-matter role, tenant binding, case binding
+and purpose binding. The contract initially opens only protected status
+metadata; raw data, documents and the full workspace remain closed. For
+sensitive steps, the gate may require four-eyes approval as an additional
+condition.
+
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 
