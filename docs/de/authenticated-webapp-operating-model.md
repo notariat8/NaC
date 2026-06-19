@@ -133,11 +133,11 @@ werden; Tokens, Claims, Nonces, Providerdetails und Callback-Werte bleiben aus
 dem Cookie heraus. Ein Arbeitsbereich wird in diesem Stand weiterhin nicht
 geöffnet.
 
-Die nächste Q2J-Grenze prüft dieses signierte Session-Cookie vor `/workspace`.
-Ein gültiges Cookie öffnet nur eine geschützte notariat8-Start-/Statusseite;
-Mandatsdaten werden nicht geladen und der vollständige Arbeitsbereich bleibt
-geschlossen. Fehlende, manipulierte, abgelaufene oder unkonfigurierte Cookies
-führen zur Anmeldeseite.
+Die Q2J-Grenze prüft dieses signierte Session-Cookie vor `/workspace`. In
+diesem Slice durfte ein gültiges Cookie höchstens eine geschützte
+notariat8-Start-/Statusseite öffnen; Mandatsdaten wurden nicht geladen und der
+vollständige Arbeitsbereich blieb geschlossen. Fehlende, manipulierte,
+abgelaufene oder unkonfigurierte Cookies führen weiterhin zur Anmeldeseite.
 
 Q2Q definiert die nächste fachliche Grenze vor jedem Pfad jenseits dieses
 Startstatus: geprüfte Session plus fachliche Rolle, Tenant-Bindung,
@@ -145,6 +145,13 @@ Vorgangsbindung und Zweckbindung. Der Vertrag öffnet zunächst nur geschützte
 Status-Metadaten; Rohdaten, Dokumente und vollständige Arbeitsbereiche bleiben
 geschlossen. Für sensible Schritte kann das Gate eine Vier-Augen-Freigabe als
 zusätzliche Bedingung verlangen.
+
+Q2R verdrahtet `/workspace` mit diesem Gate. Eine gültige Sitzung allein reicht
+nicht mehr aus: Ohne fachliche Rolle, Tenant-, Vorgangs- und Zweckbindung bleibt
+die Route geschlossen. Bei positiver Prüfung zeigt `/workspace` nur
+Metadaten zum geschützten Status. Mandatsinhalte, Vorgangskennungen,
+Sessionwerte, Providerdetails und Rohdaten werden nicht in die Browserausgabe
+übernommen.
 
 Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 [OIDC State- und Log-Grenze](operations/oidc-state-log-boundary.md).

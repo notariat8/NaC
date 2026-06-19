@@ -29,6 +29,7 @@ from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_sess
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from nac_identity.role_case_gate import evaluate_role_case_gate
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
@@ -914,29 +915,94 @@ def build_protected_workspace_start_page(
         """
         return HTTPStatus.UNAUTHORIZED, _layout("notariat8 Anmeldung erforderlich", body)
 
+    role_case_gate = evaluate_role_case_gate(
+        session_validation=validation,
+        role_gate={
+            "status": "open" if _workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True) else "closed",
+            "role": _request_header(request_headers, "X-NaC-Role"),
+            "session_allowed": True,
+        },
+        tenant_context={
+            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound") else "unbound",
+            "tenant_authorized": _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound"),
+        },
+        case_context={
+            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Case-Bound") else "unbound",
+            "case_authorized": _workspace_header_bool(request_headers, "X-NaC-Case-Bound"),
+        },
+        purpose_context={
+            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound") else "unbound",
+            "purpose_allowed": _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound"),
+        },
+        subject_matter_roles=["nac-notary", "nac-case-worker", "nac-tenant-admin"],
+    )
+    if role_case_gate["status"] != "open":
+        reason_label = {
+            "role_missing": "Rolle fehlt",
+            "tenant_mismatch": "Tenant-Bindung fehlt",
+            "case_missing": "Vorgangsbindung fehlt",
+            "purpose_missing": "Zweckbindung fehlt",
+            "four_eyes_required": "Vier-Augen-Freigabe fehlt",
+        }.get(str(role_case_gate.get("reason")), "Freigabe fehlt")
+        body = f"""
+        <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+        <section class="hero">
+          <p class="eyebrow">notariat8 Start</p>
+          <h1>Rollen- und Vorgangsprüfung offen</h1>
+          <p>Ihre Sitzung wurde geprüft. Der geschützte Arbeitsbereich bleibt geschlossen,
+          bis Rolle, Tenant, Vorgang und Zweck geprüft sind.</p>
+        </section>
+        <div class="grid">
+          <section class="notice">
+            <h2>Geschützter Startstatus</h2>
+            <ul class="link-list">
+              <li><span>Sitzung geprüft.</span></li>
+              <li><span>{html.escape(reason_label)}</span></li>
+              <li><span>Keine Mandatsdaten geladen.</span></li>
+            </ul>
+          </section>
+          <section>
+            <h2>Nächster Schritt</h2>
+            <ul class="link-list">
+              <li><span>notariat8 prüft die fachliche Bindung für diesen Arbeitsbereich.</span></li>
+              <li><span>Der vollständige Arbeitsbereich bleibt geschlossen.</span></li>
+            </ul>
+          </section>
+        </div>
+        """
+        return HTTPStatus.FORBIDDEN, _layout("notariat8 Rollen- und Vorgangsprüfung offen", body)
+
     body = """
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
       <p class="eyebrow">notariat8 Start</p>
-      <h1>Geschützter Startstatus</h1>
-      <p>Ihre Sitzung wurde geprüft. notariat8 zeigt hier nur den geschützten Startstatus.</p>
+      <h1>Geschützte Workspace-Metadaten</h1>
+      <p>Ihre Sitzung und die fachliche Bindung wurden geprüft. notariat8 zeigt hier nur
+      Status-Metadaten.</p>
     </section>
     <div class="grid">
       <section class="notice">
-        <h2>Sitzung geprüft</h2>
-        <p><strong>Startseite freigegeben</strong></p>
-        <p>Der vollständige Arbeitsbereich bleibt geschlossen, bis der nächste Freigabeschritt umgesetzt ist.</p>
+        <h2>Rollen- und Vorgangsgate bestätigt</h2>
+        <p><strong>Status-Metadaten freigegeben</strong></p>
+        <p>Der vollständige Arbeitsbereich bleibt geschlossen, bis weitere Fach- und Freigabegates greifen.</p>
       </section>
       <section>
         <h2>Nächster Schritt</h2>
         <ul class="link-list">
-          <li><span>NaC-Rollengate bleibt maßgeblich für weitere Arbeitsbereiche.</span></li>
+          <li><span>Nur geprüfte Navigation und Statushinweise anzeigen.</span></li>
           <li><span>Keine Mandatsdaten geladen.</span></li>
         </ul>
       </section>
     </div>
     """
     return HTTPStatus.OK, _layout("notariat8 Start", body)
+
+
+def _workspace_header_bool(headers: dict[str, str], name: str, *, default: bool = False) -> bool:
+    value = _request_header(headers, name)
+    if not value:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def build_operator_access_required_page() -> str:
