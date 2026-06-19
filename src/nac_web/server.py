@@ -29,7 +29,13 @@ from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_sess
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
-from nac_identity.role_case_gate import evaluate_role_case_gate
+from nac_identity.role_case_gate import (
+    evaluate_role_case_gate,
+    normalize_workspace_case_binding_context,
+    normalize_workspace_purpose_binding_context,
+    normalize_workspace_role_gate_context,
+    normalize_workspace_tenant_binding_context,
+)
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
@@ -917,23 +923,19 @@ def build_protected_workspace_start_page(
 
     role_case_gate = evaluate_role_case_gate(
         session_validation=validation,
-        role_gate={
-            "status": "open" if _workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True) else "closed",
-            "role": _request_header(request_headers, "X-NaC-Role"),
-            "session_allowed": True,
-        },
-        tenant_context={
-            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound") else "unbound",
-            "tenant_authorized": _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound"),
-        },
-        case_context={
-            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Case-Bound") else "unbound",
-            "case_authorized": _workspace_header_bool(request_headers, "X-NaC-Case-Bound"),
-        },
-        purpose_context={
-            "status": "bound" if _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound") else "unbound",
-            "purpose_allowed": _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound"),
-        },
+        role_gate=normalize_workspace_role_gate_context(
+            role=_request_header(request_headers, "X-NaC-Role"),
+            role_gate_open=_workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True),
+        ),
+        tenant_context=normalize_workspace_tenant_binding_context(
+            tenant_bound=_workspace_header_bool(request_headers, "X-NaC-Tenant-Bound"),
+        ),
+        case_context=normalize_workspace_case_binding_context(
+            case_bound=_workspace_header_bool(request_headers, "X-NaC-Case-Bound"),
+        ),
+        purpose_context=normalize_workspace_purpose_binding_context(
+            purpose_bound=_workspace_header_bool(request_headers, "X-NaC-Purpose-Bound"),
+        ),
         subject_matter_roles=["nac-notary", "nac-case-worker", "nac-tenant-admin"],
     )
     if role_case_gate["status"] != "open":

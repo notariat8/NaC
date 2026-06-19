@@ -904,6 +904,77 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             self.assertFalse(result["guardrails"]["case_identifier_exposed"])
             self.assertFalse(result["guardrails"]["session_identifier_exposed"])
 
+    def test_workspace_binding_context_normalizers_preserve_exact_role_and_redact_raw_values(self) -> None:
+        from nac_identity.role_case_gate import (
+            evaluate_role_case_gate,
+            normalize_workspace_case_binding_context,
+            normalize_workspace_purpose_binding_context,
+            normalize_workspace_role_gate_context,
+            normalize_workspace_tenant_binding_context,
+        )
+
+        role_gate = normalize_workspace_role_gate_context(role=" nac-notary ", role_gate_open=True)
+        tenant_context = normalize_workspace_tenant_binding_context(tenant_bound=True)
+        case_context = normalize_workspace_case_binding_context(case_bound=True)
+        purpose_context = normalize_workspace_purpose_binding_context(purpose_bound=True)
+        serialized_contexts = json.dumps(
+            {
+                "role_gate": role_gate,
+                "tenant_context": tenant_context,
+                "case_context": case_context,
+                "purpose_context": purpose_context,
+            },
+            sort_keys=True,
+        )
+
+        result = evaluate_role_case_gate(
+            session_validation={
+                "status": "valid",
+                "session": {"protected_start_page_allowed": True, "workspace_opened": False},
+            },
+            role_gate=role_gate,
+            tenant_context=tenant_context,
+            case_context=case_context,
+            purpose_context=purpose_context,
+            subject_matter_roles=["nac-notary"],
+        )
+
+        self.assertEqual(role_gate, {"status": "open", "role": " nac-notary ", "session_allowed": True})
+        self.assertEqual(tenant_context, {"status": "bound", "tenant_authorized": True})
+        self.assertEqual(case_context, {"status": "bound", "case_authorized": True})
+        self.assertEqual(purpose_context, {"status": "bound", "purpose_allowed": True})
+        self.assertEqual(result["status"], "closed")
+        self.assertEqual(result["reason"], "role_missing")
+        self.assertNotIn("case-secret-1", serialized_contexts)
+        self.assertNotIn("myjur", serialized_contexts)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", serialized_contexts)
+        self.assertNotIn("admin@example.test", serialized_contexts)
+
+    def test_workspace_binding_context_normalizers_fail_closed_for_unbound_inputs(self) -> None:
+        from nac_identity.role_case_gate import (
+            normalize_workspace_case_binding_context,
+            normalize_workspace_purpose_binding_context,
+            normalize_workspace_role_gate_context,
+            normalize_workspace_tenant_binding_context,
+        )
+
+        self.assertEqual(
+            normalize_workspace_role_gate_context(role="nac-notary", role_gate_open=False),
+            {"status": "closed", "role": "nac-notary", "session_allowed": False},
+        )
+        self.assertEqual(
+            normalize_workspace_tenant_binding_context(tenant_bound=False),
+            {"status": "unbound", "tenant_authorized": False},
+        )
+        self.assertEqual(
+            normalize_workspace_case_binding_context(case_bound=False),
+            {"status": "unbound", "case_authorized": False},
+        )
+        self.assertEqual(
+            normalize_workspace_purpose_binding_context(purpose_bound=False),
+            {"status": "unbound", "purpose_allowed": False},
+        )
+
     def test_oidc_session_boundary_fails_closed_without_token_exchange(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
 
