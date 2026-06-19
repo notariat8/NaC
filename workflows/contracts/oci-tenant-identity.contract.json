@@ -149,8 +149,26 @@
     "allowed_surface": "protected_status_metadata",
     "raw_mandate_content_allowed": false,
     "browser_payload_contains_case_or_session_identifiers": false,
+    "browser_payload_contains_tenant_identifiers": false,
+    "browser_payload_contains_claims_or_emails": false,
+    "browser_payload_contains_provider_details": false,
     "full_workspace_opened_in_contract_slice": false,
     "mandate_data_loaded_in_contract_slice": false,
+    "audit_evidence_schema": {
+      "schema_version": "nac.role-case-gate.audit/v0.1",
+      "redacted_metadata_only": true,
+      "forbidden_values": [
+        "session_id",
+        "tenant_hint",
+        "case_id",
+        "claims",
+        "email",
+        "provider_url",
+        "callback_code",
+        "callback_state",
+        "mandate_content"
+      ]
+    },
     "fail_closed_reasons": [
       "session_missing",
       "session_revoked",

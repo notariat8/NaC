@@ -160,7 +160,29 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         )
         self.assertFalse(contract["role_case_gate_contract_schema"]["raw_mandate_content_allowed"])
         self.assertFalse(contract["role_case_gate_contract_schema"]["browser_payload_contains_case_or_session_identifiers"])
+        self.assertFalse(contract["role_case_gate_contract_schema"]["browser_payload_contains_tenant_identifiers"])
+        self.assertFalse(contract["role_case_gate_contract_schema"]["browser_payload_contains_claims_or_emails"])
+        self.assertFalse(contract["role_case_gate_contract_schema"]["browser_payload_contains_provider_details"])
         self.assertFalse(contract["role_case_gate_contract_schema"]["full_workspace_opened_in_contract_slice"])
+        self.assertEqual(
+            contract["role_case_gate_contract_schema"]["audit_evidence_schema"]["schema_version"],
+            "nac.role-case-gate.audit/v0.1",
+        )
+        self.assertTrue(contract["role_case_gate_contract_schema"]["audit_evidence_schema"]["redacted_metadata_only"])
+        self.assertEqual(
+            contract["role_case_gate_contract_schema"]["audit_evidence_schema"]["forbidden_values"],
+            [
+                "session_id",
+                "tenant_hint",
+                "case_id",
+                "claims",
+                "email",
+                "provider_url",
+                "callback_code",
+                "callback_state",
+                "mandate_content",
+            ],
+        )
         self.assertTrue(contract["guardrails"]["nac_role_gate_required_after_idp_login"])
 
     def test_domain_check_accepts_notary_domain_and_admin_email(self) -> None:
@@ -859,6 +881,33 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertFalse(result["guardrails"]["session_identifier_exposed"])
         self.assertFalse(result["guardrails"]["case_identifier_exposed"])
         self.assertFalse(result["guardrails"]["mandate_content_exposed"])
+        self.assertEqual(
+            result["audit_evidence"],
+            {
+                "schema_version": "nac.role-case-gate.audit/v0.1",
+                "status": "recorded",
+                "reason_class": "authorized",
+                "checks": {
+                    "session_valid": True,
+                    "protected_start_allowed": True,
+                    "subject_matter_role_matched": True,
+                    "tenant_bound": True,
+                    "case_bound": True,
+                    "purpose_bound": True,
+                    "four_eyes_satisfied": True,
+                },
+                "redaction": {
+                    "contains_session_identifier": False,
+                    "contains_tenant_identifier": False,
+                    "contains_case_identifier": False,
+                    "contains_claim_values": False,
+                    "contains_email": False,
+                    "contains_provider_details": False,
+                    "contains_callback_values": False,
+                    "contains_mandate_content": False,
+                },
+            },
+        )
         self.assertNotIn("case-secret-1", serialized)
         self.assertNotIn("audit-secret-1", serialized)
         self.assertNotIn("myjur", serialized)
@@ -903,6 +952,71 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             self.assertFalse(result["mandate_data_loaded"])
             self.assertFalse(result["guardrails"]["case_identifier_exposed"])
             self.assertFalse(result["guardrails"]["session_identifier_exposed"])
+            self.assertEqual(result["audit_evidence"]["reason_class"], expected_reason)
+            self.assertFalse(result["audit_evidence"]["redaction"]["contains_case_identifier"])
+            self.assertFalse(result["audit_evidence"]["redaction"]["contains_session_identifier"])
+
+    def test_role_case_gate_returns_explicit_safe_reason_classes(self) -> None:
+        from nac_identity.role_case_gate import ROLE_CASE_GATE_REASON_CLASSES
+
+        self.assertEqual(
+            ROLE_CASE_GATE_REASON_CLASSES,
+            (
+                "session_missing",
+                "session_revoked",
+                "session_expired",
+                "role_missing",
+                "tenant_mismatch",
+                "case_missing",
+                "purpose_missing",
+                "four_eyes_required",
+            ),
+        )
+
+    def test_role_case_gate_returns_redacted_audit_evidence_without_subject_values(self) -> None:
+        from nac_identity.role_case_gate import evaluate_role_case_gate
+
+        result = evaluate_role_case_gate(
+            session_validation={
+                "status": "valid",
+                "session": {
+                    "protected_start_page_allowed": True,
+                    "workspace_opened": False,
+                    "session_id": "session-secret-1",
+                },
+                "server_session": {
+                    "status": "active",
+                    "audit_event_id": "audit-secret-1",
+                    "subject": "ofunk@myjur.de",
+                },
+            },
+            role_gate={
+                "status": "open",
+                "role": "nac-notary",
+                "session_allowed": True,
+                "claims": {"groups": ["nac-notary"], "email": "ofunk@myjur.de"},
+            },
+            tenant_context={"status": "bound", "tenant_authorized": True, "tenant_hint": "myjur"},
+            case_context={"status": "bound", "case_authorized": True, "case_id": "case-secret-1"},
+            purpose_context={"status": "bound", "purpose_allowed": True, "purpose": "workspace"},
+            subject_matter_roles=["nac-notary"],
+        )
+        serialized = json.dumps(result["audit_evidence"], sort_keys=True)
+
+        self.assertEqual(result["audit_evidence"]["schema_version"], "nac.role-case-gate.audit/v0.1")
+        self.assertEqual(result["audit_evidence"]["status"], "recorded")
+        self.assertEqual(result["audit_evidence"]["reason_class"], "authorized")
+        self.assertNotIn("session-secret-1", serialized)
+        self.assertNotIn("audit-secret-1", serialized)
+        self.assertNotIn("ofunk@myjur.de", serialized)
+        self.assertNotIn("myjur", serialized)
+        self.assertNotIn("case-secret-1", serialized)
+        self.assertNotIn("nac-notary", serialized)
+        self.assertFalse(result["audit_evidence"]["redaction"]["contains_session_identifier"])
+        self.assertFalse(result["audit_evidence"]["redaction"]["contains_tenant_identifier"])
+        self.assertFalse(result["audit_evidence"]["redaction"]["contains_case_identifier"])
+        self.assertFalse(result["audit_evidence"]["redaction"]["contains_claim_values"])
+        self.assertFalse(result["audit_evidence"]["redaction"]["contains_email"])
 
     def test_workspace_binding_context_normalizers_preserve_exact_role_and_redact_raw_values(self) -> None:
         from nac_identity.role_case_gate import (

@@ -1652,6 +1652,85 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_workspace_redacts_gate_reason_context_values(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+        from nac_identity.session_store import MappingSessionStoreAdapter
+
+        session = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256("nonce-from-id-token".encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "aud": "notariat8_nac_app",
+                    "nonce": "nonce-from-id-token",
+                    "groups": ["nac-notary"],
+                    "email": "notar@example.test",
+                },
+            },
+            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_audience="notariat8_nac_app",
+            required_role="nac-notary",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+        payload = _session_cookie_payload(cookie_header)
+        app = NaCLocalWebApp(
+            REPO_ROOT,
+            session_store=MappingSessionStoreAdapter(
+                {
+                    payload["sid"]: {
+                        "schema_version": "nac.server-session/v0.1",
+                        "session_id": payload["sid"],
+                        "issued_at": payload["iat"],
+                        "expires_at": payload["exp"],
+                        "revoked_at": None,
+                        "audit_event_id": "audit-event-secret",
+                        "contains_credentials": False,
+                        "tokens_stored": False,
+                        "claims_stored": False,
+                    }
+                }
+            ),
+        )
+        headers = {
+            "Cookie": cookie_header,
+            "X-NaC-Role": "nac-notary",
+            "X-NaC-Tenant-Bound": "true",
+            "X-NaC-Case-Bound": "false",
+            "X-NaC-Purpose-Bound": "true",
+            "X-NaC-Case-Id": "case-secret-1",
+            "X-NaC-Tenant-Hint": "myjur",
+            "X-NaC-Provider-Url": "https://idcs.example.identity.oraclecloud.com:443",
+            "X-NaC-Callback-State": "state-secret-1",
+        }
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/workspace", headers=headers)
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 403)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Vorgangsbindung fehlt", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertNotIn("case-secret-1", html)
+        self.assertNotIn("myjur", html)
+        self.assertNotIn("audit-event-secret", html)
+        self.assertNotIn(cookie_header, html)
+        self.assertNotIn("notar@example.test", html)
+        self.assertNotIn("nonce-from-id-token", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("state-secret-1", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
     def test_auth_callback_validates_vault_backed_signed_state_without_leaking_reference(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 
