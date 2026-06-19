@@ -5,7 +5,18 @@ from typing import Any
 
 
 ROLE_CASE_GATE_SCHEMA_VERSION = "nac.role-case-gate/v0.1"
+ROLE_CASE_GATE_AUDIT_SCHEMA_VERSION = "nac.role-case-gate.audit/v0.1"
 PROTECTED_STATUS_METADATA_SURFACE = "protected_status_metadata"
+ROLE_CASE_GATE_REASON_CLASSES = (
+    "session_missing",
+    "session_revoked",
+    "session_expired",
+    "role_missing",
+    "tenant_mismatch",
+    "case_missing",
+    "purpose_missing",
+    "four_eyes_required",
+)
 
 
 def normalize_workspace_role_gate_context(*, role: str, role_gate_open: bool) -> dict[str, Any]:
@@ -86,6 +97,16 @@ def evaluate_role_case_gate(
         "full_workspace_opened": False,
         "mandate_data_loaded": False,
         "guardrails": _guardrails(),
+        "audit_evidence": _audit_evidence(
+            reason="authorized",
+            session_valid=True,
+            protected_start_allowed=True,
+            subject_matter_role_matched=True,
+            tenant_bound=True,
+            case_bound=True,
+            purpose_bound=True,
+            four_eyes_satisfied=not requires_four_eyes or _four_eyes_approved(four_eyes_approval),
+        ),
     }
 
 
@@ -102,6 +123,7 @@ def _closed(reason: str) -> dict[str, Any]:
         "full_workspace_opened": False,
         "mandate_data_loaded": False,
         "guardrails": _guardrails(),
+        "audit_evidence": _audit_evidence(reason=reason),
     }
 
 
@@ -115,6 +137,43 @@ def _guardrails() -> dict[str, bool]:
         "case_identifier_exposed": False,
         "tenant_identifier_exposed": False,
         "mandate_content_exposed": False,
+    }
+
+
+def _audit_evidence(
+    *,
+    reason: str,
+    session_valid: bool = False,
+    protected_start_allowed: bool = False,
+    subject_matter_role_matched: bool = False,
+    tenant_bound: bool = False,
+    case_bound: bool = False,
+    purpose_bound: bool = False,
+    four_eyes_satisfied: bool = False,
+) -> dict[str, Any]:
+    return {
+        "schema_version": ROLE_CASE_GATE_AUDIT_SCHEMA_VERSION,
+        "status": "recorded",
+        "reason_class": reason,
+        "checks": {
+            "session_valid": session_valid,
+            "protected_start_allowed": protected_start_allowed,
+            "subject_matter_role_matched": subject_matter_role_matched,
+            "tenant_bound": tenant_bound,
+            "case_bound": case_bound,
+            "purpose_bound": purpose_bound,
+            "four_eyes_satisfied": four_eyes_satisfied,
+        },
+        "redaction": {
+            "contains_session_identifier": False,
+            "contains_tenant_identifier": False,
+            "contains_case_identifier": False,
+            "contains_claim_values": False,
+            "contains_email": False,
+            "contains_provider_details": False,
+            "contains_callback_values": False,
+            "contains_mandate_content": False,
+        },
     }
 
 
