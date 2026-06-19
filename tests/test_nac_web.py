@@ -774,6 +774,60 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("client_secret", html.lower())
         self.assertNotIn("private_key", html.lower())
 
+    def test_customer_onboarding_request_status_reflects_approved_review_without_invitation_send(self) -> None:
+        html = nac_server.build_customer_onboarding_request_page(
+            {
+                "request_id": "onr_myjur_20260610_111500",
+                "domain": "myjur.de",
+                "tenant_slug": "myjur",
+                "admin_email": "ofunk@myjur.de",
+                "request_status": "approved",
+                "invitation_status": "not_sent",
+            }
+        )
+
+        self.assertIn("Einrichtung freigegeben", html)
+        self.assertIn("Prüfung dokumentiert", html)
+        self.assertIn("Einladung noch nicht versendet", html)
+        self.assertIn("Eine E-Mail wird erst nach Freigabe ausgelöst", html)
+        self.assertNotIn(">approved<", html)
+        self.assertNotIn("not_sent", html)
+        self.assertNotIn("Admin", html)
+        self.assertNotIn("Operator", html)
+        self.assertNotIn("Owner", html)
+        self.assertNotIn("Apply", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
+
+    def test_customer_onboarding_request_status_reflects_rejected_review_without_invitation_send(self) -> None:
+        html = nac_server.build_customer_onboarding_request_page(
+            {
+                "request_id": "onr_myjur_20260610_111500",
+                "domain": "myjur.de",
+                "tenant_slug": "myjur",
+                "admin_email": "ofunk@myjur.de",
+                "request_status": "rejected",
+                "invitation_status": "not_sent",
+            }
+        )
+
+        self.assertIn("Einrichtung noch nicht freigegeben", html)
+        self.assertIn("Prüfung dokumentiert", html)
+        self.assertIn("Einladung noch nicht versendet", html)
+        self.assertIn("notariat8 meldet sich mit den nächsten Schritten", html)
+        self.assertNotIn(">rejected<", html)
+        self.assertNotIn("not_sent", html)
+        self.assertNotIn("Admin", html)
+        self.assertNotIn("Operator", html)
+        self.assertNotIn("Owner", html)
+        self.assertNotIn("Apply", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+        self.assertNotIn("client_secret", html.lower())
+        self.assertNotIn("private_key", html.lower())
+
     def test_customer_onboarding_request_post_validation_error_renders_customer_page(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
