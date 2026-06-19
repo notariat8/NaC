@@ -127,11 +127,11 @@ short-lived, signed session cookie; tokens, claims, nonces, provider details,
 and callback values stay out of the cookie. This state still opens no
 workspace.
 
-The next Q2J boundary validates that signed session cookie before serving
-`/workspace`. A valid cookie opens only a protected notariat8 start/status
-page; it does not load mandate data and it does not open the full workspace.
-Missing, tampered, expired or unconfigured cookies return the login-required
-page.
+The Q2J boundary validates that signed session cookie before serving
+`/workspace`. In that slice, a valid cookie could open at most a protected
+notariat8 start/status page; it did not load mandate data and it did not open
+the full workspace. Missing, tampered, expired or unconfigured cookies still
+return the login-required page.
 
 Q2Q defines the next subject-matter boundary before any path beyond that start
 status: verified session plus subject-matter role, tenant binding, case binding
@@ -139,6 +139,12 @@ and purpose binding. The contract initially opens only protected status
 metadata; raw data, documents and the full workspace remain closed. For
 sensitive steps, the gate may require four-eyes approval as an additional
 condition.
+
+Q2R wires `/workspace` to that gate. A valid session alone is no longer enough:
+without subject-matter role, tenant, case and purpose binding, the route stays
+closed. After a positive check, `/workspace` returns metadata-only protected
+status. Mandate content, case identifiers, session values, provider details and
+raw data are not copied into browser output.
 
 The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).

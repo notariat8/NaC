@@ -758,7 +758,15 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
                 FakeFunctionContext(
                     request_url="/workspace",
                     method="GET",
-                    headers={"Cookie": cookie_header},
+                    headers={
+                        "Cookie": cookie_header,
+                        "X-NaC-Role": "nac-tenant-admin",
+                        "X-NaC-Tenant-Bound": "true",
+                        "X-NaC-Case-Bound": "true",
+                        "X-NaC-Purpose-Bound": "true",
+                        "X-NaC-Case-Id": "case-secret-1",
+                        "X-NaC-Tenant-Hint": "myjur",
+                    },
                 ),
                 FailingBody(),
                 repo_root=REPO_ROOT,
@@ -767,10 +775,12 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
 
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
-        self.assertIn("notariat8 Start", body)
-        self.assertIn("Geschützter Startstatus", body)
+        self.assertIn("Geschützte Workspace-Metadaten", body)
+        self.assertIn("Rollen- und Vorgangsgate bestätigt", body)
         self.assertIn("Keine Mandatsdaten geladen", body)
         self.assertNotIn(cookie_header, body)
+        self.assertNotIn("case-secret-1", body)
+        self.assertNotIn("myjur", body)
         self.assertNotIn("admin@example.test", body)
         self.assertNotIn("notariat8_nac_app", body)
         self.assertNotIn("idcs.example.identity.oraclecloud.com", body)
