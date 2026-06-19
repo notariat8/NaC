@@ -1,8 +1,12 @@
 # NaC Release Lane Reference
 
 Diese Referenz enthält nur nicht-geheime Release-Prozedur und Entscheidungslogik.
-Reale OCIDs, Tokens, API-Keys, private Schlüssel, Zertifikate und Mandatsdaten
-gehören nicht in dieses Dokument.
+Dev-only nicht-sensitive OCIDs dürfen im OCI-Landing-Zone Release-Lane Context
+Pack stehen:
+`/home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json`.
+User-, Tenancy-, Vault-Secret-, KMS-Key- und Certificate-OCIDs, Tokens,
+API-Keys, private Schlüssel, Zertifikate und Mandatsdaten gehören nicht in Git,
+Chat, Logs oder Issue-Kommentare.
 
 ## Zweck
 
@@ -15,6 +19,8 @@ im OCI-Mirror vorhanden sein und als `NAC_RELEASE_COMMIT` an den Build-Run
 
 - GitHub PR/Merge-Commit und Owner-Release-Freigabe im Chat oder Issue.
 - Bestehende Resource-Manager-Stack-Variablen und Stack-Konfiguration.
+- Release-Lane Context Pack für allowlisted dev-only nicht-sensitive OCIDs,
+  Resource Manager outputs, Stack-Variable-Keys und Hotpath-Kommandovorlagen.
 - Lokale, nicht versionierte Operator-Shell für reale OCIDs.
 - OCI Vault für Secrets; nur Secret-OCIDs dürfen in passende Konfigurationen,
   niemals Secret-Werte.

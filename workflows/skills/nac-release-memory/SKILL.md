@@ -30,7 +30,9 @@ und zu einem wiederholbaren Umgang mit Timeouts und Reibungspunkten.
 2. `references/release-lane.md`.
 3. Das OCI-Landing-Zone-Runbook
    `/home/ubuntu/src/oci-landing-zone/runbooks/no-ssh-functions-release.md`.
-4. Bei Status-/Benachrichtigungsthemen zusätzlich
+4. Das Release-Lane Context Pack
+   `/home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json`.
+5. Bei Status-/Benachrichtigungsthemen zusätzlich
    `/home/ubuntu/src/oci-landing-zone/runbooks/event-driven-release-monitor.md`.
 
 ## Harte Regeln
@@ -38,9 +40,11 @@ und zu einem wiederholbaren Umgang mit Timeouts und Reibungspunkten.
 - Keine Secrets, Tokens, TLS-Schlüssel, Session-Werte, OAuth-States, Nonces,
   Mandatsdaten oder privaten Zertifikatsmaterialien lesen, loggen, posten oder
   in Git schreiben.
-- Keine realen OCIDs in neue Git-Artefakte schreiben, wenn das zuständige
-  Runbook Operator-Variablen, Resource Manager oder lokale Shell-Umgebungen als
-  Speicherort vorsieht.
+- dev-only nicht-sensitive OCIDs dürfen im Release-Lane Context Pack stehen,
+  wenn sie dort allowlisted sind und nur Release-Lane-Ressourcen betreffen.
+  User-, Tenancy-, Vault-Secret-, KMS-Key- und Certificate-OCIDs bleiben
+  verboten. Resource Manager outputs und Stack-Variablen bleiben die aktuelle
+  Quelle für live Infrastruktur.
 - Keine OCI-Schreibaktion ohne passende Owner-Freigabe starten:
   `Owner Release Approval` für Release-Builds, `Owner Apply Approval` für
   Apply-/Infra-Schreibaktionen.
