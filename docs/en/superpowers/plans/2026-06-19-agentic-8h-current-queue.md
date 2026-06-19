@@ -29,6 +29,8 @@ These lanes may be prepared without asking the owner:
    - Read GitHub PR, issue and branch status.
    - Read OCI status as long as no secrets are read and no writes are performed.
    - Check release-lane context and release memory against the current repos.
+   - Release memory is verified in NaC; the release-lane context pack is
+     verified in the `oci-landing-zone` repository.
 
 2. **Local Baseline**
    - Run `scripts/quality_gate.py --profile strict`.
@@ -151,3 +153,13 @@ git diff --check
 ```
 
 Execution can be recorded with `nac time-ledger run`.
+
+Release-lane-specific evidence:
+
+```bash
+cd /home/ubuntu/src/private/NaC
+PYTHONPATH=src /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_release_lane_context_memory
+
+cd /home/ubuntu/src/oci-landing-zone
+PYTHONPATH=. /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_release_lane_context_pack
+```
