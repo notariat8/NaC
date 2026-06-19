@@ -193,7 +193,41 @@ class OnboardingRequestTests(unittest.TestCase):
         self.assertEqual(reviewed["request_status"], "approved")
         self.assertEqual(reviewed["invitation_status"], "not_sent")
         self.assertEqual(reviewed["domain"], "myjur.de")
+        self.assertEqual(reviewed["review_audit"]["schema_version"], "nac.onboarding-review-audit/v0.1")
+        self.assertEqual(reviewed["review_audit"]["decision"], "approve")
+        self.assertEqual(reviewed["review_audit"]["reviewed_at"], "2026-06-11T18:30:00Z")
+        self.assertEqual(reviewed["review_audit"]["review_surface"], "admin.onboarding.review")
+        self.assertFalse(reviewed["review_audit"]["contains_mandate_data"])
+        self.assertFalse(reviewed["review_audit"]["customer_mail_dispatched"])
+        self.assertFalse(reviewed["review_audit"]["oci_write_executed"])
+        self.assertFalse(reviewed["review_audit"]["atp_schema_change_required"])
         self.assertNotIn("fixture-db-value", json.dumps(update_binds, sort_keys=True))
+        self.assertNotIn("fixture-db-value", json.dumps(reviewed["review_audit"], sort_keys=True))
+        self.assertNotIn("ofunk@myjur.de", json.dumps(reviewed["review_audit"], sort_keys=True))
+
+    def test_build_onboarding_review_audit_metadata_is_redacted(self) -> None:
+        from nac_identity.onboarding_requests import build_onboarding_review_audit_metadata
+
+        audit = build_onboarding_review_audit_metadata(
+            request_id="onr_myjur_20260611_182453",
+            decision="approve",
+            reviewed_at="2026-06-11T18:30:00Z",
+        )
+        serialized = json.dumps(audit, sort_keys=True).lower()
+
+        self.assertEqual(audit["schema_version"], "nac.onboarding-review-audit/v0.1")
+        self.assertEqual(audit["review_surface"], "admin.onboarding.review")
+        self.assertEqual(audit["request_id"], "onr_myjur_20260611_182453")
+        self.assertFalse(audit["contains_mandate_data"])
+        self.assertFalse(audit["customer_mail_dispatched"])
+        self.assertFalse(audit["oci_write_executed"])
+        self.assertFalse(audit["atp_schema_change_required"])
+        self.assertNotIn("client_secret", serialized)
+        self.assertNotIn("private_key", serialized)
+        self.assertNotIn("password", serialized)
+        self.assertNotIn("urkunde", serialized)
+        self.assertNotIn("ausweis", serialized)
+        self.assertNotIn("einladung senden", serialized)
 
     def test_env_factory_builds_atp_store_from_secret_reference(self) -> None:
         from nac_identity.onboarding_requests import AtpOnboardingRequestStore, build_onboarding_request_store_from_env

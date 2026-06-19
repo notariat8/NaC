@@ -6,6 +6,7 @@ from .onboarding_requests import (
     OnboardingRequestStoreDisabled,
     OnboardingRequestStoreUnavailable,
     build_onboarding_request,
+    build_onboarding_review_audit_metadata,
     build_onboarding_request_store_from_env,
 )
 from .oci_callback import build_auth_callback_result
@@ -52,6 +53,7 @@ __all__ = [
     "build_live_dns_check_result",
     "build_login_intent",
     "build_onboarding_request",
+    "build_onboarding_review_audit_metadata",
     "build_onboarding_request_store_from_env",
     "build_signed_state",
     "check_domain_ready",

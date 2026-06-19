@@ -371,6 +371,17 @@ class NaCLocalWebTests(unittest.TestCase):
                     "invitation_status": "not_sent",
                     "created_at": "2026-06-11T18:24:53Z",
                     "updated_at": "2026-06-11T18:30:00Z",
+                    "review_audit": {
+                        "schema_version": "nac.onboarding-review-audit/v0.1",
+                        "request_id": kwargs["request_id"],
+                        "decision": kwargs["decision"],
+                        "reviewed_at": "2026-06-11T18:30:00Z",
+                        "review_surface": "admin.onboarding.review",
+                        "contains_mandate_data": False,
+                        "customer_mail_dispatched": False,
+                        "oci_write_executed": False,
+                        "atp_schema_change_required": False,
+                    },
                 }
 
         store = FakeOnboardingRequestStore()
@@ -398,8 +409,15 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("ofunk@myjur.de", html)
         self.assertIn("approved", html)
         self.assertIn("Einladung noch nicht versendet", html)
+        self.assertIn("Audit-Metadaten", html)
+        self.assertIn("nac.onboarding-review-audit/v0.1", html)
+        self.assertIn("Keine Mandatsdaten im Review-Audit", html)
+        self.assertIn("Keine E-Mail ausgelöst", html)
+        self.assertIn("Keine Cloud-Schreiboperation", html)
+        self.assertIn("Keine Datenbank-Schemaänderung", html)
         self.assertNotIn("client_secret", html.lower())
         self.assertNotIn("private_key", html.lower())
+        self.assertNotIn("password", html.lower())
 
     def test_customer_readiness_page_explains_next_steps(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
