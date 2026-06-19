@@ -31,6 +31,8 @@ Diese Lanes dürfen vorbereitet werden, ohne beim Owner nachzufragen:
    - OCI Status lesen, soweit keine Secrets gelesen und keine Writes ausgeführt
      werden.
    - Release-Lane Context und Release Memory gegen aktuelle Repos prüfen.
+   - Release Memory wird in NaC verifiziert; Release-Lane Context Pack wird im
+     `oci-landing-zone`-Repo verifiziert.
 
 2. **Lokale Baseline**
    - `scripts/quality_gate.py --profile strict` ausführen.
@@ -153,3 +155,13 @@ git diff --check
 ```
 
 Die Ausführung kann über `nac time-ledger run` protokolliert werden.
+
+Release-Lane-spezifische Nachweise:
+
+```bash
+cd /home/ubuntu/src/private/NaC
+PYTHONPATH=src /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_release_lane_context_memory
+
+cd /home/ubuntu/src/oci-landing-zone
+PYTHONPATH=. /home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_release_lane_context_pack
+```
