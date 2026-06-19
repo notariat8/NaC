@@ -777,6 +777,12 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
         self.assertIn("Geschützte Workspace-Metadaten", body)
         self.assertIn("Rollen- und Vorgangsgate bestätigt", body)
+        self.assertIn("Rolle bestätigt", body)
+        self.assertIn("Tenant-Bindung bestätigt", body)
+        self.assertIn("Vorgangsbindung bestätigt", body)
+        self.assertIn("Zweckbindung bestätigt", body)
+        self.assertIn("Vollständiger Arbeitsbereich noch geschlossen", body)
+        self.assertIn("Nächster sicherer Schritt", body)
         self.assertIn("Keine Mandatsdaten geladen", body)
         self.assertNotIn(cookie_header, body)
         self.assertNotIn("case-secret-1", body)
@@ -784,6 +790,8 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("admin@example.test", body)
         self.assertNotIn("notariat8_nac_app", body)
         self.assertNotIn("idcs.example.identity.oraclecloud.com", body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
 
     def test_dispatches_workspace_fail_closed_without_cookie(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request

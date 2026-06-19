@@ -984,11 +984,17 @@ def build_protected_workspace_start_page(
       <section class="notice">
         <h2>Rollen- und Vorgangsgate bestätigt</h2>
         <p><strong>Status-Metadaten freigegeben</strong></p>
-        <p>Der vollständige Arbeitsbereich bleibt geschlossen, bis weitere Fach- und Freigabegates greifen.</p>
+        <ul class="link-list">
+          <li><span>Rolle bestätigt.</span></li>
+          <li><span>Tenant-Bindung bestätigt.</span></li>
+          <li><span>Vorgangsbindung bestätigt.</span></li>
+          <li><span>Zweckbindung bestätigt.</span></li>
+        </ul>
       </section>
       <section>
-        <h2>Nächster Schritt</h2>
+        <h2>Nächster sicherer Schritt</h2>
         <ul class="link-list">
+          <li><span>Vollständiger Arbeitsbereich noch geschlossen.</span></li>
           <li><span>Nur geprüfte Navigation und Statushinweise anzeigen.</span></li>
           <li><span>Keine Mandatsdaten geladen.</span></li>
         </ul>
