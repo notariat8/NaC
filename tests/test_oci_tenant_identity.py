@@ -144,6 +144,23 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "verified_claims_forwarded_to_role_gate_only"
             ]
         )
+        self.assertEqual(
+            contract["role_case_gate_contract_schema"]["schema_version"],
+            "nac.role-case-gate/v0.1",
+        )
+        self.assertTrue(contract["role_case_gate_contract_schema"]["verified_session_required"])
+        self.assertTrue(contract["role_case_gate_contract_schema"]["subject_matter_role_required"])
+        self.assertTrue(contract["role_case_gate_contract_schema"]["tenant_binding_required_before_workspace_route"])
+        self.assertTrue(contract["role_case_gate_contract_schema"]["case_binding_required_before_workspace_route"])
+        self.assertTrue(contract["role_case_gate_contract_schema"]["purpose_binding_required_before_workspace_route"])
+        self.assertTrue(contract["role_case_gate_contract_schema"]["four_eyes_gate_supported"])
+        self.assertEqual(
+            contract["role_case_gate_contract_schema"]["allowed_surface"],
+            "protected_status_metadata",
+        )
+        self.assertFalse(contract["role_case_gate_contract_schema"]["raw_mandate_content_allowed"])
+        self.assertFalse(contract["role_case_gate_contract_schema"]["browser_payload_contains_case_or_session_identifiers"])
+        self.assertFalse(contract["role_case_gate_contract_schema"]["full_workspace_opened_in_contract_slice"])
         self.assertTrue(contract["guardrails"]["nac_role_gate_required_after_idp_login"])
 
     def test_domain_check_accepts_notary_domain_and_admin_email(self) -> None:
@@ -804,6 +821,88 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(audience_with_space["reason"], "audience_mismatch")
         self.assertEqual(nonce_with_space["status"], "closed")
         self.assertEqual(nonce_with_space["reason"], "nonce_mismatch")
+
+    def test_role_case_gate_opens_only_for_bound_session_role_tenant_case_and_purpose(self) -> None:
+        from nac_identity.role_case_gate import evaluate_role_case_gate
+
+        result = evaluate_role_case_gate(
+            session_validation={
+                "status": "valid",
+                "session": {"protected_start_page_allowed": True, "workspace_opened": False},
+                "server_session": {"status": "active", "audit_event_id": "audit-secret-1"},
+            },
+            role_gate={"status": "open", "role": "nac-notary", "session_allowed": True},
+            tenant_context={"status": "bound", "tenant_authorized": True, "tenant_hint": "myjur"},
+            case_context={
+                "status": "bound",
+                "case_authorized": True,
+                "case_id": "case-secret-1",
+                "case_type": "immobilienkaufvertrag",
+            },
+            purpose_context={"status": "bound", "purpose_allowed": True, "purpose": "protected_status_review"},
+            subject_matter_roles=["nac-notary", "nac-case-worker"],
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["schema_version"], "nac.role-case-gate/v0.1")
+        self.assertEqual(result["status"], "open")
+        self.assertEqual(result["reason"], "authorized")
+        self.assertEqual(result["allowed_surface"], "protected_status_metadata")
+        self.assertTrue(result["tenant_bound"])
+        self.assertTrue(result["case_bound"])
+        self.assertTrue(result["purpose_bound"])
+        self.assertFalse(result["full_workspace_opened"])
+        self.assertFalse(result["mandate_data_loaded"])
+        self.assertFalse(result["guardrails"]["contains_credentials"])
+        self.assertFalse(result["guardrails"]["tokens_returned"])
+        self.assertFalse(result["guardrails"]["claims_exposed"])
+        self.assertFalse(result["guardrails"]["session_identifier_exposed"])
+        self.assertFalse(result["guardrails"]["case_identifier_exposed"])
+        self.assertFalse(result["guardrails"]["mandate_content_exposed"])
+        self.assertNotIn("case-secret-1", serialized)
+        self.assertNotIn("audit-secret-1", serialized)
+        self.assertNotIn("myjur", serialized)
+        self.assertNotIn("immobilienkaufvertrag", serialized)
+
+    def test_role_case_gate_fails_closed_for_missing_bindings_and_four_eyes(self) -> None:
+        from nac_identity.role_case_gate import evaluate_role_case_gate
+
+        base = {
+            "session_validation": {
+                "status": "valid",
+                "session": {"protected_start_page_allowed": True, "workspace_opened": False},
+                "server_session": {"status": "active"},
+            },
+            "role_gate": {"status": "open", "role": "nac-notary", "session_allowed": True},
+            "tenant_context": {"status": "bound", "tenant_authorized": True},
+            "case_context": {"status": "bound", "case_authorized": True},
+            "purpose_context": {"status": "bound", "purpose_allowed": True},
+            "subject_matter_roles": ["nac-notary"],
+        }
+        scenarios = [
+            ("session_missing", {"session_validation": {"status": "missing"}}),
+            ("session_revoked", {"session_validation": {"status": "revoked"}}),
+            ("role_missing", {"role_gate": {"status": "closed", "role": "nac-notary"}}),
+            ("role_missing", {"role_gate": {"status": "open", "role": "nac-billing-viewer"}}),
+            ("tenant_mismatch", {"tenant_context": {"status": "bound", "tenant_authorized": False}}),
+            ("case_missing", {"case_context": {"status": "unbound", "case_authorized": False}}),
+            ("purpose_missing", {"purpose_context": {"status": "bound", "purpose_allowed": False}}),
+            ("four_eyes_required", {"requires_four_eyes": True, "four_eyes_approval": None}),
+        ]
+
+        for expected_reason, overrides in scenarios:
+            payload = dict(base)
+            payload.update(overrides)
+            with self.subTest(expected_reason=expected_reason, overrides=sorted(overrides)):
+                result = evaluate_role_case_gate(**payload)
+
+            self.assertEqual(result["status"], "closed")
+            self.assertEqual(result["reason"], expected_reason)
+            self.assertEqual(result["allowed_surface"], "none")
+            self.assertFalse(result["full_workspace_opened"])
+            self.assertFalse(result["mandate_data_loaded"])
+            self.assertFalse(result["guardrails"]["case_identifier_exposed"])
+            self.assertFalse(result["guardrails"]["session_identifier_exposed"])
 
     def test_oidc_session_boundary_fails_closed_without_token_exchange(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary

@@ -78,6 +78,17 @@ Signatur, falscher Audience, falschem Issuer oder abgelaufenem Token bleibt der
 Pfad geschlossen. Browsernahe Ergebnisse enthalten weiterhin keine Tokens,
 Claims, Nonces, Providerdetails oder Callback-Werte.
 
+Q2Q ergänzt vor jedem Pfad jenseits der geschützten Start-/Statusseite ein
+separates Rollen- und Vorgangsgate. Ein gültiges Session-Cookie reicht dafür
+nicht aus. NaC braucht zusätzlich eine fachliche Rolle, Tenant-Bindung,
+Vorgangsbindung und Zweckbindung; für sensible Schritte kann eine
+Vier-Augen-Freigabe gefordert werden. Der Gate-Vertrag gibt nur Statusklassen
+und Booleans aus. Tenant-Hinweise, Vorgangs-IDs, Session-IDs, E-Mail-Adressen,
+Claims, Tokens, Providerdetails und Mandatsinhalte werden nicht in
+browsernahe Ergebnisse übernommen. Auch bei positivem Gate ist die erste
+freigegebene Oberfläche nur geschützte Status-Metadaten, kein vollständiger
+Arbeitsbereich mit Rohdaten.
+
 ## Aktueller OCI-Befund
 
 Read-only geprüft am 2026-06-18:

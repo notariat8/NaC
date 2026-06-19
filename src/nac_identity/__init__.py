@@ -20,6 +20,7 @@ from .oidc_token_exchange import (
     build_oidc_token_exchange_contract,
     exchange_oidc_authorization_code,
 )
+from .role_case_gate import evaluate_role_case_gate
 
 __all__ = [
     "DEFAULT_OIDC_SCOPES",
@@ -48,6 +49,7 @@ __all__ = [
     "check_domain_ready",
     "evaluate_oidc_role_gate",
     "evaluate_oidc_session_boundary",
+    "evaluate_role_case_gate",
     "validate_session_cookie",
     "validate_signed_state",
 ]
