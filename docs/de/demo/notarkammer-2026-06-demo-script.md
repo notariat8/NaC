@@ -11,6 +11,13 @@ gedacht werden. notariat8 zeigt stattdessen einen kontrollierten,
 editierbaren und prüfbaren Ablauf mit Rollen, Nachweisen, parallelen
 Arbeitsanteilen, kritischer Pfad und geschütztem App-Einstieg.
 
+Zentraler fachlicher Punkt für diese Demo: NaC zeigt, wann XNP,
+Kartenleser, XNotar, XJustiz, Grundbuch- und Registerpfade im Vorgang
+relevant werden. NaC ersetzt diese Systeme nicht. XNP liefert keine
+Grundbuchdaten an NaC; Grundbuch- und Registerschritte werden als lokale
+XNotar-/XJustiz-Übergaben, Nachweise und menschlich freigegebene Gates
+modelliert.
+
 ## Vorabprüfung
 
 Vor der Demo diese URLs in einem frischen Browserfenster öffnen:
@@ -75,6 +82,9 @@ Sagen:
   Grundbuch, Finanzierung, Gemeinde, Steuer und Nachweise."
 - "Der kritische Pfad bleibt dort blockiert, wo ein Rücklauf für den
   nächsten rechtlichen Schritt gebraucht wird."
+- "Wenn ein externer Fachsystemschritt nötig ist, zeigt BPMN die Grenze:
+  lokale XNP-/Kartenleser-Readiness, XNotar/XJustiz-Paket oder
+  Grundbuch-/Registerportal."
 - "Das Ziel ist nicht Automatisierung um jeden Preis, sondern klare
   Sichtbarkeit und Nachvollziehbarkeit."
 
@@ -83,8 +93,16 @@ Zeigen:
 - Planwert "Stunden bis Tage" für interne Prüfung.
 - Planwert "Wochen" für externe Rückläufe.
 - Planwert "Wochen bis Monate" für komplexeren Vollzug.
+- Lokales Gate "Karte, XNP und Signaturpfad prüfen".
+- XNotar/XJustiz-Schritt als Paket- oder Austauschordner-Nachweis.
 
-### 30-40 Minuten: Editierbarer Prozess und Governance
+Sicherheitslinie sagen:
+
+- "Die Cloud greift XNP nicht direkt an. Der lokale Arbeitsplatz prüft nur
+  readiness- und nachweisfähige Statuswerte. Produktive XNP-, Register- oder
+  Grundbuchhandlungen bleiben außerhalb dieser Demo."
+
+### 30-40 Minuten: Editierbarer Prozess und XNP/XNotar-Grenze
 
 Öffnen, falls lokal verfügbar:
 
@@ -99,11 +117,15 @@ Sagen:
 - "Der Editor ist für Modellpflege vorgesehen, nicht für echte
   Mandatsdokumente."
 - "Änderungen laufen über GitHub Pull Requests und Validierung."
+- "XNP-nahe Schritte bleiben lokale Arbeitsplatz-Gates. XNotar/XJustiz ist
+  die Dateibrücke für Register- und Grundbuchkommunikation, nicht eine
+  versteckte Cloud-Automation."
 
 Falls der lokale Editor nicht verfügbar ist, Fallback nutzen:
 
 - `https://notariat8.de/prozessmodell.html`
 - GitHub-Referenz nur als technischer Nachweis, nicht als Nutzeransicht.
+- Die Aussage bleibt trotzdem gleich: XNP liefert keine Grundbuchdaten an NaC.
 
 ### 40-50 Minuten: App-Einstieg und geschützter Arbeitsbereich
 
@@ -150,9 +172,11 @@ Sagen:
 2. Zum Immobilienkaufvertrag gehen.
 3. `https://notariat8.de/prozessmodell.html` zeigen.
 4. Dauer, Parallelität und kritischer Pfad erklären.
-5. `https://app.notariat8.de/login` öffnen.
-6. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht zeigen.
-7. Abschluss: "Keine Mandatsdaten, kontrollierte Modellpflege, geschützter
+5. XNP/Kartenleser als lokales Gate und XNotar/XJustiz als Übergabepfad
+   erklären.
+6. `https://app.notariat8.de/login` öffnen.
+7. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht zeigen.
+8. Abschluss: "Keine Mandatsdaten, kontrollierte Modellpflege, geschützter
    Arbeitsbereich."
 
 ## Fallbacks
@@ -163,6 +187,7 @@ Sagen:
 | App-Login ist langsam | Direkt `https://app.notariat8.de/workspace` zeigen und Fail-Closed erklären. |
 | Identitätsanbieter braucht zu lange | Stop-Line verwenden: "Die externe Anmeldung ist nicht Teil der fachlichen Prozessdemo; der geschlossene Arbeitsbereich ist hier der relevante Sicherheitsnachweis." |
 | Lokaler BPMN-Editor ist nicht verfügbar | Öffentliche Prozessmodellseite zeigen und GitHub-PR/Validatoren nur kurz als Governance-Nachweis erklären. |
+| XNP oder Kartenleser ist lokal nicht verfügbar | Keine Live-XNP-Aktion zeigen; den BPMN-Gate und den XNP/XNotar-Demo-Kontrakt erklären. |
 | Live-DNS oder Netzwerk instabil | Keine Live-Neukundenanlage zeigen; nur bestehende Readiness-/DNS-Statusseite verwenden. |
 
 ## Stop-Lines
@@ -175,6 +200,7 @@ Sagen:
   sondern auf die öffentliche Prozessmodellseite zurückgehen.
 - Keine echten Mandatsdaten, keine echten Ausweise, keine echten Urkunden und
   keine produktiven Register- oder Grundbuchhandlungen zeigen.
+- Keine Behauptung, dass NaC Grundbuchdaten direkt aus XNP erhält.
 
 ## Vorführbare Kernaussagen
 
@@ -182,5 +208,7 @@ Sagen:
 - Der Immobilienkaufvertrag braucht parallele Arbeit und kritischer Pfad.
 - Die Dauerangaben sind editierbare Planwerte.
 - Die öffentliche Sicht enthält keine Mandatsdaten.
+- XNP, Kartenleser, XNotar und XJustiz werden als sichtbare Fachsystemgrenzen
+  im Prozess gezeigt.
 - Die App öffnet den Arbeitsbereich erst nach Sicherheitsprüfung.
 - GitHub Protected PRs sichern Modelländerungen nachvollziehbar ab.
