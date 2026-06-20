@@ -80,6 +80,7 @@ ALLOWED_CHANNELS = {
     "register_portal",
     "tax_portal",
     "video",
+    "xnotar_xjustiz",
     "xnp_local",
 }
 FORBIDDEN_NAME_PARTS = ("passwort", "password", "pin", "secret", "token", "api-key", "apikey")

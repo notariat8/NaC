@@ -38,8 +38,9 @@ Review und menschlicher Freigabe.
   bleibt unter [bpmn/immobilienkaufvertrag.bpmn](../../bpmn/immobilienkaufvertrag.bpmn);
   die weiteren Usecase-Modelle liegen unter [bpmn/usecases/](../../bpmn/usecases).
 - `nac:channel` dokumentiert, in welcher Form ein Schritt ausgeführt wird,
-  etwa persönlich, per E-Mail, per Post/Fax, digital signiert, über XNP lokal
-  oder über ein Register-/Grundbuchportal.
+  etwa persönlich, per E-Mail, per Post/Fax, digital signiert, über XNP lokal,
+  über einen XNotar/XJustiz-Austauschordner oder über ein
+  Register-/Grundbuchportal.
 - Die deterministische Prüfung liegt in
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - Die Generierung liegt in
@@ -57,12 +58,17 @@ die usecase-lokalen KGs mit zwei externen BNotK-Ankern:
 - Die BNotK beschreibt die XNP-Integration als lokale REST-Schnittstelle auf
   `localhost`, die Login-Informationen, Amtstätigkeit und bei Login-Funktionen
   einen pro Installation konfigurierten API-Key betrifft.
+- Die BNotK beschreibt XNotar auf Basis von XNP als Datei-/Ordnergrenze für
+  durch Notariatssoftware vorbereitete Vorgänge. In diesem Modell liefert XNP
+  keine Grundbuchdaten an NaC; NaC modelliert nur den Übergabe-, Nachweis- und
+  Prüfpunkt.
 - Die BNotK beschreibt Online-Verfahren im Gesellschaftsrecht mit
   Vorgangseingang, E-Mail-Benachrichtigung, Sachbearbeiter/Aktenzeichen,
   Bearbeiten/Exportieren/Anlegen sowie Videokonferenz-bezogenen Schritten.
 
 Deshalb modelliert NaC XNP-nahe Schritte als lokalen, nachweispflichtigen
-Service Task und Online-GmbH-Schritte mit `notary_app`, `video` und
+Service Task, XNotar/XJustiz-Schritte als Austauschordner- oder
+Paketnachweis und Online-GmbH-Schritte mit `notary_app`, `video` und
 `qualified_e_signature`. Das ersetzt keine notarielle Rechtsprüfung und
 speichert keine Mandatswerte.
 
