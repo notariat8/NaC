@@ -106,7 +106,7 @@
     <bpmn:sendTask id="Task_EinreichungVersand"
                      name="Vollzug und Grundbuchkommunikation ausführen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="land_register_portal;post;email"
+                     nac:channel="xnotar_xjustiz;land_register_portal;post;email"
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"

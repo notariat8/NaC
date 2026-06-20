@@ -23,7 +23,7 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 | `nac:owner` | Prozess | Herausgeber oder fachlich verantwortliche Stelle. |
 | `nac:binding` | Prozess | Bindungsmodell, zum Beispiel `Git Pull Request`. |
 | `nac:role` | Flow Node | Fachliche Rolle, die den Schritt verantwortet. |
-| `nac:channel` | Flow Node | Ausführungsform, Semikolon-getrennt, zum Beispiel `personal`, `email`, `fax`, `video`, `qualified_e_signature`, `xnp_local`, `register_portal` oder `land_register_portal`. |
+| `nac:channel` | Flow Node | Ausführungsform, Semikolon-getrennt, zum Beispiel `personal`, `email`, `fax`, `video`, `qualified_e_signature`, `xnp_local`, `xnotar_xjustiz`, `register_portal` oder `land_register_portal`. |
 | `nac:dataClass` | Flow Node | Datenklasse: `metadata`, `public_reference`, `confidential_placeholder`, `no_mandate_data`. |
 | `nac:approval` | Flow Node | Freigabe: `none`, `human`, `four_eyes`. |
 | `nac:evidence` | Flow Node | Nachweis: `none`, `optional`, `required`. |
@@ -50,6 +50,12 @@ Fachpersonal reichen zunächst:
 
 - Keine echten Mandatsdaten in BPMN.
 - Keine PINs, Passwörter, Tokens oder API-Keys in Namen oder Metadaten.
+- `xnp_local` beschreibt nur den lokalen XNP-/Karten-/Amtstätigkeitskontext am
+  Notariatsarbeitsplatz. XNP liefert keine Grundbuchdaten an NaC.
+- `xnotar_xjustiz` beschreibt XNotar-/XJustiz-Paket-, Import- oder
+  Austauschordnergrenzen für Grundbuch- und Registerkommunikation. Der Kanal
+  ist ein Nachweis- und Übergabepunkt, keine automatisierte produktive
+  Einreichung aus dem BPMN-Diagramm.
 - Keine direkte technische Automatisierung aus einem BPMN-Diagramm ohne
   Python-Validator und Pull-Request-Freigabe.
 - Ein BPMN-Diagramm darf eine UI anleiten, ersetzt aber nicht notarielle

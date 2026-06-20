@@ -106,7 +106,7 @@
     <bpmn:sendTask id="Task_EinreichungVersand"
                      name="Registereinreichung ausführen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="xnp_local;register_portal;qualified_e_signature"
+                     nac:channel="xnotar_xjustiz;register_portal;qualified_e_signature"
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"

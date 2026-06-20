@@ -38,8 +38,8 @@ approval.
   [bpmn/immobilienkaufvertrag.bpmn](../../bpmn/immobilienkaufvertrag.bpmn);
   the other usecase models live under [bpmn/usecases/](../../bpmn/usecases).
 - `nac:channel` documents how a step is executed, for example in person,
-  by email, by post/fax, digitally signed, through local XNP, or through a
-  register/land-register portal.
+  by email, by post/fax, digitally signed, through local XNP, through an
+  XNotar/XJustiz exchange-folder, or through a register/land-register portal.
 - Deterministic validation lives in
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - Generation lives in
@@ -57,14 +57,18 @@ usecase-local KGs with two external BNotK anchors:
 - BNotK describes XNP integration as a local `localhost` REST interface that
   involves login information, the current official activity and, for login
   functions, an API key configured per installation.
+- BNotK describes XNotar on top of XNP as a file/folder boundary for matters
+  prepared by notarial software. In this model, XNP does not deliver
+  land-register data to NaC; NaC models only the handoff, evidence and review
+  point.
 - BNotK describes online company-law proceedings with incoming cases, email
   notification, clerk/file-reference handling, edit/export/create actions and
   videoconference-related steps.
 
 NaC therefore models XNP-adjacent steps as local, evidence-required service
-tasks and online GmbH steps with `notary_app`, `video` and
-`qualified_e_signature`. This does not replace notarial legal review and does
-not store mandate values.
+tasks, XNotar/XJustiz steps as exchange-folder or package evidence, and online
+GmbH steps with `notary_app`, `video` and `qualified_e_signature`. This does
+not replace notarial legal review and does not store mandate values.
 
 ## Relationship To KG
 
