@@ -1,8 +1,8 @@
 # Agentic 8h Current Queue
 
-> **Status:** June 19, 2026. This queue does not replace the general operating
+> **Status:** June 20, 2026. This queue does not replace the general operating
 > rules in `2026-06-18-agentic-8h-work-packages.md`; it updates the work state
-> after the now-closed Q2Q-Q2V and release-lane tracks.
+> after the now-closed Q2Q-Q2V, Track A-C, and release-lane tracks.
 
 ## Goal
 
@@ -20,6 +20,15 @@ governance.
 - The earlier 8h plan inputs `NaC#163`, `NaC#171` and
   `oci-landing-zone#89` are no longer open.
 - Q2Q through Q2V have landed or been closed.
+- Track A landed through PR #189 and is released: `/workspace` requires a
+  server-side session-store record in addition to a signed cookie.
+- Track B landed through PR #191: role/case/purpose gate audit reasons are
+  explicit and redacted.
+- Track C landed through PR #192: the customer-facing onboarding request status
+  reflects documented review state without sending invitations or exposing
+  internal terminology.
+- Read-only branch hygiene currently shows no merged remote cleanup branches
+  beyond `main`.
 
 ## Owner-Free Work Lanes
 
@@ -53,72 +62,22 @@ These lanes may be prepared without asking the owner:
 
 ## Current Cleanup Candidates
 
-These branches are merged according to the current read-only audit and may be
-proposed as a cleanup gate.
-
-NaC:
-
-```text
-agent/178-q2t-session-store-adapter
-agent/179-q2u-workspace-binding-normalizers
-agent/181-q2v-onboarding-review-audit
-agent/release-memory-parity-check
-```
-
-OCI Landing Zone:
-
-```text
-agent/93-owner-gate-text-normalizer
-agent/release-memory-parity-check
-```
-
-`www-n8`: no visible cleanup branches.
+The June 20 read-only audit shows no merged remote cleanup branches beyond
+`origin/main` in NaC or `oci-landing-zone`.
 
 ## Next Domain Tracks As Gate Candidates
 
-### Track A: Server Session Store Required For `/workspace`
+No pre-approved next domain track is currently open in the repository. The next
+feature/security boundary must be introduced by an owner design gate before
+implementation starts.
 
-Owner gate:
+Owner-free work may still continue on:
 
-```text
-Owner Design Approval for next Workspace/Auth Track A: make the server-side session-store mandatory for /workspace and every route beyond protected start; a signed cookie alone is no longer sufficient, missing/unavailable/revoked/expired store records fail closed, audit remains redacted metadata-only, no full workspace, no mandate data, no OCI writes.
-```
-
-Stop lines:
-
-- No productive store adapter.
-- No Vault or secret access.
-- No OCI runtime configuration.
-- No live session migration.
-
-### Track B: Sharpen Role/Case/Purpose Gate Audit
-
-Owner gate:
-
-```text
-Owner Design Approval for next Workspace/Auth Track B: formalize the /workspace role-case-purpose gate as a metadata-only authorization contract with explicit reason classes, optional four-eyes requirement, redacted audit evidence, and no exposure of tenant hints, case IDs, session IDs, claims, emails, provider details or mandate content; fail closed, protected PR, no OCI writes.
-```
-
-Stop lines:
-
-- No real tenant or case lookups.
-- No real case identifiers in browser or log output.
-- No productive IdP role or group changes.
-
-### Track C: Customer Status After Admin Review
-
-Owner gate:
-
-```text
-Owner Design Approval for next Onboarding Track C: improve the customer-facing request status page after admin review using only existing request_status and invitation_status fields and customer-safe copy; show that review is documented and invitation remains pending; no customer mail dispatch, no mandate data, no internal provider or admin terminology.
-```
-
-Stop lines:
-
-- No customer mail dispatch.
-- No invitation sending.
-- No new lifecycle states without a contract.
-- No internal provider or admin terminology in customer HTML.
+- release-memory and release-lane evidence checks,
+- local baseline and quality-gate verification,
+- read-only live smoke evidence,
+- branch hygiene audits,
+- concrete gate-text preparation for a new owner-selected domain track.
 
 ## Batched Owner Packet
 
@@ -126,9 +85,12 @@ After all owner-free lanes are prepared, the owner should not be interrupted by
 intermediate questions. Instead, Codex produces exactly one packet:
 
 ```text
-1. Branch cleanup gate with exact branch list.
-2. One recommended next owner design gate.
-3. Optional release gate only for a concretely checked commit.
+1. Evidence summary for the current live/runtime state.
+2. Branch cleanup gate with exact branch list, only if read-only audit finds
+   merged branches.
+3. One recommended next owner design gate, only if a concrete next domain track
+   has been selected.
+4. Optional release gate only for a concretely checked commit.
 ```
 
 ## Hard Stop Lines
