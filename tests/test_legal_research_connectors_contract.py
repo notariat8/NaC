@@ -28,6 +28,7 @@ class LegalResearchConnectorsContractTests(unittest.TestCase):
                 "ansvar-german-law-mcp-lobehub",
                 "ansvar-german-law-mcp-elasticflow",
                 "beck-online-mcp-market",
+                "deubner-recht-publisher-portal",
             },
         )
         for candidate in candidates.values():
@@ -35,6 +36,21 @@ class LegalResearchConnectorsContractTests(unittest.TestCase):
             self.assertIn(parsed.scheme, {"http", "https"})
             self.assertEqual(parsed.query, "", candidate["canonical_url"])
             self.assertNotIn("shem=", candidate["canonical_url"])
+
+    def test_deubner_candidate_is_metadata_only_until_license_review(self) -> None:
+        payload = self.load_contract()
+        candidates = {candidate["id"]: candidate for candidate in payload["candidates"]}
+        candidate = candidates["deubner-recht-publisher-portal"]
+
+        self.assertEqual(candidate["provider"], "Deubner Recht & Steuern")
+        self.assertEqual(candidate["integration_level"], "metadata_only")
+        self.assertEqual(candidate["status"], "needs_license_review")
+        self.assertTrue(candidate["credentials_required"])
+        self.assertFalse(candidate["credentials_in_repo_allowed"])
+        self.assertFalse(candidate["personal_data_allowed"])
+        self.assertTrue(candidate["license_review_required"])
+        self.assertIn("automated_provider_query_without_contract", candidate["blocked_actions"])
+        self.assertIn("store_provider_full_text_in_product_repo", candidate["blocked_actions"])
 
     def test_contract_blocks_credentials_and_mandate_data_until_review(self) -> None:
         payload = self.load_contract()

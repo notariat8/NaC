@@ -21,6 +21,7 @@ erst danach eine technische Integration planen.
 | German Law MCP von Ansvar Systems | [LobeHub](https://lobehub.com/mcp/ansvar-systems-german-law-mcp) | Kandidat | Metadatenprüfung für öffentliche Rechtsquellen, AI-SBOM offen. |
 | German Law MCP auf ElasticFlow | [ElasticFlow](https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp) | Kandidat, Doppellistung | Gleicher technischer Kandidat wie Ansvar/LobeHub, separat nachgewiesen. |
 | beck-online MCP Listing | [MCP Market](https://mcpmarket.com/server/beck-online) | Lizenzprüfung nötig | Keine Nutzung ohne Vertrags-, Lizenz-, TDM-, Sicherheits- und Credential-Prüfung. |
+| Deubner Recht Portal | [Deubner Recht & Praxis](https://www.deubner-recht.de/) | Lizenzprüfung nötig | Nur als Verlagsportal-Kandidat; keine automatisierte Abfrage, kein Volltextimport und keine Credential-Nutzung ohne Vertrags-, Lizenz-, AVV-/DPA-, TDM- und Sicherheitsprüfung. |
 
 Alle URLs werden ohne Trackingparameter geführt. Die maschinenlesbare Grenze
 steht im

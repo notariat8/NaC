@@ -214,6 +214,53 @@
         "personal_data_processing"
       ],
       "notes": "Marketplace listing claims programmatic access using subscription credentials; NaC blocks integration until terms, license, security and provider boundaries are reviewed."
+    },
+    {
+      "id": "deubner-recht-publisher-portal",
+      "display_name": "Deubner Recht publisher portal",
+      "provider": "Deubner Recht & Steuern",
+      "source_type": "publisher_portal",
+      "status": "needs_license_review",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://www.deubner-recht.de/",
+      "source_seen_at": "2026-06-20",
+      "credentials_required": true,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "unknown",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "open_provider_page",
+        "record_license_status"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "store_secret_material",
+        "send_mandate_data_to_external_ai",
+        "scrape_protected_portal",
+        "automated_provider_query_without_contract",
+        "store_provider_full_text_in_product_repo"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "api_use",
+        "mcp_use",
+        "personal_data_processing"
+      ],
+      "notes": "Publisher portal with login and legal-practice content categories; NaC treats it only as a candidate until terms, license, API/MCP availability, TDM, DPA and security boundaries are reviewed."
     }
   ]
 }

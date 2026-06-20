@@ -21,6 +21,7 @@ technical integration.
 | German Law MCP by Ansvar Systems | [LobeHub](https://lobehub.com/mcp/ansvar-systems-german-law-mcp) | Candidate | Metadata review for public legal sources, AI-SBOM open. |
 | German Law MCP on ElasticFlow | [ElasticFlow](https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp) | Candidate, duplicate listing | Same technical candidate as Ansvar/LobeHub, evidenced separately. |
 | beck-online MCP listing | [MCP Market](https://mcpmarket.com/server/beck-online) | License review needed | No use without terms, license, TDM, security and credential review. |
+| Deubner Recht portal | [Deubner Recht & Praxis](https://www.deubner-recht.de/) | License review needed | Publisher-portal candidate only; no automated query, full-text import or credential use without terms, license, DPA, TDM and security review. |
 
 All URLs are kept without tracking parameters. The machine-readable boundary is
 defined in the
