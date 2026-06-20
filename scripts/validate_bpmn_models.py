@@ -55,6 +55,13 @@ ALLOWED_DATA_CLASSES = {
 }
 ALLOWED_APPROVALS = {"none", "human", "four_eyes"}
 ALLOWED_EVIDENCE = {"none", "optional", "required"}
+ALLOWED_DURATION_BANDS = {
+    "same_day_or_internal",
+    "short_party_turnaround",
+    "standard_external",
+    "extended_external",
+    "statutory_or_exceptional",
+}
 ALLOWED_CHANNELS = {
     "authority",
     "ben",
@@ -173,6 +180,9 @@ def validate_moddle_descriptor() -> list[str]:
         "plugin",
         "localExecution",
         "kgRef",
+        "durationBand",
+        "parallelGroup",
+        "criticalPath",
     }
     missing = sorted(required - properties)
     for name in missing:
@@ -282,6 +292,12 @@ def validate_nac_profile(path: Path, root: ET.Element) -> list[str]:
                 errors.append(f"{node.location()}: nac:evidence ist ungültig: {evidence!r}")
             if not node.nac_attr("kgRef"):
                 errors.append(f"{node.location()}: nac:kgRef fehlt")
+            duration_band = node.nac_attr("durationBand")
+            if duration_band is not None and duration_band not in ALLOWED_DURATION_BANDS:
+                errors.append(f"{node.location()}: nac:durationBand ist ungültig: {duration_band!r}")
+            critical_path = node.nac_attr("criticalPath")
+            if critical_path is not None and critical_path not in {"true", "false"}:
+                errors.append(f"{node.location()}: nac:criticalPath ist ungültig: {critical_path!r}")
             if node.tag_name == "serviceTask" and node.nac_attr("localExecution") != "true":
                 errors.append(f"{node.location()}: serviceTask braucht nac:localExecution=true")
             if node.tag_name in TASK_NAMES and data_class == "no_mandate_data" and approval == "four_eyes":
