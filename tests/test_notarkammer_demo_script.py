@@ -49,6 +49,25 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
         for term in blocked_terms:
             self.assertNotIn(term, combined)
 
+    def test_demo_script_covers_xnp_xnotar_story_without_overclaiming(self) -> None:
+        german = DEMO_DOCS["de"].read_text(encoding="utf-8")
+        english = DEMO_DOCS["en"].read_text(encoding="utf-8")
+        normalized_english = " ".join(english.split())
+
+        for content in (german, english):
+            self.assertIn("XNP", content)
+            self.assertIn("XNotar", content)
+            self.assertIn("XJustiz", content)
+            self.assertIn("Kartenleser", content)
+            lowered = content.lower()
+            self.assertTrue("lokal" in lowered or "local" in lowered)
+            self.assertTrue("Grundbuch" in content or "land-register" in content)
+
+        self.assertIn("XNP liefert keine Grundbuchdaten an NaC", german)
+        self.assertIn("XNP does not deliver land-register data to NaC", normalized_english)
+        self.assertIn("keine produktiven Register- oder Grundbuchhandlungen", german)
+        self.assertIn("productive register/land-register actions", normalized_english)
+
 
 if __name__ == "__main__":
     unittest.main()
