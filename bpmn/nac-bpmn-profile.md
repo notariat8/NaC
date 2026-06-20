@@ -9,7 +9,8 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 - `bpmn-js` ist die visuelle Bearbeitungsschicht.
 - `bpmn/nac-moddle.json` ergänzt BPMN um NaC-Metadaten für Rollen,
   Ausführungskanal, Datenklasse, Freigabe, Nachweis, Plugin-Bindung und
-  KG-Referenz.
+  KG-Referenz sowie Demo-Planungsmetadaten für Dauer, Parallelität und
+  kritischen Pfad.
 - `scripts/validate_bpmn_models.py` prüft BPMN-Dateien deterministisch.
 - Python bleibt Ausführungs-, Prüf- und Exportlogik.
 - Mermaid bleibt eine Zusatzsicht, nicht die Prozessquelle.
@@ -29,6 +30,9 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 | `nac:plugin` | Flow Node | Optional gebundenes lokales Plugin, etwa `nac-cyberjack-rfid`. |
 | `nac:localExecution` | Flow Node | `true`, wenn der Schritt lokal am Arbeitsplatz laufen muss. |
 | `nac:kgRef` | Flow Node | Zugehöriger usecase-lokaler Knowledge Graph. |
+| `nac:durationBand` | Flow Node | Planungs-Dauerklasse: `same_day_or_internal`, `short_party_turnaround`, `standard_external`, `extended_external`, `statutory_or_exceptional`. Das sind editierbare Planwerte, keine amtlichen Durchschnittswerte. |
+| `nac:parallelGroup` | Flow Node | Fachliche Gruppe für Schritte, die parallel vorbereitet oder nachgehalten werden können, z.B. `post_notarization`. |
+| `nac:criticalPath` | Flow Node | `true`, wenn der Schritt den kritischen Pfad des Vollzugs blockieren kann; `false` oder fehlend bedeutet keine kritische-Pfad-Markierung. |
 
 ## bpmn-js-Regeln
 
@@ -50,3 +54,5 @@ Fachpersonal reichen zunächst:
   Python-Validator und Pull-Request-Freigabe.
 - Ein BPMN-Diagramm darf eine UI anleiten, ersetzt aber nicht notarielle
   Prüfung oder menschliche Freigabe.
+- Dauerklassen sind Demonstrations- und Planungswerte. Sie dürfen nicht als
+  verbindliche Fristen, SLA oder amtliche Durchschnittsdauer dargestellt werden.

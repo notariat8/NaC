@@ -30,6 +30,38 @@ class BpmnModelValidationTests(unittest.TestCase):
     def test_repository_bpmn_models_are_valid(self) -> None:
         self.assertEqual(validator.validate(), [])
 
+    def test_moddle_declares_duration_parallel_and_critical_path_metadata(self) -> None:
+        errors = validator.validate_moddle_descriptor()
+
+        self.assertEqual(errors, [])
+        payload = validator.json.loads(validator.NAC_MODDLE.read_text(encoding="utf-8"))
+        properties = {
+            prop["name"]
+            for entry in payload["types"]
+            for prop in entry.get("properties", [])
+            if prop.get("isAttr")
+        }
+
+        self.assertIn("durationBand", properties)
+        self.assertIn("parallelGroup", properties)
+        self.assertIn("criticalPath", properties)
+
+    def test_real_estate_model_marks_duration_parallel_and_critical_path(self) -> None:
+        path = BPMN_ROOT / "immobilienkaufvertrag.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = [
+            validator.BpmnElement(path, child)
+            for process in validator.children_by_tag(root, "process")
+            for child in validator.all_process_children(process)
+            if child.tag.rsplit("}", maxsplit=1)[-1] in validator.FLOW_NODE_NAMES
+        ]
+
+        self.assertTrue(any(node.nac_attr("durationBand") == "standard_external" for node in nodes))
+        self.assertTrue(any(node.nac_attr("parallelGroup") == "post_notarization" for node in nodes))
+        self.assertTrue(any(node.nac_attr("criticalPath") == "true" for node in nodes))
+
     def test_every_usecase_has_a_bpmn_model(self) -> None:
         usecase_slugs = {
             path.name
@@ -62,6 +94,50 @@ class BpmnModelValidationTests(unittest.TestCase):
             errors = validator.validate_file(path)
 
         self.assertTrue(any("targetRef" in error for error in errors), errors)
+
+    def test_invalid_duration_band_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "broken-duration.bpmn"
+            path.write_text(
+                f"""<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:nac="{validator.NAC_NS}">
+  <bpmn:process id="Process_Broken"
+                name="Broken"
+                nac:profile="{validator.NAC_PROFILE}"
+                nac:owner="notariat8"
+                nac:binding="Git Pull Request">
+    <bpmn:startEvent id="Start"
+                     name="Start"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="none"
+                     nac:evidence="none"
+                     nac:durationBand="instant"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="End"
+                   name="End"
+                   nac:role="Notariat"
+                   nac:channel="internal"
+                   nac:dataClass="metadata"
+                   nac:approval="none"
+                   nac:evidence="none"
+                   nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="End"/>
+  </bpmn:process>
+</bpmn:definitions>
+""",
+                encoding="utf-8",
+            )
+
+            errors = validator.validate_file(path)
+
+        self.assertTrue(any("nac:durationBand" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
