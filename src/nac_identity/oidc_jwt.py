@@ -20,14 +20,20 @@ def build_oidc_id_token_verifier(
     *,
     issuer: str,
     audience: str,
+    discovery_base_url: str = "",
     jwks_fetcher: OidcJsonFetcher | None = None,
     now: int | None = None,
     timeout_seconds: float = 5.0,
 ) -> OidcIdTokenVerifier | None:
     normalized_issuer = issuer.strip().rstrip("/") if isinstance(issuer, str) else ""
     normalized_audience = audience.strip() if isinstance(audience, str) else ""
+    normalized_discovery_base_url = (
+        discovery_base_url.strip().rstrip("/") if isinstance(discovery_base_url, str) else ""
+    )
     if not normalized_issuer or not normalized_audience:
         return None
+    if not normalized_discovery_base_url:
+        normalized_discovery_base_url = normalized_issuer
 
     fetcher = jwks_fetcher or (lambda url: _fetch_json(url, timeout_seconds=timeout_seconds))
     jwks_cache: dict[str, Any] = {}
@@ -36,6 +42,7 @@ def build_oidc_id_token_verifier(
         return _verify_id_token(
             id_token,
             issuer=normalized_issuer,
+            discovery_base_url=normalized_discovery_base_url,
             audience=normalized_audience,
             fetcher=fetcher,
             jwks_cache=jwks_cache,
@@ -49,6 +56,7 @@ def _verify_id_token(
     id_token: str,
     *,
     issuer: str,
+    discovery_base_url: str,
     audience: str,
     fetcher: OidcJsonFetcher,
     jwks_cache: dict[str, Any],
@@ -69,7 +77,7 @@ def _verify_id_token(
         return None
 
     try:
-        keys = _jwks_for_issuer(issuer, fetcher=fetcher, jwks_cache=jwks_cache)
+        keys = _jwks_for_issuer(discovery_base_url, fetcher=fetcher, jwks_cache=jwks_cache)
     except Exception:
         return None
     jwk = _select_jwk(keys, header.get("kid"))

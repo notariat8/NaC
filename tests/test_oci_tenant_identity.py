@@ -1925,8 +1925,59 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         serialized = json.dumps(result, sort_keys=True)
 
         self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["failure_class"], "authorization_code_rejected")
         self.assertFalse(result["guardrails"]["provider_error_details_exposed"])
-        self.assertNotIn("invalid_grant", serialized)
+        self.assertNotIn("error_description", serialized)
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("client-secret-value", serialized)
+
+        from nac_identity.oidc_token_exchange import build_oidc_token_exchange_contract
+
+        contract = build_oidc_token_exchange_contract(
+            configured=True,
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            exchanger_result=result,
+        )
+        public_result = contract.public_result()
+        serialized_public = json.dumps(public_result, sort_keys=True)
+
+        self.assertEqual(public_result["failure_class"], "authorization_code_rejected")
+        self.assertNotIn("invalid_grant", serialized_public)
+        self.assertNotIn("secret-code-from-idp", serialized_public)
+        self.assertNotIn("client-secret-value", serialized_public)
+
+    def test_oidc_token_exchange_adapter_uses_generic_failure_class_for_unknown_provider_errors(self) -> None:
+        from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
+
+        def http_post(
+            url: str,
+            body: bytes,
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            return {
+                "status_code": 400,
+                "body": b'{"error":"vendor_specific_detail","error_description":"do not expose this"}',
+            }
+
+        result = exchange_oidc_authorization_code(
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            client_secret="client-secret-value",
+            id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
+            http_post=http_post,
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["failure_class"], "token_endpoint_rejected")
+        self.assertNotIn("vendor_specific_detail", serialized)
+        self.assertNotIn("do not expose this", serialized)
         self.assertNotIn("secret-code-from-idp", serialized)
         self.assertNotIn("client-secret-value", serialized)
 
@@ -1975,6 +2026,51 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             [
                 f"{issuer}/.well-known/openid-configuration",
                 f"{issuer}/admin/v1/SigningCert/jwk",
+            ],
+        )
+
+    def test_oidc_id_token_verifier_can_use_separate_discovery_base_url(self) -> None:
+        from nac_identity.oidc_jwt import build_oidc_id_token_verifier
+
+        issuer = "https://identity.oraclecloud.com/"
+        discovery_base_url = "https://idcs.example.identity.oraclecloud.com:443"
+        audience = "notariat8_nac_app"
+        fetch_urls: list[str] = []
+
+        def fetch_json(url: str) -> dict[str, object]:
+            fetch_urls.append(url)
+            if url == f"{discovery_base_url}/.well-known/openid-configuration":
+                return {"jwks_uri": f"{discovery_base_url}/admin/v1/SigningCert/jwk"}
+            if url == f"{discovery_base_url}/admin/v1/SigningCert/jwk":
+                return {"keys": [_test_jwk()]}
+            raise AssertionError(f"unexpected fetch URL: {url}")
+
+        token = _signed_test_id_token(
+            {
+                "iss": issuer.rstrip("/"),
+                "aud": audience,
+                "exp": 4102444800,
+                "iat": 1900000000,
+            }
+        )
+        verifier = build_oidc_id_token_verifier(
+            issuer=issuer,
+            audience=audience,
+            discovery_base_url=discovery_base_url,
+            jwks_fetcher=fetch_json,
+            now=1900000100,
+        )
+
+        self.assertIsNotNone(verifier)
+        claims = verifier(token) if verifier else None
+
+        self.assertIsInstance(claims, dict)
+        self.assertEqual(claims["iss"], issuer.rstrip("/"))
+        self.assertEqual(
+            fetch_urls,
+            [
+                f"{discovery_base_url}/.well-known/openid-configuration",
+                f"{discovery_base_url}/admin/v1/SigningCert/jwk",
             ],
         )
 

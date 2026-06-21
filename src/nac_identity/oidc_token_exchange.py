@@ -10,6 +10,15 @@ from urllib.request import Request, urlopen
 
 TOKEN_EXCHANGE_SCHEMA_VERSION = "nac.oidc-token-exchange/v0.1"
 _ALLOWED_STATUSES = {"not_started", "not_configured", "verified", "invalid", "failed", "unavailable"}
+_SAFE_OAUTH_FAILURE_CLASSES = {
+    "invalid_grant": "authorization_code_rejected",
+    "invalid_client": "client_auth_rejected",
+    "invalid_request": "token_request_rejected",
+    "unauthorized_client": "client_not_authorized",
+    "unsupported_grant_type": "grant_type_unsupported",
+    "server_error": "token_endpoint_unavailable",
+    "temporarily_unavailable": "token_endpoint_unavailable",
+}
 _CONTRACT_MODE = "contract_only"
 _LIVE_EXCHANGE_MODE = "server_side_token_exchange"
 _ALLOWED_MODES = {_CONTRACT_MODE, _LIVE_EXCHANGE_MODE}
@@ -24,12 +33,14 @@ class OidcTokenExchangeContract:
         status: str,
         configuration: str,
         claims: dict[str, Any] | None = None,
+        failure_class: str = "",
         mode: str = _CONTRACT_MODE,
         live_token_exchange_performed: bool = False,
     ) -> None:
         self._status = status if status in _ALLOWED_STATUSES else "invalid"
         self._configuration = configuration
         self._claims = deepcopy(claims) if self._status == "verified" and isinstance(claims, dict) else None
+        self._failure_class = _normalized_failure_class(failure_class) if self._status == "failed" else ""
         self._mode = mode if mode in _ALLOWED_MODES else _CONTRACT_MODE
         self._live_token_exchange_performed = bool(live_token_exchange_performed and self._mode == _LIVE_EXCHANGE_MODE)
 
@@ -37,13 +48,16 @@ class OidcTokenExchangeContract:
         return f"OidcTokenExchangeContract(status={self._status!r}, claims=<redacted>)"
 
     def public_result(self) -> dict[str, Any]:
-        return {
+        result = {
             "schema_version": TOKEN_EXCHANGE_SCHEMA_VERSION,
             "status": self._status,
             "configuration": self._configuration,
             "mode": self._mode,
             "guardrails": _guardrails(live_token_exchange_performed=self._live_token_exchange_performed),
         }
+        if self._status == "failed":
+            result["failure_class"] = self._failure_class
+        return result
 
     def session_input(self) -> dict[str, Any]:
         result: dict[str, Any] = {"status": self._status}
@@ -79,6 +93,7 @@ def build_oidc_token_exchange_contract(
         return OidcTokenExchangeContract(
             status=status,
             configuration="configured",
+            failure_class=str(exchanger_result.get("failure_class", "")),
             mode=mode,
             live_token_exchange_performed=live_token_exchange_performed,
         )
@@ -141,7 +156,11 @@ def exchange_oidc_authorization_code(
     except (TypeError, ValueError, AttributeError):
         return _exchange_result("unavailable", live_token_exchange_performed=True)
     if status_code < 200 or status_code >= 300:
-        return _exchange_result("failed", live_token_exchange_performed=True)
+        return _exchange_result(
+            "failed",
+            live_token_exchange_performed=True,
+            failure_class=_safe_oauth_failure_class(response.get("body")),
+        )
 
     token_payload = _json_body(response.get("body"))
     if not isinstance(token_payload, dict):
@@ -187,6 +206,7 @@ def _exchange_result(
     *,
     live_token_exchange_performed: bool,
     claims: dict[str, Any] | None = None,
+    failure_class: str = "",
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "status": _normalized_status(status),
@@ -194,9 +214,29 @@ def _exchange_result(
         "live_token_exchange_performed": bool(live_token_exchange_performed),
         "guardrails": _guardrails(live_token_exchange_performed=live_token_exchange_performed),
     }
+    if result["status"] == "failed":
+        result["failure_class"] = _normalized_failure_class(failure_class)
     if result["status"] == "verified" and isinstance(claims, dict):
         result["claims"] = deepcopy(claims)
     return result
+
+
+def _safe_oauth_failure_class(body: object) -> str:
+    payload = _json_body(body)
+    if not isinstance(payload, dict):
+        return "token_endpoint_rejected"
+    error = payload.get("error")
+    if not isinstance(error, str):
+        return "token_endpoint_rejected"
+    return _SAFE_OAUTH_FAILURE_CLASSES.get(error.strip(), "token_endpoint_rejected")
+
+
+def _normalized_failure_class(value: Any) -> str:
+    normalized = str(value or "").strip()
+    allowed = set(_SAFE_OAUTH_FAILURE_CLASSES.values()) | {"token_endpoint_rejected"}
+    if normalized in allowed:
+        return normalized
+    return "token_endpoint_rejected"
 
 
 def _json_body(body: object) -> object:

@@ -2697,11 +2697,15 @@ def _auth_callback_oidc_client_secret_from_env(
 def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None] | None:
     issuer = _auth_callback_expected_issuer()
     audience = os.environ.get("NAC_OIDC_CLIENT_ID", "").strip()
-    return build_oidc_id_token_verifier(issuer=issuer, audience=audience)
+    return build_oidc_id_token_verifier(
+        issuer=issuer,
+        audience=audience,
+        discovery_base_url=_auth_callback_identity_domain_url(),
+    )
 
 
 def _auth_callback_token_exchange_metadata() -> dict[str, str]:
-    identity_domain_url = os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
+    identity_domain_url = _auth_callback_identity_domain_url()
     return {
         "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
         "token_endpoint": f"{identity_domain_url}/oauth2/v1/token" if identity_domain_url else "",
@@ -2710,6 +2714,13 @@ def _auth_callback_token_exchange_metadata() -> dict[str, str]:
 
 
 def _auth_callback_expected_issuer() -> str:
+    return (
+        os.environ.get("NAC_OIDC_EXPECTED_ISSUER", "").strip().rstrip("/")
+        or _auth_callback_identity_domain_url()
+    )
+
+
+def _auth_callback_identity_domain_url() -> str:
     return os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
 
 
@@ -2854,7 +2865,7 @@ def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:
     role_gate = callback_result.get("role_gate", {})
     session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
     items = [
-        ("Token-Austausch", _safe_status_label(token_exchange.get("status"))),
+        ("Token-Austausch", _token_exchange_status_label(token_exchange)),
         ("Token-Prüfung", _safe_status_label(jwt_validation.get("status"))),
         ("Rollenprüfung", _safe_status_label(role_gate.get("status"))),
         ("Sitzung", "erstellt" if isinstance(session, dict) and session.get("cookie_issued") else "nicht erstellt"),
@@ -2871,6 +2882,22 @@ def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:
       </ul>
     </section>
     """
+
+
+def _token_exchange_status_label(token_exchange: Any) -> str:
+    if not isinstance(token_exchange, dict):
+        return _safe_status_label(None)
+    if token_exchange.get("status") != "failed":
+        return _safe_status_label(token_exchange.get("status"))
+    return {
+        "authorization_code_rejected": "Anmeldung abgelaufen oder bereits verwendet",
+        "client_auth_rejected": "Anmeldung technisch nicht verfügbar",
+        "client_not_authorized": "Anmeldung technisch nicht verfügbar",
+        "grant_type_unsupported": "Anmeldung technisch nicht verfügbar",
+        "token_endpoint_unavailable": "Anmeldung vorübergehend nicht verfügbar",
+        "token_request_rejected": "Anmeldung abgelehnt",
+        "token_endpoint_rejected": "Anmeldung abgelehnt",
+    }.get(str(token_exchange.get("failure_class") or ""), "fehlgeschlagen")
 
 
 def _safe_status_label(value: Any) -> str:

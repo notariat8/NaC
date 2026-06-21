@@ -1067,6 +1067,7 @@ class NaCLocalWebTests(unittest.TestCase):
                 "status": "failed",
                 "mode": "server_side_token_exchange",
                 "live_token_exchange_performed": True,
+                "failure_class": "authorization_code_rejected",
                 "error_description": "provider failure detail",
             },
             create=True,
@@ -1079,10 +1080,11 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
         self.assertIn("Technische Statusdiagnose", html)
-        self.assertIn("Token-Austausch: fehlgeschlagen", html)
+        self.assertIn("Token-Austausch: Anmeldung abgelaufen oder bereits verwendet", html)
         self.assertIn("Token-Prüfung: nicht gestartet", html)
         self.assertIn("Rollenprüfung: geschlossen", html)
         self.assertIn("Sitzung: nicht erstellt", html)
+        self.assertNotIn("authorization_code_rejected", html)
         self.assertNotIn("provider failure detail", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
@@ -1178,14 +1180,15 @@ class NaCLocalWebTests(unittest.TestCase):
     def test_auth_callback_builds_runtime_id_token_verifier_from_env(self) -> None:
         created: list[dict[str, str]] = []
 
-        def build_verifier(*, issuer: str, audience: str):
-            created.append({"issuer": issuer, "audience": audience})
+        def build_verifier(*, issuer: str, audience: str, discovery_base_url: str = ""):
+            created.append({"issuer": issuer, "audience": audience, "discovery_base_url": discovery_base_url})
             return lambda _id_token: {"iss": issuer, "aud": audience}
 
         with patch.dict(
             os.environ,
             {
                 "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_EXPECTED_ISSUER": "https://identity.oraclecloud.com/",
                 "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
             },
             clear=False,
@@ -1202,8 +1205,9 @@ class NaCLocalWebTests(unittest.TestCase):
             created,
             [
                 {
-                    "issuer": "https://idcs.example.identity.oraclecloud.com:443",
+                    "issuer": "https://identity.oraclecloud.com",
                     "audience": "notariat8_nac_app",
+                    "discovery_base_url": "https://idcs.example.identity.oraclecloud.com:443",
                 }
             ],
         )
