@@ -69,12 +69,13 @@ class NotarkammerXnpBpmnGateTests(unittest.TestCase):
         self.assertIn("register_portal", channels)
 
     def test_land_register_filing_uses_xnotar_xjustiz_with_land_register_portal(self) -> None:
-        for model in [
-            BPMN_ROOT / "usecases" / "grundschuld-hypothekenbestellung.bpmn",
-            BPMN_ROOT / "usecases" / "grundstueckskaufvertrag.bpmn",
-        ]:
+        filing_nodes = {
+            BPMN_ROOT / "usecases" / "grundschuld-hypothekenbestellung.bpmn": "Task_GrundbuchEinreichungVorbereiten",
+            BPMN_ROOT / "usecases" / "grundstueckskaufvertrag.bpmn": "Task_VormerkungBeantragen",
+        }
+        for model, node_id in filing_nodes.items():
             with self.subTest(model=model.name):
-                channels = node_channels(model, "Task_EinreichungVersand")
+                channels = node_channels(model, node_id)
                 self.assertIn("xnotar_xjustiz", channels)
                 self.assertIn("land_register_portal", channels)
 

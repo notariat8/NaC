@@ -49,6 +49,10 @@ Fachpersonal reichen zunächst:
 ## Grenzen
 
 - Keine echten Mandatsdaten in BPMN.
+- Externe Gates werden nur als fachliche Übergabe- und Nachweispunkte
+  modelliert. Typische Beispiele im Immobilienkaufvertrag sind
+  Eigentumsvormerkung, Löschungsunterlagen, gemeindliches Vorkaufsrecht,
+  Unbedenklichkeitsbescheinigung und Eigentumsumschreibung.
 - Keine PINs, Passwörter, Tokens oder API-Keys in Namen oder Metadaten.
 - `xnp_local` beschreibt nur den lokalen XNP-/Karten-/Amtstätigkeitskontext am
   Notariatsarbeitsplatz. XNP liefert keine Grundbuchdaten an NaC.
@@ -62,3 +66,5 @@ Fachpersonal reichen zunächst:
   Prüfung oder menschliche Freigabe.
 - Dauerklassen sind Demonstrations- und Planungswerte. Sie dürfen nicht als
   verbindliche Fristen, SLA oder amtliche Durchschnittsdauer dargestellt werden.
+- Kritischer-Pfad-Markierungen zeigen Demo-Blocker im Modell. Sie lösen keine
+  Runtime-, OCI-, Release-, Apply- oder Cloud-Aktion aus.

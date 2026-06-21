@@ -93,6 +93,9 @@ Zeigen:
 - Planwert "Stunden bis Tage" für interne Prüfung.
 - Planwert "Wochen" für externe Rückläufe.
 - Planwert "Wochen bis Monate" für komplexeren Vollzug.
+- Einzelne externe Gates: Eigentumsvormerkung, Löschungsunterlagen,
+  gemeindliches Vorkaufsrecht, Unbedenklichkeitsbescheinigung und
+  Eigentumsumschreibung.
 - Lokales Gate "Karte, XNP und Signaturpfad prüfen".
 - XNotar/XJustiz-Schritt als Paket- oder Austauschordner-Nachweis.
 

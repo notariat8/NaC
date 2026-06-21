@@ -139,6 +139,59 @@ class BpmnModelValidationTests(unittest.TestCase):
 
         self.assertTrue(any("nac:durationBand" in error for error in errors), errors)
 
+    def test_real_estate_purchase_usecase_has_demo_external_gates(self) -> None:
+        path = BPMN_ROOT / "usecases" / "grundstueckskaufvertrag.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = {
+            node.element_id: node
+            for process in validator.children_by_tag(root, "process")
+            for node in validator.flow_nodes(process, path)
+        }
+
+        expected = {
+            "Task_VormerkungBeantragen": ("post_notarization", "standard_external", "true"),
+            "Task_LoeschungsunterlagenNachhalten": ("post_notarization", "standard_external", "true"),
+            "Task_VorkaufsrechtKlaeren": ("post_notarization", "standard_external", "true"),
+            "Task_UnbedenklichkeitNachhalten": ("ownership_transfer", "extended_external", "true"),
+            "Task_EigentumsumschreibungEinreichen": ("ownership_transfer", "extended_external", "true"),
+        }
+        for node_id, (parallel_group, duration_band, critical_path) in expected.items():
+            with self.subTest(node_id=node_id):
+                node = nodes[node_id]
+                self.assertEqual(node.nac_attr("parallelGroup"), parallel_group)
+                self.assertEqual(node.nac_attr("durationBand"), duration_band)
+                self.assertEqual(node.nac_attr("criticalPath"), critical_path)
+                self.assertNotEqual(node.nac_attr("dataClass"), "confidential_placeholder")
+
+        self.assertIn("xnotar_xjustiz", validator.split_channel_tokens(nodes["Task_VormerkungBeantragen"].nac_attr("channel")))
+        self.assertNotIn("xnp_local", validator.split_channel_tokens(nodes["Task_VormerkungBeantragen"].nac_attr("channel")))
+
+    def test_mortgage_usecase_keeps_xnp_local_as_readiness_not_land_register_feed(self) -> None:
+        path = BPMN_ROOT / "usecases" / "grundschuld-hypothekenbestellung.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = {
+            node.element_id: node
+            for process in validator.children_by_tag(root, "process")
+            for node in validator.flow_nodes(process, path)
+        }
+
+        readiness = nodes["Task_XnpArbeitsplatzPruefen"]
+        self.assertEqual(readiness.nac_attr("durationBand"), "same_day_or_internal")
+        self.assertEqual(readiness.nac_attr("parallelGroup"), "local_readiness")
+        self.assertEqual(readiness.nac_attr("criticalPath"), "false")
+        self.assertIn("xnp_local", validator.split_channel_tokens(readiness.nac_attr("channel")))
+
+        filing = nodes["Task_GrundbuchEinreichungVorbereiten"]
+        self.assertEqual(filing.nac_attr("durationBand"), "standard_external")
+        self.assertEqual(filing.nac_attr("parallelGroup"), "land_register_filing")
+        self.assertEqual(filing.nac_attr("criticalPath"), "true")
+        self.assertIn("xnotar_xjustiz", validator.split_channel_tokens(filing.nac_attr("channel")))
+        self.assertNotIn("xnp_local", validator.split_channel_tokens(filing.nac_attr("channel")))
+
 
 if __name__ == "__main__":
     unittest.main()
