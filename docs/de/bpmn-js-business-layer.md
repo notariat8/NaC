@@ -72,6 +72,12 @@ Paketnachweis und Online-GmbH-Schritte mit `notary_app`, `video` und
 `qualified_e_signature`. Das ersetzt keine notarielle Rechtsprüfung und
 speichert keine Mandatswerte.
 
+Fuer Kunden- und Beteiligtenansichten gilt ein engerer Textvertrag: Sie zeigen
+nur provider-neutrale Status wie "Externe notarielle Arbeitsumgebung
+erforderlich". XNP, lokale Ports, Kartenleserdiagnosen, XNotar-Pfade,
+Registersystemdetails und Providerdetails bleiben interne Notariats- oder
+Review-Metadaten und erscheinen nicht in der Kunden-UI.
+
 ## Zusammenspiel Mit KG
 
 BPMN und KG haben verschiedene Aufgaben:

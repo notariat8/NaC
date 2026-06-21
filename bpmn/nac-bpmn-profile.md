@@ -62,6 +62,34 @@ lokaler Ausführung oder einem rein internen Prüfpunkt erscheinen.
 Nachweisgrenzen. Beide Kanäle beschreiben keinen produktiven Fachsystemzugriff
 und keine Grundbuchdatenlieferung an NaC.
 
+## XNP/BPMN-Integrationsvertrag
+
+NaC ist 100% notariat. XNP ist die externe notarielle Arbeitsumgebung des
+lokalen Notariatsarbeitsplatzes, nicht ein NaC-Backend und nicht ein
+Kunden-UI-Provider. BPMN muss deshalb sichtbar modellieren, wann ein Schritt
+eine externe XNP-, local-notary-workstation-, card-reader-, Register- oder
+Grundbuch-Abhängigkeit hat.
+
+- `xnp_local` modelliert nur lokale Bereitschaft, Amtstätigkeit,
+  Kartenleser-/Signaturpfad oder UVZ-/VVZ-nahe Arbeit am Arbeitsplatz.
+- `xnotar_xjustiz` modelliert XNotar-/XJustiz-Paket-, Import-,
+  Austauschordner- oder Nachweisgrenzen.
+- `register_portal` und `land_register_portal` bleiben externe Register- oder
+  Grundbuchpfade; sie liefern keine Mandats- oder Grundbuchdaten an NaC.
+- Externe Gates sind fail-closed: ohne `nac:evidence="required"` und
+  zuständige menschliche Freigabe darf der Folgepfad nicht als frei gelten.
+- Lokale XNP-/Kartenleser-/Arbeitsplatz-Gates brauchen
+  `nac:localExecution="true"` oder werden als rein manuelle Notariatsprüfung
+  modelliert.
+- `nac:durationBand`, `nac:parallelGroup` und `nac:criticalPath` sind bei
+  externen Gates Demo-Readiness-Metadaten: Dauerband für erwartete
+  Abhängigkeit, Parallelgruppe für gleichzeitig nachzuhaltende Vollzugsgates,
+  kritischer Pfad für externe Blocker.
+- Kundensichten zeigen nur provider-neutrale Status wie "Externe notarielle
+  Arbeitsumgebung erforderlich"; XNP-Ports, lokale Pfade,
+  Kartenleserdiagnosen, Registersystemdetails und Providerdetails bleiben aus
+  Kunden-UI, Reports und normaler Auditansicht heraus.
+
 ## bpmn-js-Regeln
 
 Der spätere Editor soll nicht den vollen BPMN-Baukasten freigeben. Für

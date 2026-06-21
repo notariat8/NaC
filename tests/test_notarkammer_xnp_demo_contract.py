@@ -11,16 +11,24 @@ CONTRACT_DOCS = {
 }
 
 
+def normalized_contract_text() -> str:
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in CONTRACT_DOCS.values())
+    return " ".join(combined.split())
+
+
 class NotarkammerXnpDemoContractTests(unittest.TestCase):
     def test_contract_exists_in_german_and_english(self) -> None:
         for path in CONTRACT_DOCS.values():
             self.assertTrue(path.is_file(), path)
 
     def test_contract_maps_public_xnp_facts_to_bpmn_boundaries(self) -> None:
-        combined = "\n".join(path.read_text(encoding="utf-8") for path in CONTRACT_DOCS.values())
+        combined = normalized_contract_text()
 
         required_terms = [
+            "100% notariat",
             "XNP",
+            "external notarial environment",
+            "externe notarielle Arbeitsumgebung",
             "XNotar",
             "XJustiz",
             "UVZ",
@@ -36,6 +44,28 @@ class NotarkammerXnpDemoContractTests(unittest.TestCase):
             "Datenaustauschverzeichnis",
             "no automated external XNotar import trigger",
             "kein automatisierter externer XNotar-Import-Trigger",
+            "fail-closed",
+            "durationBand",
+            "parallelGroup",
+            "criticalPath",
+        ]
+        for term in required_terms:
+            self.assertIn(term, combined)
+
+    def test_contract_keeps_customer_ui_provider_neutral(self) -> None:
+        combined = normalized_contract_text()
+
+        required_terms = [
+            "Kunden-UI",
+            "customer UI",
+            "Externe notarielle Arbeitsumgebung erforderlich",
+            "External notarial environment required",
+            "keine Providerdetails",
+            "no provider details",
+            "local-notary-workstation",
+            "card-reader",
+            "register",
+            "land-register",
         ]
         for term in required_terms:
             self.assertIn(term, combined)

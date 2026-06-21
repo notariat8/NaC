@@ -4,9 +4,10 @@ Status: 2026-06-20
 
 This demo specification describes how NaC should present XNP, XNotar,
 XJustiz, card readers and external register paths in BPMN process flows. The
-goal is a defensible demo narrative for the Notarkammer: NaC orchestrates the
-notarial workflow, while BNotK and register systems stay behind their official,
-local or file-based boundaries.
+goal is a defensible demo narrative for the Notarkammer: NaC is 100% notariat,
+orchestrates the notarial workflow, while BNotK and register systems stay
+behind their official, local or file-based boundaries. XNP is the external
+notarial environment, not a NaC backend.
 
 ## Public Evidence Base
 
@@ -86,9 +87,32 @@ explicit gate:
 | Prepare commercial-register filing | XNotar/XJustiz | register data, attachments | XJustiz package in exchange directory | signature, approval and import |
 | Capture response | local/manual | external response or evidence | redacted evidence | human review |
 
+Gate rules for BPMN profiles:
+
+- Every step with `xnp_local`, `xnotar_xjustiz`, `register_portal` or
+  `land_register_portal` needs `nac:evidence="required"` or remains
+  fail-closed.
+- Local XNP, local-notary-workstation and card-reader checks need
+  `nac:localExecution="true"` or manual notary-office approval.
+- Register and land-register gates are modeled only as external waiting,
+  handoff or evidence points. Without evidence, the next path must not be
+  shown as clear.
+- `durationBand`, `parallelGroup` and `criticalPath` are required
+  considerations for demo readiness: duration band for the expected
+  dependency, parallel group for simultaneously tracked completion gates and
+  critical path for external blockers.
+
 The critical path is not just NaC waiting time. It is driven by external
 dependencies: local login, signature/card, XNotar import, register or
 land-register office, evidence, payment, approvals and intermediate orders.
+
+## Customer UI
+
+The customer UI shows no provider details, XNP ports, local file paths,
+register or land-register system names, or card-reader diagnostics. The
+allowed status is: "External notarial environment required". Internally, the
+notary workstation may distinguish `local-notary-workstation`, `card-reader`,
+`register` and `land-register`.
 
 ## Demo Statement
 

@@ -4,9 +4,10 @@ Stand: 2026-06-20
 
 Diese Demo-Spezifikation beschreibt, wie NaC XNP, XNotar, XJustiz,
 Kartenleser und externe Registerpfade im BPMN-Prozessfluss zeigen soll. Ziel
-ist ein belastbares Demo-Bild für die Notarkammer: NaC orchestriert den
-notariellen Vorgang, aber fachliche BNotK-/Registersysteme bleiben an ihren
-offiziellen, lokalen oder dateibasierten Grenzen.
+ist ein belastbares Demo-Bild für die Notarkammer: NaC ist 100% notariat,
+orchestriert den notariellen Vorgang, aber fachliche BNotK-/Registersysteme
+bleiben an ihren offiziellen, lokalen oder dateibasierten Grenzen. XNP ist
+dabei die externe notarielle Arbeitsumgebung, nicht ein NaC-Backend.
 
 ## Belegte Faktenbasis
 
@@ -96,10 +97,34 @@ explizitem Gate modelliert:
 | Handelsregisteranmeldung vorbereiten | XNotar/XJustiz | Registerdaten, Anlagen | XJustiz-Paket im Datenaustauschverzeichnis | Signatur/Freigabe/Import |
 | Rückmeldung erfassen | lokal/manuell | externe Rückmeldung oder Nachweis | redigierte Evidence | menschliche Prüfung |
 
+Gate-Regeln fuer die BPMN-Profile:
+
+- Jeder Schritt mit `xnp_local`, `xnotar_xjustiz`, `register_portal` oder
+  `land_register_portal` braucht `nac:evidence="required"` oder bleibt
+  fail-closed.
+- Lokale XNP-, local-notary-workstation- und card-reader-Pruefungen brauchen
+  `nac:localExecution="true"` oder eine manuelle Notariatsfreigabe.
+- Register- und Grundbuch-Gates werden nur als externe Warte-, Uebergabe- oder
+  Nachweispunkte modelliert. Ohne Evidence darf der Folgepfad nicht als frei
+  angezeigt werden.
+- `durationBand`, `parallelGroup` und `criticalPath` sind Pflichtueberlegungen
+  fuer Demo-Readiness: Dauerband fuer die erwartete Abhaengigkeit,
+  Parallelgruppe fuer gleichzeitig nachzuhaltende Vollzugsgates und
+  kritischer Pfad fuer externe Blocker.
+
 Der kritische Pfad wird nicht durch NaC-Wartezeit allein bestimmt, sondern
 durch externe Abhängigkeiten: lokale Anmeldung, Signatur/Karte, XNotar-Import,
 Register- oder Grundbuchamt, Nachweise, Zahlung, Genehmigungen und
 Zwischenverfügungen.
+
+## Kunden-UI
+
+Die Kunden-UI zeigt keine Providerdetails, keine XNP-Ports, keine lokalen
+Dateipfade, keine Register- oder Grundbuchsystemnamen und keine
+Kartenleserdiagnose. Der zulässige Status lautet: "Externe notarielle
+Arbeitsumgebung erforderlich". Intern darf der Notariatsarbeitsplatz genauer
+zwischen `local-notary-workstation`, `card-reader`, `register` und
+`land-register` unterscheiden.
 
 ## Demo-Aussage
 

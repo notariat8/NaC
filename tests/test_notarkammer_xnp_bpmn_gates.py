@@ -48,6 +48,16 @@ class NotarkammerXnpBpmnGateTests(unittest.TestCase):
         self.assertIn("`xnp_local`", profile)
         self.assertIn("`xnotar_xjustiz`", profile)
         self.assertIn("XNP liefert keine Grundbuchdaten an NaC", profile)
+        self.assertIn("NaC ist 100% notariat", profile)
+        self.assertIn("externe notarielle Arbeitsumgebung", profile)
+        self.assertIn("fail-closed", profile)
+        self.assertIn("local-notary-workstation", profile)
+        self.assertIn("card-reader", profile)
+        self.assertIn("Kunden-UI", profile)
+        self.assertIn("Providerdetails", profile)
+        self.assertIn("nac:durationBand", profile)
+        self.assertIn("nac:parallelGroup", profile)
+        self.assertIn("nac:criticalPath", profile)
 
     def test_business_layer_docs_name_the_same_public_boundary(self) -> None:
         de_text = DE_BUSINESS_LAYER.read_text(encoding="utf-8")

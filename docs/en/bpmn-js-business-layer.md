@@ -70,6 +70,12 @@ tasks, XNotar/XJustiz steps as exchange-folder or package evidence, and online
 GmbH steps with `notary_app`, `video` and `qualified_e_signature`. This does
 not replace notarial legal review and does not store mandate values.
 
+Customer and party-facing views follow a narrower text contract: they only
+show provider-neutral statuses such as "External notarial environment
+required". XNP, local ports, card-reader diagnostics, XNotar paths, register
+system details and provider details remain internal notary-office or review
+metadata and do not appear in the customer UI.
+
 ## Relationship To KG
 
 BPMN and KG have different jobs:
