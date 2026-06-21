@@ -21,6 +21,8 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="none"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="false"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
@@ -31,6 +33,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_00</bpmn:incoming>
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
@@ -42,6 +46,8 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
@@ -53,6 +59,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="pre_notarization"
+                     nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
@@ -64,6 +73,9 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:parallelGroup="pre_notarization"
+                     nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
@@ -75,6 +87,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
@@ -92,6 +106,21 @@
       <bpmn:incoming>Flow_05</bpmn:incoming>
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:manualTask>
+    <bpmn:serviceTask id="Task_XnpXnotarGrenzePruefen"
+                     name="Lokale XNP-/XNotar-Grenze prüfen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="xnp_local;xnotar_xjustiz;internal"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:parallelGroup="xnp_boundary"
+                     nac:criticalPath="false"
+                     nac:localExecution="true"
+                     nac:kgRef="grundstueckskaufvertrag">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_06b</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:parallelGateway id="Gateway_PostNotarizationSplit"
                      name="Externe Vollzugsgates parallel starten"
                      nac:role="Notariat"
@@ -102,7 +131,7 @@
                      nac:durationBand="short_party_turnaround"
                      nac:criticalPath="true"
                      nac:kgRef="grundstueckskaufvertrag">
-      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:incoming>Flow_06b</bpmn:incoming>
       <bpmn:outgoing>Flow_07a</bpmn:outgoing>
       <bpmn:outgoing>Flow_07b</bpmn:outgoing>
       <bpmn:outgoing>Flow_07c</bpmn:outgoing>
@@ -239,7 +268,8 @@
     <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_EntwurfAbstimmen"/>
     <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
     <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
-    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_Beurkundung" targetRef="Gateway_PostNotarizationSplit"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_Beurkundung" targetRef="Task_XnpXnotarGrenzePruefen"/>
+    <bpmn:sequenceFlow id="Flow_06b" sourceRef="Task_XnpXnotarGrenzePruefen" targetRef="Gateway_PostNotarizationSplit"/>
     <bpmn:sequenceFlow id="Flow_07a" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_VormerkungBeantragen"/>
     <bpmn:sequenceFlow id="Flow_07b" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_LoeschungsunterlagenNachhalten"/>
     <bpmn:sequenceFlow id="Flow_07c" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_VorkaufsrechtKlaeren"/>
@@ -274,6 +304,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
         <dc:Bounds x="1405" y="138" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_XnpXnotarGrenzePruefen" bpmnElement="Task_XnpXnotarGrenzePruefen">
+        <dc:Bounds x="1585" y="260" width="180" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_Gateway_PostNotarizationSplit" bpmnElement="Gateway_PostNotarizationSplit">
         <dc:Bounds x="1620" y="153" width="50" height="50"/>
@@ -331,7 +364,13 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
         <di:waypoint x="1565" y="178"/>
-        <di:waypoint x="1620" y="178"/>
+        <di:waypoint x="1675" y="178"/>
+        <di:waypoint x="1675" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06b" bpmnElement="Flow_06b">
+        <di:waypoint x="1675" y="260"/>
+        <di:waypoint x="1675" y="228"/>
+        <di:waypoint x="1645" y="203"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Edge_Flow_07a" bpmnElement="Flow_07a">
         <di:waypoint x="1645" y="153"/>
