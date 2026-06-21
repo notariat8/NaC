@@ -252,6 +252,42 @@ Batch gates whenever possible:
 3. Apply gates only if new OCI routing/config is required.
 4. No secret gates unless a new runtime integration truly needs one.
 
+## Current Day Mode For Larger Steps
+
+The default mode for the remaining Notarkammer preparation is a multi-hour
+multi-agent block. The controller starts independent PR-only tracks in parallel
+and collects the results into one gate packet instead of interrupting the owner
+for routine evidence.
+
+### Owner-free during the block
+
+- Read GitHub PR, issue, branch, check and diff status.
+- Run local tests, documentation validators and quality gates.
+- Read non-sensitive public references and already versioned demo artifacts.
+- Prepare PRs, comments and review-packet summaries.
+- Inspect worktree and branch hygiene in read-only mode.
+
+### Owner gates remain separate
+
+- Design Approval when professional scope or architecture is new.
+- Review/Merge when a protected PR is ready.
+- Release Approval when a concrete commit is built or deployed live.
+- Apply Approval when Resource Manager or OCI configuration changes.
+- Secret, credential, destructive Git and real live-data actions.
+
+### Parallelization
+
+A block should use at least three separate lanes when the scope allows it:
+
+1. `www-n8` public demo surface.
+2. NaC BPMN/usecase depth.
+3. Live demo runbook, fallbacks and smoke paths.
+4. Optional governance/queue memory when process friction becomes visible.
+
+Each lane works in an isolated worktree on its own branch. After merge, cleanup
+is emitted as a separate exact owner-gate sentence when branch or worktree
+deletion is needed.
+
 ## Verification Baseline
 
 NaC:
