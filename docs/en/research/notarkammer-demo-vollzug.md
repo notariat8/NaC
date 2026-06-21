@@ -44,6 +44,14 @@ purchase price. The tax clearance certificate may also be required.
 | Purchase-price payment and economic transfer | days to weeks | partly | yes |
 | Tax and land-register feedback, ownership transfer | weeks to months | yes | yes, if feedback is missing |
 
+The BPMN usecase view therefore exposes these external gates separately:
+`Task_VormerkungBeantragen`, `Task_LoeschungsunterlagenNachhalten`,
+`Task_VorkaufsrechtKlaeren`, `Task_UnbedenklichkeitNachhalten` and
+`Task_EigentumsumschreibungEinreichen`. All five steps use mandate-data-free
+model metadata and describe only the handoff/evidence boundary. XNP is not a
+land-register data source for NaC; land-register communication is described as
+an `xnotar_xjustiz`/land-register portal boundary.
+
 ## Demo Message
 
 The visualization should not claim how long a specific case will take. It
@@ -54,6 +62,8 @@ should show:
 - which feedback blocks the critical path,
 - where duration classes are editable planning values,
 - why a linear four-step view simplifies completion too much.
+- that critical-path and duration-class metadata does not trigger runtime,
+  OCI, release, apply or cloud actions.
 
 ## Fee Logic
 

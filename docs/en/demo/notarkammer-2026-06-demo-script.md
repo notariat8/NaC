@@ -91,6 +91,8 @@ Show:
 - Planning value "hours to days" for internal review.
 - Planning value "weeks" for external responses.
 - Planning value "weeks to months" for complex completion.
+- Separate external gates: priority notice, release documents, municipal
+  pre-emption right, tax clearance certificate and ownership transfer.
 - Local gate "check card, XNP and signing path".
 - XNotar/XJustiz step as package or exchange-folder evidence.
 

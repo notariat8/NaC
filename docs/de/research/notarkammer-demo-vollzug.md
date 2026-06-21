@@ -45,6 +45,14 @@ Unbedenklichkeitsbescheinigung des Finanzamts erforderlich sein.
 | Kaufpreiszahlung und Besitzübergang | days bis weeks | teilweise | ja |
 | Steuer-/Grundbuchrückläufe und Eigentumsumschreibung | weeks bis months | ja | ja, wenn Rücklauf fehlt |
 
+Die BPMN-Usecase-Sicht macht diese externen Gates deshalb einzeln sichtbar:
+`Task_VormerkungBeantragen`, `Task_LoeschungsunterlagenNachhalten`,
+`Task_VorkaufsrechtKlaeren`, `Task_UnbedenklichkeitNachhalten` und
+`Task_EigentumsumschreibungEinreichen`. Alle fünf Schritte verwenden
+mandatsdatenfreie Modell-Metadaten und planen nur die Übergabe-/Nachweisgrenze.
+XNP ist dabei keine Grundbuchdatenquelle für NaC; Grundbuchkommunikation wird
+als `xnotar_xjustiz`-/Grundbuchportal-Grenze beschrieben.
+
 ## Demo-Aussage
 
 Die Visualisierung sollte nicht behaupten, wie lange ein konkreter Fall dauern
@@ -56,6 +64,8 @@ wird. Sie sollte zeigen:
 - wo Dauerklassen als editierbare Planwerte gepflegt werden,
 - warum eine lineare Vier-Schritte-Darstellung den Vollzug fachlich zu stark
   vereinfacht.
+- dass kritischer Pfad und Dauerklasse keine Runtime-, OCI-, Release-, Apply-
+  oder Cloud-Aktion auslösen.
 
 ## Gebührenlogik
 

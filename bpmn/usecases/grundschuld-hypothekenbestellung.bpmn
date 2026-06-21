@@ -66,6 +66,9 @@
                      nac:evidence="required"
                      nac:plugin="nac-cyberjack-rfid"
                      nac:localExecution="true"
+                     nac:durationBand="same_day_or_internal"
+                     nac:parallelGroup="local_readiness"
+                     nac:criticalPath="false"
                      nac:kgRef="grundschuld-hypothekenbestellung">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
@@ -103,13 +106,16 @@
       <bpmn:incoming>Flow_06</bpmn:incoming>
       <bpmn:outgoing>Flow_07</bpmn:outgoing>
     </bpmn:manualTask>
-    <bpmn:sendTask id="Task_EinreichungVersand"
-                     name="Vollzug und Grundbuchkommunikation ausführen"
+    <bpmn:sendTask id="Task_GrundbuchEinreichungVorbereiten"
+                     name="Grundbuch-Einreichung über XNotar/XJustiz vorbereiten"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="xnotar_xjustiz;land_register_portal;post;email"
-                     nac:dataClass="metadata"
+                     nac:channel="xnotar_xjustiz;land_register_portal"
+                     nac:dataClass="no_mandate_data"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="land_register_filing"
+                     nac:criticalPath="true"
                      nac:kgRef="grundschuld-hypothekenbestellung">
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
@@ -142,8 +148,8 @@
     <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_XnpArbeitsplatzPruefen" targetRef="Task_EntwurfAbstimmen"/>
     <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
     <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
-    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Beurkundung" targetRef="Task_EinreichungVersand"/>
-    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Beurkundung" targetRef="Task_GrundbuchEinreichungVorbereiten"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_GrundbuchEinreichungVorbereiten" targetRef="Task_NachweiseNachhalten"/>
     <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_grundschuld_hypothekenbestellung">
@@ -172,7 +178,7 @@
       <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
         <dc:Bounds x="1620" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_EinreichungVersand" bpmnElement="Task_EinreichungVersand">
+      <bpmndi:BPMNShape id="Shape_Task_GrundbuchEinreichungVorbereiten" bpmnElement="Task_GrundbuchEinreichungVorbereiten">
         <dc:Bounds x="1835" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_Task_NachweiseNachhalten" bpmnElement="Task_NachweiseNachhalten">
