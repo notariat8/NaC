@@ -24,13 +24,15 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
 
     def test_runbook_merges_contract_script_and_preflight_into_ordered_checklist(self) -> None:
-        for content in read_runbooks().values():
+        runbooks = read_runbooks()
+        for language, content in runbooks.items():
             self.assertIn("Live-Test", content)
             self.assertIn("Fallback", content)
             self.assertIn("Stop-Line", content)
             self.assertIn("T-03:00", content)
             self.assertIn("60", content)
-            self.assertIn("5-Minuten", content)
+            self.assertIn("20", content)
+            self.assertIn("5-Minuten" if language == "de" else "5-Minute", content)
             self.assertIn("https://notariat8.de", content)
             self.assertIn("https://notariat8.de/prozessmodell.html", content)
             self.assertIn("https://app.notariat8.de/healthz", content)
@@ -56,13 +58,31 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             "XNP does not deliver land-register data to NaC",
             "kein automatisierter externer XNotar-Import-Trigger",
             "no automated external XNotar import trigger",
+            "Demo-Gate",
+            "Demo Gate",
+            "fail-closed",
         ]
         for term in required_terms:
             self.assertIn(term, combined)
 
+    def test_runbook_has_20_minute_fallback_and_login_gate(self) -> None:
+        german = RUNBOOK_DOCS["de"].read_text(encoding="utf-8")
+        english = RUNBOOK_DOCS["en"].read_text(encoding="utf-8")
+        normalized_german = " ".join(german.split())
+        normalized_english = " ".join(english.split())
+
+        self.assertIn("## 20-Minuten Fallback", german)
+        self.assertIn("## 20-Minute Fallback", english)
+        self.assertIn("Login-Flow nur bei", normalized_german)
+        self.assertIn("Continue the login flow only with explicit approval", normalized_english)
+        self.assertIn("fail-closed", german)
+        self.assertIn("fail-closed", english)
+        self.assertIn("Keine produktive XNP-Aktion", normalized_german)
+        self.assertIn("Start no productive XNP action", english)
+
     def test_runbook_keeps_protected_pr_scope_and_demo_safety(self) -> None:
         combined = "\n".join(read_runbooks().values())
-        combined_lower = combined.lower()
+        combined_lower = " ".join(combined.lower().split())
 
         required_boundaries = [
             "docs/de",
@@ -76,6 +96,7 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             "no apply",
             "no runtime change",
             "no cloud change",
+            "no productive claim",
         ]
         for boundary in required_boundaries:
             self.assertIn(boundary, combined_lower)
