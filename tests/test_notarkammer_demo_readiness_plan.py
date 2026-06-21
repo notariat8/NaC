@@ -80,6 +80,37 @@ class NotarkammerDemoReadinessPlanTests(unittest.TestCase):
         self.assertNotIn("read secret value", lowered)
         self.assertNotIn("apply without approval", lowered)
 
+    def test_plan_records_current_evidence_state_after_demo_prs(self) -> None:
+        plans = read_plans()
+
+        self.assertIn("Aktueller Evidenzstand", plans["de"])
+        self.assertIn("Current Evidence State", plans["en"])
+
+        combined = "\n".join(plans.values())
+        required_evidence = [
+            "Issue #211",
+            "NaC PR #215",
+            "NaC PR #216",
+            "NaC PR #217",
+            "www-n8 PR #18",
+            "notariat8.de/prozessmodell.html",
+            "app.notariat8.de/workspace",
+            "401",
+        ]
+        for item in required_evidence:
+            self.assertIn(item, combined)
+
+        required_remaining_work = [
+            "Restlücken",
+            "Remaining Gaps",
+            "productive XNP coupling",
+            "produktive XNP-Kopplung",
+            "full workspace",
+            "vollständigen Workspace",
+        ]
+        for item in required_remaining_work:
+            self.assertIn(item, combined)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,6 +38,34 @@ Notarielle Arbeit ist keine lineare Vier-Schritte-Checkliste. NaC kann ein kontr
 - öffentliche Ansichten keine Mandatsdaten enthalten,
 - die App erst nach Identitäts-, Sitzungs- und Rollengates öffnet.
 
+## Aktueller Evidenzstand
+
+Dieser Plan ist nicht mehr der Startpunkt der Demo-Vorbereitung. Issue #211 ist
+die aktuelle Review- und Smoke-Evidenz für die Notarkammer-Demo.
+
+Abgeschlossen und gemerged:
+
+- NaC PR #215: Demo-Smoke-Readiness-Runbook.
+- NaC PR #216: XNP/BPMN-Demo-Tiefe.
+- NaC PR #217: Notarkammer-Demo-Gap-Audit.
+- www-n8 PR #18: öffentliche Prozessmodell-Demo.
+
+Live-Smoke laut Issue #211:
+
+- `https://notariat8.de/` liefert 200.
+- `https://notariat8.de/prozessmodell.html` liefert 200.
+- `https://app.notariat8.de/healthz` liefert 200.
+- `https://app.notariat8.de/workspace` liefert 401 ohne geprüfte Sitzung; das
+  ist das erwartete Fail-Closed-Verhalten.
+
+Restlücken für die Demo bleiben bewusst begrenzt:
+
+- keine produktive XNP-Kopplung behaupten oder zeigen,
+- keinen vollständigen Workspace öffnen,
+- keine echten Grundbuch-, Register-, Kartenleser- oder XNP-Schreibaktionen,
+- keine Mandatsdaten, Session-IDs, Providerdetails oder internen
+  Betriebsdetails anzeigen.
+
 ## Vier-Tage-Lieferplan
 
 ### Tag 1: Quellmodell Und Demo-Schnitt
