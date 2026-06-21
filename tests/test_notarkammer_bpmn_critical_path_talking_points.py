@@ -25,6 +25,7 @@ class NotarkammerBpmnCriticalPathTalkingPointTests(unittest.TestCase):
 
         required_terms = [
             "Immobilienkaufvertrag",
+            "Handelsregisteranmeldung",
             "Grundbuch",
             "Register",
             "BPMN",
@@ -33,6 +34,28 @@ class NotarkammerBpmnCriticalPathTalkingPointTests(unittest.TestCase):
             "XNotar/XJustiz",
             "Kartenleser",
             "Notariat",
+        ]
+        for term in required_terms:
+            self.assertIn(term, combined)
+
+    def test_talking_points_include_duration_parallelism_and_blockers(self) -> None:
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in TALKING_POINT_DOCS.values())
+
+        required_terms = [
+            "15-30 Minuten",
+            "2-6 Stunden",
+            "2-8 Wochen",
+            "10-25 minutes",
+            "45-120 minutes",
+            "2 days to 3 weeks",
+            "Parallele Vorarbeiten",
+            "Parallel Preparation",
+            "Blockierende Ereignisse",
+            "Blocking Events",
+            "fehlende oder widersprüchliche Unterlagen",
+            "missing or inconsistent documents",
+            "Registerrücklauf",
+            "register response",
         ]
         for term in required_terms:
             self.assertIn(term, combined)
@@ -51,9 +74,14 @@ class NotarkammerBpmnCriticalPathTalkingPointTests(unittest.TestCase):
             "Secret",
             "Token",
             "OCID",
+            "Autonomous",
+            "Tenancy",
+            "Compartment",
             "produktive XNP-Integration",
             "production XNP integration",
             "XNP integration is live",
+            "productive dispatch",
+            "produktiven Versand",
         ]
         for term in forbidden_terms:
             self.assertNotIn(term, combined)
@@ -64,6 +92,10 @@ class NotarkammerBpmnCriticalPathTalkingPointTests(unittest.TestCase):
 
         paired_beats = [
             ("Sprechspur", "Talk Track"),
+            ("Prozess 1: Immobilienkaufvertrag", "Process 1: Immobilienkaufvertrag"),
+            ("Prozess 2: Handelsregisteranmeldung", "Process 2: Handelsregisteranmeldung"),
+            ("Parallele Vorarbeiten", "Parallel Preparation"),
+            ("Blockierende Ereignisse", "Blocking Events"),
             ("Sichere Grenze", "Safe Boundary"),
             ("Nicht sagen", "Do Not Say"),
             ("Nachweisfrage", "Evidence Question"),
