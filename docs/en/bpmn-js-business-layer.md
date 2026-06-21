@@ -38,8 +38,9 @@ approval.
   [bpmn/immobilienkaufvertrag.bpmn](../../bpmn/immobilienkaufvertrag.bpmn);
   the other usecase models live under [bpmn/usecases/](../../bpmn/usecases).
 - `nac:channel` documents how a step is executed, for example in person,
-  by email, by post/fax, digitally signed, through local XNP, through an
-  XNotar/XJustiz exchange-folder, or through a register/land-register portal.
+  by email, by post/fax, digitally signed, through local XNP, through XNotar
+  land-register/register, signature or sending boundaries within XNP, or
+  through a register/land-register portal.
 - Deterministic validation lives in
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - Generation lives in
@@ -52,23 +53,34 @@ approval.
 ## Subject-Matter Sources
 
 The usecase BPMN models are a reviewable working state. They connect the
-usecase-local KGs with two external BNotK anchors:
+usecase-local KGs with public NotarNet/BNotK anchors:
 
-- BNotK describes XNP integration as a local `localhost` REST interface that
-  involves login information, the current official activity and, for login
-  functions, an API key configured per installation.
-- BNotK describes XNotar on top of XNP as a file/folder boundary for matters
-  prepared by notarial software. In this model, XNP does not deliver
-  land-register data to NaC; NaC models only the handoff, evidence and review
-  point.
-- BNotK describes online company-law proceedings with incoming cases, email
-  notification, clerk/file-reference handling, edit/export/create actions and
-  videoconference-related steps.
+- NotarNet describes XNP as the BNotK base application with UVZ, VVZ,
+  notarial online procedures, beN, documents/PDF viewer/signature folder, user
+  management and card management.
+- BNotK describes XNP as the base application for BNotK applications and
+  electronic legal communication; the XNotar modules Grundbuch and
+  Handelsregister are provided within XNP.
+- NotarNet describes XNotar for electronic legal communication in register
+  and land-registry matters, eNoVA, AML and qES certification.
+- The BNotK flow helpers for land-registry applications and register filings
+  show basic data, properties or legal entity, applications or filing cases,
+  parties, documents, validation/preparation, signature, SAK/KMC or card
+  reader, sending via beN and status "Versendet".
+- Technical adapter, port, import/export and productive interface details are
+  to be clarified in XNP test access.
 
 NaC therefore models XNP-adjacent steps as local, evidence-required service
-tasks, XNotar/XJustiz steps as exchange-folder or package evidence, and online
-GmbH steps with `notary_app`, `video` and `qualified_e_signature`. This does
-not replace notarial legal review and does not store mandate values.
+tasks, XNotar steps as local land-register/register, signature, sending or
+evidence boundaries within XNP, and online GmbH steps with `notary_app`,
+`video` and `qualified_e_signature`. This does not replace notarial legal
+review and does not store mandate values.
+
+Customer and party-facing views follow a narrower text contract: they only
+show provider-neutral statuses such as "External notarial environment
+required". XNP, local ports, card-reader diagnostics, XNotar paths, register
+system details and provider details remain internal notary-office or review
+metadata and do not appear in the customer UI.
 
 ## Relationship To KG
 

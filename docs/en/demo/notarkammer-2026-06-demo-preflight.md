@@ -8,13 +8,19 @@ card-reader or XNP improvisation and unapproved operating actions. All examples
 remain synthetic; the explicit boundary is: no real mandate data, no secrets,
 no release, no apply, no runtime change, no cloud change.
 
-## CET Timeline
+## CET/CEST Timeline
 
-| CET Time | Goal | Result |
+All times are local chamber/Berlin time: CET in winter (UTC+1) and CEST in
+summer (UTC+2). June 2026 uses CEST; no demo note should use UTC only.
+
+| CET/CEST Time | Goal | Result |
 | --- | --- | --- |
 | T-03:00 | Open a fresh browser profile, avoid cache, prepare demo tabs. | Five tabs are loaded or marked for fallback. |
+| T-02:45 | Check public onboarding, DNS readiness and an existing request-status page by GET only. | Customer journey is presentable or marked for fallback. |
 | T-02:30 | Check the local card-reader/SAK path for XNP as a readiness gate. | Evidence shows `ready`, `manual_review` or a Stop-Line. |
 | T-02:00 | Check XNP localhost, XNotar exchange folder and XJustiz package boundary. | Only non-sensitive status and hash evidence exists. |
+| T-01:45 | Check OIDC login intent, protected start status and workspace gate. | Login stops before workspace unless the demo is approved. |
+| T-01:40 | Classify ATP healthcheck status as a store gate. | `enabled`, `disabled`, `unavailable` or `not_checked` without secret output. |
 | T-01:30 | Align the 1h demo script with the visible browser and workstation states. | No new storyline is started. |
 | T-01:00 | Read the Stop-Lines aloud and finalize browser tab order. | The demo can start without live debugging. |
 | T-00:15 | Read-only viewing only, no further changes. | The presentation window remains stable. |
@@ -40,6 +46,23 @@ Run every check in a fresh browser window without a saved session.
 5. `https://app.notariat8.de/workspace`
    - Expected: Without a valid session, the workspace remains closed.
    - Fallback: Explain exactly this state as the security evidence.
+
+## What Can Be Shown Today
+
+| Track | Demonstrable State | Read-only Check | Fallback |
+| --- | --- | --- | --- |
+| Public Onboarding | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` shows domain, admin email, DNS guidance and setup status without mandate data. | `curl -fsS "https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example" >/tmp/nac-onboarding-readiness.html` | Show an already loaded tab; submit no request. |
+| DNS Check | `https://app.notariat8.de/onboarding/dns-check?...` shows the expected TXT record and current status. | `python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json` | If DNS is not `verified`, explain `pending`/`mismatch` as normal setup status. |
+| Request Status | An existing request can be shown via `/onboarding/requests/<request_id>?audience=customer` as a status page only. | `curl -fsS "https://app.notariat8.de/onboarding/requests/onr_demo_20260621_100000?audience=customer" >/tmp/nac-request-status.html` | If the store is disabled or the ID is unknown, explain `not found`/`unavailable` as the ATP gate. |
+| OIDC Login To Protected Start | `/login?tenant_hint=notariat-musterstadt` and `/api/tenant/login-intent?tenant_hint=notariat-musterstadt` show the start of the login flow without credentials. | `curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt" >/tmp/nac-login-intent.json` | Do not continue login; show protected start status. |
+| Workspace Metadata-only Gate | `/workspace` remains closed without an approved session and shows metadata status only, no matter file. | `curl -i "https://app.notariat8.de/workspace"` expects `401` or closed HTML containing `Keine Mandatsdaten geladen`. | Explain fail-closed as the security evidence. |
+| BPMN Process Model | Immobilienkaufvertrag is visible and validatable as a BPMN/process model. | `python scripts/nac.py bpmn validate` and `python scripts/nac.py bpmn show immobilienkaufvertrag --format text` | Use the public process-model page or screenshot. |
+| ATP Healthcheck Status | ATP is only the store gate for onboarding requests; healthcheck output must not expose wallet, secret or DSN values. | `python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json` shows `shared_atp_with_tenant_id`; `/healthz` shows runtime status only. | For `onboarding_request_store_disabled` or `onboarding_request_store_unavailable`, do not analyze ATP live; mark the status as a demo gate. |
+| Apply/Provisioning Status | Only review artifacts exist; no OCI write is performed. | `python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.invalid --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json` | If a gate is missing, explain the blocker; execute no apply. |
+
+All `curl` examples are GET/HEAD-style viewing checks. During the meeting,
+submit no forms, run no POST requests, run no OCI CLI, and open no Vault,
+wallet, ATP or Identity secrets.
 
 ## XNP and Card-Reader Gates
 
@@ -81,6 +104,10 @@ evidence artifacts. It is not an operating journal and not a mandate file.
 | XNotar exchange folder or XJustiz structure is not safely bounded | Open no package; explain only the synthetic package boundary. |
 | Local editor is unavailable | Use the public process-model page and mention GitHub PRs only as governance evidence. |
 | Network is unstable | Open no new tabs; use only loaded demo tabs. |
+| Public onboarding request status is unavailable | Do not debug ATP; show setup status as `unavailable` and fall back to public onboarding/DNS. |
+| ATP healthcheck is `disabled` or `unavailable` | Open no secrets or wallets; explain the status as the store gate and stay with the BPMN/workspace path. |
+| OIDC login intent returns only JSON or an error | Do not explain it live; show `/login?tenant_hint=notariat-musterstadt` or the closed workspace. |
+| Workspace shows metadata status only | That is expected: protected start yes, full workspace no. |
 
 ## Stop-Lines
 

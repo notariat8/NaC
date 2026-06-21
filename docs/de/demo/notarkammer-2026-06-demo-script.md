@@ -22,6 +22,10 @@ Demo-Gate: Der Login-Flow wird nur fortgesetzt, wenn die Freigabe für diese
 Demo-Sitzung vorliegt. Ohne Freigabe wird der Workspace bewusst fail-closed
 gezeigt; das ist ein Sicherheitsnachweis, kein Fehlerpfad.
 
+Zeitangaben in der Demo sind lokale Kammer-/Berlin-Zeit: CET im Winter
+(UTC+1), CEST im Sommer (UTC+2). Für Juni 2026 gilt CEST; Audit-Notizen nie
+UTC-only führen.
+
 ## Vorabprüfung
 
 Vor der Demo diese URLs in einem frischen Browserfenster öffnen:
@@ -40,6 +44,21 @@ Erwartung:
 - Die Login-Seite öffnet eine notariat8-Anmeldung; der Flow wird nur mit
   Freigabe fortgesetzt.
 - Der geschützte Arbeitsbereich bleibt ohne freigegebene Sitzung geschlossen.
+
+Zusätzliche read-only Checks, falls Zeit ist:
+
+```text
+https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
+https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
+https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt
+python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+python scripts/nac.py bpmn validate
+```
+
+Diese Checks zeigen Status und Readiness. Sie senden keine Formulare ab,
+lesen kein Berechtigungsmaterial, schreiben nicht in den Cloud-Control-Plane
+und öffnen keine echten Mandatsdaten.
 
 ## 60-Minuten-Ablauf
 
@@ -79,7 +98,7 @@ Zeigen:
 - `Parallel möglich`
 - `Blockiert den kritischen Pfad`
 
-### 20-30 Minuten: Kritischer Pfad und parallele Arbeit
+### 20-28 Minuten: Kritischer Pfad und parallele Arbeit
 
 Sagen:
 
@@ -110,7 +129,36 @@ Sicherheitslinie sagen:
   readiness- und nachweisfähige Statuswerte. Produktive XNP-, Register- oder
   Grundbuchhandlungen bleiben außerhalb dieser Demo."
 
-### 30-40 Minuten: Editierbarer Prozess und XNP/XNotar-Grenze
+### 28-35 Minuten: Public Onboarding, DNS und Request-Status
+
+Öffnen:
+
+- `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example`
+- `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example`
+
+Sagen:
+
+- "Das ist der öffentliche Onboarding-Pfad: Domain, Admin-E-Mail,
+  DNS-Hinweis und Einrichtungsstatus, aber keine Mandatsdaten."
+- "Der DNS-Check ist ein Readiness-Status. `pending`, `mismatch` oder
+  `verified` sind Setup-Zustände, keine Live-Fehleranalyse."
+- "Eine vorhandene Anfrage kann als Statusseite gezeigt werden. Wenn der
+  ATP-Store `disabled` oder `unavailable` ist, bleibt das ein Gate und wir
+  debuggen keine Datenbank im Termin."
+
+Nicht tun:
+
+- Keine neue Onboarding-Anfrage absenden.
+- Keine Admin-Review-POSTs ausführen.
+- Keine ATP-Wallet, DSN, Berechtigungsreferenz oder Cloud-Konsole öffnen.
+
+Fallback:
+
+- Bereits geladene Readiness-/DNS-Seite zeigen.
+- Wenn Request-Status nicht verfügbar ist, genau diesen Store-Gate-Status als
+  Sicherheitsgrenze erklären.
+
+### 35-43 Minuten: Editierbarer Prozess und XNP/XNotar-Grenze
 
 Öffnen, falls lokal verfügbar:
 
@@ -135,7 +183,7 @@ Falls der lokale Editor nicht verfügbar ist, Fallback nutzen:
 - GitHub-Referenz nur als technischer Nachweis, nicht als Nutzeransicht.
 - Die Aussage bleibt trotzdem gleich: XNP liefert keine Grundbuchdaten an NaC.
 
-### 40-50 Minuten: App-Einstieg und geschützter Arbeitsbereich
+### 43-52 Minuten: App-Einstieg und geschützter Arbeitsbereich
 
 Öffnen: `https://app.notariat8.de/login`
 
@@ -145,16 +193,21 @@ Sagen:
 - "Vor dem Arbeitsbereich werden Sitzung und Rolle geprüft."
 - "Ohne gültige Sitzung bleibt `https://app.notariat8.de/workspace`
   geschlossen."
+- "Der geschützte Startstatus ist metadata-only: Status, Gate und Grund,
+  aber keine Akte und keine Dokumentinhalte."
+- "Der ATP-Healthcheck ist nur ein Store-Gate. `https://app.notariat8.de/healthz`
+  bleibt bewusst kurz und nicht-sensitiv."
 - "Wir führen den Login nur weiter, wenn das für diese Demo freigegeben ist;
   sonst ist fail-closed das gewollte Ergebnis."
 
 Zeigen:
 
 1. Login-Seite.
-2. Nur bei Freigabe: geschützter Startstatus oder Anmeldeschritt.
-3. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht.
+2. Optional read-only: `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt`.
+3. Nur bei Freigabe: geschützter Startstatus oder Anmeldeschritt.
+4. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht.
 
-### 50-55 Minuten: Kurzer Vergleichsprozess
+### 52-55 Minuten: Kurzer Vergleichsprozess
 
 Zeigen:
 

@@ -21,6 +21,9 @@ Demo Gate: continue the login flow only when the demo session is approved.
 Without approval, intentionally show the workspace fail-closed; that is
 security evidence, not a broken path.
 
+Use local chamber/Berlin time in the demo: CET in winter (UTC+1), CEST in
+summer (UTC+2). June 2026 uses CEST; never keep audit notes UTC-only.
+
 ## Preflight
 
 Open these URLs in a fresh browser window before the demo:
@@ -39,6 +42,20 @@ Expected:
 - The login page opens the notariat8 sign-in entry; the flow continues only
   with approval.
 - The protected workspace remains closed without an approved session.
+
+Additional read-only checks if time allows:
+
+```text
+https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
+https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
+https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt
+python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+python scripts/nac.py bpmn validate
+```
+
+These checks show status and readiness. They submit no forms, read no secrets,
+write nothing to the cloud control plane and open no real mandate data.
 
 ## 60-Minute Run
 
@@ -78,7 +95,7 @@ Show:
 - `Parallel möglich`
 - `Blockiert den kritischen Pfad`
 
-### 20-30 Minutes: Critical Path And Parallel Work
+### 20-28 Minutes: Critical Path And Parallel Work
 
 Say:
 
@@ -107,7 +124,36 @@ Say the safety line:
   readiness and evidence-capable status values. Productive XNP, register or
   land-register actions remain outside this demo."
 
-### 30-40 Minutes: Editable Process And XNP/XNotar Boundary
+### 28-35 Minutes: Public Onboarding, DNS And Request Status
+
+Open:
+
+- `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example`
+- `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example`
+
+Say:
+
+- "This is the public onboarding path: domain, admin email, DNS guidance and
+  setup status, but no mandate data."
+- "The DNS check is a readiness status. `pending`, `mismatch` or `verified`
+  are setup states, not live debugging."
+- "An existing request can be shown as a status page. If the ATP store is
+  `disabled` or `unavailable`, that remains a gate and we do not debug the
+  database during the meeting."
+
+Do not:
+
+- Submit a new onboarding request.
+- Run admin review POSTs.
+- Open ATP wallet, DSN, secret reference or cloud console.
+
+Fallback:
+
+- Show an already loaded readiness/DNS page.
+- If request status is unavailable, explain exactly that store-gate status as
+  the safety boundary.
+
+### 35-43 Minutes: Editable Process And XNP/XNotar Boundary
 
 Open locally if available:
 
@@ -132,7 +178,7 @@ If the local editor is unavailable, use this fallback:
 - The statement remains the same: XNP does not deliver land-register data to
   NaC.
 
-### 40-50 Minutes: App Entry And Protected Workspace
+### 43-52 Minutes: App Entry And Protected Workspace
 
 Open: `https://app.notariat8.de/login`
 
@@ -142,16 +188,21 @@ Say:
 - "Session and role are checked before the workspace opens."
 - "Without a valid session, `https://app.notariat8.de/workspace` remains
   closed."
+- "Protected start is metadata-only: status, gate and reason, but no matter
+  file and no document contents."
+- "The ATP healthcheck is only a store gate. `https://app.notariat8.de/healthz`
+  intentionally stays short and non-sensitive."
 - "We continue login only if it is approved for this demo; otherwise
   fail-closed is the intended result."
 
 Show:
 
 1. Login page.
-2. Only with approval: protected start status or sign-in step.
-3. `https://app.notariat8.de/workspace` without a session as the closed view.
+2. Optional read-only: `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt`.
+3. Only with approval: protected start status or sign-in step.
+4. `https://app.notariat8.de/workspace` without a session as the closed view.
 
-### 50-55 Minutes: Short Comparison Process
+### 52-55 Minutes: Short Comparison Process
 
 Show:
 

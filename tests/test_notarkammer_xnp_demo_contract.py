@@ -11,31 +11,72 @@ CONTRACT_DOCS = {
 }
 
 
+def normalized_contract_text() -> str:
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in CONTRACT_DOCS.values())
+    return " ".join(combined.split())
+
+
 class NotarkammerXnpDemoContractTests(unittest.TestCase):
     def test_contract_exists_in_german_and_english(self) -> None:
         for path in CONTRACT_DOCS.values():
             self.assertTrue(path.is_file(), path)
 
     def test_contract_maps_public_xnp_facts_to_bpmn_boundaries(self) -> None:
-        combined = "\n".join(path.read_text(encoding="utf-8") for path in CONTRACT_DOCS.values())
+        combined = normalized_contract_text()
 
         required_terms = [
+            "100% notariat",
             "XNP",
+            "Basisanwendung der Bundesnotarkammer",
+            "BNotK base application",
+            "external notarial environment",
+            "externe notarielle Arbeitsumgebung",
             "XNotar",
-            "XJustiz",
             "UVZ",
             "VVZ",
+            "beN",
             "Grundbuch",
             "Handelsregister",
+            "notarielle Onlineverfahren",
+            "notarial online procedures",
+            "Dokumente",
+            "PDF viewer",
+            "Signaturmappe",
+            "signature folder",
+            "Benutzerverwaltung",
+            "Kartenverwaltung",
             "Kartenleser",
             "BPMN",
-            "localhost",
             "Local Evidence Companion",
-            "XNP does not deliver land-register data to NaC",
-            "XNP liefert keine Grundbuchdaten an NaC",
-            "Datenaustauschverzeichnis",
-            "no automated external XNotar import trigger",
-            "kein automatisierter externer XNotar-Import-Trigger",
+            "NaC does not claim direct XNP-to-NaC land-register data delivery",
+            "NaC behauptet im Demo-Modell keine direkte XNP-zu-NaC-Grundbuchdatenlieferung",
+            "zu klären im XNP-Testzugang",
+            "to be clarified in XNP test access",
+            "fail-closed",
+            "durationBand",
+            "parallelGroup",
+            "criticalPath",
+        ]
+        for term in required_terms:
+            self.assertIn(term, combined)
+
+    def test_contract_keeps_customer_ui_provider_neutral(self) -> None:
+        combined = normalized_contract_text()
+
+        required_terms = [
+            "Kunden-UI",
+            "customer UI",
+            "Externe notarielle Arbeitsumgebung erforderlich",
+            "External notarial environment required",
+            "keine Providerdetails",
+            "no provider details",
+            "local-notary-workstation",
+            "card-reader",
+            "register",
+            "land-register",
+            "REINER SCT",
+            "class 3",
+            "Sicherheitsklasse 3",
         ]
         for term in required_terms:
             self.assertIn(term, combined)
@@ -46,6 +87,8 @@ class NotarkammerXnpDemoContractTests(unittest.TestCase):
         forbidden_claims = [
             "XNP liefert Grundbuchdaten",
             "XNP returns land-register data",
+            "XNP liefert keine Grundbuchdaten an NaC",
+            "XNP does not deliver land-register data to NaC",
             "Cloud ruft XNP direkt auf",
             "NaC stores XNP API keys",
             "NaC speichert XNP-API-Keys",
@@ -54,6 +97,10 @@ class NotarkammerXnpDemoContractTests(unittest.TestCase):
             "localhost tunnel",
             "Mandatsdaten anzeigen",
             "Oracle Cloud Infrastructure",
+            "keine softwareseitige Schnittstelle",
+            "does not describe a software interface",
+            "kein automatisierter externer XNotar-Import-Trigger",
+            "no automated external XNotar import trigger",
         ]
         for claim in forbidden_claims:
             self.assertNotIn(claim, combined)
@@ -62,9 +109,12 @@ class NotarkammerXnpDemoContractTests(unittest.TestCase):
         combined = "\n".join(path.read_text(encoding="utf-8") for path in CONTRACT_DOCS.values())
 
         sources = [
-            "https://onlinehilfe.bnotk.de/technischer-bereich/systembetreuer/xnp-die-basisanwendung-der-bnotk/integration-xnp-mit-notariatssoftware.html",
-            "https://onlinehilfe.bnotk.de/technischer-bereich/systembetreuer/xnotar/integration-xnp-xnotar-mit-weiterer-notariatssoftware.html",
-            "https://xjustiz.justiz.de/",
+            "https://notarnet.de/produkte/xnp",
+            "https://notarnet.de/produkte/xnotar",
+            "https://onlinehilfe.bnotk.de/technischer-bereich/systembetreuer/xnp-die-basisanwendung-der-bnotk.html",
+            "https://onlinehilfe.bnotk.de/einrichtungen/notarnet/xnotar/einstiegshilfen/alle-schritte-eines-grundbuchantrags-auf-einen-blick.html",
+            "https://onlinehilfe.bnotk.de/einrichtungen/notarnet/xnotar/einstiegshilfen/alle-schritte-einer-registeranmeldung-auf-einen-blick.html",
+            "https://onlinehilfe.bnotk.de/einrichtungen/zertifizierungsstelle/hinweis-zu-kartenlesegeraeten.html",
         ]
         for source in sources:
             self.assertIn(source, combined)
