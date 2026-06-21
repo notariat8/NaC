@@ -38,6 +38,34 @@ Notarial work is not a four-step linear checklist. NaC can show a controlled, au
 - public views contain no mandate data,
 - the app opens only after identity/session/role gates.
 
+## Current Evidence State
+
+This plan is no longer the starting point of the demo preparation. Issue #211 is
+the current review and smoke-test evidence for the Notarkammer demo.
+
+Completed and merged:
+
+- NaC PR #215: demo smoke readiness runbook.
+- NaC PR #216: XNP/BPMN demo depth.
+- NaC PR #217: Notarkammer demo gap audit.
+- www-n8 PR #18: public process-model demo.
+
+Live smoke according to Issue #211:
+
+- `https://notariat8.de/` returns 200.
+- `https://notariat8.de/prozessmodell.html` returns 200.
+- `https://app.notariat8.de/healthz` returns 200.
+- `https://app.notariat8.de/workspace` returns 401 without a verified session;
+  this is the expected fail-closed behavior.
+
+Remaining Gaps for the demo stay intentionally narrow:
+
+- do not claim or show productive XNP coupling,
+- do not open the full workspace,
+- do not perform real land-register, register, card-reader or XNP write actions,
+- do not expose mandate data, session IDs, provider details or internal
+  operating details.
+
 ## Four-Day Delivery Plan
 
 ### Day 1: Source Model And Demo Slice
