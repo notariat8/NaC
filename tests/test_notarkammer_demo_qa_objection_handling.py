@@ -10,7 +10,7 @@ QA_DOCS = {
     / "docs"
     / "de"
     / "demo"
-    / "notarkammer-2026-06-demo-qa-einwandbehandlung.md",
+    / "notarkammer-2026-06-demo-qa-objection-handling.md",
     "en": REPO_ROOT
     / "docs"
     / "en"
