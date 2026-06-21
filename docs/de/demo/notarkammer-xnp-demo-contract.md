@@ -111,20 +111,20 @@ explizitem Gate modelliert:
 | Handelsregisteranmeldung vorbereiten | XNotar innerhalb XNP | Grunddaten, Rechtstraeger, Anmeldefaelle, Beteiligte, Dokumente | Vorbereitung, Signatur, Versandstatus via beN | SAK/KMC/Kartenleser, Signatur und Versand |
 | Rückmeldung erfassen | lokal/manuell | externe Rückmeldung oder Nachweis | redigierte Evidence | menschliche Prüfung |
 
-Gate-Regeln fuer die BPMN-Profile:
+Gate-Regeln für die BPMN-Profile:
 
 - Jeder Schritt mit `xnp_local`, `xnotar_xjustiz`, `register_portal` oder
   `land_register_portal` braucht `nac:evidence="required"` oder bleibt
   fail-closed.
-- Lokale XNP-, local-notary-workstation- und card-reader-Pruefungen brauchen
+- Lokale XNP-, local-notary-workstation- und card-reader-Prüfungen brauchen
   `nac:localExecution="true"` oder eine manuelle Notariatsfreigabe.
-- Register- und Grundbuch-Gates werden nur als externe Warte-, Uebergabe- oder
+- Register- und Grundbuch-Gates werden nur als externe Warte-, Übergabe- oder
   Nachweispunkte modelliert. Ohne Evidence darf der Folgepfad nicht als frei
   angezeigt werden.
-- `durationBand`, `parallelGroup` und `criticalPath` sind Pflichtueberlegungen
-  fuer Demo-Readiness: Dauerband fuer die erwartete Abhaengigkeit,
-  Parallelgruppe fuer gleichzeitig nachzuhaltende Vollzugsgates und
-  kritischer Pfad fuer externe Blocker.
+- `durationBand`, `parallelGroup` und `criticalPath` sind Pflichtüberlegungen
+  für Demo-Readiness: Dauerband für die erwartete Abhängigkeit,
+  Parallelgruppe für gleichzeitig nachzuhaltende Vollzugsgates und
+  kritischer Pfad für externe Blocker.
 
 Der kritische Pfad wird nicht durch NaC-Wartezeit allein bestimmt, sondern
 durch externe Abhängigkeiten: lokale Anmeldung, Signatur/Karte, XNotar-Import,
