@@ -53,19 +53,19 @@ Review und menschlicher Freigabe.
 ## Fachliche Quellen
 
 Die Usecase-BPMN-Modelle sind bewusst ein prüfbarer Arbeitsstand. Sie verbinden
-die usecase-lokalen KGs mit oeffentlichen NotarNet-/BNotK-Ankern:
+die usecase-lokalen KGs mit öffentlichen NotarNet-/BNotK-Ankern:
 
 - NotarNet beschreibt XNP als Basisanwendung der Bundesnotarkammer mit UVZ,
   VVZ, notariellen Onlineverfahren, beN, Dokumente/PDF-Viewer/Signaturmappe,
   Benutzerverwaltung und Kartenverwaltung.
-- Die BNotK beschreibt XNP als Basisanwendung fuer BNotK-Anwendungen und
+- Die BNotK beschreibt XNP als Basisanwendung für BNotK-Anwendungen und
   elektronischen Rechtsverkehr; XNotar-Module Grundbuch und Handelsregister
   werden innerhalb XNP bereitgestellt.
-- NotarNet beschreibt XNotar fuer elektronischen Rechtsverkehr in Register-
-  und Grundbuchangelegenheiten, eNoVA, Geldwaeschebekaempfung und
+- NotarNet beschreibt XNotar für elektronischen Rechtsverkehr in Register-
+  und Grundbuchangelegenheiten, eNoVA, Geldwäschebekämpfung und
   qeS-Beglaubigung.
-- Die BNotK-Ablaufhilfen fuer Grundbuchantrag und Registeranmeldung zeigen
-  Grunddaten, Grundstuecke oder Rechtstraeger, Antraege oder Anmeldefaelle,
+- Die BNotK-Ablaufhilfen für Grundbuchantrag und Registeranmeldung zeigen
+  Grunddaten, Grundstücke oder Rechtsträger, Anträge oder Anmeldefälle,
   Beteiligte, Dokumente, Validierung/Vorbereitung, Signatur, SAK/KMC oder
   Kartenleser, Versand via beN und Status "Versendet".
 - Technische Adapter-, Port-, Import-/Export- und produktive

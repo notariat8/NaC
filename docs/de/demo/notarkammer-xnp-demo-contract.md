@@ -14,26 +14,26 @@ dabei die externe notarielle Arbeitsumgebung, nicht ein NaC-Backend.
 - NotarNet beschreibt XNP als Basisanwendung der Bundesnotarkammer. Die
   genannten Module sind UVZ, VVZ, notarielle Onlineverfahren, beN, Dokumente
   mit PDF-Viewer und Signaturmappe, Benutzerverwaltung und Kartenverwaltung.
-- Die BNotK-Onlinehilfe beschreibt XNP als Basisanwendung fuer Anwendungen
+- Die BNotK-Onlinehilfe beschreibt XNP als Basisanwendung für Anwendungen
   der Bundesnotarkammer und den elektronischen Rechtsverkehr. Die
   XNotar-Module Grundbuch und Handelsregister werden innerhalb der
   XNP-Basisanwendung bereitgestellt.
-- NotarNet beschreibt XNotar als Anwendung fuer elektronischen Rechtsverkehr
-  in Register- und Grundbuchangelegenheiten, eNoVA, Geldwaeschebekaempfung
+- NotarNet beschreibt XNotar als Anwendung für elektronischen Rechtsverkehr
+  in Register- und Grundbuchangelegenheiten, eNoVA, Geldwäschebekämpfung
   und qeS-Beglaubigung. Genannte Module sind Handelsregister, Grundbuch,
-  sonstige Antraege, GWG, eNoVA, qeS und Transparenzregister.
-- Die BNotK-Onlinehilfe zeigt fuer Grundbuchantraege einen gefuehrten Ablauf
-  von Grunddaten, Grundstuecken, Antraegen, Beteiligten und Dokumenten ueber
+  sonstige Anträge, GWG, eNoVA, qeS und Transparenzregister.
+- Die BNotK-Onlinehilfe zeigt für Grundbuchanträge einen geführten Ablauf
+  von Grunddaten, Grundstücken, Anträgen, Beteiligten und Dokumenten über
   Validieren, Signieren, PIN/Kartenleser, Versand via beN bis zum Status
   "Versendet".
-- Die BNotK-Onlinehilfe zeigt fuer Registeranmeldungen einen gefuehrten
-  Ablauf von Grunddaten, Rechtstraeger, Anmeldefaellen, Beteiligten und
-  Dokumenten ueber Vorbereitung abschliessen, Signieren, SAK/KMC/Kartenleser,
+- Die BNotK-Onlinehilfe zeigt für Registeranmeldungen einen geführten
+  Ablauf von Grunddaten, Rechtsträger, Anmeldefällen, Beteiligten und
+  Dokumenten über Vorbereitung abschließen, Signieren, SAK/KMC/Kartenleser,
   Versand via beN bis zum Status "Versendet".
-- Fuer Kartenleser verweist die BNotK auf getestete REINER SCT-Geraete. Fuer
-  andere Geraete nennt sie mindestens Sicherheitsklasse 3, Display und eigene
+- Für Kartenleser verweist die BNotK auf getestete REINER SCT-Geräte. Für
+  andere Geräte nennt sie mindestens Sicherheitsklasse 3, Display und eigene
   PIN-Tastatur.
-- Details, die diese oeffentlichen Quellen nicht belegen, werden im
+- Details, die diese öffentlichen Quellen nicht belegen, werden im
   Demo-Kontrakt als "zu klären im XNP-Testzugang" markiert.
 
 Quellen:
@@ -56,7 +56,7 @@ Quellen:
 Aus der öffentlichen Dokumentation folgt kein direkter Cloud-Zugriff von NaC
 auf XNP, XNotar, beN, Signaturkarte, Kartenleser, Register oder Grundbuch.
 NaC behauptet im Demo-Modell keine direkte XNP-zu-NaC-Grundbuchdatenlieferung;
-ob und welche lokalen Datenuebergaben technisch moeglich sind, ist zu klären
+ob und welche lokalen Datenübergaben technisch möglich sind, ist zu klären
 im XNP-Testzugang. Für die Demo gilt deshalb nur:
 
 1. NaC darf einen BPMN-Schritt modellieren, der lokalen XNP-/Kartenleser- und
@@ -66,7 +66,7 @@ im XNP-Testzugang. Für die Demo gilt deshalb nur:
    NaC SaaS landen.
 3. NaC darf für Grundbuch- und Registerpfade die öffentlich beschriebenen
    XNotar-Schritte als externe notarielle Arbeitsumgebung modellieren:
-   Grunddaten, Grundstuecke oder Rechtstraeger, Antraege oder Anmeldefaelle,
+   Grunddaten, Grundstücke oder Rechtsträger, Anträge oder Anmeldefälle,
    Beteiligte, Dokumente, Validierung, Signatur, Versand via beN und Status.
 4. NaC darf eine lokale Nutzerbestätigung modellieren: "Antrag wurde lokal in
    XNP/XNotar bearbeitet", "Versandstatus wurde lokal erfasst" oder
@@ -86,7 +86,7 @@ flowchart LR
     D --> F["XNP: UVZ / VVZ / beN / Dokumente"]
     D --> G["XNotar: Grundbuch / Handelsregister"]
     G --> H["Validieren / Signieren / via beN versenden"]
-    H --> I["lokale Statuspruefung durch Nutzer"]
+    H --> I["lokale Statusprüfung durch Nutzer"]
     F --> J["redigierte Evidence an NaC"]
     I --> J
     J --> K["BPMN Gate: fortsetzen oder blockieren"]
@@ -94,7 +94,7 @@ flowchart LR
 
 Der `Local Evidence Companion` läuft auf demselben Arbeitsplatz und im
 passenden Benutzerkontext wie XNP. Er ist die einzige Komponente, die lokale
-XNP-, XNotar-, beN-, Signatur- oder Kartenleserbereitschaft prueft. Die SaaS
+XNP-, XNotar-, beN-, Signatur- oder Kartenleserbereitschaft prüft. Die SaaS
 sieht nur redigierte Evidence, Status und Hashes. Technische Erreichbarkeit,
 Port-/API-Verhalten und Adapterdetails sind zu klären im XNP-Testzugang.
 
@@ -138,7 +138,7 @@ Dateipfade, keine Register- oder Grundbuchsystemnamen und keine
 Kartenleserdiagnose. Der zulässige Status lautet: "Externe notarielle
 Arbeitsumgebung erforderlich". Intern darf der Notariatsarbeitsplatz genauer
 zwischen `local-notary-workstation`, `card-reader`, `register` und
-`land-register` unterscheiden. Fuer Kartenleser duerfen interne
+`land-register` unterscheiden. Für Kartenleser dürfen interne
 Readiness-Notizen auf REINER SCT, Sicherheitsklasse 3, Display und eigene
 PIN-Tastatur verweisen; die Kundenansicht zeigt diese Details nicht.
 
