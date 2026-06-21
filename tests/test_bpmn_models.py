@@ -168,6 +168,57 @@ class BpmnModelValidationTests(unittest.TestCase):
         self.assertIn("xnotar_xjustiz", validator.split_channel_tokens(nodes["Task_VormerkungBeantragen"].nac_attr("channel")))
         self.assertNotIn("xnp_local", validator.split_channel_tokens(nodes["Task_VormerkungBeantragen"].nac_attr("channel")))
 
+    def test_real_estate_purchase_usecase_has_full_demo_depth_metadata(self) -> None:
+        path = BPMN_ROOT / "usecases" / "grundstueckskaufvertrag.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = {
+            node.element_id: node
+            for process in validator.children_by_tag(root, "process")
+            for node in validator.flow_nodes(process, path)
+        }
+
+        for node in nodes.values():
+            with self.subTest(node_id=node.element_id):
+                self.assertIsNotNone(node.nac_attr("durationBand"))
+                self.assertIsNotNone(node.nac_attr("criticalPath"))
+
+        boundary = nodes["Task_XnpXnotarGrenzePruefen"]
+        self.assertEqual(boundary.nac_attr("durationBand"), "same_day_or_internal")
+        self.assertEqual(boundary.nac_attr("parallelGroup"), "xnp_boundary")
+        self.assertEqual(boundary.nac_attr("criticalPath"), "false")
+        self.assertEqual(boundary.nac_attr("localExecution"), "true")
+        self.assertEqual(boundary.nac_attr("dataClass"), "no_mandate_data")
+        self.assertIn("xnp_local", validator.split_channel_tokens(boundary.nac_attr("channel")))
+        self.assertIn("xnotar_xjustiz", validator.split_channel_tokens(boundary.nac_attr("channel")))
+
+    def test_signature_certification_usecase_stays_short_non_parallel_comparison(self) -> None:
+        path = BPMN_ROOT / "usecases" / "unterschriftsbeglaubigung.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = {
+            node.element_id: node
+            for process in validator.children_by_tag(root, "process")
+            for node in validator.flow_nodes(process, path)
+        }
+
+        self.assertFalse(any(node.nac_attr("parallelGroup") for node in nodes.values()))
+        for node in nodes.values():
+            with self.subTest(node_id=node.element_id):
+                self.assertIsNotNone(node.nac_attr("durationBand"))
+                self.assertIsNotNone(node.nac_attr("criticalPath"))
+
+        notarization = nodes["Task_Beurkundung"]
+        self.assertEqual(notarization.nac_attr("durationBand"), "same_day_or_internal")
+        self.assertEqual(notarization.nac_attr("criticalPath"), "true")
+
+        outbound = nodes["Task_EinreichungVersand"]
+        self.assertEqual(outbound.nac_attr("durationBand"), "short_party_turnaround")
+        self.assertEqual(outbound.nac_attr("criticalPath"), "false")
+        self.assertNotIn("xnp_local", validator.split_channel_tokens(outbound.nac_attr("channel")))
+
     def test_mortgage_usecase_keeps_xnp_local_as_readiness_not_land_register_feed(self) -> None:
         path = BPMN_ROOT / "usecases" / "grundschuld-hypothekenbestellung.bpmn"
         root = validator.parse_xml(path)

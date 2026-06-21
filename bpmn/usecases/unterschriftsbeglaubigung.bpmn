@@ -21,6 +21,8 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="none"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="false"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
@@ -31,6 +33,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_00</bpmn:incoming>
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
@@ -42,6 +46,8 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
@@ -53,6 +59,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
@@ -64,6 +72,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
@@ -75,6 +85,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
@@ -86,6 +98,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="four_eyes"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="true"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_05</bpmn:incoming>
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
@@ -97,6 +111,8 @@
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="false"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_06</bpmn:incoming>
       <bpmn:outgoing>Flow_07</bpmn:outgoing>
@@ -108,6 +124,8 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="false"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
@@ -119,6 +137,8 @@
                      nac:dataClass="metadata"
                      nac:approval="none"
                      nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="false"
                      nac:kgRef="unterschriftsbeglaubigung">
       <bpmn:incoming>Flow_08</bpmn:incoming>
     </bpmn:endEvent>

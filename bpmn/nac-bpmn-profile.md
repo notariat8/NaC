@@ -34,6 +34,34 @@ später in einem bpmn-js-Editor bearbeitet werden soll.
 | `nac:parallelGroup` | Flow Node | Fachliche Gruppe für Schritte, die parallel vorbereitet oder nachgehalten werden können, z.B. `post_notarization`. |
 | `nac:criticalPath` | Flow Node | `true`, wenn der Schritt den kritischen Pfad des Vollzugs blockieren kann; `false` oder fehlend bedeutet keine kritische-Pfad-Markierung. |
 
+## Demo-Planungsmetadaten
+
+Für die Notarkammer-Demo werden Dauerklasse, Parallelgruppe und kritischer Pfad
+als fachliche Sicht auf das BPMN-Modell gepflegt. Sie dienen dazu, den
+Vollzugspfad im Editor zu erklären, nicht dazu, Fristen oder produktive
+Automatisierung auszulösen.
+
+- `same_day_or_internal` beschreibt Notariats- oder Arbeitsplatzschritte, die
+  in der Demo als intern beherrschbar gezeigt werden.
+- `short_party_turnaround` beschreibt kurze Rückläufe mit Beteiligten oder
+  üblichen Versand-/Abstimmungsschritten.
+- `standard_external`, `extended_external` und `statutory_or_exceptional`
+  markieren externe Abhängigkeiten, insbesondere Behörden-, Steuer-,
+  Register- oder Grundbuchgrenzen.
+- `parallelGroup` darf vorbereitbare oder nachzuhaltende Vollzugsgates
+  bündeln. Beim Immobilienkaufvertrag ist `post_notarization` die parallele
+  Phase nach der Beurkundung; `ownership_transfer` markiert den späteren
+  Umschreibungsabschnitt.
+- `criticalPath=true` markiert Demo-Blocker, die den weiteren Vollzug
+  fachlich sperren können. Die Markierung ist keine Runtime-Anweisung.
+
+XNP-, XNotar- und XJustiz-Bezüge werden als Boundary-Gates modelliert:
+`xnp_local` steht für lokale Arbeitsplatzbereitschaft und darf nur zusammen mit
+lokaler Ausführung oder einem rein internen Prüfpunkt erscheinen.
+`xnotar_xjustiz` steht für Paket-, Import-, Austauschordner- oder
+Nachweisgrenzen. Beide Kanäle beschreiben keinen produktiven Fachsystemzugriff
+und keine Grundbuchdatenlieferung an NaC.
+
 ## bpmn-js-Regeln
 
 Der spätere Editor soll nicht den vollen BPMN-Baukasten freigeben. Für
@@ -60,6 +88,9 @@ Fachpersonal reichen zunächst:
   Austauschordnergrenzen für Grundbuch- und Registerkommunikation. Der Kanal
   ist ein Nachweis- und Übergabepunkt, keine automatisierte produktive
   Einreichung aus dem BPMN-Diagramm.
+- Lokale XNP/XNotar-Gates dürfen Metadaten, Bereitschaft und Übergabegrenzen
+  prüfen, aber keine Mandatsdaten, Grundbuchinhalte oder produktive
+  Fachsystemantworten im Repository abbilden.
 - Keine direkte technische Automatisierung aus einem BPMN-Diagramm ohne
   Python-Validator und Pull-Request-Freigabe.
 - Ein BPMN-Diagramm darf eine UI anleiten, ersetzt aber nicht notarielle
