@@ -47,12 +47,14 @@ class NotarkammerXnpBpmnGateTests(unittest.TestCase):
 
         self.assertIn("`xnp_local`", profile)
         self.assertIn("`xnotar_xjustiz`", profile)
-        self.assertIn("XNP liefert keine Grundbuchdaten an NaC", profile)
+        self.assertIn("direkte XNP-zu-NaC-Grundbuchdatenlieferung", profile)
         self.assertIn("NaC ist 100% notariat", profile)
         self.assertIn("externe notarielle Arbeitsumgebung", profile)
         self.assertIn("fail-closed", profile)
         self.assertIn("local-notary-workstation", profile)
         self.assertIn("card-reader", profile)
+        self.assertIn("zu klären im XNP-Testzugang", profile)
+        self.assertIn("REINER SCT", profile)
         self.assertIn("Kunden-UI", profile)
         self.assertIn("Providerdetails", profile)
         self.assertIn("nac:durationBand", profile)
@@ -63,11 +65,14 @@ class NotarkammerXnpBpmnGateTests(unittest.TestCase):
         de_text = DE_BUSINESS_LAYER.read_text(encoding="utf-8")
         en_text = EN_BUSINESS_LAYER.read_text(encoding="utf-8")
 
-        self.assertIn("XNotar/XJustiz-Austauschordner", de_text)
-        self.assertIn("XNotar/XJustiz exchange-folder", en_text)
-        self.assertIn("keine Grundbuchdaten", de_text)
-        self.assertIn("does not deliver", en_text)
-        self.assertIn("land-register data", en_text)
+        self.assertIn("Basisanwendung der Bundesnotarkammer", de_text)
+        self.assertIn("BNotK base application", en_text)
+        self.assertIn("Versand via beN", de_text)
+        self.assertIn("sending via beN", en_text)
+        self.assertIn("zu klären im XNP-Testzugang", de_text)
+        self.assertIn("to be clarified in XNP test access", en_text)
+        self.assertIn("Grundbuch", de_text)
+        self.assertIn("land-registry", en_text)
 
     def test_register_filing_uses_xnotar_xjustiz_not_only_xnp_local(self) -> None:
         channels = node_channels(

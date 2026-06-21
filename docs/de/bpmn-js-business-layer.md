@@ -39,8 +39,8 @@ Review und menschlicher Freigabe.
   die weiteren Usecase-Modelle liegen unter [bpmn/usecases/](../../bpmn/usecases).
 - `nac:channel` dokumentiert, in welcher Form ein Schritt ausgeführt wird,
   etwa persönlich, per E-Mail, per Post/Fax, digital signiert, über XNP lokal,
-  über einen XNotar/XJustiz-Austauschordner oder über ein
-  Register-/Grundbuchportal.
+  über XNotar-Grundbuch-/Register-, Signatur- oder Versandgrenzen innerhalb
+  XNP oder über ein Register-/Grundbuchportal.
 - Die deterministische Prüfung liegt in
   [scripts/validate_bpmn_models.py](../../scripts/validate_bpmn_models.py).
 - Die Generierung liegt in
@@ -53,24 +53,29 @@ Review und menschlicher Freigabe.
 ## Fachliche Quellen
 
 Die Usecase-BPMN-Modelle sind bewusst ein prüfbarer Arbeitsstand. Sie verbinden
-die usecase-lokalen KGs mit zwei externen BNotK-Ankern:
+die usecase-lokalen KGs mit oeffentlichen NotarNet-/BNotK-Ankern:
 
-- Die BNotK beschreibt die XNP-Integration als lokale REST-Schnittstelle auf
-  `localhost`, die Login-Informationen, Amtstätigkeit und bei Login-Funktionen
-  einen pro Installation konfigurierten API-Key betrifft.
-- Die BNotK beschreibt XNotar auf Basis von XNP als Datei-/Ordnergrenze für
-  durch Notariatssoftware vorbereitete Vorgänge. In diesem Modell liefert XNP
-  keine Grundbuchdaten an NaC; NaC modelliert nur den Übergabe-, Nachweis- und
-  Prüfpunkt.
-- Die BNotK beschreibt Online-Verfahren im Gesellschaftsrecht mit
-  Vorgangseingang, E-Mail-Benachrichtigung, Sachbearbeiter/Aktenzeichen,
-  Bearbeiten/Exportieren/Anlegen sowie Videokonferenz-bezogenen Schritten.
+- NotarNet beschreibt XNP als Basisanwendung der Bundesnotarkammer mit UVZ,
+  VVZ, notariellen Onlineverfahren, beN, Dokumente/PDF-Viewer/Signaturmappe,
+  Benutzerverwaltung und Kartenverwaltung.
+- Die BNotK beschreibt XNP als Basisanwendung fuer BNotK-Anwendungen und
+  elektronischen Rechtsverkehr; XNotar-Module Grundbuch und Handelsregister
+  werden innerhalb XNP bereitgestellt.
+- NotarNet beschreibt XNotar fuer elektronischen Rechtsverkehr in Register-
+  und Grundbuchangelegenheiten, eNoVA, Geldwaeschebekaempfung und
+  qeS-Beglaubigung.
+- Die BNotK-Ablaufhilfen fuer Grundbuchantrag und Registeranmeldung zeigen
+  Grunddaten, Grundstuecke oder Rechtstraeger, Antraege oder Anmeldefaelle,
+  Beteiligte, Dokumente, Validierung/Vorbereitung, Signatur, SAK/KMC oder
+  Kartenleser, Versand via beN und Status "Versendet".
+- Technische Adapter-, Port-, Import-/Export- und produktive
+  Schnittstellendetails sind zu klären im XNP-Testzugang.
 
 Deshalb modelliert NaC XNP-nahe Schritte als lokalen, nachweispflichtigen
-Service Task, XNotar/XJustiz-Schritte als Austauschordner- oder
-Paketnachweis und Online-GmbH-Schritte mit `notary_app`, `video` und
-`qualified_e_signature`. Das ersetzt keine notarielle Rechtsprüfung und
-speichert keine Mandatswerte.
+Service Task, XNotar-Schritte als lokale Grundbuch-/Register-, Signatur-,
+Versand- oder Nachweisgrenzen innerhalb XNP und Online-GmbH-Schritte mit
+`notary_app`, `video` und `qualified_e_signature`. Das ersetzt keine
+notarielle Rechtsprüfung und speichert keine Mandatswerte.
 
 Fuer Kunden- und Beteiligtenansichten gilt ein engerer Textvertrag: Sie zeigen
 nur provider-neutrale Status wie "Externe notarielle Arbeitsumgebung

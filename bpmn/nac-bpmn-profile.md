@@ -55,12 +55,15 @@ Automatisierung auszulösen.
 - `criticalPath=true` markiert Demo-Blocker, die den weiteren Vollzug
   fachlich sperren können. Die Markierung ist keine Runtime-Anweisung.
 
-XNP-, XNotar- und XJustiz-Bezüge werden als Boundary-Gates modelliert:
+XNP- und XNotar-Bezüge werden als Boundary-Gates modelliert:
 `xnp_local` steht für lokale Arbeitsplatzbereitschaft und darf nur zusammen mit
-lokaler Ausführung oder einem rein internen Prüfpunkt erscheinen.
-`xnotar_xjustiz` steht für Paket-, Import-, Austauschordner- oder
-Nachweisgrenzen. Beide Kanäle beschreiben keinen produktiven Fachsystemzugriff
-und keine Grundbuchdatenlieferung an NaC.
+lokaler Ausführung oder einem rein internen Prüfpunkt erscheinen. Der
+bestehende BPMN-Kanal `xnotar_xjustiz` steht im Demo-Profil für die
+öffentlich beschriebenen XNotar-Schritte innerhalb XNP, insbesondere
+Grundbuch, Handelsregister, Signatur und Versand via beN. Konkrete
+XJustiz-/Import-/Export-Artefakte sind zu klären im XNP-Testzugang. Beide
+Kanäle beschreiben keinen produktiven Fachsystemzugriff und keine behauptete
+direkte XNP-zu-NaC-Grundbuchdatenlieferung.
 
 ## XNP/BPMN-Integrationsvertrag
 
@@ -72,10 +75,12 @@ Grundbuch-Abhängigkeit hat.
 
 - `xnp_local` modelliert nur lokale Bereitschaft, Amtstätigkeit,
   Kartenleser-/Signaturpfad oder UVZ-/VVZ-nahe Arbeit am Arbeitsplatz.
-- `xnotar_xjustiz` modelliert XNotar-/XJustiz-Paket-, Import-,
-  Austauschordner- oder Nachweisgrenzen.
+- `xnotar_xjustiz` modelliert XNotar-Grundbuch-/Register-, Signatur-,
+  Versand- oder Nachweisgrenzen innerhalb XNP; XJustiz-/Import-/Export-Details
+  sind zu klären im XNP-Testzugang.
 - `register_portal` und `land_register_portal` bleiben externe Register- oder
-  Grundbuchpfade; sie liefern keine Mandats- oder Grundbuchdaten an NaC.
+  Grundbuchpfade; direkte Datenuebergaben an NaC sind zu klären im
+  XNP-Testzugang und werden im Demo-Modell nicht behauptet.
 - Externe Gates sind fail-closed: ohne `nac:evidence="required"` und
   zuständige menschliche Freigabe darf der Folgepfad nicht als frei gelten.
 - Lokale XNP-/Kartenleser-/Arbeitsplatz-Gates brauchen
@@ -85,6 +90,9 @@ Grundbuch-Abhängigkeit hat.
   externen Gates Demo-Readiness-Metadaten: Dauerband für erwartete
   Abhängigkeit, Parallelgruppe für gleichzeitig nachzuhaltende Vollzugsgates,
   kritischer Pfad für externe Blocker.
+- Kartenleser-Readiness darf intern auf REINER SCT, Sicherheitsklasse 3,
+  Display und eigene PIN-Tastatur verweisen; die Kunden-UI zeigt diese
+  Details nicht.
 - Kundensichten zeigen nur provider-neutrale Status wie "Externe notarielle
   Arbeitsumgebung erforderlich"; XNP-Ports, lokale Pfade,
   Kartenleserdiagnosen, Registersystemdetails und Providerdetails bleiben aus
@@ -111,11 +119,13 @@ Fachpersonal reichen zunächst:
   Unbedenklichkeitsbescheinigung und Eigentumsumschreibung.
 - Keine PINs, Passwörter, Tokens oder API-Keys in Namen oder Metadaten.
 - `xnp_local` beschreibt nur den lokalen XNP-/Karten-/Amtstätigkeitskontext am
-  Notariatsarbeitsplatz. XNP liefert keine Grundbuchdaten an NaC.
-- `xnotar_xjustiz` beschreibt XNotar-/XJustiz-Paket-, Import- oder
-  Austauschordnergrenzen für Grundbuch- und Registerkommunikation. Der Kanal
-  ist ein Nachweis- und Übergabepunkt, keine automatisierte produktive
-  Einreichung aus dem BPMN-Diagramm.
+  Notariatsarbeitsplatz. Eine direkte XNP-zu-NaC-Grundbuchdatenlieferung wird
+  im Demo-Modell nicht behauptet.
+- `xnotar_xjustiz` beschreibt XNotar-Grundbuch-/Register-, Signatur-,
+  Versand- oder Nachweisgrenzen innerhalb XNP. Der Kanal ist ein Nachweis- und
+  Übergabepunkt, keine automatisierte produktive Einreichung aus dem
+  BPMN-Diagramm. XJustiz-/Import-/Export-Details sind zu klären im
+  XNP-Testzugang.
 - Lokale XNP/XNotar-Gates dürfen Metadaten, Bereitschaft und Übergabegrenzen
   prüfen, aber keine Mandatsdaten, Grundbuchinhalte oder produktive
   Fachsystemantworten im Repository abbilden.
