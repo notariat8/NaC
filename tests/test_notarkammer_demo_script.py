@@ -22,8 +22,10 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
 
         for content in (german, english):
             self.assertIn("60", content)
+            self.assertIn("20", content)
             self.assertIn("5", content)
             self.assertIn("https://notariat8.de", content)
+            self.assertIn("https://notariat8.de/prozessmodell.html", content)
             self.assertIn("https://app.notariat8.de/login", content)
             self.assertIn("https://app.notariat8.de/workspace", content)
             self.assertIn("Fallback", content)
@@ -32,6 +34,8 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
             self.assertIn("Unterschriftsbeglaubigung", content)
         self.assertIn("kritischer pfad", german.lower())
         self.assertIn("critical path", english.lower())
+        self.assertIn("20-Minuten-Fallback", german)
+        self.assertIn("20-Minute Fallback", english)
 
     def test_demo_script_stays_customer_safe(self) -> None:
         combined = "\n".join(path.read_text(encoding="utf-8") for path in DEMO_DOCS.values())
@@ -45,6 +49,8 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
             "Secret",
             "Token",
             "Nonce",
+            "produktive XNP-Handlung ausführen",
+            "productive XNP action is executed",
         ]
         for term in blocked_terms:
             self.assertNotIn(term, combined)
@@ -67,6 +73,12 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
         self.assertIn("XNP does not deliver land-register data to NaC", normalized_english)
         self.assertIn("keine produktiven Register- oder Grundbuchhandlungen", german)
         self.assertIn("productive register/land-register actions", normalized_english)
+        self.assertIn("XNP, Kartenleser, SAK lite, secureFramework", german)
+        self.assertIn("XNP, Kartenleser card reader, SAK lite, secureFramework", english)
+        self.assertIn("Login-Flow wird nur fortgesetzt", german)
+        self.assertIn("continue the login flow only when the demo session is approved", english)
+        self.assertIn("fail-closed", german)
+        self.assertIn("fail-closed", english)
 
 
 if __name__ == "__main__":

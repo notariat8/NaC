@@ -17,6 +17,10 @@ does not deliver land-register data to NaC; land-register and
 commercial-register steps are modeled as local XNotar/XJustiz handoffs,
 evidence and human-approved gates.
 
+Demo Gate: continue the login flow only when the demo session is approved.
+Without approval, intentionally show the workspace fail-closed; that is
+security evidence, not a broken path.
+
 ## Preflight
 
 Open these URLs in a fresh browser window before the demo:
@@ -32,8 +36,9 @@ Expected:
 - The public page loads.
 - The process model shows the Immobilienkaufvertrag.
 - The app health page returns `ok`.
-- The login page opens the notariat8 sign-in entry.
-- The protected workspace remains closed without a session.
+- The login page opens the notariat8 sign-in entry; the flow continues only
+  with approval.
+- The protected workspace remains closed without an approved session.
 
 ## 60-Minute Run
 
@@ -137,11 +142,13 @@ Say:
 - "Session and role are checked before the workspace opens."
 - "Without a valid session, `https://app.notariat8.de/workspace` remains
   closed."
+- "We continue login only if it is approved for this demo; otherwise
+  fail-closed is the intended result."
 
 Show:
 
 1. Login page.
-2. Protected start status or sign-in step.
+2. Only with approval: protected start status or sign-in step.
 3. `https://app.notariat8.de/workspace` without a session as the closed view.
 
 ### 50-55 Minutes: Short Comparison Process
@@ -177,6 +184,40 @@ Say:
 7. Show `https://app.notariat8.de/workspace` without a session as closed.
 8. Close: "No mandate data, controlled model maintenance, protected workspace."
 
+## 20-Minute Fallback
+
+1. 0-3 minutes: open `https://notariat8.de`.
+
+   Say: "We show only public process references. No mandate data, no real
+   identity documents, no real deeds."
+
+2. 3-9 minutes: show `https://notariat8.de/prozessmodell.html`.
+
+   Say: "The Immobilienkaufvertrag needs duration logic, parallel work,
+   critical path and domain Gates."
+
+3. 9-13 minutes: explain XNP local as a system boundary.
+
+   Say: "XNP, Kartenleser card reader, SAK lite, secureFramework, role and
+   official activity context are checked on the local workstation. NaC starts
+   no productive XNP action here."
+
+4. 13-16 minutes: explain XNotar/XJustiz as a handoff boundary.
+
+   Say: "Register and land-register communication remains a package,
+   exchange-folder or portal boundary. We open no real packages, register data
+   or property data."
+
+5. 16-18 minutes: show `https://app.notariat8.de/login`.
+
+   Say: "Login only with demo approval. Without approval, we go directly to
+   `https://app.notariat8.de/workspace` and show fail-closed behavior."
+
+6. 18-20 minutes: close.
+
+   Say: "NaC shows BPMN, Evidence and Gate. The domain systems remain visibly
+   bounded; there is no productive register, land-register or XNP claim."
+
 ## Fallbacks
 
 | Risk | Fallback |
@@ -184,6 +225,7 @@ Say:
 | Public page loads slowly | Use a local copy or an already opened browser tab with `https://notariat8.de/prozessmodell.html`. |
 | App login is slow | Open `https://app.notariat8.de/workspace` directly and explain fail-closed behavior. |
 | Identity provider takes too long | Use the Stop-Line: "External sign-in is not part of the business-process demo; the closed workspace is the relevant security evidence here." |
+| Login flow is not approved | Do not attempt login; go directly to `https://app.notariat8.de/workspace` and show fail-closed behavior. |
 | Local BPMN editor is unavailable | Use the public process model page and mention GitHub PRs/validators only briefly as governance evidence. |
 | XNP or card reader is unavailable locally | Do not show a live XNP action; explain the BPMN gate and the XNP/XNotar demo contract. |
 | Live DNS or network is unstable | Do not show a live new-customer setup; use the existing readiness/DNS status page only. |
@@ -192,6 +234,8 @@ Say:
 
 - If login or identity verification takes longer than two minutes, do not debug
   live. Switch to the protected workspace and process viewer.
+- If login approval is missing, do not continue the login flow; the closed
+  workspace is then the demo statement.
 - If a link shows JSON instead of HTML, stop and restart through the intended
   button path.
 - If a page exposes internal technical terms, do not explain them; return to
@@ -199,6 +243,8 @@ Say:
 - Do not show real mandate data, real identity documents, real deeds or
   productive register/land-register actions.
 - Do not claim that NaC receives land-register data directly from XNP.
+- Do not make a productive claim about XNP, XNotar, XJustiz, register or
+  land-register automation.
 
 ## Demonstrable Core Claims
 

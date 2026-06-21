@@ -1,6 +1,6 @@
 # Notarkammer-Demo 2026-06: Live-Runbook
 
-Status: Protected-PR-fähige Vorführ-Checkliste für die 1h-Live-Demo.
+Status: Protected-PR-fähige Vorführ-Checkliste für die 60-Minuten-Live-Demo.
 
 Dieses Runbook führt die gemergten Demo-Spuren zusammen:
 
@@ -24,6 +24,8 @@ change, no secrets und no real mandate data. Alle Beispiele bleiben synthetic.
    über ein explizites Gate.
 4. Harte Aussage: XNP liefert keine Grundbuchdaten an NaC.
 5. Harte Aussage: kein automatisierter externer XNotar-Import-Trigger.
+6. Demo-Gate: Login und Workspace werden nur weitergeführt, wenn die
+   Freigabe für die Demo-Sitzung vorliegt; sonst wird fail-closed gezeigt.
 
 ## T-03:00 Preflight-Reihenfolge
 
@@ -32,8 +34,8 @@ change, no secrets und no real mandate data. Alle Beispiele bleiben synthetic.
 | 1 | `https://notariat8.de` | Startseite lädt ohne Mandatsdaten. | Bereits geladenen Tab verwenden. |
 | 2 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, Dauerlogik und kritischer Pfad sind sichtbar. | Screenshot oder geöffneten Tab nutzen. |
 | 3 | `https://app.notariat8.de/healthz` | Kurzer, nicht-sensitiver Status. | Tab schließen, Workspace-Grenze zeigen. |
-| 4 | `https://app.notariat8.de/login` | Login-Seite öffnet; keine echten Zugangsdaten eingeben. | Nicht debuggen, zum Prozessmodell wechseln. |
-| 5 | `https://app.notariat8.de/workspace` | Ohne Sitzung bleibt der Arbeitsbereich geschlossen. | Fail-closed als Sicherheitsnachweis erklären. |
+| 4 | `https://app.notariat8.de/login` | Login-Seite öffnet; keine echten Zugangsdaten eingeben; Login-Flow nur mit Freigabe fortsetzen. | Nicht debuggen, zum Prozessmodell wechseln. |
+| 5 | `https://app.notariat8.de/workspace` | Ohne freigegebene Sitzung bleibt der Arbeitsbereich geschlossen. | Fail-closed als Sicherheitsnachweis erklären. |
 | 6 | XNP lokal | Kartenpfad, XNP-Localhost `12774` bis `12784` und Rolle sind nur lokal plausibel. | Keine Live-XNP-Aktion; Gate als `manual_review` oder `blocked` markieren. |
 | 7 | XNotar/XJustiz-Übergabe | Austauschordner und Paketgrenze sind synthetisch oder leer prüfbar. | Kein Paket öffnen; nur die Übergabegrenze erklären. |
 
@@ -52,6 +54,8 @@ change, no secrets und no real mandate data. Alle Beispiele bleiben synthetic.
    Aussage, nicht Live-Automatisierung.
 5. 40-50 Minuten: `https://app.notariat8.de/login` und
    `https://app.notariat8.de/workspace` als geschützten Einstieg zeigen.
+   Login nur fortsetzen, wenn es vorab für diese Demo freigegeben ist;
+   ansonsten den geschlossenen Workspace als erwartetes Ergebnis zeigen.
 6. 50-55 Minuten: Unterschriftsbeglaubigung als kurzen Vergleichsprozess
    nennen.
 7. 55-60 Minuten: Zusammenfassen: sichtbare Fachsystemgrenzen, Protected PRs,
@@ -67,10 +71,32 @@ change, no secrets und no real mandate data. Alle Beispiele bleiben synthetic.
 6. `https://app.notariat8.de/login` und den geschlossenen Workspace zeigen.
 7. Abschluss: NaC BPMN/Evidence/Gate macht Arbeit sichtbar und prüfbar.
 
+## 20-Minuten Fallback
+
+1. 0-3 Minuten: `https://notariat8.de` öffnen und sagen, dass nur öffentliche
+   Prozessreferenzen ohne Mandatsdaten gezeigt werden.
+2. 3-9 Minuten: `https://notariat8.de/prozessmodell.html` zeigen:
+   Immobilienkaufvertrag, Dauerlogik, Parallelität und kritischen Pfad
+   benennen.
+3. 9-13 Minuten: XNP lokal, Kartenleser, SAK lite, secureFramework, Rolle und
+   Amtstätigkeitskontext als Arbeitsplatzgrenze und Demo-Gate erklären. Keine
+   produktive XNP-Aktion starten.
+4. 13-16 Minuten: XNotar/XJustiz als Paket-/Austauschordnergrenze für
+   Register- und Grundbuchkommunikation erklären. Keine echten Pakete, keine
+   Registerdaten und keine Grundstücksdaten öffnen.
+5. 16-18 Minuten: `https://app.notariat8.de/login` zeigen. Login-Flow nur bei
+   ausdrücklicher Freigabe fortsetzen; sonst direkt
+   `https://app.notariat8.de/workspace` fail-closed zeigen.
+6. 18-20 Minuten: Stop-Lines zusammenfassen: NaC modelliert BPMN, Evidence und
+   Gate; externe Fachsysteme bleiben Grenzen; keine echten Daten, keine
+   produktive Behauptung.
+
 ## Stop-Lines
 
 - Stop-Line: "Wir debuggen jetzt nicht live; die Demo zeigt den geprüften
   Prozesspfad."
+- Stop-Line: "Ohne Freigabe führen wir den Login-Flow nicht weiter; der
+  geschlossene Workspace ist dann das erwartete Demo-Ergebnis."
 - Stop-Line: "XNP bleibt lokal. XNP liefert keine Grundbuchdaten an NaC."
 - Stop-Line: "XNotar/XJustiz ist hier eine Übergabegrenze, keine versteckte
   Cloud-Automation."
@@ -80,7 +106,7 @@ change, no secrets und no real mandate data. Alle Beispiele bleiben synthetic.
 
 ## Protected-PR Nachweis
 
-- Branch: `agent/notarkammer-live-demo-runbook-c`.
+- Branch: `agent/notarkammer-live-demo-runbook-2`.
 - Geänderte Flächen: `docs/de/demo/`, `docs/en/demo/`, `tests/`.
 - Erwartete Checks: fokussierte Demo-Runbook-Tests, bestehende Demo-Kontrakt-,
   Demo-Skript- und Preflight-Tests.

@@ -18,6 +18,10 @@ Grundbuchdaten an NaC; Grundbuch- und Registerschritte werden als lokale
 XNotar-/XJustiz-Übergaben, Nachweise und menschlich freigegebene Gates
 modelliert.
 
+Demo-Gate: Der Login-Flow wird nur fortgesetzt, wenn die Freigabe für diese
+Demo-Sitzung vorliegt. Ohne Freigabe wird der Workspace bewusst fail-closed
+gezeigt; das ist ein Sicherheitsnachweis, kein Fehlerpfad.
+
 ## Vorabprüfung
 
 Vor der Demo diese URLs in einem frischen Browserfenster öffnen:
@@ -33,8 +37,9 @@ Erwartung:
 - Die öffentliche Seite lädt.
 - Das Prozessmodell zeigt den Immobilienkaufvertrag.
 - Die App-Health-Seite meldet `ok`.
-- Die Login-Seite öffnet eine notariat8-Anmeldung.
-- Der geschützte Arbeitsbereich bleibt ohne Sitzung geschlossen.
+- Die Login-Seite öffnet eine notariat8-Anmeldung; der Flow wird nur mit
+  Freigabe fortgesetzt.
+- Der geschützte Arbeitsbereich bleibt ohne freigegebene Sitzung geschlossen.
 
 ## 60-Minuten-Ablauf
 
@@ -140,11 +145,13 @@ Sagen:
 - "Vor dem Arbeitsbereich werden Sitzung und Rolle geprüft."
 - "Ohne gültige Sitzung bleibt `https://app.notariat8.de/workspace`
   geschlossen."
+- "Wir führen den Login nur weiter, wenn das für diese Demo freigegeben ist;
+  sonst ist fail-closed das gewollte Ergebnis."
 
 Zeigen:
 
 1. Login-Seite.
-2. Geschützter Startstatus oder Anmeldeschritt.
+2. Nur bei Freigabe: geschützter Startstatus oder Anmeldeschritt.
 3. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht.
 
 ### 50-55 Minuten: Kurzer Vergleichsprozess
@@ -182,6 +189,41 @@ Sagen:
 8. Abschluss: "Keine Mandatsdaten, kontrollierte Modellpflege, geschützter
    Arbeitsbereich."
 
+## 20-Minuten-Fallback
+
+1. 0-3 Minuten: `https://notariat8.de` öffnen.
+
+   Sagen: "Wir zeigen nur öffentliche Prozessreferenzen. Keine Mandatsdaten,
+   keine echten Ausweise, keine echten Urkunden."
+
+2. 3-9 Minuten: `https://notariat8.de/prozessmodell.html` zeigen.
+
+   Sagen: "Der Immobilienkaufvertrag braucht Dauerlogik, Parallelität,
+   kritischen Pfad und fachliche Gates."
+
+3. 9-13 Minuten: XNP lokal als Systemgrenze erklären.
+
+   Sagen: "XNP, Kartenleser, SAK lite, secureFramework, Rolle und
+   Amtstätigkeitskontext werden am lokalen Arbeitsplatz geprüft. NaC startet
+   hier keine produktive XNP-Handlung."
+
+4. 13-16 Minuten: XNotar/XJustiz als Übergabegrenze erklären.
+
+   Sagen: "Register- und Grundbuchkommunikation bleibt Paket-,
+   Austauschordner- oder Portalgrenze. Wir öffnen keine echten Pakete,
+   Registerdaten oder Grundstücksdaten."
+
+5. 16-18 Minuten: `https://app.notariat8.de/login` zeigen.
+
+   Sagen: "Login nur bei Demo-Freigabe. Ohne Freigabe wechseln wir direkt zu
+   `https://app.notariat8.de/workspace` und zeigen fail-closed."
+
+6. 18-20 Minuten: Abschluss.
+
+   Sagen: "NaC zeigt BPMN, Evidence und Gate. Die Fachsysteme bleiben
+   sichtbar begrenzt; es gibt keine produktive Register-, Grundbuch- oder
+   XNP-Behauptung."
+
 ## Fallbacks
 
 | Risiko | Fallback |
@@ -189,6 +231,7 @@ Sagen:
 | Öffentliche Seite lädt langsam | Lokale Kopie oder bereits geöffneter Browser-Tab mit `https://notariat8.de/prozessmodell.html`. |
 | App-Login ist langsam | Direkt `https://app.notariat8.de/workspace` zeigen und Fail-Closed erklären. |
 | Identitätsanbieter braucht zu lange | Stop-Line verwenden: "Die externe Anmeldung ist nicht Teil der fachlichen Prozessdemo; der geschlossene Arbeitsbereich ist hier der relevante Sicherheitsnachweis." |
+| Login-Flow ist nicht freigegeben | Keinen Login versuchen; direkt `https://app.notariat8.de/workspace` fail-closed zeigen. |
 | Lokaler BPMN-Editor ist nicht verfügbar | Öffentliche Prozessmodellseite zeigen und GitHub-PR/Validatoren nur kurz als Governance-Nachweis erklären. |
 | XNP oder Kartenleser ist lokal nicht verfügbar | Keine Live-XNP-Aktion zeigen; den BPMN-Gate und den XNP/XNotar-Demo-Kontrakt erklären. |
 | Live-DNS oder Netzwerk instabil | Keine Live-Neukundenanlage zeigen; nur bestehende Readiness-/DNS-Statusseite verwenden. |
@@ -197,6 +240,8 @@ Sagen:
 
 - Wenn Login oder Identitätsprüfung länger als zwei Minuten dauert, nicht
   debuggen. Auf den geschützten Workspace und den Prozessviewer wechseln.
+- Wenn keine Login-Freigabe vorliegt, den Login-Flow nicht fortsetzen; der
+  geschlossene Workspace ist dann die Demo-Aussage.
 - Wenn ein Link JSON statt HTML zeigt, abbrechen und über den vorgesehenen
   Button-Pfad starten.
 - Wenn eine Seite interne technische Begriffe zeigt, nicht weiter erklären,
@@ -204,6 +249,8 @@ Sagen:
 - Keine echten Mandatsdaten, keine echten Ausweise, keine echten Urkunden und
   keine produktiven Register- oder Grundbuchhandlungen zeigen.
 - Keine Behauptung, dass NaC Grundbuchdaten direkt aus XNP erhält.
+- Keine produktive Behauptung zu XNP-, XNotar-, XJustiz-, Register- oder
+  Grundbuchautomation.
 
 ## Vorführbare Kernaussagen
 

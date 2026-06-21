@@ -1,6 +1,6 @@
 # Notarkammer Demo 2026-06: Live Runbook
 
-Status: Protected PR ready presentation checklist for the 1h live demo.
+Status: Protected PR ready presentation checklist for the 60-minute live demo.
 
 This runbook merges the already landed demo tracks:
 
@@ -23,6 +23,8 @@ no secrets and no real mandate data. All examples remain synthetic.
    explicit Gate.
 4. Hard statement: XNP does not deliver land-register data to NaC.
 5. Hard statement: no automated external XNotar import trigger.
+6. Demo Gate: continue login and workspace only when the demo session is
+   approved; otherwise show the fail-closed boundary.
 
 ## T-03:00 Preflight Order
 
@@ -31,8 +33,8 @@ no secrets and no real mandate data. All examples remain synthetic.
 | 1 | `https://notariat8.de` | Home page loads without mandate data. | Use an already loaded tab. |
 | 2 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, duration logic and critical path are visible. | Use a screenshot or opened tab. |
 | 3 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | Close the tab and show the workspace boundary. |
-| 4 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered. | Do not debug, switch to the process model. |
-| 5 | `https://app.notariat8.de/workspace` | Without a session, the workspace remains closed. | Explain fail-closed as security evidence. |
+| 4 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
+| 5 | `https://app.notariat8.de/workspace` | Without an approved session, the workspace remains closed. | Explain fail-closed as security evidence. |
 | 6 | XNP local | Card path, XNP localhost `12774` through `12784` and role are locally plausible only. | Show no live XNP action; mark Gate as `manual_review` or `blocked`. |
 | 7 | XNotar/XJustiz handoff | Exchange folder and package boundary are checkable synthetically or empty. | Open no package; explain only the handoff boundary. |
 
@@ -49,13 +51,15 @@ no secrets and no real mandate data. All examples remain synthetic.
    on the public process model. NaC BPMN/Evidence/Gate is the point, not live
    automation.
 5. 40-50 minutes: show `https://app.notariat8.de/login` and
-   `https://app.notariat8.de/workspace` as the protected entry.
+   `https://app.notariat8.de/workspace` as the protected entry. Continue
+   login only if it was pre-approved for this demo; otherwise show the closed
+   workspace as the expected result.
 6. 50-55 minutes: mention Unterschriftsbeglaubigung as the short comparison
    process.
 7. 55-60 minutes: close with visible domain-system boundaries, Protected PRs,
    redacted Evidence and no productive register/land-register actions.
 
-## 5-Minuten / 5-Minute Short Order
+## 5-Minute Short Order
 
 1. Open `https://notariat8.de`.
 2. Show `https://notariat8.de/prozessmodell.html`.
@@ -65,10 +69,31 @@ no secrets and no real mandate data. All examples remain synthetic.
 6. Show `https://app.notariat8.de/login` and the closed workspace.
 7. Close with: NaC BPMN/Evidence/Gate makes work visible and auditable.
 
+## 20-Minute Fallback
+
+1. 0-3 minutes: open `https://notariat8.de` and state that the demo shows only
+   public process references without mandate data.
+2. 3-9 minutes: show `https://notariat8.de/prozessmodell.html`; name
+   Immobilienkaufvertrag, duration logic, parallel work and critical path.
+3. 9-13 minutes: explain XNP local, card reader, SAK lite, secureFramework,
+   role and official activity context as the workstation boundary and Demo
+   Gate. Start no productive XNP action.
+4. 13-16 minutes: explain XNotar/XJustiz as the package/exchange-folder
+   boundary for register and land-register communication. Open no real
+   packages, register data or property data.
+5. 16-18 minutes: show `https://app.notariat8.de/login`. Continue the login
+   flow only with explicit approval; otherwise go directly to
+   `https://app.notariat8.de/workspace` and show fail-closed behavior.
+6. 18-20 minutes: summarize the Stop-Lines: NaC models BPMN, Evidence and
+   Gate; external domain systems remain boundaries; no real data and no
+   productive claim.
+
 ## Stop-Lines
 
 - Stop-Line: "We are not debugging live; the demo shows the checked process
   path."
+- Stop-Line: "Without approval, we do not continue the login flow; the closed
+  workspace is then the expected demo result."
 - Stop-Line: "XNP stays local. XNP does not deliver land-register data to NaC."
 - Stop-Line: "XNotar/XJustiz is a handoff boundary here, not hidden cloud
   automation."
@@ -78,7 +103,7 @@ no secrets and no real mandate data. All examples remain synthetic.
 
 ## Protected PR Evidence
 
-- Branch: `agent/notarkammer-live-demo-runbook-c`.
+- Branch: `agent/notarkammer-live-demo-runbook-2`.
 - Changed surfaces: `docs/de/demo/`, `docs/en/demo/`, `tests/`.
 - Expected checks: focused demo runbook tests, existing demo contract,
   demo script and preflight tests.
