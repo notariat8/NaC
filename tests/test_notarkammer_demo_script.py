@@ -27,15 +27,45 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
             self.assertIn("https://notariat8.de", content)
             self.assertIn("https://notariat8.de/prozessmodell.html", content)
             self.assertIn("https://app.notariat8.de/login", content)
+            self.assertIn("https://app.notariat8.de/onboarding/readiness", content)
+            self.assertIn("https://app.notariat8.de/onboarding/dns-check", content)
+            self.assertIn("https://app.notariat8.de/api/tenant/login-intent", content)
             self.assertIn("https://app.notariat8.de/workspace", content)
             self.assertIn("Fallback", content)
             self.assertIn("Stop-Line", content)
             self.assertIn("Immobilienkaufvertrag", content)
             self.assertIn("Unterschriftsbeglaubigung", content)
+            self.assertIn("CET", content)
+            self.assertIn("CEST", content)
         self.assertIn("kritischer pfad", german.lower())
         self.assertIn("critical path", english.lower())
         self.assertIn("20-Minuten-Fallback", german)
         self.assertIn("20-Minute Fallback", english)
+
+    def test_demo_script_covers_current_showable_readiness_tracks(self) -> None:
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in DEMO_DOCS.values())
+        combined_lower = " ".join(combined.lower().split())
+
+        required_terms = [
+            "public onboarding",
+            "Public Onboarding",
+            "DNS",
+            "Request-Status",
+            "request status",
+            "metadata-only",
+            "ATP-Healthcheck",
+            "ATP healthcheck",
+            "Store-Gate",
+            "store gate",
+            "python scripts/nac.py tenant customer-plan",
+            "python scripts/nac.py tenant dns-check",
+            "python scripts/nac.py bpmn validate",
+            "no forms",
+            "keine neue Onboarding-Anfrage",
+            "submit a new onboarding request",
+        ]
+        for term in required_terms:
+            self.assertIn(term.lower(), combined_lower)
 
     def test_demo_script_stays_customer_safe(self) -> None:
         combined = "\n".join(path.read_text(encoding="utf-8") for path in DEMO_DOCS.values())

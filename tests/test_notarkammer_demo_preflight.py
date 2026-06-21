@@ -28,14 +28,40 @@ class NotarkammerDemoPreflightTests(unittest.TestCase):
             self.assertIn("T-03:00", content)
             self.assertIn("1h", content)
             self.assertIn("CET", content)
+            self.assertIn("CEST", content)
             self.assertIn("https://notariat8.de", content)
             self.assertIn("https://notariat8.de/prozessmodell.html", content)
             self.assertIn("https://app.notariat8.de/healthz", content)
+            self.assertIn("https://app.notariat8.de/onboarding/readiness", content)
+            self.assertIn("https://app.notariat8.de/onboarding/dns-check", content)
+            self.assertIn("/onboarding/requests/", content)
             self.assertIn("https://app.notariat8.de/login", content)
+            self.assertIn("https://app.notariat8.de/api/tenant/login-intent", content)
             self.assertIn("https://app.notariat8.de/workspace", content)
             self.assertIn("Fallback", content)
             self.assertIn("Stop-Line", content)
             self.assertIn("Owner-Gate", content)
+
+    def test_preflight_checklist_has_exact_read_only_demo_checks(self) -> None:
+        for content in read_preflight_docs():
+            heading = (
+                "What Can Be Shown Today"
+                if "What Can Be Shown Today" in content
+                else "Was Heute Gezeigt Werden Kann"
+            )
+            self.assertIn(heading, content)
+            self.assertIn("python scripts/nac.py tenant customer-plan", content)
+            self.assertIn("python scripts/nac.py tenant dns-check", content)
+            self.assertIn("python scripts/nac.py tenant apply-request", content)
+            self.assertIn("--dry-run", content)
+            self.assertIn("python scripts/nac.py bpmn validate", content)
+            self.assertIn("python scripts/nac.py bpmn show immobilienkaufvertrag", content)
+            self.assertIn("curl -fsS", content)
+            self.assertIn("curl -i", content)
+            self.assertIn("metadata", content.lower())
+            self.assertIn("ATP", content)
+            self.assertIn("healthcheck", content.lower())
+            self.assertTrue("store gate" in content.lower() or "store-gate" in content.lower())
 
     def test_preflight_checklist_covers_xnp_reader_xnotar_xjustiz_gates(self) -> None:
         for content in read_preflight_docs():

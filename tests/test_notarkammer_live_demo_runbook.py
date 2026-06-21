@@ -30,13 +30,19 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             self.assertIn("Fallback", content)
             self.assertIn("Stop-Line", content)
             self.assertIn("T-03:00", content)
+            self.assertIn("CET", content)
+            self.assertIn("CEST", content)
             self.assertIn("60", content)
             self.assertIn("20", content)
             self.assertIn("5-Minuten" if language == "de" else "5-Minute", content)
             self.assertIn("https://notariat8.de", content)
             self.assertIn("https://notariat8.de/prozessmodell.html", content)
             self.assertIn("https://app.notariat8.de/healthz", content)
+            self.assertIn("https://app.notariat8.de/onboarding/readiness", content)
+            self.assertIn("https://app.notariat8.de/onboarding/dns-check", content)
+            self.assertIn("/onboarding/requests/", content)
             self.assertIn("https://app.notariat8.de/login", content)
+            self.assertIn("https://app.notariat8.de/api/tenant/login-intent", content)
             self.assertIn("https://app.notariat8.de/workspace", content)
             self.assertIn("notarkammer-xnp-demo-contract.md", content)
             self.assertIn("notarkammer-2026-06-demo-script.md", content)
@@ -64,6 +70,37 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term, combined)
+
+    def test_runbook_covers_current_readiness_surfaces_and_read_only_checks(self) -> None:
+        combined = "\n".join(read_runbooks().values())
+        combined_lower = " ".join(combined.lower().split())
+
+        required_terms = [
+            "public-onboarding",
+            "public onboarding",
+            "dns-check",
+            "request-status",
+            "request status",
+            "login-intent",
+            "metadata-only",
+            "metadata status",
+            "atp-healthcheck",
+            "atp healthcheck",
+            "store-gate",
+            "store gate",
+            "python scripts/nac.py tenant customer-plan",
+            "python scripts/nac.py tenant dns-check",
+            "python scripts/nac.py tenant apply-request",
+            "--dry-run",
+            "python scripts/nac.py bpmn validate",
+            "python scripts/nac.py bpmn show immobilienkaufvertrag",
+            "curl -fsS".lower(),
+            "curl -i",
+            "POST /onboarding/requests".lower(),
+            "POST /admin/onboarding/review".lower(),
+        ]
+        for term in required_terms:
+            self.assertIn(term.lower(), combined_lower)
 
     def test_runbook_has_20_minute_fallback_and_login_gate(self) -> None:
         german = RUNBOOK_DOCS["de"].read_text(encoding="utf-8")
