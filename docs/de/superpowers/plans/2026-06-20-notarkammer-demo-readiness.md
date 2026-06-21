@@ -252,6 +252,44 @@ Gates möglichst bündeln:
 3. Apply Gates nur, falls neue OCI-Routen/-Konfiguration nötig sind.
 4. Keine Secret Gates, solange keine neue Runtime-Integration sie wirklich benötigt.
 
+## Aktueller Tagesmodus Für Große Schritte
+
+Der Standardmodus für die verbleibende Notarkammer-Vorbereitung ist ein
+mehrstündiger Multi-Agent-Block. Der Controller startet unabhängige PR-only
+Tracks parallel und sammelt die Ergebnisse zu einem Gate-Paket, statt den Owner
+für Routine-Evidenz zu unterbrechen.
+
+### Owner-frei während des Blocks
+
+- GitHub PR-, Issue-, Branch-, Check- und Diff-Status lesen.
+- Lokale Tests, Dokumentationsvalidatoren und Quality Gates ausführen.
+- Nicht-sensitive öffentliche Referenzen und bereits versionierte
+  Demo-Artefakte lesen.
+- PRs vorbereiten, kommentieren und als Review-Paket zusammenfassen.
+- Worktree- und Branch-Hygiene read-only prüfen.
+
+### Owner-Gates bleiben separat
+
+- Design Approval, wenn fachlicher Scope oder Architektur neu ist.
+- Review/Merge, sobald ein Protected PR fertig ist.
+- Release Approval, sobald ein konkreter Commit live gebaut oder deployed wird.
+- Apply Approval, sobald Resource Manager oder OCI-Konfiguration geändert wird.
+- Secret-, Credential-, destruktive Git- und echte Live-Daten-Aktionen.
+
+### Parallelisierung
+
+Ein Block soll mindestens drei getrennte Lanes nutzen, wenn der Scope es
+erlaubt:
+
+1. `www-n8` öffentliche Demo-Oberfläche.
+2. NaC BPMN-/Usecase-Tiefe.
+3. Live-Demo-Runbook, Fallbacks und Smoke-Pfade.
+4. Optional Governance/Queue-Memory, wenn Reibung im Ablauf sichtbar wird.
+
+Jede Lane arbeitet in einem isolierten Worktree auf eigenem Branch. Nach Merge
+wird der Cleanup als eigener, exakter Owner-Gate-Satz ausgegeben, sofern Branch-
+oder Worktree-Löschung nötig ist.
+
 ## Verifikationsbasis
 
 NaC:
