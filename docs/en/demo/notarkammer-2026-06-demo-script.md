@@ -97,6 +97,9 @@ Show:
 
 ### 20-28 Minutes: Critical Path And Parallel Work
 
+Keep the companion talk track ready:
+[BPMN Critical Path Talking Points](notarkammer-bpmn-critical-path-talking-points.md).
+
 Say:
 
 - "After notarization, several work streams can run in parallel: land register,

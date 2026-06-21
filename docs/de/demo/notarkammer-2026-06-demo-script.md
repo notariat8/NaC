@@ -100,6 +100,9 @@ Zeigen:
 
 ### 20-28 Minuten: Kritischer Pfad und parallele Arbeit
 
+Sprechspur ergänzend bereithalten:
+[BPMN Critical Path Talking Points](notarkammer-bpmn-critical-path-talking-points.md).
+
 Sagen:
 
 - "Nach der Beurkundung können mehrere Stränge parallel laufen:
