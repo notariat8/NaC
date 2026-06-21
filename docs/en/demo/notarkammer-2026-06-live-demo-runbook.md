@@ -25,6 +25,17 @@ no secrets and no real mandate data. All examples remain synthetic.
 5. Hard statement: no automated external XNotar import trigger.
 6. Demo Gate: continue login and workspace only when the demo session is
    approved; otherwise show the fail-closed boundary.
+7. Public onboarding can be shown today as a GET/status path: readiness, DNS
+   check and request status, but no new request is submitted during the
+   meeting.
+8. ATP healthcheck is a store gate: `enabled`, `disabled`, `unavailable` or
+   `not_checked`; secrets, wallets, DSN and OCI writes are not opened.
+
+## Time Wording
+
+The presentation uses local chamber/Berlin time: CET in winter (UTC+1) and
+CEST in summer (UTC+2). June 2026 uses CEST. Write audit notes as CET/CEST
+with optional technical UTC context, never UTC-only.
 
 ## T-03:00 Preflight Order
 
@@ -33,10 +44,34 @@ no secrets and no real mandate data. All examples remain synthetic.
 | 1 | `https://notariat8.de` | Home page loads without mandate data. | Use an already loaded tab. |
 | 2 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, duration logic and critical path are visible. | Use a screenshot or opened tab. |
 | 3 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | Close the tab and show the workspace boundary. |
-| 4 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
-| 5 | `https://app.notariat8.de/workspace` | Without an approved session, the workspace remains closed. | Explain fail-closed as security evidence. |
-| 6 | XNP local | Card path, XNP localhost `12774` through `12784` and role are locally plausible only. | Show no live XNP action; mark Gate as `manual_review` or `blocked`. |
-| 7 | XNotar/XJustiz handoff | Exchange folder and package boundary are checkable synthetically or empty. | Open no package; explain only the handoff boundary. |
+| 4 | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | Public onboarding shows setup status without mandate data. | Show the loaded tab; submit no request. |
+| 5 | `https://app.notariat8.de/onboarding/dns-check?...` and CLI DNS check | Expected TXT record and status are visible. | Explain `pending`/`mismatch` as setup status. |
+| 6 | `/onboarding/requests/<request_id>?audience=customer` | Status page for an existing request or `unavailable` as the store gate. | Do not debug ATP. |
+| 7 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
+| 8 | `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt` | Read-only login intent without credentials. | If JSON/error is visible, show login page or workspace boundary. |
+| 9 | `https://app.notariat8.de/workspace` | Without an approved session, the workspace remains closed; metadata status only, no matter file. | Explain fail-closed as security evidence. |
+| 10 | BPMN validation | `python scripts/nac.py bpmn validate` stays green; `bpmn show immobilienkaufvertrag` is readable. | Use the public process-model page. |
+| 11 | ATP healthcheck status | `/healthz` shows runtime status; ATP store gate is only classified as `enabled`, `disabled`, `unavailable` or `not_checked`. | Open no secrets, wallets, DSN or OCI CLI. |
+| 12 | XNP local | Card path, XNP localhost `12774` through `12784` and role are locally plausible only. | Show no live XNP action; mark Gate as `manual_review` or `blocked`. |
+| 13 | XNotar/XJustiz handoff | Exchange folder and package boundary are checkable synthetically or empty. | Open no package; explain only the handoff boundary. |
+
+## Exact Read-only Checks
+
+```bash
+curl -fsS https://app.notariat8.de/healthz
+curl -fsS "https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example" >/tmp/nac-onboarding-readiness.html
+curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt" >/tmp/nac-login-intent.json
+curl -i "https://app.notariat8.de/workspace"
+python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.invalid --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
+python scripts/nac.py bpmn validate
+python scripts/nac.py bpmn show immobilienkaufvertrag --format text
+```
+
+Do not execute: `POST /onboarding/requests`, `POST /admin/onboarding/review`,
+OCI CLI, Vault/wallet reads, ATP schema changes or real Identity
+provisioning.
 
 ## 60-Minute Live Order
 
@@ -44,19 +79,23 @@ no secrets and no real mandate data. All examples remain synthetic.
    view contains no mandate data.
 2. 5-20 minutes: open `https://notariat8.de/prozessmodell.html`; explain
    Immobilienkaufvertrag, duration logic, parallel work and critical path.
-3. 20-30 minutes: show domain-system boundaries: XNP local for readiness, card
+3. 20-28 minutes: show public onboarding, DNS readiness and existing request
+   status as a customer-readable setup path. Submit no new request during the
+   meeting.
+4. 28-35 minutes: show domain-system boundaries: XNP local for readiness, card
    reader and signature path; XNotar/XJustiz handoff for register and
    land-register communication.
-4. 30-40 minutes: if locally available, show the BPMN editor; otherwise stay
+5. 35-43 minutes: if locally available, show the BPMN editor; otherwise stay
    on the public process model. NaC BPMN/Evidence/Gate is the point, not live
    automation.
-5. 40-50 minutes: show `https://app.notariat8.de/login` and
+6. 43-52 minutes: show `https://app.notariat8.de/login`,
+   `https://app.notariat8.de/api/tenant/login-intent?...` and
    `https://app.notariat8.de/workspace` as the protected entry. Continue
    login only if it was pre-approved for this demo; otherwise show the closed
-   workspace as the expected result.
-6. 50-55 minutes: mention Unterschriftsbeglaubigung as the short comparison
+   workspace with the metadata-only gate as the expected result.
+7. 52-55 minutes: mention Unterschriftsbeglaubigung as the short comparison
    process.
-7. 55-60 minutes: close with visible domain-system boundaries, Protected PRs,
+8. 55-60 minutes: close with visible domain-system boundaries, Protected PRs,
    redacted Evidence and no productive register/land-register actions.
 
 ## 5-Minute Short Order
@@ -64,10 +103,12 @@ no secrets and no real mandate data. All examples remain synthetic.
 1. Open `https://notariat8.de`.
 2. Show `https://notariat8.de/prozessmodell.html`.
 3. Name Immobilienkaufvertrag, duration, parallel work and critical path.
-4. Explain XNP local as a readiness Gate.
-5. Explain XNotar/XJustiz handoff as a package/exchange-folder boundary.
-6. Show `https://app.notariat8.de/login` and the closed workspace.
-7. Close with: NaC BPMN/Evidence/Gate makes work visible and auditable.
+4. Show public onboarding/DNS status as a GET-only setup path.
+5. Explain XNP local as a readiness Gate.
+6. Explain XNotar/XJustiz handoff as a package/exchange-folder boundary.
+7. Show `https://app.notariat8.de/login`, login intent and the closed
+   metadata-only workspace.
+8. Close with: NaC BPMN/Evidence/Gate makes work visible and auditable.
 
 ## 20-Minute Fallback
 
@@ -75,16 +116,18 @@ no secrets and no real mandate data. All examples remain synthetic.
    public process references without mandate data.
 2. 3-9 minutes: show `https://notariat8.de/prozessmodell.html`; name
    Immobilienkaufvertrag, duration logic, parallel work and critical path.
-3. 9-13 minutes: explain XNP local, card reader, SAK lite, secureFramework,
+3. 9-12 minutes: show public onboarding readiness and DNS status. If request
+   status or ATP is unavailable, explain `unavailable` as the store gate.
+4. 12-15 minutes: explain XNP local, card reader, SAK lite, secureFramework,
    role and official activity context as the workstation boundary and Demo
    Gate. Start no productive XNP action.
-4. 13-16 minutes: explain XNotar/XJustiz as the package/exchange-folder
+5. 15-17 minutes: explain XNotar/XJustiz as the package/exchange-folder
    boundary for register and land-register communication. Open no real
    packages, register data or property data.
-5. 16-18 minutes: show `https://app.notariat8.de/login`. Continue the login
+6. 17-19 minutes: show `https://app.notariat8.de/login`. Continue the login
    flow only with explicit approval; otherwise go directly to
    `https://app.notariat8.de/workspace` and show fail-closed behavior.
-6. 18-20 minutes: summarize the Stop-Lines: NaC models BPMN, Evidence and
+7. 19-20 minutes: summarize the Stop-Lines: NaC models BPMN, Evidence and
    Gate; external domain systems remain boundaries; no real data and no
    productive claim.
 
