@@ -42,6 +42,35 @@ class OnboardingStoreSchemaTests(unittest.TestCase):
         for term in required_terms:
             self.assertIn(term, normalized)
 
+    def test_atp_session_schema_matches_multi_tenant_session_contract(self) -> None:
+        sql = self.read_schema()
+        normalized = " ".join(sql.lower().split())
+
+        required_terms = [
+            "create table nac_sessions",
+            "session_id_hash varchar2(64)",
+            "tenant_slug varchar2(80)",
+            "subject_hash varchar2(128)",
+            "role_class varchar2(80)",
+            "usecase_slug varchar2(120)",
+            "purpose varchar2(80)",
+            "issued_at number(19)",
+            "expires_at number(19)",
+            "revoked_at number(19)",
+            "audit_event_id varchar2(120)",
+            "contains_credentials number(1)",
+            "tokens_stored number(1)",
+            "claims_stored number(1)",
+            "constraint nac_sessions_pk primary key (session_id_hash)",
+            "constraint nac_sessions_guardrails_ck",
+            "create index nac_sessions_tenant_i",
+            "create index nac_sessions_subject_i",
+            "create index nac_sessions_expiry_i",
+        ]
+
+        for term in required_terms:
+            self.assertIn(term, normalized)
+
     def test_schema_artifact_contains_no_secret_material(self) -> None:
         sql = self.read_schema().lower()
 

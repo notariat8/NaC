@@ -67,10 +67,11 @@ domain, client, redirect, state, or nonce values.
 
 ## ATP Onboarding Request Store
 
-The productive onboarding request store is enabled only through an explicit
-server-side gate:
+The productive onboarding request store and server-side portal session store
+are enabled only through explicit server-side gates:
 
 - `NAC_ONBOARDING_STORE=atp`
+- `NAC_SESSION_STORE=atp`
 - `NAC_ATP_DSN`
 - `NAC_ATP_USER`
 - `NAC_ATP_PASSWORD_SECRET_OCID`
@@ -79,11 +80,13 @@ server-side gate:
 - `NAC_ATP_WALLET_OBJECT_NAME` for mTLS-required ATP
 - `NAC_ATP_WALLET_PASSWORD_SECRET_OCID` for mTLS-required ATP
 
-A plaintext password in `NAC_ATP_PASSWORD` does not enable the store. If any
-required value is missing, the route remains fail-closed and returns
-`onboarding_request_store_disabled`. The password value is read at runtime from
-OCI Vault through Resource Principal; Git, chat, query parameters, HTML, and
-Function config contain only the Secret OCID, never the secret value.
+A plaintext password in `NAC_ATP_PASSWORD` does not enable any store. If any
+required value is missing, affected routes remain fail-closed. Onboarding
+returns `onboarding_request_store_disabled`; protected start pages remain
+closed without an active server-side session record. The password value is read
+at runtime from OCI Vault through Resource Principal; Git, chat, query
+parameters, HTML, and Function config contain only the Secret OCID, never the
+secret value.
 
 For mTLS-required ATP, the wallet zip is read from a private Object Storage
 bucket and extracted into the ephemeral Function filesystem. The wallet
@@ -104,11 +107,15 @@ The ATP apply, table creation, and secret boundary remain a separate
 Owner-gated infrastructure track through `notariat8/oci-landing-zone#44`. The
 app adapter track is `notariat8/NaC#85`.
 
-The versioned bootstrap artifact for the first table is
+The versioned bootstrap artifact for the first tables is
 [deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
-It creates only `onboarding_requests` with the current contract fields. Running
-it belongs into the Block M runbook step after the ATP target has been reviewed
-and before the final live smoke for `POST /onboarding/requests`.
+It creates `onboarding_requests` and `nac_sessions` with the current contract
+fields. `nac_sessions` stores only hashed session IDs, tenant/user/usecase/
+purpose bindings, and redacted audit metadata. Tokens, claims, credentials, and
+mandate data are excluded by contract and schema guardrail. Running it belongs
+into the Block M runbook step after the ATP target has been reviewed and before
+the final live smoke for `POST /onboarding/requests` and the protected
+`GET /workspace` start status.
 The smoke test must also verify the `303` redirect and the reloadable GET status
 page without `admin_email` in the URL.
 

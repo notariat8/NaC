@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import html
 import json
 import os
 import threading
 import webbrowser
+from http.cookies import CookieError, SimpleCookie
 from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,7 +28,7 @@ from nac_identity.onboarding_requests import (
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
 from nac_identity.oidc_jwt import build_oidc_id_token_verifier
-from nac_identity.oidc_session import DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
+from nac_identity.oidc_session import DEFAULT_SESSION_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.session_store import RuntimeSessionStoreAdapter
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
@@ -132,6 +135,7 @@ class NaCLocalWebApp:
                 status, page, headers = build_auth_callback_page(
                     parsed.query,
                     secret_text_provider=self.secret_text_provider,
+                    session_store=self.session_store,
                 )
                 return _html_response(page, status, headers=headers)
             if route == "/workspace":
@@ -738,7 +742,7 @@ def build_login_page(query: str) -> str:
         <h2>Sicherheitsprüfung</h2>
         <ul class="link-list">
           <li><span>Die Anmeldung wird erst nach serverseitiger Sicherheitsprüfung geöffnet.</span></li>
-          <li><span>Rollen- und Vorgangsprüfung entscheiden erst nach erfolgreicher Anmeldung über Zugriff.</span></li>
+          <li><span>Berechtigung und Vorgang werden erst nach erfolgreicher Anmeldung geprüft.</span></li>
           <li><span>Keine Mandatsdaten, Zugangsdaten oder Client-Secrets in dieser Einstiegskante.</span></li>
         </ul>
       </section>
@@ -779,6 +783,7 @@ def build_auth_callback_page(
     query: str,
     *,
     secret_text_provider: Callable[[str], str] | None = None,
+    session_store: RuntimeSessionStoreAdapter | None = None,
 ) -> tuple[HTTPStatus, str, dict[str, str]]:
     params = parse_qs(query, keep_blank_values=True)
     provider_error = _optional_query_text(params, "error", max_length=120)
@@ -786,6 +791,12 @@ def build_auth_callback_page(
     state = _optional_query_text(params, "state", max_length=4096)
     state_validation = _auth_callback_state_validation(state, secret_text_provider=secret_text_provider)
     token_exchange_metadata = _auth_callback_token_exchange_metadata()
+    token_exchange_result = _auth_callback_token_exchange_result(
+        code=code,
+        state_validation=state_validation,
+        secret_text_provider=secret_text_provider,
+        **token_exchange_metadata,
+    )
     callback_result = build_auth_callback_result(
         code=code,
         state=state,
@@ -793,12 +804,7 @@ def build_auth_callback_page(
         state_validation_configured=_auth_callback_state_validation_configured(),
         token_exchange_configured=_auth_callback_token_exchange_configured(),
         state_validation=state_validation,
-        token_exchange_result=_auth_callback_token_exchange_result(
-            code=code,
-            state_validation=state_validation,
-            secret_text_provider=secret_text_provider,
-            **token_exchange_metadata,
-        ),
+        token_exchange_result=token_exchange_result,
         expected_issuer=_auth_callback_expected_issuer(),
         expected_audience=token_exchange_metadata["client_id"],
         session_signing_key=_auth_callback_session_signing_key(secret_text_provider=secret_text_provider),
@@ -831,6 +837,15 @@ def build_auth_callback_page(
         else "Rollenprüfung offen"
     )
     session_bound = bool(callback_result.get("session_boundary", {}).get("session", {}).get("cookie_issued"))
+    if session_bound and session_store is not None:
+        session_bound = _persist_auth_callback_session(
+            callback_result=callback_result,
+            token_exchange_result=token_exchange_result,
+            state_validation=state_validation,
+            session_store=session_store,
+        )
+        if not session_bound:
+            _mark_callback_session_store_unavailable(callback_result)
     session_label = "Sitzung vorbereitet" if session_bound else "Sitzung offen"
     escaped_state_label = html.escape(state_label)
     escaped_role_label = html.escape(role_label)
@@ -843,7 +858,7 @@ def build_auth_callback_page(
             "freigegeben. Vollständiger Arbeitsbereich bleibt geschlossen."
         )
         role_gate_detail = (
-            "Die Sitzung ist aufgebaut und das notariat8-Rollengate bestätigt. "
+            "Die Sitzung ist aufgebaut und die notariat8-Berechtigung bestätigt. "
             "Dieser Schritt öffnet nur den geschützten Startstatus."
         )
         next_step_html = """
@@ -863,7 +878,7 @@ def build_auth_callback_page(
             "aufgebaut und die Rolle geprüft hat."
         )
         next_step_html = """
-          <li><span>Sitzung prüfen und notariat8-Rollengate anwenden.</span></li>
+          <li><span>Sitzung und Berechtigung prüfen.</span></li>
           <li><span>Mandatsdaten werden in diesem Zwischenschritt nicht geladen.</span></li>
         """
         startstatus_label_html = ""
@@ -876,7 +891,7 @@ def build_auth_callback_page(
     </section>
     <div class="grid">
       <section class="notice">
-        <h2>Rollen- und Vorgangsprüfung</h2>
+        <h2>Anmeldung und Berechtigung</h2>
         <p><strong>{escaped_state_label}</strong></p>
         <p><strong>{escaped_role_label}</strong></p>
         <p><strong>{escaped_session_label}</strong></p>
@@ -928,27 +943,30 @@ def build_protected_workspace_start_page(
         """
         return HTTPStatus.UNAUTHORIZED, _layout("notariat8 Anmeldung erforderlich", body)
 
+    server_bindings = _server_session_bindings(validation)
     role_case_gate = evaluate_role_case_gate(
         session_validation=validation,
         role_gate=normalize_workspace_role_gate_context(
-            role=_request_header(request_headers, "X-NaC-Role"),
-            role_gate_open=_workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True),
+            role=_workspace_role_from_binding_or_header(server_bindings, request_headers),
+            role_gate_open=server_bindings.get("role_bound")
+            if "role_bound" in server_bindings
+            else _workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True),
         ),
         tenant_context=normalize_workspace_tenant_binding_context(
-            tenant_bound=_workspace_header_bool(request_headers, "X-NaC-Tenant-Bound"),
+            tenant_bound=server_bindings.get("tenant_bound", _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound")),
         ),
         case_context=normalize_workspace_case_binding_context(
-            case_bound=_workspace_header_bool(request_headers, "X-NaC-Case-Bound"),
+            case_bound=server_bindings.get("case_bound", _workspace_header_bool(request_headers, "X-NaC-Case-Bound")),
         ),
         purpose_context=normalize_workspace_purpose_binding_context(
-            purpose_bound=_workspace_header_bool(request_headers, "X-NaC-Purpose-Bound"),
+            purpose_bound=server_bindings.get("purpose_bound", _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound")),
         ),
         subject_matter_roles=["nac-notary", "nac-case-worker", "nac-tenant-admin"],
     )
     if role_case_gate["status"] != "open":
         reason_label = {
             "role_missing": "Rolle fehlt",
-            "tenant_mismatch": "Tenant-Bindung fehlt",
+            "tenant_mismatch": "Notariatsbindung fehlt",
             "case_missing": "Vorgangsbindung fehlt",
             "purpose_missing": "Zweckbindung fehlt",
             "four_eyes_required": "Vier-Augen-Freigabe fehlt",
@@ -957,9 +975,9 @@ def build_protected_workspace_start_page(
         <nav class="topline"><a href="/login">← Anmeldung</a></nav>
         <section class="hero">
           <p class="eyebrow">notariat8 Start</p>
-          <h1>Rollen- und Vorgangsprüfung offen</h1>
+          <h1>Berechtigungsprüfung offen</h1>
           <p>Ihre Sitzung wurde geprüft. Der geschützte Arbeitsbereich bleibt geschlossen,
-          bis Rolle, Tenant, Vorgang und Zweck geprüft sind.</p>
+          bis Berechtigung, Notariat, Vorgang und Zweck geprüft sind.</p>
         </section>
         <div class="grid">
           <section class="notice">
@@ -979,23 +997,23 @@ def build_protected_workspace_start_page(
           </section>
         </div>
         """
-        return HTTPStatus.FORBIDDEN, _layout("notariat8 Rollen- und Vorgangsprüfung offen", body)
+        return HTTPStatus.FORBIDDEN, _layout("notariat8 Berechtigungsprüfung offen", body)
 
     body = """
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
       <p class="eyebrow">notariat8 Start</p>
-      <h1>Geschützte Workspace-Metadaten</h1>
-      <p>Ihre Sitzung und die fachliche Bindung wurden geprüft. notariat8 zeigt hier nur
-      Status-Metadaten.</p>
+      <h1>Geschützter Startstatus</h1>
+      <p>Ihre Anmeldung und Berechtigung wurden geprüft. notariat8 zeigt hier nur
+      Statushinweise.</p>
     </section>
     <div class="grid">
       <section class="notice">
-        <h2>Rollen- und Vorgangsgate bestätigt</h2>
-        <p><strong>Status-Metadaten freigegeben</strong></p>
+        <h2>Anmeldung und Berechtigung bestätigt</h2>
+        <p><strong>Startstatus freigegeben</strong></p>
         <ul class="link-list">
-          <li><span>Rolle bestätigt.</span></li>
-          <li><span>Tenant-Bindung bestätigt.</span></li>
+          <li><span>Berechtigung bestätigt.</span></li>
+          <li><span>Notariat bestätigt.</span></li>
           <li><span>Vorgangsbindung bestätigt.</span></li>
           <li><span>Zweckbindung bestätigt.</span></li>
         </ul>
@@ -1018,6 +1036,23 @@ def _workspace_header_bool(headers: dict[str, str], name: str, *, default: bool 
     if not value:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _server_session_bindings(validation: dict[str, Any]) -> dict[str, bool]:
+    server_session = validation.get("server_session")
+    if not isinstance(server_session, dict):
+        return {}
+    bindings = server_session.get("bindings")
+    if not isinstance(bindings, dict):
+        return {}
+    allowed = {"tenant_bound", "subject_bound", "role_bound", "case_bound", "purpose_bound"}
+    return {key: bool(value) for key, value in bindings.items() if key in allowed}
+
+
+def _workspace_role_from_binding_or_header(bindings: dict[str, bool], headers: dict[str, str]) -> str:
+    if bindings.get("role_bound"):
+        return "nac-tenant-admin"
+    return _request_header(headers, "X-NaC-Role")
 
 
 def build_operator_access_required_page() -> str:
@@ -1168,7 +1203,7 @@ def _onboarding_state_gate(state: str) -> str:
         "dns_challenge_issued": "DNS-TXT-Challenge ausgegeben",
         "domain_verified": "DNS-TXT bestätigt",
         "in_review": "notariat8 prüft Einrichtung und E-Mail-Adresse",
-        "approved": "Freigabe ist dokumentiert; Einladung bleibt bis zum nächsten Gate offen",
+        "approved": "Freigabe ist dokumentiert; Einladung bleibt bis zum nächsten Freigabeschritt offen",
         "rejected": "Anfrage wurde abgelehnt und nicht eingeladen",
         "invited": "Initialer Tenant-Admin wurde eingeladen",
     }
@@ -2711,6 +2746,105 @@ def _auth_callback_response_headers(callback_result: dict[str, Any]) -> dict[str
     if not isinstance(set_cookie, str) or not set_cookie:
         return {}
     return {"Set-Cookie": set_cookie}
+
+
+def _persist_auth_callback_session(
+    *,
+    callback_result: dict[str, Any],
+    token_exchange_result: dict[str, Any] | None,
+    state_validation: dict[str, Any],
+    session_store: RuntimeSessionStoreAdapter,
+) -> bool:
+    create_session_record = getattr(session_store, "create_session_record", None)
+    if not callable(create_session_record):
+        return False
+    session = callback_result.get("session_boundary", {}).get("session", {})
+    if not isinstance(session, dict):
+        return False
+    payload = _session_cookie_payload_from_set_cookie(str(session.get("set_cookie", "")))
+    if not payload:
+        return False
+    claims = token_exchange_result.get("claims") if isinstance(token_exchange_result, dict) else {}
+    subject_hash = _auth_subject_hash(claims if isinstance(claims, dict) else {})
+    tenant_slug = _safe_auth_session_text(state_validation.get("tenant_hint"), 80) or "default"
+    role_class = _safe_auth_session_text(callback_result.get("role_gate", {}).get("role"), 80) or "nac-tenant-admin"
+    try:
+        create_session_record(
+            session_id=str(payload["sid"]),
+            tenant_slug=tenant_slug,
+            subject_hash=subject_hash,
+            role_class=role_class,
+            usecase_slug=_auth_callback_default_usecase_slug(),
+            purpose="portal-start",
+            issued_at=int(payload["iat"]),
+            expires_at=int(payload["exp"]),
+            audit_event_id=_auth_session_audit_event_id(payload),
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _mark_callback_session_store_unavailable(callback_result: dict[str, Any]) -> None:
+    session = callback_result.get("session_boundary", {}).get("session")
+    if isinstance(session, dict):
+        session["cookie_issued"] = False
+        session["session_allowed"] = False
+        session.pop("set_cookie", None)
+    guardrails = callback_result.get("guardrails")
+    if isinstance(guardrails, dict):
+        guardrails["session_cookie_issued"] = False
+    callback_result["next_step"] = "server_session_store_unavailable"
+
+
+def _session_cookie_payload_from_set_cookie(set_cookie: str) -> dict[str, Any] | None:
+    cookie = SimpleCookie()
+    try:
+        cookie.load(set_cookie)
+    except CookieError:
+        return None
+    morsel = cookie.get(DEFAULT_SESSION_COOKIE_NAME)
+    if morsel is None:
+        return None
+    payload_part = morsel.value.strip().split(".", 1)[0]
+    if not payload_part:
+        return None
+    try:
+        padding = "=" * (-len(payload_part) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(f"{payload_part}{padding}".encode("ascii")).decode("utf-8"))
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if not isinstance(payload.get("sid"), str) or not payload.get("sid"):
+        return None
+    if not isinstance(payload.get("iat"), int) or not isinstance(payload.get("exp"), int):
+        return None
+    return payload
+
+
+def _auth_subject_hash(claims: dict[str, Any]) -> str:
+    subject = _safe_auth_session_text(claims.get("sub"), 256)
+    if not subject:
+        subject = _safe_auth_session_text(claims.get("email"), 256)
+    if not subject:
+        subject = "subject-unavailable"
+    return hashlib.sha256(subject.encode("utf-8")).hexdigest()
+
+
+def _auth_session_audit_event_id(payload: dict[str, Any]) -> str:
+    digest = hashlib.sha256(str(payload.get("sid", "")).encode("utf-8")).hexdigest()[:16]
+    return f"session-{digest}"
+
+
+def _auth_callback_default_usecase_slug() -> str:
+    return os.environ.get("NAC_DEFAULT_USECASE_SLUG", "immobilienkaufvertrag").strip() or "immobilienkaufvertrag"
+
+
+def _safe_auth_session_text(value: Any, max_length: int) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip()[:max_length]
 
 
 def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:

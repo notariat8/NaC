@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from nac_identity.onboarding_requests import build_onboarding_request_store_from_env
+from nac_identity.session_store import build_session_store_from_env
 from nac_web.server import NaCLocalWebApp
 
 
@@ -54,7 +55,16 @@ def dispatch_oci_function_request(
         if expose_stateful_onboarding_routes and _requires_onboarding_request_store(method, request_url)
         else None
     )
-    app = NaCLocalWebApp(_repo_root(repo_root), onboarding_request_store=onboarding_request_store)
+    session_store = (
+        build_session_store_from_env()
+        if expose_stateful_onboarding_routes and _requires_session_store(method, request_url)
+        else None
+    )
+    app = NaCLocalWebApp(
+        _repo_root(repo_root),
+        onboarding_request_store=onboarding_request_store,
+        session_store=session_store,
+    )
 
     response_headers: dict[str, str] = {}
     if method in {"GET", "HEAD"} and _is_exposed_get_route(
@@ -163,6 +173,14 @@ def _requires_onboarding_request_store(method: str, request_url: str) -> bool:
         params = parse_qs(parsed.query, keep_blank_values=True)
         return (params.get("audience") or [""])[0] == "customer"
     return False
+
+
+def _requires_session_store(method: str, request_url: str) -> bool:
+    if method not in {"GET", "HEAD"}:
+        return False
+    parsed = urlparse(request_url)
+    route = unquote(parsed.path) or "/"
+    return route in {"/auth/callback", "/workspace"}
 
 
 def _headers(ctx: Any) -> dict[str, str]:
