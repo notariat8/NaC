@@ -716,7 +716,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.headers["Content-Type"], "text/html; charset=utf-8")
         self.assertIn("Anmeldung empfangen", body)
-        self.assertIn("Rollen- und Vorgangsprüfung", body)
+        self.assertIn("Anmeldung und Berechtigung", body)
         self.assertIn("Arbeitsbereich bleibt geschlossen", body)
         self.assertIn("Sicherheitsprüfung offen", body)
         self.assertNotIn("secret-code-from-idp", body)
@@ -786,6 +786,23 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("idcs.example.identity.oraclecloud.com", body)
         self.assertNotIn("Oracle", body)
         self.assertNotIn("OCI", body)
+
+    def test_stateful_auth_routes_initialize_session_store_from_env(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        class DummySessionStore:
+            def get_session_record(self, _session_id: str) -> None:
+                return None
+
+        with patch("nac_web.oci_functions.build_session_store_from_env", return_value=DummySessionStore()) as factory:
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/workspace", method="GET"),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+
+        self.assertEqual(result.status_code, 401)
+        factory.assert_called_once_with()
 
     def test_dispatches_workspace_fail_closed_without_cookie(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request

@@ -128,6 +128,133 @@ class OnboardingRequestTests(unittest.TestCase):
         self.assertEqual(binds["domain"], "myjur.de")
         self.assertNotIn("fixture-db-value", json.dumps(binds, sort_keys=True))
 
+    def test_atp_session_store_creates_multi_tenant_user_session_without_secret_leakage(self) -> None:
+        from nac_identity.session_store import AtpSessionStore
+
+        connections: list[FakeConnection] = []
+
+        def connect(**kwargs: object) -> "FakeConnection":
+            connection = FakeConnection(kwargs)
+            connections.append(connection)
+            return connection
+
+        store = AtpSessionStore(
+            user="nac_app",
+            dsn="nacdb_low",
+            password_provider=lambda: "fixture-db-value",
+            connector=connect,
+        )
+
+        created = store.create_session_record(
+            session_id="raw-session-secret",
+            tenant_slug="myjur",
+            subject_hash="subject-hash-1",
+            role_class="nac-tenant-admin",
+            usecase_slug="immobilienkaufvertrag",
+            purpose="portal-start",
+            issued_at=1_800_000_000,
+            expires_at=1_800_000_600,
+            audit_event_id="audit-session-1",
+        )
+
+        self.assertEqual(created["schema_version"], "nac.server-session/v0.1")
+        self.assertFalse(created["session_id_exposed"])
+        self.assertTrue(created["tenant_bound"])
+        self.assertTrue(created["subject_bound"])
+        self.assertTrue(created["role_bound"])
+        self.assertTrue(created["case_bound"])
+        self.assertTrue(created["purpose_bound"])
+        self.assertEqual(connections[0].connect_kwargs["user"], "nac_app")
+        self.assertEqual(connections[0].connect_kwargs["dsn"], "nacdb_low")
+        self.assertEqual(connections[0].connect_kwargs["password"], "fixture-db-value")
+        self.assertTrue(connections[0].committed)
+        statement, binds = connections[0].cursor_obj.executions[0]
+        serialized_binds = json.dumps(binds, sort_keys=True)
+        self.assertIn("MERGE INTO nac_sessions", statement)
+        self.assertIn("session_id_hash", binds)
+        self.assertNotEqual(binds["session_id_hash"], "raw-session-secret")
+        self.assertEqual(binds["tenant_slug"], "myjur")
+        self.assertEqual(binds["subject_hash"], "subject-hash-1")
+        self.assertEqual(binds["role_class"], "nac-tenant-admin")
+        self.assertEqual(binds["usecase_slug"], "immobilienkaufvertrag")
+        self.assertEqual(binds["purpose"], "portal-start")
+        self.assertEqual(binds["contains_credentials"], 0)
+        self.assertEqual(binds["tokens_stored"], 0)
+        self.assertEqual(binds["claims_stored"], 0)
+        self.assertNotIn("raw-session-secret", serialized_binds)
+        self.assertNotIn("fixture-db-value", serialized_binds)
+
+    def test_atp_session_store_lookup_returns_redacted_runtime_record(self) -> None:
+        from nac_identity.session_store import AtpSessionStore
+
+        connection = FakeConnection({})
+
+        def connect(**kwargs: object) -> FakeConnection:
+            connection.connect_kwargs.update(kwargs)
+            connection.cursor_obj.description = [
+                ("SESSION_ID_HASH",),
+                ("TENANT_SLUG",),
+                ("SUBJECT_HASH",),
+                ("ROLE_CLASS",),
+                ("USECASE_SLUG",),
+                ("PURPOSE",),
+                ("ISSUED_AT",),
+                ("EXPIRES_AT",),
+                ("REVOKED_AT",),
+                ("AUDIT_EVENT_ID",),
+                ("CONTAINS_CREDENTIALS",),
+                ("TOKENS_STORED",),
+                ("CLAIMS_STORED",),
+            ]
+            connection.cursor_obj.rows = [
+                (
+                    "stored-session-hash",
+                    "myjur",
+                    "subject-hash-1",
+                    "nac-tenant-admin",
+                    "immobilienkaufvertrag",
+                    "portal-start",
+                    1_800_000_000,
+                    1_800_000_600,
+                    None,
+                    "audit-session-1",
+                    0,
+                    0,
+                    0,
+                )
+            ]
+            return connection
+
+        store = AtpSessionStore(
+            user="nac_app",
+            dsn="nacdb_low",
+            password_provider=lambda: "fixture-db-value",
+            connector=connect,
+        )
+
+        record = store.get_session_record("raw-session-secret")
+
+        self.assertIsNotNone(record)
+        assert record is not None
+        serialized = json.dumps(record, sort_keys=True)
+        select_statement, select_binds = connection.cursor_obj.executions[0]
+        self.assertIn("SELECT", select_statement)
+        self.assertIn("FROM nac_sessions", select_statement)
+        self.assertNotEqual(select_binds["session_id_hash"], "raw-session-secret")
+        self.assertEqual(record["schema_version"], "nac.server-session/v0.1")
+        self.assertEqual(record["expires_at"], 1_800_000_600)
+        self.assertFalse(record["contains_credentials"])
+        self.assertFalse(record["tokens_stored"])
+        self.assertFalse(record["claims_stored"])
+        self.assertEqual(record["audit_event_id"], "audit-session-1")
+        self.assertTrue(record["tenant_bound"])
+        self.assertTrue(record["subject_bound"])
+        self.assertTrue(record["role_bound"])
+        self.assertTrue(record["case_bound"])
+        self.assertTrue(record["purpose_bound"])
+        self.assertNotIn("raw-session-secret", serialized)
+        self.assertNotIn("fixture-db-value", serialized)
+
     def test_atp_store_review_request_updates_status_without_invitation_send(self) -> None:
         from nac_identity.onboarding_requests import AtpOnboardingRequestStore
 

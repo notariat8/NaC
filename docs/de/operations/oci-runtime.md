@@ -68,10 +68,11 @@ Client-, Redirect-, State- oder Nonce-Werte setzen.
 
 ## ATP-Onboarding-Request-Store
 
-Der produktive Store für Onboarding-Anfragen wird nur über ein explizites
-serverseitiges Gate aktiviert:
+Der produktive Store für Onboarding-Anfragen und serverseitige Portal-Sessions
+wird nur über explizite serverseitige Gates aktiviert:
 
 - `NAC_ONBOARDING_STORE=atp`
+- `NAC_SESSION_STORE=atp`
 - `NAC_ATP_DSN`
 - `NAC_ATP_USER`
 - `NAC_ATP_PASSWORD_SECRET_OCID`
@@ -80,11 +81,13 @@ serverseitiges Gate aktiviert:
 - `NAC_ATP_WALLET_OBJECT_NAME` bei mTLS-erforderlicher ATP
 - `NAC_ATP_WALLET_PASSWORD_SECRET_OCID` bei mTLS-erforderlicher ATP
 
-Ein Klartext-Passwort in `NAC_ATP_PASSWORD` aktiviert den Store nicht. Fehlt
-einer der erforderlichen Werte, bleibt die Route fail-closed und antwortet mit
-`onboarding_request_store_disabled`. Der Passwortwert wird zur Laufzeit über
-OCI Vault und Resource Principal gelesen; in Git, Chat, Query-Parametern,
-HTML und Function-Config steht nur die Secret-OCID, nicht der Secret-Inhalt.
+Ein Klartext-Passwort in `NAC_ATP_PASSWORD` aktiviert keinen Store. Fehlt
+einer der erforderlichen Werte, bleiben die betroffenen Routen fail-closed.
+Onboarding antwortet mit `onboarding_request_store_disabled`; geschützte
+Startseiten bleiben ohne aktiven Server-Session-Record geschlossen. Der
+Passwortwert wird zur Laufzeit über OCI Vault und Resource Principal gelesen;
+in Git, Chat, Query-Parametern, HTML und Function-Config steht nur die
+Secret-OCID, nicht der Secret-Inhalt.
 
 Bei mTLS-erforderlicher ATP wird das Wallet-Zip aus einem privaten Object
 Storage Bucket gelesen und in das ephemere Function-Dateisystem entpackt. Das
@@ -105,11 +108,16 @@ Der ATP-Apply, Tabellenanlage und Secret-Boundary bleiben ein separater
 Owner-gated Infrastruktur-Track über `notariat8/oci-landing-zone#44`. Der
 App-Adapter-Track ist `notariat8/NaC#85`.
 
-Das versionierte Bootstrap-Artefakt für die erste Tabelle liegt in
+Das versionierte Bootstrap-Artefakt für die ersten Tabellen liegt in
 [deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
-Es legt nur `onboarding_requests` mit den aktuellen Vertragsfeldern an. Die
-Ausführung gehört in den Block-M-Runbook-Schritt nach geprüfter ATP-Zielwahl
-und vor dem finalen Live-Smoke für `POST /onboarding/requests`.
+Es legt `onboarding_requests` und `nac_sessions` mit den aktuellen
+Vertragsfeldern an. `nac_sessions` speichert nur gehashte Session-IDs,
+Tenant-/Benutzer-/Vorgangs-/Zweck-Bindungen und redaktierte Audit-Metadaten.
+Tokens, Claims, Zugangsdaten und Mandatsdaten sind per Contract und
+Schema-Guardrail ausgeschlossen. Die Ausführung gehört in den
+Block-M-Runbook-Schritt nach geprüfter ATP-Zielwahl und vor dem finalen
+Live-Smoke für `POST /onboarding/requests` und den geschützten
+`GET /workspace`-Startstatus.
 Der Smoke-Test muss zusätzlich den `303`-Redirect und die reloadbare
 GET-Statusseite ohne `admin_email` in der URL prüfen.
 

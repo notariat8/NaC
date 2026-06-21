@@ -441,7 +441,12 @@ def _validate_server_session_record(
         return _server_session_result("invalid", "server_session_time_invalid", audit_event_id=audit_event_id)
     if checked_at >= expires_at:
         return _server_session_result("expired", "server_session_expired", audit_event_id=audit_event_id)
-    return _server_session_result("active", "server_session_active", audit_event_id=audit_event_id)
+    return _server_session_result(
+        "active",
+        "server_session_active",
+        audit_event_id=audit_event_id,
+        bindings=_server_session_bindings(record),
+    )
 
 
 _SESSION_STORE_UNAVAILABLE = object()
@@ -460,7 +465,13 @@ def _lookup_server_session_record(
         return _SESSION_STORE_UNAVAILABLE
 
 
-def _server_session_result(status: str, reason: str, *, audit_event_id: str = "") -> dict[str, Any]:
+def _server_session_result(
+    status: str,
+    reason: str,
+    *,
+    audit_event_id: str = "",
+    bindings: dict[str, bool] | None = None,
+) -> dict[str, Any]:
     result: dict[str, Any] = {
         "schema_version": "nac.server-session/v0.1",
         "status": status,
@@ -475,7 +486,21 @@ def _server_session_result(status: str, reason: str, *, audit_event_id: str = ""
     }
     if audit_event_id:
         result["audit_event_id"] = audit_event_id
+    if bindings is not None:
+        result["bindings"] = dict(bindings)
     return result
+
+
+def _server_session_bindings(record: Mapping[str, Any]) -> dict[str, bool]:
+    if not any(key in record for key in {"tenant_bound", "subject_bound", "role_bound", "case_bound", "purpose_bound"}):
+        return {}
+    return {
+        "tenant_bound": _record_boolean_is_true(record, "tenant_bound"),
+        "subject_bound": _record_boolean_is_true(record, "subject_bound"),
+        "role_bound": _record_boolean_is_true(record, "role_bound"),
+        "case_bound": _record_boolean_is_true(record, "case_bound"),
+        "purpose_bound": _record_boolean_is_true(record, "purpose_bound"),
+    }
 
 
 def _append_session_audit_event(
@@ -509,6 +534,10 @@ def _append_session_audit_event(
 
 def _record_boolean_is_false(record: Mapping[str, Any], key: str) -> bool:
     return record.get(key) is False
+
+
+def _record_boolean_is_true(record: Mapping[str, Any], key: str) -> bool:
+    return record.get(key) is True
 
 
 def _safe_audit_event_id(value: Any) -> str:
