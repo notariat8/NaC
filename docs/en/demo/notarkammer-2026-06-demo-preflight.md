@@ -25,6 +25,13 @@ summer (UTC+2). June 2026 uses CEST; no demo note should use UTC only.
 | T-01:00 | Read the Stop-Lines aloud and finalize browser tab order. | The demo can start without live debugging. |
 | T-00:15 | Read-only viewing only, no further changes. | The presentation window remains stable. |
 
+## Command safety
+
+All commands in this preflight may prepare or read only. `curl` examples are
+viewing checks. `tenant apply-request` examples must include `--dry-run`.
+POST, OCI CLI, productive apply steps, Vault, wallet, ATP and Identity secret
+access remain stop-lines and are not executed during the meeting.
+
 ## Browser Checks
 
 Run every check in a fresh browser window without a saved session.

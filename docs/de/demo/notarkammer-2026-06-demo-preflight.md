@@ -26,6 +26,14 @@ Demo-Notiz darf nur UTC nennen.
 | T-01:00 | Stop-Lines laut lesen und Browser-Tabs final sortieren. | Demo kann ohne Live-Debugging starten. |
 | T-00:15 | Nur noch Read-only-Sichtung, keine Änderungen mehr. | Praesentationsfenster bleibt stabil. |
 
+## Befehlssicherheit
+
+Alle Befehle in diesem Preflight dürfen nur vorbereiten oder lesen. Beispiele
+mit `curl` sind Sichtprüfungen. Beispiele mit `tenant apply-request` müssen
+`--dry-run` enthalten. POST, OCI-CLI, produktive Apply-Schritte, Vault-,
+Wallet-, ATP- und Identity-Secret-Zugriffe bleiben Stop-Lines und werden im
+Termin nicht ausgeführt.
+
 ## Browser-Checks
 
 Alle Checks laufen in einem frischen Browserfenster ohne gespeicherte Sitzung.
