@@ -19,6 +19,19 @@ sondern verhindert Ad-hoc-Debugging im Termin.
 | XNP und card reader Readiness | Nur lokaler Status `ready`, `manual_review` oder `blocked`; keine Rohdaten. | XNP als lokale Arbeitsplatzgrenze erklären. |
 | Protected PR | Pull Request, Checks und redigierte Testausgabe. | Änderungs- und Freigabespur zeigen. |
 
+## Vorbereitetes Evidence-Paket
+
+| Evidence-ID | Artefaktname | Zulässige Sicht | Status | Nach der Demo |
+| --- | --- | --- | --- | --- |
+| `NK-EVIDENCE-001-public-home` | `notariat8-public-home-redacted.png` | Öffentliche Startseite von `notariat8.de`. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-002-process-model` | `notariat8-process-model-immobilienkaufvertrag-redacted.png` | Prozessmodell ohne Mandatsdaten. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-003-workspace-boundary` | `notariat8-workspace-boundary-redacted.png` | Geschlossene oder metadata-only Arbeitsbereichsgrenze. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-004-local-xnp-readiness` | `notariat8-local-xnp-readiness-redacted.png` | Lokaler Readiness-Status ohne Rohdaten. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-005-protected-pr` | `notariat8-protected-pr-checks-redacted.png` | PR-Checks und Freigabespur ohne Secrets. | `redacted`, `reviewed` | `delete-after-demo` |
+
+Jedes Artefakt muss vor der Vorführung als `redacted` und `reviewed`
+markiert sein. Artefakte ohne beide Markierungen werden nicht gezeigt.
+
 ## Nicht erlaubte Evidence
 
 - keine echten Mandatsdaten
@@ -32,6 +45,16 @@ sondern verhindert Ad-hoc-Debugging im Termin.
 - keine Schlüssel
 - keine produktive Einreichung
 - keine produktive XNP-, Register- oder Grundbuchaktion
+- keine Login-Felder
+- keine Callback-Werte
+- kein Autorisierungscode
+- kein State-Wert
+- kein Session-Cookie
+- keine Anbieterdetails
+- keine echten Namen
+- kein XNP-Payload
+- kein Register-Payload
+- kein Grundbuch-Payload
 
 ## Redaktionsregel
 

@@ -17,6 +17,19 @@ replace live checks; it prevents ad-hoc debugging during the meeting.
 | XNP and card reader readiness | Local status only: `ready`, `manual_review` or `blocked`; no raw data. | Explain XNP as a local workstation boundary. |
 | Protected PR | Pull request, checks and redacted test output. | Show change and review evidence. |
 
+## Prepared Evidence Package
+
+| Evidence ID | Artifact name | Allowed view | Status | After the demo |
+| --- | --- | --- | --- | --- |
+| `NK-EVIDENCE-001-public-home` | `notariat8-public-home-redacted.png` | Public `notariat8.de` home page. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-002-process-model` | `notariat8-process-model-immobilienkaufvertrag-redacted.png` | Process model without mandate data. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-003-workspace-boundary` | `notariat8-workspace-boundary-redacted.png` | Closed or metadata-only workspace boundary. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-004-local-xnp-readiness` | `notariat8-local-xnp-readiness-redacted.png` | Local readiness status without raw data. | `redacted`, `reviewed` | `delete-after-demo` |
+| `NK-EVIDENCE-005-protected-pr` | `notariat8-protected-pr-checks-redacted.png` | PR checks and review trail without secrets. | `redacted`, `reviewed` | `delete-after-demo` |
+
+Each artifact must be marked `redacted` and `reviewed` before the
+presentation. Artifacts missing either status are not shown.
+
 ## Disallowed evidence
 
 - no real mandate data
@@ -30,6 +43,16 @@ replace live checks; it prevents ad-hoc debugging during the meeting.
 - no keys
 - no productive submission
 - no productive XNP, register or land-register action
+- no login fields
+- no callback values
+- no authorization code
+- no state value
+- no session cookie
+- no provider details
+- no real names
+- no XNP payload
+- no register payload
+- no land-register payload
 
 ## Redaction rule
 

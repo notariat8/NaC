@@ -71,6 +71,63 @@ class NotarkammerDemoFallbackEvidenceManifestTests(unittest.TestCase):
         self.assertIn("notarkammer-2026-06-demo-fallback-evidence-manifest.md", german)
         self.assertIn("notarkammer-2026-06-demo-fallback-evidence-manifest.md", english)
 
+    def test_manifest_defines_prepared_evidence_package_rules(self):
+        german = (
+            ROOT / "docs" / "de" / "demo" / "notarkammer-2026-06-demo-fallback-evidence-manifest.md"
+        ).read_text(encoding="utf-8")
+        english = (
+            ROOT / "docs" / "en" / "demo" / "notarkammer-2026-06-demo-fallback-evidence-manifest.md"
+        ).read_text(encoding="utf-8")
+
+        for text in [german, english]:
+            self.assertIn("NK-EVIDENCE-001-public-home", text)
+            self.assertIn("NK-EVIDENCE-002-process-model", text)
+            self.assertIn("NK-EVIDENCE-003-workspace-boundary", text)
+            self.assertIn("NK-EVIDENCE-004-local-xnp-readiness", text)
+            self.assertIn("NK-EVIDENCE-005-protected-pr", text)
+            self.assertIn("redacted", text)
+            self.assertIn("reviewed", text)
+            self.assertIn("delete-after-demo", text)
+
+    def test_manifest_blocks_unsafe_evidence_categories(self):
+        combined = "\n".join(
+            [
+                (
+                    ROOT
+                    / "docs"
+                    / locale
+                    / "demo"
+                    / "notarkammer-2026-06-demo-fallback-evidence-manifest.md"
+                ).read_text(encoding="utf-8")
+                for locale in ["de", "en"]
+            ]
+        )
+
+        forbidden_evidence_classes = [
+            "login fields",
+            "callback values",
+            "authorization code",
+            "state value",
+            "session cookie",
+            "provider details",
+            "real names",
+            "XNP payload",
+            "register payload",
+            "land-register payload",
+            "Login-Felder",
+            "Callback-Werte",
+            "Autorisierungscode",
+            "State-Wert",
+            "Session-Cookie",
+            "Anbieterdetails",
+            "echten Namen",
+            "XNP-Payload",
+            "Register-Payload",
+            "Grundbuch-Payload",
+        ]
+        for forbidden in forbidden_evidence_classes:
+            self.assertIn(forbidden, combined)
+
 
 if __name__ == "__main__":
     unittest.main()
