@@ -31,6 +31,7 @@ deliberately closed work area until session and role checks are complete.
 | Questions and objections | [notarkammer-2026-06-demo-qa-objection-handling.md](notarkammer-2026-06-demo-qa-objection-handling.md) |
 | Duration, parallel work and critical path | [notarkammer-bpmn-critical-path-talking-points.md](notarkammer-bpmn-critical-path-talking-points.md) |
 | Real estate purchase agreement as XNP/SNP closing path | [notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md](notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md) |
+| Evidence matrix for the real estate purchase agreement | [notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md](notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md) |
 | XNP/BPMN demo depth | [notarkammer-xnp-bpmn-demo-depth.md](notarkammer-xnp-bpmn-demo-depth.md) |
 | XNP demo contract and boundaries | [notarkammer-xnp-demo-contract.md](notarkammer-xnp-demo-contract.md) |
 | Source matrix for XNP, XNotar, registers, land register and card reader | [notarkammer-xnp-quellenmatrix.md](notarkammer-xnp-quellenmatrix.md) |
