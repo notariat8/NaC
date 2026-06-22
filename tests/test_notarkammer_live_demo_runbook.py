@@ -141,6 +141,39 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             self.assertIn(DEMO_DNS_CHECK_URL, content)
             self.assertNotIn("https://app.notariat8.de/onboarding/dns-check?...", content)
 
+    def test_runbook_has_fillable_t15_t03_evidence_capture_table(self) -> None:
+        combined = "\n".join(read_runbooks().values())
+        normalized = " ".join(combined.split())
+
+        required_terms = [
+            "T-15/T-03 Evidence Capture",
+            "T-15/T-03 Evidenz-Erfassung",
+            "Evidence-ID",
+            "Command or view",
+            "Befehl oder Sicht",
+            "Expected result",
+            "Erwartetes Ergebnis",
+            "Actual result",
+            "Tatsächliches Ergebnis",
+            "Redaction status",
+            "Redaktionsstatus",
+            "Fallback decision",
+            "Fallback-Entscheidung",
+            "NK-EVID-001",
+            "NK-EVID-002",
+            "NK-EVID-003",
+            "NK-EVID-004",
+            "notarkammer_demo_smoke.py --timeout-seconds 15 --summary-only",
+            "no response body preview",
+            "kein Response-Body-Preview",
+            "no secrets",
+            "keine Secrets",
+            "no mandate data",
+            "keine Mandatsdaten",
+        ]
+        for term in required_terms:
+            self.assertIn(term, normalized)
+
     def test_runbook_has_20_minute_fallback_and_login_gate(self) -> None:
         german = RUNBOOK_DOCS["de"].read_text(encoding="utf-8")
         english = RUNBOOK_DOCS["en"].read_text(encoding="utf-8")

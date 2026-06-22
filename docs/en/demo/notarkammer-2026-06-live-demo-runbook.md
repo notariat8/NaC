@@ -83,6 +83,19 @@ boundary.
 | 12 | XNP local | Card path, XNP localhost `12774` through `12784` and role are locally plausible only. | Show no live XNP action; mark Gate as `manual_review` or `blocked`. |
 | 13 | XNotar/XJustiz handoff | Exchange folder and package boundary are checkable synthetically or empty. | Open no package; explain only the handoff boundary. |
 
+## T-15/T-03 Evidence Capture
+
+This table can be filled before the presentation. It captures only redacted
+demo evidence: no secrets, no mandate data, no response body preview, no
+callback values and no provider details.
+
+| Evidence-ID | Time | Command or view | Expected result | Actual result | Redaction status | Fallback decision |
+| --- | --- | --- | --- | --- | --- | --- |
+| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 15 --summary-only` | Demo smoke `pass`; no response body preview; workspace fail-closed. | to be filled | redacted: no secrets, no mandate data | On failure: show process model and workspace boundary. |
+| NK-EVID-002 | T-03 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, duration, parallel work and critical path visible. | to be filled | public; no mandate reference | Use the approved screenshot. |
+| NK-EVID-003 | T-03 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | to be filled | redacted; do not read runtime details aloud | Close health tab and show workspace boundary. |
+| NK-EVID-004 | T-03 | `https://app.notariat8.de/workspace` without demo session | Fail-closed or metadata-only; no workspace content. | to be filled | redacted: no IDs, no claims, no file values | Explain the closed boundary as security evidence. |
+
 ## Exact Read-only Checks
 
 ```bash
