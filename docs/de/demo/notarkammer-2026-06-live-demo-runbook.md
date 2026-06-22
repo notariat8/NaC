@@ -89,6 +89,29 @@ Nicht ausführen: `POST /onboarding/requests`, `POST /admin/onboarding/review`,
 OCI-CLI, Vault-/Wallet-Lesen, ATP-Schemaänderungen oder echte
 Identity-Provisionierung.
 
+## Login-Triage
+
+Wenn der Login in der Demo nicht bis zum geschützten Startstatus führt, wird
+nicht live geraten. Die sichtbare Diagnose bleibt redigiert und
+kundenverständlich:
+
+- `Token-Austausch: Anmeldung technisch nicht verfügbar`: die Anmeldung wurde
+  angenommen, aber der serverseitige Austausch konnte nicht belastbar
+  abgeschlossen werden.
+- `Token-Austausch: ungültig`: der serverseitige Austausch lieferte kein
+  verwendbares Ergebnis.
+- `Token-Prüfung: nicht gestartet`: ohne belastbares Ergebnis startet keine
+  nachgelagerte Prüfung.
+- `Rollenprüfung: geschlossen`: ohne geprüfte Anmeldung und Rolle bleibt der
+  Arbeitsbereich geschlossen.
+
+Erlaubte interne Diagnoseklassen für die Nachbereitung sind nur
+`missing_id_token`, `token_response_not_json` und
+`id_token_verification_failed`. In Demo, Logs und Issues werden keine Tokens,
+keine Claims, keine Provider-Details, keine Callback-Werte, keine Zugangsdaten
+und keine Mandatsdaten ausgegeben. Stop-Line: "Der Login ist fail-closed; wir
+zeigen jetzt den Prozesspfad und prüfen die technische Ursache nach dem Termin."
+
 ## 60-Minuten Live-Folge
 
 1. 0-5 Minuten: `https://notariat8.de` zeigen und klar sagen, dass die

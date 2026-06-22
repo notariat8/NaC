@@ -156,6 +156,45 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         self.assertIn("Keine produktive XNP-Aktion", normalized_german)
         self.assertIn("Start no productive XNP action", english)
 
+    def test_runbook_contains_redacted_login_triage_without_sensitive_values(self) -> None:
+        combined = "\n".join(read_runbooks().values())
+        combined_lower = " ".join(combined.lower().split())
+
+        required_terms = [
+            "login-triage",
+            "token-austausch",
+            "token exchange",
+            "missing_id_token",
+            "token_response_not_json",
+            "id_token_verification_failed",
+            "anmeldung technisch nicht verfügbar",
+            "technically unavailable",
+            "ungültig",
+            "invalid",
+            "keine tokens",
+            "no tokens",
+            "keine claims",
+            "no claims",
+            "keine provider-details",
+            "no provider details",
+            "keine callback-werte",
+            "no callback values",
+        ]
+        for term in required_terms:
+            self.assertIn(term, combined_lower)
+
+        forbidden_terms = [
+            "code=",
+            "state=",
+            "nonce=",
+            "id_token=",
+            "access_token=",
+            "client_secret",
+            "idcs-",
+        ]
+        for term in forbidden_terms:
+            self.assertNotIn(term, combined_lower)
+
     def test_runbook_keeps_protected_pr_scope_and_demo_safety(self) -> None:
         combined = "\n".join(read_runbooks().values())
         combined_lower = " ".join(combined.lower().split())

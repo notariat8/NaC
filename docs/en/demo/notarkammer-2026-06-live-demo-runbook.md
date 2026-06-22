@@ -87,6 +87,26 @@ Do not execute: `POST /onboarding/requests`, `POST /admin/onboarding/review`,
 OCI CLI, Vault/wallet reads, ATP schema changes or real Identity
 provisioning.
 
+## Login Triage
+
+If login does not reach the protected start status during the demo, do not
+debug by guessing. Keep the visible diagnosis redacted and customer-safe:
+
+- `Token exchange: technically unavailable`: sign-in was received, but the
+  server-side exchange could not be completed with reliable evidence.
+- `Token exchange: invalid`: the server-side exchange returned no usable
+  result.
+- `Token validation: not started`: without a reliable exchange result, no
+  downstream validation starts.
+- `Role gate: closed`: without verified sign-in and role, the workspace remains
+  closed.
+
+Allowed internal follow-up classes are only `missing_id_token`,
+`token_response_not_json` and `id_token_verification_failed`. Demo output, logs
+and issues contain no tokens, no claims, no provider details, no callback
+values, no credentials and no mandate data. Stop-Line: "Login is fail-closed;
+we now show the process path and check the technical cause after the meeting."
+
 ## 60-Minute Live Order
 
 1. 0-5 minutes: show `https://notariat8.de` and state clearly that the public
