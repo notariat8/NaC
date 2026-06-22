@@ -142,6 +142,17 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         for term in blocked_terms:
             self.assertNotIn(term, combined)
 
+    def test_smoke_runbook_uses_summary_only_evidence_output(self) -> None:
+        for language, content in read_smoke_docs().items():
+            self.assertIn(
+                "python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only",
+                content,
+                language,
+            )
+            self.assertIn("--summary-only", content, language)
+            self.assertIn("body preview", content.lower(), language)
+            self.assertIn("no response", content.lower(), language)
+
 
 if __name__ == "__main__":
     unittest.main()

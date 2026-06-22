@@ -114,6 +114,26 @@ def build_smoke_report(results: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def build_smoke_summary(report: dict[str, Any]) -> dict[str, Any]:
+    summarized_results = []
+    for result in report.get("results", []):
+        summarized_results.append(
+            {
+                key: value
+                for key, value in dict(result).items()
+                if key != "body_preview"
+            }
+        )
+    return {
+        "schema_version": str(report.get("schema_version", "nac.notarkammer-demo-smoke/v0.1")),
+        "scope": str(report.get("scope", "notarkammer_demo_readiness")),
+        "overall": str(report.get("overall", "fail")),
+        "guardrails": dict(report.get("guardrails", {})),
+        "warnings": list(report.get("warnings", [])),
+        "results": summarized_results,
+    }
+
+
 def run_smoke(targets: Iterable[SmokeTarget] = DEFAULT_NOTARKAMMER_DEMO_TARGETS, *, timeout_seconds: int = 15) -> dict[str, Any]:
     results = []
     for target in targets:
@@ -155,8 +175,15 @@ def run_smoke(targets: Iterable[SmokeTarget] = DEFAULT_NOTARKAMMER_DEMO_TARGETS,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the read-only notariat8 Notarkammer demo smoke check.")
     parser.add_argument("--timeout-seconds", type=int, default=15)
+    parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Omit response body previews from the JSON output for demo evidence.",
+    )
     args = parser.parse_args(argv)
     report = run_smoke(timeout_seconds=args.timeout_seconds)
+    if args.summary_only:
+        report = build_smoke_summary(report)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["overall"] == "pass" else 1
 

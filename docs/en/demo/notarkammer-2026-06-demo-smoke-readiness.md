@@ -23,12 +23,14 @@ pre-approved demo views.
 Optional machine-readable precheck, read-only only:
 
 ```bash
-python scripts/notarkammer_demo_smoke.py --timeout-seconds 20
+python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only
 ```
 
 The script checks only the fixed demo URLs, accepts the closed workspace as the
 expected fail-closed boundary and redacts query values plus login/callback
-responses in the JSON output.
+responses in the JSON output. For citable demo evidence, use `--summary-only`:
+no response body preview is emitted, and the body preview stays completely out
+of the report.
 
 The 20s limit is the calibrated cold-start tolerance for the demo preflight. A
 10s run can time out when the workspace is cold and must not trigger live
@@ -39,6 +41,7 @@ professionally green and documents at most `slow_fail_closed_response`.
 
 - Speaker line: This public process view is the audited demo path.
 - Speaker line: The app entry stays protected until the approved demo sign-in is complete.
+- Speaker line: After sign-in, notariat8 shows only a metadata-only portal start; no case content is loaded.
 - Speaker line: A closed workspace is the expected safety result before sign-in.
 - Speaker line: If sign-in is slow, we continue with the process model and the protected boundary.
 

@@ -24,12 +24,14 @@ vorab freigegebene Demo-Sichten.
 Optionaler maschinenlesbarer Vorabcheck, nur read-only:
 
 ```bash
-python scripts/notarkammer_demo_smoke.py --timeout-seconds 20
+python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only
 ```
 
 Das Script prüft nur die festgelegten Demo-URLs, akzeptiert den geschlossenen
 Workspace als erwartete Fail-Closed-Grenze und redigiert Query-Werte sowie
-Login-/Callback-Antworten in der JSON-Ausgabe.
+Login-/Callback-Antworten in der JSON-Ausgabe. Für zitierbare Demo-Evidence
+wird `--summary-only` genutzt: no response body preview wird ausgegeben, der
+body preview bleibt vollständig aus dem Bericht heraus.
 
 Die 20s-Grenze ist die kalibrierte Cold-Start-Toleranz für den Demo-Preflight.
 Ein 10s-Lauf kann bei kaltem Workspace als Timeout enden und ist dann kein
