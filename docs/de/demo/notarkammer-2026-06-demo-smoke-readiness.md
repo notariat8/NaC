@@ -19,7 +19,7 @@ vorab freigegebene Demo-Sichten.
 | www-n8 Prozessmodell | `https://notariat8.de/prozessmodell.html` im frischen oder bereits geladenen Browser-Tab öffnen. | Prozessmodell ist erreichbar; Immobilienkaufvertrag, Gate und kritischer Pfad sind sichtbar. | Bereits geladenen Tab oder cached screenshot zeigen; nicht live deployen. |
 | App Health | `https://app.notariat8.de/healthz` per Browser oder read-only curl öffnen. | Kurz, nicht-sensitiv, kein Secret, kein Mandatsbezug. | Health-Tab schließen und Workspace-Grenze zeigen. |
 | Workspace ohne Session | `https://app.notariat8.de/workspace` ohne Session öffnen. | Erwartet sind `401`, `403` oder eine geschlossene Sicht: fail-closed, no workspace content, keine Workspace-Inhalte, keine Mandatsdaten. | Fail-closed als Sicherheitsnachweis erklären. |
-| Login/OIDC | `https://app.notariat8.de/login` nur mit freigegebenem Testnutzer (test user) fortsetzen. | Login/OIDC bleibt Demo-gebunden; keine echten Zugangsdaten, keine echten Akten. | Wenn OCI oder IdP kalt oder langsam ist: do not debug live, nicht live debuggen; zum Prozessmodell und zur Workspace-Grenze wechseln. |
+| Login/OIDC und Portal-Start | `https://app.notariat8.de/login` nur mit freigegebenem Testnutzer fortsetzen. | Nach erfolgreicher Anmeldung erscheint die metadata-only Portal-Startseite: Anmeldung und Berechtigung bestätigt, keine Mandatsdaten geladen, vollständiger Arbeitsbereich weiterhin geschlossen. | Wenn die Anmeldung langsam ist oder geschlossen bleibt: nicht live debuggen; zum Prozessmodell und zur Workspace-Grenze wechseln. |
 
 Optionaler maschinenlesbarer Vorabcheck, nur read-only:
 
@@ -35,7 +35,8 @@ Login-/Callback-Antworten in der JSON-Ausgabe.
 
 - Speaker line: This public process view is the audited demo path.
 - Speaker line: The app entry stays protected until the approved demo sign-in is complete.
-- Speaker line: A closed workspace is the expected safety result before sign-in.
+- Speaker line: After sign-in, notariat8 shows only a metadata-only portal start; no case content is loaded.
+- Speaker line: A closed workspace is the expected safety result before sign-in or missing authorization.
 - Speaker line: If sign-in is slow, we continue with the process model and the protected boundary.
 
 ## Guardrails

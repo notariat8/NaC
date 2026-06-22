@@ -1005,28 +1005,27 @@ def build_protected_workspace_start_page(
     body = """
     <nav class="topline"><a href="/login">← Anmeldung</a></nav>
     <section class="hero">
-      <p class="eyebrow">notariat8 Start</p>
-      <h1>Geschützter Startstatus</h1>
-      <p>Ihre Anmeldung und Berechtigung wurden geprüft. notariat8 zeigt hier nur
-      Statushinweise.</p>
+      <p class="eyebrow">notariat8 Portal-Start</p>
+      <h1>Portal-Start bereit</h1>
+      <p>Ihre Anmeldung und Berechtigung wurden geprüft. notariat8 öffnet hier
+      nur den sicheren Startbereich ohne Mandatsdaten.</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Anmeldung und Berechtigung bestätigt</h2>
-        <p><strong>Startstatus freigegeben</strong></p>
+        <p><strong>Portal-Start bereit</strong></p>
         <ul class="link-list">
           <li><span>Berechtigung bestätigt.</span></li>
-          <li><span>Notariat bestätigt.</span></li>
-          <li><span>Vorgangsbindung bestätigt.</span></li>
-          <li><span>Zweckbindung bestätigt.</span></li>
+          <li><span>Notariat, Vorgang und Zweck sind serverseitig gebunden.</span></li>
+          <li><span>Keine Mandatsdaten geladen.</span></li>
         </ul>
       </section>
       <section>
         <h2>Nächster sicherer Schritt</h2>
         <ul class="link-list">
-          <li><span>Vollständiger Arbeitsbereich noch geschlossen.</span></li>
-          <li><span>Nur geprüfte Navigation und Statushinweise anzeigen.</span></li>
-          <li><span>Keine Mandatsdaten geladen.</span></li>
+          <li><span>Erste sichere Vorgangsübersicht vorbereiten.</span></li>
+          <li><span>Der vollständige Arbeitsbereich bleibt geschlossen.</span></li>
+          <li><span>Mandatsinhalte werden erst nach den nächsten Freigaben geladen.</span></li>
         </ul>
       </section>
     </div>
