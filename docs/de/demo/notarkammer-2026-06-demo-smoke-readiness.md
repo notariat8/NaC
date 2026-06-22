@@ -39,6 +39,24 @@ Live-Debugging-Auftrag. Wenn der Workspace erst langsam, aber geschlossen
 antwortet, bleibt der Smoke fachlich grün und dokumentiert höchstens
 `slow_fail_closed_response`.
 
+## Schnellentscheidung Vor Dem Start
+
+Diese drei Punkte entscheiden, ob die Live-Demo mit Browserpfad startet oder
+sofort in den vorbereiteten Fallback wechselt:
+
+1. `https://notariat8.de/prozessmodell.html` lädt den Immobilienkaufvertrag
+   mit XNP/XNotar/Vollzug, Dauer und kritischem Pfad.
+2. `https://app.notariat8.de/healthz` antwortet kurz und ohne interne Details.
+3. `https://app.notariat8.de/workspace` bleibt ohne Sitzung geschlossen.
+
+**Go:** Alle drei Punkte sind grün oder der maschinenlesbare Lauf mit
+`--summary-only` meldet nur `slow_fail_closed_response`.
+
+**Fallback:** Einer der drei Punkte ist nicht innerhalb von 20s erklärbar,
+zeigt interne Details oder öffnet mehr als metadata-only Status. Dann nicht
+live debuggen, sondern Prozessmodell, Fallback-Evidence und Sprecherlinien
+verwenden.
+
 ## Sprecherlinien
 
 - Speaker line: This public process view is the audited demo path.

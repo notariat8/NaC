@@ -159,6 +159,18 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         self.assertIn("keine Response-Body-Vorschau", docs["de"])
         self.assertIn("no response body preview", docs["en"])
 
+    def test_smoke_runbook_has_quick_decision_block_for_live_start(self) -> None:
+        docs = read_smoke_docs()
+        for language, content in docs.items():
+            self.assertIn("Quick decision" if language == "en" else "Schnellentscheidung", content)
+            self.assertIn("https://notariat8.de/prozessmodell.html", content)
+            self.assertIn("https://app.notariat8.de/healthz", content)
+            self.assertIn("https://app.notariat8.de/workspace", content)
+            self.assertIn("Go", content)
+            self.assertIn("Fallback", content)
+            self.assertIn("do not debug live" if language == "en" else "nicht live debuggen", content)
+            self.assertIn("summary-only", content)
+
 
 if __name__ == "__main__":
     unittest.main()

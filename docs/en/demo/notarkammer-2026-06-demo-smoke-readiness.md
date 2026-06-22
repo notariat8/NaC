@@ -37,6 +37,24 @@ The 20s limit is the calibrated cold-start tolerance for the demo preflight. A
 debugging. If the workspace responds slowly but remains closed, the smoke stays
 professionally green and documents at most `slow_fail_closed_response`.
 
+## Quick decision before start
+
+These three checks decide whether the live demo starts with the browser path or
+switches immediately to the prepared fallback:
+
+1. `https://notariat8.de/prozessmodell.html` loads the real estate purchase
+   agreement with XNP/XNotar/completion, duration and critical path.
+2. `https://app.notariat8.de/healthz` responds briefly and without internal
+   details.
+3. `https://app.notariat8.de/workspace` remains closed without a session.
+
+**Go:** All three checks are green, or the machine-readable run with
+`--summary-only` reports only `slow_fail_closed_response`.
+
+**Fallback:** One of the three checks is not explainable within 20s, shows
+internal details, or opens more than metadata-only status. Then do not debug
+live; use the process model, fallback evidence and speaker lines.
+
 ## Speaker Lines
 
 - Speaker line: This public process view is the audited demo path.
