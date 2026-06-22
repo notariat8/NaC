@@ -2893,9 +2893,10 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
     role_gate = callback_result.get("role_gate", {})
     session_boundary = callback_result.get("session_boundary", {})
     session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
-    LOGGER.info(
+    message = (
         "auth_callback_status state=%s token_exchange=%s token_exchange_class=%s "
-        "token_exchange_detail=%s jwt_validation=%s role_gate=%s session_cookie=%s session_store=%s",
+        "token_exchange_detail=%s jwt_validation=%s role_gate=%s session_cookie=%s session_store=%s"
+    ) % (
         _safe_auth_log_status(callback_result.get("state_validation", {}).get("status")),
         _safe_auth_log_status(token_exchange.get("status") if isinstance(token_exchange, dict) else None),
         _safe_token_exchange_log_class(token_exchange),
@@ -2905,6 +2906,8 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
         _safe_auth_log_bool(isinstance(session, dict) and bool(session.get("cookie_issued"))),
         _safe_auth_log_bool(session_store_bound),
     )
+    LOGGER.info("%s", message)
+    print(message, flush=True)
 
 
 def _safe_token_exchange_log_class(token_exchange: Any) -> str:
