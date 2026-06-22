@@ -47,6 +47,9 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             self.assertIn("notarkammer-xnp-demo-contract.md", content)
             self.assertIn("notarkammer-2026-06-demo-script.md", content)
             self.assertIn("notarkammer-2026-06-demo-preflight.md", content)
+            self.assertIn("Callback-URL" if language == "de" else "callback URL", content)
+            self.assertIn("code" if language == "de" else "code", content)
+            self.assertIn("state" if language == "de" else "state", content)
 
     def test_runbook_states_xnp_xnotar_xjustiz_and_nac_gate_boundary(self) -> None:
         combined = "\n".join(read_runbooks().values())
@@ -152,6 +155,21 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         ]
         for term in forbidden_terms:
             self.assertNotIn(term, combined)
+
+    def test_runbook_hides_callback_code_and_state_values_during_demo(self) -> None:
+        combined = "\n".join(read_runbooks().values())
+        normalized = " ".join(combined.split())
+
+        required_terms = [
+            "Callback-URL nicht vorlesen",
+            "keine Werte aus `code` oder `state`",
+            "Do not read the callback URL aloud",
+            "no values from `code` or `state`",
+            "Tab schließen oder auf `/workspace` wechseln",
+            "close the tab or switch to `/workspace`",
+        ]
+        for term in required_terms:
+            self.assertIn(term, normalized)
 
 
 if __name__ == "__main__":

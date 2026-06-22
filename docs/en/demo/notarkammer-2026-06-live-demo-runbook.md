@@ -137,6 +137,8 @@ provisioning.
   path."
 - Stop-Line: "Without approval, we do not continue the login flow; the closed
   workspace is then the expected demo result."
+- Stop-Line: "Do not read the callback URL aloud and show no values from
+  `code` or `state`; close the tab or switch to `/workspace`."
 - Stop-Line: "XNP stays local. XNP does not deliver land-register data to NaC."
 - Stop-Line: "XNotar/XJustiz is a handoff boundary here, not hidden cloud
   automation."

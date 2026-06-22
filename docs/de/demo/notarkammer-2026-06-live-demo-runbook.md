@@ -143,6 +143,8 @@ Identity-Provisionierung.
   Prozesspfad."
 - Stop-Line: "Ohne Freigabe führen wir den Login-Flow nicht weiter; der
   geschlossene Workspace ist dann das erwartete Demo-Ergebnis."
+- Stop-Line: "Callback-URL nicht vorlesen und keine Werte aus `code` oder
+  `state` zeigen; Tab schließen oder auf `/workspace` wechseln."
 - Stop-Line: "XNP bleibt lokal. XNP liefert keine Grundbuchdaten an NaC."
 - Stop-Line: "XNotar/XJustiz ist hier eine Übergabegrenze, keine versteckte
   Cloud-Automation."
