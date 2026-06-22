@@ -75,6 +75,16 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         for term in required_terms:
             self.assertIn(term, combined_lower)
 
+    def test_smoke_runbook_uses_calibrated_twenty_second_timeout(self) -> None:
+        combined = "\n".join(read_smoke_docs().values())
+        combined_lower = " ".join(combined.lower().split())
+
+        self.assertIn("scripts/notarkammer_demo_smoke.py --timeout-seconds 20", combined)
+        self.assertIn("10s", combined_lower)
+        self.assertIn("20s", combined_lower)
+        self.assertIn("cold-start tolerance", combined_lower)
+        self.assertIn("slow_fail_closed_response", combined)
+
     def test_customer_speaker_lines_do_not_expose_provider_or_matter_terms(self) -> None:
         forbidden_terms = [
             "OCI",
