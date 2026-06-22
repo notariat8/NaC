@@ -65,6 +65,13 @@ XJustiz-/Import-/Export-Artefakte sind zu klären im XNP-Testzugang. Beide
 Kanäle beschreiben keinen produktiven Fachsystemzugriff und keine behauptete
 direkte XNP-zu-NaC-Grundbuchdatenlieferung.
 
+Für die Notarkammer-Demo ist `Immobilienkaufvertrag` der primäre
+Fachprozess. XNP-/SNP-API-Zugänge, Testrollen, Testdaten, Zertifikate,
+Sicherheitsfreigaben und Pilotbedingungen werden als offene ISV-Fragen an
+BNotK oder Notarkammer geführt. Das BPMN-Profil darf diese Fragen als
+Boundary-Gates sichtbar machen, aber keine produktive XNP-/SNP-Nutzung, keine
+produktive Einreichung und keine Verarbeitung von Mandatsdaten behaupten.
+
 ## XNP/BPMN-Integrationsvertrag
 
 NaC ist 100% notariat. XNP ist die externe notarielle Arbeitsumgebung des
@@ -113,6 +120,8 @@ Fachpersonal reichen zunächst:
 ## Grenzen
 
 - Keine echten Mandatsdaten in BPMN.
+- `Immobilienkaufvertrag` ist der primäre Demo-Fluss für XNP-/SNP-
+  Zugriffsklärung; andere Usecases sind Vergleichs- oder Anschlussflüsse.
 - Externe Gates werden nur als fachliche Übergabe- und Nachweispunkte
   modelliert. Typische Beispiele im Immobilienkaufvertrag sind
   Eigentumsvormerkung, Löschungsunterlagen, gemeindliches Vorkaufsrecht,

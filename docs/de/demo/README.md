@@ -11,11 +11,15 @@ und Rolle geprüft sind.
 
 1. Öffentliche Orientierung über `https://notariat8.de`.
 2. Vorgang `Immobilienkaufvertrag` und BPMN-Ansicht zeigen.
-3. Dauer, parallele Schritte und kritischen Pfad erläutern.
-4. XNP, Kartenleser, Register und Grundbuch als fachliche Zugriffspunkte
-   erklären, ohne produktive Einreichungen zu behaupten.
-5. Wechsel zu `https://app.notariat8.de`, Login und fail-closed-Grenze zeigen.
-6. ATP-Healthcheck und Store-Gate nur als technischen Statusnachweis nennen,
+3. Immobilienkaufvertrag als Primärfluss erläutern: Entwurf, Beurkundung,
+   Vollzug, Grundbuch, Finanzierung, Gemeinde/Steuer, Löschungen und
+   Rückläufe.
+4. Dauer, parallele Schritte und kritischen Pfad erläutern.
+5. XNP, SNP, Kartenleser, Register und Grundbuch als fachliche
+   Zugriffspunkte erklären, ohne produktive Einreichungen oder produktiven
+   API-Zugriff zu behaupten.
+6. Wechsel zu `https://app.notariat8.de`, Login und fail-closed-Grenze zeigen.
+7. ATP-Healthcheck und Store-Gate nur als technischen Statusnachweis nennen,
    nicht als Mandatsdatenansicht.
 
 ## Dokumente in empfohlener Reihenfolge
@@ -33,6 +37,7 @@ und Rolle geprüft sind.
 | XNP/BPMN-Demotiefe | [notarkammer-xnp-bpmn-demo-depth.md](notarkammer-xnp-bpmn-demo-depth.md) |
 | XNP-Demovertrag und Grenzen | [notarkammer-xnp-demo-contract.md](notarkammer-xnp-demo-contract.md) |
 | Quellenmatrix zu XNP, XNotar, Register, Grundbuch und Kartenleser | [notarkammer-xnp-quellenmatrix.md](notarkammer-xnp-quellenmatrix.md) |
+| ISV-Fragen zu XNP/SNP API- und Testzugang | [notarkammer-xnp-snp-api-testzugang.md](notarkammer-xnp-snp-api-testzugang.md) |
 
 ## Grenzen
 
@@ -43,6 +48,8 @@ und Rolle geprüft sind.
   Grundbuchabrufe.
 - Keine produktive XNP-Handlung und keine produktive Register- oder
   Grundbucheinreichung.
+- Keine Behauptung produktiver XNP-/SNP-API-Nutzung; API- und Testzugänge
+  werden als offene ISV-Fragen an BNotK und Notarkammer formuliert.
 - Keine Zugangsdaten, Tokens, Secrets, PINs oder Anbieterbetriebsdetails in der
   Vorführung.
 - Wenn Login, Sitzung, Rollenprüfung oder Store-Gate nicht sauber öffnen,

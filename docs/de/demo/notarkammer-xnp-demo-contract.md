@@ -35,6 +35,9 @@ dabei die externe notarielle Arbeitsumgebung, nicht ein NaC-Backend.
   PIN-Tastatur.
 - Details, die diese öffentlichen Quellen nicht belegen, werden im
   Demo-Kontrakt als "zu klären im XNP-Testzugang" markiert.
+- Fragen zu SNP, freigegebenen XNP-/SNP-APIs, Testrollen, Testdaten,
+  Zertifizierung und Pilotfreigabe werden im ergänzenden
+  [ISV-Fragenkatalog](notarkammer-xnp-snp-api-testzugang.md) gesammelt.
 
 Quellen:
 
@@ -74,6 +77,13 @@ im XNP-Testzugang. Für die Demo gilt deshalb nur:
 5. NaC darf keine direkte XNP-zu-NaC-Grundbuchdatenlieferung behaupten.
 6. Automatisierte Adapter, Import-/Export-Details, lokale Ports, API-Keys und
    produktive Schnittstellenparameter sind zu klären im XNP-Testzugang.
+
+Für die Notarkammer-Demo ist `Immobilienkaufvertrag` der primäre Fluss. An
+diesem Prozess werden Grundbuchvollzug, Finanzierung, Gemeinde-/Steuer-Gates,
+Löschungsunterlagen, beN-/XNotar-Grenzen und lokale Karten-/Signaturpfade
+erklärt. SNP und API-Zugang werden dabei nur als ISV-Klärungsbedarf benannt:
+NaC behauptet keinen produktiven XNP-/SNP-Zugriff, keine produktive
+Fachsystemautomation und keine Verarbeitung echter Mandatsdaten.
 
 ## Zielarchitektur für BPMN
 

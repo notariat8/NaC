@@ -20,7 +20,9 @@ XNP-Handlung und keine direkte XNP-zu-NaC-Grundbuchdatenlieferung.
 
 Die Demo zeigt deshalb nicht, dass NaC Fachsysteme ersetzt. Sie zeigt, dass
 NaC die fachliche Verantwortung, die Systemgrenze, den Nachweisstatus, das
-Dauerband, die Parallelität und den Kritischer Pfad explizit modelliert.
+Dauerband, die Parallelität und den Kritischer Pfad explizit modelliert. Der
+primäre Fluss ist `Immobilienkaufvertrag`; SNP- und XNP-API-Zugänge werden nur
+als ISV-Test- und Freigabefragen an BNotK/Notarkammer benannt.
 
 ## BPMN-Tasktypen für die 1h-Demo
 
@@ -83,6 +85,9 @@ Beispiel Handelsregisteranmeldung:
   Blocker reichen aus.
 - Keine Live-XNP-API-Zugriffe: offene technische Details bleiben "zu klären
   im XNP-Testzugang".
+- Keine produktiven SNP- oder XNP-API-Claims: offizielle Testzugänge,
+  Schnittstellenverträge, Zertifizierung und Pilotfreigabe sind
+  Gesprächsfragen, keine Demo-Behauptung.
 - Kein Produktionsversprechen: alle externen Fachsysteme bleiben Grenzen,
   Handoffs oder manuell bestätigte Gates.
 
