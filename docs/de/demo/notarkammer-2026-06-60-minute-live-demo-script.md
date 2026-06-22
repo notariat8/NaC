@@ -49,6 +49,10 @@ lokale Fachsystemgrenzen und ein prüfbares NaC-Gate.
 
 ## Failover Cards
 
+Vorbereitete Screenshots und Ersatzansichten müssen im
+[`Fallback-Evidence-Manifest`](notarkammer-2026-06-demo-fallback-evidence-manifest.md)
+freigegeben sein.
+
 ### www-n8 does not load
 
 1. Nicht live debuggen.
@@ -109,4 +113,3 @@ Am Ende werden nur diese Nachweise gezeigt oder genannt:
 - Register- und Grundbuchgrenze als externe Zugriffspunkte.
 - Failover-Ergebnis: Screenshot, OIDC-Grenze, `manual_review`, `blocked` oder
   fail-closed.
-

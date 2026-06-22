@@ -49,6 +49,9 @@ auditable NaC Gate.
 
 ## Failover Cards
 
+Prepared screenshots and fallback views must be approved in the
+[`Fallback Evidence Manifest`](notarkammer-2026-06-demo-fallback-evidence-manifest.md).
+
 ### www-n8 does not load
 
 1. Do not debug live.
@@ -106,4 +109,3 @@ At the end, show or name only this evidence:
 - Register and land-register boundary as external access points.
 - Failover result: screenshot, OIDC boundary, `manual_review`, `blocked` or
   fail-closed.
-
