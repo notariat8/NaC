@@ -27,7 +27,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
-from nac_identity.oidc_jwt import build_oidc_id_token_verifier
+from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.session_store import RuntimeSessionStoreAdapter
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
@@ -2701,6 +2701,7 @@ def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None]
         issuer=issuer,
         audience=audience,
         discovery_base_url=_auth_callback_identity_domain_url(),
+        jwks_fetcher=build_oci_identity_domain_json_fetcher(),
     )
 
 

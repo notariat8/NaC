@@ -1178,10 +1178,23 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("notariat8_nac_app", html)
 
     def test_auth_callback_builds_runtime_id_token_verifier_from_env(self) -> None:
-        created: list[dict[str, str]] = []
+        created: list[dict[str, object]] = []
 
-        def build_verifier(*, issuer: str, audience: str, discovery_base_url: str = ""):
-            created.append({"issuer": issuer, "audience": audience, "discovery_base_url": discovery_base_url})
+        def build_verifier(
+            *,
+            issuer: str,
+            audience: str,
+            discovery_base_url: str = "",
+            jwks_fetcher: object | None = None,
+        ):
+            created.append(
+                {
+                    "issuer": issuer,
+                    "audience": audience,
+                    "discovery_base_url": discovery_base_url,
+                    "jwks_fetcher_injected": callable(jwks_fetcher),
+                }
+            )
             return lambda _id_token: {"iss": issuer, "aud": audience}
 
         with patch.dict(
@@ -1208,6 +1221,7 @@ class NaCLocalWebTests(unittest.TestCase):
                     "issuer": "https://identity.oraclecloud.com",
                     "audience": "notariat8_nac_app",
                     "discovery_base_url": "https://idcs.example.identity.oraclecloud.com:443",
+                    "jwks_fetcher_injected": True,
                 }
             ],
         )

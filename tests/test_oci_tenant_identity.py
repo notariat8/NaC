@@ -6,6 +6,8 @@ import hashlib
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -2073,6 +2075,101 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 f"{discovery_base_url}/admin/v1/SigningCert/jwk",
             ],
         )
+
+    def test_oidc_id_token_verifier_fetches_oci_identity_jwks_with_signed_fallback(self) -> None:
+        from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
+
+        issuer = "https://identity.oraclecloud.com/"
+        discovery_base_url = "https://idcs.example.identity.oraclecloud.com:443"
+        audience = "notariat8_nac_app"
+        signed_requests: list[dict[str, object]] = []
+
+        def public_fetcher(url: str) -> dict[str, object]:
+            if url == f"{discovery_base_url}/.well-known/openid-configuration":
+                return {"jwks_uri": f"{discovery_base_url}/admin/v1/SigningCert/jwk"}
+            if url == f"{discovery_base_url}/admin/v1/SigningCert/jwk":
+                raise HTTPError(url, 401, "Unauthorized", {}, None)
+            raise AssertionError(f"unexpected fetch URL: {url}")
+
+        class FakeSigner:
+            def __call__(self, request: object, enforce_content_headers: bool = True) -> object:
+                request.headers["Authorization"] = "Signature unit-test"
+                signed_requests.append(
+                    {
+                        "path_url": request.path_url,
+                        "enforce_content_headers": enforce_content_headers,
+                    }
+                )
+                return request
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *_args: object) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps({"keys": [_test_jwk()]}).encode("utf-8")
+
+        def signed_urlopen(request: object, timeout: float = 0) -> FakeResponse:
+            self.assertEqual(timeout, 5.0)
+            self.assertEqual(request.full_url, f"{discovery_base_url}/admin/v1/SigningCert/jwk")
+            self.assertEqual(request.get_header("Authorization"), "Signature unit-test")
+            return FakeResponse()
+
+        fetcher = build_oci_identity_domain_json_fetcher(
+            public_fetcher=public_fetcher,
+            signer_factory=FakeSigner,
+        )
+        token = _signed_test_id_token(
+            {
+                "iss": issuer.rstrip("/"),
+                "aud": audience,
+                "exp": 4102444800,
+                "iat": 1900000000,
+            }
+        )
+        verifier = build_oidc_id_token_verifier(
+            issuer=issuer,
+            audience=audience,
+            discovery_base_url=discovery_base_url,
+            jwks_fetcher=fetcher,
+            now=1900000100,
+        )
+
+        with patch("nac_identity.oidc_jwt.urlopen", side_effect=signed_urlopen):
+            claims = verifier(token) if verifier else None
+
+        self.assertIsInstance(claims, dict)
+        self.assertEqual(claims["iss"], issuer.rstrip("/"))
+        self.assertEqual(
+            signed_requests,
+            [{"path_url": "/admin/v1/SigningCert/jwk", "enforce_content_headers": False}],
+        )
+
+    def test_oci_identity_domain_json_fetcher_does_not_sign_untrusted_hosts(self) -> None:
+        from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher
+
+        signed = False
+
+        def public_fetcher(url: str) -> dict[str, object]:
+            raise HTTPError(url, 401, "Unauthorized", {}, None)
+
+        def signer_factory() -> object:
+            nonlocal signed
+            signed = True
+            return lambda request: request
+
+        fetcher = build_oci_identity_domain_json_fetcher(
+            public_fetcher=public_fetcher,
+            signer_factory=signer_factory,
+        )
+
+        with self.assertRaises(HTTPError):
+            fetcher("https://not-oci.example.test/admin/v1/SigningCert/jwk")
+
+        self.assertFalse(signed)
 
     def test_oidc_id_token_verifier_fails_closed_for_bad_signature_or_claims(self) -> None:
         from nac_identity.oidc_jwt import build_oidc_id_token_verifier
