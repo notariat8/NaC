@@ -1,0 +1,63 @@
+{
+  "schema_version": "nac.demo-matter-metadata/v0.1",
+  "demo_context": "notarkammer-2026-06",
+  "scope": "metadata_only",
+  "tenant_demo_id": "DEMO-TENANT-NOTARIAT-01",
+  "matter_demo_id": "DEMO-MATTER-IMMOBILIENKAUF-01",
+  "usecase_slug": "immobilienkaufvertrag",
+  "bpmn_model": "bpmn/immobilienkaufvertrag.bpmn",
+  "kg_ref": "usecases/immobilienkaufvertrag/knowledge-graph.md",
+  "raw_mandate_content_loaded": false,
+  "productive_xnp_action": false,
+  "contains_credentials": false,
+  "party_roles": [
+    "DEMO-ROLLE-VERKAEUFER",
+    "DEMO-ROLLE-KAEUFER",
+    "DEMO-ROLLE-FINANZIERUNG"
+  ],
+  "document_classes": [
+    "DEMO-DOKUMENT-ENTWURF",
+    "DEMO-DOKUMENT-VOLLZUGSNACHWEIS",
+    "DEMO-DOKUMENT-KOSTENPRUEFUNG"
+  ],
+  "gates": [
+    "domain_verified",
+    "tenant_admin_review_required",
+    "gnotkg_review_required",
+    "xnp_local_readiness_only",
+    "human_review_required",
+    "no_customer_mail_dispatch"
+  ],
+  "external_boundaries": [
+    "grundbuch_external_boundary",
+    "register_external_boundary",
+    "tax_office_external_boundary",
+    "municipality_external_boundary"
+  ],
+  "parallel_groups": [
+    "post_beurkundung_parallel",
+    "external_response_tracking_parallel"
+  ],
+  "critical_path": [
+    "kaufpreisfaelligkeit",
+    "rangpruefung",
+    "vollzugsvoraussetzungen"
+  ],
+  "duration_bands": {
+    "internal_review": "hours_to_days",
+    "external_responses": "weeks",
+    "complex_completion": "weeks_to_months"
+  },
+  "cost_review": {
+    "module": "nac_gnotkg",
+    "status": "technical_review_only",
+    "final_decision": "notarial_review_required"
+  },
+  "demo_boundaries": [
+    "no_mandate_data",
+    "no_real_personal_data",
+    "no_real_property_data",
+    "no_customer_mail_dispatch",
+    "no_production_filing"
+  ]
+}
