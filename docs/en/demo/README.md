@@ -23,6 +23,7 @@ deliberately closed work area until session and role checks are complete.
 | --- | --- |
 | Preparation before the presentation | [notarkammer-2026-06-demo-preflight.md](notarkammer-2026-06-demo-preflight.md) |
 | Live order and browser paths | [notarkammer-2026-06-live-demo-runbook.md](notarkammer-2026-06-live-demo-runbook.md) |
+| Login/portal diagnostics and fallback status classes | [notarkammer-2026-06-login-portal-diagnostics-runbook.md](notarkammer-2026-06-login-portal-diagnostics-runbook.md) |
 | 60-minute script | [notarkammer-2026-06-60-minute-live-demo-script.md](notarkammer-2026-06-60-minute-live-demo-script.md) |
 | Smoke readiness and fallbacks | [notarkammer-2026-06-demo-smoke-readiness.md](notarkammer-2026-06-demo-smoke-readiness.md) |
 | Go/No-Go decision | [notarkammer-2026-06-demo-go-no-go.md](notarkammer-2026-06-demo-go-no-go.md) |
