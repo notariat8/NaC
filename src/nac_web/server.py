@@ -1046,9 +1046,9 @@ def _server_session_bindings(validation: dict[str, Any]) -> dict[str, bool]:
         return {}
     bindings = server_session.get("bindings")
     if not isinstance(bindings, dict):
-        return {}
+        bindings = {}
     allowed = {"tenant_bound", "subject_bound", "role_bound", "case_bound", "purpose_bound"}
-    return {key: bool(value) for key, value in bindings.items() if key in allowed}
+    return {key: bool(bindings.get(key)) for key in allowed}
 
 
 def _workspace_role_from_binding_or_header(bindings: dict[str, bool], headers: dict[str, str]) -> str:

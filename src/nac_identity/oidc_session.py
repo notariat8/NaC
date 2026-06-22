@@ -492,8 +492,6 @@ def _server_session_result(
 
 
 def _server_session_bindings(record: Mapping[str, Any]) -> dict[str, bool]:
-    if not any(key in record for key in {"tenant_bound", "subject_bound", "role_bound", "case_bound", "purpose_bound"}):
-        return {}
     return {
         "tenant_bound": _record_boolean_is_true(record, "tenant_bound"),
         "subject_bound": _record_boolean_is_true(record, "subject_bound"),
