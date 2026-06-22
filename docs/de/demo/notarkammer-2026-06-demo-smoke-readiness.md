@@ -4,8 +4,9 @@ Smoke-ID: `NK-DEMO-SMOKE-2026-06`
 Version: `1.0.0`
 Status: Protected PR, Review/Merge Gate, no OCI apply.
 
-Scope: nur `docs/de/demo/`, `docs/en/demo/` und `tests/`. Dieses Artefakt ist
-ein runbook smoke check für die Vorführung, kein Monitoring; no live network test
+Scope: `docs/de/demo/`, `docs/en/demo/`, `src/nac_observability/`,
+`scripts/notarkammer_demo_smoke.py` und `tests/`. Dieses Artefakt ist ein
+runbook smoke check für die Vorführung, kein Monitoring; no live network test
 in Unit-Tests. Keine Secrets, keine Mandatsdaten, keine OCI- oder
 IdP-Schreiboperation, keine Infrastruktur- oder Runtime-Änderung. Alle
 Beispiele verwenden synthetic Demo-Daten, einen Testnutzer (test user) und
@@ -19,6 +20,16 @@ vorab freigegebene Demo-Sichten.
 | App Health | `https://app.notariat8.de/healthz` per Browser oder read-only curl öffnen. | Kurz, nicht-sensitiv, kein Secret, kein Mandatsbezug. | Health-Tab schließen und Workspace-Grenze zeigen. |
 | Workspace ohne Session | `https://app.notariat8.de/workspace` ohne Session öffnen. | Erwartet sind `401`, `403` oder eine geschlossene Sicht: fail-closed, no workspace content, keine Workspace-Inhalte, keine Mandatsdaten. | Fail-closed als Sicherheitsnachweis erklären. |
 | Login/OIDC | `https://app.notariat8.de/login` nur mit freigegebenem Testnutzer (test user) fortsetzen. | Login/OIDC bleibt Demo-gebunden; keine echten Zugangsdaten, keine echten Akten. | Wenn OCI oder IdP kalt oder langsam ist: do not debug live, nicht live debuggen; zum Prozessmodell und zur Workspace-Grenze wechseln. |
+
+Optionaler maschinenlesbarer Vorabcheck, nur read-only:
+
+```bash
+python scripts/notarkammer_demo_smoke.py --timeout-seconds 15
+```
+
+Das Script prüft nur die festgelegten Demo-URLs, akzeptiert den geschlossenen
+Workspace als erwartete Fail-Closed-Grenze und redigiert Query-Werte sowie
+Login-/Callback-Antworten in der JSON-Ausgabe.
 
 ## Sprecherlinien
 

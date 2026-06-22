@@ -4,11 +4,12 @@ Smoke-ID: `NK-DEMO-SMOKE-2026-06`
 Version: `1.0.0`
 Status: Protected PR, Review/Merge Gate, no OCI apply.
 
-Scope: only `docs/de/demo/`, `docs/en/demo/` and `tests/`. This artifact is a
-runbook smoke check for the presentation, not monitoring; no live network test
-in unit tests. No secrets, no mandate data, no OCI or IdP write, no
-infrastructure or runtime change. All examples use synthetic demo data, a test
-user and pre-approved demo views.
+Scope: `docs/de/demo/`, `docs/en/demo/`, `src/nac_observability/`,
+`scripts/notarkammer_demo_smoke.py` and `tests/`. This artifact is a runbook
+smoke check for the presentation, not monitoring; no live network test in unit
+tests. No secrets, no mandate data, no OCI or IdP write, no infrastructure or
+runtime change. All examples use synthetic demo data, a test user and
+pre-approved demo views.
 
 ## T-15 Minute Smoke Check
 
@@ -18,6 +19,16 @@ user and pre-approved demo views.
 | App health | Open `https://app.notariat8.de/healthz` in the browser or by read-only curl. | Short, non-sensitive status; no secret and no matter reference. | Close the health tab and show the workspace boundary. |
 | Workspace without session | Open `https://app.notariat8.de/workspace` without a session. | Expected result is `401`, `403` or a closed view: fail-closed, no workspace content, keine Workspace-Inhalte, no matter data. | Explain fail-closed as security evidence. |
 | Login/OIDC | Continue `https://app.notariat8.de/login` only with an approved test user. | Login/OIDC stays demo-bound; no real credentials and no real files. | If OCI or IdP is cold or slow: do not debug live, nicht live debuggen; switch to the process model and workspace boundary. |
+
+Optional machine-readable precheck, read-only only:
+
+```bash
+python scripts/notarkammer_demo_smoke.py --timeout-seconds 15
+```
+
+The script checks only the fixed demo URLs, accepts the closed workspace as the
+expected fail-closed boundary and redacts query values plus login/callback
+responses in the JSON output.
 
 ## Speaker Lines
 

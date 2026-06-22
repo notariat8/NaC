@@ -35,6 +35,7 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
             self.assertIn("OIDC", content)
             self.assertIn("test user", content.lower())
             self.assertIn("no live network test", content.lower())
+            self.assertIn("scripts/notarkammer_demo_smoke.py", content)
             self.assertIn("no OCI apply", content)
 
     def test_smoke_runbook_requires_workspace_fail_closed_without_session(self) -> None:
@@ -105,6 +106,8 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         required_boundaries = [
             "docs/de/demo/",
             "docs/en/demo/",
+            "src/nac_observability/",
+            "scripts/notarkammer_demo_smoke.py",
             "tests/",
             "protected pr",
             "review/merge gate",
