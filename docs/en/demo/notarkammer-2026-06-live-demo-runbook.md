@@ -37,6 +37,20 @@ The presentation uses local chamber/Berlin time: CET in winter (UTC+1) and
 CEST in summer (UTC+2). June 2026 uses CEST. Write audit notes as CET/CEST
 with optional technical UTC context, never UTC-only.
 
+## Open Browser Tabs Beforehand
+
+No live searching, no browser history and no spontaneous admin or cloud
+consoles during the meeting. Before starting, open only these tabs:
+
+| Tab | Page | Purpose | Fallback |
+| --- | --- | --- | --- |
+| Tab 1 | `https://notariat8.de` | Public entry point. | Keep the loaded tab. |
+| Tab 2 | `https://notariat8.de/prozessmodell.html` | BPMN, duration, parallel work and critical path. | Use the approved screenshot. |
+| Tab 3 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | DNS/readiness evidence with a synthetic domain. | Explain setup status. |
+| Tab 4 | `https://app.notariat8.de/onboarding/requests/<request_id>?audience=customer` | existing request status. | Explain Store Gate `unavailable`. |
+| Tab 5 | `https://app.notariat8.de/login` | protected entry. | Do not debug login live. |
+| Tab 6 | `https://app.notariat8.de/workspace` | fail-closed or metadata-only workspace. | Explain the closed boundary. |
+
 ## T-03:00 Preflight Order
 
 | Order | Live-Test | Expected | Fallback |

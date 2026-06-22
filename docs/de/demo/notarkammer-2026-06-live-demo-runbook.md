@@ -39,6 +39,20 @@ CEST im Sommer (UTC+2). Für Juni 2026 ist CEST maßgeblich. Zeitangaben in
 Audit-Notizen immer als CET/CEST plus optionaler technischer UTC-Ergänzung
 schreiben, nie UTC-only.
 
+## Browser-Tabs vorab öffnen
+
+Keine Live-Suche, keine Browser-Historie und keine spontanen Admin- oder
+Cloud-Konsolen im Termin. Vor Beginn nur diese Tabs öffnen:
+
+| Tab | Seite | Zweck | Fallback |
+| --- | --- | --- | --- |
+| Tab 1 | `https://notariat8.de` | Öffentlicher Einstieg. | Geladenen Tab behalten. |
+| Tab 2 | `https://notariat8.de/prozessmodell.html` | BPMN, Dauer, Parallelität und kritischer Pfad. | Freigegebenen Screenshot nutzen. |
+| Tab 3 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | DNS-/Readiness-Nachweis mit synthetischer Domain. | Setup-Status erklären. |
+| Tab 4 | `https://app.notariat8.de/onboarding/requests/<request_id>?audience=customer` | vorhandener Request-Status. | Store-Gate `unavailable` erklären. |
+| Tab 5 | `https://app.notariat8.de/login` | geschützter Einstieg. | Login nicht live debuggen. |
+| Tab 6 | `https://app.notariat8.de/workspace` | fail-closed oder Metadata-only Workspace. | geschlossene Grenze erklären. |
+
 ## T-03:00 Preflight-Reihenfolge
 
 | Reihenfolge | Live-Test | Erwartung | Fallback |
