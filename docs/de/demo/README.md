@@ -34,6 +34,7 @@ und Rolle geprüft sind.
 | Bekannte Lücken und Grenzen | [notarkammer-2026-06-demo-gap-audit.md](notarkammer-2026-06-demo-gap-audit.md) |
 | Fragen und Einwände | [notarkammer-2026-06-demo-qa-objection-handling.md](notarkammer-2026-06-demo-qa-objection-handling.md) |
 | Dauer, Parallelität und kritischer Pfad | [notarkammer-bpmn-critical-path-talking-points.md](notarkammer-bpmn-critical-path-talking-points.md) |
+| Immobilienkaufvertrag als XNP/SNP-Vollzugspfad | [notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md](notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md) |
 | XNP/BPMN-Demotiefe | [notarkammer-xnp-bpmn-demo-depth.md](notarkammer-xnp-bpmn-demo-depth.md) |
 | XNP-Demovertrag und Grenzen | [notarkammer-xnp-demo-contract.md](notarkammer-xnp-demo-contract.md) |
 | Quellenmatrix zu XNP, XNotar, Register, Grundbuch und Kartenleser | [notarkammer-xnp-quellenmatrix.md](notarkammer-xnp-quellenmatrix.md) |
