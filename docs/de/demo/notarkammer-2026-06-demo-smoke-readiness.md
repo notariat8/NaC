@@ -19,7 +19,7 @@ vorab freigegebene Demo-Sichten.
 | www-n8 Prozessmodell | `https://notariat8.de/prozessmodell.html` im frischen oder bereits geladenen Browser-Tab öffnen. | Prozessmodell ist erreichbar; Immobilienkaufvertrag, Gate und kritischer Pfad sind sichtbar. | Bereits geladenen Tab oder cached screenshot zeigen; nicht live deployen. |
 | App Health | `https://app.notariat8.de/healthz` per Browser oder read-only curl öffnen. | Kurz, nicht-sensitiv, kein Secret, kein Mandatsbezug. | Health-Tab schließen und Workspace-Grenze zeigen. |
 | Workspace ohne Session | `https://app.notariat8.de/workspace` ohne Session öffnen. | Erwartet sind `401`, `403` oder eine geschlossene Sicht: fail-closed, no workspace content, keine Workspace-Inhalte, keine Mandatsdaten. | Fail-closed als Sicherheitsnachweis erklären. |
-| Login/OIDC und Portal-Start | `https://app.notariat8.de/login` nur mit freigegebenem Testnutzer fortsetzen. | Nach erfolgreicher Anmeldung erscheint die metadata-only Portal-Startseite: Anmeldung und Berechtigung bestätigt, keine Mandatsdaten geladen, vollständiger Arbeitsbereich weiterhin geschlossen. | Wenn die Anmeldung langsam ist oder geschlossen bleibt: nicht live debuggen; zum Prozessmodell und zur Workspace-Grenze wechseln. |
+| Anmeldung und Portal-Start | `https://app.notariat8.de/login` nur mit freigegebenem Testnutzer fortsetzen. | Nach erfolgreicher Anmeldung erscheint die metadata-only Portal-Startseite: Anmeldung und Berechtigung bestätigt, keine Mandatsdaten geladen, vollständiger Arbeitsbereich weiterhin geschlossen. | Wenn die Anmeldung langsam ist oder geschlossen bleibt: nicht live debuggen; zum Prozessmodell und zur Workspace-Grenze wechseln. |
 
 Optionaler maschinenlesbarer Vorabcheck, nur read-only:
 
@@ -30,7 +30,7 @@ python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only
 Das Script prüft nur die festgelegten Demo-URLs, akzeptiert den geschlossenen
 Workspace als erwartete Fail-Closed-Grenze und redigiert Query-Werte sowie
 Login-/Callback-Antworten in der JSON-Ausgabe. Für zitierbare Demo-Evidence
-wird `--summary-only` genutzt: no response body preview wird ausgegeben, der
+wird `--summary-only` genutzt: keine Response-Body-Vorschau wird ausgegeben, der
 body preview bleibt vollständig aus dem Bericht heraus.
 
 Die 20s-Grenze ist die kalibrierte Cold-Start-Toleranz für den Demo-Preflight.
@@ -59,9 +59,9 @@ antwortet, bleibt der Smoke fachlich grün und dokumentiert höchstens
 - Evidence für den Protected PR besteht nur aus Branch, Commit-SHA,
   Testausgabe, Review/Merge Gate und diesem versionierten Runbook.
 
-## Kalter oder Langsamer OCI-/IdP-Pfad
+## Kalter oder Langsamer Anmeldepfad
 
-Wenn OCI oder IdP cold or slow ist, wird nicht gewartet und nicht live
+Wenn die Anmeldung kalt oder langsam ist, wird nicht gewartet und nicht live
 debuggt:
 
 1. Bereits geladenen Tab oder cached screenshot des Prozessmodells zeigen.

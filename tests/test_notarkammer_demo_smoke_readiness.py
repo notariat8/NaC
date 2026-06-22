@@ -24,7 +24,7 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
 
     def test_smoke_runbook_names_exact_demo_surfaces_without_live_network_tests(self) -> None:
-        for content in read_smoke_docs().values():
+        for language, content in read_smoke_docs().items():
             self.assertIn("Smoke-ID", content)
             self.assertIn("Version", content)
             self.assertIn("www-n8", content)
@@ -32,7 +32,7 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
             self.assertIn("https://app.notariat8.de/healthz", content)
             self.assertIn("https://app.notariat8.de/workspace", content)
             self.assertIn("https://app.notariat8.de/login", content)
-            self.assertIn("OIDC", content)
+            self.assertIn("Anmeldung" if language == "de" else "sign-in", content)
             self.assertIn("test user", content.lower())
             self.assertIn("no live network test", content.lower())
             self.assertIn("scripts/notarkammer_demo_smoke.py", content)
@@ -74,6 +74,9 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term, combined_lower)
+
+        self.assertNotIn("If OCI or IdP", combined)
+        self.assertNotIn("Wenn OCI oder IdP", combined)
 
     def test_smoke_runbook_uses_calibrated_twenty_second_timeout(self) -> None:
         combined = "\n".join(read_smoke_docs().values())
@@ -143,7 +146,8 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
             self.assertNotIn(term, combined)
 
     def test_smoke_runbook_uses_summary_only_evidence_output(self) -> None:
-        for language, content in read_smoke_docs().items():
+        docs = read_smoke_docs()
+        for language, content in docs.items():
             self.assertIn(
                 "python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only",
                 content,
@@ -151,7 +155,9 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
             )
             self.assertIn("--summary-only", content, language)
             self.assertIn("body preview", content.lower(), language)
-            self.assertIn("no response", content.lower(), language)
+
+        self.assertIn("keine Response-Body-Vorschau", docs["de"])
+        self.assertIn("no response body preview", docs["en"])
 
 
 if __name__ == "__main__":

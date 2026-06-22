@@ -78,7 +78,7 @@ Fallback-Evidence nutzen und die fachliche Grenze benennen.
 | 5 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` und CLI-DNS-Check | Erwarteter TXT-Record und Status sind sichtbar. | `pending`/`mismatch` als Setup-Status erklären. |
 | 6 | `/onboarding/requests/<request_id>?audience=customer` | Statusseite für vorhandene Anfrage oder `unavailable` als Store-Gate. | Nicht in ATP debuggen. |
 | 7 | `https://app.notariat8.de/login` | Login-Seite öffnet; keine echten Zugangsdaten eingeben; Login-Flow nur mit Freigabe fortsetzen. | Nicht debuggen, zum Prozessmodell wechseln. |
-| 8 | `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt` | Read-only Login-Intent ohne Credentials. | Falls JSON/Fehler sichtbar ist, Login-Seite oder Workspace-Grenze zeigen. |
+| 8 | Login-Intent nur als redigierter CLI-/curl-Check, nicht als Browser-Tab | Der Read-only Check bleibt ohne Credentials und ohne sichtbare JSON-Oberfläche. | Falls Login-Intent geprüft werden muss: Ergebnis nicht vorführen, sondern Login-Seite oder Workspace-Grenze zeigen. |
 | 9 | `https://app.notariat8.de/workspace` | Ohne freigegebene Sitzung bleibt der Arbeitsbereich geschlossen; nur Metadatenstatus, keine Akte. | Fail-closed als Sicherheitsnachweis erklären. |
 | 10 | BPMN-Validierung | `python scripts/nac.py bpmn validate` bleibt grün; `bpmn show immobilienkaufvertrag` ist lesbar. | Öffentliche Prozessmodellseite nutzen. |
 | 11 | ATP-Healthcheck-Status | `/healthz` zeigt Runtime-Status; ATP-Store-Gate wird nur als `enabled`, `disabled`, `unavailable` oder `not_checked` eingeordnet. | Keine Secrets, Wallets, DSN oder OCI-CLI öffnen. |
@@ -88,12 +88,12 @@ Fallback-Evidence nutzen und die fachliche Grenze benennen.
 ## T-15/T-03 Evidenz-Erfassung
 
 Diese Tabelle ist vor der Vorführung ausfüllbar. Sie sammelt nur redigierte
-Demo-Evidence: keine Secrets, keine Mandatsdaten, kein Response-Body-Preview,
+Demo-Evidence: keine Secrets, keine Mandatsdaten, keine Response-Body-Vorschau,
 keine Callback-Werte und keine Provider-Details.
 
 | Evidence-ID | Zeitpunkt | Befehl oder Sicht | Erwartetes Ergebnis | Tatsächliches Ergebnis | Redaktionsstatus | Fallback-Entscheidung |
 | --- | --- | --- | --- | --- | --- | --- |
-| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 15 --summary-only` | Demo-Smoke `pass`; no response body preview; Workspace fail-closed. | einzutragen | redigiert: keine Secrets, keine Mandatsdaten | Bei Fehler: Prozessmodell und Workspace-Grenze zeigen. |
+| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only` | Demo-Smoke `pass`; keine Response-Body-Vorschau; Workspace fail-closed. | einzutragen | redigiert: keine Secrets, keine Mandatsdaten | Bei Fehler: Prozessmodell und Workspace-Grenze zeigen. |
 | NK-EVID-002 | T-03 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, Dauer, Parallelität und kritischer Pfad sichtbar. | einzutragen | öffentlich; kein Mandatsbezug | Freigegebenen Screenshot nutzen. |
 | NK-EVID-003 | T-03 | `https://app.notariat8.de/healthz` | Kurzer, nicht-sensitiver Status. | einzutragen | redigiert; keine Runtime-Details vorlesen | Health-Tab schließen, Workspace-Grenze zeigen. |
 | NK-EVID-004 | T-03 | `https://app.notariat8.de/workspace` ohne Demo-Sitzung | Fail-closed oder Metadata-only; keine Workspace-Inhalte. | einzutragen | redigiert: keine IDs, keine Claims, keine Aktenwerte | Geschlossene Grenze als Sicherheitsnachweis erklären. |

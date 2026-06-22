@@ -18,7 +18,7 @@ pre-approved demo views.
 | www-n8 process model | Open `https://notariat8.de/prozessmodell.html` in a fresh or already loaded browser tab. | The process model is reachable; Immobilienkaufvertrag, gate and critical path are visible. | Show an already loaded tab or cached screenshot; do not deploy live. |
 | App health | Open `https://app.notariat8.de/healthz` in the browser or by read-only curl. | Short, non-sensitive status; no secret and no matter reference. | Close the health tab and show the workspace boundary. |
 | Workspace without session | Open `https://app.notariat8.de/workspace` without a session. | Expected result is `401`, `403` or a closed view: fail-closed, no workspace content, keine Workspace-Inhalte, no matter data. | Explain fail-closed as security evidence. |
-| Login/OIDC | Continue `https://app.notariat8.de/login` only with an approved test user. | Login/OIDC stays demo-bound; no real credentials and no real files. | If OCI or IdP is cold or slow: do not debug live, nicht live debuggen; switch to the process model and workspace boundary. |
+| Login and portal start | Continue `https://app.notariat8.de/login` only with an approved test user. | After successful sign-in, the metadata-only portal start appears: sign-in and authorization are confirmed, no matter data is loaded, and the full workspace remains closed. | If sign-in is slow or remains closed: do not debug live; switch to the process model and workspace boundary. |
 
 Optional machine-readable precheck, read-only only:
 
@@ -57,9 +57,9 @@ professionally green and documents at most `slow_fail_closed_response`.
 - Evidence for the Protected PR is limited to branch, commit SHA, test output,
   Review/Merge Gate and this versioned runbook.
 
-## Cold or Slow OCI/IdP Path
+## Cold or Slow Sign-in Path
 
-If OCI or IdP is kalt oder langsam, cold or slow, do not wait and do not debug
+If sign-in is cold or slow, do not wait and do not debug
 live:
 
 1. Show the already loaded tab or cached screenshot of the process model.

@@ -76,7 +76,7 @@ boundary.
 | 5 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` and CLI DNS check | Expected TXT record and status are visible. | Explain `pending`/`mismatch` as setup status. |
 | 6 | `/onboarding/requests/<request_id>?audience=customer` | Status page for an existing request or `unavailable` as the store gate. | Do not debug ATP. |
 | 7 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
-| 8 | `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt` | Read-only login intent without credentials. | If JSON/error is visible, show login page or workspace boundary. |
+| 8 | Login intent as redacted CLI/curl check only, not as a browser tab | The read-only check stays credential-free and exposes no visible JSON surface. | If login intent must be checked, do not present the result; show the login page or workspace boundary. |
 | 9 | `https://app.notariat8.de/workspace` | Without an approved session, the workspace remains closed; metadata status only, no matter file. | Explain fail-closed as security evidence. |
 | 10 | BPMN validation | `python scripts/nac.py bpmn validate` stays green; `bpmn show immobilienkaufvertrag` is readable. | Use the public process-model page. |
 | 11 | ATP healthcheck status | `/healthz` shows runtime status; ATP store gate is only classified as `enabled`, `disabled`, `unavailable` or `not_checked`. | Open no secrets, wallets, DSN or OCI CLI. |
@@ -91,7 +91,7 @@ callback values and no provider details.
 
 | Evidence-ID | Time | Command or view | Expected result | Actual result | Redaction status | Fallback decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 15 --summary-only` | Demo smoke `pass`; no response body preview; workspace fail-closed. | to be filled | redacted: no secrets, no mandate data | On failure: show process model and workspace boundary. |
+| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only` | Demo smoke `pass`; no response body preview; workspace fail-closed. | to be filled | redacted: no secrets, no mandate data | On failure: show process model and workspace boundary. |
 | NK-EVID-002 | T-03 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, duration, parallel work and critical path visible. | to be filled | public; no mandate reference | Use the approved screenshot. |
 | NK-EVID-003 | T-03 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | to be filled | redacted; do not read runtime details aloud | Close health tab and show workspace boundary. |
 | NK-EVID-004 | T-03 | `https://app.notariat8.de/workspace` without demo session | Fail-closed or metadata-only; no workspace content. | to be filled | redacted: no IDs, no claims, no file values | Explain the closed boundary as security evidence. |
