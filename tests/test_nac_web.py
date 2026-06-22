@@ -1201,6 +1201,121 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_auth_callback_shows_customer_safe_label_for_unavailable_token_exchange(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=lambda _secret_id: "unit-test-client-secret")
+        state = build_signed_state(
+            tenant_hint="myjur",
+            signing_key="unit-test-state-signing-key",
+            nonce="nonce-secret-for-id-token",
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+            },
+            clear=False,
+        ), patch.object(
+            nac_server,
+            "_auth_callback_id_token_verifier",
+            return_value=lambda _id_token: None,
+            create=True,
+        ), patch.object(
+            nac_server,
+            "exchange_oidc_authorization_code",
+            return_value={
+                "status": "unavailable",
+                "mode": "server_side_token_exchange",
+                "live_token_exchange_performed": True,
+                "error": "network-or-secret-detail",
+            },
+            create=True,
+        ):
+            status, _content_type, body = app.handle(f"/auth/callback?code=secret-code-from-idp&state={state}")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("Token-Austausch: Anmeldung vorübergehend nicht verfügbar", html)
+        self.assertNotIn("unavailable", html)
+        self.assertNotIn("network-or-secret-detail", html)
+        self.assertNotIn("secret-code-from-idp", html)
+        self.assertNotIn(state, html)
+        self.assertNotIn("ocid1.vaultsecret", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_auth_callback_shows_customer_safe_labels_for_failed_token_exchange_classes(self) -> None:
+        from nac_identity.oidc_state import build_signed_state
+
+        expected_labels = {
+            "client_auth_rejected": "Anmeldung technisch nicht verfügbar",
+            "client_not_authorized": "Anmeldung technisch nicht verfügbar",
+            "grant_type_unsupported": "Anmeldung technisch nicht verfügbar",
+            "token_endpoint_unavailable": "Anmeldung vorübergehend nicht verfügbar",
+            "token_request_rejected": "Anmeldung abgelehnt",
+            "token_endpoint_rejected": "Anmeldung abgelehnt",
+        }
+
+        for failure_class, expected_label in expected_labels.items():
+            app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=lambda _secret_id: "unit-test-client-secret")
+            state = build_signed_state(
+                tenant_hint="myjur",
+                signing_key="unit-test-state-signing-key",
+                nonce="nonce-secret-for-id-token",
+            )
+
+            with self.subTest(failure_class=failure_class), patch.dict(
+                os.environ,
+                {
+                    "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
+                    "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
+                    "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                    "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                    "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
+                    "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                },
+                clear=False,
+            ), patch.object(
+                nac_server,
+                "_auth_callback_id_token_verifier",
+                return_value=lambda _id_token: None,
+                create=True,
+            ), patch.object(
+                nac_server,
+                "exchange_oidc_authorization_code",
+                return_value={
+                    "status": "failed",
+                    "mode": "server_side_token_exchange",
+                    "live_token_exchange_performed": True,
+                    "failure_class": failure_class,
+                    "error_description": "provider failure detail",
+                },
+                create=True,
+            ):
+                status, _content_type, body = app.handle(f"/auth/callback?code=secret-code-from-idp&state={state}")
+            html = body.decode("utf-8")
+
+            self.assertEqual(status, 200)
+            self.assertIn(f"Token-Austausch: {expected_label}", html)
+            self.assertNotIn(failure_class, html)
+            self.assertNotIn("provider failure detail", html)
+            self.assertNotIn("secret-code-from-idp", html)
+            self.assertNotIn(state, html)
+            self.assertNotIn("ocid1.vaultsecret", html)
+            self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+            self.assertNotIn("notariat8_nac_app", html)
+            self.assertNotIn("Oracle", html)
+            self.assertNotIn("OCI", html)
+
     def test_auth_callback_logs_redacted_status_evidence_for_invalid_token_exchange(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 

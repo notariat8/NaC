@@ -2976,6 +2976,8 @@ def _token_exchange_status_label(token_exchange: Any) -> str:
             "token_response_not_json": "Anmeldung technisch nicht verfügbar",
             "id_token_verification_failed": "Token-Prüfung fehlgeschlagen",
         }.get(str(token_exchange.get("diagnostic_class") or ""), "Anmeldung nicht vollständig geprüft")
+    if token_exchange.get("status") == "unavailable":
+        return "Anmeldung vorübergehend nicht verfügbar"
     if token_exchange.get("status") != "failed":
         return _safe_status_label(token_exchange.get("status"))
     return {
