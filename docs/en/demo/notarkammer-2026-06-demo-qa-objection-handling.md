@@ -10,6 +10,15 @@ no infrastructure action, no productive filing, no provider or operator
 details, no secrets and no mandate data. The statements are demo orientation,
 not legal advice.
 
+## 2-Minute Opening
+
+notariat8 does not show yet another screen; it shows a notarial matter as an
+auditable workflow. BPMN, duration, parallel work and critical path make clear
+which work can be prepared and which external response actually blocks the next
+step. XNP, card reader, registers and land register are shown as local or
+external domain-system boundaries. The demo therefore stays controlled: no
+productive filing, no mandate data, no credentials and no legal advice.
+
 ## Short Answers
 
 | Question or Objection | Precise Answer |

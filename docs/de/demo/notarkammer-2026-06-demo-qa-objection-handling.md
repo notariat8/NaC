@@ -10,6 +10,16 @@ Runtime-Änderung, keine Infrastrukturaktion, keine produktive Einreichung,
 keine Anbieter- oder Betreiberdetails, keine Secrets und keine Mandatsdaten.
 Die Aussagen sind Demo-Orientierung und keine Rechtsberatung.
 
+## 2-Minuten-Auftakt
+
+notariat8 zeigt nicht eine weitere Maske, sondern einen notariellen Vorgang
+als prüfbaren Ablauf: BPMN, Dauer, Parallelität und kritischer Pfad machen
+sichtbar, welche Arbeit vorbereitet werden kann und welcher externe Rücklauf
+wirklich blockiert. XNP, Kartenleser, Register und Grundbuch werden als lokale
+oder externe Fachsystemgrenzen gezeigt. Die Demo bleibt deshalb kontrolliert:
+keine produktive Einreichung, keine echten Mandatsdaten, keine Zugangsdaten
+und keine Rechtsberatung.
+
 ## Kurzantworten
 
 | Frage oder Einwand | Präzise Antwort |

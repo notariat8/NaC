@@ -55,6 +55,12 @@ class NotarkammerDemoQaObjectionHandlingTests(unittest.TestCase):
         combined = "\n".join(read_qa_docs().values())
 
         required_terms = [
+            "2-Minuten-Auftakt",
+            "2-Minute Opening",
+            "notariat8 zeigt nicht eine weitere Maske",
+            "notariat8 does not show yet another screen",
+            "BPMN, Dauer, Parallelität und kritischer Pfad",
+            "BPMN, duration, parallel work and critical path",
             "Was zeigt NaC live?",
             "What does NaC show live?",
             "Was macht XNP",
