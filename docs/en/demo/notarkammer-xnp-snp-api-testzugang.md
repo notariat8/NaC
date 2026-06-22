@@ -75,6 +75,24 @@ test and approval paths, not for productive live use.
 | Operations | Which separation is required between test, pilot and production access, and how are keys, certificates, client IDs or local configurations issued and revoked? |
 | Support | Which error classes and escalation paths should ISVs use when XNP/SNP test access, beN status or local components are unavailable? |
 
+## ISV Approval Package For The Appointment
+
+The ISV approval package is a concrete follow-up question, not a productive XNP action and no productive XNP action in the demo. For an
+ISV listing, the appointment should clarify a small approval package:
+
+The boundary remains: no matter data, no raw documents, no PINs, no tokens and
+no card values.
+
+| Package item | Clarification |
+| --- | --- |
+| technical contact | Who can coordinate XNP/SNP test access, documentation, Sandbox and support path with binding authority? |
+| Sandbox | Is there a dedicated test tenant or another matter-data-free test environment for real estate purchase agreement, land-register closing, beN and signature path? |
+| callback examples | Which sample events or status callback examples may NaC process without raw documents, land-register data or matter data? |
+| error classes | Which error classes should ISVs use for missing local components, card reader, beN, XNotar, XNP/SNP test access or external responses? |
+| evidence and audit | Which minimal evidence fields are allowed: time, role, gate, status, hash, approval, error class, without PINs, tokens, card values or contents? |
+| certification path | Which privacy, security, chamber, BNotK and vendor checks are required before pilot and listing? |
+| pilot notary office | May a pilot notary office accompany the real estate purchase agreement as an end-to-end test with synthetic matter and approved test access? |
+
 ## Demo Talk Track
 
 Allowed:
@@ -96,6 +114,8 @@ Not allowed:
 ## Work Boundary For This PR
 
 - No productive XNP/SNP claims.
+- No productive XNP action.
 - No matter data, no register data, no property data.
+- No raw documents, no PINs, no tokens and no card values.
 - No OCI, runtime, adapter or app change.
 - Only demo guidance, BPMN profile wording and source references.

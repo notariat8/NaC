@@ -75,6 +75,22 @@ Freigabewegen, nicht nach produktiver Live-Nutzung.
 | Betrieb | Welche Trennung ist zwischen Test-, Pilot- und Produktivzugang vorgeschrieben, und wie werden Schlüssel, Zertifikate, Client-IDs oder lokale Konfigurationen ausgegeben und widerrufen? |
 | Support | Welche Fehlerklassen und Eskalationswege sollen ISVs verwenden, wenn XNP/SNP-Testzugänge, beN-Status oder lokale Komponenten nicht erreichbar sind? |
 
+## ISV-Freigabepaket für den Termin
+
+Ziel ist eine konkrete Anschlussfrage, nicht eine produktive XNP-Handlung und
+keine produktive XNP-Handlung in der Demo. Für
+die ISV-Listung sollte im Termin ein kleines Freigabepaket geklärt werden:
+
+| Paketpunkt | Klärung |
+| --- | --- |
+| technischer Ansprechpartner | Wer kann XNP/SNP-Testzugang, Dokumentation, Sandbox und Supportweg verbindlich koordinieren? |
+| Sandbox | Gibt es einen dedizierten test tenant oder eine andere mandatsdatenfreie Testumgebung für Immobilienkaufvertrag, Grundbuchvollzug, beN und Signaturpfad? |
+| Callback-Beispiele | Welche Beispielereignisse oder Status-Callback-Beispiele dürfen NaC ohne Rohdokumente, ohne Grundbuchdaten und ohne Mandatsdaten verarbeiten? |
+| Fehlerklassen | Welche Fehlerklassen sollen ISVs für fehlende lokale Komponenten, Kartenleser, beN, XNotar, XNP/SNP-Testzugang oder externe Rückläufe verwenden? |
+| Evidence und Audit | Welche minimalen Evidence-Felder sind zulässig: Zeit, Rolle, Gate, Status, Hash, Freigabe, Fehlklasse, ohne PINs, Tokens, Kartenwerte oder Inhalte? |
+| Zertifizierungsweg | Welche Datenschutz-, Sicherheits-, Kammer-, BNotK- und Herstellerprüfungen sind vor Pilot und Listung erforderlich? |
+| Pilotnotariat | Darf ein Pilotnotariat mit synthetischem Vorgang und freigegebenem Testzugang den Immobilienkaufvertrag als Ende-zu-Ende-Test begleiten? |
+
 ## Demo-Sprechspur
 
 Zulässig:
@@ -96,6 +112,8 @@ Nicht zulässig:
 ## Arbeitsgrenze für diesen PR
 
 - Keine produktiven XNP-/SNP-Claims.
+- Keine produktive XNP-Handlung.
 - Keine Mandatsdaten, keine Registerdaten, keine Grundstücksdaten.
+- Keine Rohdokumente, keine PINs, keine Tokens und keine Kartenwerte.
 - Keine OCI-, Runtime-, Adapter- oder App-Änderung.
 - Nur Demo-Guidance, BPMN-Profil-Sprache und Quellenverweis.
