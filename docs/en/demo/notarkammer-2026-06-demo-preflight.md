@@ -36,6 +36,27 @@ access remain stop-lines and are not executed during the meeting.
 
 Run every check in a fresh browser window without a saved session.
 
+## Screen Hygiene / Presentation Mode
+
+Before the demo, the presentation window is deliberately separated from the
+private browser and system environment. This list is a stop gate: if an item is
+not clean, use the prepared fallback evidence.
+
+- Presentation mode is active; only the approved browser window is shared.
+- Fresh browser profile is started; do not use personal profiles.
+- Autofill is disabled and saved credentials are not displayed.
+- Browser history and search suggestions are cleared or absent in the fresh
+  profile.
+- Notifications off is set; system, mail, chat and calendar alerts do not
+  appear in the presentation window.
+- Download shelf is closed; no local file names are shown.
+- Pre-approved tabs are loaded: home page, process model, login, workspace
+  boundary and fallback evidence.
+- No callback URL is shown in the browser; after a login test, switch to the
+  protected status page or the closed workspace.
+- No live console: no developer tools, no cloud console, no Vault, wallet, ATP
+  or Identity view during the meeting.
+
 1. `https://notariat8.de`
    - Expected: The home page loads and shows no real mandate data.
    - Fallback: Use the already loaded home page; do not deploy live.

@@ -24,7 +24,7 @@ Demo-Notiz darf nur UTC nennen.
 | T-01:40 | ATP-Healthcheck-Status als Store-Gate einordnen. | `enabled`, `disabled`, `unavailable` oder `not_checked` ohne Secret-Ausgabe. |
 | T-01:30 | 1h-Demo-Skript mit den sichtbaren Browser- und Arbeitsplatzständen abgleichen. | Keine neue Storyline wird begonnen. |
 | T-01:00 | Stop-Lines laut lesen und Browser-Tabs final sortieren. | Demo kann ohne Live-Debugging starten. |
-| T-00:15 | Nur noch Read-only-Sichtung, keine Änderungen mehr. | Praesentationsfenster bleibt stabil. |
+| T-00:15 | Nur noch Read-only-Sichtung, keine Änderungen mehr. | Präsentationsfenster bleibt stabil. |
 
 ## Befehlssicherheit
 
@@ -37,6 +37,27 @@ Termin nicht ausgeführt.
 ## Browser-Checks
 
 Alle Checks laufen in einem frischen Browserfenster ohne gespeicherte Sitzung.
+
+## Bildschirmhygiene / Presentation Mode
+
+Vor der Demo wird das Präsentationsfenster bewusst entkoppelt von privater
+Browser- und Systemumgebung vorbereitet. Diese Liste ist ein Stop-Gate: wenn
+ein Punkt nicht passt, wird die vorbereitete Fallback-Evidence gezeigt.
+
+- Presentation mode ist aktiv; nur das freigegebene Browserfenster wird geteilt.
+- Fresh browser profile ist gestartet; keine persönlichen Profile verwenden.
+- Autofill ist ausgeschaltet und saved credentials werden nicht eingeblendet.
+- Browser history und search suggestions sind vor der Vorführung geleert oder
+  im frischen Profil nicht vorhanden.
+- Notifications off ist gesetzt; System-, Mail-, Chat- und Kalenderhinweise
+  erscheinen nicht im Präsentationsfenster.
+- Download shelf ist geschlossen; es werden keine lokalen Dateinamen gezeigt.
+- Pre-approved tabs sind geladen: Startseite, Prozessmodell, Login,
+  Workspace-Grenze und Fallback-Evidence.
+- No callback URL wird im Browser gezeigt; nach einem Login-Test wird auf die
+  geschützte Statusseite oder den geschlossenen Workspace gewechselt.
+- No live console: keine Developer Tools, keine Cloud-Konsole, keine Vault-,
+  Wallet-, ATP- oder Identity-Ansicht im Termin.
 
 1. `https://notariat8.de`
    - Erwartung: Startseite laedt und zeigt keine echten Mandatsdaten.
@@ -144,7 +165,7 @@ entschieden:
   geschlossene Workspace.
 - Freigabe, ob ein lokaler XNP-Arbeitsplatz überhaupt gezeigt wird.
 - Freigabe des finalen Browserfensters unmittelbar vor Start.
-- Merge-Entscheidung für diesen geschuetzten PR.
+- Merge-Entscheidung für diesen geschützten PR.
 
 ## PR-Track
 

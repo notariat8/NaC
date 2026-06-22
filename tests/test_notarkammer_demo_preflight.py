@@ -130,6 +130,22 @@ class NotarkammerDemoPreflightTests(unittest.TestCase):
         self.assertIn("runtime", combined.lower())
         self.assertIn("infrastructure", combined.lower())
 
+    def test_preflight_requires_presentation_screen_hygiene(self) -> None:
+        for content in read_preflight_docs():
+            content_lower = content.lower()
+            self.assertIn("presentation mode", content_lower)
+            self.assertTrue("bildschirmhygiene" in content_lower or "screen hygiene" in content_lower)
+            self.assertIn("fresh browser profile", content_lower)
+            self.assertIn("autofill", content_lower)
+            self.assertIn("saved credentials", content_lower)
+            self.assertIn("browser history", content_lower)
+            self.assertIn("search suggestions", content_lower)
+            self.assertIn("notifications off", content_lower)
+            self.assertIn("download shelf", content_lower)
+            self.assertIn("pre-approved tabs", content_lower)
+            self.assertIn("no callback url", content_lower)
+            self.assertIn("no live console", content_lower)
+
 
 if __name__ == "__main__":
     unittest.main()
