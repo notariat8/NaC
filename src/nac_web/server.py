@@ -4,6 +4,7 @@ import base64
 import hashlib
 import html
 import json
+import logging
 import os
 import threading
 import webbrowser
@@ -78,6 +79,7 @@ ROLE_LABELS_DE = {
 
 DEFAULT_OCI_IDENTITY_DOMAIN_URL = "https://idcs.example.identity.oraclecloud.com:443"
 DEFAULT_OCI_IDENTITY_DOMAIN_ID = "ocid1.domain.oc1.example"
+LOGGER = logging.getLogger(__name__)
 DEFAULT_OWNER_APPLY_APPROVAL_ID = "OWNER-APPLY-2026-0001"
 DEFAULT_AUDIT_EVENT_ID = "AUDIT-2026-0001"
 DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
@@ -846,6 +848,7 @@ def build_auth_callback_page(
         )
         if not session_bound:
             _mark_callback_session_store_unavailable(callback_result)
+    _log_auth_callback_redacted_status(callback_result, session_store_bound=session_bound and session_store is not None)
     session_label = "Sitzung vorbereitet" if session_bound else "Sitzung offen"
     escaped_state_label = html.escape(state_label)
     escaped_role_label = html.escape(role_label)
@@ -2883,6 +2886,83 @@ def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:
       </ul>
     </section>
     """
+
+
+def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, session_store_bound: bool) -> None:
+    token_exchange = callback_result.get("token_exchange", {})
+    jwt_validation = callback_result.get("jwt_validation", {})
+    role_gate = callback_result.get("role_gate", {})
+    session_boundary = callback_result.get("session_boundary", {})
+    session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
+    LOGGER.info(
+        "auth_callback_status state=%s token_exchange=%s token_exchange_class=%s "
+        "token_exchange_detail=%s jwt_validation=%s role_gate=%s session_cookie=%s session_store=%s",
+        _safe_auth_log_status(callback_result.get("state_validation", {}).get("status")),
+        _safe_auth_log_status(token_exchange.get("status") if isinstance(token_exchange, dict) else None),
+        _safe_token_exchange_log_class(token_exchange),
+        _safe_token_exchange_log_detail(token_exchange),
+        _safe_auth_log_status(jwt_validation.get("status") if isinstance(jwt_validation, dict) else None),
+        _safe_auth_log_status(role_gate.get("status") if isinstance(role_gate, dict) else None),
+        _safe_auth_log_bool(isinstance(session, dict) and bool(session.get("cookie_issued"))),
+        _safe_auth_log_bool(session_store_bound),
+    )
+
+
+def _safe_token_exchange_log_class(token_exchange: Any) -> str:
+    if not isinstance(token_exchange, dict):
+        return "unknown"
+    if token_exchange.get("status") == "invalid":
+        return "invalid_token"
+    if token_exchange.get("status") == "failed":
+        return "exchange_failed"
+    return _safe_auth_log_status(token_exchange.get("status"))
+
+
+def _safe_token_exchange_log_detail(token_exchange: Any) -> str:
+    if not isinstance(token_exchange, dict):
+        return "unknown"
+    diagnostic_class = str(token_exchange.get("diagnostic_class") or "")
+    if diagnostic_class in {"missing_id_token", "token_response_not_json", "id_token_verification_failed"}:
+        return diagnostic_class
+    failure_class = str(token_exchange.get("failure_class") or "")
+    if failure_class in {
+        "authorization_code_rejected",
+        "client_auth_rejected",
+        "client_not_authorized",
+        "grant_type_unsupported",
+        "token_endpoint_unavailable",
+        "token_request_rejected",
+        "token_endpoint_rejected",
+    }:
+        return failure_class
+    return "none"
+
+
+def _safe_auth_log_status(value: Any) -> str:
+    status = str(value or "")
+    if status in {
+        "closed",
+        "expired",
+        "failed",
+        "invalid",
+        "missing",
+        "not_configured",
+        "not_started",
+        "open",
+        "received",
+        "rejected",
+        "session_allowed",
+        "session_bound",
+        "unavailable",
+        "valid",
+        "verified",
+    }:
+        return status
+    return "unknown"
+
+
+def _safe_auth_log_bool(value: bool) -> str:
+    return "true" if value else "false"
 
 
 def _token_exchange_status_label(token_exchange: Any) -> str:
