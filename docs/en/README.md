@@ -104,6 +104,8 @@ regardless of the language used in the prompt. The binding rule is defined in
   governance, documentation parity, and validation.
 - [docs/en/datenrepo-demo8notariat.md](datenrepo-demo8notariat.md) defines the
   separate demo data repository for synthetic NaC cases and a later sovereign Git move.
+- [docs/en/demo/](demo/) is the Notarkammer demo entry point with preflight,
+  live runbook, 60-minute script, XNP/BPMN boundaries and fallbacks.
 - [docs/en/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md) derives
   the open matter model from common notary-software building blocks.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
