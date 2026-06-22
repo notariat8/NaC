@@ -19,6 +19,11 @@ _SAFE_OAUTH_FAILURE_CLASSES = {
     "server_error": "token_endpoint_unavailable",
     "temporarily_unavailable": "token_endpoint_unavailable",
 }
+_SAFE_INVALID_DIAGNOSTIC_CLASSES = {
+    "missing_id_token",
+    "token_response_not_json",
+    "id_token_verification_failed",
+}
 _CONTRACT_MODE = "contract_only"
 _LIVE_EXCHANGE_MODE = "server_side_token_exchange"
 _ALLOWED_MODES = {_CONTRACT_MODE, _LIVE_EXCHANGE_MODE}
@@ -34,6 +39,7 @@ class OidcTokenExchangeContract:
         configuration: str,
         claims: dict[str, Any] | None = None,
         failure_class: str = "",
+        diagnostic_class: str = "",
         mode: str = _CONTRACT_MODE,
         live_token_exchange_performed: bool = False,
     ) -> None:
@@ -41,6 +47,9 @@ class OidcTokenExchangeContract:
         self._configuration = configuration
         self._claims = deepcopy(claims) if self._status == "verified" and isinstance(claims, dict) else None
         self._failure_class = _normalized_failure_class(failure_class) if self._status == "failed" else ""
+        self._diagnostic_class = (
+            _normalized_invalid_diagnostic_class(diagnostic_class) if self._status == "invalid" else ""
+        )
         self._mode = mode if mode in _ALLOWED_MODES else _CONTRACT_MODE
         self._live_token_exchange_performed = bool(live_token_exchange_performed and self._mode == _LIVE_EXCHANGE_MODE)
 
@@ -57,6 +66,8 @@ class OidcTokenExchangeContract:
         }
         if self._status == "failed":
             result["failure_class"] = self._failure_class
+        if self._status == "invalid" and self._diagnostic_class:
+            result["diagnostic_class"] = self._diagnostic_class
         return result
 
     def session_input(self) -> dict[str, Any]:
@@ -94,6 +105,7 @@ def build_oidc_token_exchange_contract(
             status=status,
             configuration="configured",
             failure_class=str(exchanger_result.get("failure_class", "")),
+            diagnostic_class=str(exchanger_result.get("diagnostic_class", "")),
             mode=mode,
             live_token_exchange_performed=live_token_exchange_performed,
         )
@@ -102,6 +114,7 @@ def build_oidc_token_exchange_contract(
         return OidcTokenExchangeContract(
             status="invalid",
             configuration="configured",
+            diagnostic_class=str(exchanger_result.get("diagnostic_class", "")),
             mode=mode,
             live_token_exchange_performed=live_token_exchange_performed,
         )
@@ -164,17 +177,33 @@ def exchange_oidc_authorization_code(
 
     token_payload = _json_body(response.get("body"))
     if not isinstance(token_payload, dict):
-        return _exchange_result("invalid", live_token_exchange_performed=True)
+        return _exchange_result(
+            "invalid",
+            live_token_exchange_performed=True,
+            diagnostic_class="token_response_not_json",
+        )
     id_token = token_payload.get("id_token")
     if not _safe_non_empty_text(id_token):
-        return _exchange_result("invalid", live_token_exchange_performed=True)
+        return _exchange_result(
+            "invalid",
+            live_token_exchange_performed=True,
+            diagnostic_class="missing_id_token",
+        )
 
     try:
         claims = id_token_verifier(str(id_token))
     except Exception:
-        return _exchange_result("invalid", live_token_exchange_performed=True)
+        return _exchange_result(
+            "invalid",
+            live_token_exchange_performed=True,
+            diagnostic_class="id_token_verification_failed",
+        )
     if not isinstance(claims, dict):
-        return _exchange_result("invalid", live_token_exchange_performed=True)
+        return _exchange_result(
+            "invalid",
+            live_token_exchange_performed=True,
+            diagnostic_class="id_token_verification_failed",
+        )
     return _exchange_result("verified", live_token_exchange_performed=True, claims=claims)
 
 
@@ -207,6 +236,7 @@ def _exchange_result(
     live_token_exchange_performed: bool,
     claims: dict[str, Any] | None = None,
     failure_class: str = "",
+    diagnostic_class: str = "",
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "status": _normalized_status(status),
@@ -216,6 +246,10 @@ def _exchange_result(
     }
     if result["status"] == "failed":
         result["failure_class"] = _normalized_failure_class(failure_class)
+    if result["status"] == "invalid":
+        normalized_diagnostic_class = _normalized_invalid_diagnostic_class(diagnostic_class)
+        if normalized_diagnostic_class:
+            result["diagnostic_class"] = normalized_diagnostic_class
     if result["status"] == "verified" and isinstance(claims, dict):
         result["claims"] = deepcopy(claims)
     return result
@@ -237,6 +271,13 @@ def _normalized_failure_class(value: Any) -> str:
     if normalized in allowed:
         return normalized
     return "token_endpoint_rejected"
+
+
+def _normalized_invalid_diagnostic_class(value: Any) -> str:
+    normalized = str(value or "").strip()
+    if normalized in _SAFE_INVALID_DIAGNOSTIC_CLASSES:
+        return normalized
+    return ""
 
 
 def _json_body(body: object) -> object:

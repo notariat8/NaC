@@ -1983,6 +1983,70 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn("secret-code-from-idp", serialized)
         self.assertNotIn("client-secret-value", serialized)
 
+    def test_oidc_token_exchange_adapter_classifies_redacted_invalid_substatus(self) -> None:
+        from nac_identity.oidc_token_exchange import (
+            build_oidc_token_exchange_contract,
+            exchange_oidc_authorization_code,
+        )
+
+        def exchange_with_body(body: bytes, verifier=lambda _id_token: {"aud": "notariat8_nac_app"}) -> dict[str, object]:
+            def http_post(
+                url: str,
+                request_body: bytes,
+                headers: dict[str, str],
+                timeout_seconds: float,
+            ) -> dict[str, object]:
+                return {"status_code": 200, "body": body}
+
+            return exchange_oidc_authorization_code(
+                code="secret-code-from-idp",
+                redirect_uri="https://app.notariat8.de/auth/callback",
+                token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+                client_id="notariat8_nac_app",
+                client_secret="client-secret-value",
+                id_token_verifier=verifier,
+                http_post=http_post,
+            )
+
+        token_response_not_json = exchange_with_body(b"not-json")
+        missing_id_token = exchange_with_body(b'{"access_token":"sample-access-token-value"}')
+        id_token_verification_failed = exchange_with_body(
+            b'{"id_token":"sample-id-token-value"}',
+            verifier=lambda _id_token: None,
+        )
+
+        self.assertEqual(token_response_not_json["status"], "invalid")
+        self.assertEqual(token_response_not_json["diagnostic_class"], "token_response_not_json")
+        self.assertEqual(missing_id_token["status"], "invalid")
+        self.assertEqual(missing_id_token["diagnostic_class"], "missing_id_token")
+        self.assertEqual(id_token_verification_failed["status"], "invalid")
+        self.assertEqual(id_token_verification_failed["diagnostic_class"], "id_token_verification_failed")
+
+        public_result = build_oidc_token_exchange_contract(
+            configured=True,
+            code="secret-code-from-idp",
+            redirect_uri="https://app.notariat8.de/auth/callback",
+            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            client_id="notariat8_nac_app",
+            exchanger_result=id_token_verification_failed,
+        ).public_result()
+        serialized = json.dumps(
+            {
+                "token_response_not_json": token_response_not_json,
+                "missing_id_token": missing_id_token,
+                "id_token_verification_failed": id_token_verification_failed,
+                "public_result": public_result,
+            },
+            sort_keys=True,
+        )
+
+        self.assertEqual(public_result["status"], "invalid")
+        self.assertEqual(public_result["diagnostic_class"], "id_token_verification_failed")
+        self.assertNotIn("secret-code-from-idp", serialized)
+        self.assertNotIn("client-secret-value", serialized)
+        self.assertNotIn("sample-access-token-value", serialized)
+        self.assertNotIn("sample-id-token-value", serialized)
+
     def test_oidc_id_token_verifier_accepts_rs256_jwks_claims(self) -> None:
         from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 
