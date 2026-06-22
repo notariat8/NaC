@@ -24,7 +24,7 @@ vorab freigegebene Demo-Sichten.
 Optionaler maschinenlesbarer Vorabcheck, nur read-only:
 
 ```bash
-python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only
+/home/ubuntu/.venvs/nac/bin/python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only
 ```
 
 Das Script prüft nur die festgelegten Demo-URLs, akzeptiert den geschlossenen

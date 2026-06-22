@@ -122,12 +122,12 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             "atp healthcheck",
             "store-gate",
             "store gate",
-            "python scripts/nac.py tenant customer-plan",
-            "python scripts/nac.py tenant dns-check",
-            "python scripts/nac.py tenant apply-request",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant customer-plan",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant dns-check",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request",
             "--dry-run",
-            "python scripts/nac.py bpmn validate",
-            "python scripts/nac.py bpmn show immobilienkaufvertrag",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn show immobilienkaufvertrag",
             "curl -fsS".lower(),
             "curl -i",
             "POST /onboarding/requests".lower(),
@@ -135,6 +135,12 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term.lower(), combined_lower)
+        bare_python_commands = [
+            line.strip()
+            for line in combined.splitlines()
+            if line.strip().startswith("python scripts/nac.py")
+        ]
+        self.assertEqual([], bare_python_commands)
 
     def test_runbook_uses_exact_synthetic_dns_demo_url(self) -> None:
         for content in read_runbooks().values():

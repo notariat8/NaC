@@ -80,7 +80,7 @@ Fallback-Evidence nutzen und die fachliche Grenze benennen.
 | 7 | `https://app.notariat8.de/login` | Login-Seite öffnet; keine echten Zugangsdaten eingeben; Login-Flow nur mit Freigabe fortsetzen. | Nicht debuggen, zum Prozessmodell wechseln. |
 | 8 | Login-Intent nur als redigierter CLI-/curl-Check, nicht als Browser-Tab | Der Read-only Check bleibt ohne Credentials und ohne sichtbare JSON-Oberfläche. | Falls Login-Intent geprüft werden muss: Ergebnis nicht vorführen, sondern Login-Seite oder Workspace-Grenze zeigen. |
 | 9 | `https://app.notariat8.de/workspace` | Ohne freigegebene Sitzung bleibt der Arbeitsbereich geschlossen; nur Metadatenstatus, keine Akte. | Fail-closed als Sicherheitsnachweis erklären. |
-| 10 | BPMN-Validierung | `python scripts/nac.py bpmn validate` bleibt grün; `bpmn show immobilienkaufvertrag` ist lesbar. | Öffentliche Prozessmodellseite nutzen. |
+| 10 | BPMN-Validierung | `/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate` bleibt grün; `bpmn show immobilienkaufvertrag` ist lesbar. | Öffentliche Prozessmodellseite nutzen. |
 | 11 | ATP-Healthcheck-Status | `/healthz` zeigt Runtime-Status; ATP-Store-Gate wird nur als `enabled`, `disabled`, `unavailable` oder `not_checked` eingeordnet. | Keine Secrets, Wallets, DSN oder OCI-CLI öffnen. |
 | 12 | XNP lokal | Kartenpfad, XNP-Localhost `12774` bis `12784` und Rolle sind nur lokal plausibel. | Keine Live-XNP-Aktion; Gate als `manual_review` oder `blocked` markieren. |
 | 13 | XNotar/XJustiz-Übergabe | Austauschordner und Paketgrenze sind synthetisch oder leer prüfbar. | Kein Paket öffnen; nur die Übergabegrenze erklären. |
@@ -93,7 +93,7 @@ keine Callback-Werte und keine Provider-Details.
 
 | Evidence-ID | Zeitpunkt | Befehl oder Sicht | Erwartetes Ergebnis | Tatsächliches Ergebnis | Redaktionsstatus | Fallback-Entscheidung |
 | --- | --- | --- | --- | --- | --- | --- |
-| NK-EVID-001 | T-15 | `python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only` | Demo-Smoke `pass`; keine Response-Body-Vorschau; Workspace fail-closed. | einzutragen | redigiert: keine Secrets, keine Mandatsdaten | Bei Fehler: Prozessmodell und Workspace-Grenze zeigen. |
+| NK-EVID-001 | T-15 | `/home/ubuntu/.venvs/nac/bin/python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only` | Demo-Smoke `pass`; keine Response-Body-Vorschau; Workspace fail-closed. | einzutragen | redigiert: keine Secrets, keine Mandatsdaten | Bei Fehler: Prozessmodell und Workspace-Grenze zeigen. |
 | NK-EVID-002 | T-03 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, Dauer, Parallelität und kritischer Pfad sichtbar. | einzutragen | öffentlich; kein Mandatsbezug | Freigegebenen Screenshot nutzen. |
 | NK-EVID-003 | T-03 | `https://app.notariat8.de/healthz` | Kurzer, nicht-sensitiver Status. | einzutragen | redigiert; keine Runtime-Details vorlesen | Health-Tab schließen, Workspace-Grenze zeigen. |
 | NK-EVID-004 | T-03 | `https://app.notariat8.de/workspace` ohne Demo-Sitzung | Fail-closed oder Metadata-only; keine Workspace-Inhalte. | einzutragen | redigiert: keine IDs, keine Claims, keine Aktenwerte | Geschlossene Grenze als Sicherheitsnachweis erklären. |
@@ -105,11 +105,11 @@ curl -fsS https://app.notariat8.de/healthz
 curl -fsS "https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example" >/tmp/nac-onboarding-readiness.html
 curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt" >/tmp/nac-login-intent.json
 curl -i "https://app.notariat8.de/workspace"
-python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
-python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
-python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.invalid --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
-python scripts/nac.py bpmn validate
-python scripts/nac.py bpmn show immobilienkaufvertrag --format text
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.invalid --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn show immobilienkaufvertrag --format text
 ```
 
 Nicht ausführen: `POST /onboarding/requests`, `POST /admin/onboarding/review`,

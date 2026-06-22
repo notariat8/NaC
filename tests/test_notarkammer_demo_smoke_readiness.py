@@ -82,7 +82,16 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         combined = "\n".join(read_smoke_docs().values())
         combined_lower = " ".join(combined.lower().split())
 
-        self.assertIn("scripts/notarkammer_demo_smoke.py --timeout-seconds 20", combined)
+        self.assertIn(
+            "/home/ubuntu/.venvs/nac/bin/python scripts/notarkammer_demo_smoke.py --timeout-seconds 20",
+            combined,
+        )
+        bare_python_commands = [
+            line.strip()
+            for line in combined.splitlines()
+            if line.strip().startswith("python scripts/notarkammer_demo_smoke.py")
+        ]
+        self.assertEqual([], bare_python_commands)
         self.assertIn("10s", combined_lower)
         self.assertIn("20s", combined_lower)
         self.assertIn("cold-start tolerance", combined_lower)
@@ -149,7 +158,7 @@ class NotarkammerDemoSmokeReadinessTests(unittest.TestCase):
         docs = read_smoke_docs()
         for language, content in docs.items():
             self.assertIn(
-                "python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only",
+                "/home/ubuntu/.venvs/nac/bin/python scripts/notarkammer_demo_smoke.py --timeout-seconds 20 --summary-only",
                 content,
                 language,
             )
