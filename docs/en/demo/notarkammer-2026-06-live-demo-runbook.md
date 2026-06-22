@@ -51,6 +51,20 @@ consoles during the meeting. Before starting, open only these tabs:
 | Tab 5 | `https://app.notariat8.de/login` | protected entry. | Do not debug login live. |
 | Tab 6 | `https://app.notariat8.de/workspace` | fail-closed or metadata-only workspace. | Explain the closed boundary. |
 
+## Show Mode
+
+The demo runs in exactly one browser window with prepared tabs. The browser
+address bar is not narrated and is not used as an evidence surface. Show only
+the user-facing surfaces `notariat8.de/prozessmodell.html`,
+`app.notariat8.de/login` and `app.notariat8.de/workspace`, plus the prepared
+readiness/status pages with synthetic data.
+
+No JSON endpoint is shown as a user interface. If a JSON, callback or error tab
+becomes visible, close the tab and switch back to the process model, the login
+page or the closed workspace. If a live surface is slow or technically
+unavailable, do not debug; use the fallback evidence and name the domain
+boundary.
+
 ## T-03:00 Preflight Order
 
 | Order | Live-Test | Expected | Fallback |

@@ -246,6 +246,54 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         for term in required_terms:
             self.assertIn(term, normalized)
 
+    def test_runbook_defines_show_mode_boundary(self) -> None:
+        combined = "\n".join(read_runbooks().values())
+        normalized = " ".join(combined.split())
+        normalized_lower = normalized.lower()
+        combined_lower = combined.lower()
+
+        required_exact_terms = [
+            "## Vorführmodus",
+            "## Show Mode",
+            "Adresszeile wird nicht vorgelesen",
+            "Fallback-Evidence",
+            "Tab schließen",
+        ]
+        required_lower_terms = [
+            "one browser window",
+            "einem browserfenster",
+            "notariat8.de/prozessmodell.html",
+            "app.notariat8.de/login",
+            "app.notariat8.de/workspace",
+            "browser address bar is not narrated",
+            "no JSON endpoint is shown as a user interface",
+            "kein JSON-Endpunkt als Benutzeroberfläche",
+            "fallback evidence",
+            "close the tab",
+        ]
+        for term in required_exact_terms:
+            self.assertIn(term, normalized)
+        for term in required_lower_terms:
+            self.assertIn(term.lower(), normalized_lower)
+
+        forbidden_show_mode_terms = [
+            "cloud console",
+            "resource manager",
+            "vault",
+            "wallet",
+            "secret value",
+            "client secret",
+            "callback code",
+            "callback state",
+        ]
+        show_mode_sections = [
+            section for section in combined_lower.split("## ") if section.startswith(("vorführmodus", "show mode"))
+        ]
+        self.assertEqual(2, len(show_mode_sections))
+        for section in show_mode_sections:
+            for term in forbidden_show_mode_terms:
+                self.assertNotIn(term, section)
+
 
 if __name__ == "__main__":
     unittest.main()

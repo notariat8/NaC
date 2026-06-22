@@ -53,6 +53,20 @@ Cloud-Konsolen im Termin. Vor Beginn nur diese Tabs öffnen:
 | Tab 5 | `https://app.notariat8.de/login` | geschützter Einstieg. | Login nicht live debuggen. |
 | Tab 6 | `https://app.notariat8.de/workspace` | fail-closed oder Metadata-only Workspace. | geschlossene Grenze erklären. |
 
+## Vorführmodus
+
+Die Demo läuft in genau einem Browserfenster mit vorbereiteten Tabs. Die
+Adresszeile wird nicht vorgelesen und nicht als Belegfläche verwendet. Gezeigt
+werden nur die Nutzerflächen `notariat8.de/prozessmodell.html`,
+`app.notariat8.de/login` und `app.notariat8.de/workspace` sowie die
+vorbereiteten Readiness-/Statusseiten mit synthetischen Daten.
+
+Kein JSON-Endpunkt als Benutzeroberfläche zeigen. Wenn ein JSON-, Callback-
+oder Fehler-Tab sichtbar wird, Tab schließen und auf das Prozessmodell, die
+Login-Seite oder den geschlossenen Workspace wechseln. Wenn eine Live-Fläche
+langsam ist oder technisch nicht verfügbar wirkt, nicht debuggen, sondern die
+Fallback-Evidence nutzen und die fachliche Grenze benennen.
+
 ## T-03:00 Preflight-Reihenfolge
 
 | Reihenfolge | Live-Test | Erwartung | Fallback |
