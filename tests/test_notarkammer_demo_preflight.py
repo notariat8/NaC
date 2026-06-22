@@ -9,6 +9,11 @@ PREFLIGHT_DOCS = {
     "de": REPO_ROOT / "docs" / "de" / "demo" / "notarkammer-2026-06-demo-preflight.md",
     "en": REPO_ROOT / "docs" / "en" / "demo" / "notarkammer-2026-06-demo-preflight.md",
 }
+DEMO_DNS_CHECK_URL = (
+    "https://app.notariat8.de/onboarding/dns-check?"
+    "audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat"
+    "&admin_email=admin%40kanzlei-notariat.example"
+)
 
 
 def read_preflight_docs() -> list[str]:
@@ -62,6 +67,11 @@ class NotarkammerDemoPreflightTests(unittest.TestCase):
             self.assertIn("ATP", content)
             self.assertIn("healthcheck", content.lower())
             self.assertTrue("store gate" in content.lower() or "store-gate" in content.lower())
+
+    def test_preflight_uses_exact_synthetic_dns_demo_url(self) -> None:
+        for content in read_preflight_docs():
+            self.assertIn(DEMO_DNS_CHECK_URL, content)
+            self.assertNotIn("https://app.notariat8.de/onboarding/dns-check?...", content)
 
     def test_preflight_checklist_covers_xnp_reader_xnotar_xjustiz_gates(self) -> None:
         for content in read_preflight_docs():

@@ -61,7 +61,7 @@ Cloud-Konsolen im Termin. Vor Beginn nur diese Tabs öffnen:
 | 2 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, Dauerlogik und kritischer Pfad sind sichtbar. | Screenshot oder geöffneten Tab nutzen. |
 | 3 | `https://app.notariat8.de/healthz` | Kurzer, nicht-sensitiver Status. | Tab schließen, Workspace-Grenze zeigen. |
 | 4 | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | Public-Onboarding zeigt Einrichtungsstatus ohne Mandatsdaten. | Geladenen Tab zeigen, keine Anfrage absenden. |
-| 5 | `https://app.notariat8.de/onboarding/dns-check?...` und CLI-DNS-Check | Erwarteter TXT-Record und Status sind sichtbar. | `pending`/`mismatch` als Setup-Status erklären. |
+| 5 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` und CLI-DNS-Check | Erwarteter TXT-Record und Status sind sichtbar. | `pending`/`mismatch` als Setup-Status erklären. |
 | 6 | `/onboarding/requests/<request_id>?audience=customer` | Statusseite für vorhandene Anfrage oder `unavailable` als Store-Gate. | Nicht in ATP debuggen. |
 | 7 | `https://app.notariat8.de/login` | Login-Seite öffnet; keine echten Zugangsdaten eingeben; Login-Flow nur mit Freigabe fortsetzen. | Nicht debuggen, zum Prozessmodell wechseln. |
 | 8 | `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt` | Read-only Login-Intent ohne Credentials. | Falls JSON/Fehler sichtbar ist, Login-Seite oder Workspace-Grenze zeigen. |

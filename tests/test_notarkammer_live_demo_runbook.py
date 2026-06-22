@@ -9,6 +9,11 @@ RUNBOOK_DOCS = {
     "de": REPO_ROOT / "docs" / "de" / "demo" / "notarkammer-2026-06-live-demo-runbook.md",
     "en": REPO_ROOT / "docs" / "en" / "demo" / "notarkammer-2026-06-live-demo-runbook.md",
 }
+DEMO_DNS_CHECK_URL = (
+    "https://app.notariat8.de/onboarding/dns-check?"
+    "audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat"
+    "&admin_email=admin%40kanzlei-notariat.example"
+)
 
 
 def read_runbooks() -> dict[str, str]:
@@ -130,6 +135,11 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term.lower(), combined_lower)
+
+    def test_runbook_uses_exact_synthetic_dns_demo_url(self) -> None:
+        for content in read_runbooks().values():
+            self.assertIn(DEMO_DNS_CHECK_URL, content)
+            self.assertNotIn("https://app.notariat8.de/onboarding/dns-check?...", content)
 
     def test_runbook_has_20_minute_fallback_and_login_gate(self) -> None:
         german = RUNBOOK_DOCS["de"].read_text(encoding="utf-8")

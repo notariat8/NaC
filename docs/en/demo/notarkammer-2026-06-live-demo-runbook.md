@@ -59,7 +59,7 @@ consoles during the meeting. Before starting, open only these tabs:
 | 2 | `https://notariat8.de/prozessmodell.html` | Immobilienkaufvertrag, duration logic and critical path are visible. | Use a screenshot or opened tab. |
 | 3 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | Close the tab and show the workspace boundary. |
 | 4 | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | Public onboarding shows setup status without mandate data. | Show the loaded tab; submit no request. |
-| 5 | `https://app.notariat8.de/onboarding/dns-check?...` and CLI DNS check | Expected TXT record and status are visible. | Explain `pending`/`mismatch` as setup status. |
+| 5 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` and CLI DNS check | Expected TXT record and status are visible. | Explain `pending`/`mismatch` as setup status. |
 | 6 | `/onboarding/requests/<request_id>?audience=customer` | Status page for an existing request or `unavailable` as the store gate. | Do not debug ATP. |
 | 7 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
 | 8 | `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt` | Read-only login intent without credentials. | If JSON/error is visible, show login page or workspace boundary. |
