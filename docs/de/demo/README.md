@@ -26,6 +26,7 @@ und Rolle geprüft sind.
 | Live-Reihenfolge und Browserpfade | [notarkammer-2026-06-live-demo-runbook.md](notarkammer-2026-06-live-demo-runbook.md) |
 | 60-Minuten-Skript | [notarkammer-2026-06-60-minute-live-demo-script.md](notarkammer-2026-06-60-minute-live-demo-script.md) |
 | Smoke-Readiness und Fallbacks | [notarkammer-2026-06-demo-smoke-readiness.md](notarkammer-2026-06-demo-smoke-readiness.md) |
+| Go/No-Go-Entscheidung | [notarkammer-2026-06-demo-go-no-go.md](notarkammer-2026-06-demo-go-no-go.md) |
 | Bekannte Lücken und Grenzen | [notarkammer-2026-06-demo-gap-audit.md](notarkammer-2026-06-demo-gap-audit.md) |
 | Fragen und Einwände | [notarkammer-2026-06-demo-qa-objection-handling.md](notarkammer-2026-06-demo-qa-objection-handling.md) |
 | Dauer, Parallelität und kritischer Pfad | [notarkammer-bpmn-critical-path-talking-points.md](notarkammer-bpmn-critical-path-talking-points.md) |
