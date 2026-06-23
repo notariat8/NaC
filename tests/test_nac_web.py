@@ -156,6 +156,24 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
         self.assertEqual(body, b"")
 
+    def test_runtime_server_binds_session_store_from_environment(self) -> None:
+        class DummySessionStore:
+            pass
+
+        session_store = DummySessionStore()
+        with (
+            patch("nac_web.server.build_session_store_from_env", return_value=session_store) as session_factory,
+            patch("nac_web.server.build_onboarding_request_store_from_env") as onboarding_factory,
+            patch("nac_web.server.NaCLocalWebApp") as app_factory,
+        ):
+            server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
+            server.server_close()
+
+        session_factory.assert_called_once_with()
+        onboarding_factory.assert_called_once_with()
+        _, kwargs = app_factory.call_args
+        self.assertIs(kwargs["session_store"], session_store)
+
     def test_runtime_server_sanitizes_auth_callback_query_in_logs(self) -> None:
         server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)

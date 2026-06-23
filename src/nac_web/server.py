@@ -31,7 +31,7 @@ from nac_identity.oci_login import build_login_intent
 from nac_identity.oci_role_lookup import build_oci_identity_domain_role_membership_resolver
 from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
-from nac_identity.session_store import RuntimeSessionStoreAdapter
+from nac_identity.session_store import RuntimeSessionStoreAdapter, build_session_store_from_env
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -591,7 +591,11 @@ class NaCLocalWebApp:
 
 
 def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
-    app = NaCLocalWebApp(repo_root, onboarding_request_store=build_onboarding_request_store_from_env())
+    app = NaCLocalWebApp(
+        repo_root,
+        onboarding_request_store=build_onboarding_request_store_from_env(),
+        session_store=build_session_store_from_env(),
+    )
 
     class Handler(BaseHTTPRequestHandler):
         def _send_app_response(self, response: AppResponse, *, include_body: bool = True) -> None:
