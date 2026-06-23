@@ -33,6 +33,7 @@ class NotarkammerDemoIndexTests(unittest.TestCase):
             "notarkammer-2026-06-demo-smoke-readiness.md",
             "notarkammer-2026-06-demo-gap-audit.md",
             "notarkammer-2026-06-demo-qa-objection-handling.md",
+            "notarkammer-first-route-smoke-map.md",
             "notarkammer-first-matter-metadata.md",
             "notarkammer-bpmn-critical-path-talking-points.md",
             "notarkammer-xnp-bpmn-demo-depth.md",
