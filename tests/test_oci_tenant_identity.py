@@ -1157,6 +1157,38 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn(hashlib.sha256(nonce.encode("utf-8")).hexdigest(), serialized)
         self.assertNotIn("admin@example.test", serialized)
 
+    def test_oidc_session_boundary_accepts_expected_issuer_with_trailing_slash(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+
+        nonce = "nonce-from-id-token"
+        result = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://identity.oraclecloud.com",
+                    "aud": "notariat8_nac_app",
+                    "nonce": nonce,
+                    "groups": ["nac-tenant-admin"],
+                    "email": "admin@example.test",
+                },
+            },
+            expected_issuer="https://identity.oraclecloud.com/",
+            expected_audience="notariat8_nac_app",
+        )
+        serialized = json.dumps(result, sort_keys=True)
+
+        self.assertEqual(result["status"], "session_allowed")
+        self.assertEqual(result["jwt_validation"]["status"], "verified")
+        self.assertEqual(result["role_gate"]["status"], "open")
+        self.assertNotIn(nonce, serialized)
+        self.assertNotIn("admin@example.test", serialized)
+
     def test_oidc_session_boundary_issues_secure_cookie_after_verified_role_gate(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
 

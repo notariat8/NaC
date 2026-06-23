@@ -101,4 +101,4 @@ def _nonce_matches(nonce: Any, expected_hash: str) -> bool:
 def _expected_value(value: Any) -> str:
     if not isinstance(value, str) or not value or value != value.strip():
         return ""
-    return value
+    return value.rstrip("/")
