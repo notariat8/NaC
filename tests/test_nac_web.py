@@ -32,6 +32,62 @@ def _session_cookie_payload(cookie_header: str) -> dict[str, object]:
     return json.loads(base64.urlsafe_b64decode(f"{payload_part}{padding}".encode("ascii")).decode("utf-8"))
 
 
+def _bound_workspace_app_and_cookie() -> tuple[NaCLocalWebApp, str]:
+    from nac_identity.oidc_session import evaluate_oidc_session_boundary
+    from nac_identity.session_store import MappingSessionStoreAdapter
+
+    session = evaluate_oidc_session_boundary(
+        state_validation={
+            "status": "valid",
+            "tenant_hint": "myjur",
+            "nonce_bound": True,
+            "nonce_hash": hashlib.sha256("nonce-from-id-token".encode("utf-8")).hexdigest(),
+        },
+        token_exchange_result={
+            "status": "verified",
+            "claims": {
+                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "aud": "notariat8_nac_app",
+                "nonce": "nonce-from-id-token",
+                "groups": ["nac-notary"],
+                "email": "notar@example.test",
+            },
+        },
+        expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+        expected_audience="notariat8_nac_app",
+        required_role="nac-notary",
+        session_signing_key="unit-test-session-signing-key",
+        now=1_800_000_000,
+        session_ttl_seconds=600,
+    )
+    cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+    payload = _session_cookie_payload(cookie_header)
+    app = NaCLocalWebApp(
+        REPO_ROOT,
+        session_store=MappingSessionStoreAdapter(
+            {
+                payload["sid"]: {
+                    "schema_version": "nac.server-session/v0.1",
+                    "session_id": payload["sid"],
+                    "issued_at": payload["iat"],
+                    "expires_at": payload["exp"],
+                    "revoked_at": None,
+                    "audit_event_id": "audit-event-secret",
+                    "contains_credentials": False,
+                    "tokens_stored": False,
+                    "claims_stored": False,
+                    "tenant_bound": True,
+                    "subject_bound": True,
+                    "role_bound": True,
+                    "case_bound": True,
+                    "purpose_bound": True,
+                }
+            }
+        ),
+    )
+    return app, cookie_header
+
+
 class NaCLocalWebTests(unittest.TestCase):
     def test_home_page_links_bpmn_and_kg_views(self) -> None:
         html = build_home_page(REPO_ROOT)
@@ -2547,6 +2603,85 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("notar@example.test", html)
         self.assertNotIn("nonce-from-id-token", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_workspace_links_first_matter_metadata_status_without_exposing_identifiers(self) -> None:
+        app, cookie_header = _bound_workspace_app_and_cookie()
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, _content_type, body = app.handle("/workspace", headers={"Cookie": cookie_header})
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertIn("Ersten Vorgang als Statusansicht öffnen", html)
+        self.assertIn('href="/workspace/immobilienkaufvertrag"', html)
+        self.assertNotIn("case-secret", html)
+        self.assertNotIn("myjur", html)
+        self.assertNotIn("audit-event-secret", html)
+        self.assertNotIn(cookie_header, html)
+        self.assertNotIn("notar@example.test", html)
+        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_first_matter_status_requires_valid_session_cookie(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/workspace/immobilienkaufvertrag")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 401)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("notariat8 Anmeldung erforderlich", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertNotIn("Immobilienkaufvertrag Status", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_first_matter_status_shows_metadata_only_after_role_case_gate(self) -> None:
+        app, cookie_header = _bound_workspace_app_and_cookie()
+        headers = {
+            "Cookie": cookie_header,
+            "X-NaC-Case-Id": "case-secret-1",
+            "X-NaC-Tenant-Hint": "myjur",
+            "X-NaC-Provider-Url": "https://idcs.example.identity.oraclecloud.com:443",
+            "X-NaC-Callback-State": "state-secret-1",
+        }
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/workspace/immobilienkaufvertrag", headers=headers)
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Immobilienkaufvertrag Status", html)
+        self.assertIn("Vorgangsstatus ohne Mandatsdaten", html)
+        self.assertIn("Aufnahme und Beteiligte", html)
+        self.assertIn("Entwurf und Abstimmung", html)
+        self.assertIn("Beurkundung", html)
+        self.assertIn("Vollzug", html)
+        self.assertIn("XNP/SNP-Kommunikation vorbereitet", html)
+        self.assertIn("Grundbuch- und Registerrückläufe als externe Statuspunkte", html)
+        self.assertIn("Parallel möglich", html)
+        self.assertIn("Kritischer Pfad", html)
+        self.assertIn("Dauerband: Wochen bis Monate", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertIn("Vollständiger Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("Grundbuchblatt", html)
+        self.assertNotIn("Flurstück", html)
+        self.assertNotIn("Kaufpreis", html)
+        self.assertNotIn("case-secret-1", html)
+        self.assertNotIn("myjur", html)
+        self.assertNotIn("audit-event-secret", html)
+        self.assertNotIn(cookie_header, html)
+        self.assertNotIn("notar@example.test", html)
+        self.assertNotIn("nonce-from-id-token", html)
+        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("idcs.example.identity.oraclecloud.com", html)
+        self.assertNotIn("state-secret-1", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 

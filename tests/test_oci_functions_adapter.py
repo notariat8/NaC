@@ -804,6 +804,24 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 401)
         factory.assert_called_once_with()
 
+    def test_first_matter_status_route_initializes_session_store_from_env(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        class DummySessionStore:
+            def get_session_record(self, _session_id: str) -> None:
+                return None
+
+        with patch("nac_web.oci_functions.build_session_store_from_env", return_value=DummySessionStore()) as factory:
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/workspace/immobilienkaufvertrag", method="GET"),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+
+        self.assertEqual(result.status_code, 401)
+        self.assertIn(b"notariat8 Anmeldung erforderlich", result.body)
+        factory.assert_called_once_with()
+
     def test_dispatches_workspace_fail_closed_without_cookie(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 

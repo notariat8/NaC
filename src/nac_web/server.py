@@ -155,6 +155,13 @@ class NaCLocalWebApp:
                     session_store=self.session_store,
                 )
                 return _html_response(page, status)
+            if route == "/workspace/immobilienkaufvertrag":
+                status, page = build_protected_first_matter_status_page(
+                    headers or {},
+                    secret_text_provider=self.secret_text_provider,
+                    session_store=self.session_store,
+                )
+                return _html_response(page, status)
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
@@ -933,14 +940,12 @@ def build_protected_workspace_start_page(
     secret_text_provider: Callable[[str], str] | None = None,
     session_store: RuntimeSessionStoreAdapter | None = None,
 ) -> tuple[HTTPStatus, str]:
-    signing_key = _auth_callback_session_signing_key(secret_text_provider=secret_text_provider)
-    validation = validate_session_cookie(
-        _request_header(request_headers, "Cookie"),
-        signing_key=signing_key,
+    access = _evaluate_workspace_access(
+        request_headers,
+        secret_text_provider=secret_text_provider,
         session_store=session_store,
-        require_server_session_store=True,
     )
-    if validation["status"] != "valid":
+    if access["status"] == "session_required":
         body = """
         <nav class="topline"><a href="/login">← Anmeldung</a></nav>
         <section class="hero">
@@ -960,34 +965,8 @@ def build_protected_workspace_start_page(
         """
         return HTTPStatus.UNAUTHORIZED, _layout("notariat8 Anmeldung erforderlich", body)
 
-    server_bindings = _server_session_bindings(validation)
-    role_case_gate = evaluate_role_case_gate(
-        session_validation=validation,
-        role_gate=normalize_workspace_role_gate_context(
-            role=_workspace_role_from_binding_or_header(server_bindings, request_headers),
-            role_gate_open=server_bindings.get("role_bound")
-            if "role_bound" in server_bindings
-            else _workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True),
-        ),
-        tenant_context=normalize_workspace_tenant_binding_context(
-            tenant_bound=server_bindings.get("tenant_bound", _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound")),
-        ),
-        case_context=normalize_workspace_case_binding_context(
-            case_bound=server_bindings.get("case_bound", _workspace_header_bool(request_headers, "X-NaC-Case-Bound")),
-        ),
-        purpose_context=normalize_workspace_purpose_binding_context(
-            purpose_bound=server_bindings.get("purpose_bound", _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound")),
-        ),
-        subject_matter_roles=["nac-notary", "nac-case-worker", "nac-tenant-admin"],
-    )
-    if role_case_gate["status"] != "open":
-        reason_label = {
-            "role_missing": "Rolle fehlt",
-            "tenant_mismatch": "Notariatsbindung fehlt",
-            "case_missing": "Vorgangsbindung fehlt",
-            "purpose_missing": "Zweckbindung fehlt",
-            "four_eyes_required": "Vier-Augen-Freigabe fehlt",
-        }.get(str(role_case_gate.get("reason")), "Freigabe fehlt")
+    if access["status"] == "gate_closed":
+        reason_label = _workspace_gate_reason_label(str(access.get("reason")))
         body = f"""
         <nav class="topline"><a href="/login">← Anmeldung</a></nav>
         <section class="hero">
@@ -1058,12 +1037,163 @@ def build_protected_workspace_start_page(
     <section>
       <h2>Nächster Demo-Schritt</h2>
       <ul class="link-list">
-        <li><span>Ersten Vorgang als Statusansicht öffnen.</span></li>
+        <li><a class="inline-link" href="/workspace/immobilienkaufvertrag">Ersten Vorgang als Statusansicht öffnen.</a></li>
         <li><span>Vollständiger Arbeitsbereich und Mandatsinhalte bleiben geschlossen.</span></li>
       </ul>
     </section>
     """
     return HTTPStatus.OK, _layout("notariat8 Start", body)
+
+
+def build_protected_first_matter_status_page(
+    request_headers: dict[str, str],
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+    session_store: RuntimeSessionStoreAdapter | None = None,
+) -> tuple[HTTPStatus, str]:
+    access = _evaluate_workspace_access(
+        request_headers,
+        secret_text_provider=secret_text_provider,
+        session_store=session_store,
+    )
+    if access["status"] == "session_required":
+        body = """
+        <nav class="topline"><a href="/login">← Anmeldung</a></nav>
+        <section class="hero">
+          <p class="eyebrow">notariat8 Start</p>
+          <h1>notariat8 Anmeldung erforderlich</h1>
+          <p>Bitte melden Sie sich erneut an. Der Vorgangsstatus bleibt geschlossen,
+          bis die Sitzung geprüft ist.</p>
+        </section>
+        <section class="notice">
+          <h2>Vorgangsstatus geschlossen</h2>
+          <ul class="link-list">
+            <li><span>Sitzung nicht geprüft.</span></li>
+            <li><span>Keine Mandatsdaten geladen.</span></li>
+          </ul>
+        </section>
+        """
+        return HTTPStatus.UNAUTHORIZED, _layout("notariat8 Anmeldung erforderlich", body)
+
+    if access["status"] == "gate_closed":
+        reason_label = _workspace_gate_reason_label(str(access.get("reason")))
+        body = f"""
+        <nav class="topline"><a href="/workspace">← Portal-Start</a></nav>
+        <section class="hero">
+          <p class="eyebrow">notariat8 Vorgangsstatus</p>
+          <h1>Berechtigungsprüfung offen</h1>
+          <p>Der Vorgangsstatus bleibt geschlossen, bis Berechtigung, Notariat,
+          Vorgang und Zweck geprüft sind.</p>
+        </section>
+        <section class="notice">
+          <h2>Vorgangsstatus geschlossen</h2>
+          <ul class="link-list">
+            <li><span>{html.escape(reason_label)}</span></li>
+            <li><span>Keine Mandatsdaten geladen.</span></li>
+            <li><span>Vollständiger Arbeitsbereich bleibt geschlossen.</span></li>
+          </ul>
+        </section>
+        """
+        return HTTPStatus.FORBIDDEN, _layout("notariat8 Vorgangsstatus geschlossen", body)
+
+    body = """
+    <nav class="topline"><a href="/workspace">← Portal-Start</a></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Vorgangsstatus</p>
+      <h1>Immobilienkaufvertrag Status</h1>
+      <p>Vorgangsstatus ohne Mandatsdaten: notariat8 zeigt hier nur Prozessmetadaten,
+      Sicherheitsgrenzen und vorbereitete Integrationspunkte.</p>
+    </section>
+    <div class="grid">
+      <section class="notice">
+        <h2>Ablaufstatus</h2>
+        <ul class="link-list">
+          <li><span><strong>Aufnahme und Beteiligte:</strong> vorbereitet.</span></li>
+          <li><span><strong>Entwurf und Abstimmung:</strong> vorbereitet.</span></li>
+          <li><span><strong>Beurkundung:</strong> vorbereitet.</span></li>
+          <li><span><strong>Vollzug:</strong> vorbereitet.</span></li>
+        </ul>
+      </section>
+      <section>
+        <h2>XNP/SNP und Vollzug</h2>
+        <ul class="link-list">
+          <li><span>XNP/SNP-Kommunikation vorbereitet.</span></li>
+          <li><span>Grundbuch- und Registerrückläufe als externe Statuspunkte.</span></li>
+          <li><span>Kartenleser- und Signaturpfad als Integrationsgrenze markiert.</span></li>
+        </ul>
+      </section>
+    </div>
+    <div class="grid">
+      <section>
+        <h2>Zeit und Abhängigkeiten</h2>
+        <ul class="link-list">
+          <li><span><strong>Parallel möglich:</strong> Entwurf, Abstimmung und Vorbereitungen können teilweise parallel laufen.</span></li>
+          <li><span><strong>Kritischer Pfad:</strong> externe Rückläufe vor Vollzug.</span></li>
+          <li><span>Dauerband: Wochen bis Monate.</span></li>
+        </ul>
+      </section>
+      <section>
+        <h2>Sicherheitsgrenze</h2>
+        <ul class="link-list">
+          <li><span>Keine Mandatsdaten geladen.</span></li>
+          <li><span>Vollständiger Arbeitsbereich bleibt geschlossen.</span></li>
+          <li><span>Nur metadata-only Status für die Live-Demo.</span></li>
+        </ul>
+      </section>
+    </div>
+    """
+    return HTTPStatus.OK, _layout("notariat8 Immobilienkaufvertrag Status", body)
+
+
+def _evaluate_workspace_access(
+    request_headers: dict[str, str],
+    *,
+    secret_text_provider: Callable[[str], str] | None = None,
+    session_store: RuntimeSessionStoreAdapter | None = None,
+) -> dict[str, Any]:
+    signing_key = _auth_callback_session_signing_key(secret_text_provider=secret_text_provider)
+    validation = validate_session_cookie(
+        _request_header(request_headers, "Cookie"),
+        signing_key=signing_key,
+        session_store=session_store,
+        require_server_session_store=True,
+    )
+    if validation["status"] != "valid":
+        return {"status": "session_required"}
+
+    server_bindings = _server_session_bindings(validation)
+    role_case_gate = evaluate_role_case_gate(
+        session_validation=validation,
+        role_gate=normalize_workspace_role_gate_context(
+            role=_workspace_role_from_binding_or_header(server_bindings, request_headers),
+            role_gate_open=server_bindings.get("role_bound")
+            if "role_bound" in server_bindings
+            else _workspace_header_bool(request_headers, "X-NaC-Role-Gate-Open", default=True),
+        ),
+        tenant_context=normalize_workspace_tenant_binding_context(
+            tenant_bound=server_bindings.get("tenant_bound", _workspace_header_bool(request_headers, "X-NaC-Tenant-Bound")),
+        ),
+        case_context=normalize_workspace_case_binding_context(
+            case_bound=server_bindings.get("case_bound", _workspace_header_bool(request_headers, "X-NaC-Case-Bound")),
+        ),
+        purpose_context=normalize_workspace_purpose_binding_context(
+            purpose_bound=server_bindings.get("purpose_bound", _workspace_header_bool(request_headers, "X-NaC-Purpose-Bound")),
+        ),
+        subject_matter_roles=["nac-notary", "nac-case-worker", "nac-tenant-admin"],
+    )
+    if role_case_gate["status"] != "open":
+        return {"status": "gate_closed", "reason": role_case_gate.get("reason")}
+    return {"status": "open"}
+
+
+def _workspace_gate_reason_label(reason: str) -> str:
+    return {
+        "role_missing": "Rolle fehlt",
+        "tenant_mismatch": "Notariatsbindung fehlt",
+        "case_missing": "Vorgangsbindung fehlt",
+        "purpose_missing": "Zweckbindung fehlt",
+        "four_eyes_required": "Vier-Augen-Freigabe fehlt",
+    }.get(reason, "Freigabe fehlt")
 
 
 def _workspace_header_bool(headers: dict[str, str], name: str, *, default: bool = False) -> bool:

@@ -26,6 +26,7 @@ EXPOSED_GET_ROUTES = {
 STATEFUL_GET_ROUTES = {
     "/auth/callback",
     "/workspace",
+    "/workspace/immobilienkaufvertrag",
 }
 
 EXPOSED_POST_ROUTES = {
@@ -180,7 +181,7 @@ def _requires_session_store(method: str, request_url: str) -> bool:
         return False
     parsed = urlparse(request_url)
     route = unquote(parsed.path) or "/"
-    return route in {"/auth/callback", "/workspace"}
+    return route in STATEFUL_GET_ROUTES
 
 
 def _headers(ctx: Any) -> dict[str, str]:
