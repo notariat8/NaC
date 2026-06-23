@@ -2147,6 +2147,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         discovery_base_url = "https://idcs.example.identity.oraclecloud.com:443"
         audience = "notariat8_nac_app"
         signed_requests: list[dict[str, object]] = []
+        test_case = self
 
         def public_fetcher(url: str) -> dict[str, object]:
             if url == f"{discovery_base_url}/.well-known/openid-configuration":
@@ -2157,6 +2158,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         class FakeSigner:
             def __call__(self, request: object, enforce_content_headers: bool = True) -> object:
+                test_case.assertTrue(hasattr(request, "body"))
+                test_case.assertIsNone(request.body)
                 request.headers["Authorization"] = "Signature unit-test"
                 signed_requests.append(
                     {

@@ -22,6 +22,7 @@ class _SignableGetRequest:
     def __init__(self, url: str) -> None:
         self.method = "GET"
         self.url = url
+        self.body = None
         parsed = urlparse(url)
         self.path_url = parsed.path or "/"
         if parsed.query:
