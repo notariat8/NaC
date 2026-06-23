@@ -22,7 +22,7 @@ def evaluate_oidc_role_gate(
     if not state_validation.get("nonce_bound") or not state_validation.get("nonce_hash"):
         return _closed("nonce_not_bound", required_role=required_role)
     expected_issuer_value = _expected_value(expected_issuer)
-    if not expected_issuer_value or claims.get("iss") != expected_issuer_value:
+    if not expected_issuer_value or _expected_value(claims.get("iss")) != expected_issuer_value:
         return _closed("issuer_mismatch", required_role=required_role)
     expected_audience_value = _expected_value(expected_audience)
     if not expected_audience_value or expected_audience_value not in _audiences(claims.get("aud")):
