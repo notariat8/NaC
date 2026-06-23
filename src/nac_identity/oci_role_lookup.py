@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from typing import Any, Callable
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 
 from .oidc_jwt import build_oci_identity_domain_json_fetcher
@@ -33,8 +34,12 @@ def build_oci_identity_domain_role_membership_resolver(
             if _group_contains_user(base_url=base_url, user=user, required_role=role, fetcher=json_fetcher):
                 return _evidence("confirmed", required_role=role)
             return _evidence("missing", required_role=role)
-        except Exception:
-            return _evidence("unavailable", required_role=role)
+        except Exception as exc:
+            return _evidence(
+                "unavailable",
+                required_role=role,
+                failure_class=_safe_failure_class(exc),
+            )
 
     return resolve
 
@@ -224,8 +229,8 @@ def _safe_text(value: Any, *, max_length: int) -> str:
     return stripped
 
 
-def _evidence(status: str, *, required_role: str) -> dict[str, Any]:
-    return {
+def _evidence(status: str, *, required_role: str, failure_class: str = "") -> dict[str, Any]:
+    evidence = {
         "status": status,
         "role": required_role,
         "source": "oci_identity_domain_server_lookup",
@@ -234,3 +239,48 @@ def _evidence(status: str, *, required_role: str) -> dict[str, Any]:
         "claims_exposed": False,
         "provider_details_exposed": False,
     }
+    safe_failure_class = _safe_failure_class_value(failure_class)
+    if status == "unavailable" and safe_failure_class:
+        evidence["failure_class"] = safe_failure_class
+    return evidence
+
+
+def _safe_failure_class(exc: Exception) -> str:
+    if isinstance(exc, HTTPError):
+        if exc.code == 401:
+            return "identity_domain_unauthorized"
+        if exc.code == 403:
+            return "identity_domain_forbidden"
+        if 400 <= exc.code < 500:
+            return "identity_domain_client_error"
+        if 500 <= exc.code < 600:
+            return "identity_domain_server_error"
+        return "identity_domain_http_error"
+    if isinstance(exc, TimeoutError):
+        return "identity_domain_timeout"
+    if isinstance(exc, URLError):
+        reason = getattr(exc, "reason", None)
+        if isinstance(reason, TimeoutError):
+            return "identity_domain_timeout"
+        return "identity_domain_network_error"
+    message = str(exc)
+    if "oci_resource_principal_signer_unavailable" in message:
+        return "resource_principal_signer_unavailable"
+    return "identity_domain_lookup_unavailable"
+
+
+def _safe_failure_class_value(value: Any) -> str:
+    failure_class = str(value or "")
+    if failure_class in {
+        "identity_domain_client_error",
+        "identity_domain_forbidden",
+        "identity_domain_http_error",
+        "identity_domain_lookup_unavailable",
+        "identity_domain_network_error",
+        "identity_domain_server_error",
+        "identity_domain_timeout",
+        "identity_domain_unauthorized",
+        "resource_principal_signer_unavailable",
+    }:
+        return failure_class
+    return ""

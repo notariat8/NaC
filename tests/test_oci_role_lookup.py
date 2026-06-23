@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 import sys
 from pathlib import Path
+from urllib.error import HTTPError
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -226,6 +227,33 @@ class OciRoleLookupTests(unittest.TestCase):
         self.assertEqual(result["status"], "unavailable")
         self.assertFalse(result["contains_credentials"])
         self.assertNotIn("network detail", str(result))
+        self.assertNotIn("user-123", str(result))
+        self.assertNotIn("admin@example.test", str(result))
+
+    def test_reports_redacted_http_failure_class_when_identity_domain_forbidden(self) -> None:
+        def fetcher(_url: str):
+            raise HTTPError(
+                "https://idcs.example.identity.oraclecloud.com/admin/v1/Users",
+                403,
+                "forbidden detail should not escape",
+                hdrs=None,
+                fp=None,
+            )
+
+        resolver = build_oci_identity_domain_role_membership_resolver(
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            fetcher=fetcher,
+        )
+
+        result = resolver(
+            claims={"sub": "user-123", "email": "admin@example.test"},
+            required_role="nac-tenant-admin",
+        )
+
+        self.assertEqual(result["status"], "unavailable")
+        self.assertEqual(result["failure_class"], "identity_domain_forbidden")
+        self.assertNotIn("forbidden detail", str(result))
+        self.assertNotIn("idcs.example", str(result))
         self.assertNotIn("user-123", str(result))
         self.assertNotIn("admin@example.test", str(result))
 

@@ -2912,11 +2912,12 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
     jwt_validation = callback_result.get("jwt_validation", {})
     role_gate = callback_result.get("role_gate", {})
     session_boundary = callback_result.get("session_boundary", {})
+    role_evidence = session_boundary.get("role_evidence", {}) if isinstance(session_boundary, dict) else {}
     session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
     message = (
         "auth_callback_status state=%s token_exchange=%s token_exchange_class=%s "
         "token_exchange_detail=%s jwt_validation=%s role_gate=%s role_gate_reason=%s "
-        "session_cookie=%s session_store=%s"
+        "role_lookup_detail=%s session_cookie=%s session_store=%s"
     ) % (
         _safe_auth_log_status(callback_result.get("state_validation", {}).get("status")),
         _safe_auth_log_status(token_exchange.get("status") if isinstance(token_exchange, dict) else None),
@@ -2925,6 +2926,7 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
         _safe_auth_log_status(jwt_validation.get("status") if isinstance(jwt_validation, dict) else None),
         _safe_auth_log_status(role_gate.get("status") if isinstance(role_gate, dict) else None),
         _safe_role_gate_log_reason(role_gate),
+        _safe_role_lookup_log_detail(role_evidence),
         _safe_auth_log_bool(isinstance(session, dict) and bool(session.get("cookie_issued"))),
         _safe_auth_log_bool(session_store_bound),
     )
@@ -3007,6 +3009,28 @@ def _safe_role_gate_log_reason(role_gate: Any) -> str:
     }:
         return reason
     return "unknown"
+
+
+def _safe_role_lookup_log_detail(role_evidence: Any) -> str:
+    if not isinstance(role_evidence, dict):
+        return "none"
+    failure_class = str(role_evidence.get("failure_class") or "")
+    if failure_class in {
+        "identity_domain_client_error",
+        "identity_domain_forbidden",
+        "identity_domain_http_error",
+        "identity_domain_lookup_unavailable",
+        "identity_domain_network_error",
+        "identity_domain_server_error",
+        "identity_domain_timeout",
+        "identity_domain_unauthorized",
+        "resource_principal_signer_unavailable",
+    }:
+        return failure_class
+    status = str(role_evidence.get("status") or "")
+    if status in {"confirmed", "missing", "unavailable"}:
+        return status
+    return "none"
 
 
 def _role_gate_status_label(role_gate: Any) -> str:

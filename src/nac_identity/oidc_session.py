@@ -308,11 +308,15 @@ def _resolve_server_role_membership(
         return _role_evidence("confirmed", required_role=required_role)
     if status == "missing":
         return _role_evidence("missing", required_role=required_role)
-    return _role_evidence("unavailable", required_role=required_role)
+    return _role_evidence(
+        "unavailable",
+        required_role=required_role,
+        failure_class=_safe_role_lookup_failure_class(evidence.get("failure_class")),
+    )
 
 
-def _role_evidence(status: str, *, required_role: str) -> dict[str, Any]:
-    return {
+def _role_evidence(status: str, *, required_role: str, failure_class: str = "") -> dict[str, Any]:
+    evidence = {
         "schema_version": "nac.server-role-evidence/v0.1",
         "status": status,
         "role": required_role,
@@ -321,6 +325,27 @@ def _role_evidence(status: str, *, required_role: str) -> dict[str, Any]:
         "claims_exposed": False,
         "provider_details_exposed": False,
     }
+    safe_failure_class = _safe_role_lookup_failure_class(failure_class)
+    if status == "unavailable" and safe_failure_class:
+        evidence["failure_class"] = safe_failure_class
+    return evidence
+
+
+def _safe_role_lookup_failure_class(value: Any) -> str:
+    failure_class = str(value or "")
+    if failure_class in {
+        "identity_domain_client_error",
+        "identity_domain_forbidden",
+        "identity_domain_http_error",
+        "identity_domain_lookup_unavailable",
+        "identity_domain_network_error",
+        "identity_domain_server_error",
+        "identity_domain_timeout",
+        "identity_domain_unauthorized",
+        "resource_principal_signer_unavailable",
+    }:
+        return failure_class
+    return ""
 
 
 def _result(

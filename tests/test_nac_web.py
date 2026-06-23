@@ -1815,7 +1815,15 @@ class NaCLocalWebTests(unittest.TestCase):
         from nac_identity.oidc_state import build_signed_state
 
         def role_membership_resolver(*, claims: dict[str, object], required_role: str) -> dict[str, object]:
-            raise RuntimeError("identity-domain-temporary-error")
+            return {
+                "status": "unavailable",
+                "role": required_role,
+                "failure_class": "identity_domain_forbidden",
+                "contains_credentials": False,
+                "tokens_returned": False,
+                "claims_exposed": False,
+                "provider_details_exposed": False,
+            }
 
         app = NaCLocalWebApp(
             REPO_ROOT,
@@ -1874,9 +1882,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Rollenprüfung: Berechtigung offen", html)
         self.assertIn("Sitzung offen", html)
         self.assertIn("role_gate_reason=server_membership_unavailable", log_text)
+        self.assertIn("role_lookup_detail=identity_domain_forbidden", log_text)
         self.assertIn("session_cookie=false", log_text)
-        self.assertNotIn("identity-domain-temporary-error", html)
-        self.assertNotIn("identity-domain-temporary-error", log_text)
+        self.assertNotIn("identity_domain_forbidden", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
         self.assertNotIn(nonce, html)
