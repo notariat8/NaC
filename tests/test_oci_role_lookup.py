@@ -60,6 +60,90 @@ class OciRoleLookupTests(unittest.TestCase):
         self.assertIn("filter=", serialized_urls)
         self.assertNotIn("admin@example.test", str(result))
 
+    def test_confirms_role_from_user_groups_requested_explicitly(self) -> None:
+        seen_urls: list[str] = []
+
+        def fetcher(url: str):
+            seen_urls.append(url)
+            if "/Users?" in url and "attributes=" in url and "groups" in url:
+                return {
+                    "Resources": [
+                        {
+                            "id": "user-123",
+                            "userName": "admin@example.test",
+                            "groups": [{"display": "nac-tenant-admin"}],
+                        }
+                    ]
+                }
+            if "/Users?" in url:
+                return {"Resources": [{"id": "user-123", "userName": "admin@example.test"}]}
+            if "/Groups?" in url:
+                return {"Resources": []}
+            return {}
+
+        resolver = build_oci_identity_domain_role_membership_resolver(
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            fetcher=fetcher,
+        )
+
+        result = resolver(
+            claims={"sub": "provider-subject", "email": "admin@example.test"},
+            required_role="nac-tenant-admin",
+        )
+
+        self.assertEqual(result["status"], "confirmed")
+        serialized_urls = "\n".join(seen_urls)
+        self.assertIn("attributes=", serialized_urls)
+        self.assertIn("groups", serialized_urls)
+        self.assertNotIn("provider-subject", str(result))
+        self.assertNotIn("admin@example.test", str(result))
+
+    def test_confirms_role_from_group_detail_when_search_omits_members(self) -> None:
+        seen_urls: list[str] = []
+
+        def fetcher(url: str):
+            seen_urls.append(url)
+            if "/Users?" in url:
+                return {
+                    "Resources": [
+                        {
+                            "id": "user-123",
+                            "userName": "admin@example.test",
+                        }
+                    ]
+                }
+            if "/Groups?" in url:
+                return {
+                    "Resources": [
+                        {
+                            "id": "group-123",
+                            "displayName": "nac-tenant-admin",
+                            "members": None,
+                        }
+                    ]
+                }
+            if "/Groups/group-123" in url:
+                return {
+                    "id": "group-123",
+                    "displayName": "nac-tenant-admin",
+                    "members": [{"value": "user-123"}],
+                }
+            return {}
+
+        resolver = build_oci_identity_domain_role_membership_resolver(
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            fetcher=fetcher,
+        )
+
+        result = resolver(
+            claims={"sub": "provider-subject", "email": "admin@example.test"},
+            required_role="nac-tenant-admin",
+        )
+
+        self.assertEqual(result["status"], "confirmed")
+        self.assertTrue(any("/Groups/group-123" in url for url in seen_urls))
+        self.assertNotIn("group-123", str(result))
+
     def test_confirms_role_from_user_app_roles_without_exposing_claims(self) -> None:
         def fetcher(url: str):
             if "/Users?" in url:

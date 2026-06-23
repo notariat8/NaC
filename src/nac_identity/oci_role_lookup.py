@@ -46,7 +46,15 @@ def _find_user(
     fetcher: Callable[[str], Mapping[str, Any]],
 ) -> Mapping[str, Any] | None:
     for attribute, value in _user_lookup_candidates(claims):
-        payload = fetcher(_scim_filter_url(base_url, "Users", attribute, value))
+        payload = fetcher(
+            _scim_filter_url(
+                base_url,
+                "Users",
+                attribute,
+                value,
+                attributes=("id", "userName", "emails", "groups"),
+            )
+        )
         resource = _first_resource(payload)
         if resource is not None:
             return resource
@@ -81,9 +89,26 @@ def _group_contains_user(
     user_id = _safe_text(user.get("id"), max_length=160)
     if not user_id:
         return False
-    payload = fetcher(_scim_filter_url(base_url, "Groups", "displayName", required_role))
+    payload = fetcher(
+        _scim_filter_url(
+            base_url,
+            "Groups",
+            "displayName",
+            required_role,
+            attributes=("id", "displayName", "members"),
+        )
+    )
     for group in _resources(payload):
         for member in _members(group):
+            if member == user_id:
+                return True
+        group_id = _safe_text(group.get("id"), max_length=160)
+        if not group_id:
+            continue
+        detail = fetcher(_scim_resource_url(base_url, "Groups", group_id, attributes=("id", "displayName", "members")))
+        if not isinstance(detail, Mapping):
+            continue
+        for member in _members(detail):
             if member == user_id:
                 return True
     return False
@@ -139,6 +164,8 @@ def _first_resource(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
 
 def _resources(payload: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]:
     resources = payload.get("Resources")
+    if resources is None:
+        resources = payload.get("resources")
     if not isinstance(resources, list):
         return
     for resource in resources:
@@ -146,10 +173,32 @@ def _resources(payload: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]:
             yield resource
 
 
-def _scim_filter_url(base_url: str, resource: str, attribute: str, value: str) -> str:
+def _scim_filter_url(
+    base_url: str,
+    resource: str,
+    attribute: str,
+    value: str,
+    *,
+    attributes: tuple[str, ...] = (),
+) -> str:
     escaped_value = value.replace("\\", "\\\\").replace('"', '\\"')
-    query = urlencode({"filter": f'{attribute} eq "{escaped_value}"'})
+    query_items: dict[str, str] = {"filter": f'{attribute} eq "{escaped_value}"'}
+    if attributes:
+        query_items["attributes"] = ",".join(attributes)
+    query = urlencode(query_items)
     return f"{base_url}/admin/v1/{quote(resource, safe='')}?{query}"
+
+
+def _scim_resource_url(
+    base_url: str,
+    resource: str,
+    resource_id: str,
+    *,
+    attributes: tuple[str, ...] = (),
+) -> str:
+    query = urlencode({"attributes": ",".join(attributes)}) if attributes else ""
+    url = f"{base_url}/admin/v1/{quote(resource, safe='')}/{quote(resource_id, safe='')}"
+    return f"{url}?{query}" if query else url
 
 
 def _normalized_identity_domain_url(value: str) -> str:
