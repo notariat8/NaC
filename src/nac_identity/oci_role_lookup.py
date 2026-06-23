@@ -77,6 +77,11 @@ def _user_lookup_candidates(claims: Mapping[str, Any]) -> Iterable[tuple[str, st
         if candidate not in seen:
             seen.add(candidate)
             yield candidate
+        if scim_attribute == "id" and value.startswith("ocid1.user."):
+            ocid_candidate = ("ocid", value)
+            if ocid_candidate not in seen:
+                seen.add(ocid_candidate)
+                yield ocid_candidate
 
 
 def _group_contains_user(

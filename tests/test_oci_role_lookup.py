@@ -98,6 +98,42 @@ class OciRoleLookupTests(unittest.TestCase):
         self.assertNotIn("provider-subject", str(result))
         self.assertNotIn("admin@example.test", str(result))
 
+    def test_confirms_role_when_subject_is_oci_user_ocid(self) -> None:
+        seen_urls: list[str] = []
+
+        def fetcher(url: str):
+            seen_urls.append(url)
+            if "filter=id+eq" in url:
+                return {"Resources": []}
+            if "filter=ocid+eq" in url:
+                return {
+                    "Resources": [
+                        {
+                            "id": "user-123",
+                            "ocid": "ocid1.user.oc1..tenantadmin",
+                            "groups": [{"display": "nac-tenant-admin"}],
+                        }
+                    ]
+                }
+            return {}
+
+        resolver = build_oci_identity_domain_role_membership_resolver(
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            fetcher=fetcher,
+        )
+
+        result = resolver(
+            claims={"sub": "ocid1.user.oc1..tenantadmin"},
+            required_role="nac-tenant-admin",
+        )
+
+        self.assertEqual(result["status"], "confirmed")
+        self.assertEqual(result["role"], "nac-tenant-admin")
+        serialized_urls = "\n".join(seen_urls)
+        self.assertIn("filter=id+eq", serialized_urls)
+        self.assertIn("filter=ocid+eq", serialized_urls)
+        self.assertNotIn("ocid1.user", str(result))
+
     def test_confirms_role_from_group_detail_when_search_omits_members(self) -> None:
         seen_urls: list[str] = []
 
