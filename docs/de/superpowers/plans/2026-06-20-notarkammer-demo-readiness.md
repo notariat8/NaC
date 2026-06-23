@@ -50,6 +50,15 @@ Abgeschlossen und gemerged:
 - NaC PR #217: Notarkammer-Demo-Gap-Audit.
 - www-n8 PR #18: öffentliche Prozessmodell-Demo.
 
+Vorbereitet und im Owner-Review:
+
+- NaC PR #264: Runtime verdrahtet den ATP-backed Session-Store aus der
+  Umgebung in den Webserver.
+- NaC PR #265: kanonischer `Immobilienkaufvertrag` BPMN-Fluss mit
+  XNP/XNotar-Grenze, parallelem Vollzug, Fälligkeit, Unbedenklichkeit und
+  Eigentumsumschreibung.
+- NaC PR #266: aktuelle agentische Queue und offene Gate-/Cleanup-Sicht.
+
 Live-Smoke laut Issue #211:
 
 - `https://notariat8.de/` liefert 200.

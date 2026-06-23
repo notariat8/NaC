@@ -30,6 +30,7 @@ und Rolle geprüft sind.
 | Live-Reihenfolge und Browserpfade | [notarkammer-2026-06-live-demo-runbook.md](notarkammer-2026-06-live-demo-runbook.md) |
 | Login-/Portal-Diagnose und Fallback-Ampel | [notarkammer-2026-06-login-portal-diagnostics-runbook.md](notarkammer-2026-06-login-portal-diagnostics-runbook.md) |
 | 60-Minuten-Skript | [notarkammer-2026-06-60-minute-live-demo-script.md](notarkammer-2026-06-60-minute-live-demo-script.md) |
+| Sprechertext und Fallback-Formulierungen | [notarkammer-2026-06-demo-script.md](notarkammer-2026-06-demo-script.md) |
 | Smoke-Readiness und Fallbacks | [notarkammer-2026-06-demo-smoke-readiness.md](notarkammer-2026-06-demo-smoke-readiness.md) |
 | Go/No-Go-Entscheidung | [notarkammer-2026-06-demo-go-no-go.md](notarkammer-2026-06-demo-go-no-go.md) |
 | Merge-Reihenfolge und Live-Test-Karte | [notarkammer-2026-06-merge-order-live-test-card.md](notarkammer-2026-06-merge-order-live-test-card.md) |

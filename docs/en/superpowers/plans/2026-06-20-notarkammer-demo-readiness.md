@@ -50,6 +50,15 @@ Completed and merged:
 - NaC PR #217: Notarkammer demo gap audit.
 - www-n8 PR #18: public process-model demo.
 
+Prepared and in owner review:
+
+- NaC PR #264: runtime wires the ATP-backed session store from the environment
+  into the web server.
+- NaC PR #265: canonical `Immobilienkaufvertrag` BPMN flow with XNP/XNotar
+  boundary, parallel closing, payment maturity, tax clearance and transfer of
+  title.
+- NaC PR #266: current agentic queue and open gate/cleanup view.
+
 Live smoke according to Issue #211:
 
 - `https://notariat8.de/` returns 200.

@@ -162,8 +162,11 @@ track:
 
 ## PR Track
 
-- Branch: `agent/notarkammer-demo-preflight-audit`.
-- Scope: only `docs/de/demo/`, `docs/en/demo/` and `tests/`.
-- Checks: Language Parity, Documentation Links and Strict Quality Gate.
+- Current GitHub evidence lives in Issue #211 and the open protected PRs.
+- Branch names are not operational evidence after merge and are not used as
+  demo instructions.
+- Scope: demo documentation in `docs/de/demo/` and `docs/en/demo/`, BPMN/runbook evidence, and focused tests in `tests/`.
+- Checks: Language Parity, Documentation Links, demo smoke and Strict Quality
+  Gate.
 - No OCI, runtime, release, apply or infrastructure changes.
 - Do not use real person, matter, deed, identity, register or property data.

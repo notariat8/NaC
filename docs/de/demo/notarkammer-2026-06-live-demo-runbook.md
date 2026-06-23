@@ -5,7 +5,8 @@ Status: Protected-PR-fähige Vorführ-Checkliste für die 60-Minuten-Live-Demo.
 Dieses Runbook führt die gemergten Demo-Spuren zusammen:
 
 - XNP-Demo-Kontrakt: `notarkammer-xnp-demo-contract.md`
-- 60-Minuten-Skript: `notarkammer-2026-06-demo-script.md`
+- 60-Minuten-Live-Skript: `notarkammer-2026-06-60-minute-live-demo-script.md`
+- Sprechertext und Fallback-Formulierungen: `notarkammer-2026-06-demo-script.md`
 - XNP-Preflight/Audit-Spur: `notarkammer-2026-06-demo-preflight.md`
 
 Scope für diesen PR: nur `docs/de`, `docs/en` und `tests`. Keine Runtime,
@@ -218,9 +219,14 @@ zeigen jetzt den Prozesspfad und prüfen die technische Ursache nach dem Termin.
 
 ## Protected-PR Nachweis
 
-- Branch: `agent/notarkammer-live-demo-runbook-2`.
-- Geänderte Flächen: `docs/de/demo/`, `docs/en/demo/`, `tests/`.
-- Erwartete Checks: fokussierte Demo-Runbook-Tests, bestehende Demo-Kontrakt-,
+Aktuelle GitHub-Review-Evidenz steht in Issue #211 und den jeweils offenen
+Protected PRs. Branchnamen sind nach Merge keine operative Evidenz und werden
+nicht als Demo-Anweisung verwendet.
+
+- Vorbereitete aktuelle NaC-PRs: #264, #265 und #266.
+- Geänderte Flächen dieser Runbook-Familie: `docs/de/demo/`, `docs/en/demo/`
+  und fokussierte Tests.
+- Erwartete Checks: Demo-Smoke, Demo-Runbook-Tests, bestehende Demo-Kontrakt-,
   Demo-Skript- und Preflight-Tests.
-- Audit-Spur: Commit-SHA, Testausgabe, Branch und PR-Link; keine Personen-,
-  Akten-, Urkunden-, Ausweis-, Register- oder Grundstücksdaten.
+- Audit-Spur: Commit-SHA, Testausgabe und PR-Link; keine Personen-, Akten-,
+  Urkunden-, Ausweis-, Register- oder Grundstücksdaten.

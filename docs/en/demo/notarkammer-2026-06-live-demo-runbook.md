@@ -5,7 +5,8 @@ Status: Protected PR ready presentation checklist for the 60-minute live demo.
 This runbook merges the already landed demo tracks:
 
 - XNP demo contract: `notarkammer-xnp-demo-contract.md`
-- 60-minute script: `notarkammer-2026-06-demo-script.md`
+- 60-minute live script: `notarkammer-2026-06-60-minute-live-demo-script.md`
+- presenter wording and fallback phrases: `notarkammer-2026-06-demo-script.md`
 - XNP preflight/audit trail: `notarkammer-2026-06-demo-preflight.md`
 
 Scope for this PR: only `docs/de`, `docs/en` and `tests`. No runtime, No OCI,
@@ -209,9 +210,14 @@ we now show the process path and check the technical cause after the meeting."
 
 ## Protected PR Evidence
 
-- Branch: `agent/notarkammer-live-demo-runbook-2`.
-- Changed surfaces: `docs/de/demo/`, `docs/en/demo/`, `tests/`.
-- Expected checks: focused demo runbook tests, existing demo contract,
+Current GitHub review evidence lives in Issue #211 and the currently open
+protected PRs. Branch names are not operational evidence after merge and are
+not used as demo instructions.
+
+- Current prepared NaC PRs: #264, #265 and #266.
+- Changed surfaces for this runbook family: `docs/de/demo/`, `docs/en/demo/`
+  and focused tests.
+- Expected checks: demo smoke, demo runbook tests, existing demo contract,
   demo script and preflight tests.
-- Audit trail: commit SHA, test output, branch and PR link; no person, matter,
-  deed, identity, register or property data.
+- Audit trail: commit SHA, test output and PR link; no person, matter, deed,
+  identity, register or property data.

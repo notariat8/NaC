@@ -25,6 +25,7 @@ deliberately closed work area until session and role checks are complete.
 | Live order and browser paths | [notarkammer-2026-06-live-demo-runbook.md](notarkammer-2026-06-live-demo-runbook.md) |
 | Login/portal diagnostics and fallback status classes | [notarkammer-2026-06-login-portal-diagnostics-runbook.md](notarkammer-2026-06-login-portal-diagnostics-runbook.md) |
 | 60-minute script | [notarkammer-2026-06-60-minute-live-demo-script.md](notarkammer-2026-06-60-minute-live-demo-script.md) |
+| Presenter wording and fallback phrases | [notarkammer-2026-06-demo-script.md](notarkammer-2026-06-demo-script.md) |
 | Smoke readiness and fallbacks | [notarkammer-2026-06-demo-smoke-readiness.md](notarkammer-2026-06-demo-smoke-readiness.md) |
 | Go/No-Go decision | [notarkammer-2026-06-demo-go-no-go.md](notarkammer-2026-06-demo-go-no-go.md) |
 | Merge order and live-test card | [notarkammer-2026-06-merge-order-live-test-card.md](notarkammer-2026-06-merge-order-live-test-card.md) |
@@ -36,6 +37,7 @@ deliberately closed work area until session and role checks are complete.
 | XNP/BPMN demo depth | [notarkammer-xnp-bpmn-demo-depth.md](notarkammer-xnp-bpmn-demo-depth.md) |
 | XNP demo contract and boundaries | [notarkammer-xnp-demo-contract.md](notarkammer-xnp-demo-contract.md) |
 | Source matrix for XNP, XNotar, registers, land register and card reader | [notarkammer-xnp-quellenmatrix.md](notarkammer-xnp-quellenmatrix.md) |
+| ISV questions for XNP/SNP API and test access | [notarkammer-xnp-snp-api-testzugang.md](notarkammer-xnp-snp-api-testzugang.md) |
 
 ## Boundaries
 
