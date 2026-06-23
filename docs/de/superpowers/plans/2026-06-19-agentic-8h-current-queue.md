@@ -1,9 +1,9 @@
 # Agentic 8h Current Queue
 
-> **Stand:** 20. Juni 2026. Diese Queue ersetzt nicht die allgemeinen
+> **Stand:** 23. Juni 2026. Diese Queue ersetzt nicht die allgemeinen
 > Operating Rules aus `2026-06-18-agentic-8h-work-packages.md`, sondern
-> aktualisiert die Arbeitslage nach den inzwischen geschlossenen Q2Q-Q2V-,
-> Track-A-C- und Release-Lane-Tracks.
+> aktualisiert die Arbeitslage nach den inzwischen geschlossenen Q2Q-Q3J-,
+> Track-A-C-, Release-Lane- und Notarkammer-Demo-Tracks.
 
 ## Ziel
 
@@ -17,10 +17,14 @@ wirklich erforderlich sind.
 - NaC `main` ist sauber und mit GitHub synchron.
 - `oci-landing-zone` `main` ist sauber und mit GitHub synchron.
 - `www-n8` `main` ist sauber und mit GitHub synchron.
-- Es gibt keine offenen PRs in den drei Repos.
+- Offene PRs aus dem aktuellen owner-freien 3h-Block:
+  - NaC PR #264: Runtime bindet den serverseitigen Session-Store auch im
+    `nac-web` Serverpfad.
+  - NaC PR #265: Immobilienkaufvertrag-BPMN wird als XNP-/XNotar- und
+    Vollzug-Demofluss vertieft.
 - Die frueheren 8h-Plan-Inputs `NaC#163`, `NaC#171` und
   `oci-landing-zone#89` sind nicht mehr offen.
-- Q2Q bis Q2V sind gelandet oder geschlossen.
+- Q2Q bis Q3J sind gelandet oder geschlossen.
 - Track A ist über PR #189 gelandet und released: `/workspace` verlangt neben
   dem signierten Cookie einen serverseitigen Session-Store-Eintrag.
 - Track B ist über PR #191 gelandet: Role-/Case-/Purpose-Gate-Audit-Reasons
@@ -28,8 +32,9 @@ wirklich erforderlich sind.
 - Track C ist über PR #192 gelandet: der kunden sichtbare Onboarding-Status
   zeigt dokumentierte Review-Information, ohne Einladungen zu senden oder
   interne Begriffe offenzulegen.
-- Das Read-only-Branch-Hygiene-Audit zeigt aktuell keine gemergten
-  Remote-Cleanup-Branches außer `main`.
+- Das Read-only-Branch-Hygiene-Audit zeigt aktuell drei superseded/merged
+  NaC-Remote-Branches, die nur nach expliziter Owner-Cleanup-Freigabe gelöscht
+  werden dürfen.
 
 ## Owner-freie Arbeitslanes
 
@@ -64,14 +69,29 @@ Diese Lanes dürfen vorbereitet werden, ohne beim Owner nachzufragen:
 
 ## Aktuelle Cleanup-Kandidaten
 
-Das Read-only-Audit vom 20. Juni zeigt in NaC und `oci-landing-zone` keine
-gemergten Remote-Cleanup-Branches außer `origin/main`.
+Read-only-Audit vom 23. Juni:
+
+- NaC:
+  - `agent/q3h-role-gate-issuer-normalization`
+  - `agent/q3h-role-gate-issuer-claim-normalization`
+  - `agent/q3j-server-side-oci-role-lookup`
+- `www-n8`: keine bestätigten Cleanup-Kandidaten aus diesem Audit.
+- `oci-landing-zone`: keine bestätigten Cleanup-Kandidaten aus diesem Audit.
+
+Cleanup bleibt ein eigenes Owner Gate. Codex darf diese Branches nur listen und
+den Gate-Text vorbereiten, aber nicht löschen.
 
 ## Naechste Fachtracks Als Gate-Kandidaten
 
-Im Repository ist aktuell kein vorab freigegebener nächster Fachtrack offen.
-Die nächste Feature- oder Security-Grenze muss vor Implementierungsstart durch
-ein Owner Design Gate eingeführt werden.
+Aktuell vorbereitete Fachtracks:
+
+- Runtime/Login: PR #264 schließt eine Inkonsistenz zwischen Functions-Runtime
+  und lokalem `nac-web` Serverpfad beim Session-Store.
+- Notarkammer/XNP: PR #265 vertieft den Immobilienkaufvertrag als primären
+  XNP-/XNotar-/Grundbuch-/Vollzug-Demofluss.
+
+Neue Feature- oder Security-Grenzen brauchen weiterhin ein Owner Design Gate
+vor Implementierungsstart.
 
 Owner-freie Arbeit kann weiterhin laufen für:
 
@@ -95,6 +115,19 @@ Zwischenfragen unterbrochen werden. Stattdessen wird genau ein Paket geliefert:
    Fachtrack ausgewählt wurde.
 4. Optional Release-Gate nur für einen konkret geprüften Commit.
 ```
+
+Aktueller gebündelter Gate-Satz:
+
+```text
+Owner Review/Merge PR #264 und PR #265.
+
+Owner Approval to delete merged/superseded NaC head branches
+agent/q3h-role-gate-issuer-normalization,
+agent/q3h-role-gate-issuer-claim-normalization and
+agent/q3j-server-side-oci-role-lookup locally and remotely.
+```
+
+Release-Gates werden erst nach Merge mit konkretem Commit formuliert.
 
 ## Harte Stop-Lines
 
