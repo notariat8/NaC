@@ -1043,6 +1043,25 @@ def build_protected_workspace_start_page(
         </ul>
       </section>
     </div>
+    <section class="notice">
+      <h2>Erster Vorgang vorbereitet</h2>
+      <p><strong>Immobilienkaufvertrag</strong></p>
+      <ul class="link-list">
+        <li><span>BPMN-Modell vorhanden.</span></li>
+        <li><span>XNP/SNP-Zielpfad vorbereitet.</span></li>
+        <li><span>Vollzugspfad sichtbar.</span></li>
+        <li><span>Kritischer Pfad: externer Rücklauf.</span></li>
+        <li><span>Dauerband: Wochen bis Monate.</span></li>
+        <li><span>Keine Mandatsdaten geladen.</span></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Nächster Demo-Schritt</h2>
+      <ul class="link-list">
+        <li><span>Ersten Vorgang als Statusansicht öffnen.</span></li>
+        <li><span>Vollständiger Arbeitsbereich und Mandatsinhalte bleiben geschlossen.</span></li>
+      </ul>
+    </section>
     """
     return HTTPStatus.OK, _layout("notariat8 Start", body)
 
