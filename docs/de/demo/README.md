@@ -36,6 +36,7 @@ und Rolle geprüft sind.
 | Merge-Reihenfolge und Live-Test-Karte | [notarkammer-2026-06-merge-order-live-test-card.md](notarkammer-2026-06-merge-order-live-test-card.md) |
 | Bekannte Lücken und Grenzen | [notarkammer-2026-06-demo-gap-audit.md](notarkammer-2026-06-demo-gap-audit.md) |
 | Fragen und Einwände | [notarkammer-2026-06-demo-qa-objection-handling.md](notarkammer-2026-06-demo-qa-objection-handling.md) |
+| Erster Vorgang als metadata-only Contract | [notarkammer-first-matter-metadata.md](notarkammer-first-matter-metadata.md) |
 | Dauer, Parallelität und kritischer Pfad | [notarkammer-bpmn-critical-path-talking-points.md](notarkammer-bpmn-critical-path-talking-points.md) |
 | Immobilienkaufvertrag als XNP/SNP-Vollzugspfad | [notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md](notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md) |
 | Evidence-Matrix zum Immobilienkaufvertrag | [notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md](notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md) |

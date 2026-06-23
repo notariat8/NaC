@@ -1,12 +1,22 @@
 {
   "schema_version": "nac.demo-matter-metadata/v0.1",
+  "entry_contract": "notarkammer-first-matter-demo/v0.1",
   "demo_context": "notarkammer-2026-06",
   "scope": "metadata_only",
   "tenant_demo_id": "DEMO-TENANT-NOTARIAT-01",
   "matter_demo_id": "DEMO-MATTER-IMMOBILIENKAUF-01",
   "usecase_slug": "immobilienkaufvertrag",
+  "primary_matter_type": "immobilienkaufvertrag",
+  "target_systems": [
+    "XNP",
+    "SNP"
+  ],
   "bpmn_model": "bpmn/immobilienkaufvertrag.bpmn",
   "kg_ref": "usecases/immobilienkaufvertrag/knowledge-graph.md",
+  "mandate_data_present": false,
+  "real_register_data_present": false,
+  "oci_apply_permitted": false,
+  "secret_material_present": false,
   "raw_mandate_content_loaded": false,
   "productive_xnp_action": false,
   "contains_credentials": false,
@@ -25,6 +35,7 @@
     "tenant_admin_review_required",
     "gnotkg_review_required",
     "xnp_local_readiness_only",
+    "xnp_snp_target_metadata_only",
     "human_review_required",
     "no_customer_mail_dispatch"
   ],
@@ -58,6 +69,8 @@
     "no_real_personal_data",
     "no_real_property_data",
     "no_customer_mail_dispatch",
-    "no_production_filing"
+    "no_production_filing",
+    "no_oci_apply",
+    "no_secret_material"
   ]
 }

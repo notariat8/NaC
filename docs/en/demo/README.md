@@ -31,6 +31,7 @@ deliberately closed work area until session and role checks are complete.
 | Merge order and live-test card | [notarkammer-2026-06-merge-order-live-test-card.md](notarkammer-2026-06-merge-order-live-test-card.md) |
 | Known gaps and boundaries | [notarkammer-2026-06-demo-gap-audit.md](notarkammer-2026-06-demo-gap-audit.md) |
 | Questions and objections | [notarkammer-2026-06-demo-qa-objection-handling.md](notarkammer-2026-06-demo-qa-objection-handling.md) |
+| First matter as metadata-only contract | [notarkammer-first-matter-metadata.md](notarkammer-first-matter-metadata.md) |
 | Duration, parallel work and critical path | [notarkammer-bpmn-critical-path-talking-points.md](notarkammer-bpmn-critical-path-talking-points.md) |
 | Real estate purchase agreement as XNP/SNP closing path | [notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md](notarkammer-immobilienkaufvertrag-xnp-vollzug-map.md) |
 | Evidence matrix for the real estate purchase agreement | [notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md](notarkammer-immobilienkaufvertrag-xnp-evidence-matrix.md) |

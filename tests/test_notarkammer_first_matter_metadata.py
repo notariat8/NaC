@@ -55,6 +55,21 @@ class NotarkammerFirstMatterMetadataTests(unittest.TestCase):
         self.assertEqual(data["duration_bands"]["external_responses"], "weeks")
         self.assertEqual(data["duration_bands"]["complex_completion"], "weeks_to_months")
 
+    def test_fixture_declares_first_entry_contract_without_sensitive_actions(self) -> None:
+        data = self.load_fixture()
+
+        self.assertIn("entry_contract", data)
+        self.assertEqual(data["entry_contract"], "notarkammer-first-matter-demo/v0.1")
+        self.assertEqual(data["primary_matter_type"], "immobilienkaufvertrag")
+        self.assertEqual(data["target_systems"], ["XNP", "SNP"])
+        self.assertFalse(data["mandate_data_present"])
+        self.assertFalse(data["real_register_data_present"])
+        self.assertFalse(data["oci_apply_permitted"])
+        self.assertFalse(data["secret_material_present"])
+        self.assertIn("no_oci_apply", data["demo_boundaries"])
+        self.assertIn("no_secret_material", data["demo_boundaries"])
+        self.assertIn("xnp_snp_target_metadata_only", data["gates"])
+
     def test_fixture_does_not_contain_realistic_personal_or_case_values(self) -> None:
         text = FIXTURE.read_text(encoding="utf-8")
         blocked_patterns = [
@@ -84,10 +99,12 @@ class NotarkammerFirstMatterMetadataTests(unittest.TestCase):
             self.assertIn("notariat8", content)
             self.assertIn("metadata-only", content)
             self.assertIn("Immobilienkaufvertrag", content)
+            self.assertIn("XNP/SNP", content)
             self.assertIn("no mandate data", content.lower())
+            self.assertIn("no OCI Apply", content)
+            self.assertIn("no secret", content.lower())
             self.assertIn(str(FIXTURE.relative_to(REPO_ROOT)), content)
-            self.assertNotIn("Oracle", content)
-            self.assertNotIn("OCI", content)
+            self.assertNotIn("Oracle Cloud Infrastructure", content)
 
 
 if __name__ == "__main__":
