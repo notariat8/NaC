@@ -2870,7 +2870,7 @@ def _auth_callback_diagnostics_html(callback_result: dict[str, Any]) -> str:
     items = [
         ("Token-Austausch", _token_exchange_status_label(token_exchange)),
         ("Token-Prüfung", _safe_status_label(jwt_validation.get("status"))),
-        ("Rollenprüfung", _safe_status_label(role_gate.get("status"))),
+        ("Rollenprüfung", _role_gate_status_label(role_gate)),
         ("Sitzung", "erstellt" if isinstance(session, dict) and session.get("cookie_issued") else "nicht erstellt"),
     ]
     rows = "\n".join(
@@ -2895,7 +2895,8 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
     session = session_boundary.get("session", {}) if isinstance(session_boundary, dict) else {}
     message = (
         "auth_callback_status state=%s token_exchange=%s token_exchange_class=%s "
-        "token_exchange_detail=%s jwt_validation=%s role_gate=%s session_cookie=%s session_store=%s"
+        "token_exchange_detail=%s jwt_validation=%s role_gate=%s role_gate_reason=%s "
+        "session_cookie=%s session_store=%s"
     ) % (
         _safe_auth_log_status(callback_result.get("state_validation", {}).get("status")),
         _safe_auth_log_status(token_exchange.get("status") if isinstance(token_exchange, dict) else None),
@@ -2903,6 +2904,7 @@ def _log_auth_callback_redacted_status(callback_result: dict[str, Any], *, sessi
         _safe_token_exchange_log_detail(token_exchange),
         _safe_auth_log_status(jwt_validation.get("status") if isinstance(jwt_validation, dict) else None),
         _safe_auth_log_status(role_gate.get("status") if isinstance(role_gate, dict) else None),
+        _safe_role_gate_log_reason(role_gate),
         _safe_auth_log_bool(isinstance(session, dict) and bool(session.get("cookie_issued"))),
         _safe_auth_log_bool(session_store_bound),
     )
@@ -2965,6 +2967,31 @@ def _safe_auth_log_status(value: Any) -> str:
 
 def _safe_auth_log_bool(value: bool) -> str:
     return "true" if value else "false"
+
+
+def _safe_role_gate_log_reason(role_gate: Any) -> str:
+    if not isinstance(role_gate, dict):
+        return "unknown"
+    reason = str(role_gate.get("reason") or "")
+    if reason in {
+        "audience_mismatch",
+        "authorized",
+        "issuer_mismatch",
+        "nonce_mismatch",
+        "nonce_not_bound",
+        "role_missing",
+        "state_invalid",
+    }:
+        return reason
+    return "unknown"
+
+
+def _role_gate_status_label(role_gate: Any) -> str:
+    if not isinstance(role_gate, dict):
+        return _safe_status_label(None)
+    if role_gate.get("status") == "closed" and role_gate.get("reason") == "role_missing":
+        return "Berechtigung offen"
+    return _safe_status_label(role_gate.get("status"))
 
 
 def _token_exchange_status_label(token_exchange: Any) -> str:
