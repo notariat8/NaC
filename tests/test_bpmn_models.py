@@ -193,6 +193,51 @@ class BpmnModelValidationTests(unittest.TestCase):
         self.assertIn("xnp_local", validator.split_channel_tokens(boundary.nac_attr("channel")))
         self.assertIn("xnotar_xjustiz", validator.split_channel_tokens(boundary.nac_attr("channel")))
 
+    def test_canonical_real_estate_contract_model_has_xnp_xnotar_land_register_demo_depth(self) -> None:
+        path = BPMN_ROOT / "immobilienkaufvertrag.bpmn"
+        root = validator.parse_xml(path)
+        self.assertIsNotNone(root)
+
+        nodes = {
+            node.element_id: node
+            for process in validator.children_by_tag(root, "process")
+            for node in validator.flow_nodes(process, path)
+        }
+
+        expected = {
+            "Task_XnpXnotarGrenzePruefen": ("xnp_boundary", "same_day_or_internal", "false"),
+            "Gateway_PostNotarizationSplit": (None, "short_party_turnaround", "true"),
+            "Task_VormerkungBeantragen": ("post_notarization", "standard_external", "true"),
+            "Task_LoeschungsunterlagenNachhalten": ("post_notarization", "standard_external", "true"),
+            "Task_VorkaufsrechtKlaeren": ("post_notarization", "standard_external", "true"),
+            "Gateway_FaelligkeitJoin": ("post_notarization", "standard_external", "true"),
+            "Task_KaufpreisfaelligkeitMitteilen": ("post_notarization", "short_party_turnaround", "true"),
+            "Task_UnbedenklichkeitNachhalten": ("ownership_transfer", "extended_external", "true"),
+            "Task_EigentumsumschreibungEinreichen": ("ownership_transfer", "extended_external", "true"),
+        }
+        self.assertEqual(sorted(set(expected) - set(nodes)), [])
+        for node_id, (parallel_group, duration_band, critical_path) in expected.items():
+            with self.subTest(node_id=node_id):
+                node = nodes[node_id]
+                self.assertEqual(node.nac_attr("parallelGroup"), parallel_group)
+                self.assertEqual(node.nac_attr("durationBand"), duration_band)
+                self.assertEqual(node.nac_attr("criticalPath"), critical_path)
+
+        boundary = nodes["Task_XnpXnotarGrenzePruefen"]
+        boundary_channels = validator.split_channel_tokens(boundary.nac_attr("channel"))
+        self.assertEqual(boundary.nac_attr("dataClass"), "no_mandate_data")
+        self.assertEqual(boundary.nac_attr("localExecution"), "true")
+        self.assertIn("xnp_local", boundary_channels)
+        self.assertIn("xnotar_xjustiz", boundary_channels)
+
+        for node_id in ("Task_VormerkungBeantragen", "Task_EigentumsumschreibungEinreichen"):
+            with self.subTest(node_id=node_id):
+                channels = validator.split_channel_tokens(nodes[node_id].nac_attr("channel"))
+                self.assertEqual(nodes[node_id].nac_attr("dataClass"), "no_mandate_data")
+                self.assertIn("xnotar_xjustiz", channels)
+                self.assertIn("land_register_portal", channels)
+                self.assertNotIn("xnp_local", channels)
+
     def test_signature_certification_usecase_stays_short_non_parallel_comparison(self) -> None:
         path = BPMN_ROOT / "usecases" / "unterschriftsbeglaubigung.bpmn"
         root = validator.parse_xml(path)

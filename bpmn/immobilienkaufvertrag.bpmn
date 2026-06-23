@@ -22,7 +22,7 @@
                      nac:approval="none"
                      nac:evidence="none"
                      nac:durationBand="same_day_or_internal"
-                     nac:criticalPath="true"
+                     nac:criticalPath="false"
                      nac:kgRef="immobilienkaufvertrag">
       <bpmn:outgoing>Flow_00</bpmn:outgoing>
     </bpmn:startEvent>
@@ -60,27 +60,12 @@
                      nac:approval="human"
                      nac:evidence="required"
                      nac:durationBand="standard_external"
-                     nac:parallelGroup="pre_notarization_due_diligence"
+                     nac:parallelGroup="pre_notarization"
                      nac:criticalPath="true"
                      nac:kgRef="immobilienkaufvertrag">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="Task_XnpArbeitsplatzPruefen"
-                     name="Karte, XNP und Signaturpfad lokal prüfen"
-                     nac:role="IT-Betrieb"
-                     nac:channel="xnp_local"
-                     nac:dataClass="metadata"
-                     nac:approval="none"
-                     nac:evidence="required"
-                     nac:plugin="nac-cyberjack-rfid"
-                     nac:localExecution="true"
-                     nac:durationBand="same_day_or_internal"
-                     nac:parallelGroup="pre_notarization_due_diligence"
-                     nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_03</bpmn:incoming>
-      <bpmn:outgoing>Flow_04</bpmn:outgoing>
-    </bpmn:serviceTask>
     <bpmn:userTask id="Task_EntwurfAbstimmen"
                      name="Urkundenentwurf und Vollzugshinweise abstimmen"
                      nac:role="Notariatsfachkraft"
@@ -89,10 +74,11 @@
                      nac:approval="human"
                      nac:evidence="required"
                      nac:durationBand="short_party_turnaround"
+                     nac:parallelGroup="pre_notarization"
                      nac:criticalPath="true"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_04</bpmn:incoming>
-      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:manualTask id="Task_IdentitaetVertretung"
                      name="Identität und Vertretung prüfen"
@@ -104,8 +90,8 @@
                      nac:durationBand="same_day_or_internal"
                      nac:criticalPath="true"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_05</bpmn:incoming>
-      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
     </bpmn:manualTask>
     <bpmn:manualTask id="Task_Beurkundung"
                      name="Beurkundung oder Erklärung durchführen"
@@ -117,13 +103,85 @@
                      nac:durationBand="same_day_or_internal"
                      nac:criticalPath="true"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_06</bpmn:incoming>
-      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:manualTask>
-    <bpmn:sendTask id="Task_EinreichungVersand"
-                     name="Vollzug und Grundbuchkommunikation ausführen"
+    <bpmn:serviceTask id="Task_XnpXnotarGrenzePruefen"
+                     name="Lokale XNP-/XNotar-Grenze prüfen"
                      nac:role="Notariatsfachkraft"
-                     nac:channel="land_register_portal;post;email"
+                     nac:channel="xnp_local;xnotar_xjustiz;internal"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="same_day_or_internal"
+                     nac:parallelGroup="xnp_boundary"
+                     nac:criticalPath="false"
+                     nac:localExecution="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_06b</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_PostNotarizationSplit"
+                     name="Externe Vollzugsgates parallel starten"
+                     nac:role="Notariat"
+                     nac:channel="internal"
+                     nac:dataClass="metadata"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_06b</bpmn:incoming>
+      <bpmn:outgoing>Flow_07a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_07b</bpmn:outgoing>
+      <bpmn:outgoing>Flow_07c</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sendTask id="Task_VormerkungBeantragen"
+                     name="Eigentumsvormerkung über Grundbuchpfad beantragen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="xnotar_xjustiz;land_register_portal"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="post_notarization"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_07a</bpmn:incoming>
+      <bpmn:outgoing>Flow_08a</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_LoeschungsunterlagenNachhalten"
+                     name="Löschungsunterlagen der Finanzierung nachhalten"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="email;post;land_register_portal"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="post_notarization"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_07b</bpmn:incoming>
+      <bpmn:outgoing>Flow_08b</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_VorkaufsrechtKlaeren"
+                     name="Gemeindliches Vorkaufsrecht klären"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="authority;post;email"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="post_notarization"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_07c</bpmn:incoming>
+      <bpmn:outgoing>Flow_08c</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:parallelGateway id="Gateway_FaelligkeitJoin"
+                     name="Fälligkeitsvoraussetzungen vollständig"
+                     nac:role="Notariat"
+                     nac:channel="internal"
                      nac:dataClass="metadata"
                      nac:approval="human"
                      nac:evidence="required"
@@ -131,8 +189,52 @@
                      nac:parallelGroup="post_notarization"
                      nac:criticalPath="true"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_07</bpmn:incoming>
-      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+      <bpmn:incoming>Flow_08a</bpmn:incoming>
+      <bpmn:incoming>Flow_08b</bpmn:incoming>
+      <bpmn:incoming>Flow_08c</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_KaufpreisfaelligkeitMitteilen"
+                     name="Kaufpreisfälligkeit mitteilen"
+                     nac:role="Notariat"
+                     nac:channel="email;post"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="short_party_turnaround"
+                     nac:parallelGroup="post_notarization"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_UnbedenklichkeitNachhalten"
+                     name="Unbedenklichkeitsbescheinigung nachhalten"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="tax_portal;post;email"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="extended_external"
+                     nac:parallelGroup="ownership_transfer"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_EigentumsumschreibungEinreichen"
+                     name="Eigentumsumschreibung über Grundbuchpfad einreichen"
+                     nac:role="Notariatsfachkraft"
+                     nac:channel="xnotar_xjustiz;land_register_portal"
+                     nac:dataClass="no_mandate_data"
+                     nac:approval="human"
+                     nac:evidence="required"
+                     nac:durationBand="extended_external"
+                     nac:parallelGroup="ownership_transfer"
+                     nac:criticalPath="true"
+                     nac:kgRef="immobilienkaufvertrag">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:userTask id="Task_NachweiseNachhalten"
                      name="Nachweis und Fristen nachhalten"
@@ -141,12 +243,12 @@
                      nac:dataClass="confidential_placeholder"
                      nac:approval="human"
                      nac:evidence="required"
-                     nac:durationBand="extended_external"
-                     nac:parallelGroup="post_notarization"
-                     nac:criticalPath="true"
+                     nac:durationBand="standard_external"
+                     nac:parallelGroup="ownership_transfer"
+                     nac:criticalPath="false"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_08</bpmn:incoming>
-      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:endEvent id="EndEvent_Abgeschlossen"
                      name="Vorgang abgeschlossen"
@@ -156,19 +258,29 @@
                      nac:approval="none"
                      nac:evidence="required"
                      nac:durationBand="same_day_or_internal"
+                     nac:criticalPath="false"
                      nac:kgRef="immobilienkaufvertrag">
-      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:incoming>Flow_13</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00" sourceRef="StartEvent_VorgangAnlegen" targetRef="Task_AuftragAufnehmen"/>
     <bpmn:sequenceFlow id="Flow_01" sourceRef="Task_AuftragAufnehmen" targetRef="Task_FormFristenPruefen"/>
     <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_FormFristenPruefen" targetRef="Task_UnterlagenPruefen"/>
-    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_XnpArbeitsplatzPruefen"/>
-    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_XnpArbeitsplatzPruefen" targetRef="Task_EntwurfAbstimmen"/>
-    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
-    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
-    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Beurkundung" targetRef="Task_EinreichungVersand"/>
-    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_EinreichungVersand" targetRef="Task_NachweiseNachhalten"/>
-    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_UnterlagenPruefen" targetRef="Task_EntwurfAbstimmen"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_EntwurfAbstimmen" targetRef="Task_IdentitaetVertretung"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_IdentitaetVertretung" targetRef="Task_Beurkundung"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_Beurkundung" targetRef="Task_XnpXnotarGrenzePruefen"/>
+    <bpmn:sequenceFlow id="Flow_06b" sourceRef="Task_XnpXnotarGrenzePruefen" targetRef="Gateway_PostNotarizationSplit"/>
+    <bpmn:sequenceFlow id="Flow_07a" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_VormerkungBeantragen"/>
+    <bpmn:sequenceFlow id="Flow_07b" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_LoeschungsunterlagenNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_07c" sourceRef="Gateway_PostNotarizationSplit" targetRef="Task_VorkaufsrechtKlaeren"/>
+    <bpmn:sequenceFlow id="Flow_08a" sourceRef="Task_VormerkungBeantragen" targetRef="Gateway_FaelligkeitJoin"/>
+    <bpmn:sequenceFlow id="Flow_08b" sourceRef="Task_LoeschungsunterlagenNachhalten" targetRef="Gateway_FaelligkeitJoin"/>
+    <bpmn:sequenceFlow id="Flow_08c" sourceRef="Task_VorkaufsrechtKlaeren" targetRef="Gateway_FaelligkeitJoin"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Gateway_FaelligkeitJoin" targetRef="Task_KaufpreisfaelligkeitMitteilen"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_KaufpreisfaelligkeitMitteilen" targetRef="Task_UnbedenklichkeitNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_UnbedenklichkeitNachhalten" targetRef="Task_EigentumsumschreibungEinreichen"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_EigentumsumschreibungEinreichen" targetRef="Task_NachweiseNachhalten"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_NachweiseNachhalten" targetRef="EndEvent_Abgeschlossen"/>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_immobilienkaufvertrag">
     <bpmndi:BPMNPlane id="BPMNPlane_immobilienkaufvertrag" bpmnElement="Process_immobilienkaufvertrag">
@@ -184,26 +296,47 @@
       <bpmndi:BPMNShape id="Shape_Task_UnterlagenPruefen" bpmnElement="Task_UnterlagenPruefen">
         <dc:Bounds x="760" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_XnpArbeitsplatzPruefen" bpmnElement="Task_XnpArbeitsplatzPruefen">
+      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
         <dc:Bounds x="975" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_EntwurfAbstimmen" bpmnElement="Task_EntwurfAbstimmen">
+      <bpmndi:BPMNShape id="Shape_Task_IdentitaetVertretung" bpmnElement="Task_IdentitaetVertretung">
         <dc:Bounds x="1190" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_IdentitaetVertretung" bpmnElement="Task_IdentitaetVertretung">
+      <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
         <dc:Bounds x="1405" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_Beurkundung" bpmnElement="Task_Beurkundung">
-        <dc:Bounds x="1620" y="138" width="160" height="80"/>
+      <bpmndi:BPMNShape id="Shape_Task_XnpXnotarGrenzePruefen" bpmnElement="Task_XnpXnotarGrenzePruefen">
+        <dc:Bounds x="1585" y="260" width="180" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Shape_Task_EinreichungVersand" bpmnElement="Task_EinreichungVersand">
-        <dc:Bounds x="1835" y="138" width="160" height="80"/>
+      <bpmndi:BPMNShape id="Shape_Gateway_PostNotarizationSplit" bpmnElement="Gateway_PostNotarizationSplit">
+        <dc:Bounds x="1620" y="153" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_VormerkungBeantragen" bpmnElement="Task_VormerkungBeantragen">
+        <dc:Bounds x="1775" y="40" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_LoeschungsunterlagenNachhalten" bpmnElement="Task_LoeschungsunterlagenNachhalten">
+        <dc:Bounds x="1775" y="138" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_VorkaufsrechtKlaeren" bpmnElement="Task_VorkaufsrechtKlaeren">
+        <dc:Bounds x="1775" y="236" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_FaelligkeitJoin" bpmnElement="Gateway_FaelligkeitJoin">
+        <dc:Bounds x="2045" y="153" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_KaufpreisfaelligkeitMitteilen" bpmnElement="Task_KaufpreisfaelligkeitMitteilen">
+        <dc:Bounds x="2200" y="138" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_UnbedenklichkeitNachhalten" bpmnElement="Task_UnbedenklichkeitNachhalten">
+        <dc:Bounds x="2430" y="138" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_EigentumsumschreibungEinreichen" bpmnElement="Task_EigentumsumschreibungEinreichen">
+        <dc:Bounds x="2660" y="138" width="170" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_Task_NachweiseNachhalten" bpmnElement="Task_NachweiseNachhalten">
-        <dc:Bounds x="2050" y="138" width="160" height="80"/>
+        <dc:Bounds x="2890" y="138" width="160" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_EndEvent_Abgeschlossen" bpmnElement="EndEvent_Abgeschlossen">
-        <dc:Bounds x="2280" y="160" width="36" height="36"/>
+        <dc:Bounds x="3120" y="160" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Edge_Flow_00" bpmnElement="Flow_00">
         <di:waypoint x="166" y="178"/>
@@ -231,19 +364,61 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
         <di:waypoint x="1565" y="178"/>
-        <di:waypoint x="1620" y="178"/>
+        <di:waypoint x="1675" y="178"/>
+        <di:waypoint x="1675" y="260"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_07" bpmnElement="Flow_07">
-        <di:waypoint x="1780" y="178"/>
-        <di:waypoint x="1835" y="178"/>
+      <bpmndi:BPMNEdge id="Edge_Flow_06b" bpmnElement="Flow_06b">
+        <di:waypoint x="1675" y="260"/>
+        <di:waypoint x="1675" y="228"/>
+        <di:waypoint x="1645" y="203"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
-        <di:waypoint x="1995" y="178"/>
-        <di:waypoint x="2050" y="178"/>
+      <bpmndi:BPMNEdge id="Edge_Flow_07a" bpmnElement="Flow_07a">
+        <di:waypoint x="1645" y="153"/>
+        <di:waypoint x="1645" y="80"/>
+        <di:waypoint x="1775" y="80"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07b" bpmnElement="Flow_07b">
+        <di:waypoint x="1670" y="178"/>
+        <di:waypoint x="1775" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07c" bpmnElement="Flow_07c">
+        <di:waypoint x="1645" y="203"/>
+        <di:waypoint x="1645" y="276"/>
+        <di:waypoint x="1775" y="276"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08a" bpmnElement="Flow_08a">
+        <di:waypoint x="1945" y="80"/>
+        <di:waypoint x="2070" y="80"/>
+        <di:waypoint x="2070" y="153"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08b" bpmnElement="Flow_08b">
+        <di:waypoint x="1945" y="178"/>
+        <di:waypoint x="2045" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08c" bpmnElement="Flow_08c">
+        <di:waypoint x="1945" y="276"/>
+        <di:waypoint x="2070" y="276"/>
+        <di:waypoint x="2070" y="203"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
-        <di:waypoint x="2210" y="178"/>
-        <di:waypoint x="2280" y="178"/>
+        <di:waypoint x="2095" y="178"/>
+        <di:waypoint x="2200" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_10" bpmnElement="Flow_10">
+        <di:waypoint x="2370" y="178"/>
+        <di:waypoint x="2430" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_11" bpmnElement="Flow_11">
+        <di:waypoint x="2600" y="178"/>
+        <di:waypoint x="2660" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_12" bpmnElement="Flow_12">
+        <di:waypoint x="2830" y="178"/>
+        <di:waypoint x="2890" y="178"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_13" bpmnElement="Flow_13">
+        <di:waypoint x="3050" y="178"/>
+        <di:waypoint x="3120" y="178"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
