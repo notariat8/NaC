@@ -28,6 +28,7 @@ from nac_identity.onboarding_requests import (
 )
 from nac_identity.oci_callback import build_auth_callback_result
 from nac_identity.oci_login import build_login_intent
+from nac_identity.oci_role_lookup import build_oci_identity_domain_role_membership_resolver
 from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.session_store import RuntimeSessionStoreAdapter
@@ -114,6 +115,7 @@ class NaCLocalWebApp:
         session_store: RuntimeSessionStoreAdapter | None = None,
         operator_access: bool = False,
         secret_text_provider: Callable[[str], str] | None = None,
+        role_membership_resolver: Callable[..., dict[str, Any]] | None = None,
     ) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
@@ -121,6 +123,11 @@ class NaCLocalWebApp:
         self.session_store = session_store
         self.operator_access = operator_access
         self.secret_text_provider = secret_text_provider
+        self.role_membership_resolver = (
+            role_membership_resolver
+            if role_membership_resolver is not None
+            else _auth_callback_role_membership_resolver()
+        )
 
     def handle(self, path: str, headers: dict[str, str] | None = None) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -138,6 +145,7 @@ class NaCLocalWebApp:
                     parsed.query,
                     secret_text_provider=self.secret_text_provider,
                     session_store=self.session_store,
+                    role_membership_resolver=self.role_membership_resolver,
                 )
                 return _html_response(page, status, headers=headers)
             if route == "/workspace":
@@ -786,6 +794,7 @@ def build_auth_callback_page(
     *,
     secret_text_provider: Callable[[str], str] | None = None,
     session_store: RuntimeSessionStoreAdapter | None = None,
+    role_membership_resolver: Callable[..., dict[str, Any]] | None = None,
 ) -> tuple[HTTPStatus, str, dict[str, str]]:
     params = parse_qs(query, keep_blank_values=True)
     provider_error = _optional_query_text(params, "error", max_length=120)
@@ -811,6 +820,7 @@ def build_auth_callback_page(
         expected_audience=token_exchange_metadata["client_id"],
         session_signing_key=_auth_callback_session_signing_key(secret_text_provider=secret_text_provider),
         session_ttl_seconds=_auth_callback_session_ttl_seconds(),
+        role_membership_resolver=role_membership_resolver,
         **token_exchange_metadata,
     )
     if callback_result["status"] == "rejected":
@@ -2707,6 +2717,12 @@ def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None]
     )
 
 
+def _auth_callback_role_membership_resolver() -> Callable[..., dict[str, Any]] | None:
+    return build_oci_identity_domain_role_membership_resolver(
+        identity_domain_url=_auth_callback_identity_domain_url(),
+    )
+
+
 def _auth_callback_token_exchange_metadata() -> dict[str, str]:
     identity_domain_url = _auth_callback_identity_domain_url()
     return {
@@ -2980,6 +2996,9 @@ def _safe_role_gate_log_reason(role_gate: Any) -> str:
         "nonce_mismatch",
         "nonce_not_bound",
         "role_missing",
+        "server_membership_confirmed",
+        "server_membership_missing",
+        "server_membership_unavailable",
         "state_invalid",
     }:
         return reason
@@ -2989,7 +3008,11 @@ def _safe_role_gate_log_reason(role_gate: Any) -> str:
 def _role_gate_status_label(role_gate: Any) -> str:
     if not isinstance(role_gate, dict):
         return _safe_status_label(None)
-    if role_gate.get("status") == "closed" and role_gate.get("reason") == "role_missing":
+    if role_gate.get("status") == "closed" and role_gate.get("reason") in {
+        "role_missing",
+        "server_membership_missing",
+        "server_membership_unavailable",
+    }:
         return "Berechtigung offen"
     return _safe_status_label(role_gate.get("status"))
 

@@ -8,7 +8,7 @@ import secrets
 import time
 from collections.abc import Mapping, MutableSequence
 from http.cookies import CookieError, SimpleCookie
-from typing import Any
+from typing import Any, Callable
 
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
 from .session_store import RuntimeSessionStoreAdapter
@@ -27,6 +27,7 @@ def evaluate_oidc_session_boundary(
     session_signing_key: str = "",
     now: int | None = None,
     session_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
+    role_membership_resolver: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     token_exchange = _token_exchange_summary(token_exchange_result)
     if state_validation.get("status") != "valid":
@@ -58,6 +59,20 @@ def evaluate_oidc_session_boundary(
         state_validation=state_validation,
         required_role=required_role,
     )
+    role_evidence = None
+    if role_gate["status"] != "open" and role_gate.get("reason") == "role_missing":
+        role_evidence = _resolve_server_role_membership(
+            resolver=role_membership_resolver,
+            claims=claims,
+            required_role=required_role,
+        )
+        if role_evidence is not None:
+            if role_evidence["status"] == "confirmed":
+                role_gate = _server_confirmed_role_gate(required_role=required_role)
+            elif role_evidence["status"] == "unavailable":
+                role_gate = _closed_role_gate("server_membership_unavailable", required_role=required_role)
+            elif role_evidence["status"] == "missing":
+                role_gate = _closed_role_gate("server_membership_missing", required_role=required_role)
     if role_gate["status"] != "open":
         return _result(
             status="closed",
@@ -71,6 +86,7 @@ def evaluate_oidc_session_boundary(
             role_gate=role_gate,
             session_allowed=False,
             jwt_validation_status=_jwt_validation_status(role_gate["reason"]),
+            role_evidence=role_evidence,
         )
     issued_session = _issued_session_cookie(
         signing_key=session_signing_key,
@@ -90,6 +106,7 @@ def evaluate_oidc_session_boundary(
         session_allowed=True,
         jwt_validation_status="verified",
         issued_session=issued_session,
+        role_evidence=role_evidence,
     )
 
 
@@ -214,7 +231,7 @@ def _state_reason(status: Any) -> str:
 
 
 def _jwt_validation_status(role_gate_reason: str) -> str:
-    if role_gate_reason in {"role_missing"}:
+    if role_gate_reason in {"role_missing", "server_membership_missing", "server_membership_unavailable"}:
         return "verified"
     return "invalid"
 
@@ -249,6 +266,63 @@ def _closed(
     )
 
 
+def _closed_role_gate(reason: str, *, required_role: str) -> dict[str, Any]:
+    return {
+        "schema_version": "nac.oidc-role-gate/v0.1",
+        "status": "closed",
+        "reason": reason,
+        "role": required_role,
+        "session_allowed": False,
+        "guardrails": _guardrails(),
+    }
+
+
+def _server_confirmed_role_gate(*, required_role: str) -> dict[str, Any]:
+    return {
+        "schema_version": "nac.oidc-role-gate/v0.1",
+        "status": "open",
+        "reason": "server_membership_confirmed",
+        "role": required_role,
+        "session_allowed": True,
+        "guardrails": _guardrails(),
+    }
+
+
+def _resolve_server_role_membership(
+    *,
+    resolver: Callable[..., dict[str, Any]] | None,
+    claims: dict[str, Any],
+    required_role: str,
+) -> dict[str, Any] | None:
+    if resolver is None:
+        return None
+    try:
+        evidence = resolver(claims=claims, required_role=required_role)
+    except Exception:
+        return _role_evidence("unavailable", required_role=required_role)
+    if not isinstance(evidence, dict):
+        return _role_evidence("unavailable", required_role=required_role)
+    status = str(evidence.get("status") or "")
+    role = str(evidence.get("role") or "")
+    if status in {"confirmed", "verified", "open"} and hmac.compare_digest(role, required_role):
+        return _role_evidence("confirmed", required_role=required_role)
+    if status == "missing":
+        return _role_evidence("missing", required_role=required_role)
+    return _role_evidence("unavailable", required_role=required_role)
+
+
+def _role_evidence(status: str, *, required_role: str) -> dict[str, Any]:
+    return {
+        "schema_version": "nac.server-role-evidence/v0.1",
+        "status": status,
+        "role": required_role,
+        "contains_credentials": False,
+        "tokens_returned": False,
+        "claims_exposed": False,
+        "provider_details_exposed": False,
+    }
+
+
 def _result(
     *,
     status: str,
@@ -258,6 +332,7 @@ def _result(
     session_allowed: bool,
     jwt_validation_status: str,
     issued_session: dict[str, Any] | None = None,
+    role_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     session = {
         "session_allowed": bool(session_allowed),
@@ -266,7 +341,7 @@ def _result(
     }
     if issued_session:
         session.update(issued_session)
-    return {
+    result = {
         "schema_version": "nac.oidc-session-boundary/v0.2" if issued_session else "nac.oidc-session-boundary/v0.1",
         "status": status,
         "token_exchange": token_exchange,
@@ -278,6 +353,9 @@ def _result(
         "session": session,
         "guardrails": _guardrails(session_cookie_issued=bool(issued_session)),
     }
+    if role_evidence is not None:
+        result["role_evidence"] = role_evidence
+    return result
 
 
 def _guardrails(*, session_cookie_issued: bool = False) -> dict[str, bool]:

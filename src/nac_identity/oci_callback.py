@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from .oidc_token_exchange import build_oidc_token_exchange_contract
 from .oidc_session import evaluate_oidc_session_boundary
@@ -22,6 +22,7 @@ def build_auth_callback_result(
     client_id: str = "",
     session_signing_key: str = "",
     session_ttl_seconds: int = 600,
+    role_membership_resolver: Callable[..., dict[str, Any]] | None = None,
 ) -> dict:
     if provider_error or not code or not state:
         return {
@@ -82,6 +83,7 @@ def build_auth_callback_result(
         expected_audience=expected_audience,
         session_signing_key=session_signing_key,
         session_ttl_seconds=session_ttl_seconds,
+        role_membership_resolver=role_membership_resolver,
     )
     token_exchange = token_exchange_contract.public_result()
 
