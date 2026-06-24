@@ -58,8 +58,12 @@ Akten-Metadaten, Prozessinstanzen, Prozessereignisse und Audit-Metadaten.
 
 Produktive Mandatsdaten werden nicht in Git gespeichert. Konkrete
 Prozessinstanzen referenzieren freigegebene Git-Template-Versionen, laufen aber
-in ATP. Die Detailentscheidung steht in
-[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md).
+in ATP. ATP wird dabei nicht als SQL-only-Fachmodell verstanden: relationale
+Anker, JSON-Payloads und Graph-/Ontologie-Projektionen werden getrennt. Die
+Detailentscheidungen stehen in
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
+und
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md).
 
 ## Fachlicher Zustandsautomat
 

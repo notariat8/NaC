@@ -2,6 +2,12 @@
 
 Status: target-architecture decision, without productive schema apply.
 
+Companion model decision:
+[atp-graph-runtime-model.md](atp-graph-runtime-model.md) clarifies that ATP is
+the runtime data platform, but not a pure SQL subject-matter model. NaC
+separates relational security anchors, versioned JSON payloads and graph or
+ontology projections.
+
 ## Decision
 
 NaC separates Git as the control plane from ATP as the runtime data plane.
@@ -43,10 +49,11 @@ weak for live SaaS data:
 
 ATP is the better runtime boundary for NaC because it combines transactions,
 structured queries, JSON flexibility, access control, backups and server-side
-persistence. JSON columns can hold flexible subject-matter payloads; relational
-keys remain the leading integrity boundary. Graph capabilities can later support
-relationships, dependencies, parallel paths and critical paths without moving
-the primary runtime data model into Git.
+persistence. This is not a SQL-only decision: relational keys remain the leading
+security and integrity boundary, JSON payloads carry versioned subject-matter
+state, and graph or ontology projections model relationships, dependencies,
+parallelism and critical paths. The primary runtime model therefore does not
+move back into Git.
 
 ## Data Classification
 
@@ -62,10 +69,12 @@ the primary runtime data model into Git.
 | Document binaries | later Object Storage | encrypted, with retention and audit |
 | Demo data | Git allowed | synthetic and explicitly marked only |
 
-## Initial Schema Concept
+## Initial Runtime Contract Concept
 
-The target model is built incrementally. For the next expansion, these logical
-tables or equivalent store boundaries are sufficient:
+The target model is built incrementally. `Schema` does not mean a purely
+relational subject-matter design here. It means a runtime contract for
+transactional anchors, JSON payloads, audit and graph projections. For the next
+expansion, these logical tables or equivalent store boundaries are sufficient:
 
 - `tenants`: tenant, status, domain binding, activated process versions.
 - `users`: NaC user binding, role class, tenant assignment, IdP subject hash.
@@ -101,8 +110,9 @@ version. This keeps demo, governance and productive runtime data separated.
 
 ## Next Tracks
 
-1. ATP schema plan for `tenants`, `matters`, `process_templates`,
-   `process_instances` and `process_events`.
+1. Runtime contract plan for anchors, JSON payloads and graph projections around
+   `tenants`, `matters`, `process_templates`, `process_instances` and
+   `process_events`.
 2. Migration path for synthetic demo Git data into an ATP-backed demo read-model store.
 3. Read `/workspace` status from ATP metadata without loading raw mandate data.
 4. Model the real-estate purchase agreement as the first process instance with

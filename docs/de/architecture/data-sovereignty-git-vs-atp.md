@@ -2,6 +2,12 @@
 
 Status: entschieden für Zielarchitektur, noch ohne produktiven Schema-Apply.
 
+Ergänzende Modellentscheidung:
+[atp-graph-runtime-model.md](atp-graph-runtime-model.md) klärt, dass ATP die
+Laufzeit-Datenplattform ist, aber nicht als reines SQL-Fachmodell verstanden
+wird. NaC trennt relationale Sicherheitsanker, versionierte JSON-Payloads und
+Graph-/Ontologie-Projektionen.
+
 ## Entscheidung
 
 NaC trennt Git als Steuerungsebene von ATP als Laufzeit-Datenebene.
@@ -34,23 +40,24 @@ produktiven SaaS-Betrieb.
 Git ist stark für Nachvollziehbarkeit, Review und Versionierung von
 Produktlogik. Git ist schwach für laufende SaaS-Daten:
 
-- Klone, Forks und lokale Arbeitskopien vervielfaeltigen Daten.
+- Klone, Forks und lokale Arbeitskopien vervielfältigen Daten.
 - Mandanten-, Rollen- und Feldzugriff lassen sich nicht sauber pro Datensatz
   durchsetzen.
 - Löschen, Korrigieren, Sperren und Aufbewahren sind mit Git-Historie schwer
   kontrollierbar.
-- Gleichzeitige Laufzeitschreibvorgaenge führen zu Merge- und
+- Gleichzeitige Laufzeitschreibvorgänge führen zu Merge- und
   Konsistenzproblemen.
 - Abfragen über Akten, Fristen, Status, Ereignisse und Mandanten sind in Git
   keine tragfähige Datenbankoperation.
 
 ATP ist für NaC die bessere Laufzeitgrenze, weil es Transaktionen,
-strukturierte Abfragen, JSON-Flexibilitaet, Zugriffskontrolle, Backups und
-serverseitige Persistenz verbindet. JSON-Spalten können flexible
-Fachpayloads aufnehmen; relationale Schluessel bleiben die führende
-Integritaetsgrenze. Graph-Funktionen können später für Beziehungen,
-Abhaengigkeiten, Parallelitaet und kritische Pfade genutzt werden, ohne die
-Basisdatenhaltung in Git zu verschieben.
+strukturierte Abfragen, JSON-Flexibilität, Zugriffskontrolle, Backups und
+serverseitige Persistenz verbindet. Das ist keine SQL-only-Entscheidung:
+relationale Schlüssel bleiben die führende Sicherheits- und
+Integritätsgrenze, JSON-Payloads tragen versionierte fachliche Zustände, und
+Graph-/Ontologie-Projektionen bilden Beziehungen, Abhängigkeiten,
+Parallelität und kritische Pfade ab. Die Basisdatenhaltung verschiebt sich
+damit nicht zurück nach Git.
 
 ## Datenklassifizierung
 
@@ -63,13 +70,15 @@ Basisdatenhaltung in Git zu verschieben.
 | Mandanten und Benutzerbindungen | ATP / IdP | ATP speichert NaC-Bindung, IdP authentifiziert |
 | Sessions | ATP | nur gehashte/abgeleitete Sessiondaten, keine Tokens oder Claims |
 | Dokument-Metadaten | ATP | Dateiname, Typ, Status, Nachweisreferenz ohne Rohinhalt |
-| Dokument-Binaerdaten | später Object Storage | verschluesselt, mit Retention und Audit |
-| Demo-Daten | Git erlaubt | nur synthetisch und ausdruecklich markiert |
+| Dokument-Binärdaten | später Object Storage | verschlüsselt, mit Retention und Audit |
+| Demo-Daten | Git erlaubt | nur synthetisch und ausdrücklich markiert |
 
-## Erstes Schema-Konzept
+## Erstes Laufzeitvertrags-Konzept
 
-Das Zielmodell wird inkrementell aufgebaut. Für den naechsten Ausbau reichen
-folgende logische Tabellen oder gleichwertige Store-Grenzen:
+Das Zielmodell wird inkrementell aufgebaut. `Schema` meint hier keinen rein
+relationalen Fachentwurf, sondern einen Laufzeitvertrag für transaktionale
+Anker, JSON-Payloads, Audit und Graph-Projektionen. Für den nächsten Ausbau
+reichen folgende logische Tabellen oder gleichwertige Store-Grenzen:
 
 - `tenants`: Mandant, Status, Domainbindung, aktivierte Prozessversionen.
 - `users`: NaC-Benutzerbindung, Rollenklasse, Mandantenzuordnung, IdP-Subjekt-Hash.
@@ -89,7 +98,7 @@ Ein Prozess hat zwei getrennte Lebenszyklen:
 
 1. **Template-Lebenszyklus in Git:** Fachmodell, BPMN, Review, Freigabe, Version.
 2. **Instanz-Lebenszyklus in ATP:** konkreter Vorgang, Status, Ereignisse,
-   externe Ruecklaeufe, Fristen, Audit-Metadaten.
+   externe Rückläufe, Fristen, Audit-Metadaten.
 
 Ein Merge in Git ändert keine laufende Akte automatisch. Ein Mandant muss eine
 Template-Version aktivieren; Prozessinstanzen referenzieren danach die konkrete
@@ -103,10 +112,11 @@ Version. Dadurch bleiben Demo, Governance und produktive Laufzeitdaten getrennt.
 - Keine Ablage von Rohdokumenten in ATP oder Git.
 - Keine Aussage, dass XNP/SNP produktiv angebunden ist.
 
-## Naechste Tracks
+## Nächste Tracks
 
-1. ATP-Schema-Plan für `tenants`, `matters`, `process_templates`,
-   `process_instances` und `process_events`.
+1. Laufzeitvertragsplan für Anker, JSON-Payloads und Graph-Projektionen rund um
+   `tenants`, `matters`, `process_templates`, `process_instances` und
+   `process_events`.
 2. Migrationspfad für synthetische Demo-Git-Daten in einen ATP-basierten
    Demo-Read-Model-Store.
 3. `/workspace`-Status aus ATP-Metadaten lesen, ohne Rohmandatsdaten zu laden.

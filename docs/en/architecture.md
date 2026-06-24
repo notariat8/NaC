@@ -63,9 +63,12 @@ user bindings, sessions, matter/case metadata, process instances, process
 events and audit metadata.
 
 Productive mandate data is not stored in Git. Concrete process instances
-reference approved Git template versions, but run in ATP. The detailed decision
-is documented in
-[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md).
+reference approved Git template versions, but run in ATP. ATP is not treated as
+a SQL-only subject-matter model: relational anchors, JSON payloads and graph or
+ontology projections are kept separate. The detailed decisions are documented in
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
+and
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md).
 
 ## Subject-Matter State Machine
 
