@@ -34,6 +34,30 @@ Known browser state at `/auth/callback`:
 | `Role check open` | Yellow. | "The role is not yet showably confirmed." | Show /workspace only as fail-closed or metadata-only boundary. |
 | `Session open` | Yellow. | "The session is not reliably complete." | Workspace boundary fallback. |
 
+## When Redacted Callback Logs Are Unavailable
+
+Redacted callback logs unavailable is an observability boundary and not proof
+of a broken sign-in. Without redacted callback rows, make no root-cause claim
+about token validation, role check or session creation.
+
+Allowed read-only evidence during the meeting:
+
+- `/healthz` is reachable.
+- `/login` is reachable.
+- `/workspace` remains fail-closed without a session.
+- No recent function errors are visible in the approved overview check.
+
+Not allowed during the meeting:
+
+- no debug mode and no debug log
+- no retry with raw values from the callback address
+- no provider details, tokens, claims or session values
+- no root-cause claim from missing log search evidence
+
+Demo decision: Yellow when the visible surface is stable and only redacted log
+search is unavailable. Red remains red when the browser itself shows a red gate
+status. In both cases, do not debug live.
+
 ## Gate Criteria
 
 | Gate | Green | Yellow | Red |

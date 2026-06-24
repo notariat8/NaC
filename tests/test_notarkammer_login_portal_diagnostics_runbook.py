@@ -107,6 +107,32 @@ class NotarkammerLoginPortalDiagnosticsRunbookTests(unittest.TestCase):
         for term in required_terms:
             self.assertIn(term, combined_lower)
 
+    def test_runbook_defines_redacted_log_unavailable_boundary(self) -> None:
+        combined = "\n".join(read_docs().values())
+        combined_lower = " ".join(combined.lower().split())
+
+        required_terms = [
+            "redigierte callback-logs nicht abrufbar",
+            "redacted callback logs unavailable",
+            "observability-grenze",
+            "observability boundary",
+            "kein nachweis für einen defekten login",
+            "not proof of a broken sign-in",
+            "healthz",
+            "/login",
+            "/workspace",
+            "/workspace` bleibt ohne sitzung fail-closed",
+            "/workspace` remains fail-closed without a session",
+            "keine aktuellen funktionsfehler",
+            "no recent function errors",
+            "kein debug",
+            "no debug",
+            "keine root-cause-aussage",
+            "no root-cause claim",
+        ]
+        for term in required_terms:
+            self.assertIn(term, combined_lower)
+
     def test_runbook_keeps_public_output_redacted_and_scope_protected(self) -> None:
         combined = "\n".join(read_docs().values())
         combined_lower = " ".join(combined.lower().split())

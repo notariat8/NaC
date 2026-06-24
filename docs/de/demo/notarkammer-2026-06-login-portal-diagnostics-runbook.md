@@ -34,6 +34,31 @@ Bekannter Browserstand bei `/auth/callback`:
 | `Rollenprüfung offen` | Gelb. | "Die Rolle ist noch nicht vorführbar bestätigt." | /workspace nur als fail-closed- oder metadata-only-Grenze zeigen. |
 | `Sitzung offen` | Gelb. | "Die Sitzung ist nicht belastbar abgeschlossen." | Workspace-Grenzen-Fallback. |
 
+## Wenn redigierte Callback-Logs nicht abrufbar sind
+
+Redigierte Callback-Logs nicht abrufbar ist eine Observability-Grenze und kein
+Nachweis für einen defekten Login. Ohne redigierte Callback-Zeilen wird keine
+Root-Cause-Aussage zu Token-Prüfung, Rollenprüfung oder Sitzung getroffen.
+
+Zulässige Read-only-Evidenz im Termin:
+
+- `/healthz` ist erreichbar.
+- `/login` ist erreichbar.
+- `/workspace` bleibt ohne Sitzung fail-closed.
+- Es sind keine aktuellen Funktionsfehler in der freigegebenen
+  Übersichtsprüfung sichtbar.
+
+Nicht zulässig im Termin:
+
+- kein Debug-Modus und kein Debug-Protokoll
+- keine Wiederholung mit Rohwerten aus der Callback-Adresse
+- keine Provider-Details, keine Tokens, keine Claims, keine Sitzungswerte
+- keine Root-Cause-Aussage aus fehlender Logsuche
+
+Demo-Entscheidung: Gelb, wenn die sichtbare Oberfläche stabil ist und nur die
+redigierte Logsuche fehlt. Rot bleibt Rot, wenn der Browser selbst einen roten
+Gate-Status zeigt. In beiden Fällen wird nicht live debuggt.
+
 ## Gate-Kriterien
 
 | Gate | Grün | Gelb | Rot |
