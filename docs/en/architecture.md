@@ -55,6 +55,18 @@ flowchart TD
     MainState --> Close["Tag or release for closure"]
 ```
 
+## Data Sovereignty
+
+Git is the control and template plane for code, IaC, governance, BPMN process
+definitions and synthetic demo data. ATP is the runtime data plane for tenants,
+user bindings, sessions, matter/case metadata, process instances, process
+events and audit metadata.
+
+Productive mandate data is not stored in Git. Concrete process instances
+reference approved Git template versions, but run in ATP. The detailed decision
+is documented in
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md).
+
 ## Subject-Matter State Machine
 
 ```mermaid

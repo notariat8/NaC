@@ -8,7 +8,7 @@ Diese Architektur folgt dem Modell `Notariat as Code` mit `Enterprise GitOps` al
 Referenz: `docs/de/organization-as-code-positioning.md`
 
 Das operative Ausführungsmodell mit Bürooberfläche und prüfbarem Kern steht in
-[ausfuehrungsmodell.md](ausfuehrungsmodell.md).
+[ausführungsmodell.md](ausfuehrungsmodell.md).
 
 ## Schichten
 
@@ -48,6 +48,18 @@ flowchart TD
     Runtime --> MainState["Verbindlicher main Stand"]
     MainState --> Close["Tag oder Release für Abschluss"]
 ```
+
+## Datenhoheit
+
+Git ist die Steuerungs- und Template-Ebene für Code, IaC, Governance,
+BPMN-Prozessdefinitionen und synthetische Demo-Daten. ATP ist die
+Laufzeit-Datenebene für Mandanten, Benutzerbindungen, Sessions, Vorgangs- und
+Akten-Metadaten, Prozessinstanzen, Prozessereignisse und Audit-Metadaten.
+
+Produktive Mandatsdaten werden nicht in Git gespeichert. Konkrete
+Prozessinstanzen referenzieren freigegebene Git-Template-Versionen, laufen aber
+in ATP. Die Detailentscheidung steht in
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md).
 
 ## Fachlicher Zustandsautomat
 
