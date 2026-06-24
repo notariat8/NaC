@@ -28,6 +28,7 @@ und Rolle geprüft sind.
 | --- | --- |
 | Vorbereitung vor der Vorführung | [notarkammer-2026-06-demo-preflight.md](notarkammer-2026-06-demo-preflight.md) |
 | Live-Reihenfolge und Browserpfade | [notarkammer-2026-06-live-demo-runbook.md](notarkammer-2026-06-live-demo-runbook.md) |
+| Kompakte Live-Checkkarte | [notarkammer-2026-06-live-checkcard.md](notarkammer-2026-06-live-checkcard.md) |
 | Login-/Portal-Diagnose und Fallback-Ampel | [notarkammer-2026-06-login-portal-diagnostics-runbook.md](notarkammer-2026-06-login-portal-diagnostics-runbook.md) |
 | 60-Minuten-Skript | [notarkammer-2026-06-60-minute-live-demo-script.md](notarkammer-2026-06-60-minute-live-demo-script.md) |
 | Sprechertext und Fallback-Formulierungen | [notarkammer-2026-06-demo-script.md](notarkammer-2026-06-demo-script.md) |
