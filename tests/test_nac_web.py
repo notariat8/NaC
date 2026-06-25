@@ -15,11 +15,19 @@ from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
+FIRST_MATTER_METADATA_FIXTURE = (
+    REPO_ROOT
+    / "tests"
+    / "fixtures"
+    / "demo"
+    / "notarkammer-first-immobilienkaufvertrag.metadata.json"
+)
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
 import nac_web.server as nac_server  # noqa: E402
+from nac_runtime.status_source import AtpJsonRuntimeMetadataSource  # noqa: E402
 from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_cost_page, build_home_page, build_kg_page  # noqa: E402
 from nac_gnotkg.views import build_cost_review_view  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
@@ -32,7 +40,7 @@ def _session_cookie_payload(cookie_header: str) -> dict[str, object]:
     return json.loads(base64.urlsafe_b64decode(f"{payload_part}{padding}".encode("ascii")).decode("utf-8"))
 
 
-def _bound_workspace_app_and_cookie() -> tuple[NaCLocalWebApp, str]:
+def _bound_workspace_app_and_cookie(first_matter_runtime_metadata_source=None) -> tuple[NaCLocalWebApp, str]:
     from nac_identity.oidc_session import evaluate_oidc_session_boundary
     from nac_identity.session_store import MappingSessionStoreAdapter
 
@@ -84,6 +92,7 @@ def _bound_workspace_app_and_cookie() -> tuple[NaCLocalWebApp, str]:
                 }
             }
         ),
+        first_matter_runtime_metadata_source=first_matter_runtime_metadata_source,
     )
     return app, cookie_header
 
@@ -2729,6 +2738,64 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("notariat8_nac_app", html)
         self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
         self.assertNotIn("state-secret-1", html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_first_matter_status_accepts_injected_atp_json_runtime_source(self) -> None:
+        fixture = json.loads(FIRST_MATTER_METADATA_FIXTURE.read_text(encoding="utf-8"))
+        requested_keys: list[str] = []
+
+        def read_atp_json(object_key: str) -> dict[str, object]:
+            requested_keys.append(object_key)
+            return dict(fixture)
+
+        app, cookie_header = _bound_workspace_app_and_cookie(
+            AtpJsonRuntimeMetadataSource(
+                read_atp_json,
+                object_key="runtime/atp/notarkammer-first.json",
+            )
+        )
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/workspace/immobilienkaufvertrag", headers={"Cookie": cookie_header})
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertEqual(requested_keys, ["runtime/atp/notarkammer-first.json"])
+        self.assertIn("Immobilienkaufvertrag Status", html)
+        self.assertIn("Vorgangsstatus ohne Mandatsdaten", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertNotIn("runtime/atp", html)
+        self.assertNotIn("DEMO-MATTER", html)
+        self.assertNotIn("DEMO-TENANT", html)
+        self.assertNotIn(cookie_header, html)
+        self.assertNotIn("Oracle", html)
+        self.assertNotIn("OCI", html)
+
+    def test_first_matter_status_fails_closed_when_runtime_source_is_unavailable(self) -> None:
+        class FailingRuntimeMetadataSource:
+            def load_first_matter_metadata(self) -> dict[str, object]:
+                raise RuntimeError("runtime/secret/object-key token-secret")
+
+        app, cookie_header = _bound_workspace_app_and_cookie()
+        app.first_matter_runtime_metadata_source = FailingRuntimeMetadataSource()
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/workspace/immobilienkaufvertrag", headers={"Cookie": cookie_header})
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 503)
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn("Vorgangsstatus vorübergehend geschlossen", html)
+        self.assertIn("Runtime-Quelle nicht freigegeben", html)
+        self.assertIn("Keine Mandatsdaten geladen", html)
+        self.assertIn("Vollständiger Arbeitsbereich bleibt geschlossen", html)
+        self.assertNotIn("RuntimeError", html)
+        self.assertNotIn("runtime/secret", html)
+        self.assertNotIn("token-secret", html)
+        self.assertNotIn("Immobilienkaufvertrag Status", html)
+        self.assertNotIn(cookie_header, html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 

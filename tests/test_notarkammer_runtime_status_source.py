@@ -16,6 +16,7 @@ from nac_runtime.status_source import (
     AtpJsonRuntimeMetadataSource,
     PackagedRuntimeMetadataSource,
     build_first_matter_status_display_from_metadata_source,
+    resolve_first_matter_runtime_metadata_source,
 )
 
 FIXTURE = (
@@ -28,6 +29,18 @@ FIXTURE = (
 
 
 class NotarkammerRuntimeStatusSourceTests(unittest.TestCase):
+    def test_first_matter_source_resolver_defaults_to_packaged_source(self) -> None:
+        source = resolve_first_matter_runtime_metadata_source()
+
+        self.assertIsInstance(source, PackagedRuntimeMetadataSource)
+
+    def test_first_matter_source_resolver_keeps_injected_source(self) -> None:
+        injected = AtpJsonRuntimeMetadataSource(lambda _object_key: {})
+
+        source = resolve_first_matter_runtime_metadata_source(injected)
+
+        self.assertIs(source, injected)
+
     def test_packaged_runtime_source_loads_metadata_only_json_without_test_fixture_path(self) -> None:
         payload = PackagedRuntimeMetadataSource().load_first_matter_metadata()
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)

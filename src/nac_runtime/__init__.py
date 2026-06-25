@@ -8,6 +8,7 @@ from nac_runtime.status_source import (
     PackagedRuntimeMetadataSource,
     RuntimeMetadataSource,
     build_first_matter_status_display_from_metadata_source,
+    resolve_first_matter_runtime_metadata_source,
 )
 from nac_runtime.store import InMemoryRuntimeStore, RuntimeRecord, RuntimeStoreAdapter
 
@@ -18,6 +19,7 @@ __all__ = [
     "build_first_matter_status_display_from_metadata_source",
     "InMemoryRuntimeStore",
     "RuntimeMetadataSource",
+    "resolve_first_matter_runtime_metadata_source",
     "RuntimeRecord",
     "RuntimeStoreAdapter",
     "PackagedRuntimeMetadataSource",

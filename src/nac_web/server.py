@@ -43,8 +43,9 @@ from nac_identity.role_case_gate import (
     normalize_workspace_tenant_binding_context,
 )
 from nac_runtime.status_source import (
-    PackagedRuntimeMetadataSource,
+    RuntimeMetadataSource,
     build_first_matter_status_display_from_metadata_source,
+    resolve_first_matter_runtime_metadata_source,
 )
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
@@ -118,6 +119,7 @@ class NaCLocalWebApp:
         operator_access: bool = False,
         secret_text_provider: Callable[[str], str] | None = None,
         role_membership_resolver: Callable[..., dict[str, Any]] | None = None,
+        first_matter_runtime_metadata_source: RuntimeMetadataSource | None = None,
     ) -> None:
         self.repo_root = repo_root.resolve()
         self.dns_resolver = dns_resolver
@@ -130,6 +132,7 @@ class NaCLocalWebApp:
             if role_membership_resolver is not None
             else _auth_callback_role_membership_resolver()
         )
+        self.first_matter_runtime_metadata_source = first_matter_runtime_metadata_source
 
     def handle(self, path: str, headers: dict[str, str] | None = None) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
@@ -163,6 +166,7 @@ class NaCLocalWebApp:
                     repo_root=self.repo_root,
                     secret_text_provider=self.secret_text_provider,
                     session_store=self.session_store,
+                    runtime_metadata_source=self.first_matter_runtime_metadata_source,
                 )
                 return _html_response(page, status)
             if route == "/onboarding/readiness":
@@ -1054,6 +1058,7 @@ def build_protected_first_matter_status_page(
     repo_root: Path,
     secret_text_provider: Callable[[str], str] | None = None,
     session_store: RuntimeSessionStoreAdapter | None = None,
+    runtime_metadata_source: RuntimeMetadataSource | None = None,
 ) -> tuple[HTTPStatus, str]:
     access = _evaluate_workspace_access(
         request_headers,
@@ -1100,7 +1105,15 @@ def build_protected_first_matter_status_page(
         """
         return HTTPStatus.FORBIDDEN, _layout("notariat8 Vorgangsstatus geschlossen", body)
 
-    display = _first_matter_status_display()
+    try:
+        display = _first_matter_status_display(source=runtime_metadata_source)
+    except (KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        LOGGER.warning(
+            "first_matter_runtime_metadata_unavailable",
+            extra={"error_type": type(exc).__name__},
+        )
+        return _first_matter_status_unavailable_page()
+
     status_items_html = _link_list_items(display["status_items"])
     next_steps_html = _link_list_items(display["next_steps"])
 
@@ -1157,10 +1170,34 @@ def build_protected_first_matter_status_page(
     return HTTPStatus.OK, _layout("notariat8 Immobilienkaufvertrag Status", body)
 
 
-def _first_matter_status_display() -> dict[str, Any]:
+def _first_matter_status_display(
+    *,
+    source: RuntimeMetadataSource | None = None,
+) -> dict[str, Any]:
     return build_first_matter_status_display_from_metadata_source(
-        source=PackagedRuntimeMetadataSource(),
+        source=resolve_first_matter_runtime_metadata_source(source),
     )
+
+
+def _first_matter_status_unavailable_page() -> tuple[HTTPStatus, str]:
+    body = """
+    <nav class="topline"><a href="/workspace">← Portal-Start</a></nav>
+    <section class="hero">
+      <p class="eyebrow">notariat8 Vorgangsstatus</p>
+      <h1>Vorgangsstatus vorübergehend geschlossen</h1>
+      <p>Die Runtime-Metadaten konnten nicht geprüft werden. Der vollständige
+      Arbeitsbereich bleibt geschlossen.</p>
+    </section>
+    <section class="notice">
+      <h2>Sicherheitsgrenze aktiv</h2>
+      <ul class="link-list">
+        <li><span>Runtime-Quelle nicht freigegeben.</span></li>
+        <li><span>Keine Mandatsdaten geladen.</span></li>
+        <li><span>Vollständiger Arbeitsbereich bleibt geschlossen.</span></li>
+      </ul>
+    </section>
+    """
+    return HTTPStatus.SERVICE_UNAVAILABLE, _layout("notariat8 Vorgangsstatus geschlossen", body)
 
 
 def _link_list_items(items: Any) -> str:

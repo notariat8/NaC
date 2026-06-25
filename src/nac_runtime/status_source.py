@@ -49,6 +49,14 @@ class AtpJsonRuntimeMetadataSource:
         return dict(payload)
 
 
+def resolve_first_matter_runtime_metadata_source(
+    source: RuntimeMetadataSource | None = None,
+) -> RuntimeMetadataSource:
+    if source is not None:
+        return source
+    return PackagedRuntimeMetadataSource()
+
+
 def build_first_matter_status_display_from_metadata_source(
     *,
     source: RuntimeMetadataSource,
