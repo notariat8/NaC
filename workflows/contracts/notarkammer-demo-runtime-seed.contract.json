@@ -1,0 +1,24 @@
+{
+  "schema_version": "nac.demo-runtime-seed/v0.1",
+  "contract_status": "owner_free_contract_first",
+  "source_fixture": "tests/fixtures/demo/notarkammer-first-immobilienkaufvertrag.metadata.json",
+  "writes": {
+    "tenants": true,
+    "matters": true,
+    "process_instances": true,
+    "process_events": true,
+    "audit_events": true
+  },
+  "graph_projection": {
+    "source": "process_events",
+    "contract": "nac.atp-runtime-graph-projection/v0.1"
+  },
+  "guardrails": {
+    "metadata_only": true,
+    "mandate_data": false,
+    "productive_xnp_action": false,
+    "live_oci": false,
+    "schema_apply": false,
+    "secret_material": false
+  }
+}
