@@ -1123,6 +1123,15 @@ def build_protected_first_matter_status_page(
         </ul>
       </section>
     </div>
+    <section class="notice">
+      <h2>Nachweis ohne Mandatsdaten</h2>
+      <ul class="link-list">
+        <li><span><strong>GNotKG-Prüfung erforderlich:</strong> Gebührenprüfung bleibt fachlich freigabepflichtig.</span></li>
+        <li><span><strong>XNP/SNP-Zielpfad nur als Metadaten:</strong> keine produktive Aktion und kein Versand.</span></li>
+        <li><span><strong>Kartenleser- und Signaturpfad als Bereitschaftsgrenze:</strong> lokale Anbindung bleibt als Integrationspunkt markiert.</span></li>
+        <li><span><strong>Fachliche Freigabe erforderlich:</strong> menschliche Prüfung vor jedem produktiven Schritt.</span></li>
+      </ul>
+    </section>
     <div class="grid">
       <section>
         <h2>Zeit und Abhängigkeiten</h2>
