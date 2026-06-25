@@ -1038,7 +1038,7 @@ def build_protected_workspace_start_page(
       </ul>
     </section>
     <section>
-      <h2>Nächster Demo-Schritt</h2>
+      <h2>Nächster sicherer Schritt</h2>
       <ul class="link-list">
         <li><a class="inline-link" href="/workspace/immobilienkaufvertrag">Ersten Vorgang als Statusansicht öffnen.</a></li>
         <li><span>Vollständiger Arbeitsbereich und Mandatsinhalte bleiben geschlossen.</span></li>
@@ -1149,7 +1149,7 @@ def build_protected_first_matter_status_page(
         <ul class="link-list">
           <li><span>Keine Mandatsdaten geladen.</span></li>
           <li><span>Vollständiger Arbeitsbereich bleibt geschlossen.</span></li>
-          <li><span>Nur metadata-only Status für die Live-Demo.</span></li>
+          <li><span>Nur Statusmetadaten ohne Mandatsdaten.</span></li>
         </ul>
       </section>
     </div>
