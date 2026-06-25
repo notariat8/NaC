@@ -21,6 +21,47 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 
+def bash_executable() -> str:
+    candidates = [shutil.which("bash")]
+    if os.name == "nt":
+        candidates.extend(
+            [
+                r"C:\Program Files\Git\bin\bash.exe",
+                r"C:\Program Files\Git\usr\bin\bash.exe",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return str(candidate)
+
+    return "bash"
+
+
+def git_bash_path(path: Path) -> str:
+    resolved = path.resolve()
+    drive = resolved.drive.rstrip(":").lower()
+    if drive:
+        return f"/{drive}/{resolved.relative_to(resolved.anchor).as_posix()}"
+    return resolved.as_posix()
+
+
+def add_python3_shim_for_git_bash(env: dict[str, str], parent: Path) -> dict[str, str]:
+    if os.name != "nt":
+        return env
+
+    shim_dir = parent / "python-shim-bin"
+    shim_dir.mkdir(exist_ok=True)
+    shim = shim_dir / "python3"
+    shim.write_text(
+        f'#!/usr/bin/env bash\nexec "{git_bash_path(Path(sys.executable))}" "$@"\n',
+        encoding="utf-8",
+    )
+    os.chmod(shim, 0o755)
+    env["PATH"] = f"{git_bash_path(shim_dir)}:{env.get('PATH', '')}"
+    return env
+
+
 class FakeFunctionContext:
     def __init__(self, *, request_url: str, method: str = "GET", headers: dict[str, str] | None = None) -> None:
         self._request_url = request_url
@@ -158,7 +199,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
     def build_spec_fixture_env(self, checkout: Path) -> dict[str, str]:
         env = os.environ.copy()
         env["OCI_PRIMARY_SOURCE_DIR"] = str(checkout)
-        return env
+        return add_python3_shim_for_git_bash(env, checkout.parent)
 
     def test_buildspec_requires_owner_approved_release_commit(self) -> None:
         command = self.build_spec_step_command("Prepare immutable image tag")
@@ -171,7 +212,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
 
             result = subprocess.run(
-                ["bash", "-lc", command],
+                [bash_executable(), "-lc", command],
                 cwd=tmp_path,
                 env=env,
                 text=True,
@@ -193,7 +234,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
 
             result = subprocess.run(
-                ["bash", "-lc", command],
+                [bash_executable(), "-lc", command],
                 cwd=tmp_path,
                 env=env,
                 text=True,
@@ -216,7 +257,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             env["NAC_RELEASE_COMMIT"] = "0" * 40
 
             result = subprocess.run(
-                ["bash", "-lc", command],
+                [bash_executable(), "-lc", command],
                 cwd=tmp_path,
                 env=env,
                 text=True,
@@ -269,9 +310,10 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             )
             env = os.environ.copy()
             env["OCI_PRIMARY_SOURCE_DIR"] = str(tmp_path / "not-the-clone")
+            env = add_python3_shim_for_git_bash(env, tmp_path)
 
             result = subprocess.run(
-                ["bash", "-lc", command],
+                [bash_executable(), "-lc", command],
                 cwd=tmp_path,
                 env=env,
                 text=True,
@@ -398,7 +440,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             env["OCI_PRIMARY_SOURCE_COMMIT_HASH"] = "f" * 40
 
             result = subprocess.run(
-                ["bash", "-lc", command],
+                [bash_executable(), "-lc", command],
                 cwd=tmp_path,
                 env=env,
                 text=True,

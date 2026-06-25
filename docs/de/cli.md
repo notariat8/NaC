@@ -170,7 +170,7 @@ NaC schreibt Vorgangs- und Testdaten nicht in das Produktrepo. Für synthetische
 Demo-Daten gibt es ein getrenntes Datenrepo, zum Beispiel `../demo8notariat`:
 
 ```bash
-nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
+nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/notariat8/demo8notariat.git
 nac tenant write-sample-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001

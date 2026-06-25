@@ -392,7 +392,7 @@ class NaCCliTests(unittest.TestCase):
                 "--name",
                 "demo8notariat",
                 "--remote-url",
-                "https://github.com/ofunk/demo8notariat.git",
+                "https://github.com/notariat8/demo8notariat.git",
             )
             self.assertEqual(rc, 0)
             self.assertIn("NaC-Datenrepo initialisiert", output)
@@ -402,7 +402,7 @@ class NaCCliTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("Demo-Vorgänge: 0", output)
             self.assertIn("Akten: 0", output)
-            self.assertIn("https://github.com/ofunk/demo8notariat.git", output)
+            self.assertIn("https://github.com/notariat8/demo8notariat.git", output)
 
             rc, output = run_cli(
                 "tenant",

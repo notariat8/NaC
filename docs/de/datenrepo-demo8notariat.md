@@ -2,7 +2,7 @@
 
 NaC trennt Produktlogik und Notariatsdaten. Das Produktrepo `notariat8/NaC` enthält
 Usecases, BPMN-Modelle, Plugins, Regeln, Validatoren und Dokumentation. Das
-Datenrepo `ofunk/demo8notariat` ist ein getrenntes Ziel für Akten, Beteiligte,
+Datenrepo `notariat8/demo8notariat` ist ein getrenntes Ziel für Akten, Beteiligte,
 Dokumente, Ereignisse, Exporte und spätere produktive Datenstände.
 
 Für die Demo werden synthetische Daten geschrieben. Das Modell ist aber so
@@ -67,7 +67,7 @@ auch nach vielen Bearbeitergenerationen lesbar.
 nac tenant init \
   --repo ../demo8notariat \
   --name demo8notariat \
-  --remote-url https://github.com/ofunk/demo8notariat.git
+  --remote-url https://github.com/notariat8/demo8notariat.git
 ```
 
 Der Befehl legt Manifest, Modellbeschreibung, Standardordner und

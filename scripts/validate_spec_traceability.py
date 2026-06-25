@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -21,6 +22,7 @@ TEMPLATE_PATHS = (
     Path(".github/ISSUE_TEMPLATE/process_release.md"),
     Path(".github/PULL_REQUEST_TEMPLATE.md"),
 )
+GIT_EXECUTABLE = os.environ.get("GIT_EXECUTABLE") or shutil.which("git") or "git"
 REQUIRED_CONTRACT_FIELDS = [
     "schema_version",
     "spec_id",
@@ -42,7 +44,7 @@ REQUIRED_TEMPLATE_MARKERS = (
 
 def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", *args],
+        [os.environ.get("GIT_EXECUTABLE") or GIT_EXECUTABLE, *args],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,
@@ -267,7 +269,7 @@ def validate_process_policy_file() -> list[str]:
         if spec_traceability.get(key) is not True:
             errors.append(f"Pflichtwert fehlt in process-policy: spec_traceability.{key}.true")
 
-    if spec_traceability.get("contract") != str(CONTRACT_PATH):
+    if spec_traceability.get("contract") != CONTRACT_PATH.as_posix():
         errors.append("Pflichtwert fehlt in process-policy: spec_traceability.contract")
 
     enforced_by = spec_traceability.get("enforced_by")

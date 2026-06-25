@@ -103,7 +103,7 @@ class NotarkammerFirstMatterMetadataTests(unittest.TestCase):
             self.assertIn("no mandate data", content.lower())
             self.assertIn("no OCI Apply", content)
             self.assertIn("no secret", content.lower())
-            self.assertIn(str(FIXTURE.relative_to(REPO_ROOT)), content)
+            self.assertIn(FIXTURE.relative_to(REPO_ROOT).as_posix(), content)
             self.assertNotIn("Oracle Cloud Infrastructure", content)
 
 

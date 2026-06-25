@@ -2,7 +2,7 @@
 
 NaC separates product logic from notary-office data. The product repository
 `notariat8/NaC` contains usecases, BPMN models, plugins, rules, validators and
-documentation. The data repository `ofunk/demo8notariat` is a separate target
+documentation. The data repository `notariat8/demo8notariat` is a separate target
 for matters, participants, documents, events, exports and later production data
 states.
 
@@ -67,7 +67,7 @@ many editors and many generations.
 nac tenant init \
   --repo ../demo8notariat \
   --name demo8notariat \
-  --remote-url https://github.com/ofunk/demo8notariat.git
+  --remote-url https://github.com/notariat8/demo8notariat.git
 ```
 
 The command creates the manifest, model description, standard folders and

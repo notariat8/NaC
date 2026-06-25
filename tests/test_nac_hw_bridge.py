@@ -119,7 +119,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
         self.assertIn('data-matter-field="client_name"', html)
         self.assertIn('data-matter-field="participant_name"', html)
         self.assertIn('data-matter-field="status"', html)
-        self.assertIn("https://github.com/ofunk/demo8notariat.git", html)
+        self.assertIn("https://github.com/notariat8/demo8notariat.git", html)
         self.assertNotIn('href="#bpmn-modelle"', html)
         self.assertNotIn('href="#tests"', html)
         self.assertNotIn('href="#anbindungen"', html)
@@ -243,7 +243,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
+                        "data_git_url": "https://github.com/notariat8/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -316,7 +316,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
+                        "data_git_url": "https://github.com/notariat8/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -356,7 +356,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
+                        "data_git_url": "https://github.com/notariat8/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -429,7 +429,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 {
                     "values": {
                         "nac_fork_git_url": "https://github.com/funktion8/NaC.git",
-                        "data_git_url": "https://github.com/ofunk/demo8notariat.git",
+                        "data_git_url": "https://github.com/notariat8/demo8notariat.git",
                         "data_repo_path": str(tenant_repo),
                     }
                 },
@@ -546,7 +546,7 @@ class NaCHardwareBridgeTests(unittest.TestCase):
                 bridge.DEFAULT_DATA_REPO = original_default_data_repo
 
         self.assertEqual(payload["schema_version"], "nac.operator-config/v1")
-        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/ofunk/demo8notariat.git")
+        self.assertEqual(payload["values"]["data_git_url"], "https://github.com/notariat8/demo8notariat.git")
         self.assertTrue(payload["values"]["data_repo_path"].endswith("demo8notariat"))
 
     def test_import_job_listing_is_empty_without_configured_demo_repo(self) -> None:

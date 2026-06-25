@@ -169,7 +169,7 @@ NaC does not write case and test data into the product repository. Synthetic
 demo data lives in a separate data repository, for example `../demo8notariat`:
 
 ```bash
-nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/ofunk/demo8notariat.git
+nac tenant init --repo ../demo8notariat --name demo8notariat --remote-url https://github.com/notariat8/demo8notariat.git
 nac tenant write-sample-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant list-akten --repo ../demo8notariat
 nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
