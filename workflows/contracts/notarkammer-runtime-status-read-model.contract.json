@@ -1,0 +1,25 @@
+{
+  "schema_version": "nac.runtime-status-read-model/v0.1",
+  "contract_status": "owner_free_contract_first",
+  "source": "ATP runtime store process events",
+  "projection_dependency": "nac.atp-runtime-graph-projection/v0.1",
+  "output": {
+    "matter_label": "public_demo_label",
+    "bpmn_model_present": "boolean",
+    "xnp_snp_target_path_prepared": "boolean",
+    "execution_path_visible": "boolean",
+    "critical_path_summary": "redacted_public_summary",
+    "duration_band_summary": "redacted_public_summary"
+  },
+  "output_guardrails": {
+    "tenant_id": false,
+    "matter_id": false,
+    "process_instance_id": false,
+    "session_id": false,
+    "provider_details": false,
+    "claims": false,
+    "emails": false,
+    "mandate_data": false,
+    "productive_xnp_action": false
+  }
+}
