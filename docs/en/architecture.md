@@ -68,7 +68,9 @@ a SQL-only subject-matter model: relational anchors, JSON payloads and graph or
 ontology projections are kept separate. The detailed decisions are documented in
 [data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
 and
-[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md).
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md). The
+first runtime storage contract is documented in
+[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md).
 
 ## Subject-Matter State Machine
 

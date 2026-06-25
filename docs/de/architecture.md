@@ -63,7 +63,9 @@ Anker, JSON-Payloads und Graph-/Ontologie-Projektionen werden getrennt. Die
 Detailentscheidungen stehen in
 [data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
 und
-[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md).
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md). Der
+erste Runtime-Storage-Vertrag steht in
+[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md).
 
 ## Fachlicher Zustandsautomat
 

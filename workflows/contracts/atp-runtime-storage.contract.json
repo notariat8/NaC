@@ -1,0 +1,206 @@
+{
+  "schema_version": "nac.atp-runtime-storage/v0.1",
+  "contract_id": "runtime.atp_storage",
+  "title": "ATP Runtime Storage Contract",
+  "status": "contract_first_no_schema_apply",
+  "last_update": "2026-06-24",
+  "runtime_data_plane": "oracle_atp",
+  "purpose": "Define the first safe runtime-storage boundary for NaC tenants, users, sessions, matters, process instances, process events and audit metadata before any productive schema or graph activation.",
+  "source_of_truth": {
+    "git": [
+      "code",
+      "iac",
+      "governance",
+      "bpmn_templates",
+      "synthetic_demo_data"
+    ],
+    "atp": [
+      "tenants",
+      "user_bindings",
+      "sessions",
+      "matters",
+      "process_instances",
+      "process_events",
+      "audit_metadata"
+    ]
+  },
+  "transactional_anchors": [
+    {
+      "id": "tenants",
+      "purpose": "Stable tenant boundary for a notary office or demo tenant.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "tenant_public_label",
+        "tenant_status"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "secrets",
+        "tokens"
+      ]
+    },
+    {
+      "id": "users",
+      "purpose": "Internal NaC user binding, separated from external identity-provider details.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "subject_binding_reference",
+        "role_binding_status"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "id_token",
+        "access_token",
+        "provider_claim_dump"
+      ]
+    },
+    {
+      "id": "sessions",
+      "purpose": "Server-side session state; browser cookies remain short-lived opaque references.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "session_status",
+        "expiration_metadata"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "tokens",
+        "claims",
+        "provider_details"
+      ]
+    },
+    {
+      "id": "matters",
+      "purpose": "Matter or case anchor for notarial process instances.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "matter_type",
+        "matter_status",
+        "redacted_reference"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "personal_identifiers_without_separate_gate",
+        "document_full_text"
+      ]
+    },
+    {
+      "id": "process_templates",
+      "purpose": "Runtime reference to an approved Git BPMN/template version.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "git_template_reference",
+        "template_version"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "mutable_template_truth"
+      ]
+    },
+    {
+      "id": "process_instances",
+      "purpose": "Concrete runtime execution of an approved process template for a matter.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "process_status",
+        "duration_band",
+        "critical_path_status"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text"
+      ]
+    },
+    {
+      "id": "process_events",
+      "purpose": "Append-oriented event metadata for process progress and external-gate status.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "event_type",
+        "event_status",
+        "redacted_external_system_label"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "external_payload_without_separate_gate",
+        "credentials"
+      ]
+    },
+    {
+      "id": "audit_events",
+      "purpose": "Redacted audit metadata for gates, reviews and operator-visible evidence.",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "gate_status",
+        "review_status",
+        "redacted_actor_reference"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "tokens",
+        "secret_values",
+        "full_identity_claims"
+      ]
+    }
+  ],
+  "json_payload_policy": {
+    "schema_version_required": true,
+    "payload_type_required": true,
+    "redaction_class_required": true,
+    "template_version_reference_required": true,
+    "raw_mandate_content_allowed_before_separate_gate": false,
+    "allowed_initial_payload_types": [
+      "matter_status",
+      "process_instance_status",
+      "process_gate_status",
+      "duration_estimate",
+      "external_gate_metadata",
+      "audit_metadata"
+    ]
+  },
+  "graph_projection": {
+    "status": "projection_contract_only",
+    "target": "oracle_database_graph_projection",
+    "node_types": [
+      "Tenant",
+      "UserBinding",
+      "Session",
+      "Matter",
+      "ProcessTemplate",
+      "ProcessInstance",
+      "ProcessStep",
+      "Gate",
+      "ExternalSystem",
+      "DocumentReference",
+      "Deadline",
+      "FeeEvent",
+      "AuditEvent"
+    ],
+    "edge_types": [
+      "belongs_to",
+      "acts_as",
+      "uses_template",
+      "has_step",
+      "requires",
+      "blocks",
+      "produces",
+      "consumes",
+      "sent_to",
+      "received_from",
+      "signed_by",
+      "depends_on",
+      "parallel_with",
+      "critical_path_of",
+      "fee_basis_for",
+      "audited_by"
+    ]
+  },
+  "guardrails": {
+    "productive_schema_apply_approved": false,
+    "productive_graph_activation_approved": false,
+    "raw_mandate_data_in_git_allowed": false,
+    "secrets_in_git_allowed": false,
+    "oci_apply_approved": false,
+    "protected_pr_required": true
+  }
+}
