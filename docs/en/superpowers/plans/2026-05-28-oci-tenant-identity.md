@@ -102,8 +102,8 @@ def test_admin_provisioning_plan_is_dry_run_and_secret_free(self) -> None:
         domain="kanzlei-notariat.example",
         admin_email="admin@kanzlei-notariat.example",
         admin_display_name="Admin Notariat",
-        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-        identity_domain_id="ocid1.domain.oc1.example",
+        identity_domain_url="${NAC_OCI_IDENTITY_DOMAIN_URL}",
+        identity_domain_id="${NAC_OCI_IDENTITY_DOMAIN_ID}",
     )
     self.assertEqual(plan["mode"], "dry_run")
     self.assertTrue(plan["requires_human_approval"])

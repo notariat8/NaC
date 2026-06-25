@@ -21,7 +21,7 @@ def build_login_intent(
     state_ttl_seconds: int = DEFAULT_STATE_TTL_SECONDS,
 ) -> dict:
     base_url = _normalize_identity_domain_url(identity_domain_url)
-    normalized_client_id = _required_text(client_id, "client_id")
+    normalized_client_id = _normalize_client_id(client_id)
     normalized_redirect_uri = _normalize_redirect_uri(redirect_uri)
     normalized_hint = tenant_hint.strip()[:120]
     normalized_nonce = _server_nonce("nonce")
@@ -104,6 +104,13 @@ def _required_text(value: str, field: str) -> str:
     return normalized
 
 
+def _normalize_client_id(value: str) -> str:
+    normalized = _required_text(value, "client_id")
+    if normalized in {"nac-local-preview", "local-preview", "demo", "example"}:
+        raise ValueError("client_id_placeholder")
+    return normalized
+
+
 def _normalize_identity_domain_url(value: str) -> str:
     raw = value.strip().rstrip("/")
     if raw.endswith("/admin/v1"):
@@ -114,6 +121,8 @@ def _normalize_identity_domain_url(value: str) -> str:
     hostname = parsed.hostname or ""
     if not _is_oci_identity_domain_host(hostname):
         raise ValueError("identity_domain_url_not_oci_identity_domain")
+    if _is_placeholder_identity_domain_host(hostname):
+        raise ValueError("identity_domain_url_placeholder")
     return raw
 
 
@@ -129,6 +138,11 @@ def _is_oci_identity_domain_host(hostname: str) -> bool:
     return hostname.endswith(".identity.oraclecloud.com") or (
         ".identity." in hostname and hostname.endswith(".oci.oraclecloud.com")
     )
+
+
+def _is_placeholder_identity_domain_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip(".")
+    return normalized.startswith("idcs.example.") or ".example." in normalized
 
 
 def _server_nonce(prefix: str) -> str:

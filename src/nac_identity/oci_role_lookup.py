@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 
 from .oidc_jwt import build_oci_identity_domain_json_fetcher
 
@@ -215,7 +215,15 @@ def _normalized_identity_domain_url(value: str) -> str:
     if not isinstance(value, str):
         return ""
     normalized = value.strip().rstrip("/")
-    if not normalized.startswith("https://") or ".identity.oraclecloud.com" not in normalized:
+    if normalized.endswith("/admin/v1"):
+        normalized = normalized.removesuffix("/admin/v1").rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.scheme != "https" or not parsed.netloc:
+        return ""
+    hostname = (parsed.hostname or "").lower().strip(".")
+    if not hostname.endswith(".identity.oraclecloud.com"):
+        return ""
+    if hostname.startswith("idcs.example.") or ".example." in hostname:
         return ""
     return normalized
 

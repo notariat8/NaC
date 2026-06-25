@@ -53,7 +53,7 @@ Run: `/home/ubuntu/.venvs/nac/bin/python -m unittest tests.test_oci_tenant_ident
 
 ```python
 def test_tenant_apply_request_cli_is_review_artifact_only(self) -> None:
-    rc, output = run_cli("tenant", "apply-request", "--tenant-slug", "kanzlei-notariat", "--domain", "kanzlei-notariat.example", "--admin-email", "admin@kanzlei-notariat.example", "--admin-display-name", "Admin Notariat", "--identity-domain-url", "https://idcs.example.identity.oraclecloud.com:443", "--identity-domain-id", "ocid1.domain.oc1.example", "--dns-verified", "--owner-approval-id", "OWNER-APPROVED-32", "--audit-event-id", "AUDIT-32", "--rollback-plan-id", "ROLLBACK-32", "--dry-run", "--format", "json")
+    rc, output = run_cli("tenant", "apply-request", "--tenant-slug", "kanzlei-notariat", "--domain", "kanzlei-notariat.example", "--admin-email", "admin@kanzlei-notariat.example", "--admin-display-name", "Admin Notariat", "--identity-domain-url", "${NAC_OCI_IDENTITY_DOMAIN_URL}", "--identity-domain-id", "${NAC_OCI_IDENTITY_DOMAIN_ID}", "--dns-verified", "--owner-approval-id", "OWNER-APPROVED-32", "--audit-event-id", "AUDIT-32", "--rollback-plan-id", "ROLLBACK-32", "--dry-run", "--format", "json")
     self.assertEqual(rc, 0)
     self.assertTrue(json.loads(output)["ready_to_apply"])
 ```

@@ -108,7 +108,7 @@ curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat
 curl -i "https://app.notariat8.de/workspace"
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
-/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.invalid --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn show immobilienkaufvertrag --format text
 ```

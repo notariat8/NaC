@@ -237,8 +237,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             domain="kanzlei-notariat.example",
             admin_email="admin@kanzlei-notariat.example",
             admin_display_name="Admin Notariat",
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-            identity_domain_id="ocid1.domain.oc1.example",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
         )
 
         serialized = json.dumps(plan, sort_keys=True).lower()
@@ -246,8 +246,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(plan["mode"], "dry_run")
         self.assertTrue(plan["requires_human_approval"])
         self.assertFalse(plan["console_access_required_for_end_users"])
-        self.assertEqual(plan["target"]["users_endpoint"], "https://idcs.example.identity.oraclecloud.com:443/admin/v1/Users")
-        self.assertEqual(plan["target"]["groups_endpoint"], "https://idcs.example.identity.oraclecloud.com:443/admin/v1/Groups")
+        self.assertEqual(plan["target"]["users_endpoint"], "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/admin/v1/Users")
+        self.assertEqual(plan["target"]["groups_endpoint"], "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/admin/v1/Groups")
         self.assertEqual(plan["admin_user"]["user_name"], "admin@kanzlei-notariat.example")
         self.assertIn("nac-tenant-admin", plan["groups"])
         self.assertIn("users.create", plan["planned_writes"])
@@ -264,11 +264,26 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 domain="kanzlei-notariat.example",
                 admin_email="admin@gmail.com",
                 admin_display_name="Admin Notariat",
-                identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-                identity_domain_id="ocid1.domain.oc1.example",
+                identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
             )
 
         self.assertIn("admin_email_domain_mismatch", str(error.exception))
+
+    def test_admin_provisioning_plan_rejects_placeholder_identity_domain_url(self) -> None:
+        from nac_identity.oci_tenant import build_admin_provisioning_plan
+
+        with self.assertRaises(ValueError) as error:
+            build_admin_provisioning_plan(
+                tenant_slug="kanzlei-notariat",
+                domain="kanzlei-notariat.example",
+                admin_email="admin@kanzlei-notariat.example",
+                admin_display_name="Admin Notariat",
+                identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+                identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
+            )
+
+        self.assertIn("identity_domain_url_placeholder", str(error.exception))
 
     def test_apply_request_requires_all_apply_gates(self) -> None:
         from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request
@@ -278,8 +293,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             domain="kanzlei-notariat.example",
             admin_email="admin@kanzlei-notariat.example",
             admin_display_name="Admin Notariat",
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-            identity_domain_id="ocid1.domain.oc1.example",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
         )
 
         request = build_apply_request(
@@ -306,8 +321,8 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             domain="kanzlei-notariat.example",
             admin_email="admin@kanzlei-notariat.example",
             admin_display_name="Admin Notariat",
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-            identity_domain_id="ocid1.domain.oc1.example",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
         )
 
         request = build_apply_request(
@@ -335,7 +350,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         intent = build_login_intent(
             tenant_hint="notariat-musterstadt",
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             client_id="nac-web-app",
             redirect_uri="https://app.notariat8.de/auth/callback",
         )
@@ -349,11 +364,11 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertTrue(intent["guardrails"]["server_generated_state_required"])
         self.assertEqual(
             intent["endpoints"]["authorization_endpoint"],
-            "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/authorize",
+            "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/authorize",
         )
         self.assertEqual(
             intent["endpoints"]["discovery_endpoint"],
-            "https://idcs.example.identity.oraclecloud.com:443/.well-known/openid-configuration",
+            "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/.well-known/openid-configuration",
         )
         self.assertIn("response_type=code", intent["authorization_url"])
         self.assertIn("client_id=nac-web-app", intent["authorization_url"])
@@ -370,7 +385,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         intent = build_login_intent(
             tenant_hint="notariat-musterstadt",
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             client_id="nac-web-app",
             redirect_uri="https://app.notariat8.de/auth/callback",
             state_signing_key="unit-test-state-signing-key",
@@ -625,13 +640,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         nonce = "nonce-from-id-token"
         result = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin", "other-group"],
                 "email": "admin@example.test",
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -660,12 +675,12 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         nonce = "nonce-from-id-token"
         result = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": nonce,
                 "groups": ["viewer"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -694,18 +709,18 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation=state_validation,
         )
         wrong_audience = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "wrong-client",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation=state_validation,
         )
@@ -720,23 +735,23 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         result_without_binding = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": "nonce-from-id-token",
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation={"status": "valid", "nonce_bound": False},
         )
         result_with_mismatch = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": "nonce-from-id-token",
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -755,7 +770,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
 
         nonce = "nonce-from-id-token"
         claims = {
-            "iss": "https://idcs.example.identity.oraclecloud.com:443",
+            "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             "aud": "notariat8_nac_app",
             "nonce": nonce,
             "groups": ["nac-tenant-admin"],
@@ -773,7 +788,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         )
         missing_audience = evaluate_oidc_role_gate(
             claims=claims,
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="",
             state_validation=state_validation,
         )
@@ -807,34 +822,34 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         }
         issuer_with_space = evaluate_oidc_role_gate(
             claims={
-                "iss": " https://idcs.example.identity.oraclecloud.com:443",
+                "iss": " https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation=state_validation,
         )
         audience_with_space = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app ",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation=state_validation,
         )
         nonce_with_space = evaluate_oidc_role_gate(
             claims={
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": f" {nonce}",
                 "groups": ["nac-tenant-admin"],
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             state_validation=state_validation,
         )
@@ -1063,7 +1078,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(result["reason"], "role_missing")
         self.assertNotIn("case-secret-1", serialized_contexts)
         self.assertNotIn("myjur", serialized_contexts)
-        self.assertNotIn("idcs.example.identity.oraclecloud.com", serialized_contexts)
+        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", serialized_contexts)
         self.assertNotIn("admin@example.test", serialized_contexts)
 
     def test_workspace_binding_context_normalizers_fail_closed_for_unbound_inputs(self) -> None:
@@ -1102,7 +1117,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "nonce_hash": hashlib.sha256(b"nonce-secret-for-id-token").hexdigest(),
             },
             token_exchange_result=None,
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -1134,14 +1149,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -1235,14 +1250,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1271,7 +1286,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertNotIn(hashlib.sha256(nonce.encode("utf-8")).hexdigest(), serialized)
         self.assertNotIn("admin@example.test", serialized)
         self.assertNotIn("notariat8_nac_app", set_cookie)
-        self.assertNotIn("idcs.example.identity.oraclecloud.com", set_cookie)
+        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", set_cookie)
         self.assertNotIn("nac-tenant-admin", set_cookie)
         self.assertNotIn(nonce, set_cookie)
         self.assertNotIn("admin@example.test", set_cookie)
@@ -1290,14 +1305,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1344,14 +1359,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1412,14 +1427,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1466,13 +1481,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1539,14 +1554,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1607,14 +1622,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1654,13 +1669,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -1705,13 +1720,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["wrong-role"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
         )
@@ -1733,7 +1748,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "nonce_hash": hashlib.sha256(b"nonce-from-id-token").hexdigest(),
             },
             token_exchange_result={"status": "invalid", "error_description": "provider detail"},
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -1762,7 +1777,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                     "groups": ["nac-tenant-admin"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
 
@@ -1800,7 +1815,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             configured=True,
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             exchanger_result={
                 "status": "verified",
@@ -1809,7 +1824,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "id_token": "sample-id-token-value",
                 "error_description": "provider detail",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
@@ -1870,7 +1885,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         def verify_id_token(id_token: str) -> dict[str, object]:
             self.assertEqual(id_token, "sample-id-token-value")
             return {
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": "nonce-from-id-token",
                 "groups": ["nac-tenant-admin"],
@@ -1880,7 +1895,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         exchange = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="client-secret-value",
             id_token_verifier=verify_id_token,
@@ -1890,7 +1905,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             configured=True,
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             exchanger_result=exchange,
         )
@@ -1904,7 +1919,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         self.assertEqual(public_result["status"], "verified")
         self.assertEqual(public_result["mode"], "server_side_token_exchange")
         self.assertTrue(public_result["guardrails"]["live_token_exchange_performed"])
-        self.assertEqual(calls[0]["url"], "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token")
+        self.assertEqual(calls[0]["url"], "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token")
         self.assertIn("grant_type=authorization_code", request_body)
         self.assertIn("code=secret-code-from-idp", request_body)
         self.assertIn("client_secret=client-secret-value", request_body)
@@ -1936,7 +1951,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         missing_secret = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="",
             id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
@@ -1945,7 +1960,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         missing_verifier = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="client-secret-value",
             id_token_verifier=None,
@@ -1982,7 +1997,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         result = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="client-secret-value",
             id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
@@ -2003,7 +2018,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             configured=True,
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             exchanger_result=result,
         )
@@ -2032,7 +2047,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         result = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="client-secret-value",
             id_token_verifier=lambda _id_token: {"aud": "notariat8_nac_app"},
@@ -2065,7 +2080,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             return exchange_oidc_authorization_code(
                 code="secret-code-from-idp",
                 redirect_uri="https://app.notariat8.de/auth/callback",
-                token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+                token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
                 client_id="notariat8_nac_app",
                 client_secret="client-secret-value",
                 id_token_verifier=verifier,
@@ -2090,7 +2105,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             configured=True,
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             exchanger_result=id_token_verification_failed,
         ).public_result()
@@ -2114,7 +2129,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
     def test_oidc_id_token_verifier_accepts_rs256_jwks_claims(self) -> None:
         from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 
-        issuer = "https://idcs.example.identity.oraclecloud.com:443"
+        issuer = "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com"
         audience = "notariat8_nac_app"
         fetch_urls: list[str] = []
 
@@ -2163,7 +2178,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 
         issuer = "https://identity.oraclecloud.com/"
-        discovery_base_url = "https://idcs.example.identity.oraclecloud.com:443"
+        discovery_base_url = "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com"
         audience = "notariat8_nac_app"
         fetch_urls: list[str] = []
 
@@ -2208,7 +2223,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
 
         issuer = "https://identity.oraclecloud.com/"
-        discovery_base_url = "https://idcs.example.identity.oraclecloud.com:443"
+        discovery_base_url = "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com"
         audience = "notariat8_nac_app"
         signed_requests: list[dict[str, object]] = []
         test_case = self
@@ -2305,7 +2320,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
     def test_oidc_id_token_verifier_fails_closed_for_bad_signature_or_claims(self) -> None:
         from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 
-        issuer = "https://idcs.example.identity.oraclecloud.com:443"
+        issuer = "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com"
         audience = "notariat8_nac_app"
 
         def fetch_json(url: str) -> dict[str, object]:
@@ -2361,11 +2376,11 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         exchange = exchange_oidc_authorization_code(
             code="secret-code-from-idp",
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             client_secret="client-secret-value",
             id_token_verifier=lambda _id_token: {
-                "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "aud": "notariat8_nac_app",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
@@ -2380,7 +2395,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=True,
             token_exchange_configured=True,
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2389,7 +2404,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "nonce_hash": hashlib.sha256(nonce.encode("utf-8")).hexdigest(),
             },
             token_exchange_result=exchange,
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -2439,7 +2454,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=True,
             token_exchange_configured=True,
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2471,7 +2486,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=True,
             token_exchange_configured=True,
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2485,14 +2500,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "id_token": "sample-id-token-value",
                 "error_description": "provider detail",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -2521,7 +2536,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=True,
             token_exchange_configured=True,
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2534,14 +2549,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "mode": "server_side_token_exchange",
                 "live_token_exchange_performed": True,
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -2569,7 +2584,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=True,
             token_exchange_configured=True,
             redirect_uri="",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2581,14 +2596,14 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
                 "status": "verified",
                 "access_token": "sample-access-token-value",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
         serialized = json.dumps(result, sort_keys=True)
@@ -2621,13 +2636,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
 
@@ -2648,7 +2663,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             state_validation_configured=False,
             token_exchange_configured=True,
             redirect_uri="https://app.notariat8.de/auth/callback",
-            token_endpoint="https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/token",
+            token_endpoint="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
             client_id="notariat8_nac_app",
             state_validation={
                 "status": "valid",
@@ -2659,13 +2674,13 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": nonce,
                     "groups": ["nac-tenant-admin"],
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
         )
 
@@ -2680,7 +2695,7 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as error:
             build_login_intent(
                 tenant_hint="notariat-musterstadt",
-                identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+                identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 client_id="nac-web-app",
                 redirect_uri="http://app.notariat8.de/auth/callback",
             )
@@ -2699,6 +2714,32 @@ class NaCOciTenantIdentityTests(unittest.TestCase):
             )
 
         self.assertIn("identity_domain_url_not_oci_identity_domain", str(error.exception))
+
+    def test_login_intent_rejects_placeholder_identity_domain_url(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+
+        with self.assertRaises(ValueError) as error:
+            build_login_intent(
+                tenant_hint="notariat-musterstadt",
+                identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+                client_id="nac-web-app",
+                redirect_uri="https://app.notariat8.de/auth/callback",
+            )
+
+        self.assertIn("identity_domain_url_placeholder", str(error.exception))
+
+    def test_login_intent_rejects_placeholder_client_id(self) -> None:
+        from nac_identity.oci_login import build_login_intent
+
+        with self.assertRaises(ValueError) as error:
+            build_login_intent(
+                tenant_hint="notariat-musterstadt",
+                identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                client_id="nac-local-preview",
+                redirect_uri="https://app.notariat8.de/auth/callback",
+            )
+
+        self.assertIn("client_id_placeholder", str(error.exception))
 
 
 if __name__ == "__main__":

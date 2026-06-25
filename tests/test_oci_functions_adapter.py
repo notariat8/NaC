@@ -620,7 +620,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_OIDC_STATE_SIGNING_KEY": "test-signing-key",
@@ -697,7 +697,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
@@ -780,14 +780,14 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs.example.identity.oraclecloud.com:443",
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
                     "aud": "notariat8_nac_app",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-tenant-admin"],
                     "email": "admin@example.test",
                 },
             },
-            expected_issuer="https://idcs.example.identity.oraclecloud.com:443",
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             expected_audience="notariat8_nac_app",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -825,7 +825,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("myjur", body)
         self.assertNotIn("admin@example.test", body)
         self.assertNotIn("notariat8_nac_app", body)
-        self.assertNotIn("idcs.example.identity.oraclecloud.com", body)
+        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", body)
         self.assertNotIn("Oracle", body)
         self.assertNotIn("OCI", body)
 

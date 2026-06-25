@@ -118,7 +118,7 @@ app. Codex or a local importer first writes only an import proposal under
 `eingang/import-vorschlaege/`. The office surface shows that proposal with
 recognized metadata and files. Only the explicit `Übernehmen` action creates a
 demo matter and journal event from it. For real production data, raw document
-storage must stay outside public Git repositories; demo mode only permits
+storage must stay outside public Git repositories; fixture mode only permits
 synthetic test data.
 
 Uploads from the web app now also create a bounded Codex extraction job under

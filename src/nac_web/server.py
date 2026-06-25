@@ -79,8 +79,6 @@ ROLE_LABELS_DE = {
     "testator": "Erblasser",
 }
 
-DEFAULT_OCI_IDENTITY_DOMAIN_URL = "https://idcs.example.identity.oraclecloud.com:443"
-DEFAULT_OCI_IDENTITY_DOMAIN_ID = "ocid1.domain.oc1.example"
 LOGGER = logging.getLogger(__name__)
 DEFAULT_OWNER_APPLY_APPROVAL_ID = "OWNER-APPLY-2026-0001"
 DEFAULT_AUDIT_EVENT_ID = "AUDIT-2026-0001"
@@ -1804,19 +1802,44 @@ def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
     return _layout("notariat8 Domain vorbereiten" if public_context else "NaC Domain-Readiness", body)
 
 
+def build_admin_identity_config_required_page(reason: str) -> str:
+    safe_reason = html.escape(reason)
+    body = f"""
+    <nav class="topline"><a href="/admin/onboarding">← Admin-Queue</a></nav>
+    <section class="hero">
+      <p class="eyebrow">OCI Identity</p>
+      <h1>Konfiguration erforderlich</h1>
+      <p>Admin-Provisioning startet nur mit einer echten OCI Identity Domain aus der Serverumgebung.</p>
+    </section>
+    <section class="notice">
+      <h2>Blockiert</h2>
+      <p><strong>Grund:</strong> <code>{safe_reason}</code></p>
+      <ul class="link-list">
+        <li><span><code>NAC_OCI_IDENTITY_DOMAIN_URL</code> muss auf eine echte OCI Identity Domain zeigen.</span></li>
+        <li><span><code>NAC_OCI_IDENTITY_DOMAIN_ID</code> muss die echte Identity-Domain-OCID enthalten.</span></li>
+      </ul>
+    </section>
+    """
+    return _layout("NaC OCI-Konfiguration erforderlich", body)
+
+
 def build_admin_provisioning_preview_page(query: str) -> str:
     params = parse_qs(query, keep_blank_values=True)
     domain = _query_text(params, "domain")
     tenant_slug = _query_text(params, "tenant_slug")
     admin_email = _query_text(params, "admin_email")
-    plan = build_admin_provisioning_plan(
-        tenant_slug=tenant_slug,
-        domain=domain,
-        admin_email=admin_email,
-        admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
-        identity_domain_url=DEFAULT_OCI_IDENTITY_DOMAIN_URL,
-        identity_domain_id=DEFAULT_OCI_IDENTITY_DOMAIN_ID,
-    )
+    try:
+        identity_target = _admin_identity_target_from_env()
+        plan = build_admin_provisioning_plan(
+            tenant_slug=tenant_slug,
+            domain=domain,
+            admin_email=admin_email,
+            admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
+            identity_domain_url=identity_target["identity_domain_url"],
+            identity_domain_id=identity_target["identity_domain_id"],
+        )
+    except ValueError as exc:
+        return build_admin_identity_config_required_page(str(exc))
     planned_write_items = "".join(
         f"<li><span>{html.escape(write)}</span></li>" for write in plan["planned_writes"]
     )
@@ -1898,14 +1921,18 @@ def build_admin_apply_readiness_page(query: str) -> str:
     domain = _query_text(params, "domain")
     tenant_slug = _query_text(params, "tenant_slug")
     admin_email = _query_text(params, "admin_email")
-    plan = build_admin_provisioning_plan(
-        tenant_slug=tenant_slug,
-        domain=domain,
-        admin_email=admin_email,
-        admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
-        identity_domain_url=DEFAULT_OCI_IDENTITY_DOMAIN_URL,
-        identity_domain_id=DEFAULT_OCI_IDENTITY_DOMAIN_ID,
-    )
+    try:
+        identity_target = _admin_identity_target_from_env()
+        plan = build_admin_provisioning_plan(
+            tenant_slug=tenant_slug,
+            domain=domain,
+            admin_email=admin_email,
+            admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
+            identity_domain_url=identity_target["identity_domain_url"],
+            identity_domain_id=identity_target["identity_domain_id"],
+        )
+    except ValueError as exc:
+        return build_admin_identity_config_required_page(str(exc))
     apply_request = build_apply_request(
         plan,
         dns_verified=_optional_query_bool(params, "dns_verified", default=True),
@@ -2775,6 +2802,23 @@ def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
     }
     if any(params.get(field) for field in server_side_fields):
         raise ValueError("login_intent_config_is_server_side")
+
+
+def _admin_identity_target_from_env() -> dict[str, str]:
+    config = {
+        "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
+        "identity_domain_id": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_ID", "").strip(),
+    }
+    if not all(config.values()):
+        raise ValueError("admin_identity_config_missing")
+    if _is_placeholder_identity_domain_id(config["identity_domain_id"]):
+        raise ValueError("identity_domain_id_placeholder")
+    return config
+
+
+def _is_placeholder_identity_domain_id(value: str) -> bool:
+    normalized = value.strip().lower()
+    return normalized in {"example", "demo"} or normalized.endswith(".example")
 
 
 def _login_intent_config_from_env(

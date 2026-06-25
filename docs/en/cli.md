@@ -81,8 +81,8 @@ nac bpmn validate
 nac config list
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
-nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run
-nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run
+nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
@@ -189,7 +189,7 @@ NaC then creates an admin-provisioning plan for OCI Identity Domains. This
 command does not write to OCI and contains no credentials:
 
 ```bash
-nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dry-run --format json
+nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run --format json
 ```
 
 Productive identity writes require separate owner review and explicit apply
@@ -199,7 +199,7 @@ When DNS verification, owner approval, audit event and rollback plan are
 prepared, NaC still creates only a review artifact:
 
 ```bash
-nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url https://idcs.example.identity.oraclecloud.com:443 --identity-domain-id ocid1.domain.oc1.example --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run --format json
+nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run --format json
 ```
 
 This command is not yet an OCI connector and performs no user, group or

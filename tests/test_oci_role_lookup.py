@@ -14,6 +14,14 @@ from nac_identity.oci_role_lookup import build_oci_identity_domain_role_membersh
 
 
 class OciRoleLookupTests(unittest.TestCase):
+    def test_rejects_placeholder_identity_domain_url(self) -> None:
+        resolver = build_oci_identity_domain_role_membership_resolver(
+            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            fetcher=lambda _url: {},
+        )
+
+        self.assertIsNone(resolver)
+
     def test_confirms_role_from_identity_domain_group_membership(self) -> None:
         seen_urls: list[str] = []
 
@@ -40,7 +48,7 @@ class OciRoleLookupTests(unittest.TestCase):
             return {}
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -83,7 +91,7 @@ class OciRoleLookupTests(unittest.TestCase):
             return {}
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -119,7 +127,7 @@ class OciRoleLookupTests(unittest.TestCase):
             return {}
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -168,7 +176,7 @@ class OciRoleLookupTests(unittest.TestCase):
             return {}
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -197,7 +205,7 @@ class OciRoleLookupTests(unittest.TestCase):
             return {}
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -215,7 +223,7 @@ class OciRoleLookupTests(unittest.TestCase):
             raise RuntimeError("network detail should not escape")
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 
@@ -233,7 +241,7 @@ class OciRoleLookupTests(unittest.TestCase):
     def test_reports_redacted_http_failure_class_when_identity_domain_forbidden(self) -> None:
         def fetcher(_url: str):
             raise HTTPError(
-                "https://idcs.example.identity.oraclecloud.com/admin/v1/Users",
+                "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/admin/v1/Users",
                 403,
                 "forbidden detail should not escape",
                 hdrs=None,
@@ -241,7 +249,7 @@ class OciRoleLookupTests(unittest.TestCase):
             )
 
         resolver = build_oci_identity_domain_role_membership_resolver(
-            identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+            identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
             fetcher=fetcher,
         )
 

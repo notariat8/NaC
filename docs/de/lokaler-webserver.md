@@ -122,7 +122,7 @@ Import-Vorschlag unter `eingang/import-vorschlaege/`. Die Bürooberfläche zeigt
 diesen Vorschlag mit erkannten Metadaten und Dateien an. Erst die explizite
 Aktion `Übernehmen` erzeugt daraus eine Demo-Akte mit Journalereignis. Für
 echte Produktivdaten bleibt Rohdokumentablage außerhalb öffentlicher Git-Repos
-verpflichtend; im Demo-Modus sind nur synthetische Testdaten zulässig.
+verpflichtend; im Fixture-Modus sind ausschließlich synthetische Testdaten zulässig.
 
 Bei Uploads aus der Webapp entsteht zusätzlich ein begrenzter
 Codex-Extraktionsauftrag unter `eingang/jobs/`. Codex oder die zentrale CLI kann

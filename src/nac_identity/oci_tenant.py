@@ -239,4 +239,21 @@ def _normalize_identity_domain_url(value: str) -> str:
     parsed = urlparse(raw)
     if parsed.scheme != "https" or not parsed.netloc:
         raise ValueError("identity_domain_url_invalid")
+    hostname = parsed.hostname or ""
+    if not _is_oci_identity_domain_host(hostname):
+        raise ValueError("identity_domain_url_not_oci_identity_domain")
+    if _is_placeholder_identity_domain_host(hostname):
+        raise ValueError("identity_domain_url_placeholder")
     return raw
+
+
+def _is_oci_identity_domain_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip(".")
+    return normalized.endswith(".identity.oraclecloud.com") or (
+        ".identity." in normalized and normalized.endswith(".oci.oraclecloud.com")
+    )
+
+
+def _is_placeholder_identity_domain_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip(".")
+    return normalized.startswith("idcs.example.") or ".example." in normalized

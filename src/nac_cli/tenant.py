@@ -202,7 +202,7 @@ def write_sample_matter(
     repo = tenant_repo.expanduser().resolve()
     manifest = _load_manifest(repo)
     if manifest.get("mode") != "demo":
-        raise ValueError("Musterakten werden nur im Demo-Modus erzeugt.")
+        raise ValueError("Musterakten werden nur im Fixture-Modus erzeugt.")
 
     akten_id = matter_id or "UVZ-2026-0001"
     year = "2026"

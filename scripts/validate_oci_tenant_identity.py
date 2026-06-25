@@ -101,8 +101,8 @@ def _validate_admin_plan(errors: list[str]) -> None:
         domain="kanzlei-notariat.example",
         admin_email="admin@kanzlei-notariat.example",
         admin_display_name="Admin Notariat",
-        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-        identity_domain_id="ocid1.domain.oc1.example",
+        identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+        identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
     )
     if plan.get("mode") != "dry_run":
         errors.append("Admin provisioning plan must be dry_run")
@@ -127,8 +127,8 @@ def _validate_apply_request(errors: list[str]) -> None:
         domain="kanzlei-notariat.example",
         admin_email="admin@kanzlei-notariat.example",
         admin_display_name="Admin Notariat",
-        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
-        identity_domain_id="ocid1.domain.oc1.example",
+        identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+        identity_domain_id="ocid1.domain.oc1..aaaaaaaarealidentitydomain",
     )
     blocked = build_apply_request(
         plan,
@@ -163,14 +163,14 @@ def _validate_apply_request(errors: list[str]) -> None:
 def _validate_login_intent(errors: list[str]) -> None:
     intent = build_login_intent(
         tenant_hint="notariat-musterstadt",
-        identity_domain_url="https://idcs.example.identity.oraclecloud.com:443",
+        identity_domain_url="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
         client_id="nac-web-app",
         redirect_uri="https://app.notariat8.de/auth/callback",
     )
     if intent.get("schema_version") != "nac.oci-login-intent/v0.1":
         errors.append("Login intent schema_version is unexpected")
     if not str(intent.get("authorization_url", "")).startswith(
-        "https://idcs.example.identity.oraclecloud.com:443/oauth2/v1/authorize?"
+        "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/authorize?"
     ):
         errors.append("Login intent must point to OCI authorize endpoint")
     if intent.get("tenant_context", {}).get("tenant_authorized_by_hint") is not False:
