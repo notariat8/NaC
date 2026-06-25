@@ -1,0 +1,24 @@
+{
+  "schema_version": "nac.runtime-status-presenter/v0.1",
+  "contract_status": "owner_free_contract_first",
+  "source": "nac.runtime-status-read-model/v0.1",
+  "purpose": "Render the first Immobilienkaufvertrag runtime status as public-safe demo text before wiring it into the live workspace route.",
+  "output": {
+    "title": "public_demo_label",
+    "matter_label": "public_demo_label",
+    "status_items": "public_safe_strings",
+    "next_steps": "public_safe_strings"
+  },
+  "output_guardrails": {
+    "tenant_id": false,
+    "matter_id": false,
+    "process_instance_id": false,
+    "session_id": false,
+    "provider_details": false,
+    "claims": false,
+    "emails": false,
+    "mandate_data": false,
+    "productive_xnp_action": false,
+    "full_workspace_open": false
+  }
+}
