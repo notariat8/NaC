@@ -57,7 +57,14 @@ Damit kann ein Notar oder Prüfer auch ohne Webapp sehen:
 
 ## Grenze
 
-Das aktuelle GitHub-Datenrepo bleibt ein Demo-Ziel. Produktive Daten brauchen
-einen geprüften Sovereign-/DSGVO-Git-Anbieter oder eine gleichwertige lokale
-Git-Infrastruktur. Das Modell soll beim Umzug gleich bleiben; nur Remote,
-Berechtigungen, Verschlüsselung, Retention und Betrieb ändern sich.
+Das aktuelle GitHub-Datenrepo bleibt ein Demo- und Template-Ziel. Produktive
+SaaS-Laufzeitmetadaten gehören nach der ATP-Zielarchitektur in ATP:
+Mandanten-, Benutzer-, Vorgangs-, Prozessinstanz-, Ereignis-, Fristen- und
+Audit-Metadaten werden dort als transaktionale Anker, versionierte
+JSON-Payloads und daraus abgeleitete Graph-Projektionen geführt.
+
+Git darf weiter synthetische Demo-Akten, freigegebene Templates und
+Exportmodelle enthalten. Rohmandatsdaten, Rohdokumente, Ausweis-, Register-
+oder Grundbuchinhalte gehören weder in Git noch in den ersten ATP-Graph-Slice;
+sie brauchen separate Datenschutz-, Aufbewahrungs-, Rollen-,
+Verschlüsselungs- und Apply-Gates.

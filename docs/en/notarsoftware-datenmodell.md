@@ -56,7 +56,13 @@ This lets a notary or reviewer see without web-app access:
 
 ## Boundary
 
-The current GitHub data repository remains a demo target. Production data needs
-a reviewed sovereign/GDPR Git provider or equivalent local Git infrastructure.
-The model should stay the same during migration; only remote, permissions,
-encryption, retention and operations change.
+The current GitHub data repository remains a demo and template target.
+Productive SaaS runtime metadata belongs in ATP according to the ATP target
+architecture: tenant, user, matter, process-instance, event, deadline and audit
+metadata are kept there as transactional anchors, versioned JSON payloads and
+derived graph projections.
+
+Git may still contain synthetic demo matters, approved templates and export
+models. Raw mandate data, raw documents, ID, register or land-register content
+belong neither in Git nor in the first ATP graph slice; they need separate data
+protection, retention, role, encryption and apply gates.

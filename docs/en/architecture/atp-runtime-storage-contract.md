@@ -54,6 +54,25 @@ At this stage, these anchors may only hold safe metadata. Raw data from
 matters, deeds, IDs, powers of attorney, register lookups or land-register data
 requires a separate design, protection and apply gate.
 
+## v0.1 Implementation Boundary
+
+The `runtime_graph_metadata_v0` slice does not implement every target anchor
+through the same adapter surface:
+
+- `tenants`, `user_bindings`, `matters`, `process_instances`,
+  `process_events` and `audit_events` are the first `RuntimeStoreAdapter`
+  boundary for graph status and tests.
+- `process_templates` is a schema-artifact anchor, but the v0.1 adapter only
+  carries the approved template reference in the `process_instances` payload.
+  A dedicated template adapter method remains deferred.
+- `sessions` belong to the ATP runtime target model, but are externalized from
+  this graph slice: the portal-session path runs through
+  `nac_identity.session_store.AtpSessionStore` and
+  [atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+
+This keeps process graph projection scoped to `process_events` and prevents
+auth/session-revocation logic from being mixed into matter status.
+
 ## Schema Artifact
 
 The first technical schema slice is captured as a non-destructive artifact in

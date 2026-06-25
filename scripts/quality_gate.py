@@ -126,6 +126,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_ai_sbom.py"],
                 ),
                 (
+                    "atp_runtime_contracts",
+                    "ATP Runtime Contract Parity",
+                    [sys.executable, "scripts/validate_atp_runtime_contracts.py"],
+                ),
+                (
                     "knowledge_graph",
                     "Knowledge Graph Baseline",
                     [sys.executable, "scripts/validate_knowledge_graph.py"],

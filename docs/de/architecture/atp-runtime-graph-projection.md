@@ -35,3 +35,20 @@ Runtime-UI und keine produktive Aktivierung.
 
 Eine spätere Oracle-Graph- oder PGQL-Nutzung braucht ein eigenes Owner-Apply-
 und Kosten-Gate, inklusive Rollenfreigabe wie `GRAPH_DEVELOPER`.
+
+## Runtime-Vokabular v0.1
+
+Die Python-Projektion nutzt bewusst ein kleines Runtime-Vokabular und mappt es
+auf die kanonischen Architekturbegriffe:
+
+| Runtime-Typ | Kanonischer Begriff |
+| --- | --- |
+| `process_instance` | `ProcessInstance` |
+| `gate` | `Gate` |
+| `external_system` | `ExternalSystem` |
+| `has_event_gate` | `has_step` |
+| `touches_gate` | `external_gate_touchpoint` |
+| `depends_on` | `depends_on` |
+
+Neue Knoten- oder Kantentypen brauchen eine Contract-Änderung und Validator-
+Nachweis, bevor sie in der Runtime-Projektion auftauchen.

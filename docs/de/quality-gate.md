@@ -30,8 +30,8 @@ CI:
 - `standard`: `minimal` + Privacy Lint
 - `strict`: `standard` + Governance Policy Sync + Spec-Traceability +
   Language Parity inklusive Skill-Sprachmarkern + Documentation Links +
-  BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM + Knowledge
-  Graph
+  BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM +
+  ATP-Runtime-Contract + Knowledge Graph
 
 ## Feste Reihenfolge
 
@@ -49,7 +49,15 @@ CI:
    Roadmap-/Scope-/Statusupdates)
 11. `cloud_runbook_parity` (nur `strict`)
 12. `ai_sbom` (nur `strict`)
-13. `knowledge_graph` (nur `strict`)
+13. `atp_runtime_contracts` (nur `strict`)
+14. `knowledge_graph` (nur `strict`)
+15. `kg_editor` (nur `strict`)
+16. `codex_parallel_review` (nur `strict`)
+17. `gnotkg_costs` (nur `strict`)
+18. `secure_document_links` (nur `strict`)
+19. `legal_research_connectors` (nur `strict`)
+20. `legal_graph_contracts` (nur `strict`)
+21. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 

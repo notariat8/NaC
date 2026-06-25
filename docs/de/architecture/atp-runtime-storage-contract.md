@@ -56,6 +56,25 @@ Diese Anker dürfen im ersten Schritt nur sichere Metadaten aufnehmen. Rohdaten
 aus Mandaten, Urkunden, Ausweisen, Vollmachten, Registerabrufen oder
 Grundbuchdaten brauchen einen eigenen Design-, Schutz- und Apply-Gate.
 
+## Umsetzungsgrenze v0.1
+
+Der `runtime_graph_metadata_v0`-Slice setzt nicht alle Zielanker über dieselbe
+Adapterfläche um:
+
+- `tenants`, `user_bindings`, `matters`, `process_instances`,
+  `process_events` und `audit_events` sind die erste
+  `RuntimeStoreAdapter`-Grenze für Graph-Status und Tests.
+- `process_templates` ist im Schema-Artefakt ein Anker, wird im v0.1-Adapter
+  aber nur als freigegebene Template-Referenz im `process_instances`-Payload
+  getragen. Eine eigene Template-Adaptermethode bleibt deferred.
+- `sessions` gehören zum ATP-Runtime-Zielmodell, sind aber in diesem
+  Graph-Slice externalisiert: der Portal-Session-Pfad läuft über
+  `nac_identity.session_store.AtpSessionStore` und
+  [atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+
+Damit bleibt die Prozessgraph-Projektion klar auf `process_events` begrenzt und
+vermischt keine Auth-/Session-Widerrufslogik mit Vorgangsstatus.
+
 ## Schema-Artefakt
 
 Der erste technische Schema-Zuschnitt liegt als nicht-destruktives Artefakt in

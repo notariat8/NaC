@@ -21,3 +21,14 @@ ein deterministischer Testadapter und keine produktive ATP-Anbindung.
 Dieser Slice ist absichtlich disjunkt zu ATP-Schema- oder Deploy-PRs. Ein
 späterer ATP-Adapter kann denselben Vertrag implementieren, ohne dass dieser
 PR Datenbankobjekte anlegt oder Mandatsdaten berührt.
+
+## Scope-Parität
+
+Der Adapter-Scope ist enger als der gesamte ATP-Zielvertrag:
+
+- `sessions` werden nicht über `RuntimeStoreAdapter` modelliert, sondern über
+  den separaten Portal-Session-Store.
+- `process_templates` sind im Runtime-Graph-Slice nur als `template_ref` im
+  Prozessinstanz-Payload sichtbar.
+- Graph Studio, PGQL, Property Graph und RDF/OWL bleiben Analyse-/Zielbegriffe
+  ohne Runtime-Abhängigkeit.

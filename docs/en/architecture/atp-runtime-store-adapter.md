@@ -21,3 +21,14 @@ adapter, not a productive ATP integration.
 This slice is intentionally disjoint from ATP schema or deployment PRs. A later
 ATP adapter can implement the same contract without this PR creating database
 objects or touching mandate data.
+
+## Scope Parity
+
+The adapter scope is narrower than the full ATP target contract:
+
+- `sessions` are not modeled through `RuntimeStoreAdapter`; they use the
+  separate portal session store.
+- `process_templates` are only visible in the runtime graph slice as
+  `template_ref` on the process-instance payload.
+- Graph Studio, PGQL, property graph and RDF/OWL remain analysis/target terms
+  without a runtime dependency.

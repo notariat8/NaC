@@ -31,7 +31,8 @@ CI:
 - `standard`: `minimal` plus privacy lint
 - `strict`: `standard` plus governance policy sync, spec traceability,
   language parity including skill language markers, documentation links, BPMN
-  model validation, cloud runbook parity, Gantt, AI-SBOM and knowledge graph
+  model validation, cloud runbook parity, Gantt, AI-SBOM, ATP runtime
+  contract and knowledge graph
 
 ## Fixed Order
 
@@ -49,7 +50,15 @@ CI:
    updates
 11. `cloud_runbook_parity` only in `strict`
 12. `ai_sbom` only in `strict`
-13. `knowledge_graph` only in `strict`
+13. `atp_runtime_contracts` only in `strict`
+14. `knowledge_graph` only in `strict`
+15. `kg_editor` only in `strict`
+16. `codex_parallel_review` only in `strict`
+17. `gnotkg_costs` only in `strict`
+18. `secure_document_links` only in `strict`
+19. `legal_research_connectors` only in `strict`
+20. `legal_graph_contracts` only in `strict`
+21. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

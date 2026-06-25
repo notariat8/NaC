@@ -34,3 +34,20 @@ not a productive activation.
 
 A later Oracle Graph or PGQL use needs a separate owner apply and cost gate,
 including role approval such as `GRAPH_DEVELOPER`.
+
+## Runtime Vocabulary v0.1
+
+The Python projection deliberately uses a small runtime vocabulary and maps it
+to the canonical architecture terms:
+
+| Runtime type | Canonical term |
+| --- | --- |
+| `process_instance` | `ProcessInstance` |
+| `gate` | `Gate` |
+| `external_system` | `ExternalSystem` |
+| `has_event_gate` | `has_step` |
+| `touches_gate` | `external_gate_touchpoint` |
+| `depends_on` | `depends_on` |
+
+New node or edge types need a contract change and validator evidence before
+they appear in the runtime projection.

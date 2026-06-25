@@ -47,5 +47,25 @@
     "secret_material": false,
     "browser_raw_identifiers": false,
     "productive_xnp_action": false
+  },
+  "runtime_vocabulary": {
+    "node_types": [
+      "process_instance",
+      "gate",
+      "external_system"
+    ],
+    "edge_types": [
+      "has_event_gate",
+      "touches_gate",
+      "depends_on"
+    ],
+    "canonical_mapping": {
+      "process_instance": "ProcessInstance",
+      "gate": "Gate",
+      "external_system": "ExternalSystem",
+      "has_event_gate": "has_step",
+      "touches_gate": "external_gate_touchpoint",
+      "depends_on": "depends_on"
+    }
   }
 }

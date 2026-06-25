@@ -27,5 +27,31 @@
     "secrets": false,
     "mandate_data": false,
     "owner_runtime_binding": false
+  },
+  "adapter_scope_v0": {
+    "implemented_entities": [
+      "tenants",
+      "user_bindings",
+      "matters",
+      "process_instances",
+      "process_events",
+      "audit_events"
+    ],
+    "schema_anchor_only_entities": [
+      "process_templates"
+    ],
+    "externalized_or_deferred_entities": [
+      {
+        "id": "sessions",
+        "status": "externalized_in_identity_session_store",
+        "runtime_boundary": "nac_identity.session_store.AtpSessionStore",
+        "schema_artifact": "deploy/database/atp-onboarding-request-store.sql"
+      },
+      {
+        "id": "process_templates",
+        "status": "template_ref_only_in_process_instance_payload",
+        "runtime_boundary": "process_instances.payload.template_ref"
+      }
+    ]
   }
 }
