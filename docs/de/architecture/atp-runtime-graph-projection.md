@@ -26,5 +26,12 @@ abgeleitet:
 - Keine produktive XNP/SNP-Aktion.
 - Keine rohen Browser-Identifier als fachlicher Output.
 
-Die erste Umsetzung ist bewusst eine Python-Projektion. Eine spätere Oracle-Graph-
-oder PGQL-Nutzung bleibt ein eigener Owner-Gate-Schnitt.
+## Oracle-Graph-Studio-Grenze
+
+Die erste Umsetzung ist bewusst eine Python-Projektion aus freigegebenen
+Runtime-Metadaten. Oracle Graph Studio, Property Graph, PGQL und RDF/OWL sind
+hier nur Ziel- und Analysebegriffe. Graph Studio ist keine Abhängigkeit der
+Runtime-UI und keine produktive Aktivierung.
+
+Eine spätere Oracle-Graph- oder PGQL-Nutzung braucht ein eigenes Owner-Apply-
+und Kosten-Gate, inklusive Rollenfreigabe wie `GRAPH_DEVELOPER`.

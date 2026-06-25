@@ -60,6 +60,24 @@ class AtpRuntimeStorageContractTests(unittest.TestCase):
         self.assertTrue(json_policy["redaction_class_required"])
         self.assertFalse(json_policy["raw_mandate_content_allowed_before_separate_gate"])
 
+        data_model_slice = payload["data_model_slice"]
+        self.assertEqual(data_model_slice["id"], "runtime_graph_metadata_v0")
+        self.assertEqual(data_model_slice["primary_usecase"], "immobilienkaufvertrag")
+        self.assertEqual(data_model_slice["projection"]["source"], "process_events")
+        self.assertEqual(
+            data_model_slice["projection"]["target_contract"],
+            "nac.atp-runtime-graph-projection/v0.1",
+        )
+        self.assertEqual(
+            [layer["id"] for layer in data_model_slice["layers"]],
+            ["transactional_anchors", "json_payloads", "graph_projection"],
+        )
+        self.assertIn("append_only_process_events", data_model_slice["layers"][0]["contains"])
+        self.assertIn("duration_bands", data_model_slice["layers"][1]["contains"])
+        self.assertIn("critical_path", data_model_slice["layers"][2]["contains"])
+        self.assertIn("oracle_graph_studio_activation", data_model_slice["blocked_until_separate_gate"])
+        self.assertIn("raw_mandate_content", data_model_slice["blocked_until_separate_gate"])
+
         graph_projection = payload["graph_projection"]
         self.assertEqual(graph_projection["status"], "projection_contract_only")
         self.assertIn("ProcessInstance", graph_projection["node_types"])

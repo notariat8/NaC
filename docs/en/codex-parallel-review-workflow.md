@@ -12,6 +12,8 @@ documentation, and validators.
 
 ## When To Use It
 
+Use it by default when the quick assessment shows net benefit over coordination cost. The lead run remains responsible and decides up front which subagents can review independently.
+
 Use it when a task has at least one of these properties:
 
 - several subject-matter layers are affected, for example KG and BPMN;
@@ -24,7 +26,8 @@ Use it when a task has at least one of these properties:
 - many similar artifacts need repeated review.
 
 Do not use it for small typos, pure link fixes, or clearly bounded single-file
-changes without governance risk.
+changes without governance risk. Do not delegate secrets, OCI writes, apply,
+release, or destructive gates to subagents.
 
 ## Agent Profiles
 

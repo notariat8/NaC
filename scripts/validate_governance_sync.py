@@ -121,6 +121,7 @@ EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
     "require_full_pr_diff_review_before_merge",
     "routine_read_only_github_oci_checks_do_not_need_owner_approval",
     "parallel_gate_preparation_required_when_independent_inputs_known",
+    "codex_parallel_review_default_when_net_benefit_expected",
     "require_layer_sync_check_for_data_controller_view_changes",
     "require_error_test_security_review_for_code_reviewer",
 )
@@ -394,6 +395,34 @@ def validate_process_policy_file() -> list[str]:
                     "Pflichtwert fehlt in process-policy: "
                     f"agent_workflows.{key}.true"
                 )
+        validate_required_list(
+            errors=errors,
+            policy_name="process-policy",
+            section_name="agent_workflows",
+            key="codex_parallel_review_assessment_dimensions",
+            actual=agent_workflows.get("codex_parallel_review_assessment_dimensions"),
+            expected_values=(
+                "layer_count",
+                "risk_level",
+                "independent_review_perspectives",
+                "validation_surface",
+                "coordination_cost",
+            ),
+        )
+        validate_required_list(
+            errors=errors,
+            policy_name="process-policy",
+            section_name="agent_workflows",
+            key="codex_parallel_review_preserve_single_owner_for",
+            actual=agent_workflows.get("codex_parallel_review_preserve_single_owner_for"),
+            expected_values=(
+                "secrets",
+                "oci_write_actions",
+                "apply_gates",
+                "release_gates",
+                "destructive_operations",
+            ),
+        )
 
     for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
         if not (REPO_ROOT / rel_path).exists():

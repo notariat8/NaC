@@ -25,5 +25,12 @@ Runtime events remain the append-only source. The graph view derives:
 - No productive XNP/SNP action.
 - No raw browser identifiers as business output.
 
-The first implementation is deliberately a Python projection. A later Oracle Graph
-or PGQL use remains a separate owner-gated boundary.
+## Oracle Graph Studio Boundary
+
+The first implementation is deliberately a Python projection from approved
+runtime metadata. Oracle Graph Studio, property graph, PGQL and RDF/OWL are only
+target and analysis terms here. Graph Studio is not a runtime UI dependency and
+not a productive activation.
+
+A later Oracle Graph or PGQL use needs a separate owner apply and cost gate,
+including role approval such as `GRAPH_DEVELOPER`.

@@ -23,6 +23,22 @@ layers separate:
 3. Graph projections for dependencies, parallelism, critical paths, XNP/SNP
    gates, document references, deadlines, roles and audit relationships.
 
+## Data Model Slice v0.1
+
+The first binding data-model slice is `runtime_graph_metadata_v0`. It only
+covers safe runtime metadata for the first `immobilienkaufvertrag` path. ATP
+remains the source:
+
+- transactional anchors for tenant, matter, process instance, append-only
+  process events and audit metadata;
+- versioned JSON payloads for status, gates, duration bands, external system
+  boundaries and redacted audit references;
+- derived graph and ontology candidates for dependencies, parallel groups,
+  critical path and external gate touchpoints.
+
+Oracle Graph Studio is not part of runtime in this slice. It remains a later
+analysis and modeling tool behind a separate owner, apply and cost gate.
+
 ## First Anchors
 
 - `tenants`

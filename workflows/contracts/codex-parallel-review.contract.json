@@ -2,9 +2,9 @@
   "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.codex_parallel_review",
   "title": "Codex Parallel Review Workflow für NaC",
-  "status": "pilot_ready",
-  "last_update": "2026-06-08",
-  "purpose": "Explizite Codex-Subagents prüfen nichttriviale NaC-Änderungen parallel, ohne autonome Produktivschreibungen oder notarielle Freigaben zu ersetzen.",
+  "status": "active_mvp",
+  "last_update": "2026-06-25",
+  "purpose": "Explizite Codex-Subagents prüfen nichttriviale NaC-Änderungen standardmäßig parallel, wenn die Abschätzung Netto-Nutzen zeigt, ohne autonome Produktivschreibungen oder notarielle Freigaben zu ersetzen.",
   "runtime": {
     "primary_surface": "Codex CLI, Codex app or Codex SDK",
     "repo_config": ".codex/config.toml",
@@ -79,7 +79,10 @@
     "notarial_truth_from_model_output": false,
     "human_review_required": true,
     "git_diff_required": true,
-    "fresh_validation_required": true
+    "fresh_validation_required": true,
+    "parallel_review_default_when_net_benefit_expected": true,
+    "lead_agent_keeps_ownership": true,
+    "secret_oci_apply_release_destructive_delegation_allowed": false
   },
   "review_gates": [
     "scope_and_risk_mapping",
@@ -110,5 +113,18 @@
     "python scripts/validate_bpmn_models.py",
     "python scripts/quality_gate.py --profile strict"
   ],
-  "operator_prompt": "Nutze den NaC Parallel Review Workflow: nac_scope_mapper mappt Scope, Artefakte, Risiken und Validatoren; passende Spezialagenten prüfen parallel read-only; der führende Lauf fasst Blocker, Hinweise und nächste Änderungen zusammen; keine produktiven Schreibaktionen ohne Freigabe."
+  "operator_prompt": "Nutze den NaC Parallel Review Workflow standardmäßig, wenn die Abschätzung Netto-Nutzen zeigt: nac_scope_mapper mappt Scope, Artefakte, Risiken und Validatoren; passende Spezialagenten prüfen parallel read-only; der führende Lauf fasst Blocker, Hinweise und nächste Änderungen zusammen; keine Secrets, OCI-Schreibaktionen, Apply-, Release- oder destruktiven Gates an Subagents delegieren.",
+  "default_policy": {
+    "use_when_net_benefit_expected": true,
+    "assessment_dimensions": [
+      "layer_count",
+      "risk_level",
+      "independent_review_perspectives",
+      "validation_surface",
+      "coordination_cost"
+    ],
+    "lead_agent_keeps_ownership": true,
+    "subagents_read_only_by_default": true,
+    "single_owner_for_secrets_oci_apply_release_and_destructive_actions": true
+  }
 }

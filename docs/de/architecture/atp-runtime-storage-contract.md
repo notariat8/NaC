@@ -24,6 +24,23 @@ Ebenen:
 3. Graph-Projektionen für Abhängigkeiten, Parallelität, kritische Pfade,
    XNP/SNP-Gates, Dokumentreferenzen, Fristen, Rollen und Audit-Beziehungen.
 
+## Datenmodell-Slice v0.1
+
+Der erste verbindliche Datenmodell-Slice ist `runtime_graph_metadata_v0`.
+Er gilt nur für sichere Runtime-Metadaten im ersten
+`immobilienkaufvertrag`-Pfad. Die Quelle bleibt ATP:
+
+- transaktionale Anker für Mandant, Vorgang, Prozessinstanz,
+  append-only Prozessereignisse und Audit-Metadaten;
+- versionierte JSON-Payloads für Status, Gates, Dauerbänder, externe
+  Systemgrenzen und redigierte Audit-Referenzen;
+- daraus abgeleitete Graph-/Ontologie-Kandidaten für Abhängigkeiten,
+  Parallelgruppen, kritischen Pfad und externe Gate-Berührungen.
+
+Oracle Graph Studio ist in diesem Slice kein Runtime-Bestandteil. Es bleibt ein
+späteres Analyse- und Modellierungswerkzeug nach separatem Owner-, Apply- und
+Kosten-Gate.
+
 ## Erste Anker
 
 - `tenants`

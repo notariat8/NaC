@@ -12,6 +12,8 @@ Doku und Validatoren.
 
 ## Wann Nutzen?
 
+Standardmäßig nutzen, wenn die schnelle Abschätzung einen Netto-Nutzen gegenüber der Koordination zeigt. Der führende Lauf bleibt verantwortlich und entscheidet vorab, welche Subagents wirklich unabhängig prüfen können.
+
 Nutzen, wenn eine Aufgabe mindestens eine dieser Eigenschaften hat:
 
 - mehrere fachliche Schichten sind betroffen, zum Beispiel KG und BPMN;
@@ -24,7 +26,8 @@ Nutzen, wenn eine Aufgabe mindestens eine dieser Eigenschaften hat:
 - viele ähnliche Artefakte sollen wiederholt geprüft werden.
 
 Nicht nutzen für kleine Tippfehler, reine Linkkorrekturen oder klar begrenzte
-Ein-Datei-Änderungen ohne Governance-Risiko.
+Ein-Datei-Änderungen ohne Governance-Risiko. Nicht an Subagents delegieren:
+Secrets, OCI-Schreibaktionen, Apply-, Release- oder destruktive Gates.
 
 ## Agentprofile
 

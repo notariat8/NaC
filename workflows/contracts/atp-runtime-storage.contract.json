@@ -3,9 +3,60 @@
   "contract_id": "runtime.atp_storage",
   "title": "ATP Runtime Storage Contract",
   "status": "contract_first_no_schema_apply",
-  "last_update": "2026-06-24",
+  "last_update": "2026-06-25",
   "runtime_data_plane": "oracle_atp",
   "purpose": "Define the first safe runtime-storage boundary for NaC tenants, users, sessions, matters, process instances, process events and audit metadata before any productive schema or graph activation.",
+  "data_model_slice": {
+    "id": "runtime_graph_metadata_v0",
+    "scope": "safe_runtime_metadata_for_first_immobilienkaufvertrag_path",
+    "primary_usecase": "immobilienkaufvertrag",
+    "layers": [
+      {
+        "id": "transactional_anchors",
+        "source": "atp",
+        "contains": [
+          "tenant_boundary",
+          "matter_anchor",
+          "process_instance_anchor",
+          "append_only_process_events",
+          "audit_metadata"
+        ]
+      },
+      {
+        "id": "json_payloads",
+        "source": "atp",
+        "contains": [
+          "status_metadata",
+          "gate_metadata",
+          "duration_bands",
+          "external_boundary_labels",
+          "redacted_audit_references"
+        ]
+      },
+      {
+        "id": "graph_projection",
+        "source": "process_events",
+        "contains": [
+          "dependencies",
+          "parallel_groups",
+          "critical_path",
+          "external_gate_touchpoints",
+          "ontology_candidates"
+        ]
+      }
+    ],
+    "projection": {
+      "source": "process_events",
+      "target_contract": "nac.atp-runtime-graph-projection/v0.1",
+      "oracle_graph_studio": "future_analysis_and_modeling_tool_after_owner_gate"
+    },
+    "blocked_until_separate_gate": [
+      "productive_schema_apply",
+      "oracle_graph_studio_activation",
+      "raw_mandate_content",
+      "productive_xnp_snp_action"
+    ]
+  },
   "source_of_truth": {
     "git": [
       "code",

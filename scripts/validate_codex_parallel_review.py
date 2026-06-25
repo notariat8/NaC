@@ -23,12 +23,28 @@ REQUIRED_FALSE_GUARDRAILS = {
     "external_ai_processing_without_avv_dpa_gate",
     "kg_auto_merge_allowed",
     "notarial_truth_from_model_output",
+    "secret_oci_apply_release_destructive_delegation_allowed",
 }
 REQUIRED_TRUE_GUARDRAILS = {
     "agent_profiles_read_only_by_default",
     "human_review_required",
     "git_diff_required",
     "fresh_validation_required",
+    "parallel_review_default_when_net_benefit_expected",
+    "lead_agent_keeps_ownership",
+}
+REQUIRED_DEFAULT_POLICY_TRUE_KEYS = {
+    "use_when_net_benefit_expected",
+    "lead_agent_keeps_ownership",
+    "subagents_read_only_by_default",
+    "single_owner_for_secrets_oci_apply_release_and_destructive_actions",
+}
+REQUIRED_DEFAULT_POLICY_DIMENSIONS = {
+    "layer_count",
+    "risk_level",
+    "independent_review_perspectives",
+    "validation_surface",
+    "coordination_cost",
 }
 REQUIRED_VALIDATION_COMMANDS = {
     "python scripts/validate_codex_parallel_review.py",
@@ -78,6 +94,17 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         for key in sorted(REQUIRED_TRUE_GUARDRAILS):
             if guardrails.get(key) is not True:
                 errors.append(f"guardrails.{key} muss true sein")
+
+    default_policy = payload.get("default_policy")
+    if not isinstance(default_policy, dict):
+        errors.append("default_policy muss ein Objekt sein")
+    else:
+        for key in sorted(REQUIRED_DEFAULT_POLICY_TRUE_KEYS):
+            if default_policy.get(key) is not True:
+                errors.append(f"default_policy.{key} muss true sein")
+        dimensions = set(_string_list(default_policy.get("assessment_dimensions")))
+        for dimension in sorted(REQUIRED_DEFAULT_POLICY_DIMENSIONS - dimensions):
+            errors.append(f"default_policy.assessment_dimensions fehlt: {dimension}")
 
     agent_profiles = payload.get("agent_profiles")
     if not isinstance(agent_profiles, list) or not agent_profiles:
@@ -180,7 +207,7 @@ def main() -> int:
         return 1
 
     print("STATUS: PASSED")
-    print("OK: Codex Parallel Review Workflow hat read-only Agentprofile, Guardrails, Vertrag und Pflichtvalidierungen.")
+    print("OK: Codex Parallel Review Workflow hat Default-Policy, read-only Agentprofile, Guardrails, Vertrag und Pflichtvalidierungen.")
     return 0
 
 

@@ -15,6 +15,31 @@
     "future_oracle_graph": "projection_target_only",
     "productive_graph_activation": "future_owner_gate"
   },
+  "input_contracts": {
+    "runtime_storage": "nac.atp-runtime-storage/v0.1",
+    "runtime_store_adapter": "nac.atp-runtime-store-adapter/v0.1"
+  },
+  "ontology_scope": {
+    "property_graph": [
+      "process_dependencies",
+      "parallel_process_paths",
+      "critical_path_status",
+      "external_gate_touchpoints"
+    ],
+    "rdf_owl": [
+      "future_legal_source_terms",
+      "future_document_type_terms",
+      "future_role_terms"
+    ],
+    "source_of_truth": "derived_from_approved_runtime_metadata"
+  },
+  "oracle_graph_studio_boundary": {
+    "status": "deferred_owner_apply_and_cost_gate",
+    "runtime_ui_dependency": false,
+    "role_activation_approved": false,
+    "productive_graph_activation_approved": false,
+    "usage": "analysis_and_modeling_tool_only_after_separate_gate"
+  },
   "guardrails": {
     "live_oci": false,
     "schema_apply": false,

@@ -141,6 +141,16 @@ class AtpRuntimeGraphProjectionTests(unittest.TestCase):
         self.assertTrue(contract["outputs"]["critical_path"])
         self.assertTrue(contract["outputs"]["parallel_groups"])
         self.assertTrue(contract["outputs"]["duration_bands"])
+        self.assertEqual(contract["input_contracts"]["runtime_storage"], "nac.atp-runtime-storage/v0.1")
+        self.assertIn("process_dependencies", contract["ontology_scope"]["property_graph"])
+        self.assertIn("future_legal_source_terms", contract["ontology_scope"]["rdf_owl"])
+        self.assertEqual(
+            contract["oracle_graph_studio_boundary"]["status"],
+            "deferred_owner_apply_and_cost_gate",
+        )
+        self.assertFalse(contract["oracle_graph_studio_boundary"]["runtime_ui_dependency"])
+        self.assertFalse(contract["oracle_graph_studio_boundary"]["role_activation_approved"])
+        self.assertFalse(contract["oracle_graph_studio_boundary"]["productive_graph_activation_approved"])
         self.assertFalse(contract["guardrails"]["live_oci"])
         self.assertFalse(contract["guardrails"]["schema_apply"])
         self.assertFalse(contract["guardrails"]["mandate_data"])
@@ -154,6 +164,10 @@ class AtpRuntimeGraphProjectionTests(unittest.TestCase):
             "Dauerbänder",
             "No live OCI",
             "Kein Live-OCI",
+            "Graph Studio",
+            "RDF/OWL",
+            "Owner-Apply",
+            "owner apply",
         ):
             self.assertIn(term, combined)
 

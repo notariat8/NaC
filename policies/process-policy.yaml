@@ -202,6 +202,19 @@ agent_workflows:
   require_visual_evidence_for_ui_changes: true
   require_clear_purpose_for_elevated_command_approval: true
   allow_codex_parallel_review_for_cross_layer_or_risky_changes: true
+  codex_parallel_review_default_when_net_benefit_expected: true
+  codex_parallel_review_assessment_dimensions:
+    - layer_count
+    - risk_level
+    - independent_review_perspectives
+    - validation_surface
+    - coordination_cost
+  codex_parallel_review_preserve_single_owner_for:
+    - secrets
+    - oci_write_actions
+    - apply_gates
+    - release_gates
+    - destructive_operations
   codex_parallel_review_contract: workflows/contracts/codex-parallel-review.contract.json
   codex_parallel_review_doc_de: docs/de/codex-parallel-review-workflow.md
   codex_parallel_review_doc_en: docs/en/codex-parallel-review-workflow.md
