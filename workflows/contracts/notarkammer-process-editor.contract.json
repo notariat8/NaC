@@ -1,0 +1,61 @@
+{
+  "schema_version": "nac.notarkammer-process-editor/v0.1",
+  "contract_id": "notarkammer.process_editor",
+  "status": "contract_first",
+  "primary_demo_usecase": "immobilienkaufvertrag",
+  "purpose": "Demo-safe editing and viewing boundary for Notarkammer BPMN process models with XNP/SNP-facing gates, durations, parallel work and critical-path hints.",
+  "template_source_of_truth": "git",
+  "runtime_data_plane": "atp",
+  "editable_surfaces": [
+    "bpmn_template",
+    "step_label",
+    "duration_band",
+    "parallel_group",
+    "critical_path_hint",
+    "xnp_snp_gate",
+    "xnotar_xjustiz_handoff",
+    "grundbuch_boundary",
+    "card_reader_readiness",
+    "review_note"
+  ],
+  "viewer_surfaces": [
+    "public_process_overview",
+    "bpmn_viewer",
+    "duration_band_view",
+    "parallel_group_view",
+    "critical_path_view",
+    "external_gate_view"
+  ],
+  "runtime_surfaces": [
+    "process_instance_status",
+    "process_event_metadata",
+    "audit_metadata",
+    "graph_projection"
+  ],
+  "publication_flow": [
+    "draft",
+    "review",
+    "protected_pr",
+    "template_catalog"
+  ],
+  "guardrails": {
+    "no_mandate_data": true,
+    "no_productive_xnp_action": true,
+    "no_live_register_query": true,
+    "no_secret_values": true,
+    "no_customer_identifier_in_public_view": true,
+    "protected_pr_before_template_publish": true
+  },
+  "demo_scope": {
+    "usecase": "Immobilienkaufvertrag",
+    "allowed_external_boundaries": [
+      "XNP/SNP readiness and handoff boundary",
+      "XNotar/XJustiz message boundary",
+      "Grundbuch request and response boundary",
+      "Kartenleser readiness boundary"
+    ],
+    "duration_model": "duration bands for minutes, hours, days, weeks and months",
+    "parallel_model": "explicit parallel groups with dependency edges",
+    "critical_path_model": "critical path hints derived from dependent gates and external waits"
+  }
+}

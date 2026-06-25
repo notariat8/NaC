@@ -24,6 +24,10 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/bpmn-js-editor.contract.json](bpmn-js-editor.contract.json):
   BPMN-js-Editor-Vertrag für visuell bearbeitbare BPMN-2.0-Prozessmodelle mit
   NaC-Properties, Python-Validierung und Pull-Request-Freigabe.
+- [workflows/contracts/notarkammer-process-editor.contract.json](notarkammer-process-editor.contract.json):
+  Notarkammer-Prozess-Editor-Vertrag für demo-sichere BPMN-Bearbeitung und
+  BPMN-Ansicht mit XNP/SNP-Gates, Dauerbändern, Parallelgruppen und kritischem
+  Pfad ohne Mandatsdaten oder produktiven Fachsystemzugriff.
 - [workflows/contracts/local-web-preview.contract.json](local-web-preview.contract.json):
   lokaler Webserver-Vertrag für grafische BPMN- und KG-Ausgaben ohne Cloud-
   oder Mandatsdatenpflicht.
