@@ -1,0 +1,44 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.runtime_status_wiring_runbook",
+  "status": "owner_free_contract_first",
+  "purpose": "Document the safe path from the current in-memory demo runtime status to a future ATP-backed runtime status for the first Immobilienkaufvertrag route.",
+  "route": "/workspace/immobilienkaufvertrag",
+  "current_store": "in_memory_demo_adapter",
+  "runtime_store": "atp_adapter_future_slice",
+  "current_pipeline": [
+    "metadata_fixture",
+    "InMemoryRuntimeStore",
+    "demo_runtime_seed",
+    "process_events",
+    "runtime_graph_projection",
+    "runtime_status_read_model",
+    "runtime_status_presenter",
+    "protected_workspace_route"
+  ],
+  "future_owner_gated_pipeline": [
+    "ATP RuntimeStoreAdapter implementation",
+    "ATP schema migration",
+    "stateful Function configuration",
+    "live route binding"
+  ],
+  "guardrails": {
+    "mandate_data_allowed": false,
+    "productive_xnp_action_allowed": false,
+    "secrets_allowed": false,
+    "oci_apply_allowed": false,
+    "browser_identifiers_allowed": false,
+    "provider_details_allowed": false,
+    "fail_closed_required": true,
+    "append_only_process_events_required": true,
+    "graph_projection_derived_from_events": true
+  },
+  "owner_gates_required_for": [
+    "ATP schema migration",
+    "ATP credential or wallet changes",
+    "OCI Function configuration changes",
+    "Resource Manager apply",
+    "productive XNP/SNP action",
+    "mandate data writes"
+  ]
+}

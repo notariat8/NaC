@@ -66,3 +66,7 @@ Jeder Vertrag soll definieren:
   Vertrag für explizite, parallele Codex-Reviews mit read-only Agentprofilen,
   Scope-Mapping, KG-/BPMN-/Policy-/Doku-/Validierungsprüfung, Guardrails und
   frischem Nachweis vor Abnahme.
+- [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
+  Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
+  `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten
+  Prozessinstanz-Anzeige, ohne Mandatsdaten, Secrets oder OCI-Apply.
