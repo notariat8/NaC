@@ -1,0 +1,26 @@
+{
+  "schema_version": "nac.atp-runtime-graph-projection/v0.1",
+  "contract_status": "owner_free_contract_first",
+  "projection_source": "process_events",
+  "projection_mode": "derived_metadata_graph",
+  "outputs": {
+    "nodes": true,
+    "edges": true,
+    "critical_path": true,
+    "parallel_groups": true,
+    "duration_bands": true
+  },
+  "graph_projection": {
+    "runtime": "python_projection_first",
+    "future_oracle_graph": "projection_target_only",
+    "productive_graph_activation": "future_owner_gate"
+  },
+  "guardrails": {
+    "live_oci": false,
+    "schema_apply": false,
+    "mandate_data": false,
+    "secret_material": false,
+    "browser_raw_identifiers": false,
+    "productive_xnp_action": false
+  }
+}
