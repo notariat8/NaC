@@ -20,5 +20,25 @@
     "live_oci": false,
     "schema_apply": false,
     "secret_material": false
+  },
+  "data_model_slice": {
+    "id": "runtime_graph_metadata_v0",
+    "contract": "nac.atp-runtime-storage/v0.1",
+    "fixture_profile": "runtime_event_profile"
+  },
+  "runtime_event_profile": {
+    "source": "tests/fixtures/demo/notarkammer-first-immobilienkaufvertrag.metadata.json#runtime_event_profile",
+    "event_types": [
+      "runtime_gate_ready",
+      "runtime_review_gate_ready",
+      "runtime_integration_gate_ready",
+      "runtime_external_boundary_visible",
+      "runtime_critical_path_step",
+      "runtime_safety_gate_closed"
+    ],
+    "dependencies": true,
+    "critical_path": true,
+    "parallel_groups": true,
+    "duration_bands": true
   }
 }

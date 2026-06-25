@@ -39,6 +39,8 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
         self.assertEqual(result["tenant_id"], "DEMO-TENANT-NOTARIAT-01")
         self.assertEqual(result["matter_id"], "DEMO-MATTER-IMMOBILIENKAUF-01")
         self.assertEqual(result["process_instance_id"], "DEMO-PROCESS-IMMOBILIENKAUF-01")
+        self.assertEqual(result["data_model_slice"], "runtime_graph_metadata_v0")
+        self.assertEqual(result["runtime_event_profile"], "structured")
         self.assertFalse(result["mandate_data_loaded"])
         self.assertFalse(result["productive_xnp_action"])
         self.assertFalse(result["oci_apply_enabled"])
@@ -46,8 +48,11 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
         self.assertEqual(len(exported["records"]["tenants"]), 1)
         self.assertEqual(len(exported["records"]["matters"]), 1)
         self.assertEqual(len(exported["records"]["process_instances"]), 1)
-        self.assertGreaterEqual(len(exported["records"]["process_events"]), 6)
+        self.assertEqual(len(exported["records"]["process_events"]), len(fixture["runtime_event_profile"]))
         self.assertGreaterEqual(len(exported["records"]["audit_events"]), 1)
+        event_types = {record["event_type"] for record in exported["records"]["process_events"]}
+        self.assertIn("runtime_external_boundary_visible", event_types)
+        self.assertIn("runtime_critical_path_step", event_types)
 
         events = store.list_process_events(result["process_instance_id"])
         graph = project_process_graph(process_instance_id=result["process_instance_id"], events=events)
@@ -86,8 +91,12 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
 
         self.assertEqual(contract["schema_version"], "nac.demo-runtime-seed/v0.1")
         self.assertEqual(contract["source_fixture"], str(FIXTURE.relative_to(REPO_ROOT)))
+        self.assertEqual(contract["data_model_slice"]["id"], "runtime_graph_metadata_v0")
         self.assertTrue(contract["writes"]["process_events"])
         self.assertEqual(contract["graph_projection"]["contract"], "nac.atp-runtime-graph-projection/v0.1")
+        self.assertEqual(contract["runtime_event_profile"]["source"], str(FIXTURE.relative_to(REPO_ROOT)) + "#runtime_event_profile")
+        self.assertTrue(contract["runtime_event_profile"]["dependencies"])
+        self.assertTrue(contract["runtime_event_profile"]["critical_path"])
         self.assertFalse(contract["guardrails"]["mandate_data"])
         self.assertFalse(contract["guardrails"]["productive_xnp_action"])
         self.assertFalse(contract["guardrails"]["live_oci"])
@@ -97,6 +106,8 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
             "Runtime Graph Projection",
             "XNP/SNP",
             "Dauerbändern",
+            "runtime_event_profile",
+            "runtime_graph_metadata_v0",
             "critical path",
             "No mandate data",
             "Keine Mandatsdaten",

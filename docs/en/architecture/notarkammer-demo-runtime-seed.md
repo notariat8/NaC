@@ -9,6 +9,11 @@ projection can derive a visible graph view with XNP/SNP gates, external
 boundaries, parallel groups, duration bands and the critical path from those
 process events.
 
+The seed is the first concrete fixture for `runtime_graph_metadata_v0`. The
+fixture contains a structured `runtime_event_profile`; the seed writes
+append-only `process_events` from it, including dependencies, duration bands,
+parallel groups, external boundary labels and the critical path.
+
 ## Boundaries
 
 - No mandate data.

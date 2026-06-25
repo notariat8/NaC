@@ -9,6 +9,11 @@ Aus den Prozessereignissen kann die Runtime Graph Projection eine sichtbare
 Graph-Sicht mit XNP/SNP-Gates, externen Grenzen, Parallelgruppen, Dauerbändern
 und kritischem Pfad ableiten.
 
+Der Seed ist der erste konkrete Fixture für `runtime_graph_metadata_v0`. Die
+Fixture enthält ein strukturiertes `runtime_event_profile`; daraus schreibt der
+Seed append-only `process_events` mit Abhängigkeiten, Dauerbändern,
+Parallelgruppen, externen Boundary-Labels und kritischem Pfad.
+
 ## Grenzen
 
 - Keine Mandatsdaten.

@@ -2725,6 +2725,26 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_first_matter_status_display_uses_packaged_runtime_source(self) -> None:
+        captured: dict[str, object] = {}
+
+        def build_runtime_display(*, source: object) -> dict[str, object]:
+            captured["source_type"] = type(source).__name__
+            return {
+                "schema_version": "nac.runtime-status-presenter/v0.1",
+                "title": "Immobilienkaufvertrag Status",
+            }
+
+        with patch.object(
+            nac_server,
+            "build_first_matter_status_display_from_metadata_source",
+            side_effect=build_runtime_display,
+        ):
+            display = nac_server._first_matter_status_display()
+
+        self.assertEqual(display["title"], "Immobilienkaufvertrag Status")
+        self.assertEqual(captured["source_type"], "PackagedRuntimeMetadataSource")
+
     def test_workspace_redacts_gate_reason_context_values(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
         from nac_identity.session_store import MappingSessionStoreAdapter

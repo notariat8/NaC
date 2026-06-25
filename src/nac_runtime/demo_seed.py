@@ -39,6 +39,8 @@ def seed_notarkammer_first_matter(*, store: RuntimeStoreAdapter, fixture: Mappin
         matter_id=matter_id,
         payload={
             "entry_contract": fixture.get("entry_contract"),
+            "data_model_slice": _optional_text(fixture.get("data_model_slice")) or "runtime_graph_metadata_v0",
+            "graph_projection_contract": "nac.atp-runtime-graph-projection/v0.1",
             "status": "portal_start_metadata_ready",
             "full_workspace_open": False,
             "mandate_data_loaded": False,
@@ -69,6 +71,8 @@ def seed_notarkammer_first_matter(*, store: RuntimeStoreAdapter, fixture: Mappin
         "matter_id": matter_id,
         "process_instance_id": process_instance_id,
         "usecase_slug": usecase_slug,
+        "data_model_slice": _optional_text(fixture.get("data_model_slice")) or "runtime_graph_metadata_v0",
+        "runtime_event_profile": "structured" if fixture.get("runtime_event_profile") else "legacy_lists",
         "mandate_data_loaded": False,
         "productive_xnp_action": False,
         "oci_apply_enabled": False,
@@ -82,6 +86,16 @@ def _append_gate_events(
     process_instance_id: str,
     fixture: Mapping[str, Any],
 ) -> None:
+    profile = fixture.get("runtime_event_profile")
+    if isinstance(profile, list) and profile:
+        _append_profile_events(
+            store=store,
+            tenant_id=tenant_id,
+            process_instance_id=process_instance_id,
+            profile=profile,
+        )
+        return
+
     duration_bands = fixture.get("duration_bands") if isinstance(fixture.get("duration_bands"), Mapping) else {}
     gates = _text_list(fixture.get("gates"))
     external_boundaries = _text_list(fixture.get("external_boundaries"))
@@ -135,11 +149,48 @@ def _append_gate_events(
         )
 
 
+def _append_profile_events(
+    *,
+    store: RuntimeStoreAdapter,
+    tenant_id: str,
+    process_instance_id: str,
+    profile: list[Any],
+) -> None:
+    for index, event in enumerate(profile, start=1):
+        if not isinstance(event, Mapping):
+            raise ValueError("runtime_event_profile_entry_invalid")
+        gate = _required_text(event.get("gate"), "runtime_event_profile_gate_missing")
+        payload: dict[str, Any] = {
+            "gate": gate,
+            "step": _optional_text(event.get("step")) or gate,
+        }
+        for key in ("duration_band", "parallel_group", "external_system"):
+            value = _optional_text(event.get(key))
+            if value:
+                payload[key] = value
+        depends_on = _text_list(event.get("depends_on"))
+        if depends_on:
+            payload["depends_on"] = depends_on
+        if event.get("critical_path") is True:
+            payload["critical_path"] = True
+
+        store.append_process_event(
+            event_id=f"DEMO-PROCESS-EVENT-PROFILE-{index:02d}",
+            tenant_id=tenant_id,
+            process_instance_id=process_instance_id,
+            event_type=_optional_text(event.get("event_type")) or "runtime_metadata_event",
+            payload=payload,
+        )
+
+
 def _validate_demo_fixture(fixture: Mapping[str, Any]) -> None:
     if fixture.get("scope") != "metadata_only":
         raise ValueError("demo_fixture_not_metadata_only")
     if fixture.get("productive_xnp_action") is not False:
         raise ValueError("productive_xnp_action_not_allowed")
+    if fixture.get("data_model_slice") not in (None, "runtime_graph_metadata_v0"):
+        raise ValueError("demo_fixture_data_model_slice_unsupported")
+    _validate_runtime_event_profile(fixture.get("runtime_event_profile"))
     for key in (
         "mandate_data_present",
         "real_register_data_present",
@@ -150,6 +201,21 @@ def _validate_demo_fixture(fixture: Mapping[str, Any]) -> None:
     ):
         if fixture.get(key) is not False:
             raise ValueError(f"demo_fixture_guardrail_failed:{key}")
+
+
+def _validate_runtime_event_profile(value: Any) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list) or not value:
+        raise ValueError("runtime_event_profile_invalid")
+    for event in value:
+        if not isinstance(event, Mapping):
+            raise ValueError("runtime_event_profile_entry_invalid")
+        _required_text(event.get("gate"), "runtime_event_profile_gate_missing")
+        if "depends_on" in event and not isinstance(event.get("depends_on"), list):
+            raise ValueError("runtime_event_profile_depends_on_invalid")
+        if "critical_path" in event and not isinstance(event.get("critical_path"), bool):
+            raise ValueError("runtime_event_profile_critical_path_invalid")
 
 
 def _duration_for_gate(gate: str, duration_bands: Mapping[str, Any]) -> str:
@@ -182,6 +248,10 @@ def _required_text(value: Any, message: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(message)
     return value
+
+
+def _optional_text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) and value.strip() else ""
 
 
 def _text_list(value: Any) -> list[str]:

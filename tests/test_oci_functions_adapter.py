@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import json
 import hashlib
@@ -88,6 +89,13 @@ class FailingBody:
         raise AssertionError("GET/HEAD-only adapter must not copy rejected request bodies")
 
 
+def session_cookie_payload(cookie_header: str) -> dict[str, object]:
+    cookie_value = cookie_header.split("=", 1)[1]
+    payload_part = cookie_value.split(".", 1)[0]
+    padding = "=" * (-len(payload_part) % 4)
+    return json.loads(base64.urlsafe_b64decode(f"{payload_part}{padding}".encode("ascii")).decode("utf-8"))
+
+
 class OCIFunctionsAdapterTests(unittest.TestCase):
     def read(self, path: str) -> str:
         file_path = REPO_ROOT / path
@@ -121,6 +129,15 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("entrypoint: /python/bin/fdk /function/func.py handler", func_yaml)
         self.assertIn("from nac_web.oci_functions import handler", func_py)
         self.assertIn("COPY src /function/src", dockerfile)
+        self.assertTrue(
+            (
+                REPO_ROOT
+                / "src"
+                / "nac_runtime"
+                / "demo_data"
+                / "notarkammer-first-immobilienkaufvertrag.metadata.json"
+            ).is_file()
+        )
         self.assertIn("COPY deploy/functions/nac-app/func.py /function/func.py", dockerfile)
         self.assertIn("ENV PYTHONPATH=/python:/function/src", dockerfile)
         self.assertIn("fdk", requirements)
@@ -140,6 +157,9 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("type: DOCKER_IMAGE", build_spec)
         self.assertIn("location: nac-app", build_spec)
         self.assertIn("dependencies = []", pyproject)
+        self.assertIn("[tool.setuptools.package-data]", pyproject)
+        self.assertIn('nac_runtime = ["demo_data/*.json"]', pyproject)
+        self.assertNotIn("tests/fixtures", self.read("src/nac_web/server.py"))
 
         forbidden_terms = [
             "BEGIN PRIVATE KEY",
@@ -863,6 +883,83 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertEqual(result.status_code, 401)
         self.assertIn(b"notariat8 Anmeldung erforderlich", result.body)
         factory.assert_called_once_with()
+
+    def test_first_matter_status_route_uses_packaged_runtime_source_without_repo_tests(self) -> None:
+        from nac_identity.oidc_session import evaluate_oidc_session_boundary
+        from nac_identity.session_store import MappingSessionStoreAdapter
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        session = evaluate_oidc_session_boundary(
+            state_validation={
+                "status": "valid",
+                "tenant_hint": "myjur",
+                "nonce_bound": True,
+                "nonce_hash": hashlib.sha256("nonce-from-id-token".encode("utf-8")).hexdigest(),
+            },
+            token_exchange_result={
+                "status": "verified",
+                "claims": {
+                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                    "aud": "notariat8_nac_app",
+                    "nonce": "nonce-from-id-token",
+                    "groups": ["nac-notary"],
+                    "email": "notar@example.test",
+                },
+            },
+            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            expected_audience="notariat8_nac_app",
+            required_role="nac-notary",
+            session_signing_key="unit-test-session-signing-key",
+            now=1_800_000_000,
+            session_ttl_seconds=600,
+        )
+        cookie_header = session["session"]["set_cookie"].split(";", 1)[0]
+        payload = session_cookie_payload(cookie_header)
+        session_store = MappingSessionStoreAdapter(
+            {
+                str(payload["sid"]): {
+                    "schema_version": "nac.server-session/v0.1",
+                    "session_id": payload["sid"],
+                    "issued_at": payload["iat"],
+                    "expires_at": payload["exp"],
+                    "revoked_at": None,
+                    "audit_event_id": "audit-event-secret",
+                    "contains_credentials": False,
+                    "tokens_stored": False,
+                    "claims_stored": False,
+                    "tenant_bound": True,
+                    "subject_bound": True,
+                    "role_bound": True,
+                    "case_bound": True,
+                    "purpose_bound": True,
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ,
+            {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"},
+            clear=False,
+        ), patch("nac_web.oci_functions.build_session_store_from_env", return_value=session_store):
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(
+                    request_url="/workspace/immobilienkaufvertrag",
+                    method="GET",
+                    headers={"Cookie": cookie_header},
+                ),
+                FailingBody(),
+                repo_root=Path(tmp),
+            )
+        body = result.body.decode("utf-8")
+
+        self.assertEqual(result.status_code, 200)
+        self.assertIn("Immobilienkaufvertrag Status", body)
+        self.assertIn("Vorgangsstatus ohne Mandatsdaten", body)
+        self.assertIn("Keine Mandatsdaten geladen", body)
+        self.assertNotIn("tests/fixtures", body)
+        self.assertNotIn("notar@example.test", body)
+        self.assertNotIn("Oracle", body)
+        self.assertNotIn("OCI", body)
 
     def test_dispatches_workspace_fail_closed_without_cookie(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
