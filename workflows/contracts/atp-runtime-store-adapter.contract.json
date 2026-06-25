@@ -1,0 +1,31 @@
+{
+  "schema_version": "nac.atp-runtime-store-adapter/v0.1",
+  "interface_status": "owner_free_contract_first",
+  "implementation_scope": "testable_adapter_interface",
+  "runtime_entities": [
+    "tenants",
+    "user_bindings",
+    "matters",
+    "process_instances",
+    "process_events",
+    "audit_events"
+  ],
+  "payload_model": {
+    "json_payloads": true,
+    "versioned_payloads": true,
+    "raw_mandate_data": false,
+    "secret_material": false
+  },
+  "graph_projection": {
+    "status": "deferred",
+    "source": "process_events",
+    "activation": "future_contract"
+  },
+  "guardrails": {
+    "live_oci": false,
+    "schema_apply": false,
+    "secrets": false,
+    "mandate_data": false,
+    "owner_runtime_binding": false
+  }
+}
