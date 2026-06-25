@@ -40,7 +40,7 @@ class AtpRuntimeStorageContractTests(unittest.TestCase):
             anchor_ids,
             {
                 "tenants",
-                "users",
+                "user_bindings",
                 "sessions",
                 "matters",
                 "process_templates",
@@ -67,6 +67,27 @@ class AtpRuntimeStorageContractTests(unittest.TestCase):
         self.assertIn("critical_path_of", graph_projection["edge_types"])
         self.assertIn("sent_to", graph_projection["edge_types"])
         self.assertIn("received_from", graph_projection["edge_types"])
+
+        anchor_schema = payload["anchor_schema"]
+        self.assertEqual(anchor_schema["status"], "artifact_only_no_apply")
+        self.assertEqual(anchor_schema["artifact"], "deploy/database/atp-runtime-anchor-schema.sql")
+        self.assertTrue(anchor_schema["guardrails"]["idempotent_create_only"])
+        self.assertFalse(anchor_schema["guardrails"]["drop_or_truncate_allowed"])
+        self.assertFalse(anchor_schema["guardrails"]["raw_mandate_payload_columns_allowed"])
+
+        table_names = {table["name"] for table in anchor_schema["tables"]}
+        self.assertGreaterEqual(
+            table_names,
+            {
+                "nac_tenants",
+                "nac_user_bindings",
+                "nac_matters",
+                "nac_process_templates",
+                "nac_process_instances",
+                "nac_process_events",
+                "nac_audit_events",
+            },
+        )
 
     def test_runtime_storage_contract_preserves_guardrails(self) -> None:
         payload = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))

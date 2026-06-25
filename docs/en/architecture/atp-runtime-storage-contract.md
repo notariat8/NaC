@@ -26,7 +26,7 @@ layers separate:
 ## First Anchors
 
 - `tenants`
-- `users`
+- `user_bindings`
 - `sessions`
 - `matters`
 - `process_templates`
@@ -37,6 +37,25 @@ layers separate:
 At this stage, these anchors may only hold safe metadata. Raw data from
 matters, deeds, IDs, powers of attorney, register lookups or land-register data
 requires a separate design, protection and apply gate.
+
+## Schema Artifact
+
+The first technical schema slice is captured as a non-destructive artifact in
+`deploy/database/atp-runtime-anchor-schema.sql`. The artifact is not an apply
+request. It describes idempotent runtime anchors for:
+
+- `nac_tenants`
+- `nac_user_bindings`
+- `nac_matters`
+- `nac_process_templates`
+- `nac_process_instances`
+- `nac_process_events`
+- `nac_audit_events`
+
+Every tenant-scoped runtime table carries a tenant boundary. Domain status
+details are stored as validated JSON payloads so they can later be projected
+into a graph or ontology view. Process events are append-oriented; they do not
+replace audit approval and contain no raw matter data.
 
 ## JSON Payload Rules
 

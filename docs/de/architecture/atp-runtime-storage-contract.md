@@ -27,7 +27,7 @@ Ebenen:
 ## Erste Anker
 
 - `tenants`
-- `users`
+- `user_bindings`
 - `sessions`
 - `matters`
 - `process_templates`
@@ -38,6 +38,26 @@ Ebenen:
 Diese Anker dürfen im ersten Schritt nur sichere Metadaten aufnehmen. Rohdaten
 aus Mandaten, Urkunden, Ausweisen, Vollmachten, Registerabrufen oder
 Grundbuchdaten brauchen einen eigenen Design-, Schutz- und Apply-Gate.
+
+## Schema-Artefakt
+
+Der erste technische Schema-Zuschnitt liegt als nicht-destruktives Artefakt in
+`deploy/database/atp-runtime-anchor-schema.sql`. Das Artefakt ist noch kein
+Apply-Auftrag. Es beschreibt idempotente Runtime-Anker für:
+
+- `nac_tenants`
+- `nac_user_bindings`
+- `nac_matters`
+- `nac_process_templates`
+- `nac_process_instances`
+- `nac_process_events`
+- `nac_audit_events`
+
+Jede mandantenbezogene Runtime-Tabelle traegt eine Tenant-Grenze. Fachliche
+Zustandsdetails werden als validierte JSON-Payloads gehalten, damit später
+eine Graph- oder Ontologie-Projektion daraus entstehen kann. Prozessereignisse
+sind append-orientiert; sie ersetzen keine Audit-Freigabe und enthalten keine
+Rohdaten aus Mandaten.
 
 ## JSON-Payload-Regeln
 

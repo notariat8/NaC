@@ -40,7 +40,7 @@
       ]
     },
     {
-      "id": "users",
+      "id": "user_bindings",
       "purpose": "Internal NaC user binding, separated from external identity-provider details.",
       "allowed_data_classes": [
         "safe_metadata_only",
@@ -143,6 +143,54 @@
       ]
     }
   ],
+  "anchor_schema": {
+    "status": "artifact_only_no_apply",
+    "artifact": "deploy/database/atp-runtime-anchor-schema.sql",
+    "tables": [
+      {
+        "name": "nac_tenants",
+        "anchor_id": "tenants",
+        "json_contract": "nac.tenant-runtime/v0.1"
+      },
+      {
+        "name": "nac_user_bindings",
+        "anchor_id": "user_bindings",
+        "json_contract": "nac.user-binding/v0.1"
+      },
+      {
+        "name": "nac_matters",
+        "anchor_id": "matters",
+        "json_contract": "nac.matter-anchor/v0.1"
+      },
+      {
+        "name": "nac_process_templates",
+        "anchor_id": "process_templates",
+        "json_contract": "nac.process-template-binding/v0.1"
+      },
+      {
+        "name": "nac_process_instances",
+        "anchor_id": "process_instances",
+        "json_contract": "nac.process-instance-status/v0.1"
+      },
+      {
+        "name": "nac_process_events",
+        "anchor_id": "process_events",
+        "json_contract": "nac.process-event/v0.1"
+      },
+      {
+        "name": "nac_audit_events",
+        "anchor_id": "audit_events",
+        "json_contract": "nac.audit-event/v0.1"
+      }
+    ],
+    "guardrails": {
+      "idempotent_create_only": true,
+      "drop_or_truncate_allowed": false,
+      "raw_mandate_payload_columns_allowed": false,
+      "tenant_boundary_required": true,
+      "json_payload_check_required": true
+    }
+  },
   "json_payload_policy": {
     "schema_version_required": true,
     "payload_type_required": true,
