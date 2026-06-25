@@ -30,7 +30,10 @@ def present_first_matter_status(status: Mapping[str, Any]) -> dict[str, Any]:
         "schema_version": "nac.runtime-status-presenter/v0.1",
         "title": "Immobilienkaufvertrag Status",
         "status_label": "Vorgang vorbereitet",
-        "summary": "Der erste Vorgang ist als sichere Statusansicht vorbereitet.",
+        "summary": (
+            "Vorgangsstatus ohne Mandatsdaten: notariat8 zeigt hier nur Prozessmetadaten, "
+            "Sicherheitsgrenzen und vorbereitete Integrationspunkte."
+        ),
         "matter_label": _public_matter_label(status),
         "status_items": _status_items(status),
         "next_steps": (
@@ -46,7 +49,12 @@ def present_first_matter_status(status: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _status_items(status: Mapping[str, Any]) -> tuple[str, ...]:
-    items: list[str] = []
+    items: list[str] = [
+        "Aufnahme und Beteiligte: vorbereitet.",
+        "Entwurf und Abstimmung: vorbereitet.",
+        "Beurkundung: vorbereitet.",
+        "Vollzug: vorbereitet.",
+    ]
     if status.get("bpmn_model_present") is True:
         items.append("BPMN-Modell vorhanden.")
     if status.get("xnp_snp_target_path_prepared") is True:

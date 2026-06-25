@@ -42,6 +42,7 @@ from nac_identity.role_case_gate import (
     normalize_workspace_role_gate_context,
     normalize_workspace_tenant_binding_context,
 )
+from nac_runtime.status_presenter import present_first_matter_status
 from nac_gnotkg.views import build_cost_review_view
 from nac_web.bpmn import (
     BpmnSaveConflict,
@@ -1096,22 +1097,22 @@ def build_protected_first_matter_status_page(
         """
         return HTTPStatus.FORBIDDEN, _layout("notariat8 Vorgangsstatus geschlossen", body)
 
-    body = """
+    display = _first_matter_status_display()
+    status_items_html = _link_list_items(display["status_items"])
+    next_steps_html = _link_list_items(display["next_steps"])
+
+    body = f"""
     <nav class="topline"><a href="/workspace">← Portal-Start</a></nav>
     <section class="hero">
       <p class="eyebrow">notariat8 Vorgangsstatus</p>
-      <h1>Immobilienkaufvertrag Status</h1>
-      <p>Vorgangsstatus ohne Mandatsdaten: notariat8 zeigt hier nur Prozessmetadaten,
-      Sicherheitsgrenzen und vorbereitete Integrationspunkte.</p>
+      <h1>{html.escape(display["title"])}</h1>
+      <p>{html.escape(display["summary"])}</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Ablaufstatus</h2>
         <ul class="link-list">
-          <li><span><strong>Aufnahme und Beteiligte:</strong> vorbereitet.</span></li>
-          <li><span><strong>Entwurf und Abstimmung:</strong> vorbereitet.</span></li>
-          <li><span><strong>Beurkundung:</strong> vorbereitet.</span></li>
-          <li><span><strong>Vollzug:</strong> vorbereitet.</span></li>
+          {status_items_html}
         </ul>
       </section>
       <section>
@@ -1137,8 +1138,7 @@ def build_protected_first_matter_status_page(
         <h2>Zeit und Abhängigkeiten</h2>
         <ul class="link-list">
           <li><span><strong>Parallel möglich:</strong> Entwurf, Abstimmung und Vorbereitungen können teilweise parallel laufen.</span></li>
-          <li><span><strong>Kritischer Pfad:</strong> externe Rückläufe vor Vollzug.</span></li>
-          <li><span>Dauerband: Wochen bis Monate.</span></li>
+          {next_steps_html}
         </ul>
       </section>
       <section>
@@ -1152,6 +1152,31 @@ def build_protected_first_matter_status_page(
     </div>
     """
     return HTTPStatus.OK, _layout("notariat8 Immobilienkaufvertrag Status", body)
+
+
+def _first_matter_status_display() -> dict[str, Any]:
+    return present_first_matter_status(
+        {
+            "schema_version": "nac.runtime-status-read-model/v0.1",
+            "status": "portal_start_metadata_ready",
+            "matter_label": "Immobilienkaufvertrag",
+            "bpmn_model_present": True,
+            "xnp_snp_target_path_prepared": True,
+            "execution_path_visible": True,
+            "critical_path_summary": "Externer Rücklauf",
+            "duration_band_summary": "Wochen bis Monate",
+            "parallel_work_visible": True,
+            "mandate_data_loaded": False,
+            "productive_xnp_action": False,
+            "full_workspace_open": False,
+        }
+    )
+
+
+def _link_list_items(items: Any) -> str:
+    if not isinstance(items, (list, tuple)):
+        return ""
+    return "\n".join(f"<li><span>{html.escape(str(item))}</span></li>" for item in items)
 
 
 def _evaluate_workspace_access(
