@@ -106,6 +106,8 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
 
 ## Further Operating Standards
 
+- NemoClaw target operation and agent work split:
+  [docs/en/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
 - Fork model and responsibilities:
   [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync cycle and PR gates:

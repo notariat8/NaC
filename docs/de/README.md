@@ -136,6 +136,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Live-Runbook, 60-Minuten-Skript, XNP/BPMN-Grenzen und Fallbacks.
 - [docs/de/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md): Herleitung
   des offenen Aktenmodells aus typischen Notarsoftware-Bausteinen.
+- [docs/de/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md):
+  Arbeitsteilung zwischen Project Manager, `brev01`-Entwicklung und
+  `notoclaw01`-Zielbetrieb.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 

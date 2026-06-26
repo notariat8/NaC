@@ -108,6 +108,9 @@ regardless of the language used in the prompt. The binding rule is defined in
   live runbook, 60-minute script, XNP/BPMN boundaries and fallbacks.
 - [docs/en/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md) derives
   the open matter model from common notary-software building blocks.
+- [docs/en/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
+  defines the work split between Project Manager, `brev01` development and
+  `notoclaw01` target operation.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
   quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
