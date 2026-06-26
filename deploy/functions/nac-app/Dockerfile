@@ -3,6 +3,7 @@ FROM fnproject/python:3.12-dev AS build-stage
 WORKDIR /function
 COPY pyproject.toml README.md /function/
 COPY src /function/src
+COPY bpmn /function/bpmn
 COPY deploy/functions/nac-app/func.py /function/func.py
 COPY deploy/functions/nac-app/func.yaml /function/func.yaml
 COPY deploy/functions/nac-app/requirements.txt /function/requirements.txt

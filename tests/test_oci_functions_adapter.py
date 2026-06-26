@@ -129,6 +129,7 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn("entrypoint: /python/bin/fdk /function/func.py handler", func_yaml)
         self.assertIn("from nac_web.oci_functions import handler", func_py)
         self.assertIn("COPY src /function/src", dockerfile)
+        self.assertIn("COPY bpmn /function/bpmn", dockerfile)
         self.assertTrue(
             (
                 REPO_ROOT
