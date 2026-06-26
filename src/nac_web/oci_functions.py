@@ -149,6 +149,8 @@ def _is_exposed_get_route(request_url: str, *, expose_stateful_onboarding_routes
     route = unquote(parsed.path) or "/"
     if route in EXPOSED_GET_ROUTES:
         return True
+    if _is_bpmn_read_route(route):
+        return True
     if expose_stateful_onboarding_routes and route in STATEFUL_GET_ROUTES:
         return True
     if route.startswith("/onboarding/requests/"):
@@ -156,6 +158,27 @@ def _is_exposed_get_route(request_url: str, *, expose_stateful_onboarding_routes
             return False
         params = parse_qs(parsed.query, keep_blank_values=True)
         return (params.get("audience") or [""])[0] == "customer"
+    return False
+
+
+def _is_bpmn_read_route(route: str) -> bool:
+    if route == "/api/bpmn-moddle":
+        return True
+    segments = route.strip("/").split("/")
+    if len(segments) == 2 and segments[0] == "bpmn" and segments[1]:
+        return True
+    if len(segments) == 3 and segments[0] == "bpmn" and segments[1] and segments[2] == "edit":
+        return True
+    if len(segments) == 3 and segments[0] == "api" and segments[1] == "bpmn" and segments[2]:
+        return True
+    if (
+        len(segments) == 4
+        and segments[0] == "api"
+        and segments[1] == "bpmn"
+        and segments[2]
+        and segments[3] == "xml"
+    ):
+        return True
     return False
 
 

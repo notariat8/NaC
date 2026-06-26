@@ -1188,14 +1188,43 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
+    def test_dispatches_bpmn_editor_read_routes_without_write_surface(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        read_routes = {
+            "/bpmn/immobilienkaufvertrag": ("text/html; charset=utf-8", b"bpmn-js-Diagramm"),
+            "/bpmn/immobilienkaufvertrag/edit": ("text/html; charset=utf-8", b"BPMN-js Editor"),
+            "/api/bpmn/immobilienkaufvertrag": ("application/json; charset=utf-8", b'"stem"'),
+            "/api/bpmn/immobilienkaufvertrag/xml": ("application/json; charset=utf-8", b'"xml"'),
+            "/api/bpmn-moddle": ("application/json; charset=utf-8", b'"name"'),
+        }
+
+        for path, (content_type, marker) in read_routes.items():
+            with self.subTest(path=path):
+                result = dispatch_oci_function_request(
+                    FakeFunctionContext(request_url=path, method="GET"),
+                    FailingBody(),
+                    repo_root=REPO_ROOT,
+                )
+                head_result = dispatch_oci_function_request(
+                    FakeFunctionContext(request_url=path, method="HEAD"),
+                    FailingBody(),
+                    repo_root=REPO_ROOT,
+                )
+
+                self.assertEqual(result.status_code, 200)
+                self.assertEqual(result.headers["Content-Type"], content_type)
+                self.assertIn(marker, result.body)
+                self.assertEqual(head_result.status_code, 200)
+                self.assertEqual(head_result.headers["Content-Type"], content_type)
+                self.assertEqual(head_result.body, b"")
+
     def test_rejects_non_customer_safe_get_routes(self) -> None:
         from nac_web.oci_functions import dispatch_oci_function_request
 
         blocked_paths = [
             "/admin/onboarding",
             "/admin/onboarding/apply-readiness?domain=myjur.de&admin_email=admin@myjur.de",
-            "/bpmn/immobilienkaufvertrag/edit",
-            "/api/bpmn/immobilienkaufvertrag/xml",
             "/api/tenant/domain-check?domain=myjur.de&tenant_slug=myjur",
             "/onboarding/requests/onr_myjur_20260610_111500?admin_email=ofunk@myjur.de",
         ]
