@@ -22,6 +22,24 @@
     "stateful Function configuration",
     "live route binding"
   ],
+  "atp_metadata_seam_v0": {
+    "source_env": "NAC_FIRST_MATTER_RUNTIME_SOURCE",
+    "accepted_source_values": [
+      "atp",
+      "atp-json",
+      "atp_metadata",
+      "atp-runtime-metadata"
+    ],
+    "object_key_env": "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY",
+    "default_object_key": "runtime/notarkammer-first/immobilienkaufvertrag.metadata.json",
+    "payload_column_env": "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN",
+    "default_payload_column": "payload_json",
+    "missing_row_fetcher_behavior": "fail_closed_runtime_metadata_source_unavailable",
+    "packaged_fallback_when_atp_enabled": false,
+    "database_migration_required": false,
+    "oci_apply_required": false,
+    "secrets_or_wallet_change_required": false
+  },
   "guardrails": {
     "mandate_data_allowed": false,
     "productive_xnp_action_allowed": false,

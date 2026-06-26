@@ -44,6 +44,7 @@ from nac_identity.role_case_gate import (
 )
 from nac_runtime.status_source import (
     RuntimeMetadataSource,
+    build_first_matter_runtime_metadata_source_from_env,
     build_first_matter_status_display_from_metadata_source,
     resolve_first_matter_runtime_metadata_source,
 )
@@ -609,6 +610,7 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
         repo_root,
         onboarding_request_store=build_onboarding_request_store_from_env(),
         session_store=build_session_store_from_env(),
+        first_matter_runtime_metadata_source=build_first_matter_runtime_metadata_source_from_env(),
     )
 
     class Handler(BaseHTTPRequestHandler):

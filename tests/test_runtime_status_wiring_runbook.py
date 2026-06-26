@@ -26,6 +26,18 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
             contract["route"],
             "/workspace/immobilienkaufvertrag",
         )
+        seam = contract["atp_metadata_seam_v0"]
+        self.assertEqual(seam["source_env"], "NAC_FIRST_MATTER_RUNTIME_SOURCE")
+        self.assertEqual(
+            seam["accepted_source_values"],
+            ["atp", "atp-json", "atp_metadata", "atp-runtime-metadata"],
+        )
+        self.assertEqual(seam["object_key_env"], "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY")
+        self.assertEqual(seam["payload_column_env"], "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN")
+        self.assertFalse(seam["packaged_fallback_when_atp_enabled"])
+        self.assertFalse(seam["database_migration_required"])
+        self.assertFalse(seam["oci_apply_required"])
+        self.assertFalse(seam["secrets_or_wallet_change_required"])
 
         guardrails = contract["guardrails"]
         for key in (

@@ -42,12 +42,29 @@ produktnahe Anbindung ersetzt nicht den Vertrag, sondern nur den Adapter:
 - Der Vollarbeitsbereich bleibt geschlossen, bis ein eigener Owner-Gate-Schnitt
   fachlich und technisch freigegeben ist.
 
+## ATP-Metadata-Seam
+
+Der geschützte erste Vorgangsstatus kann für die spätere ATP-Quelle per
+Umgebungsschalter vorbereitet werden, ohne eine Datenbankmigration, Wallet- oder
+Secret-Änderung oder ein OCI Apply auszulösen:
+
+- `NAC_FIRST_MATTER_RUNTIME_SOURCE` aktiviert den ATP-Metadata-Seam nur für die
+  Werte `atp`, `atp-json`, `atp_metadata` oder `atp-runtime-metadata`.
+- `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` überschreibt optional den logischen
+  Runtime-Objektschlüssel. Ohne Wert gilt
+  `runtime/notarkammer-first/immobilienkaufvertrag.metadata.json`.
+- `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` überschreibt optional die
+  JSON-Payload-Spalte. Ohne Wert gilt `payload_json`.
+- Wenn der ATP-Zeilenleser noch nicht bereitsteht, liefert die Route keine
+  Packaged-Fallback-Daten, sondern bleibt fail-closed geschlossen.
+
 ## Fail-closed-Regeln
 
 Der Statuspfad muss fail-closed geschlossen bleiben, wenn eine dieser
 Bedingungen eintritt:
 
 - Runtime Store nicht erreichbar.
+- ATP-Metadata-Seam aktiviert, aber kein freigegebener Zeilenleser vorhanden.
 - Prozessinstanz oder Ereignisse fehlen.
 - Graph-Projektion kann nicht aus Ereignissen gebaut werden.
 - Statusmodell enthält Mandatsdaten.

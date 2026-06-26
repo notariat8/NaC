@@ -884,6 +884,30 @@ class OCIFunctionsAdapterTests(unittest.TestCase):
         self.assertIn(b"notariat8 Anmeldung erforderlich", result.body)
         factory.assert_called_once_with()
 
+    def test_stateful_function_binds_runtime_metadata_source_from_env(self) -> None:
+        from nac_web.oci_functions import dispatch_oci_function_request
+
+        runtime_source = object()
+        with (
+            patch(
+                "nac_web.oci_functions.build_first_matter_runtime_metadata_source_from_env",
+                return_value=runtime_source,
+            ) as runtime_source_factory,
+            patch("nac_web.oci_functions.NaCLocalWebApp") as app_factory,
+        ):
+            app_factory.return_value.handle.return_value = (200, "text/plain; charset=utf-8", b"ok")
+            result = dispatch_oci_function_request(
+                FakeFunctionContext(request_url="/healthz", method="GET"),
+                FailingBody(),
+                repo_root=REPO_ROOT,
+            )
+
+        runtime_source_factory.assert_called_once_with()
+        _, kwargs = app_factory.call_args
+        self.assertIs(kwargs["first_matter_runtime_metadata_source"], runtime_source)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.body, b"ok")
+
     def test_first_matter_status_route_uses_packaged_runtime_source_without_repo_tests(self) -> None:
         from nac_identity.oidc_session import evaluate_oidc_session_boundary
         from nac_identity.session_store import MappingSessionStoreAdapter

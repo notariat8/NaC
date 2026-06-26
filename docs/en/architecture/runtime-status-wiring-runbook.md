@@ -39,11 +39,28 @@ does not replace the contract; it replaces only the adapter:
 - The full workspace remains closed until a separate owner-gated boundary is
   approved functionally and technically.
 
+## ATP Metadata Seam
+
+The protected first matter status can be prepared for the later ATP source
+through environment switches without triggering a database migration, wallet or
+secret change, or OCI Apply:
+
+- `NAC_FIRST_MATTER_RUNTIME_SOURCE` activates the ATP metadata seam only for the
+  values `atp`, `atp-json`, `atp_metadata` or `atp-runtime-metadata`.
+- `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` optionally overrides the logical runtime
+  object key. Without a value,
+  `runtime/notarkammer-first/immobilienkaufvertrag.metadata.json` is used.
+- `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` optionally overrides the JSON payload
+  column. Without a value, `payload_json` is used.
+- If the ATP row reader is not available yet, the route does not serve packaged
+  fallback data and remains fail-closed.
+
 ## Fail-closed Rules
 
 The status path must fail-closed stay closed if any of these conditions occurs:
 
 - Runtime store unavailable.
+- ATP metadata seam active without an approved row reader.
 - Process instance or events missing.
 - Graph projection cannot be built from events.
 - Status model contains mandate data.

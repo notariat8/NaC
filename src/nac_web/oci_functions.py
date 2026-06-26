@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from nac_identity.onboarding_requests import build_onboarding_request_store_from_env
 from nac_identity.session_store import build_session_store_from_env
+from nac_runtime.status_source import build_first_matter_runtime_metadata_source_from_env
 from nac_web.server import NaCLocalWebApp
 
 
@@ -65,6 +66,7 @@ def dispatch_oci_function_request(
         _repo_root(repo_root),
         onboarding_request_store=onboarding_request_store,
         session_store=session_store,
+        first_matter_runtime_metadata_source=build_first_matter_runtime_metadata_source_from_env(),
     )
 
     response_headers: dict[str, str] = {}

@@ -226,9 +226,14 @@ class NaCLocalWebTests(unittest.TestCase):
             pass
 
         session_store = DummySessionStore()
+        runtime_source = AtpJsonRuntimeMetadataSource(lambda _object_key: {})
         with (
             patch("nac_web.server.build_session_store_from_env", return_value=session_store) as session_factory,
             patch("nac_web.server.build_onboarding_request_store_from_env") as onboarding_factory,
+            patch(
+                "nac_web.server.build_first_matter_runtime_metadata_source_from_env",
+                return_value=runtime_source,
+            ) as runtime_source_factory,
             patch("nac_web.server.NaCLocalWebApp") as app_factory,
         ):
             server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
@@ -236,8 +241,10 @@ class NaCLocalWebTests(unittest.TestCase):
 
         session_factory.assert_called_once_with()
         onboarding_factory.assert_called_once_with()
+        runtime_source_factory.assert_called_once_with()
         _, kwargs = app_factory.call_args
         self.assertIs(kwargs["session_store"], session_store)
+        self.assertIs(kwargs["first_matter_runtime_metadata_source"], runtime_source)
 
     def test_runtime_server_sanitizes_auth_callback_query_in_logs(self) -> None:
         server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)

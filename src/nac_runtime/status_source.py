@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Callable, Mapping
 from importlib import resources
 from typing import Any, Protocol
@@ -12,6 +13,10 @@ from nac_runtime.store import InMemoryRuntimeStore, RuntimeStoreAdapter
 
 FIRST_MATTER_METADATA_RESOURCE = "notarkammer-first-immobilienkaufvertrag.metadata.json"
 DEFAULT_ATP_FIRST_MATTER_OBJECT_KEY = "runtime/notarkammer-first/immobilienkaufvertrag.metadata.json"
+DEFAULT_ATP_RUNTIME_METADATA_PAYLOAD_COLUMN = "payload_json"
+ATP_RUNTIME_SOURCE_ENV = "NAC_FIRST_MATTER_RUNTIME_SOURCE"
+ATP_RUNTIME_OBJECT_KEY_ENV = "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY"
+ATP_RUNTIME_PAYLOAD_COLUMN_ENV = "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN"
 
 
 class RuntimeMetadataSource(Protocol):
@@ -21,6 +26,14 @@ class RuntimeMetadataSource(Protocol):
 
 class RuntimeMetadataSourceUnavailable(RuntimeError):
     pass
+
+
+class UnavailableRuntimeMetadataSource:
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+    def load_first_matter_metadata(self) -> Mapping[str, Any]:
+        raise RuntimeMetadataSourceUnavailable(self.reason)
 
 
 class PackagedRuntimeMetadataSource:
@@ -84,6 +97,29 @@ def resolve_first_matter_runtime_metadata_source(
     if source is not None:
         return source
     return PackagedRuntimeMetadataSource()
+
+
+def build_first_matter_runtime_metadata_source_from_env(
+    environ: Mapping[str, str] | None = None,
+    *,
+    row_fetcher: Callable[[str], Mapping[str, Any] | None] | None = None,
+) -> RuntimeMetadataSource | None:
+    env = environ if environ is not None else os.environ
+    mode = str(env.get(ATP_RUNTIME_SOURCE_ENV, "")).strip().lower()
+    if mode not in {"atp", "atp-json", "atp_metadata", "atp-runtime-metadata"}:
+        return None
+
+    object_key = str(env.get(ATP_RUNTIME_OBJECT_KEY_ENV, "")).strip() or DEFAULT_ATP_FIRST_MATTER_OBJECT_KEY
+    payload_column = (
+        str(env.get(ATP_RUNTIME_PAYLOAD_COLUMN_ENV, "")).strip()
+        or DEFAULT_ATP_RUNTIME_METADATA_PAYLOAD_COLUMN
+    )
+    if row_fetcher is None:
+        return UnavailableRuntimeMetadataSource("runtime_metadata_row_fetcher_missing")
+    return AtpJsonRuntimeMetadataSource(
+        AtpRuntimeMetadataRowReader(row_fetcher, payload_column=payload_column),
+        object_key=object_key,
+    )
 
 
 def build_first_matter_status_display_from_metadata_source(

@@ -17,6 +17,8 @@ from nac_runtime.status_source import (
     AtpRuntimeMetadataRowReader,
     PackagedRuntimeMetadataSource,
     RuntimeMetadataSourceUnavailable,
+    UnavailableRuntimeMetadataSource,
+    build_first_matter_runtime_metadata_source_from_env,
     build_first_matter_status_display_from_metadata_source,
     resolve_first_matter_runtime_metadata_source,
 )
@@ -97,6 +99,45 @@ class NotarkammerRuntimeStatusSourceTests(unittest.TestCase):
         self.assertFalse(display["mandate_data_loaded"])
         self.assertFalse(display["productive_xnp_action"])
         self.assertFalse(display["full_workspace_open"])
+
+    def test_env_runtime_source_is_inactive_without_atp_mode(self) -> None:
+        source = build_first_matter_runtime_metadata_source_from_env({})
+
+        self.assertIsNone(source)
+
+    def test_env_runtime_source_uses_atp_row_reader_and_configured_object_key(self) -> None:
+        fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        requested_keys: list[str] = []
+
+        def fetch_row(object_key: str) -> dict[str, object]:
+            requested_keys.append(object_key)
+            return {"metadata": json.dumps(fixture, ensure_ascii=False)}
+
+        source = build_first_matter_runtime_metadata_source_from_env(
+            {
+                "NAC_FIRST_MATTER_RUNTIME_SOURCE": "atp-json",
+                "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY": "runtime/atp/notarkammer-first.json",
+                "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN": "metadata",
+            },
+            row_fetcher=fetch_row,
+        )
+
+        display = build_first_matter_status_display_from_metadata_source(source=source)
+
+        self.assertEqual(requested_keys, ["runtime/atp/notarkammer-first.json"])
+        self.assertEqual(display["title"], "Immobilienkaufvertrag Status")
+        self.assertIn("Keine Mandatsdaten geladen.", display["status_items"])
+        self.assertFalse(display["mandate_data_loaded"])
+        self.assertFalse(display["productive_xnp_action"])
+
+    def test_env_runtime_source_fails_closed_when_atp_mode_lacks_row_fetcher(self) -> None:
+        source = build_first_matter_runtime_metadata_source_from_env(
+            {"NAC_FIRST_MATTER_RUNTIME_SOURCE": "atp"}
+        )
+
+        self.assertIsInstance(source, UnavailableRuntimeMetadataSource)
+        with self.assertRaisesRegex(RuntimeMetadataSourceUnavailable, "runtime_metadata_row_fetcher_missing"):
+            source.load_first_matter_metadata()
 
     def test_atp_runtime_metadata_row_reader_normalizes_bytes_and_mapping_payloads(self) -> None:
         fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
