@@ -52,11 +52,22 @@ Secret-Änderung oder ein OCI Apply auszulösen:
   Werte `atp`, `atp-json`, `atp_metadata` oder `atp-runtime-metadata`.
 - `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` überschreibt optional den logischen
   Runtime-Objektschlüssel. Ohne Wert gilt
-  `runtime/notarkammer-first/immobilienkaufvertrag.metadata.json`.
+  `DEMO-PROCESS-IMMOBILIENKAUF-01`.
 - `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` überschreibt optional die
   JSON-Payload-Spalte. Ohne Wert gilt `payload_json`.
-- Wenn der ATP-Zeilenleser noch nicht bereitsteht, liefert die Route keine
-  Packaged-Fallback-Daten, sondern bleibt fail-closed geschlossen.
+- `NAC_FIRST_MATTER_RUNTIME_TABLE` überschreibt optional die erlaubte
+  ATP-Ankertabelle. Ohne Wert gilt `nac_process_instances`.
+- `NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN` überschreibt optional die erlaubte
+  Schlüsselspalte. Ohne Wert gilt `process_instance_id`.
+- Der ATP-Zeilenleser nutzt nur erlaubte Tabellen- und Spaltennamen aus der
+  Runtime-Ankerliste; Env-Werte werden nicht ungeprüft als SQL-Identifier
+  verwendet.
+- Die ATP-Verbindung nutzt bestehende `NAC_ATP_USER`-, `NAC_ATP_DSN`- und
+  `NAC_ATP_PASSWORD_SECRET_OCID`-Konfiguration. Klartext-Passwörter per Env
+  sind nicht erlaubt; vorhandene Wallet-Referenzen werden nur wiederverwendet.
+- Wenn der ATP-Zeilenleser noch nicht bereitsteht oder ungültig konfiguriert
+  ist, liefert die Route keine Packaged-Fallback-Daten, sondern bleibt
+  fail-closed geschlossen.
 
 ## Fail-closed-Regeln
 
@@ -65,6 +76,8 @@ Bedingungen eintritt:
 
 - Runtime Store nicht erreichbar.
 - ATP-Metadata-Seam aktiviert, aber kein freigegebener Zeilenleser vorhanden.
+- ATP-Metadata-Seam mit nicht erlaubter Tabelle oder Spalte konfiguriert.
+- ATP-Metadata-Seam ohne vorhandene ATP-Secret-Referenz konfiguriert.
 - Prozessinstanz oder Ereignisse fehlen.
 - Graph-Projektion kann nicht aus Ereignissen gebaut werden.
 - Statusmodell enthält Mandatsdaten.

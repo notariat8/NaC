@@ -48,12 +48,21 @@ secret change, or OCI Apply:
 - `NAC_FIRST_MATTER_RUNTIME_SOURCE` activates the ATP metadata seam only for the
   values `atp`, `atp-json`, `atp_metadata` or `atp-runtime-metadata`.
 - `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` optionally overrides the logical runtime
-  object key. Without a value,
-  `runtime/notarkammer-first/immobilienkaufvertrag.metadata.json` is used.
+  object key. Without a value, `DEMO-PROCESS-IMMOBILIENKAUF-01` is used.
 - `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` optionally overrides the JSON payload
   column. Without a value, `payload_json` is used.
-- If the ATP row reader is not available yet, the route does not serve packaged
-  fallback data and remains fail-closed.
+- `NAC_FIRST_MATTER_RUNTIME_TABLE` optionally overrides the allowed ATP anchor
+  table. Without a value, `nac_process_instances` is used.
+- `NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN` optionally overrides the allowed key
+  column. Without a value, `process_instance_id` is used.
+- The ATP row reader uses only allowed table and column names from the runtime
+  anchor list; environment values are not used unchecked as SQL identifiers.
+- The ATP connection uses existing `NAC_ATP_USER`, `NAC_ATP_DSN` and
+  `NAC_ATP_PASSWORD_SECRET_OCID` configuration. Plaintext passwords through
+  environment variables are not allowed; existing wallet references are only
+  reused.
+- If the ATP row reader is not available or is configured invalidly, the route
+  does not serve packaged fallback data and remains fail-closed.
 
 ## Fail-closed Rules
 
@@ -61,6 +70,8 @@ The status path must fail-closed stay closed if any of these conditions occurs:
 
 - Runtime store unavailable.
 - ATP metadata seam active without an approved row reader.
+- ATP metadata seam configured with a disallowed table or column.
+- ATP metadata seam configured without an existing ATP secret reference.
 - Process instance or events missing.
 - Graph projection cannot be built from events.
 - Status model contains mandate data.

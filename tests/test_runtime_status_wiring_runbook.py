@@ -33,8 +33,18 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
             ["atp", "atp-json", "atp_metadata", "atp-runtime-metadata"],
         )
         self.assertEqual(seam["object_key_env"], "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY")
+        self.assertEqual(seam["default_object_key"], "DEMO-PROCESS-IMMOBILIENKAUF-01")
         self.assertEqual(seam["payload_column_env"], "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN")
+        self.assertEqual(seam["table_env"], "NAC_FIRST_MATTER_RUNTIME_TABLE")
+        self.assertEqual(seam["default_table"], "nac_process_instances")
+        self.assertEqual(seam["key_column_env"], "NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN")
+        self.assertEqual(seam["default_key_column"], "process_instance_id")
+        self.assertIn("nac_process_instances", seam["allowed_tables"])
+        self.assertEqual(seam["sql_identifier_policy"], "allowlisted_table_key_and_payload_columns_only")
         self.assertFalse(seam["packaged_fallback_when_atp_enabled"])
+        self.assertTrue(seam["requires_existing_atp_secret_reference"])
+        self.assertTrue(seam["wallet_references_reused_only"])
+        self.assertFalse(seam["plaintext_password_env_allowed"])
         self.assertFalse(seam["database_migration_required"])
         self.assertFalse(seam["oci_apply_required"])
         self.assertFalse(seam["secrets_or_wallet_change_required"])
@@ -71,6 +81,12 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
                 "Immobilienkaufvertrag",
                 "XNP/SNP",
                 "fail-closed",
+                "NAC_FIRST_MATTER_RUNTIME_TABLE",
+                "NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN",
+                "NAC_ATP_PASSWORD_SECRET_OCID",
+                "DEMO-PROCESS-IMMOBILIENKAUF-01",
+                "nac_process_instances",
+                "process_instance_id",
                 "no mandate data",
                 "no OCI Apply",
             ):
