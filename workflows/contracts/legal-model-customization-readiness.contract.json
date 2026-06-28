@@ -1,0 +1,234 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_model_customization_readiness",
+  "title": "Legal Model Customization Readiness",
+  "status": "readiness_contract_no_training",
+  "last_update": "2026-06-28",
+  "purpose": "Defines the gated readiness path for later Legal-Nemotron customization from public legal sources without starting training, publishing checkpoints or treating model output as legal truth.",
+  "source_documents": {
+    "legal_research_connectors": "workflows/contracts/legal-research-connectors.contract.json",
+    "legal_graph_contract": "workflows/contracts/legal-graph.contract.json",
+    "ai_sbom_policy": "policies/sbom-policy.yaml",
+    "language_policy": "policies/language-policy.yaml",
+    "build_now": "roadmap/BUILD_NOW.md"
+  },
+  "scope": {
+    "training_enabled": false,
+    "checkpoint_publication_enabled": false,
+    "production_legal_answer_system_enabled": false,
+    "mandate_data_allowed": false,
+    "publisher_full_text_allowed": false,
+    "remote_execution_enabled": false,
+    "owner_apply_required_before_any_training": true
+  },
+  "candidate_sources": [
+    {
+      "id": "nvidia-nemotron-pretraining-legal-v1",
+      "role": "baseline_pretraining_dataset_candidate",
+      "source_contract_candidate": "nvidia-nemotron-pretraining-legal-v1",
+      "canonical_url": "https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1",
+      "license_basis": "cc-by-4.0_claim_requires_review",
+      "jurisdiction_fit": "english_legal_baseline_not_german_law_source",
+      "allowed_use_before_owner_apply": [
+        "metadata_review",
+        "license_review",
+        "domain_fit_review",
+        "benchmark_gap_analysis"
+      ],
+      "blocked_use_before_owner_apply": [
+        "fine_tune_model",
+        "publish_checkpoint",
+        "treat_as_german_law_source"
+      ]
+    },
+    {
+      "id": "recht-bund-bgbl-data-access",
+      "role": "official_publication_ingestion_candidate",
+      "source_contract_candidate": "recht-bund-bgbl-data-access",
+      "canonical_url": "https://www.recht.bund.de/de/service/webservice/webservice_node.html",
+      "license_basis": "official_publication_terms_require_review",
+      "jurisdiction_fit": "german_federal_publication_evidence",
+      "allowed_use_before_owner_apply": [
+        "metadata_review",
+        "eli_url_review",
+        "pdf_zip_rss_ingestion_design",
+        "normalization_plan"
+      ],
+      "blocked_use_before_owner_apply": [
+        "bulk_crawl",
+        "train_on_pdf_full_text",
+        "publish_normalized_corpus"
+      ]
+    },
+    {
+      "id": "wikipedia-rechtsquelle-concept-reference",
+      "role": "concept_and_source_hierarchy_anchor",
+      "source_contract_candidate": "wikipedia-rechtsquelle-concept-reference",
+      "canonical_url": "https://de.wikipedia.org/wiki/Rechtsquelle",
+      "license_basis": "cc-by-sa_claim_requires_review",
+      "jurisdiction_fit": "concept_reference_not_primary_source",
+      "allowed_use_before_owner_apply": [
+        "source_hierarchy_design",
+        "collision_rule_design",
+        "terminology_review"
+      ],
+      "blocked_use_before_owner_apply": [
+        "treat_as_primary_legal_source",
+        "train_as_authoritative_law",
+        "replace_human_legal_review"
+      ]
+    }
+  ],
+  "required_readiness_gates": [
+    {
+      "id": "source_inventory_and_license_gate",
+      "must_complete_before": "corpus_preparation",
+      "required_evidence": [
+        "source_url",
+        "license_basis",
+        "terms_review_ref",
+        "tdm_review_ref",
+        "source_attribution_plan"
+      ]
+    },
+    {
+      "id": "source_hierarchy_gate",
+      "must_complete_before": "benchmark_design",
+      "required_evidence": [
+        "primary_source_classes",
+        "concept_reference_classes",
+        "commentary_exclusion_rules",
+        "collision_rules",
+        "human_review_owner"
+      ]
+    },
+    {
+      "id": "corpus_normalization_gate",
+      "must_complete_before": "training_data_preparation",
+      "required_evidence": [
+        "normalization_schema",
+        "deduplication_plan",
+        "citation_preservation_plan",
+        "full_text_storage_boundary",
+        "no_mandate_data_attestation"
+      ]
+    },
+    {
+      "id": "german_law_benchmark_gate",
+      "must_complete_before": "quality_claim",
+      "required_evidence": [
+        "benchmark_scope",
+        "held_out_sources",
+        "source_citation_requirements",
+        "wrong_answer_taxonomy",
+        "human_review_protocol"
+      ]
+    },
+    {
+      "id": "model_card_and_ai_sbom_gate",
+      "must_complete_before": "checkpoint_publication",
+      "required_evidence": [
+        "base_model",
+        "data_lineage",
+        "training_recipe",
+        "known_limitations",
+        "evaluation_results",
+        "ai_sbom_update_ref"
+      ]
+    },
+    {
+      "id": "owner_apply_gate",
+      "must_complete_before": "remote_training_or_checkpoint_publish",
+      "required_evidence": [
+        "owner_approval_ref",
+        "cost_estimate_ref",
+        "runtime_profile_ref",
+        "rollback_plan_ref",
+        "security_boundary_ref"
+      ]
+    }
+  ],
+  "nemotron_route_plan": {
+    "planning_only": true,
+    "pipeline_shape": [
+      {
+        "stage": "source_curation",
+        "candidate_step": "curate/nemo_curator",
+        "status": "blocked_until_source_inventory_and_license_gate",
+        "produces": "filtered_jsonl"
+      },
+      {
+        "stage": "pretraining_data_preparation",
+        "candidate_step": "data_prep/pretrain_prep",
+        "status": "blocked_until_corpus_normalization_gate",
+        "produces": "binidx"
+      },
+      {
+        "stage": "continued_pretraining_or_domain_adaptation",
+        "candidate_steps": [
+          "pretrain/automodel",
+          "pretrain/megatron_bridge"
+        ],
+        "status": "blocked_until_owner_apply_gate",
+        "produces": "checkpoint_hf_or_checkpoint_megatron"
+      },
+      {
+        "stage": "german_law_evaluation",
+        "candidate_step": "eval/model_eval",
+        "status": "required_before_quality_claim",
+        "produces": "eval_results"
+      },
+      {
+        "stage": "benchmark_generation",
+        "candidate_step": "byob/mcq",
+        "status": "blocked_until_benchmark_scope_review",
+        "produces": "mcq_benchmark_parquet"
+      }
+    ],
+    "required_inputs_before_runnable_config": [
+      "base_model_or_checkpoint",
+      "approved_corpus_path",
+      "tokenizer",
+      "sequence_length",
+      "hardware_gpu_count",
+      "execution_profile",
+      "output_dir",
+      "evaluation_task_ids"
+    ]
+  },
+  "blocked_actions": [
+    "emit_runnable_training_command_with_placeholders",
+    "start_finetuning_without_owner_apply",
+    "use_mandate_data_for_training",
+    "store_publisher_full_text_in_product_repo",
+    "publish_checkpoint_without_model_card",
+    "claim_legal_truth_from_model_output",
+    "skip_human_notarial_review"
+  ],
+  "required_evidence_fields": [
+    "schema_version",
+    "readiness_id",
+    "source_inventory_ref",
+    "license_review_ref",
+    "tdm_review_ref",
+    "source_hierarchy_ref",
+    "benchmark_ref",
+    "evaluation_ref",
+    "model_card_ref",
+    "ai_sbom_ref",
+    "owner_apply_ref",
+    "no_mandate_data_attestation",
+    "no_training_started_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_legal_model_customization_readiness.py",
+    "python scripts/validate_legal_research_connectors.py",
+    "python scripts/validate_legal_graph_contracts.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/legal-model-customization-readiness.md",
+    "en": "docs/en/architecture/legal-model-customization-readiness.md"
+  }
+}

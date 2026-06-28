@@ -47,6 +47,10 @@ Jeder Vertrag soll definieren:
   Vertrag für den mandatsdatenfreien NaC-Rechtsgraphen mit Primärquellen,
   Erbrechts-, Familienrechts- und Gesellschaftsrechts-MVPs, Review-Patches und
   No-Auto-Merge-Regel.
+- [workflows/contracts/legal-model-customization-readiness.contract.json](legal-model-customization-readiness.contract.json):
+  Readiness-Vertrag für spätere Legal-Nemotron-Modellanpassung mit
+  Quellenhierarchie, Lizenz-/TDM-, Benchmark-, Evaluation-, Model-Card-,
+  AI-SBOM- und Owner-Apply-Gates, ohne Trainingsstart.
 - [workflows/contracts/legal-commentary-connectors.contract.json](legal-commentary-connectors.contract.json):
   Vertrag für lizenzierte Kommentar- und Verlagsquellen über MCP/API ohne
   Credentials, Mandatsdaten oder Kommentar-Volltexte im Produktrepo, mit

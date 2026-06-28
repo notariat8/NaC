@@ -35,7 +35,7 @@ CI:
   contract, knowledge graph, NaC on-prem agent runtime, notarial on-prem
   connector boundaries, matter-data classification/redaction and private
   operating frame gate, private-payload target design and private-payload
-  access policy
+  access policy plus Legal Nemotron readiness
 
 ## Fixed Order
 
@@ -66,8 +66,9 @@ CI:
 23. `gnotkg_costs` only in `strict`
 24. `secure_document_links` only in `strict`
 25. `legal_research_connectors` only in `strict`
-26. `legal_graph_contracts` only in `strict`
-27. `oci_tenant_identity` only in `strict`
+26. `legal_model_customization_readiness` only in `strict`
+27. `legal_graph_contracts` only in `strict`
+28. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

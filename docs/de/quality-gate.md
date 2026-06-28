@@ -34,7 +34,7 @@ CI:
   ATP-Runtime-Contract + Knowledge Graph + NaC-On-Prem-Agent-Runtime +
   notarielle On-Prem-Connector-Grenzen + Mandatsdaten-Klassifikation und
   Redaktionsgrenze + privater Betriebsrahmen + Private-Payload-Zielarchitektur
-  + Private-Payload-Zugriffsmatrix
+  + Private-Payload-Zugriffsmatrix + Legal-Nemotron-Readiness
 
 ## Feste Reihenfolge
 
@@ -65,8 +65,9 @@ CI:
 23. `gnotkg_costs` (nur `strict`)
 24. `secure_document_links` (nur `strict`)
 25. `legal_research_connectors` (nur `strict`)
-26. `legal_graph_contracts` (nur `strict`)
-27. `oci_tenant_identity` (nur `strict`)
+26. `legal_model_customization_readiness` (nur `strict`)
+27. `legal_graph_contracts` (nur `strict`)
+28. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 
