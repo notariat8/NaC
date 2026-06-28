@@ -86,6 +86,10 @@ Jeder Vertrag soll definieren:
   logisches Envelope-/Pointer-Zielbild für spätere private Payloads mit
   Zugriffsgates, Hashes, Retention, Audit und Speicherzielgrenzen, ohne DDL-
   Artefakt, Apply oder private Beispieldaten.
+- [workflows/contracts/private-payload-access-policy.contract.json](private-payload-access-policy.contract.json):
+  Rollen-, Zweck- und Zugriffsmatrix für spätere private Payloads mit Step-up,
+  Human Review, Audit, globalen Ablehnungen und ohne Live-Zugriff oder private
+  Beispieldaten.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten

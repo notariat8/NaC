@@ -153,6 +153,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Mandatsdatenverarbeitung.
 - [docs/de/architecture/private-payload-target-design.md](architecture/private-payload-target-design.md):
   logisches Envelope-/Pointer-Zielbild für spätere private Payloads ohne Apply.
+- [docs/de/architecture/private-payload-access-policy.md](architecture/private-payload-access-policy.md):
+  Rollen-, Zweck- und Zugriffsmatrix für spätere private Payloads ohne
+  Live-Zugriff.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -191,6 +194,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/private-payload-target-design.contract.json](../../workflows/contracts/private-payload-target-design.contract.json)
   beschreibt das logische Envelope-/Pointer-Zielbild für private Payloads
   ohne DDL-Artefakt, Apply oder private Beispieldaten.
+- [workflows/contracts/private-payload-access-policy.contract.json](../../workflows/contracts/private-payload-access-policy.contract.json)
+  beschreibt Rollen, Zwecke, Zugriffsmatrix, Step-up, Human Review, Audit und
+  globale Ablehnungen für spätere private Payloads ohne Live-Zugriff.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

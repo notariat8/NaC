@@ -31,6 +31,7 @@ gantt
     Mandatsdaten-Redaktionsvertrag             :done,   w4o, 2026-06-28, 1d
     Privater Betriebsrahmen-Gatevertrag        :done,   w4p, 2026-06-28, 1d
     Private-Payload-Zielarchitektur            :done,   w4q, 2026-06-28, 1d
+    Private-Payload-Zugriffsmatrix             :done,   w4r, 2026-06-28, 1d
 
     section Ausführung
     Skill-Scaffolds für Notariatsworkflows    :        w5, 2026-06-01, 28d
@@ -52,7 +53,7 @@ gantt
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Nutzbarer MVP | BPMN ist fachliche Prozessquelle; alle Usecases haben bpmn-js-taugliche Basismodelle mit `nac:channel`, Python validiert NaC-Properties, Sequenzflüsse und Diagrammflächen. |
 | GNotKG-Kostenmodul | `src/nac_gnotkg/` plus `workflows/contracts/gnotkg-cost-review.contract.json` | Nutzbarer MVP | Zentrale Wertgebührenlogik mit GNotKG § 35-Höchstwerten, mandatsdatenfreier Reviewgraph und `xyflow` als reine Visualisierungsschicht. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, BPMN-XML/Editierfläche, KG-Editor-Views, GNotKG-Kostenansichten und KG-JSON lokal im Browser; BPMN-Speichern nutzt SHA-256-Konfliktprüfung, GNotKG-Quotes laufen per POST. |
-| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, GNotKG-Kosten-, lokaler Webpreview-, Secure-Document-Link-, Legal-Research-Connector-Kandidaten-, Legal-Graph-, Kommentar-Connector-, NaC-On-Prem-Agent-Runtime-, On-Prem-Connector-Grenz-, Mandatsdaten-Redaktions-, privater Betriebsrahmen-Gate- und Private-Payload-Zielvertrag. Kommentar-, On-Prem-Connector-, Mandatsdaten- und Private-Payload-Verträge bleiben vor produktivem Zugriff durch Lizenzbasis-, AVV-/DPA-, Berufsgeheimnis-, AI-SBOM-, Sicherheitsgrenzen-, Credential-, Testmodus-, Privacy-, Speicher-, Retention-, Verschlüsselungs- und Owner-Gates blockiert. |
+| Workflow-Verträge | `workflows/contracts/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, GNotKG-Kosten-, lokaler Webpreview-, Secure-Document-Link-, Legal-Research-Connector-Kandidaten-, Legal-Graph-, Kommentar-Connector-, NaC-On-Prem-Agent-Runtime-, On-Prem-Connector-Grenz-, Mandatsdaten-Redaktions-, privater Betriebsrahmen-Gate-, Private-Payload-Ziel- und Zugriffsmatrixvertrag. Kommentar-, On-Prem-Connector-, Mandatsdaten- und Private-Payload-Verträge bleiben vor produktivem Zugriff durch Lizenzbasis-, AVV-/DPA-, Berufsgeheimnis-, AI-SBOM-, Sicherheitsgrenzen-, Credential-, Testmodus-, Privacy-, Rollen-, Zweck-, Speicher-, Retention-, Verschlüsselungs- und Owner-Gates blockiert. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr

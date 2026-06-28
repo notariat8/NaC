@@ -28,6 +28,9 @@ NaC models private payloads as an envelope and pointer architecture:
 - Documents are referenced as encrypted objects or local specialist-system
   objects; NaC stores only redacted metadata for them.
 
+The matching role, purpose and access matrix is defined in
+[private-payload-access-policy.md](private-payload-access-policy.md).
+
 This keeps the architecture checkable without placing a private payload in the
 repository.
 

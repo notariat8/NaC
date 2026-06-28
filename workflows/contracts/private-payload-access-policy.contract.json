@@ -1,0 +1,330 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.private_payload_access_policy",
+  "title": "Private-Payload-Zugriffsmatrix",
+  "status": "policy_contract_no_live_access",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert, welche Rollen für spätere private Payloads welche Zugriffszwecke beantragen dürfen, ohne Live-Zugriff, private Beispieldaten oder produktive Freigaben zu aktivieren.",
+  "source_documents": {
+    "role_model_policy": "policies/role-model-policy.yaml",
+    "access_control_policy": "policies/access-control-policy.yaml",
+    "private_payload_target_design": "workflows/contracts/private-payload-target-design.contract.json",
+    "private_operating_frame_gate": "workflows/contracts/private-operating-frame-gate.contract.json",
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json"
+  },
+  "scope": {
+    "live_access_enabled": false,
+    "productive_personal_data_processing_enabled": false,
+    "private_payload_examples_in_repo_allowed": false,
+    "target_control_private_payload_allowed": false,
+    "automation_may_approve_access": false,
+    "guest_may_access_private_payload_by_default": false,
+    "owner_apply_required_before_enforcement": true
+  },
+  "role_classes": [
+    {
+      "id": "notar_fachlich",
+      "source_role": "notarial_roles.notary.notar_fachlich",
+      "allowed_request_actions": [
+        "read_private_payload_for_notarial_review",
+        "approve_matter_attachment",
+        "approve_private_payload_release",
+        "review_redacted_audit"
+      ],
+      "approval_level": "notarial_approval",
+      "step_up_required": true,
+      "human_review_required": true
+    },
+    {
+      "id": "notariatsfachkraft",
+      "source_role": "notarial_roles.notary.notariatsfachkraft",
+      "allowed_request_actions": [
+        "request_private_payload_for_casework",
+        "prepare_matter_attachment",
+        "review_redacted_audit"
+      ],
+      "approval_level": "requires_notarial_or_owner_approval_for_sensitive_classes",
+      "step_up_required": true,
+      "human_review_required": true
+    },
+    {
+      "id": "kostenverantwortung",
+      "source_role": "notarial_roles.notary.kostenverantwortung",
+      "allowed_request_actions": [
+        "request_private_payload_for_cost_review",
+        "review_redacted_audit"
+      ],
+      "approval_level": "cost_review_only",
+      "step_up_required": true,
+      "human_review_required": true
+    },
+    {
+      "id": "revision_audit",
+      "source_role": "generic_roles.revision_audit",
+      "allowed_request_actions": [
+        "review_redacted_audit",
+        "request_redacted_payload_evidence"
+      ],
+      "approval_level": "redacted_audit_only",
+      "step_up_required": true,
+      "human_review_required": true
+    },
+    {
+      "id": "owner",
+      "source_role": "process_policy.project_owner",
+      "allowed_request_actions": [
+        "approve_policy_exception",
+        "approve_owner_apply",
+        "review_redacted_audit"
+      ],
+      "approval_level": "owner_apply_only",
+      "step_up_required": true,
+      "human_review_required": true
+    },
+    {
+      "id": "automation",
+      "source_role": "generic_roles.automation",
+      "allowed_request_actions": [
+        "evaluate_policy_metadata",
+        "record_denial",
+        "record_redacted_audit"
+      ],
+      "approval_level": "cannot_approve_or_read_private_payload",
+      "step_up_required": false,
+      "human_review_required": false
+    },
+    {
+      "id": "client_guest_user",
+      "source_role": "external_access.client_guest_user",
+      "allowed_request_actions": [
+        "request_upload_link",
+        "request_own_document_status"
+      ],
+      "approval_level": "external_participant_limited_after_separate_gate",
+      "step_up_required": true,
+      "human_review_required": true
+    }
+  ],
+  "purpose_classes": [
+    "notarial_review",
+    "casework_preparation",
+    "cost_review",
+    "matter_attachment",
+    "external_participant_upload",
+    "redacted_audit",
+    "owner_apply",
+    "incident_response"
+  ],
+  "access_matrix": [
+    {
+      "id": "notary_read_for_review",
+      "role_class": "notar_fachlich",
+      "purpose": "notarial_review",
+      "allowed_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_with_gate",
+        "external_payload_with_gate"
+      ],
+      "allowed_actions": [
+        "read_private_payload_for_notarial_review",
+        "approve_matter_attachment"
+      ],
+      "required_gates": [
+        "private_operating_frame_gate",
+        "step_up_authentication",
+        "tenant_matter_purpose_binding",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "clerk_prepare_casework",
+      "role_class": "notariatsfachkraft",
+      "purpose": "casework_preparation",
+      "allowed_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "property_raw_data",
+        "personal_identifiers_with_gate",
+        "external_payload_with_gate"
+      ],
+      "allowed_actions": [
+        "request_private_payload_for_casework",
+        "prepare_matter_attachment"
+      ],
+      "required_gates": [
+        "private_operating_frame_gate",
+        "notarial_or_owner_approval_for_sensitive_classes",
+        "step_up_authentication",
+        "tenant_matter_purpose_binding",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "cost_review_limited",
+      "role_class": "kostenverantwortung",
+      "purpose": "cost_review",
+      "allowed_data_classes": [
+        "financial_account_real_data",
+        "property_raw_data",
+        "personal_identifiers_with_gate"
+      ],
+      "allowed_actions": [
+        "request_private_payload_for_cost_review"
+      ],
+      "required_gates": [
+        "private_operating_frame_gate",
+        "cost_review_qualification",
+        "step_up_authentication",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "audit_redacted_only",
+      "role_class": "revision_audit",
+      "purpose": "redacted_audit",
+      "allowed_data_classes": [
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "allowed_actions": [
+        "review_redacted_audit",
+        "request_redacted_payload_evidence"
+      ],
+      "required_gates": [
+        "redaction_check",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "owner_apply_gate",
+      "role_class": "owner",
+      "purpose": "owner_apply",
+      "allowed_data_classes": [
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "allowed_actions": [
+        "approve_owner_apply",
+        "approve_policy_exception"
+      ],
+      "required_gates": [
+        "owner_identity_confirmed",
+        "full_change_diff_review",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "automation_policy_metadata_only",
+      "role_class": "automation",
+      "purpose": "redacted_audit",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "allowed_actions": [
+        "evaluate_policy_metadata",
+        "record_denial",
+        "record_redacted_audit"
+      ],
+      "required_gates": [
+        "no_private_payload_read",
+        "append_only_audit"
+      ]
+    },
+    {
+      "id": "guest_upload_link_limited",
+      "role_class": "client_guest_user",
+      "purpose": "external_participant_upload",
+      "allowed_data_classes": [
+        "hash_or_pointer_without_private_payload"
+      ],
+      "allowed_actions": [
+        "request_upload_link",
+        "request_own_document_status"
+      ],
+      "required_gates": [
+        "secure_document_private_payload_gate",
+        "step_up_authentication",
+        "human_review_before_matter_attachment",
+        "append_only_audit"
+      ]
+    }
+  ],
+  "global_denials": [
+    {
+      "id": "no_public_or_target_control_access",
+      "denied_surfaces": [
+        "github_issues_prs_actions_artifacts",
+        "notoclaw_target_control",
+        "public_webapp_demo",
+        "quality_gate_artifacts"
+      ],
+      "denied_actions": [
+        "read_private_payload",
+        "write_private_payload",
+        "export_private_payload"
+      ]
+    },
+    {
+      "id": "no_automation_approval",
+      "denied_roles": [
+        "automation"
+      ],
+      "denied_actions": [
+        "approve_private_payload_release",
+        "approve_owner_apply",
+        "read_private_payload"
+      ]
+    },
+    {
+      "id": "no_guest_default_read",
+      "denied_roles": [
+        "client_guest_user",
+        "auditor_guest_user"
+      ],
+      "denied_actions": [
+        "read_full_matter_payload",
+        "browse_case_payloads"
+      ]
+    }
+  ],
+  "required_access_evidence_fields": [
+    "schema_version",
+    "grant_id",
+    "payload_id",
+    "tenant_id",
+    "matter_id",
+    "role_class",
+    "purpose",
+    "data_classes",
+    "decision_status",
+    "decision_reason",
+    "expires_at",
+    "revocation_status",
+    "step_up_status",
+    "human_review_ref",
+    "audit_event_ref",
+    "no_github_payload_attestation",
+    "no_target_control_payload_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_private_payload_access_policy.py",
+    "python scripts/validate_private_payload_target_design.py",
+    "python scripts/validate_private_operating_frame_gate.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/private-payload-access-policy.md",
+    "en": "docs/en/architecture/private-payload-access-policy.md"
+  }
+}
