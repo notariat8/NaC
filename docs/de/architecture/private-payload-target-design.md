@@ -30,6 +30,9 @@ NaC modelliert private Payloads als Envelope- und Pointer-Architektur:
 - Dokumente werden als verschlüsselte Objekte oder lokale Fachsystemobjekte
   referenziert; NaC speichert dazu nur redigierte Metadaten.
 
+Die Rollen-, Zweck- und Zugriffsmatrix dazu steht in
+[private-payload-access-policy.md](private-payload-access-policy.md).
+
 Damit bleibt die Architektur prüfbar, ohne einen privaten Payload im Repo zu
 erzeugen.
 
