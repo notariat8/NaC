@@ -70,7 +70,7 @@ damit nicht zurück nach Git.
 | Mandanten und Benutzerbindungen | ATP / IdP | ATP speichert NaC-Bindung, IdP authentifiziert |
 | Sessions | ATP | nur gehashte/abgeleitete Sessiondaten, keine Tokens oder Claims |
 | Dokument-Metadaten | ATP | Dateiname, Typ, Status, Nachweisreferenz ohne Rohinhalt |
-| Dokument-Binärdaten | später Object Storage | verschlüsselt, mit Retention und Audit |
+| Dokument-Binärdaten | später Object Storage | verschlüsselt, mit Retention und Audit nach [private-payload-target-design.md](private-payload-target-design.md) |
 | Demo-Daten | Git erlaubt | nur synthetisch und ausdrücklich markiert |
 
 ## Erstes Laufzeitvertrags-Konzept

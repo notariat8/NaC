@@ -34,7 +34,7 @@ CI:
   model validation, cloud runbook parity, Gantt, AI-SBOM, ATP runtime
   contract, knowledge graph, NaC on-prem agent runtime, notarial on-prem
   connector boundaries, matter-data classification/redaction and private
-  operating frame gate
+  operating frame gate and private-payload target design
 
 ## Fixed Order
 
@@ -60,11 +60,12 @@ CI:
 18. `notarial_onprem_connector_boundaries` only in `strict`
 19. `matter_data_classification_redaction` only in `strict`
 20. `private_operating_frame_gate` only in `strict`
-21. `gnotkg_costs` only in `strict`
-22. `secure_document_links` only in `strict`
-23. `legal_research_connectors` only in `strict`
-24. `legal_graph_contracts` only in `strict`
-25. `oci_tenant_identity` only in `strict`
+21. `private_payload_target_design` only in `strict`
+22. `gnotkg_costs` only in `strict`
+23. `secure_document_links` only in `strict`
+24. `legal_research_connectors` only in `strict`
+25. `legal_graph_contracts` only in `strict`
+26. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

@@ -114,6 +114,8 @@ Referenz: [policies/role-model-policy.yaml](../../policies/role-model-policy.yam
   [docs/de/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
 - Privater Betriebsrahmen und Private-Payload-Gate:
   [docs/de/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md)
+- Private-Payload-Zielarchitektur:
+  [docs/de/architecture/private-payload-target-design.md](architecture/private-payload-target-design.md)
 - Fork-Modell und Verantwortungen:
   [docs/de/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync-Zyklus und PR-Gates:

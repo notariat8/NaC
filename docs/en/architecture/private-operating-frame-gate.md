@@ -27,6 +27,9 @@ After this gate, private runtime designs can be created. That may be a separate
 ATP private-payload schema, encrypted object storage or a local specialist
 system/DMS path. Each of those paths still needs its own apply or live gate.
 
+The first logical target model for those later designs is defined in
+[private-payload-target-design.md](private-payload-target-design.md).
+
 ## Minimum Controls
 
 Before productive processing, the minimum requirements are:

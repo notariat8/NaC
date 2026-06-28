@@ -82,6 +82,10 @@ Jeder Vertrag soll definieren:
   Gate-Vertrag für den späteren privaten Betriebsrahmen mit Datenschutz-,
   Rollen-, Speicher-, Verschlüsselungs-, Retention-, Audit- und Owner-Gates,
   ohne produktiven Apply.
+- [workflows/contracts/private-payload-target-design.contract.json](private-payload-target-design.contract.json):
+  logisches Envelope-/Pointer-Zielbild für spätere private Payloads mit
+  Zugriffsgates, Hashes, Retention, Audit und Speicherzielgrenzen, ohne DDL-
+  Artefakt, Apply oder private Beispieldaten.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten
