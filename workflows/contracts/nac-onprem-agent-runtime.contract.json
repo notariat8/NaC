@@ -1,0 +1,141 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.nac_onprem_agent_runtime",
+  "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
+  "status": "target_control_ready_no_productive_connector_apply",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert die Grenze, in der NaC als agentische On-Prem-Plattform auf notoclaw01 mit NemoClaw/OpenClaw vorbereitet wird, ohne NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz zu umgehen.",
+  "operating_model": {
+    "project_manager": {
+      "location": "brev01 main chat",
+      "responsibility": "Scope, Architekturentscheidungen, Akzeptanzkriterien, Owner-Fragen, GitOps und PRs koordinieren."
+    },
+    "dev_agent": {
+      "location": "brev01 NaC repository",
+      "responsibility": "Code, Doku, Verträge, Tests, Validatoren, PRs, CI und Releases umsetzen."
+    },
+    "target_operator": {
+      "location": "notoclaw01-host:/home/ubuntu/nac-target-control",
+      "responsibility": "NemoClaw/OpenClaw-Zielsystem, Agent-Manifest, lokale Smokes, Evidence und Runbooks prüfen."
+    }
+  },
+  "source_of_truth": {
+    "git": [
+      "nac_repo_code",
+      "nac_repo_contracts",
+      "nac_repo_governance",
+      "nac_repo_bpmn",
+      "nac_repo_knowledge_graphs",
+      "nac_repo_tests"
+    ],
+    "target_control": [
+      "target_manifests",
+      "target_runbooks",
+      "target_local_smokes",
+      "target_non_sensitive_evidence"
+    ],
+    "not_source_of_truth": [
+      "/home/ubuntu/.codex",
+      "/home/ubuntu/.nemoclaw",
+      "/sandbox/.openclaw/workspace-*"
+    ]
+  },
+  "target_control": {
+    "host_label": "notoclaw01-host",
+    "control_path": "/home/ubuntu/nac-target-control",
+    "runtime_family": "NemoClaw/OpenClaw",
+    "manifest_path": "blueprints/nac-onprem/agents.yaml",
+    "workspace_template_path": "blueprints/nac-onprem/workspace-template",
+    "required_workspace_template_files": [
+      "AGENTS.md",
+      "IDENTITY.md",
+      "SOUL.md",
+      "USER.md",
+      "MEMORY.md"
+    ],
+    "skill_path": "skills/nac-agent/SKILL.md",
+    "mcp_readme_path": "mcp/nac/README.md",
+    "connector_paths": [
+      "connectors/xnp/README.md",
+      "connectors/cyberjack/README.md",
+      "connectors/register/README.md"
+    ],
+    "smoke_commands": [
+      "bin/nac-target-smoke",
+      "bin/nac-runtime-smoke"
+    ],
+    "evidence_path": "evidence/2026-06-28-nac-onprem-agent-solution.md"
+  },
+  "required_agent_roles_or_names": [
+    "main",
+    "notary-flow",
+    "evidence",
+    "connector-ops"
+  ],
+  "connector_boundaries": [
+    {
+      "id": "xnp_snp",
+      "path": "connectors/xnp/README.md",
+      "status": "prepared_stub_only",
+      "next_gate": "real_connector_contract_before_live_apply"
+    },
+    {
+      "id": "cyberjack_card_workstation",
+      "path": "connectors/cyberjack/README.md",
+      "status": "prepared_stub_only",
+      "next_gate": "card_pin_workstation_contract_before_live_apply"
+    },
+    {
+      "id": "register",
+      "path": "connectors/register/README.md",
+      "status": "prepared_stub_only",
+      "next_gate": "register_communication_contract_before_live_apply"
+    }
+  ],
+  "guardrails": {
+    "notoclaw_is_project_manager": false,
+    "target_operator_github_write_allowed_by_default": false,
+    "target_operator_pr_creation_allowed_by_default": false,
+    "secrets_in_target_control_allowed": false,
+    "matter_data_in_target_control_allowed": false,
+    "productive_connector_apply_allowed_without_owner_gate": false,
+    "productive_release_allowed_without_owner_gate": false,
+    "target_control_may_read_codex_runtime_secrets": false,
+    "target_control_may_use_nac_read_only_mirror": true,
+    "project_manager_keeps_delivery_ownership": true,
+    "protected_pr_required_for_repo_change": true
+  },
+  "owner_gates": [
+    "architecture_decision",
+    "secret_or_credential",
+    "github_write_from_target",
+    "productive_connector_apply",
+    "oci_apply",
+    "release",
+    "destructive_action"
+  ],
+  "handoff": {
+    "required_when_repo_change_needed": true,
+    "format_fields": [
+      "Handoff",
+      "Scope",
+      "Evidence",
+      "Impact",
+      "Required NaC repo change",
+      "Validation already run",
+      "Owner input needed"
+    ]
+  },
+  "validation_commands": [
+    "python scripts/validate_nac_onprem_agent_runtime.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/nac-onprem-agent-runtime.md",
+    "en": "docs/en/architecture/nac-onprem-agent-runtime.md",
+    "operating_model_de": "docs/de/architecture/nemoclaw-operating-model.md",
+    "operating_model_en": "docs/en/architecture/nemoclaw-operating-model.md"
+  }
+}

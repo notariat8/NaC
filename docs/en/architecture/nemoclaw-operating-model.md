@@ -10,6 +10,11 @@ NemoClaw target operation for NaC. It prevents a target-system agent from
 reporting local work as "finished" while the overall process still needs code,
 review, release work or owner approval.
 
+The technical NaC on-prem agent runtime boundary for `notoclaw01` is defined in
+[docs/en/architecture/nac-onprem-agent-runtime.md](nac-onprem-agent-runtime.md)
+and in the machine-readable contract
+[workflows/contracts/nac-onprem-agent-runtime.contract.json](../../../workflows/contracts/nac-onprem-agent-runtime.contract.json).
+
 ## Roles And Work Locations
 
 | Role | Work location | Responsibility | Must not |

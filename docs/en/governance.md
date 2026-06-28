@@ -108,6 +108,8 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
 
 - NemoClaw target operation and agent work split:
   [docs/en/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
+- NaC on-prem agent runtime on `notoclaw01`:
+  [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
 - Fork model and responsibilities:
   [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync cycle and PR gates:

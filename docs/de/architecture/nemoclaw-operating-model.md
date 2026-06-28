@@ -10,6 +10,11 @@ NemoClaw-Zielbetrieb für NaC. Es verhindert, dass ein Zielsystem-Agent lokal
 „fertig“ meldet, obwohl im Gesamtprozess noch Code, Review, Release oder
 Owner-Freigabe fehlt.
 
+Die technische NaC-On-Prem-Agent-Runtime-Grenze für `notoclaw01` steht in
+[docs/de/architecture/nac-onprem-agent-runtime.md](nac-onprem-agent-runtime.md)
+und im maschinenlesbaren Vertrag
+[workflows/contracts/nac-onprem-agent-runtime.contract.json](../../../workflows/contracts/nac-onprem-agent-runtime.contract.json).
+
 ## Rollen und Arbeitsorte
 
 | Rolle | Arbeitsort | Aufgabe | Darf nicht |
