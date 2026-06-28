@@ -22,6 +22,9 @@ erst danach eine technische Integration planen.
 | German Law MCP auf ElasticFlow | [ElasticFlow](https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp) | Kandidat, Doppellistung | Gleicher technischer Kandidat wie Ansvar/LobeHub, separat nachgewiesen. |
 | beck-online MCP Listing | [MCP Market](https://mcpmarket.com/server/beck-online) | Lizenzprüfung nötig | Keine Nutzung ohne Vertrags-, Lizenz-, TDM-, Sicherheits- und Credential-Prüfung. |
 | Deubner Recht Portal | [Deubner Recht & Praxis](https://www.deubner-recht.de/) | Lizenzprüfung nötig | Nur als Verlagsportal-Kandidat; keine automatisierte Abfrage, kein Volltextimport und keine Credential-Nutzung ohne Vertrags-, Lizenz-, AVV-/DPA-, TDM- und Sicherheitsprüfung. |
+| NVIDIA Nemotron Pretraining Legal v1 | [Hugging Face](https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1) | Quellen-/Lizenzprüfung nötig | Englischer Legal-Pretraining-Datensatz als Baseline-/Evaluationskandidat; keine deutsche Rechtsquelle, kein Trainingsstart und keine Checkpoint-Veröffentlichung ohne Owner-Apply, AI-SBOM, Lizenz- und Model-Card-Review. |
+| recht.bund.de Datenabruf | [Bundesgesetzblatt Datenabruf](https://www.recht.bund.de/de/service/webservice/webservice_node.html) | Amtliche Quelle prüfen | Systematischer BGBl.-Abruf über ELI, PDF, ZIP und RSS als späterer Ingest-Kandidat; kein Bulk-Crawl, kein PDF-Finetuning und keine Normalisierung ohne Nutzungs-, Lizenz- und Review-Plan. |
+| Rechtsquelle-Begriff | [Wikipedia Rechtsquelle](https://de.wikipedia.org/wiki/Rechtsquelle) | Begrifflicher Anker | Nur zur Trennung von Rechtsquelle, Rechtserkenntnisquelle, Normenhierarchie und Kollisionsregeln; keine Primärquelle und kein Trainingskorpus. |
 
 Alle URLs werden ohne Trackingparameter geführt. Die maschinenlesbare Grenze
 steht im
@@ -38,6 +41,9 @@ steht im
   menschliche fachliche Prüfung und die versionierte NaC-Freigabe.
 - Keine Portal-Scraping- oder TDM-Annahme ohne ausdrückliche Rechts- und
   Anbieterprüfung.
+- Kein Fine-tuning, keine Checkpoint-Veröffentlichung und keine Nutzung als
+  Rechtsantwortsystem ohne separaten Quellen-, Lizenz-, Evaluations-,
+  Model-Card-, AI-SBOM- und Owner-Apply-Nachweis.
 
 ## Kandidat Zu Connector
 

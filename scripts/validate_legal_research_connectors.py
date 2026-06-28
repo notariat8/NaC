@@ -39,12 +39,16 @@ LICENSE_REVIEW_SOURCE_TYPES = {
     "publisher_database_mcp_listing",
     "ai_answer_product",
     "market_landscape",
+    "training_dataset_candidate",
+    "official_publication_data_access",
+    "concept_reference",
 }
 AI_OR_MCP_SOURCE_TYPES = {
     "mcp_server_listing",
     "publisher_database_mcp_listing",
     "ai_answer_product",
     "market_landscape",
+    "training_dataset_candidate",
 }
 REQUIRED_EVIDENCE_FIELDS = {"source_url", "checked_at", "checked_by", "data_classes", "notes"}
 REQUIRED_BLOCKED_ACTIONS = {
@@ -143,6 +147,14 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
             errors.append(f"{candidate_id}: lizenzrelevante Quelle braucht license_review_required true")
         if source_type in AI_OR_MCP_SOURCE_TYPES and candidate.get("ai_sbom_status") not in {"pending", "not_applicable"}:
             errors.append(f"{candidate_id}: ai_sbom_status muss pending oder not_applicable sein")
+        if source_type == "training_dataset_candidate" and "start_finetuning_without_owner_apply" not in candidate.get("blocked_actions", []):
+            errors.append(f"{candidate_id}: Trainingsdatensatz muss start_finetuning_without_owner_apply blockieren")
+        if source_type == "training_dataset_candidate" and "treat_dataset_as_german_law_source" not in candidate.get("blocked_actions", []):
+            errors.append(f"{candidate_id}: Trainingsdatensatz muss treat_dataset_as_german_law_source blockieren")
+        if source_type == "official_publication_data_access" and "bulk_crawl_without_terms_review" not in candidate.get("blocked_actions", []):
+            errors.append(f"{candidate_id}: amtlicher Datenabruf muss bulk_crawl_without_terms_review blockieren")
+        if source_type == "concept_reference" and "treat_concept_reference_as_primary_legal_source" not in candidate.get("blocked_actions", []):
+            errors.append(f"{candidate_id}: Begriffshinweis muss treat_concept_reference_as_primary_legal_source blockieren")
 
         allowed_actions = set(_string_list(candidate.get("allowed_actions")))
         blocked_actions = set(_string_list(candidate.get("blocked_actions")))
