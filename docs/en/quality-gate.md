@@ -30,12 +30,13 @@ CI:
 - `minimal`: process validation and unit tests
 - `standard`: `minimal` plus privacy lint
 - `strict`: `standard` plus governance policy sync, spec traceability,
-  language parity including skill language markers, documentation links, BPMN
-  model validation, cloud runbook parity, Gantt, AI-SBOM, ATP runtime
-  contract, knowledge graph, NaC on-prem agent runtime, notarial on-prem
-  connector boundaries, matter-data classification/redaction and private
-  operating frame gate, private-payload target design and private-payload
-  access policy plus Legal Nemotron readiness
+  technology policy, language parity including skill language markers,
+  documentation links, BPMN model validation, cloud runbook parity, Gantt,
+  AI-SBOM, ATP runtime contract, knowledge graph, NaC on-prem agent runtime,
+  notarial on-prem connector boundaries, matter-data classification/redaction
+  and private operating frame gate, private-payload target design and
+  private-payload access policy plus Legal Nemotron readiness and legal model
+  evaluation benchmark
 
 ## Fixed Order
 
@@ -45,30 +46,32 @@ CI:
 4. `privacy_lint` from `standard`
 5. `governance_sync` only in `strict`
 6. `spec_traceability` only in `strict`
-7. `language_parity` only in `strict`
-8. `doc_links` only in `strict`
-9. `bpmn_models` only in `strict`
-10. `gantt_progress` only in `strict`; checks required Gantt files and
+7. `technology_policy` only in `strict`
+8. `language_parity` only in `strict`
+9. `doc_links` only in `strict`
+10. `bpmn_models` only in `strict`
+11. `gantt_progress` only in `strict`; checks required Gantt files and
    Mermaid render safety, and emits guidance for business roadmap/scope/status
    updates
-11. `cloud_runbook_parity` only in `strict`
-12. `ai_sbom` only in `strict`
-13. `atp_runtime_contracts` only in `strict`
-14. `knowledge_graph` only in `strict`
-15. `kg_editor` only in `strict`
-16. `codex_parallel_review` only in `strict`
-17. `nac_onprem_agent_runtime` only in `strict`
-18. `notarial_onprem_connector_boundaries` only in `strict`
-19. `matter_data_classification_redaction` only in `strict`
-20. `private_operating_frame_gate` only in `strict`
-21. `private_payload_target_design` only in `strict`
-22. `private_payload_access_policy` only in `strict`
-23. `gnotkg_costs` only in `strict`
-24. `secure_document_links` only in `strict`
-25. `legal_research_connectors` only in `strict`
-26. `legal_model_customization_readiness` only in `strict`
-27. `legal_graph_contracts` only in `strict`
-28. `oci_tenant_identity` only in `strict`
+12. `cloud_runbook_parity` only in `strict`
+13. `ai_sbom` only in `strict`
+14. `atp_runtime_contracts` only in `strict`
+15. `knowledge_graph` only in `strict`
+16. `kg_editor` only in `strict`
+17. `codex_parallel_review` only in `strict`
+18. `nac_onprem_agent_runtime` only in `strict`
+19. `notarial_onprem_connector_boundaries` only in `strict`
+20. `matter_data_classification_redaction` only in `strict`
+21. `private_operating_frame_gate` only in `strict`
+22. `private_payload_target_design` only in `strict`
+23. `private_payload_access_policy` only in `strict`
+24. `gnotkg_costs` only in `strict`
+25. `secure_document_links` only in `strict`
+26. `legal_research_connectors` only in `strict`
+27. `legal_model_customization_readiness` only in `strict`
+28. `legal_model_evaluation_benchmark` only in `strict`
+29. `legal_graph_contracts` only in `strict`
+30. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

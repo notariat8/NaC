@@ -29,12 +29,14 @@ CI:
 - `minimal`: Prozessvalidierung + Unit Tests
 - `standard`: `minimal` + Privacy Lint
 - `strict`: `standard` + Governance Policy Sync + Spec-Traceability +
-  Language Parity inklusive Skill-Sprachmarkern + Documentation Links +
-  BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM +
-  ATP-Runtime-Contract + Knowledge Graph + NaC-On-Prem-Agent-Runtime +
-  notarielle On-Prem-Connector-Grenzen + Mandatsdaten-Klassifikation und
-  Redaktionsgrenze + privater Betriebsrahmen + Private-Payload-Zielarchitektur
-  + Private-Payload-Zugriffsmatrix + Legal-Nemotron-Readiness
+  Technology Policy + Language Parity inklusive Skill-Sprachmarkern +
+  Documentation Links + BPMN-Modellprüfung + Cloud Runbook Parity + Gantt +
+  AI-SBOM + ATP-Runtime-Contract + Knowledge Graph +
+  NaC-On-Prem-Agent-Runtime + notarielle On-Prem-Connector-Grenzen +
+  Mandatsdaten-Klassifikation und Redaktionsgrenze + privater Betriebsrahmen +
+  Private-Payload-Zielarchitektur + Private-Payload-Zugriffsmatrix +
+  Legal-Nemotron-Readiness +
+  Legal-Model-Evaluationsbenchmark
 
 ## Feste Reihenfolge
 
@@ -44,30 +46,32 @@ CI:
 4. `privacy_lint` (ab `standard`)
 5. `governance_sync` (nur `strict`)
 6. `spec_traceability` (nur `strict`)
-7. `language_parity` (nur `strict`)
-8. `doc_links` (nur `strict`)
-9. `bpmn_models` (nur `strict`)
-10. `gantt_progress` (nur `strict`; prüft Pflicht-Gantts und
+7. `technology_policy` (nur `strict`)
+8. `language_parity` (nur `strict`)
+9. `doc_links` (nur `strict`)
+10. `bpmn_models` (nur `strict`)
+11. `gantt_progress` (nur `strict`; prüft Pflicht-Gantts und
    Mermaid-Render-Sicherheit, gibt aber nur Hinweise für fachliche
    Roadmap-/Scope-/Statusupdates)
-11. `cloud_runbook_parity` (nur `strict`)
-12. `ai_sbom` (nur `strict`)
-13. `atp_runtime_contracts` (nur `strict`)
-14. `knowledge_graph` (nur `strict`)
-15. `kg_editor` (nur `strict`)
-16. `codex_parallel_review` (nur `strict`)
-17. `nac_onprem_agent_runtime` (nur `strict`)
-18. `notarial_onprem_connector_boundaries` (nur `strict`)
-19. `matter_data_classification_redaction` (nur `strict`)
-20. `private_operating_frame_gate` (nur `strict`)
-21. `private_payload_target_design` (nur `strict`)
-22. `private_payload_access_policy` (nur `strict`)
-23. `gnotkg_costs` (nur `strict`)
-24. `secure_document_links` (nur `strict`)
-25. `legal_research_connectors` (nur `strict`)
-26. `legal_model_customization_readiness` (nur `strict`)
-27. `legal_graph_contracts` (nur `strict`)
-28. `oci_tenant_identity` (nur `strict`)
+12. `cloud_runbook_parity` (nur `strict`)
+13. `ai_sbom` (nur `strict`)
+14. `atp_runtime_contracts` (nur `strict`)
+15. `knowledge_graph` (nur `strict`)
+16. `kg_editor` (nur `strict`)
+17. `codex_parallel_review` (nur `strict`)
+18. `nac_onprem_agent_runtime` (nur `strict`)
+19. `notarial_onprem_connector_boundaries` (nur `strict`)
+20. `matter_data_classification_redaction` (nur `strict`)
+21. `private_operating_frame_gate` (nur `strict`)
+22. `private_payload_target_design` (nur `strict`)
+23. `private_payload_access_policy` (nur `strict`)
+24. `gnotkg_costs` (nur `strict`)
+25. `secure_document_links` (nur `strict`)
+26. `legal_research_connectors` (nur `strict`)
+27. `legal_model_customization_readiness` (nur `strict`)
+28. `legal_model_evaluation_benchmark` (nur `strict`)
+29. `legal_graph_contracts` (nur `strict`)
+30. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 
