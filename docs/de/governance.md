@@ -104,6 +104,10 @@ Referenz: [policies/role-model-policy.yaml](../../policies/role-model-policy.yam
 
 ## Weiterführende Betriebsstandards
 
+- NemoClaw-Zielbetrieb und Agenten-Arbeitsteilung:
+  [docs/de/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
+- NaC-On-Prem-Agent-Runtime auf `notoclaw01`:
+  [docs/de/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
 - Fork-Modell und Verantwortungen:
   [docs/de/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync-Zyklus und PR-Gates:

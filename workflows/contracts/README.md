@@ -66,6 +66,10 @@ Jeder Vertrag soll definieren:
   Vertrag für explizite, parallele Codex-Reviews mit read-only Agentprofilen,
   Scope-Mapping, KG-/BPMN-/Policy-/Doku-/Validierungsprüfung, Guardrails und
   frischem Nachweis vor Abnahme.
+- [workflows/contracts/nac-onprem-agent-runtime.contract.json](nac-onprem-agent-runtime.contract.json):
+  Vertrag für die NaC-On-Prem-Agent-Runtime auf `notoclaw01` mit
+  NemoClaw/OpenClaw-Zielsystemgrenze, Target-Control-Pfaden, Connector-Stubs,
+  Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten

@@ -136,6 +136,12 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Live-Runbook, 60-Minuten-Skript, XNP/BPMN-Grenzen und Fallbacks.
 - [docs/de/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md): Herleitung
   des offenen Aktenmodells aus typischen Notarsoftware-Bausteinen.
+- [docs/de/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md):
+  Arbeitsteilung zwischen Project Manager, `brev01`-Entwicklung und
+  `notoclaw01`-Zielbetrieb.
+- [docs/de/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md):
+  Zielsystemvertrag für NaC als On-Prem-Agent-Runtime mit NemoClaw/OpenClaw,
+  Target-Control, Connector-Stubs und Owner-Gates.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -158,6 +164,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json)
   beschreibt den Vertrag für explizite, parallele Codex-Reviews mit
   read-only Agentprofilen und frischer Validierung.
+- [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json)
+  beschreibt den Vertrag für NaC als On-Prem-Agent-Runtime auf `notoclaw01`
+  mit Target-Control-Pfaden, Connector-Stubs und Owner-Gates.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

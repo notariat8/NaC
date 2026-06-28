@@ -108,6 +108,12 @@ regardless of the language used in the prompt. The binding rule is defined in
   live runbook, 60-minute script, XNP/BPMN boundaries and fallbacks.
 - [docs/en/notarsoftware-datenmodell.md](notarsoftware-datenmodell.md) derives
   the open matter model from common notary-software building blocks.
+- [docs/en/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
+  defines the work split between Project Manager, `brev01` development and
+  `notoclaw01` target operation.
+- [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
+  defines the target-system contract for NaC as an on-prem agent runtime with
+  NemoClaw/OpenClaw, target-control, connector stubs and owner gates.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
   quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
@@ -118,6 +124,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
 - [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json) defines the contract for explicit parallel Codex reviews with read-only agent profiles and fresh validation.
+- [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json) defines the contract for NaC as an on-prem agent runtime on `notoclaw01` with target-control paths, connector stubs and owner gates.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.

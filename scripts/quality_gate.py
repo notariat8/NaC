@@ -146,6 +146,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_parallel_review.py"],
                 ),
                 (
+                    "nac_onprem_agent_runtime",
+                    "NaC On-Prem Agent Runtime Contract",
+                    [sys.executable, "scripts/validate_nac_onprem_agent_runtime.py"],
+                ),
+                (
                     "gnotkg_costs",
                     "GNotKG Cost Review Contract",
                     [sys.executable, "scripts/validate_gnotkg_costs.py"],
