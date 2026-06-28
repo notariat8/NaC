@@ -71,6 +71,9 @@ Vorgangsinhalt enthalten. Lokale Pfade, Betriebsdetails, produktive
 Endpunkte, Tokens und personenbezogene Details bleiben außerhalb des
 Produktrepos.
 
+Die verbindliche Datenklassifikation für diese Evidence steht in
+[matter-data-classification-redaction.md](matter-data-classification-redaction.md).
+
 ## Verhältnis Zu notoclaw01
 
 `notoclaw01` darf Connector-Stubs und Smokes in

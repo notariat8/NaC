@@ -117,6 +117,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)
   defines notarial on-prem connector boundaries for XNP/SNP, XNotar,
   cyberJack/card workstation, registers and land registers without live apply.
+- [docs/en/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
+  defines matter-data classification and redaction boundaries for GitHub,
+  `notoclaw01`, web-app status, ATP metadata and later private runtime stores.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
   quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
@@ -129,6 +132,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json) defines the contract for explicit parallel Codex reviews with read-only agent profiles and fresh validation.
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json) defines the contract for NaC as an on-prem agent runtime on `notoclaw01` with target-control paths, connector stubs and owner gates.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json) defines XNP/SNP, XNotar, card-workstation, register and land-register paths as local readiness and redacted evidence boundaries.
+- [workflows/contracts/matter-data-classification-redaction.contract.json](../../workflows/contracts/matter-data-classification-redaction.contract.json) defines matter-data classification, redaction evidence and storage boundaries between GitHub, `notoclaw01`, web-app status, ATP metadata and the private operating frame.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.

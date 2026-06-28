@@ -123,7 +123,8 @@ The current target-system run creates four NaC-side work blocks:
 
 1. Clarify subject-matter notarial workflow rules in BPMN, KG and contracts.
 2. Keep matter-data classification, redaction rules and storage boundaries
-   aligned for on-prem and SaaS runtime.
+   aligned for on-prem and SaaS runtime through
+   [matter-data-classification-redaction.md](matter-data-classification-redaction.md).
 3. Move XNP, cyberJack and register connectors from the boundary contract into
    private operating frames, test mode and later specialist-system adapters.
 4. Integrate durable manifest onboarding for NaC agents into GitOps without

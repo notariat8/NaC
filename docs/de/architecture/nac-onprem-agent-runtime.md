@@ -124,7 +124,9 @@ Aus dem aktuellen Zielsystemlauf folgen vier NaC-seitige Arbeitsblöcke:
 
 1. Fachliche Notar-Workflow-Regeln in BPMN, KG und Contracts präzisieren.
 2. Mandatsdaten-Klassifikation, Redaktionsregeln und Speichergrenzen für
-   On-Prem- und SaaS-Runtime synchron führen.
+   On-Prem- und SaaS-Runtime nach
+   [matter-data-classification-redaction.md](matter-data-classification-redaction.md)
+   synchron führen.
 3. XNP-, cyberJack- und Register-Connectoren auf Basis des Grenzvertrags in
    private Betriebsrahmen, Testmodus und spätere Fachsystemadapter überführen.
 4. Ein dauerhaftes Manifest-Onboarding für NaC-Agenten in GitOps integrieren,

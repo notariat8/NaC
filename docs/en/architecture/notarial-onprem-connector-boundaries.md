@@ -69,6 +69,9 @@ Evidence must not contain a technical secret or real matter content. Local
 paths, operating details, production endpoints, tokens and personal details
 stay outside the product repository.
 
+The binding data classification for this evidence is defined in
+[matter-data-classification-redaction.md](matter-data-classification-redaction.md).
+
 ## Relation To notoclaw01
 
 `notoclaw01` may validate connector stubs and smokes in
