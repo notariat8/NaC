@@ -148,6 +148,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md):
   Mandatsdaten-Klassifikation und Redaktionsgrenze für GitHub, `notoclaw01`,
   Webapp-Status, ATP-Metadaten und spätere private Runtime-Speicher.
+- [docs/de/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md):
+  privater Betriebsrahmen und Private-Payload-Gate vor echter
+  Mandatsdatenverarbeitung.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -180,6 +183,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   beschreibt Mandatsdaten-Klassifikation, Redaktionsnachweise und
   Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status,
   ATP-Metadaten und privatem Betriebsrahmen.
+- [workflows/contracts/private-operating-frame-gate.contract.json](../../workflows/contracts/private-operating-frame-gate.contract.json)
+  beschreibt den Gate-Vertrag für spätere private Payloads mit Datenschutz-,
+  Rollen-, Speicher-, Verschlüsselungs-, Retention-, Audit- und Owner-Gates.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

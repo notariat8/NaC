@@ -114,6 +114,8 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
   [docs/en/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)
 - Matter-data classification and redaction boundary:
   [docs/en/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
+- Private operating frame and private-payload gate:
+  [docs/en/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md)
 - Fork model and responsibilities:
   [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync cycle and PR gates:

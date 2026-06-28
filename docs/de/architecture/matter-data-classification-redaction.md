@@ -107,4 +107,5 @@ Damit bleibt die Aufteilung klar:
 - NaC-GitOps führt Contracts, BPMN, KG, Policies, Tests und PRs.
 - `notoclaw01` führt Zielsystem-Smokes und nicht-sensitive Evidence.
 - Ein späterer privater Runtime-Speicher führt echte Mandatsdaten erst nach
-  explizitem Owner-, Datenschutz-, Sicherheits- und Rollen-Gate.
+  explizitem Owner-, Datenschutz-, Sicherheits- und Rollen-Gate nach
+  [private-operating-frame-gate.md](private-operating-frame-gate.md).

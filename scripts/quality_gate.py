@@ -161,6 +161,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_matter_data_classification_redaction.py"],
                 ),
                 (
+                    "private_operating_frame_gate",
+                    "Private Operating Frame Gate",
+                    [sys.executable, "scripts/validate_private_operating_frame_gate.py"],
+                ),
+                (
                     "gnotkg_costs",
                     "GNotKG Cost Review Contract",
                     [sys.executable, "scripts/validate_gnotkg_costs.py"],

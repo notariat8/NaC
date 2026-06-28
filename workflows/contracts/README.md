@@ -78,6 +78,10 @@ Jeder Vertrag soll definieren:
   Vertrag für Mandatsdaten-Klassifikation, Redaktionsnachweise und
   Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status, ATP-Metadaten
   und späterem privaten Betriebsrahmen.
+- [workflows/contracts/private-operating-frame-gate.contract.json](private-operating-frame-gate.contract.json):
+  Gate-Vertrag für den späteren privaten Betriebsrahmen mit Datenschutz-,
+  Rollen-, Speicher-, Verschlüsselungs-, Retention-, Audit- und Owner-Gates,
+  ohne produktiven Apply.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten

@@ -152,6 +152,8 @@ Wichtige Kanten:
 
 ## Naechster Track
 
-Der nächste technische Track kann aus diesem Vertrag ein nicht-destruktives
-ATP-Schema für die Anker ableiten. Danach kann eine schreibende Runtime-Kante
-für Demo-Metadaten und später eine Graph-Projektion folgen.
+Der nächste technische Track bleibt metadata-only, bis der
+[private-operating-frame-gate.md](private-operating-frame-gate.md) erfüllt ist.
+Erst danach darf ein separates ATP-Private-Payload-Schema entworfen werden.
+Bis dahin kann NaC nur nicht-destruktive Anker, Demo-Metadaten und
+Graph-Projektionen ohne Rohmandatsdaten ausbauen.
