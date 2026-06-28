@@ -129,6 +129,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/private-payload-access-policy.md](architecture/private-payload-access-policy.md)
   defines the role, purpose and access matrix for later private payloads
   without live access.
+- [docs/en/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md)
+  defines the readiness contract for later Legal-Nemotron model customization
+  without starting training.
 - [qms/README.md](../../qms/README.md) defines the QMS/ISO 9001 layer with
   quality policy, objectives, audit program and evidence mapping.
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
@@ -146,6 +149,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [workflows/contracts/private-payload-target-design.contract.json](../../workflows/contracts/private-payload-target-design.contract.json) defines the logical envelope/pointer target model for private payloads without a DDL artifact, apply or private example data.
 - [workflows/contracts/private-payload-access-policy.contract.json](../../workflows/contracts/private-payload-access-policy.contract.json) defines roles, purposes, access matrix, step-up, human review, audit and global denials for later private payloads without live access.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
+- [workflows/contracts/legal-model-customization-readiness.contract.json](../../workflows/contracts/legal-model-customization-readiness.contract.json) defines source, license, benchmark, evaluation, model-card, AI-SBOM and owner-apply gates for later Legal-Nemotron customization.
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.

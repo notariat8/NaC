@@ -120,6 +120,8 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
   [docs/en/architecture/private-payload-target-design.md](architecture/private-payload-target-design.md)
 - Private-payload access policy:
   [docs/en/architecture/private-payload-access-policy.md](architecture/private-payload-access-policy.md)
+- Legal Nemotron readiness:
+  [docs/en/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md)
 - Fork model and responsibilities:
   [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync cycle and PR gates:
