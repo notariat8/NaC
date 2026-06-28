@@ -22,6 +22,9 @@ technical integration.
 | German Law MCP on ElasticFlow | [ElasticFlow](https://elasticflow.app/hub/pt-BR/mcps/german-law-mcp) | Candidate, duplicate listing | Same technical candidate as Ansvar/LobeHub, evidenced separately. |
 | beck-online MCP listing | [MCP Market](https://mcpmarket.com/server/beck-online) | License review needed | No use without terms, license, TDM, security and credential review. |
 | Deubner Recht portal | [Deubner Recht & Praxis](https://www.deubner-recht.de/) | License review needed | Publisher-portal candidate only; no automated query, full-text import or credential use without terms, license, DPA, TDM and security review. |
+| NVIDIA Nemotron Pretraining Legal v1 | [Hugging Face](https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1) | Source and license review needed | English legal pretraining dataset as a baseline/evaluation candidate; not a German legal source, no training start and no checkpoint publication without owner apply, AI-SBOM, license and model-card review. |
+| recht.bund.de data access | [Bundesgesetzblatt data access](https://www.recht.bund.de/de/service/webservice/webservice_node.html) | Official source review | Systematic BGBl access through ELI, PDF, ZIP and RSS as a later ingestion candidate; no bulk crawl, PDF fine-tuning or normalization without terms, license and review plan. |
+| Rechtsquelle concept | [Wikipedia Rechtsquelle](https://de.wikipedia.org/wiki/Rechtsquelle) | Concept anchor | Only for separating legal source, source-of-law evidence, hierarchy and collision rules; not a primary source and not a training corpus. |
 
 All URLs are kept without tracking parameters. The machine-readable boundary is
 defined in the
@@ -38,6 +41,9 @@ defined in the
   review and versioned NaC approval.
 - No portal scraping or TDM assumption without explicit legal and provider
   review.
+- No fine-tuning, checkpoint publication or use as a legal-answer system
+  without separate source, license, evaluation, model-card, AI-SBOM and owner
+  apply evidence.
 
 ## From Candidate To Connector
 

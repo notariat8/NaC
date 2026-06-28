@@ -261,6 +261,146 @@
         "personal_data_processing"
       ],
       "notes": "Publisher portal with login and legal-practice content categories; NaC treats it only as a candidate until terms, license, API/MCP availability, TDM, DPA and security boundaries are reviewed."
+    },
+    {
+      "id": "nvidia-nemotron-pretraining-legal-v1",
+      "display_name": "NVIDIA Nemotron Pretraining Legal v1",
+      "provider": "NVIDIA / Hugging Face",
+      "source_type": "training_dataset_candidate",
+      "status": "license_and_domain_fit_review_required",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1",
+      "source_seen_at": "2026-06-28",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "license_review_required",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "record_license_status",
+        "plan_manual_review"
+      ],
+      "blocked_actions": [
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "treat_ai_answer_as_legal_truth",
+        "store_provider_full_text_in_product_repo",
+        "start_finetuning_without_owner_apply",
+        "publish_checkpoint_without_model_card_review",
+        "treat_dataset_as_german_law_source"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "fine_tuning_plan",
+        "license_review",
+        "ai_sbom_decision"
+      ],
+      "notes": "English CC-BY-4.0 legal pretraining dataset candidate. It may inform baseline and evaluation planning, but it is not a German legal source and does not authorize a NaC fine-tune or checkpoint publication."
+    },
+    {
+      "id": "recht-bund-bgbl-data-access",
+      "display_name": "recht.bund.de Bundesgesetzblatt data access",
+      "provider": "Bundesministerium der Justiz",
+      "source_type": "official_publication_data_access",
+      "status": "official_source_review",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://www.recht.bund.de/de/service/webservice/webservice_node.html",
+      "source_seen_at": "2026-06-28",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "terms_review_required",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "not_applicable",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "record_license_status",
+        "plan_manual_review"
+      ],
+      "blocked_actions": [
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "bulk_crawl_without_terms_review",
+        "train_on_pdf_full_text_without_normalization_and_review",
+        "treat_ai_answer_as_legal_truth",
+        "store_provider_full_text_in_product_repo"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "source_ingestion_plan",
+        "license_review",
+        "normalization_review"
+      ],
+      "notes": "Official Bundesgesetzblatt data-access page documents systematic ELI URLs, PDF files, ZIP downloads and RSS feeds. NaC treats it as publication evidence and future ingestion input, not as an immediate fine-tuning corpus."
+    },
+    {
+      "id": "wikipedia-rechtsquelle-concept-reference",
+      "display_name": "Wikipedia Rechtsquelle concept reference",
+      "provider": "Wikimedia Foundation contributors",
+      "source_type": "concept_reference",
+      "status": "concept_anchor_only",
+      "integration_level": "metadata_only",
+      "canonical_url": "https://de.wikipedia.org/wiki/Rechtsquelle",
+      "source_seen_at": "2026-06-28",
+      "credentials_required": false,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "license_review_required",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "not_applicable",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "record_license_status",
+        "plan_manual_review"
+      ],
+      "blocked_actions": [
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "treat_concept_reference_as_primary_legal_source",
+        "treat_ai_answer_as_legal_truth",
+        "store_provider_full_text_in_product_repo"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "source_hierarchy_design",
+        "license_review"
+      ],
+      "notes": "Concept anchor for distinguishing source hierarchy, source-of-law classes and collision rules. It is not a primary legal source and not a training corpus."
     }
   ]
 }

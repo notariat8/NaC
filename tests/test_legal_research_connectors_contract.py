@@ -29,6 +29,9 @@ class LegalResearchConnectorsContractTests(unittest.TestCase):
                 "ansvar-german-law-mcp-elasticflow",
                 "beck-online-mcp-market",
                 "deubner-recht-publisher-portal",
+                "nvidia-nemotron-pretraining-legal-v1",
+                "recht-bund-bgbl-data-access",
+                "wikipedia-rechtsquelle-concept-reference",
             },
         )
         for candidate in candidates.values():
@@ -51,6 +54,28 @@ class LegalResearchConnectorsContractTests(unittest.TestCase):
         self.assertTrue(candidate["license_review_required"])
         self.assertIn("automated_provider_query_without_contract", candidate["blocked_actions"])
         self.assertIn("store_provider_full_text_in_product_repo", candidate["blocked_actions"])
+
+    def test_legal_model_customization_candidates_are_blocked_until_review(self) -> None:
+        payload = self.load_contract()
+        candidates = {candidate["id"]: candidate for candidate in payload["candidates"]}
+        nemotron = candidates["nvidia-nemotron-pretraining-legal-v1"]
+        recht_bund = candidates["recht-bund-bgbl-data-access"]
+        rechtsquelle = candidates["wikipedia-rechtsquelle-concept-reference"]
+
+        self.assertEqual(nemotron["source_type"], "training_dataset_candidate")
+        self.assertEqual(nemotron["integration_level"], "metadata_only")
+        self.assertTrue(nemotron["license_review_required"])
+        self.assertEqual(nemotron["ai_sbom_status"], "pending")
+        self.assertIn("start_finetuning_without_owner_apply", nemotron["blocked_actions"])
+        self.assertIn("treat_dataset_as_german_law_source", nemotron["blocked_actions"])
+
+        self.assertEqual(recht_bund["source_type"], "official_publication_data_access")
+        self.assertIn("bulk_crawl_without_terms_review", recht_bund["blocked_actions"])
+        self.assertIn("train_on_pdf_full_text_without_normalization_and_review", recht_bund["blocked_actions"])
+
+        self.assertEqual(rechtsquelle["source_type"], "concept_reference")
+        self.assertEqual(rechtsquelle["status"], "concept_anchor_only")
+        self.assertIn("treat_concept_reference_as_primary_legal_source", rechtsquelle["blocked_actions"])
 
     def test_contract_blocks_credentials_and_mandate_data_until_review(self) -> None:
         payload = self.load_contract()
