@@ -1,0 +1,176 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_model_evaluation_benchmark",
+  "title": "Legal Model Evaluation Benchmark",
+  "status": "benchmark_blueprint_no_dataset",
+  "last_update": "2026-06-28",
+  "purpose": "Defines the German-law evaluation benchmark blueprint for later Legal-Nemotron customization without generating benchmark rows, calling models or claiming legal-answer quality.",
+  "source_documents": {
+    "legal_model_customization_readiness": "workflows/contracts/legal-model-customization-readiness.contract.json",
+    "legal_research_connectors": "workflows/contracts/legal-research-connectors.contract.json",
+    "legal_graph_contract": "workflows/contracts/legal-graph.contract.json",
+    "build_now": "roadmap/BUILD_NOW.md"
+  },
+  "scope": {
+    "benchmark_dataset_generated": false,
+    "model_evaluation_executed": false,
+    "training_enabled": false,
+    "model_quality_claim_enabled": false,
+    "mandate_data_allowed": false,
+    "publisher_full_text_allowed": false,
+    "owner_apply_required_before_benchmark_generation": true
+  },
+  "benchmark_design": {
+    "benchmark_family": "german_law_mcq_and_citation_tasks",
+    "planning_only": true,
+    "primary_language": "de",
+    "source_hierarchy": [
+      {
+        "class": "primary_official_publication",
+        "examples": [
+          "recht-bund-bgbl-data-access",
+          "gesetze_im_internet"
+        ],
+        "allowed_role": "ground_truth_after_license_and_normalization_review"
+      },
+      {
+        "class": "concept_reference",
+        "examples": [
+          "wikipedia-rechtsquelle-concept-reference"
+        ],
+        "allowed_role": "terminology_and_source_hierarchy_prompt_review_only"
+      },
+      {
+        "class": "baseline_training_dataset",
+        "examples": [
+          "nvidia-nemotron-pretraining-legal-v1"
+        ],
+        "allowed_role": "baseline_gap_analysis_only"
+      },
+      {
+        "class": "licensed_commentary_or_publisher_database",
+        "examples": [
+          "beck-online",
+          "juris",
+          "wolters-kluwer"
+        ],
+        "allowed_role": "excluded_until_license_api_and_review"
+      }
+    ],
+    "domains": [
+      "erbrecht",
+      "familienrecht",
+      "gesellschaftsrecht"
+    ],
+    "task_families": [
+      {
+        "id": "source_citation_accuracy",
+        "description": "Answer must cite the controlling source class and citation metadata.",
+        "requires_human_review": true
+      },
+      {
+        "id": "temporal_validity",
+        "description": "Answer must distinguish current, amended and historical law state.",
+        "requires_human_review": true
+      },
+      {
+        "id": "notarial_workflow_fit",
+        "description": "Answer must map a legal point to NaC review points without mandate facts.",
+        "requires_human_review": true
+      },
+      {
+        "id": "refusal_and_uncertainty",
+        "description": "Model must refuse unsupported legal certainty and route to human review.",
+        "requires_human_review": true
+      },
+      {
+        "id": "source_collision_handling",
+        "description": "Answer must treat concept references, primary sources and commentary as different evidence classes.",
+        "requires_human_review": true
+      }
+    ]
+  },
+  "holdout_policy": {
+    "requires_held_out_sources": true,
+    "train_eval_overlap_allowed": false,
+    "source_leakage_check_required": true,
+    "held_out_source_classes": [
+      "official_publication_numbers",
+      "normalized_norm_versions",
+      "review_scenarios",
+      "wrong_answer_taxonomy_examples"
+    ]
+  },
+  "nemotron_route_plan": {
+    "planning_only": true,
+    "benchmark_generation_candidate_step": "byob/mcq",
+    "evaluation_candidate_step": "eval/model_eval",
+    "blocked_until": [
+      "source_inventory_and_license_gate",
+      "source_hierarchy_gate",
+      "german_law_benchmark_gate",
+      "owner_apply_gate"
+    ],
+    "required_inputs_before_runnable_config": [
+      "approved_benchmark_source_corpus",
+      "task_family_selection",
+      "held_out_source_manifest",
+      "answer_key_review_owner",
+      "evaluation_task_ids",
+      "target_model_or_endpoint",
+      "execution_profile",
+      "output_dir"
+    ]
+  },
+  "scoring_policy": {
+    "automatic_score_is_advisory_only": true,
+    "human_notarial_review_required": true,
+    "minimum_report_fields": [
+      "task_family",
+      "source_citation_accuracy",
+      "temporal_validity_result",
+      "unsupported_claim_count",
+      "refusal_quality",
+      "reviewer_notes"
+    ],
+    "blocked_quality_claims": [
+      "legally_reliable_without_review",
+      "notarial_decision_replacement",
+      "production_ready_from_benchmark_score_only"
+    ]
+  },
+  "blocked_actions": [
+    "generate_benchmark_dataset_without_owner_apply",
+    "run_model_eval_without_approved_tasks",
+    "train_on_benchmark_holdout",
+    "use_mandate_data_in_benchmark",
+    "store_publisher_full_text_in_benchmark",
+    "publish_quality_claim_without_human_review",
+    "treat_automatic_score_as_notarial_truth"
+  ],
+  "required_evidence_fields": [
+    "schema_version",
+    "benchmark_id",
+    "source_inventory_ref",
+    "source_hierarchy_ref",
+    "license_review_ref",
+    "held_out_source_manifest_ref",
+    "task_family",
+    "answer_key_review_ref",
+    "evaluation_task_ref",
+    "human_review_protocol_ref",
+    "no_mandate_data_attestation",
+    "no_dataset_generated_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_legal_model_evaluation_benchmark.py",
+    "python scripts/validate_legal_model_customization_readiness.py",
+    "python scripts/validate_legal_research_connectors.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/legal-model-evaluation-benchmark.md",
+    "en": "docs/en/architecture/legal-model-evaluation-benchmark.md"
+  }
+}

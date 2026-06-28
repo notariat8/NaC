@@ -159,6 +159,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md):
   Readiness-Vertrag für spätere Legal-Nemotron-Modellanpassung ohne
   Trainingsstart.
+- [docs/de/architecture/legal-model-evaluation-benchmark.md](architecture/legal-model-evaluation-benchmark.md):
+  Benchmark-Blueprint für spätere Legal-Nemotron-Evaluationen ohne
+  Benchmark-Datensatz, Modelllauf oder Qualitätsbehauptung.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -206,6 +209,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/legal-model-customization-readiness.contract.json](../../workflows/contracts/legal-model-customization-readiness.contract.json)
   beschreibt Quellen-, Lizenz-, Benchmark-, Evaluation-, Model-Card-,
   AI-SBOM- und Owner-Apply-Gates für spätere Legal-Nemotron-Anpassungen.
+- [workflows/contracts/legal-model-evaluation-benchmark.contract.json](../../workflows/contracts/legal-model-evaluation-benchmark.contract.json)
+  beschreibt Quellenhierarchie, Holdout-Regeln, Aufgabenfamilien,
+  BYOB/MCQ- und `eval/model_eval`-Routing für spätere
+  Legal-Nemotron-Evaluationen ohne Benchmark-Datensatz oder Modelllauf.
 - [.github/workflows/](../../.github/workflows) enthält Governance-, Runtime-, SBOM- und
   Cloud-Parity-Workflows.
 

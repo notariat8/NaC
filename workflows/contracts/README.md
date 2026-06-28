@@ -51,6 +51,11 @@ Jeder Vertrag soll definieren:
   Readiness-Vertrag für spätere Legal-Nemotron-Modellanpassung mit
   Quellenhierarchie, Lizenz-/TDM-, Benchmark-, Evaluation-, Model-Card-,
   AI-SBOM- und Owner-Apply-Gates, ohne Trainingsstart.
+- [workflows/contracts/legal-model-evaluation-benchmark.contract.json](legal-model-evaluation-benchmark.contract.json):
+  Benchmark-Blueprint für spätere Legal-Nemotron-Evaluationen mit
+  Quellenhierarchie, Holdout-Regeln, Aufgabenfamilien, BYOB/MCQ- und
+  `eval/model_eval`-Routing, ohne Benchmark-Datensatz, Modelllauf oder
+  Qualitätsbehauptung.
 - [workflows/contracts/legal-commentary-connectors.contract.json](legal-commentary-connectors.contract.json):
   Vertrag für lizenzierte Kommentar- und Verlagsquellen über MCP/API ohne
   Credentials, Mandatsdaten oder Kommentar-Volltexte im Produktrepo, mit
