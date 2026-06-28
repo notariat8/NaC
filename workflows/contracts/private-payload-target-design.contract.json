@@ -1,0 +1,188 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.private_payload_target_design",
+  "title": "Private-Payload-Zielarchitektur",
+  "status": "logical_design_only_no_apply",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert ein logisches Envelope-, Pointer-, Zugriffs- und Audit-Design für spätere private Mandatsdaten-Payloads, ohne produktiven Apply, DDL-Artefakt oder private Beispieldaten im Repository.",
+  "source_documents": {
+    "private_operating_frame_gate": "workflows/contracts/private-operating-frame-gate.contract.json",
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json",
+    "atp_metadata_storage": "workflows/contracts/atp-runtime-storage.contract.json",
+    "secure_document_link": "workflows/contracts/secure-document-link.contract.json",
+    "data_sovereignty_de": "docs/de/architecture/data-sovereignty-git-vs-atp.md",
+    "data_sovereignty_en": "docs/en/architecture/data-sovereignty-git-vs-atp.md"
+  },
+  "scope": {
+    "design_result": "logical_target_architecture_for_future_private_payloads",
+    "physical_schema_artifact_included": false,
+    "productive_schema_apply_enabled": false,
+    "private_payload_examples_in_repo_allowed": false,
+    "github_or_target_control_payload_allowed": false,
+    "plaintext_payload_storage_allowed": false,
+    "graph_projection_over_plaintext_allowed": false,
+    "requires_private_operating_frame_gate": true
+  },
+  "logical_components": [
+    {
+      "id": "private_payload_envelope",
+      "storage_role": "metadata_and_policy_shell",
+      "payload_content_stored_here": false,
+      "required_fields": [
+        "payload_id",
+        "tenant_id",
+        "matter_id",
+        "purpose",
+        "data_class",
+        "redaction_class",
+        "storage_target",
+        "payload_pointer",
+        "content_hash",
+        "encryption_key_ref",
+        "retention_policy_ref",
+        "access_policy_ref",
+        "audit_event_ref",
+        "created_by_role",
+        "created_at",
+        "legal_hold_status"
+      ]
+    },
+    {
+      "id": "private_payload_access_grant",
+      "storage_role": "purpose_bound_access_decision",
+      "payload_content_stored_here": false,
+      "required_fields": [
+        "grant_id",
+        "payload_id",
+        "tenant_id",
+        "matter_id",
+        "role_class",
+        "purpose",
+        "expires_at",
+        "revocation_status",
+        "step_up_required",
+        "human_review_ref",
+        "audit_event_ref"
+      ]
+    },
+    {
+      "id": "encrypted_document_object_pointer",
+      "storage_role": "document_object_reference_without_content",
+      "payload_content_stored_here": false,
+      "required_fields": [
+        "document_ref",
+        "payload_id",
+        "storage_target",
+        "object_pointer",
+        "content_hash",
+        "mime_class",
+        "malware_scan_ref",
+        "retention_policy_ref",
+        "audit_event_ref"
+      ]
+    },
+    {
+      "id": "redacted_private_payload_audit",
+      "storage_role": "append_only_redacted_audit",
+      "payload_content_stored_here": false,
+      "required_fields": [
+        "audit_event_ref",
+        "payload_id",
+        "event_type",
+        "decision_status",
+        "actor_role_class",
+        "purpose",
+        "created_at",
+        "no_github_payload_attestation",
+        "no_target_control_payload_attestation"
+      ]
+    }
+  ],
+  "candidate_storage_targets": [
+    {
+      "id": "oracle_atp_private_payload_metadata",
+      "status": "future_schema_design_only",
+      "allowed_content": [
+        "private_payload_envelope",
+        "private_payload_access_grant",
+        "redacted_private_payload_audit"
+      ],
+      "blocked_content": [
+        "plaintext_payload",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ]
+    },
+    {
+      "id": "encrypted_object_storage_payload",
+      "status": "future_storage_design_only",
+      "allowed_content": [
+        "encrypted_document_object",
+        "object_pointer_metadata",
+        "content_hash"
+      ],
+      "blocked_content": [
+        "plaintext_payload_in_git",
+        "long_lived_secret_link",
+        "tokens",
+        "credentials"
+      ]
+    },
+    {
+      "id": "onprem_private_store_reference",
+      "status": "future_integration_design_only",
+      "allowed_content": [
+        "redacted_evidence_back_to_nac",
+        "local_operator_status",
+        "external_store_reference"
+      ],
+      "blocked_content": [
+        "remote_control_payload",
+        "credentials",
+        "plaintext_payload_in_target_control",
+        "provider_claim_dump"
+      ]
+    }
+  ],
+  "required_controls": [
+    "owner_apply_approval",
+    "privacy_dpa_review",
+    "dsfa_screening",
+    "tenant_matter_purpose_binding",
+    "role_field_access_policy",
+    "encryption_at_rest",
+    "encryption_in_transit",
+    "key_management",
+    "retention_and_deletion_policy",
+    "legal_hold_handling",
+    "access_review",
+    "append_only_audit",
+    "backup_restore_boundary",
+    "incident_response",
+    "human_review_before_matter_attachment"
+  ],
+  "blocked_until_future_apply": [
+    "create_private_payload_tables",
+    "write_private_payload",
+    "read_private_payload",
+    "issue_private_document_link",
+    "project_private_payload_into_graph",
+    "connect_live_dms_or_specialist_system",
+    "run_migration_with_real_matter_data"
+  ],
+  "validation_commands": [
+    "python scripts/validate_private_payload_target_design.py",
+    "python scripts/validate_private_operating_frame_gate.py",
+    "python scripts/validate_matter_data_classification_redaction.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/private-payload-target-design.md",
+    "en": "docs/en/architecture/private-payload-target-design.md"
+  }
+}

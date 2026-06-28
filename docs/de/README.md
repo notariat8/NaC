@@ -151,6 +151,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md):
   privater Betriebsrahmen und Private-Payload-Gate vor echter
   Mandatsdatenverarbeitung.
+- [docs/de/architecture/private-payload-target-design.md](architecture/private-payload-target-design.md):
+  logisches Envelope-/Pointer-Zielbild für spätere private Payloads ohne Apply.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -186,6 +188,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/private-operating-frame-gate.contract.json](../../workflows/contracts/private-operating-frame-gate.contract.json)
   beschreibt den Gate-Vertrag für spätere private Payloads mit Datenschutz-,
   Rollen-, Speicher-, Verschlüsselungs-, Retention-, Audit- und Owner-Gates.
+- [workflows/contracts/private-payload-target-design.contract.json](../../workflows/contracts/private-payload-target-design.contract.json)
+  beschreibt das logische Envelope-/Pointer-Zielbild für private Payloads
+  ohne DDL-Artefakt, Apply oder private Beispieldaten.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

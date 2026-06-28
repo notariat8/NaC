@@ -66,7 +66,7 @@ move back into Git.
 | Tenants and user bindings | ATP / IdP | ATP stores NaC binding, IdP authenticates |
 | Sessions | ATP | only hashed/derived session data, no tokens or claims |
 | Document metadata | ATP | file name, type, status, evidence reference without raw content |
-| Document binaries | later Object Storage | encrypted, with retention and audit |
+| Document binaries | later Object Storage | encrypted, with retention and audit under [private-payload-target-design.md](private-payload-target-design.md) |
 | Demo data | Git allowed | synthetic and explicitly marked only |
 
 ## Initial Runtime Contract Concept

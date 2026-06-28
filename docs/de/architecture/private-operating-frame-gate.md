@@ -30,6 +30,9 @@ separates ATP-Private-Payload-Schema, verschlüsselte Object-Storage-Ablage oder
 ein lokaler Fachsystem-/DMS-Pfad sein. Jeder dieser Pfade braucht weiterhin
 einen separaten Apply- oder Live-Gate.
 
+Das erste logische Zielbild für diese späteren Designs steht in
+[private-payload-target-design.md](private-payload-target-design.md).
+
 ## Mindestkontrollen
 
 Vor produktiver Verarbeitung sind mindestens erforderlich:
