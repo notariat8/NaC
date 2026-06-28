@@ -70,6 +70,10 @@ Jeder Vertrag soll definieren:
   Vertrag für die NaC-On-Prem-Agent-Runtime auf `notoclaw01` mit
   NemoClaw/OpenClaw-Zielsystemgrenze, Target-Control-Pfaden, Connector-Stubs,
   Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
+- [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](notarial-onprem-connector-boundaries.contract.json):
+  Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
+  und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen
+  ohne Credentials, Mandatsdaten oder Live-Apply.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten

@@ -1,0 +1,216 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.notarial_onprem_connector_boundaries",
+  "title": "Notarielle On-Prem-Connector-Grenzen",
+  "status": "boundary_contract_no_live_apply",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert prüfbare Grenzen für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register- und Grundbuchpfade, bevor produktive Fachsystemzugriffe, Credentials oder Mandatsdaten erlaubt sind.",
+  "source_documents": {
+    "demo_matrix_de": "docs/de/demo/notarkammer-xnp-quellenmatrix.md",
+    "demo_matrix_en": "docs/en/demo/notarkammer-xnp-quellenmatrix.md",
+    "runtime_boundary_de": "docs/de/architecture/nac-onprem-agent-runtime.md",
+    "runtime_boundary_en": "docs/en/architecture/nac-onprem-agent-runtime.md",
+    "minimum_requirements_de": "docs/de/minimum-requirements.md",
+    "minimum_requirements_en": "docs/en/minimum-requirements.md"
+  },
+  "runtime_profile": {
+    "required_profile_before_local_hardware_tests": "notary-workstation",
+    "target_control_host": "notoclaw01-host",
+    "target_control_path": "/home/ubuntu/nac-target-control",
+    "target_connector_stub_paths": [
+      "connectors/xnp/README.md",
+      "connectors/cyberjack/README.md",
+      "connectors/register/README.md"
+    ]
+  },
+  "global_policy": {
+    "credentials_in_repo_allowed": false,
+    "secrets_in_target_control_allowed": false,
+    "matter_data_in_repo_allowed": false,
+    "matter_data_in_target_control_allowed": false,
+    "pin_capture_allowed": false,
+    "card_raw_data_storage_allowed": false,
+    "certificate_secret_storage_allowed": false,
+    "productive_write_without_owner_gate_allowed": false,
+    "automated_xnp_to_nac_data_intake_allowed": false,
+    "remote_control_of_specialist_system_allowed": false,
+    "redacted_evidence_only": true,
+    "human_review_required": true,
+    "private_operating_frame_required_before_live": true,
+    "privacy_review_required_before_personal_data": true,
+    "test_mode_required_before_live": true
+  },
+  "required_evidence_fields": [
+    "connector_id",
+    "readiness_status",
+    "checked_at",
+    "checked_by_role",
+    "source_system_label",
+    "redaction_class",
+    "no_secret_attestation",
+    "no_matter_data_attestation",
+    "human_review_status",
+    "audit_event_ref"
+  ],
+  "owner_gates": [
+    "credential_introduction",
+    "personal_data_processing",
+    "productive_xnp_or_xnotar_action",
+    "productive_register_or_land_register_action",
+    "signature_or_card_operation",
+    "specialist_system_write",
+    "external_network_write",
+    "destructive_action"
+  ],
+  "connectors": [
+    {
+      "id": "xnp_snp_xnotar",
+      "display_name": "XNP/SNP und XNotar",
+      "target_stub_path": "connectors/xnp/README.md",
+      "status": "boundary_contract_no_live_apply",
+      "allowed_actions": [
+        "model_external_access_point",
+        "record_local_readiness_attestation",
+        "record_redacted_status_evidence",
+        "model_bpmn_gate",
+        "plan_test_environment"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "store_secret_material",
+        "store_matter_data",
+        "store_pin_or_card_data",
+        "remote_control_specialist_system",
+        "automated_xnp_to_nac_data_intake",
+        "productive_dispatch",
+        "productive_register_or_land_register_filing"
+      ],
+      "data_classes_allowed_before_live_gate": [
+        "safe_metadata_only",
+        "redacted_readiness_status",
+        "redacted_user_attestation",
+        "bpmn_gate_metadata",
+        "audit_metadata"
+      ],
+      "data_classes_blocked": [
+        "raw_mandate_content",
+        "personal_identifiers_without_separate_gate",
+        "xnp_payload",
+        "xnotar_payload",
+        "credentials",
+        "tokens",
+        "pin",
+        "card_raw_data",
+        "document_full_text"
+      ],
+      "required_roles": [
+        "notariatsfachkraft",
+        "notarin_notar",
+        "it_betrieb",
+        "owner"
+      ]
+    },
+    {
+      "id": "cyberjack_card_workstation",
+      "display_name": "cyberJack/Kartenarbeitsplatz",
+      "target_stub_path": "connectors/cyberjack/README.md",
+      "status": "boundary_contract_no_live_apply",
+      "allowed_actions": [
+        "probe_local_hardware_readiness",
+        "probe_pcsc_service_status",
+        "probe_morris_loopback_readiness",
+        "record_redacted_status_evidence",
+        "model_bpmn_gate"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "capture_pin",
+        "trigger_signature",
+        "read_card_secret",
+        "export_certificate_secret",
+        "store_card_serial",
+        "store_secret_material",
+        "store_matter_data",
+        "remote_control_specialist_system"
+      ],
+      "data_classes_allowed_before_live_gate": [
+        "safe_metadata_only",
+        "redacted_readiness_status",
+        "hardware_presence_status",
+        "middleware_reachability_status",
+        "audit_metadata"
+      ],
+      "data_classes_blocked": [
+        "pin",
+        "card_raw_data",
+        "card_serial_number",
+        "certificate_secret",
+        "signature_payload",
+        "raw_mandate_content",
+        "credentials",
+        "tokens"
+      ],
+      "required_roles": [
+        "notariatsfachkraft",
+        "notarin_notar",
+        "it_betrieb",
+        "owner"
+      ]
+    },
+    {
+      "id": "register_land_register",
+      "display_name": "Register und Grundbuch",
+      "target_stub_path": "connectors/register/README.md",
+      "status": "boundary_contract_no_live_apply",
+      "allowed_actions": [
+        "model_external_access_point",
+        "record_package_readiness_attestation",
+        "record_redacted_status_evidence",
+        "model_bpmn_gate",
+        "model_wait_gate",
+        "plan_test_environment"
+      ],
+      "blocked_actions": [
+        "productive_register_filing",
+        "productive_land_register_filing",
+        "retrieve_raw_register_data",
+        "retrieve_raw_land_register_data",
+        "store_register_payload",
+        "store_land_register_payload",
+        "store_credentials",
+        "store_secret_material",
+        "store_matter_data",
+        "remote_control_specialist_system"
+      ],
+      "data_classes_allowed_before_live_gate": [
+        "safe_metadata_only",
+        "redacted_package_status",
+        "redacted_response_status",
+        "bpmn_gate_metadata",
+        "audit_metadata"
+      ],
+      "data_classes_blocked": [
+        "raw_register_content",
+        "raw_land_register_content",
+        "raw_mandate_content",
+        "personal_identifiers_without_separate_gate",
+        "document_full_text",
+        "credentials",
+        "tokens"
+      ],
+      "required_roles": [
+        "notariatsfachkraft",
+        "notarin_notar",
+        "it_betrieb",
+        "owner"
+      ]
+    }
+  ],
+  "validation_commands": [
+    "python scripts/validate_notarial_onprem_connector_boundaries.py",
+    "python scripts/validate_nac_onprem_agent_runtime.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ]
+}

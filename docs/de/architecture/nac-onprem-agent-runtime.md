@@ -79,9 +79,9 @@ ausführen:
 
 | Connector | Aktueller Status | Nächster NaC-Schritt |
 | --- | --- | --- |
-| XNP/SNP | Pfad und Smoke vorbereitet | Echten Connector-Vertrag mit Datenklassen, Rollen, Freigaben und Fehlerfällen erstellen. |
-| cyberJack/Kartenarbeitsplatz | Pfad und Smoke vorbereitet | Karten-, PIN- und Arbeitsplatzgrenze als Contract und Startup-Check führen. |
-| Register | Pfad und Smoke vorbereitet | Registerkommunikation nur mit Review-, Freigabe- und Nachweisgrenze definieren. |
+| XNP/SNP | Pfad und Smoke vorbereitet | Nach [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md) nur lokale Readiness und redigierte Evidence. |
+| cyberJack/Kartenarbeitsplatz | Pfad und Smoke vorbereitet | Nach [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md) Karten-, PIN- und Arbeitsplatzgrenze ohne Signaturauslösung. |
+| Register | Pfad und Smoke vorbereitet | Nach [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md) nur externe Status-/Wartegates ohne produktive Einreichung. |
 
 Keine dieser Grenzen darf echte Zugangsdaten, PINs, Kartenmaterial,
 Mandatsdaten oder produktive Rückkanal-Payloads im Produktrepo oder in
@@ -125,7 +125,7 @@ Aus dem aktuellen Zielsystemlauf folgen vier NaC-seitige Arbeitsblöcke:
 1. Fachliche Notar-Workflow-Regeln in BPMN, KG und Contracts präzisieren.
 2. Mandatsdaten-Klassifikation, Redaktionsregeln und Speichergrenzen für
    On-Prem- und SaaS-Runtime synchron führen.
-3. XNP-, cyberJack- und Register-Connectoren als echte Verträge mit
-   Datenklassen, Fehlerfällen und Owner-Gates definieren.
+3. XNP-, cyberJack- und Register-Connectoren auf Basis des Grenzvertrags in
+   private Betriebsrahmen, Testmodus und spätere Fachsystemadapter überführen.
 4. Ein dauerhaftes Manifest-Onboarding für NaC-Agenten in GitOps integrieren,
    ohne `notoclaw01` zum Entwicklungsrepo zu machen.

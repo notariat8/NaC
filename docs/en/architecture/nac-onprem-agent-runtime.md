@@ -80,9 +80,9 @@ production yet:
 
 | Connector | Current status | Next NaC step |
 | --- | --- | --- |
-| XNP/SNP | Path and smoke prepared | Create a real connector contract with data classes, roles, approvals and error cases. |
-| cyberJack/card workstation | Path and smoke prepared | Carry card, PIN and workstation boundaries as a contract and startup check. |
-| Register | Path and smoke prepared | Define register communication only with review, approval and evidence boundaries. |
+| XNP/SNP | Path and smoke prepared | Under [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md), local readiness and redacted evidence only. |
+| cyberJack/card workstation | Path and smoke prepared | Under [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md), card, PIN and workstation boundary without signature triggering. |
+| Register | Path and smoke prepared | Under [notarial-onprem-connector-boundaries.md](notarial-onprem-connector-boundaries.md), external status/wait gates only without production filing. |
 
 None of these boundaries may store real credentials, PINs, card material,
 matter data or production callback payloads in the product repository or in
@@ -124,7 +124,7 @@ The current target-system run creates four NaC-side work blocks:
 1. Clarify subject-matter notarial workflow rules in BPMN, KG and contracts.
 2. Keep matter-data classification, redaction rules and storage boundaries
    aligned for on-prem and SaaS runtime.
-3. Define XNP, cyberJack and register connectors as real contracts with data
-   classes, error cases and owner gates.
+3. Move XNP, cyberJack and register connectors from the boundary contract into
+   private operating frames, test mode and later specialist-system adapters.
 4. Integrate durable manifest onboarding for NaC agents into GitOps without
    turning `notoclaw01` into the development repository.
