@@ -148,6 +148,8 @@ Important edges:
 
 ## Next Track
 
-The next technical track can derive a non-destructive ATP schema for the anchors
-from this contract. After that, NaC can add a write path for demo metadata and
-later a graph projection.
+The next technical track remains metadata-only until
+[private-operating-frame-gate.md](private-operating-frame-gate.md) is met.
+Only after that may NaC design a separate ATP private-payload schema. Until
+then, NaC may only expand non-destructive anchors, demo metadata and graph
+projections without raw matter data.

@@ -33,7 +33,7 @@ CI:
   BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM +
   ATP-Runtime-Contract + Knowledge Graph + NaC-On-Prem-Agent-Runtime +
   notarielle On-Prem-Connector-Grenzen + Mandatsdaten-Klassifikation und
-  Redaktionsgrenze
+  Redaktionsgrenze + privater Betriebsrahmen
 
 ## Feste Reihenfolge
 
@@ -58,11 +58,12 @@ CI:
 17. `nac_onprem_agent_runtime` (nur `strict`)
 18. `notarial_onprem_connector_boundaries` (nur `strict`)
 19. `matter_data_classification_redaction` (nur `strict`)
-20. `gnotkg_costs` (nur `strict`)
-21. `secure_document_links` (nur `strict`)
-22. `legal_research_connectors` (nur `strict`)
-23. `legal_graph_contracts` (nur `strict`)
-24. `oci_tenant_identity` (nur `strict`)
+20. `private_operating_frame_gate` (nur `strict`)
+21. `gnotkg_costs` (nur `strict`)
+22. `secure_document_links` (nur `strict`)
+23. `legal_research_connectors` (nur `strict`)
+24. `legal_graph_contracts` (nur `strict`)
+25. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 

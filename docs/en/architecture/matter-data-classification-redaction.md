@@ -103,4 +103,5 @@ The split stays clear:
 - NaC GitOps owns contracts, BPMN, KG, policies, tests and PRs.
 - `notoclaw01` owns target-system smokes and non-sensitive evidence.
 - A later private runtime store may hold real matter data only after explicit
-  owner, privacy, security and role gates.
+  owner, privacy, security and role gates under
+  [private-operating-frame-gate.md](private-operating-frame-gate.md).

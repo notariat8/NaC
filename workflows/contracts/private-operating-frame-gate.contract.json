@@ -1,0 +1,165 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.private_operating_frame_gate",
+  "title": "Privater Betriebsrahmen und Private-Payload-Gate",
+  "status": "contract_only_no_productive_apply",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert die Mindestfreigaben, Kontrollen und Nachweise, bevor echte Mandatsdaten aus der metadata-only NaC-Grenze in einen privaten Runtime-Speicher oder Fachsystempfad gelangen dürfen.",
+  "source_documents": {
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json",
+    "atp_metadata_storage": "workflows/contracts/atp-runtime-storage.contract.json",
+    "secure_document_link": "workflows/contracts/secure-document-link.contract.json",
+    "onprem_connector_boundary": "workflows/contracts/notarial-onprem-connector-boundaries.contract.json",
+    "privacy_dpa_de": "docs/de/datenschutz-avv-dpa.md",
+    "privacy_dpa_en": "docs/en/datenschutz-avv-dpa.md",
+    "data_sovereignty_de": "docs/de/architecture/data-sovereignty-git-vs-atp.md",
+    "data_sovereignty_en": "docs/en/architecture/data-sovereignty-git-vs-atp.md"
+  },
+  "scope": {
+    "contract_result": "approval_boundary_for_future_private_payload_design",
+    "productive_processing_enabled_by_this_contract": false,
+    "productive_schema_apply_enabled_by_this_contract": false,
+    "graph_studio_activation_enabled_by_this_contract": false,
+    "connector_live_apply_enabled_by_this_contract": false,
+    "github_or_target_control_private_payload_allowed": false
+  },
+  "operating_frame_requirements": {
+    "owner_recorded_decision_required": true,
+    "privacy_dpa_review_required": true,
+    "dsfa_screening_required": true,
+    "role_tenant_matter_purpose_binding_required": true,
+    "field_level_classification_required": true,
+    "private_payload_schema_required": true,
+    "encryption_at_rest_required": true,
+    "encryption_in_transit_required": true,
+    "key_management_required": true,
+    "retention_and_deletion_policy_required": true,
+    "access_review_required": true,
+    "append_only_audit_required": true,
+    "data_subject_rights_process_required": true,
+    "incident_response_required": true,
+    "backup_restore_boundary_required": true,
+    "test_data_separation_required": true,
+    "human_review_before_matter_attachment_required": true
+  },
+  "blocked_without_gate": [
+    "productive_personal_data_processing",
+    "raw_mandate_content_storage",
+    "document_full_text_storage",
+    "identity_document_raw_data_storage",
+    "register_raw_content_storage",
+    "land_register_raw_content_storage",
+    "xnp_or_xnotar_payload_storage",
+    "secure_document_private_payload_link",
+    "atp_private_payload_schema_apply",
+    "object_storage_document_write",
+    "onprem_dms_or_specialist_system_write",
+    "graph_projection_over_private_payload"
+  ],
+  "private_payload_classes_after_gate": [
+    "raw_mandate_content",
+    "document_full_text",
+    "identity_document_raw_data",
+    "register_raw_content",
+    "land_register_raw_content",
+    "property_raw_data",
+    "financial_account_real_data",
+    "health_family_estate_raw_data",
+    "personal_identifiers_with_gate",
+    "external_payload_with_gate"
+  ],
+  "always_forbidden_surfaces": [
+    "product_repo",
+    "github_issues_prs_actions_artifacts",
+    "notoclaw_target_control",
+    "public_webapp_demo",
+    "source_code_fixtures",
+    "quality_gate_artifacts"
+  ],
+  "candidate_private_storage_targets": [
+    {
+      "id": "atp_private_payload_schema",
+      "status": "future_design_only",
+      "required_controls": [
+        "tenant_boundary",
+        "matter_boundary",
+        "purpose_binding",
+        "role_field_access",
+        "encryption_at_rest",
+        "encryption_in_transit",
+        "retention_policy",
+        "append_only_audit",
+        "owner_apply_gate"
+      ]
+    },
+    {
+      "id": "encrypted_object_storage_documents",
+      "status": "future_design_only",
+      "required_controls": [
+        "matter_binding",
+        "document_classification",
+        "malware_and_file_type_check",
+        "short_lived_access",
+        "revocation",
+        "retention_policy",
+        "append_only_audit",
+        "human_review_before_attachment"
+      ]
+    },
+    {
+      "id": "onprem_dms_or_specialist_system",
+      "status": "future_design_only",
+      "required_controls": [
+        "local_operator_boundary",
+        "credential_vault",
+        "human_review",
+        "no_remote_control_by_default",
+        "redacted_evidence_back_to_nac",
+        "owner_live_apply_gate"
+      ]
+    }
+  ],
+  "gate_sequence": [
+    "architecture_decision",
+    "privacy_dpa_review",
+    "dsfa_screening",
+    "private_payload_schema_design",
+    "security_and_key_management_review",
+    "retention_and_deletion_review",
+    "role_tenant_matter_purpose_binding_review",
+    "test_mode_with_synthetic_or_redacted_data",
+    "human_subject_matter_review",
+    "owner_apply_approval"
+  ],
+  "required_evidence_fields": [
+    "schema_version",
+    "gate_id",
+    "decision_status",
+    "decided_at",
+    "decided_by_role",
+    "scope",
+    "data_classes",
+    "storage_target",
+    "tenant_binding",
+    "matter_binding",
+    "purpose_binding",
+    "retention_policy_ref",
+    "encryption_policy_ref",
+    "access_policy_ref",
+    "audit_event_ref",
+    "no_github_payload_attestation",
+    "no_target_control_payload_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_private_operating_frame_gate.py",
+    "python scripts/validate_matter_data_classification_redaction.py",
+    "python scripts/validate_atp_runtime_contracts.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/private-operating-frame-gate.md",
+    "en": "docs/en/architecture/private-operating-frame-gate.md"
+  }
+}

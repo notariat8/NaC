@@ -112,6 +112,8 @@ Referenz: [policies/role-model-policy.yaml](../../policies/role-model-policy.yam
   [docs/de/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)
 - Mandatsdaten-Klassifikation und Redaktionsgrenze:
   [docs/de/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
+- Privater Betriebsrahmen und Private-Payload-Gate:
+  [docs/de/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md)
 - Fork-Modell und Verantwortungen:
   [docs/de/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync-Zyklus und PR-Gates:
