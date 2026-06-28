@@ -112,6 +112,8 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
   [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
 - Notarial on-prem connector boundaries:
   [docs/en/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)
+- Matter-data classification and redaction boundary:
+  [docs/en/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
 - Fork model and responsibilities:
   [docs/en/operations/fork-and-release-operating-model.md](operations/fork-and-release-operating-model.md)
 - Sync cycle and PR gates:

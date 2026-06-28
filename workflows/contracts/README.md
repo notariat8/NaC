@@ -74,6 +74,10 @@ Jeder Vertrag soll definieren:
   Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
   und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen
   ohne Credentials, Mandatsdaten oder Live-Apply.
+- [workflows/contracts/matter-data-classification-redaction.contract.json](matter-data-classification-redaction.contract.json):
+  Vertrag für Mandatsdaten-Klassifikation, Redaktionsnachweise und
+  Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status, ATP-Metadaten
+  und späterem privaten Betriebsrahmen.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten

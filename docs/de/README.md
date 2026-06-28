@@ -145,6 +145,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md):
   notarielle On-Prem-Connector-Grenzen für XNP/SNP, XNotar,
   cyberJack/Kartenarbeitsplatz, Register und Grundbuch ohne Live-Apply.
+- [docs/de/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md):
+  Mandatsdaten-Klassifikation und Redaktionsgrenze für GitHub, `notoclaw01`,
+  Webapp-Status, ATP-Metadaten und spätere private Runtime-Speicher.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -173,6 +176,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json)
   beschreibt XNP/SNP-, XNotar-, Kartenarbeitsplatz-, Register- und
   Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen.
+- [workflows/contracts/matter-data-classification-redaction.contract.json](../../workflows/contracts/matter-data-classification-redaction.contract.json)
+  beschreibt Mandatsdaten-Klassifikation, Redaktionsnachweise und
+  Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status,
+  ATP-Metadaten und privatem Betriebsrahmen.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

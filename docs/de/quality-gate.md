@@ -32,7 +32,8 @@ CI:
   Language Parity inklusive Skill-Sprachmarkern + Documentation Links +
   BPMN-Modellprüfung + Cloud Runbook Parity + Gantt + AI-SBOM +
   ATP-Runtime-Contract + Knowledge Graph + NaC-On-Prem-Agent-Runtime +
-  notarielle On-Prem-Connector-Grenzen
+  notarielle On-Prem-Connector-Grenzen + Mandatsdaten-Klassifikation und
+  Redaktionsgrenze
 
 ## Feste Reihenfolge
 
@@ -56,11 +57,12 @@ CI:
 16. `codex_parallel_review` (nur `strict`)
 17. `nac_onprem_agent_runtime` (nur `strict`)
 18. `notarial_onprem_connector_boundaries` (nur `strict`)
-19. `gnotkg_costs` (nur `strict`)
-20. `secure_document_links` (nur `strict`)
-21. `legal_research_connectors` (nur `strict`)
-22. `legal_graph_contracts` (nur `strict`)
-23. `oci_tenant_identity` (nur `strict`)
+19. `matter_data_classification_redaction` (nur `strict`)
+20. `gnotkg_costs` (nur `strict`)
+21. `secure_document_links` (nur `strict`)
+22. `legal_research_connectors` (nur `strict`)
+23. `legal_graph_contracts` (nur `strict`)
+24. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 

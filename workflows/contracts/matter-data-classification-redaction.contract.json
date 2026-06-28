@@ -1,0 +1,394 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.matter_data_classification_redaction",
+  "title": "Mandatsdaten-Klassifikation und Redaktionsgrenze",
+  "status": "boundary_contract_metadata_only_until_private_gate",
+  "last_update": "2026-06-28",
+  "purpose": "Definiert, welche Datenklassen in NaC-GitOps, notoclaw01-Target-Control, Webapp-Status, ATP-Metadaten und Secure-Document-Link-Evidence zulässig sind, bevor ein separater privater Betriebsrahmen echte Mandatsdaten freigibt.",
+  "source_documents": {
+    "data_protection_policy": "policies/data-protection-policy.yaml",
+    "matter_model_de": "docs/de/notarsoftware-datenmodell.md",
+    "matter_model_en": "docs/en/notarsoftware-datenmodell.md",
+    "atp_storage_contract": "workflows/contracts/atp-runtime-storage.contract.json",
+    "secure_document_link_contract": "workflows/contracts/secure-document-link.contract.json",
+    "onprem_runtime_contract": "workflows/contracts/nac-onprem-agent-runtime.contract.json",
+    "onprem_connector_contract": "workflows/contracts/notarial-onprem-connector-boundaries.contract.json"
+  },
+  "classification_policy": {
+    "raw_matter_data_in_product_repo_allowed": false,
+    "raw_matter_data_in_github_surfaces_allowed": false,
+    "raw_matter_data_in_target_control_allowed": false,
+    "raw_matter_data_in_public_webapp_allowed": false,
+    "raw_matter_data_in_atp_metadata_slice_allowed": false,
+    "secrets_in_product_repo_allowed": false,
+    "secrets_in_target_control_allowed": false,
+    "provider_claim_dumps_allowed": false,
+    "metadata_only_until_private_operating_frame": true,
+    "purpose_binding_required": true,
+    "tenant_binding_required": true,
+    "matter_binding_required_before_private_payload": true,
+    "human_review_required_before_personal_data": true,
+    "retention_policy_required_before_personal_data": true,
+    "encryption_policy_required_before_personal_data": true,
+    "owner_gate_required_before_productive_personal_data": true
+  },
+  "data_classes": [
+    {
+      "id": "safe_metadata_only",
+      "category": "allowed_before_private_gate",
+      "description": "Status-, Prozess-, Template-, Rollen-, Gate- und Audit-Metadaten ohne Personen-, Objekt-, Dokument- oder Inhaltswerte."
+    },
+    {
+      "id": "synthetic_demo_data",
+      "category": "allowed_before_private_gate",
+      "description": "Klar synthetische Beispiele nach Datenschutzrichtlinie, ohne echte Personen, Akten, Registerdaten oder Finanzwerte."
+    },
+    {
+      "id": "policy_reference",
+      "category": "allowed_before_private_gate",
+      "description": "Verweise auf Policies, Verträge, Runbooks und Doku ohne private Nutzdaten."
+    },
+    {
+      "id": "validation_evidence_without_secret_values",
+      "category": "allowed_before_private_gate",
+      "description": "Prüfergebnisse, Hashes, Status und Attestierungen ohne Secret-Werte oder Rohinhalte."
+    },
+    {
+      "id": "redacted_evidence_metadata",
+      "category": "allowed_before_private_gate",
+      "description": "Redigierte Nachweismetadaten mit Zweck, Rolle, Zeitpunkt, Quelle und No-Secret-/No-Matter-Data-Attestierung."
+    },
+    {
+      "id": "approved_public_source_reference",
+      "category": "allowed_before_private_gate",
+      "description": "Freigegebene öffentliche Quellenreferenz ohne Mandatsbezug und ohne lizenzgeschützten Volltext."
+    },
+    {
+      "id": "hash_or_pointer_without_private_payload",
+      "category": "allowed_before_private_gate",
+      "description": "Hash, technische Referenz oder Pointer ohne eingebetteten privaten Payload und ohne abrufbares Secret."
+    },
+    {
+      "id": "raw_mandate_content",
+      "category": "blocked_until_private_gate",
+      "description": "Sachverhalts-, Urkunden-, Beteiligten-, Objekt- oder Akteninhalt eines echten Mandats."
+    },
+    {
+      "id": "document_full_text",
+      "category": "blocked_until_private_gate",
+      "description": "Volltext oder Rohinhalt von Urkunden, Entwürfen, Uploads, Registerrückläufen oder Anlagen."
+    },
+    {
+      "id": "identity_document_raw_data",
+      "category": "blocked_until_private_gate",
+      "description": "Rohdaten aus Ausweis-, eID-, Ident- oder Legitimationsvorgängen."
+    },
+    {
+      "id": "register_raw_content",
+      "category": "blocked_until_private_gate",
+      "description": "Unredigierte Registerdaten, Rückläufe, Abrufe oder Einreichungspayloads."
+    },
+    {
+      "id": "land_register_raw_content",
+      "category": "blocked_until_private_gate",
+      "description": "Unredigierte Grundbuchdaten, Auszüge, Rückläufe oder Einreichungspayloads."
+    },
+    {
+      "id": "property_raw_data",
+      "category": "blocked_until_private_gate",
+      "description": "Echte Grundstücks-, Objekt-, Lage-, Flurstücks- oder Kaufvertragsdetails."
+    },
+    {
+      "id": "financial_account_real_data",
+      "category": "blocked_until_private_gate",
+      "description": "Echte Kontoverbindungen, Kaufpreise, Zahlungspläne, Treuhand- oder Steuerdaten."
+    },
+    {
+      "id": "health_family_estate_raw_data",
+      "category": "blocked_until_private_gate",
+      "description": "Echte Familien-, Erb-, Gesundheits-, Betreuungs- oder Vorsorgedaten."
+    },
+    {
+      "id": "personal_identifiers_without_separate_gate",
+      "category": "blocked_until_private_gate",
+      "description": "Personenidentifikatoren ohne gesonderte Rollen-, Zweck-, Speicher- und Datenschutzfreigabe."
+    },
+    {
+      "id": "external_payload_without_separate_gate",
+      "category": "blocked_until_private_gate",
+      "description": "Payloads aus Fachsystemen, Registern, Portalen, Uploads oder Provider-APIs ohne separaten Gate."
+    },
+    {
+      "id": "tokens",
+      "category": "always_blocked_from_repo_and_target_control",
+      "description": "Zugriffs-, Refresh-, Session- oder API-Tokens."
+    },
+    {
+      "id": "credentials",
+      "category": "always_blocked_from_repo_and_target_control",
+      "description": "Passwörter, API-Schlüssel, Private Keys, Zertifikatsgeheimnisse oder sonstige Zugangsdaten."
+    },
+    {
+      "id": "pin",
+      "category": "always_blocked_from_repo_and_target_control",
+      "description": "Karten-, Signatur- oder Arbeitsplatz-PINs."
+    },
+    {
+      "id": "card_raw_data",
+      "category": "always_blocked_from_repo_and_target_control",
+      "description": "Rohdaten, Serienwerte oder Geheimnisse aus Signaturkarten und Kartenlesern."
+    },
+    {
+      "id": "provider_claim_dump",
+      "category": "always_blocked_from_repo_and_target_control",
+      "description": "Unredigierte Identity-, Fachsystem- oder Provider-Claims."
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "product_repo",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "synthetic_demo_data",
+        "policy_reference",
+        "validation_evidence_without_secret_values",
+        "redacted_evidence_metadata",
+        "approved_public_source_reference"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "not_allowed_in_product_repo"
+    },
+    {
+      "id": "github_surfaces",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "synthetic_demo_data",
+        "policy_reference",
+        "validation_evidence_without_secret_values",
+        "redacted_evidence_metadata"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "not_allowed_on_github_surface"
+    },
+    {
+      "id": "notoclaw_target_control",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "policy_reference",
+        "validation_evidence_without_secret_values",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "handoff_to_private_operating_frame"
+    },
+    {
+      "id": "public_webapp_demo",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "synthetic_demo_data",
+        "policy_reference"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "not_allowed_in_public_demo"
+    },
+    {
+      "id": "authenticated_workspace_start",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "workspace_private_payload_gate"
+    },
+    {
+      "id": "atp_metadata_slice",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "separate_atp_private_payload_schema_gate"
+    },
+    {
+      "id": "secure_document_link_evidence",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "document_full_text",
+        "identity_document_raw_data",
+        "register_raw_content",
+        "land_register_raw_content",
+        "property_raw_data",
+        "financial_account_real_data",
+        "health_family_estate_raw_data",
+        "personal_identifiers_without_separate_gate",
+        "external_payload_without_separate_gate",
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "secure_document_private_payload_gate"
+    },
+    {
+      "id": "private_operating_frame_after_gate",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "redacted_evidence_metadata",
+        "hash_or_pointer_without_private_payload"
+      ],
+      "blocked_data_classes": [
+        "tokens",
+        "credentials",
+        "pin",
+        "card_raw_data",
+        "provider_claim_dump"
+      ],
+      "required_gate_before_private_payload": "owner_privacy_security_retention_and_role_gate"
+    }
+  ],
+  "required_redaction_evidence_fields": [
+    "schema_version",
+    "payload_type",
+    "redaction_class",
+    "purpose",
+    "tenant_binding",
+    "matter_binding_status",
+    "role_class",
+    "checked_at",
+    "checked_by_role",
+    "source_system_label",
+    "hash_or_reference",
+    "no_secret_attestation",
+    "no_matter_data_attestation",
+    "audit_event_ref"
+  ],
+  "owner_gates": [
+    "private_operating_frame",
+    "privacy_dpa_review",
+    "retention_policy",
+    "encryption_policy",
+    "role_tenant_matter_purpose_binding",
+    "productive_personal_data_processing",
+    "connector_private_payload",
+    "atp_private_payload_schema",
+    "secure_document_private_payload"
+  ],
+  "validation_commands": [
+    "python scripts/validate_matter_data_classification_redaction.py",
+    "python scripts/validate_notarial_onprem_connector_boundaries.py",
+    "python scripts/validate_nac_onprem_agent_runtime.py",
+    "python scripts/validate_atp_runtime_contracts.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/matter-data-classification-redaction.md",
+    "en": "docs/en/architecture/matter-data-classification-redaction.md"
+  }
+}
