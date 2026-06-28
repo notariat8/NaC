@@ -151,6 +151,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_nac_onprem_agent_runtime.py"],
                 ),
                 (
+                    "notarial_onprem_connector_boundaries",
+                    "Notarial On-Prem Connector Boundaries",
+                    [sys.executable, "scripts/validate_notarial_onprem_connector_boundaries.py"],
+                ),
+                (
                     "gnotkg_costs",
                     "GNotKG Cost Review Contract",
                     [sys.executable, "scripts/validate_gnotkg_costs.py"],

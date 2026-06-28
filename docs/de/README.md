@@ -142,6 +142,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md):
   Zielsystemvertrag für NaC als On-Prem-Agent-Runtime mit NemoClaw/OpenClaw,
   Target-Control, Connector-Stubs und Owner-Gates.
+- [docs/de/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md):
+  notarielle On-Prem-Connector-Grenzen für XNP/SNP, XNotar,
+  cyberJack/Kartenarbeitsplatz, Register und Grundbuch ohne Live-Apply.
 - [qms/README.md](../../qms/README.md): QMS-/ISO-9001-Schicht mit
   Qualitätspolitik, Zielen, Auditprogramm und Nachweismapping.
 
@@ -167,6 +170,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json)
   beschreibt den Vertrag für NaC als On-Prem-Agent-Runtime auf `notoclaw01`
   mit Target-Control-Pfaden, Connector-Stubs und Owner-Gates.
+- [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json)
+  beschreibt XNP/SNP-, XNotar-, Kartenarbeitsplatz-, Register- und
+  Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json)
   beschreibt die Mindestgrenze für mobile Upload- und Leselinks auf Object
   Store, Datenbank-Blob oder OneDrive.

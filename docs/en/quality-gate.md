@@ -32,7 +32,8 @@ CI:
 - `strict`: `standard` plus governance policy sync, spec traceability,
   language parity including skill language markers, documentation links, BPMN
   model validation, cloud runbook parity, Gantt, AI-SBOM, ATP runtime
-  contract, knowledge graph and NaC on-prem agent runtime
+  contract, knowledge graph, NaC on-prem agent runtime and notarial on-prem
+  connector boundaries
 
 ## Fixed Order
 
@@ -55,11 +56,12 @@ CI:
 15. `kg_editor` only in `strict`
 16. `codex_parallel_review` only in `strict`
 17. `nac_onprem_agent_runtime` only in `strict`
-18. `gnotkg_costs` only in `strict`
-19. `secure_document_links` only in `strict`
-20. `legal_research_connectors` only in `strict`
-21. `legal_graph_contracts` only in `strict`
-22. `oci_tenant_identity` only in `strict`
+18. `notarial_onprem_connector_boundaries` only in `strict`
+19. `gnotkg_costs` only in `strict`
+20. `secure_document_links` only in `strict`
+21. `legal_research_connectors` only in `strict`
+22. `legal_graph_contracts` only in `strict`
+23. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 
