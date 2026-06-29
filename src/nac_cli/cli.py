@@ -128,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt einen sicheren Workflow-Vertragsentwurf aus einem KG-Usecase.",
     )
     kg_workflow_contract.add_argument("slug")
+    kg_pilot_checklist = kg_sub.add_parser(
+        "pilot-checklist",
+        help="Erzeugt eine deterministische Pilot-Aufnahmecheckliste aus einem KG-Usecase.",
+    )
+    kg_pilot_checklist.add_argument("slug")
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

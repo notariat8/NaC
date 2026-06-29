@@ -1,6 +1,6 @@
 # Usecase-Gantt
 
-Letzte Aktualisierung: 2026-05-28
+Letzte Aktualisierung: 2026-06-29
 
 ```mermaid
 gantt
@@ -36,6 +36,7 @@ gantt
     section Pilot-Readiness
     Usecases an Plugin-Abhängigkeiten binden  :        u13, 2026-06-15, 28d
     Usecases an Workflow-Verträge binden      :        u14, after u13, 28d
+    GmbH-UG-Pilot-Aufnahmecheckliste           :done,   u14a, 2026-06-29, 1d
     KG-gestützte Workflow-Statusupdates       :        u15, after u14, 28d
     Pilotpaket-Review                          :        u16, after u15, 21d
 ```
@@ -53,7 +54,7 @@ gantt
 | Usecase-BPMN-Basismodelle | `bpmn/immobilienkaufvertrag.bpmn`, `bpmn/usecases/*.bpmn` plus `scripts/generate_usecase_bpmn.py` | Fertig | Alle usecase-lokalen KGs haben ein bpmn-js-taugliches BPMN-2.0-Basismodell mit Rolle, Ausführungskanal einschließlich E-Mail, Fax/Post, Portal, XNP und digitaler Signatur, Freigabe, Nachweis und KG-Referenz. |
 | Immobilien-KG-Bürosprache | `usecases/immobilienkaufvertrag/knowledge-graph.*` | Fertig | Sichtbare Pflichtangaben und Entscheidungslabels sind in deutscher Büro- und Fachsprache formuliert, inklusive Umlauten und ohne technische Wort-für-Wort-Bezeichnungen. |
 | GNotKG-Kostengate für alle Usecases | `usecases/*/knowledge-graph.*` plus `scripts/validate_knowledge_graph.py` | Fertig | Jeder KG-basierte Usecase enthält Geschäftswert-, Kostenweg-, Kostenprüf- und Kostenentwurfs-Knoten; der Validator erzwingt diese Basis ohne echte Mandatswerte. |
-| Online-GmbH-/UG-Gründung | `usecases/online-gmbh-gruendung/` | Aktiv | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; jetzt Teil der Top-10-KG. |
+| Online-GmbH-/UG-Gründung | `usecases/online-gmbh-gruendung/` | Pilot-Checkliste bereit | Aus dem leeren GitHub-Repo `ofunk/Online-GmbH-Gruendung` kanonisiert; `nac kg pilot-checklist online-gmbh-gruendung` erzeugt aus der usecase-lokalen KG eine deterministische, mandatsdatenfreie Aufnahmecheckliste für den ersten Pilotlauf. |
 | Bereinigte aktive Aufnahme | `usecases/` | Fertig | Nicht passende aktive Aufnahmequellen wurden aus diesem Repository entfernt und sind nicht mehr Teil des NaC-Usecase-Katalogs. |
 | Immobilienkaufvertrag | `usecases/immobilienkaufvertrag/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
 | Grundschuld / Hypothekenbestellung | `usecases/grundschuld-hypothekenbestellung/` | KG-Basis | Neuer kanonischer Top-10-Usecase in diesem Repository. |
