@@ -68,6 +68,15 @@ EXECUTABLE_PLUGIN_COMMANDS = {
     },
 }
 
+EXTRA_PLUGIN_ACTIONS = [
+    {
+        "plugin": "nac-bnotk-xnp",
+        "command": "nac plugins xnp-workflow-gate",
+        "description": "XNP-Reader-Prompt-Nachweis als Workflow-Gate auswerten.",
+        "cli_status": "executable",
+    },
+]
+
 
 @dataclass(frozen=True, slots=True)
 class ConfigEntry:
@@ -215,6 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_card_readiness_args(plugins_card)
     plugins_xnp = plugins_sub.add_parser("xnp-reader-prompt", help="Erzeugt XNP-Reader-Prompt und Card-Gate-Nachweis.")
     add_xnp_reader_prompt_args(plugins_xnp)
+    plugins_xnp_gate = plugins_sub.add_parser(
+        "xnp-workflow-gate",
+        help="Wertet XNP-Reader-Prompt-Nachweis als Workflow-Gate aus.",
+    )
+    add_xnp_workflow_gate_args(plugins_xnp_gate)
     plugins_pkcs7 = plugins_sub.add_parser("pkcs7-inspect", help="Prüft PKCS7/P7B/P7C-Zertifikatsbündel lokal.")
     add_pkcs7_inspect_args(plugins_pkcs7)
     plugins.set_defaults(func=command_plugins)
@@ -393,6 +407,27 @@ def add_xnp_reader_prompt_args(parser: argparse.ArgumentParser) -> None:
         help="Karten-Gate soll die lokale morris-Loopback-API aktiv prüfen.",
     )
     parser.add_argument("--strict", action="store_true", help="Nur bei promptfähigem Stand mit 0 beenden.")
+
+
+def add_xnp_workflow_gate_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--evidence", type=Path, help="Vorhandener XNP-Reader-Prompt-Nachweis.")
+    parser.add_argument("--usecase", default="online-gmbh-gruendung", help="Usecase-Slug für das Workflow-Gate.")
+    parser.add_argument("--prompt", help="Optionaler lokaler Bedienhinweis, falls der Nachweis inline erzeugt wird.")
+    parser.add_argument(
+        "--intent",
+        choices=["reader_function_check", "xnp_login_preflight", "online_hra_preflight"],
+        default="reader_function_check",
+    )
+    parser.add_argument("--manual-card-present", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--manual-rfid-off", choices=["yes", "no", "unknown"], default="unknown")
+    parser.add_argument("--output", type=Path, help="Optionaler JSON-Gate-Nachweispfad.")
+    parser.add_argument("--json", action="store_true", help="Vollen JSON-Gate-Nachweis ausgeben.")
+    parser.add_argument(
+        "--probe-morris-api",
+        action="store_true",
+        help="Karten-Gate soll die lokale morris-Loopback-API aktiv prüfen.",
+    )
+    parser.add_argument("--strict", action="store_true", help="Nur bei vorbereitbarem Workflow-Gate mit 0 beenden.")
 
 
 def add_pkcs7_inspect_args(parser: argparse.ArgumentParser) -> None:
@@ -836,6 +871,28 @@ def command_plugins(args: argparse.Namespace) -> int:
                 args.manual_card_present,
                 "--manual-rfid-off",
                 args.manual_rfid_off,
+                *optional_value("--prompt", args.prompt),
+                *optional_flag(args.json, "--json"),
+                *optional_flag(args.probe_morris_api, "--probe-morris-api"),
+                *optional_flag(args.strict, "--strict"),
+                *optional_path("--output", args.output),
+            ],
+        )
+
+    if args.plugins_command == "xnp-workflow-gate":
+        return run_plugin_main(
+            repo_root,
+            "plugins/nac-bnotk-xnp/scripts/workflow_gate.py",
+            [
+                "--usecase",
+                args.usecase,
+                "--intent",
+                args.intent,
+                "--manual-card-present",
+                args.manual_card_present,
+                "--manual-rfid-off",
+                args.manual_rfid_off,
+                *optional_path("--evidence", args.evidence),
                 *optional_value("--prompt", args.prompt),
                 *optional_flag(args.json, "--json"),
                 *optional_flag(args.probe_morris_api, "--probe-morris-api"),
@@ -1367,7 +1424,7 @@ def optional_path(flag: str, value: Path | None) -> list[str]:
 
 
 def plugin_actions(repo_root: Path) -> list[dict[str, str]]:
-    return [
+    actions = [
         {
             "plugin": plugin["name"],
             "command": plugin["command"],
@@ -1376,6 +1433,8 @@ def plugin_actions(repo_root: Path) -> list[dict[str, str]]:
         }
         for plugin in plugin_status_entries(repo_root)
     ]
+    actions.extend(EXTRA_PLUGIN_ACTIONS)
+    return actions
 
 
 def plugin_status_entries(repo_root: Path) -> list[dict[str, Any]]:

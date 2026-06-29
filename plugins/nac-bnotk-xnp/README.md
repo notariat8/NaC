@@ -48,6 +48,25 @@ Der Prompt dient der Prüfung lokaler Leserreaktion, nicht der Aktivierung
 kontaktlosen RFID in einem BNotK-Chipkarten-Arbeitsablauf. Keine PINs, Kartenwerte,
 Zertifikate, Passwörter oder XNP-API-Keys in Codex eingeben.
 
+## Workflow-Gate
+
+Ein vorhandener Leser-Prompt-Nachweis kann als mandatsdatenfreies Workflow-Gate
+ausgewertet werden:
+
+```powershell
+python plugins\nac-bnotk-xnp\scripts\workflow_gate.py --evidence out\xnp-reader-prompt.json --json
+```
+
+Das Gate schreibt Nachweise gemäß
+`contracts/workflow-gate-evidence.schema.json`, kopiert keinen Prompt-Text in
+den Workflow-Nachweis, erlaubt keine produktive XNP-Aktion und bleibt auf
+menschliche Prüfung sowie den lokalen Notariatsarbeitsplatz beschränkt. Sichtbar
+für Anwender, Doku und Agenten ist derselbe Pfad über die zentrale CLI:
+
+```powershell
+python scripts\nac.py plugins xnp-workflow-gate --evidence out\xnp-reader-prompt.json --json
+```
+
 ## Installationsgrenze
 
 - Läuft als lokales Codex-Plugin aus diesem Repository.
@@ -57,6 +76,9 @@ Zertifikate, Passwörter oder XNP-API-Keys in Codex eingeben.
   XNP-Login-Tests.
 - Erzeugt über `scripts/reader_prompt.py` einen lokalen Trockenlauf-
 Leser-Prompt zur Prüfung des cyberJack-Leserpfads vor XNP-Login-Tests.
+- Wertet vorhandene Leser-Prompt-Nachweise über `scripts/workflow_gate.py`
+  als Workflow-Gate-Metadaten aus, ohne Prompt-Text, Mandatsdaten oder
+  produktive XNP-Aktionen zu übernehmen.
 - Hält Geheimnisse, PINs, Zertifikate, Portalsitzungen und Mandatsinhalte außerhalb von Git.
 - Behandelt lokalen XNP-Login und Amtstätigkeitskontext als Prüfung vor
   Registerablauf-Automatisierung.

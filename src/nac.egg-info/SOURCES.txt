@@ -41,3 +41,4 @@ tests/test_nac_web.py
 tests/test_notary_kg.py
 tests/test_pkcs7_certbundle.py
 tests/test_xnp_reader_prompt.py
+tests/test_xnp_workflow_gate.py

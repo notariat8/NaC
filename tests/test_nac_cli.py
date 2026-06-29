@@ -329,6 +329,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("nac plugins card-readiness", output)
         self.assertIn("nac plugins xnp-reader-prompt", output)
+        self.assertIn("nac plugins xnp-workflow-gate", output)
         self.assertIn("nac plugins pkcs7-inspect", output)
         self.assertIn("nac plugins status nac-grundbuch-portal", output)
         self.assertIn("geplant", output)
@@ -384,6 +385,57 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn('"plugin": "nac-pkcs7-certbundle"', output)
         self.assertIn('"overall_status": "manual_review"', output)
+
+    def test_xnp_workflow_gate_consumes_reader_prompt_evidence_through_nac_cli(self) -> None:
+        evidence = {
+            "schema_version": "nac.xnp.reader-prompt/v1",
+            "plugin": "nac-bnotk-xnp",
+            "prompt_id": "XNP-RP-00000000-0000-0000-0000-000000000000",
+            "generated_at": "2026-06-29T00:00:00+00:00",
+            "overall_status": "prompted",
+            "mode": "local_dry_run",
+            "intent": "reader_function_check",
+            "reader_prompt": {
+                "target": "local_cyberjack_reader",
+                "route": "nac-bnotk-xnp -> nac-cyberjack-rfid",
+                "text": "Bitte testen. Kein Secret.",
+                "operator_actions": [],
+                "dry_run_only": True,
+            },
+            "xnp_local_interface": {"status": "reachable", "host": "127.0.0.1", "open_ports": [12774]},
+            "card_gate_evidence": {"overall_status": "ready", "evidence_id": "CJ-000"},
+            "policy": {
+                "pin_captured": False,
+                "card_data_captured": False,
+                "xnp_api_key_captured": False,
+                "xnp_login_performed": False,
+                "external_network_calls": False,
+                "localhost_only": True,
+                "productive_xnp_write": False,
+            },
+            "checks": [],
+            "next_required_action": "Proceed with the local XNP reader-function check.",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence_path = Path(tmp) / "xnp-reader-prompt.json"
+            evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+            rc, output = run_cli(
+                "plugins",
+                "xnp-workflow-gate",
+                "--evidence",
+                str(evidence_path),
+                "--json",
+            )
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        serialized = json.dumps(payload, sort_keys=True).lower()
+        self.assertEqual(payload["schema_version"], "nac.xnp.workflow-gate/v1")
+        self.assertEqual(payload["workflow_gate"]["status"], "ready_for_operator_review")
+        self.assertTrue(payload["decision"]["workflow_can_prepare_next_step"])
+        self.assertFalse(payload["decision"]["productive_xnp_action_allowed"])
+        self.assertNotIn("bitte testen", serialized)
+        self.assertFalse(_contains_key(payload, "value"))
 
     def test_qms_status_and_documents_are_reachable(self) -> None:
         rc, output = run_cli("qms", "status")

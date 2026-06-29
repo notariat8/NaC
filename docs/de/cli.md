@@ -298,6 +298,7 @@ nac plugins validate
 nac plugins install --mode dry-run
 nac plugins card-readiness
 nac plugins xnp-reader-prompt
+nac plugins xnp-workflow-gate --evidence out/xnp-reader-prompt.json
 nac plugins pkcs7-inspect --input beispiel.p7b
 ```
 
@@ -307,6 +308,7 @@ nac plugins pkcs7-inspect --input beispiel.p7b
 | `nac plugins status <plugin>` | Zeigt die Grenze zwischen Codex-Plugin und kanonischer NaC-CLI für eine Anbindung. |
 | `nac plugins card-readiness` | Prüft lokale Kartenleser-, SAK-/XNP- und Readiness-Metadaten. Bei installierter Hardware ist ein echter lokaler Hardwaretest möglich; PINs und Kartenrohdaten werden nicht gespeichert. |
 | `nac plugins xnp-reader-prompt` | Erzeugt einen sicheren XNP-Reader-Prompt mit vorgeschaltetem Karten-Gate. |
+| `nac plugins xnp-workflow-gate` | Wertet vorhandenen XNP-Reader-Prompt-Nachweis als mandatsdatenfreies Workflow-Gate aus. |
 | `nac plugins pkcs7-inspect` | Prüft ein lokales PKCS7/P7B/P7C-Zertifikatsbündel metadata-only, ohne Signatur oder Private-Key-Zugriff. |
 
 Die alten Plugin-Skripte bleiben die interne Ausführungsebene. Sichtbar für
@@ -320,10 +322,12 @@ Für einen Arbeitsplatz mit installierter echter Hardware:
 ```bash
 nac plugins card-readiness --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
 nac plugins xnp-reader-prompt --manual-card-present yes --manual-rfid-off yes --probe-morris-api --json
+nac plugins xnp-workflow-gate --evidence out/xnp-reader-prompt.json --json
 ```
 
 Diese Befehle dürfen reale lokale Treiber, morris, PC/SC, Kartenleser- und
-XNP-Erreichbarkeit prüfen. Gesperrt bleiben produktive Portalaktionen,
+XNP-Erreichbarkeit prüfen und vorhandene Nachweise in Workflow-Gate-Metadaten
+überführen. Gesperrt bleiben produktive Portalaktionen,
 Signaturvorgänge, PIN-Erfassung, Kartenrohdaten, Secrets und Mandatsdaten im
 Repository.
 

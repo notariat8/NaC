@@ -45,6 +45,7 @@ gantt
     Deterministisches Python-Workflow-MVP      :active, w6, 2026-05-15, 35d
     BPMN-Modellvalidierung im Quality Gate      :done,   w6a, 2026-05-19, 1d
     GmbH-UG-Pilot-Aufnahmecheckliste           :done,   w6b, 2026-06-29, 1d
+    XNP-Reader-Workflow-Gate                   :done,   w6c, 2026-06-29, 1d
     Nachweis- und Replay-Prüfungen            :        w7, after w6, 28d
 
     section Betrieb
@@ -57,7 +58,7 @@ gantt
 | Schicht | Root | Status | Grenze |
 | --- | --- | --- | --- |
 | Installierbare Skills | `workflows/skills/` | Geplant / Sprachregel bereit | Deutsche fachliche Anweisung führt; englische Summary dient technischer Anschlussfähigkeit, keine finale rechtliche Wahrheit. |
-| Python-Workflows | `workflows/python/` plus `src/notary_kg/`, `src/nac_legal_graph/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Runtime liest usecase-lokale KG-Dateien, erzeugt mit `nac kg workflow-contract <slug>` mandatsdatenfreie Workflow-Vertragsentwürfe und stellt mit `nac kg pilot-checklist online-gmbh-gruendung` die erste KG-basierte GmbH-/UG-Aufnahmecheckliste bereit; der Legal-Graph-Pilot erzeugt nur Review-Patches aus metadata-only Primärquellenmanifesten für Erbrecht, Familienrecht und Gesellschaftsrecht ohne Kommentarzugriff. Alles ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-Fachprüfungs-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
+| Python-Workflows | `workflows/python/` plus `src/notary_kg/`, `src/nac_legal_graph/` und `src/nac_cli/` | Aktiv | Die deterministische KG-Runtime liest usecase-lokale KG-Dateien, erzeugt mit `nac kg workflow-contract <slug>` mandatsdatenfreie Workflow-Vertragsentwürfe und stellt mit `nac kg pilot-checklist online-gmbh-gruendung` die erste KG-basierte GmbH-/UG-Aufnahmecheckliste bereit; `nac plugins xnp-workflow-gate` wertet vorhandene XNP-Reader-Prompt-Nachweise als no-action Workflow-Gate ohne Prompt-Text, Secrets, PINs, Kartenrohdaten oder Mandatsdaten aus; der Legal-Graph-Pilot erzeugt nur Review-Patches aus metadata-only Primärquellenmanifesten für Erbrecht, Familienrecht und Gesellschaftsrecht ohne Kommentarzugriff. Alles ist über die zentrale `nac`-CLI zusammen mit Prozess-, BPMN-, Plugin-Fachprüfungs-, Konfigurations-, Webserver- und Quality-Gate-Befehlen erreichbar. |
 | BPMN-js Business Layer | `bpmn/` plus `workflows/contracts/bpmn-js-editor.contract.json` | Nutzbarer MVP | BPMN ist fachliche Prozessquelle; alle Usecases haben bpmn-js-taugliche Basismodelle mit `nac:channel`, Python validiert NaC-Properties, Sequenzflüsse und Diagrammflächen. |
 | GNotKG-Kostenmodul | `src/nac_gnotkg/` plus `workflows/contracts/gnotkg-cost-review.contract.json` | Nutzbarer MVP | Zentrale Wertgebührenlogik mit GNotKG § 35-Höchstwerten, mandatsdatenfreier Reviewgraph und `xyflow` als reine Visualisierungsschicht. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, BPMN-XML/Editierfläche, KG-Editor-Views, GNotKG-Kostenansichten und KG-JSON lokal im Browser; BPMN-Speichern nutzt SHA-256-Konfliktprüfung, GNotKG-Quotes laufen per POST. |
