@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-06-28
+Last update: 2026-06-29
 Branch: `main`
 
 ## What Is Being Built
@@ -31,7 +31,7 @@ for Fachpersonal without exposing `value` fields.
 | KG editor view | Implemented | `src/notary_kg/editor.py`, `schemas/kg-editor-patch.schema.json`, `workflows/contracts/kg-editor.contract.json` |
 | Legal Graph source pilot | In review | `workflows/legal-graph/sources/erbrecht-primary-source.json`, `nac legal-graph sources` |
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
-| Legal model customization roadmap | Proposed | `workflows/contracts/legal-research-connectors.contract.json`, `docs/de/plugin-plans/legal-research-connectors.md` |
+| Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 
@@ -49,14 +49,15 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `nac-bnotk-xnp` readiness evidence. |
 | DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
 | DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
-| DEV-0011 | Legal Nemotron fine-tuning source and evaluation plan | Proposed | Records NVIDIA Nemotron Legal, Rechtsquelle concept framing and `recht.bund.de` BGBl data access as metadata-only candidates; no fine-tuning, checkpoint publication or legal-answer use starts before license/TDM, source hierarchy, evaluation and owner-apply gates are approved. |
+| DEV-0011 | Legal Nemotron fine-tuning source and evaluation plan | Done | Records NVIDIA Nemotron Legal, Rechtsquelle concept framing and `recht.bund.de` BGBl data access as metadata-only candidates, adds readiness and German-law benchmark contracts, and keeps fine-tuning, checkpoint publication and legal-answer use blocked before license/TDM, source hierarchy, evaluation, model-card, AI-SBOM and owner-apply gates are approved. |
 
 ## Roadmap Review Notes
 
 | Date | Topic | Decision | Follow-up trigger |
 | --- | --- | --- | --- |
 | 2026-06-16 | Fabro / Graphviz workflow orchestration | Not an active NaC roadmap item. Fabro complements the NaC BPMN line only as a possible future agentic execution and review harness; it does not replace BPMN 2.0 as the canonical subject-matter process source. | Revisit only if Codex Parallel Review, Time Ledger, Quality Gate or PR handoff work shows a repeated need for a durable external workflow engine. |
-| 2026-06-28 | Legal Nemotron fine-tuning with public legal sources | Add as a gated roadmap track, not as an active training job. NVIDIA Nemotron Legal is an English CC-BY-4.0 pretraining dataset candidate, `Rechtsquelle` is a concept anchor for source hierarchy, and `recht.bund.de` is an official BGBl publication access path. | Start only with a written source/licensing/evaluation plan, German-law benchmark, model-card delta, AI-SBOM update and owner apply approval; never use mandate data or treat generated answers as legal truth. |
+| 2026-06-28 | Legal Nemotron fine-tuning with public legal sources | Add as a gated roadmap track, not as an active training job. NVIDIA Nemotron Legal is an English CC-BY-4.0 pretraining dataset candidate, `Rechtsquelle` is a concept anchor for source hierarchy, and `recht.bund.de` is an official BGBl publication access path. | Continue only with source inventory, license/TDM review, model-card delta, AI-SBOM update, approved runnable config and owner apply approval; never use mandate data or treat generated answers as legal truth. |
+| 2026-06-29 | Legal Nemotron gates after PRs 326-328 | Mark source candidates, readiness gates and German-law evaluation benchmark as implemented planning contracts. This closes the planning-board item without enabling training, dataset generation, checkpoint publication or legal-answer automation. | Next work item must be a separate gated contract or implementation PR for source inventory, model-card delta, AI-SBOM delta or approved benchmark generation. |
 
 ## Local Developer Commands
 
@@ -65,6 +66,8 @@ python scripts/quality_gate.py --profile strict
 python scripts/validate_kg_editor.py
 python scripts/validate_knowledge_graph.py
 python scripts/nac.py legal-graph sources --format json
+python scripts/validate_legal_model_customization_readiness.py
+python scripts/validate_legal_model_evaluation_benchmark.py
 python scripts/notary_kg.py --repo-root . --format json status
 python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag
 ```
