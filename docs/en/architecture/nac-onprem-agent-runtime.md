@@ -1,7 +1,7 @@
 # NaC On-Prem Agent Runtime
 
 Status: contract and target-system boundary
-Last content update: 2026-06-28
+Last content update: 2026-06-29
 
 ## Purpose
 
@@ -72,6 +72,18 @@ Subagents on the target system are responsible only for target-control work.
 GitHub write access, PR creation, OCI apply, release steps, secrets and
 production specialist-system writes stay in the main run and remain owner
 gated.
+
+## Optional Agent Tooling Candidates
+
+Ponytail is recorded as an optional agent-tooling candidate, but it is not
+installed or activated. The allowed use is limited to documented
+over-engineering and simplicity review. Codex lifecycle hooks, OpenClaw
+runtime activation, matter-data processing, shortening security, privacy,
+owner-gate, test or validator duties, and GitHub or OCI write access from the
+target system are not allowed.
+
+Every installation, hook activation or OpenClaw runtime activation needs a
+separate owner apply gate. Ponytail must never override NaC governance.
 
 ## Connector Boundary
 

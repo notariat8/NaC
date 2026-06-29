@@ -24,6 +24,17 @@ REQUIRED_INFRASTRUCTURE_IDS = {
     "local-plugin-development-toolchain",
     "local-notary-workstation-xnp-card-path",
 }
+REQUIRED_AGENT_TOOLING_CANDIDATE_IDS = {
+    "ponytail-agent-tooling-candidate",
+}
+REQUIRED_PONYTAIL_BLOCKED_ACTIONS = {
+    "install_codex_plugin_without_owner_apply",
+    "enable_lifecycle_hooks_without_owner_apply",
+    "activate_openclaw_skill_runtime_without_owner_apply",
+    "run_on_mandate_data",
+    "shorten_security_privacy_owner_gates_tests_or_validators",
+    "grant_github_or_oci_write_from_target",
+}
 PROHIBITED_MARKERS = {
     "api_key",
     "client_secret",
@@ -31,6 +42,8 @@ PROHIBITED_MARKERS = {
     "BEGIN CERTIFICATE",
     "ghp_",
     "gho_",
+    "password=",
+    "PIN:",
 }
 
 
@@ -84,7 +97,70 @@ def validate_file(path: Path) -> list[str]:
     else:
         errors.append(f"{path.relative_to(REPO_ROOT)}: Cluster infrastructure muss eine Liste sein")
 
+    errors.extend(validate_agent_tooling_candidates(path, clusters))
     return errors
+
+
+def validate_agent_tooling_candidates(path: Path, clusters: dict) -> list[str]:
+    errors: list[str] = []
+    candidates = clusters.get("agent_tooling_candidates")
+    if not isinstance(candidates, list) or not candidates:
+        return [f"{path.relative_to(REPO_ROOT)}: Cluster agent_tooling_candidates fehlt"]
+
+    by_id = {
+        item.get("id"): item
+        for item in candidates
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    for item_id in sorted(REQUIRED_AGENT_TOOLING_CANDIDATE_IDS - set(by_id)):
+        errors.append(f"{path.relative_to(REPO_ROOT)}: Agent-Tooling-Kandidat fehlt: {item_id}")
+
+    ponytail = by_id.get("ponytail-agent-tooling-candidate")
+    if not isinstance(ponytail, dict):
+        return errors
+
+    expected_values = {
+        "upstream_repository": "https://github.com/DietrichGebert/ponytail",
+        "observed_release": "v4.8.4",
+        "license": "MIT",
+        "status": "candidate_not_installed",
+    }
+    for key, expected in expected_values.items():
+        if ponytail.get(key) != expected:
+            errors.append(f"{path.relative_to(REPO_ROOT)}: Ponytail {key} muss {expected} sein")
+
+    for key in (
+        "installed_in_nac",
+        "lifecycle_hooks_enabled",
+        "runtime_activation_enabled",
+        "personal_data_allowed",
+        "matter_data_allowed",
+        "secrets_allowed",
+    ):
+        if ponytail.get(key) is not False:
+            errors.append(f"{path.relative_to(REPO_ROOT)}: Ponytail {key} muss false sein")
+
+    blocked_actions = set(_string_list(ponytail.get("blocked_actions")))
+    for action in sorted(REQUIRED_PONYTAIL_BLOCKED_ACTIONS - blocked_actions):
+        errors.append(f"{path.relative_to(REPO_ROOT)}: Ponytail blocked_actions fehlt: {action}")
+
+    owner_apply = set(_string_list(ponytail.get("owner_apply_required_before")))
+    for gate in ("plugin_installation", "lifecycle_hook_activation", "openclaw_runtime_activation"):
+        if gate not in owner_apply:
+            errors.append(f"{path.relative_to(REPO_ROOT)}: Ponytail owner_apply_required_before fehlt: {gate}")
+
+    surfaces = set(_string_list(ponytail.get("integration_surfaces")))
+    for surface in ("codex_plugin", "openclaw_skill", "hermes_plugin"):
+        if surface not in surfaces:
+            errors.append(f"{path.relative_to(REPO_ROOT)}: Ponytail integration_surfaces fehlt: {surface}")
+
+    return errors
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def main() -> int:

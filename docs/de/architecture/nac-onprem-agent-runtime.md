@@ -1,7 +1,7 @@
 # NaC-On-Prem-Agent-Runtime
 
 Status: Vertrags- und Zielsystemgrenze
-Letzte inhaltliche Anpassung: 2026-06-28
+Letzte inhaltliche Anpassung: 2026-06-29
 
 ## Zweck
 
@@ -71,6 +71,19 @@ Mindest-Agenten im Target-Control-Vertrag:
 Subagenten auf dem Zielsystem sind nur für Target-Control-Arbeit zuständig.
 GitHub-Write, PR-Erstellung, OCI-Apply, Release-Schritte, Secrets und
 produktive Fachsystemschreibungen bleiben im Hauptlauf und Owner-gated.
+
+## Optionale Agent-Tooling-Kandidaten
+
+Ponytail ist als optionaler Agent-Tooling-Kandidat erfasst, aber nicht
+installiert und nicht aktiviert. Zulässig ist nur die dokumentierte
+Over-Engineering- und Einfachheitsprüfung. Nicht zulässig sind Codex-
+Lifecycle-Hooks, OpenClaw-Runtime-Aktivierung, Mandatsdatenverarbeitung,
+Kürzung von Security-, Datenschutz-, Owner-Gate-, Test- oder
+Validatorpflichten sowie GitHub- oder OCI-Schreibzugriff vom Zielsystem.
+
+Vor jeder Installation, Hook-Aktivierung oder OpenClaw-Runtime-Aktivierung
+braucht es ein eigenes Owner-Apply-Gate. Ponytail darf NaC-Governance nie
+überstimmen.
 
 ## Connector-Grenze
 
