@@ -95,6 +95,16 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["usecase_slug"], "immobilienkaufvertrag")
         self.assertEqual(payload["rendering"]["preferred_renderer"], "xyflow")
 
+    def test_kg_workflow_contract_is_available_through_nac_cli(self) -> None:
+        rc, output = run_cli("kg", "--format", "json", "workflow-contract", "immobilienkaufvertrag")
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.workflow-contract-draft/v0.1")
+        self.assertEqual(payload["source"]["usecase_slug"], "immobilienkaufvertrag")
+        self.assertFalse(payload["guardrails"]["real_mandate_data_in_git"])
+        self.assertFalse(_contains_key(payload, "value"))
+
     def test_gnotkg_quote_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli(
             "gnotkg",
@@ -576,6 +586,14 @@ class NaCCliTests(unittest.TestCase):
             applied = json.loads(output)
             self.assertEqual(applied["job"]["status"], "applied")
             self.assertEqual(applied["proposal"]["matter_values"]["metadata"]["ocr_review_status"], "ready_for_human_review")
+
+
+def _contains_key(value, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_contains_key(item, key) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(item, key) for item in value)
+    return False
 
 
 if __name__ == "__main__":

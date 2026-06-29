@@ -57,6 +57,7 @@ python scripts/nac.py doctor --profile strict
 python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py kg cost-view immobilienkaufvertrag
+python scripts/nac.py kg workflow-contract immobilienkaufvertrag
 python scripts/nac.py legal-graph status
 python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
@@ -75,6 +76,7 @@ nac doctor --profile strict
 nac web
 nac kg status
 nac kg cost-view immobilienkaufvertrag
+nac kg workflow-contract immobilienkaufvertrag
 nac legal-graph status
 nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
@@ -97,7 +99,7 @@ nac time-ledger summary
 | Quality | `nac doctor --profile strict` | Runs the strict quality gate. |
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
-| Knowledge graphs | `nac kg status` | Shows the state of usecase-local knowledge graphs. |
+| Knowledge graphs | `nac kg status` and `nac kg workflow-contract <slug>` | Shows the state of usecase-local knowledge graphs and creates mandate-data-free workflow contract drafts from a usecase KG. |
 | Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, review points and update patches without auto-merge. |
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |

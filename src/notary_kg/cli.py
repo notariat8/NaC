@@ -8,6 +8,7 @@ from nac_gnotkg.views import build_cost_review_view
 
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .editor import build_editor_view
+from .workflow_contract import build_workflow_contract_draft
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,6 +46,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the safe GNotKG cost review graph for one KG case.",
     )
     cost_parser.add_argument("slug")
+
+    workflow_contract_parser = subparsers.add_parser(
+        "workflow-contract",
+        help="Generate a safe workflow-contract draft from one KG case.",
+    )
+    workflow_contract_parser.add_argument("slug")
 
     return parser
 
@@ -85,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"ERROR: {exc}")
+            return 1
+        _print_payload(payload, args.format)
+        return 0
+
+    if args.command == "workflow-contract":
+        try:
+            payload = build_workflow_contract_draft(repo_root, args.slug)
+        except KeyError:
+            print(f"ERROR: Unknown KG case slug: {args.slug}")
             return 1
         _print_payload(payload, args.format)
         return 0
@@ -171,6 +187,22 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Guardrails")
         print(f"- notarielle Prüfung erforderlich: {payload['guardrails']['notarial_review_required']}")
         print(f"- echte Mandatsdaten in Git: {payload['guardrails']['real_mandate_data_in_git']}")
+        return
+
+    if payload.get("schema_version") == "nac.workflow-contract-draft/v0.1":
+        print(f"Workflow-Vertragsentwurf: {payload['source']['usecase_slug']}")
+        print(f"- contract_id: {payload['contract_id']}")
+        print(f"- status: {payload['status']}")
+        print(f"- required information: {len(payload['intake']['required_information'])}")
+        print(f"- documents: {len(payload['intake']['documents'])}")
+        print(f"- decisions: {len(payload['intake']['decisions'])}")
+        print(f"- gates: {len(payload['gates'])}")
+        print(f"- evidence: {len(payload['evidence'])}")
+        print("")
+        print("Guardrails")
+        print(f"- real mandate data in Git: {payload['guardrails']['real_mandate_data_in_git']}")
+        print(f"- value fields included: {payload['guardrails']['value_fields_included']}")
+        print(f"- protected PR required: {payload['guardrails']['protected_pr_required']}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")
