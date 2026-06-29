@@ -36,6 +36,7 @@ NaC führt die folgenden Mindestcluster als Arbeitsstand ein:
 | `models` | Modellname, Anbieter, Version, Zweck, lokale/externe Verarbeitung |
 | `datasets` | Trainings-, Test-, Validierungs- und Prompt-Datenquellen als Metadaten |
 | `infrastructure` | Runtime, Hosting, Tenant, Region, lokale Gateways, Mindestvoraussetzungen für Arbeitsplatz, Hardware und Middleware |
+| `agent_tooling_candidates` | Optionale agentische Hilfswerkzeuge wie Ponytail mit Installations-, Hook-, Aktivierungs- und Owner-Gate-Status |
 | `security_properties` | Schutz gegen Datenabfluss, Prompt Injection, Supply-Chain-Risiken |
 | `key_performance_indicators` | Abdeckung, Drift, Fehlerraten, Review- und Incident-Metriken |
 
@@ -51,6 +52,15 @@ Release-/Evidence-Bindung.
 - Mindestvoraussetzungen: `docs/de/minimum-requirements.md`
 - Klassische SBOM-Produkte: `docs/de/sbom-products.md`
 - AVV/DPA-Gate: `docs/de/datenschutz-avv-dpa.md`
+
+## Agent-Tooling-Kandidaten
+
+Ponytail ist als optionaler Agent-Tooling-Kandidat erfasst. Der Eintrag ist
+metadata-only: Ponytail ist nicht installiert, Lifecycle-Hooks sind nicht
+aktiviert und die Runtime-Aktivierung ist gesperrt. Erlaubt ist vor einem
+Owner-Apply nur die dokumentierte Over-Engineering- und Einfachheitsprüfung
+gegen öffentliche Quellen. Jede Installation, Hook-Aktivierung oder
+OpenClaw-Runtime-Nutzung braucht ein separates Owner-Apply-Gate.
 
 ## Sofortige Tasks
 

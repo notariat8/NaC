@@ -92,10 +92,39 @@
       "next_gate": "register_communication_contract_before_live_apply"
     }
   ],
+  "optional_agent_tooling_candidates": [
+    {
+      "id": "ponytail",
+      "upstream_repository": "https://github.com/DietrichGebert/ponytail",
+      "observed_release": "v4.8.4",
+      "license": "MIT",
+      "status": "candidate_not_installed",
+      "allowed_use": [
+        "over_engineering_review",
+        "simplicity_check",
+        "skill_only_planning_after_review"
+      ],
+      "blocked_use": [
+        "codex_lifecycle_hook_activation",
+        "openclaw_runtime_activation_without_owner_gate",
+        "mandate_data_processing",
+        "shorten_security_privacy_owner_gates_tests_or_validators",
+        "github_or_oci_write_from_target"
+      ],
+      "owner_gate_before": [
+        "plugin_installation",
+        "lifecycle_hook_activation",
+        "runtime_activation",
+        "target_operator_write_access"
+      ]
+    }
+  ],
   "guardrails": {
     "notoclaw_is_project_manager": false,
     "target_operator_github_write_allowed_by_default": false,
     "target_operator_pr_creation_allowed_by_default": false,
+    "external_agent_hooks_enabled_by_default": false,
+    "optional_agent_tooling_may_override_nac_governance": false,
     "secrets_in_target_control_allowed": false,
     "matter_data_in_target_control_allowed": false,
     "productive_connector_apply_allowed_without_owner_gate": false,

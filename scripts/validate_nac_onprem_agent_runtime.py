@@ -26,6 +26,14 @@ REQUIRED_CONNECTOR_PATHS = {
     "connectors/cyberjack/README.md",
     "connectors/register/README.md",
 }
+REQUIRED_AGENT_TOOLING_IDS = {"ponytail"}
+REQUIRED_PONYTAIL_BLOCKED_USE = {
+    "codex_lifecycle_hook_activation",
+    "openclaw_runtime_activation_without_owner_gate",
+    "mandate_data_processing",
+    "shorten_security_privacy_owner_gates_tests_or_validators",
+    "github_or_oci_write_from_target",
+}
 REQUIRED_AGENT_ROLES_OR_NAMES = {
     "main",
     "notary-flow",
@@ -50,6 +58,8 @@ REQUIRED_FALSE_GUARDRAILS = {
     "notoclaw_is_project_manager",
     "target_operator_github_write_allowed_by_default",
     "target_operator_pr_creation_allowed_by_default",
+    "external_agent_hooks_enabled_by_default",
+    "optional_agent_tooling_may_override_nac_governance",
     "secrets_in_target_control_allowed",
     "matter_data_in_target_control_allowed",
     "productive_connector_apply_allowed_without_owner_gate",
@@ -93,6 +103,7 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
     errors.extend(_validate_source_of_truth(payload))
     errors.extend(_validate_target_control(payload))
     errors.extend(_validate_roles_and_connectors(payload))
+    errors.extend(_validate_optional_agent_tooling(payload))
     errors.extend(_validate_guardrails(payload))
     errors.extend(_validate_handoff(payload))
     errors.extend(_validate_docs(payload))
@@ -189,6 +200,48 @@ def _validate_roles_and_connectors(payload: dict[str, Any]) -> list[str]:
         next_gate = entry.get("next_gate")
         if not isinstance(next_gate, str) or "before_live_apply" not in next_gate:
             errors.append(f"connector_boundaries.{connector_id}.next_gate must require before_live_apply")
+    return errors
+
+
+def _validate_optional_agent_tooling(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    candidates = payload.get("optional_agent_tooling_candidates")
+    if not isinstance(candidates, list) or not candidates:
+        return ["optional_agent_tooling_candidates must be a non-empty list"]
+    by_id = {
+        item.get("id"): item
+        for item in candidates
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    for missing in sorted(REQUIRED_AGENT_TOOLING_IDS - set(by_id)):
+        errors.append(f"optional_agent_tooling_candidates missing {missing}")
+
+    ponytail = by_id.get("ponytail")
+    if not isinstance(ponytail, dict):
+        return errors
+    expected_values = {
+        "upstream_repository": "https://github.com/DietrichGebert/ponytail",
+        "observed_release": "v4.8.4",
+        "license": "MIT",
+        "status": "candidate_not_installed",
+    }
+    for key, expected in expected_values.items():
+        if ponytail.get(key) != expected:
+            errors.append(f"optional_agent_tooling_candidates.ponytail.{key} must be {expected}")
+
+    allowed_use = set(_string_list(ponytail.get("allowed_use")))
+    for use in ("over_engineering_review", "simplicity_check"):
+        if use not in allowed_use:
+            errors.append(f"optional_agent_tooling_candidates.ponytail.allowed_use missing {use}")
+
+    blocked_use = set(_string_list(ponytail.get("blocked_use")))
+    for use in sorted(REQUIRED_PONYTAIL_BLOCKED_USE - blocked_use):
+        errors.append(f"optional_agent_tooling_candidates.ponytail.blocked_use missing {use}")
+
+    owner_gates = set(_string_list(ponytail.get("owner_gate_before")))
+    for gate in ("plugin_installation", "lifecycle_hook_activation", "runtime_activation"):
+        if gate not in owner_gates:
+            errors.append(f"optional_agent_tooling_candidates.ponytail.owner_gate_before missing {gate}")
     return errors
 
 

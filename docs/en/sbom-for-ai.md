@@ -35,6 +35,7 @@ NaC introduces the following minimum clusters as the working baseline:
 | `models` | Model name, provider, version, purpose, local/external processing |
 | `datasets` | Training, test, validation and prompt data sources as metadata |
 | `infrastructure` | Runtime, hosting, tenant, region, local gateways, minimum requirements for workstation, hardware and middleware |
+| `agent_tooling_candidates` | Optional agentic helper tools such as Ponytail with installation, hook, activation and owner-gate status |
 | `security_properties` | Controls against data leakage, prompt injection and supply-chain risk |
 | `key_performance_indicators` | Coverage, drift, error rates, review and incident metrics |
 
@@ -50,6 +51,15 @@ release/evidence binding.
 - Minimum requirements: `docs/en/minimum-requirements.md`
 - Classic SBOM products: `docs/en/sbom-products.md`
 - AVV/DPA gate: `docs/en/datenschutz-avv-dpa.md`
+
+## Agent Tooling Candidates
+
+Ponytail is recorded as an optional agent-tooling candidate. The entry is
+metadata-only: Ponytail is not installed, lifecycle hooks are not enabled and
+runtime activation is blocked. Before owner apply, allowed use is limited to
+documented over-engineering and simplicity review against public sources. Every
+installation, hook activation or OpenClaw runtime use needs a separate owner
+apply gate.
 
 ## Immediate Tasks
 

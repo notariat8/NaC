@@ -1,7 +1,7 @@
 {
   "schema_version": "nac.ai-sbom/v0.1",
   "status": "draft",
-  "review_date": "2026-06-08",
+  "review_date": "2026-06-29",
   "scope": "NaC repository-wide AI supply-chain baseline for plugins, workflows and usecases",
   "source_references": [
     "https://www.bsi.bund.de/DE/Service-Navi/Presse/Pressemitteilungen/Presse2026/260512_G7_Richtlinie_SBOM_for_AI.html",
@@ -215,6 +215,50 @@
           "python scripts/startup_check.py --profile notary-workstation --ide auto",
           "python plugins\\nac-cyberjack-rfid\\scripts\\check_readiness.py --json --probe-morris-api",
           "python plugins\\nac-bnotk-xnp\\scripts\\reader_prompt.py --json --probe-morris-api"
+        ]
+      }
+    ],
+    "agent_tooling_candidates": [
+      {
+        "id": "ponytail-agent-tooling-candidate",
+        "name": "Ponytail",
+        "type": "optional_agent_tooling_candidate",
+        "upstream_repository": "https://github.com/DietrichGebert/ponytail",
+        "observed_release": "v4.8.4",
+        "observed_release_url": "https://github.com/DietrichGebert/ponytail/releases/tag/v4.8.4",
+        "observed_at": "2026-06-29",
+        "license": "MIT",
+        "status": "candidate_not_installed",
+        "integration_surfaces": [
+          "codex_plugin",
+          "openclaw_skill",
+          "hermes_plugin",
+          "instruction_only_rules"
+        ],
+        "installed_in_nac": false,
+        "lifecycle_hooks_enabled": false,
+        "runtime_activation_enabled": false,
+        "personal_data_allowed": false,
+        "matter_data_allowed": false,
+        "secrets_allowed": false,
+        "allowed_pre_owner_actions": [
+          "record_metadata",
+          "manual_overengineering_review_against_public_source",
+          "plan_skill_only_smoke"
+        ],
+        "blocked_actions": [
+          "install_codex_plugin_without_owner_apply",
+          "enable_lifecycle_hooks_without_owner_apply",
+          "activate_openclaw_skill_runtime_without_owner_apply",
+          "run_on_mandate_data",
+          "shorten_security_privacy_owner_gates_tests_or_validators",
+          "grant_github_or_oci_write_from_target"
+        ],
+        "owner_apply_required_before": [
+          "plugin_installation",
+          "lifecycle_hook_activation",
+          "openclaw_runtime_activation",
+          "target_operator_write_access"
         ]
       }
     ],
