@@ -40,17 +40,26 @@ REQUIRED_PONYTAIL_BLOCKED_USE = {
     "github_or_oci_write_from_target",
 }
 REQUIRED_PONYTAIL_SKILL_ONLY_SMOKE = {
-    "status": "prepared_not_executed",
+    "status": "passed_no_install_no_activation",
     "runbook_de": "docs/de/operations/ponytail-skill-only-smoke.md",
     "runbook_en": "docs/en/operations/ponytail-skill-only-smoke.md",
     "evidence_template": "workflows/evidence-templates/ponytail-skill-only-smoke.md",
     "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
+    "target_evidence_file": "evidence/ponytail-skill-only-smoke-2026-06-29.md",
+    "execution_date": "2026-06-29",
+}
+REQUIRED_PONYTAIL_SKILL_ONLY_TRUE_FLAGS = {
+    "owner_apply_required_before_execution",
+    "execution_performed",
 }
 REQUIRED_PONYTAIL_SKILL_ONLY_FALSE_FLAGS = {
-    "execution_performed",
     "installation_performed",
     "hooks_enabled",
     "runtime_activation_performed",
+    "github_write_performed",
+    "oci_write_performed",
+    "repo_change_required",
+    "owner_input_needed",
 }
 REQUIRED_AGENT_ROLES_OR_NAMES = {
     "main",
@@ -276,10 +285,9 @@ def _validate_optional_agent_tooling(payload: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{key} points to missing file: {value}"
                 )
-    if skill_only.get("owner_apply_required_before_execution") is not True:
-        errors.append(
-            "optional_agent_tooling_candidates.ponytail.skill_only_smoke.owner_apply_required_before_execution must be true"
-        )
+    for flag in sorted(REQUIRED_PONYTAIL_SKILL_ONLY_TRUE_FLAGS):
+        if skill_only.get(flag) is not True:
+            errors.append(f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{flag} must be true")
     for flag in sorted(REQUIRED_PONYTAIL_SKILL_ONLY_FALSE_FLAGS):
         if skill_only.get(flag) is not False:
             errors.append(f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{flag} must be false")
@@ -346,8 +354,10 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (DOC_DE, "Ponytail Skill-Only Smoke"),
         (DOC_EN, "NaC On-Prem Agent Runtime"),
         (DOC_EN, "Ponytail skill-only smoke"),
-        (RUNBOOK_DE, "Status: vorbereitet, nicht ausgeführt"),
-        (RUNBOOK_EN, "Status: prepared, not executed"),
+        (RUNBOOK_DE, "Status: ausgeführt, bestanden"),
+        (RUNBOOK_DE, "ponytail-skill-only-smoke-2026-06-29.md"),
+        (RUNBOOK_EN, "Status: executed, passed"),
+        (RUNBOOK_EN, "ponytail-skill-only-smoke-2026-06-29.md"),
         (OPERATIONS_DE, "ponytail-skill-only-smoke.md"),
         (OPERATIONS_EN, "ponytail-skill-only-smoke.md"),
         (EVIDENCE_TEMPLATE, "Evidence-Status: nur Vorlage"),

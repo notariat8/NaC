@@ -113,8 +113,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/operations/](operations): Fork/Release, Upstream-Sync, Version-Binding,
   Arbeitsmodell und Repo-Konsolidierung.
 - [docs/de/operations/ponytail-skill-only-smoke.md](operations/ponytail-skill-only-smoke.md):
-  vorbereiteter, nicht ausgeführter Skill-Only-Smoke für Ponytail auf
-  `notoclaw01`.
+  Owner-gated ausgeführter Skill-Only-Smoke für Ponytail auf `notoclaw01`
+  ohne Installation, Hooks oder Runtime-Aktivierung.
 - [docs/de/service-model/](service-model): Notariats-Scope, Betriebsleistungen,
   Tenant-Ownership und Exit.
 - [docs/de/plugin-plans/](plugin-plans): Plugin- und Connector-Pläne.

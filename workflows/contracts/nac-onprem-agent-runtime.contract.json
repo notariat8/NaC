@@ -100,16 +100,22 @@
       "license": "MIT",
       "status": "candidate_not_installed",
       "skill_only_smoke": {
-        "status": "prepared_not_executed",
+        "status": "passed_no_install_no_activation",
         "runbook_de": "docs/de/operations/ponytail-skill-only-smoke.md",
         "runbook_en": "docs/en/operations/ponytail-skill-only-smoke.md",
         "evidence_template": "workflows/evidence-templates/ponytail-skill-only-smoke.md",
         "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
+        "target_evidence_file": "evidence/ponytail-skill-only-smoke-2026-06-29.md",
+        "execution_date": "2026-06-29",
         "owner_apply_required_before_execution": true,
-        "execution_performed": false,
+        "execution_performed": true,
         "installation_performed": false,
         "hooks_enabled": false,
-        "runtime_activation_performed": false
+        "runtime_activation_performed": false,
+        "github_write_performed": false,
+        "oci_write_performed": false,
+        "repo_change_required": false,
+        "owner_input_needed": false
       },
       "allowed_use": [
         "over_engineering_review",
