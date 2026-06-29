@@ -30,6 +30,7 @@ for Fachpersonal without exposing `value` fields.
 | KG CLI | Implemented | `scripts/notary_kg.py`, `notary-kg` after package install |
 | KG editor view | Implemented | `src/notary_kg/editor.py`, `schemas/kg-editor-patch.schema.json`, `workflows/contracts/kg-editor.contract.json` |
 | Workflow contract draft generator | Implemented | `src/notary_kg/workflow_contract.py`, `nac kg workflow-contract <slug>`, `tests/test_notary_kg.py` |
+| GmbH/UG pilot intake checklist | Implemented | `src/notary_kg/pilot_checklist.py`, `nac kg pilot-checklist online-gmbh-gruendung`, `tests/test_notary_kg.py` |
 | Legal Graph source pilot | In review | `workflows/legal-graph/sources/erbrecht-primary-source.json`, `nac legal-graph sources` |
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
@@ -46,7 +47,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0004 | Case-level KG CLI view | Done | CLI returns one case by slug and fails unknown slugs. |
 | DEV-0005 | No-code KG editor view and patch contract | Done | CLI returns four safe editor tabs, patch actions and blocked `value` fields. |
 | DEV-0006 | Workflow contract generator from KG | Done | `nac kg workflow-contract <slug>` generates a draft contract skeleton for one case without real mandate data. |
-| DEV-0007 | First pilot workflow: GmbH/UG formation | Next | Reads KG node and creates deterministic intake checklist. |
+| DEV-0007 | First pilot workflow: GmbH/UG formation | Done | `nac kg pilot-checklist online-gmbh-gruendung` reads the KG node and creates a deterministic intake checklist without real mandate data. |
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Next | Consumes `nac-bnotk-xnp` readiness evidence. |
 | DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
 | DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
@@ -72,6 +73,7 @@ python scripts/validate_legal_model_evaluation_benchmark.py
 python scripts/notary_kg.py --repo-root . --format json status
 python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag
 python scripts/notary_kg.py --repo-root . --format json workflow-contract immobilienkaufvertrag
+python scripts/notary_kg.py --repo-root . --format json pilot-checklist online-gmbh-gruendung
 ```
 
 ## Rule

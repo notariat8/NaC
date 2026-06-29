@@ -105,6 +105,17 @@ class NaCCliTests(unittest.TestCase):
         self.assertFalse(payload["guardrails"]["real_mandate_data_in_git"])
         self.assertFalse(_contains_key(payload, "value"))
 
+    def test_kg_pilot_checklist_is_available_through_nac_cli(self) -> None:
+        rc, output = run_cli("kg", "--format", "json", "pilot-checklist", "online-gmbh-gruendung")
+
+        self.assertEqual(rc, 0)
+        payload = json.loads(output)
+        self.assertEqual(payload["schema_version"], "nac.pilot-intake-checklist/v0.1")
+        self.assertEqual(payload["pilot_usecase"]["slug"], "online-gmbh-gruendung")
+        self.assertEqual(payload["summary"]["next_step"]["id"], "company.name")
+        self.assertFalse(payload["guardrails"]["productive_register_or_xnp_action"])
+        self.assertFalse(_contains_key(payload, "value"))
+
     def test_gnotkg_quote_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli(
             "gnotkg",

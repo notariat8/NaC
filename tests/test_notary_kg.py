@@ -15,6 +15,7 @@ if str(SRC_ROOT) not in sys.path:
 from notary_kg.catalog import all_case_summaries, find_case, load_catalogs
 from notary_kg.cli import main as kg_main
 from notary_kg.editor import build_editor_view
+from notary_kg.pilot_checklist import build_pilot_intake_checklist
 from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
 
@@ -199,6 +200,51 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload, build_workflow_contract_draft(REPO_ROOT, "immobilienkaufvertrag"))
         self.assertEqual(payload["proposal_policy"]["mode"], "proposal_only")
         self.assertIn("value", payload["proposal_policy"]["forbidden_fields"])
+        self.assertFalse(_contains_key(payload, "value"))
+
+    def test_gmbh_ug_pilot_checklist_reads_kg_node_without_values(self) -> None:
+        payload = build_pilot_intake_checklist(REPO_ROOT, "online-gmbh-gruendung")
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(payload["schema_version"], "nac.pilot-intake-checklist/v0.1")
+        self.assertEqual(payload["pilot_usecase"]["slug"], "online-gmbh-gruendung")
+        self.assertEqual(payload["workflow_binding"]["workflow_id"], "online-gmbh-gruendung:pilot-intake")
+        self.assertEqual(payload["workflow_binding"]["approval_state"], "draft_requires_notarial_review")
+        self.assertEqual([section["id"] for section in payload["sections"]], [
+            "required_information",
+            "documents",
+            "decisions",
+            "gates",
+            "evidence",
+        ])
+        self.assertGreaterEqual(payload["summary"]["total_items"], 20)
+        self.assertEqual(payload["summary"]["next_step"]["id"], "company.name")
+        self.assertIn("nac-handelsregister", payload["summary"]["plugin_dependencies"])
+        self.assertFalse(payload["guardrails"]["real_mandate_data_in_git"])
+        self.assertFalse(payload["guardrails"]["productive_register_or_xnp_action"])
+        self.assertFalse(_contains_key(payload, "value"))
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_cli_pilot_checklist_returns_gmbh_ug_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--format",
+                    "json",
+                    "pilot-checklist",
+                    "online-gmbh-gruendung",
+                ]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload, build_pilot_intake_checklist(REPO_ROOT, "online-gmbh-gruendung"))
+        self.assertEqual(payload["summary"]["next_step"]["label"], "Gesellschaft Name")
         self.assertFalse(_contains_key(payload, "value"))
 
 

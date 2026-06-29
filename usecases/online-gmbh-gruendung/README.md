@@ -67,6 +67,7 @@ Fachliche Anker im KG-Modell:
 ```bash
 python scripts/notary_kg.py --repo-root . case online-gmbh-gruendung
 python scripts/notary_kg.py --repo-root . editor-view online-gmbh-gruendung
+python scripts/notary_kg.py --repo-root . pilot-checklist online-gmbh-gruendung
 python scripts/validate_knowledge_graph.py
 ```
 

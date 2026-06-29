@@ -8,6 +8,7 @@ from nac_gnotkg.views import build_cost_review_view
 
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .editor import build_editor_view
+from .pilot_checklist import build_pilot_intake_checklist
 from .workflow_contract import build_workflow_contract_draft
 
 
@@ -52,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generate a safe workflow-contract draft from one KG case.",
     )
     workflow_contract_parser.add_argument("slug")
+
+    pilot_checklist_parser = subparsers.add_parser(
+        "pilot-checklist",
+        help="Generate a deterministic pilot intake checklist from one KG case.",
+    )
+    pilot_checklist_parser.add_argument("slug")
 
     return parser
 
@@ -99,6 +106,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "workflow-contract":
         try:
             payload = build_workflow_contract_draft(repo_root, args.slug)
+        except KeyError:
+            print(f"ERROR: Unknown KG case slug: {args.slug}")
+            return 1
+        _print_payload(payload, args.format)
+        return 0
+
+    if args.command == "pilot-checklist":
+        try:
+            payload = build_pilot_intake_checklist(repo_root, args.slug)
         except KeyError:
             print(f"ERROR: Unknown KG case slug: {args.slug}")
             return 1
@@ -203,6 +219,22 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- real mandate data in Git: {payload['guardrails']['real_mandate_data_in_git']}")
         print(f"- value fields included: {payload['guardrails']['value_fields_included']}")
         print(f"- protected PR required: {payload['guardrails']['protected_pr_required']}")
+        return
+
+    if payload.get("schema_version") == "nac.pilot-intake-checklist/v0.1":
+        print(f"Pilot-Checkliste: {payload['pilot_usecase']['slug']}")
+        print(f"- workflow: {payload['workflow_binding']['workflow_id']}")
+        print(f"- status: {payload['status']}")
+        print(f"- items: {payload['summary']['open_items']}/{payload['summary']['total_items']} offen")
+        print(f"- nächster Schritt: {payload['summary']['next_step']['label']}")
+        print("")
+        print("Abschnitte")
+        for section in payload["sections"]:
+            print(f"- {section['label_de']}: {section['open_count']}/{section['item_count']} offen")
+        print("")
+        print("Guardrails")
+        print(f"- echte Mandatsdaten in Git: {payload['guardrails']['real_mandate_data_in_git']}")
+        print(f"- produktive Register-/XNP-Aktion: {payload['guardrails']['productive_register_or_xnp_action']}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")
