@@ -123,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
     kg_editor.add_argument("slug")
     kg_cost = kg_sub.add_parser("cost-view", help="Zeigt die sichere GNotKG-Kostenansicht.")
     kg_cost.add_argument("slug")
+    kg_workflow_contract = kg_sub.add_parser(
+        "workflow-contract",
+        help="Erzeugt einen sicheren Workflow-Vertragsentwurf aus einem KG-Usecase.",
+    )
+    kg_workflow_contract.add_argument("slug")
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

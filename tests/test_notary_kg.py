@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
 from notary_kg.catalog import all_case_summaries, find_case, load_catalogs
 from notary_kg.cli import main as kg_main
 from notary_kg.editor import build_editor_view
+from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
-
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class NotaryKnowledgeGraphTests(unittest.TestCase):
@@ -155,6 +159,46 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload, build_cost_review_view(REPO_ROOT, "immobilienkaufvertrag"))
         self.assertEqual(payload["rendering"]["preferred_renderer"], "xyflow")
+        self.assertFalse(_contains_key(payload, "value"))
+
+    def test_workflow_contract_draft_from_kg_exposes_safe_skeleton(self) -> None:
+        payload = build_workflow_contract_draft(REPO_ROOT, "immobilienkaufvertrag")
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(payload["schema_version"], "nac.workflow-contract-draft/v0.1")
+        self.assertEqual(payload["contract_id"], "workflow.immobilienkaufvertrag")
+        self.assertEqual(payload["status"], "draft_from_knowledge_graph")
+        self.assertEqual(payload["source"]["catalog_source"], "usecases/immobilienkaufvertrag/knowledge-graph.graph.json")
+        self.assertGreaterEqual(len(payload["intake"]["required_information"]), 6)
+        self.assertGreaterEqual(len(payload["gates"]), 1)
+        self.assertIn("python scripts/validate_knowledge_graph.py", payload["validation_commands"])
+        self.assertFalse(payload["guardrails"]["real_mandate_data_in_git"])
+        self.assertFalse(payload["guardrails"]["value_fields_included"])
+        self.assertTrue(payload["guardrails"]["protected_pr_required"])
+        self.assertFalse(_contains_key(payload, "value"))
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_cli_workflow_contract_returns_safe_json_skeleton(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--format",
+                    "json",
+                    "workflow-contract",
+                    "immobilienkaufvertrag",
+                ]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload, build_workflow_contract_draft(REPO_ROOT, "immobilienkaufvertrag"))
+        self.assertEqual(payload["proposal_policy"]["mode"], "proposal_only")
+        self.assertIn("value", payload["proposal_policy"]["forbidden_fields"])
         self.assertFalse(_contains_key(payload, "value"))
 
 
