@@ -82,12 +82,19 @@ runtime activation, matter-data processing, shortening security, privacy,
 owner-gate, test or validator duties, and GitHub or OCI write access from the
 target system are not allowed.
 
-The later [Ponytail skill-only smoke](../operations/ponytail-skill-only-smoke.md)
-is prepared only and not executed. It may check only public metadata, target
-paths and non-sensitive evidence preparation. The matching template is
+The [Ponytail skill-only smoke](../operations/ponytail-skill-only-smoke.md)
+was owner-gated, executed and passed on 2026-06-29. It checked only public
+metadata, target paths and non-sensitive evidence preparation. The matching
+template is
 [workflows/evidence-templates/ponytail-skill-only-smoke.md](../../../workflows/evidence-templates/ponytail-skill-only-smoke.md)
 and must not contain secrets, PINs, tokens, keys, certificate material,
 personal data or matter data.
+
+The target evidence is
+`/home/ubuntu/nac-target-control/evidence/ponytail-skill-only-smoke-2026-06-29.md`.
+Ponytail remains `candidate_not_installed`; installation, lifecycle hooks,
+OpenClaw runtime activation and GitHub or OCI write from the target system did
+not happen.
 
 Every installation, hook activation or OpenClaw runtime activation needs a
 separate owner apply gate. Ponytail must never override NaC governance.
