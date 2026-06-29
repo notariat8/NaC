@@ -21,6 +21,8 @@ Notariatsbetrieb. Er ist von [plugins/](../plugins) und
   Idempotenz, Ausführungsplanung und Nachweis-Metadaten.
 - `contracts/`: Workflow-Eingabe-/Ausgabeverträge, Freigaben, Datenklassen
   und Plugin-Abhängigkeiten.
+- `evidence-templates/`: nicht-sensitive Nachweisvorlagen für vorbereitete
+  Smokes und Betriebsgrenzen ohne Secrets oder Mandatsdaten.
 
 ## Codex Parallel Review
 

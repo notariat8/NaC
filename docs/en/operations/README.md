@@ -19,6 +19,9 @@ model and repository consolidation.
   for agent rules, release memory and runbooks without secrets or mandate data.
 - [oci-runtime.md](oci-runtime.md): live runtime contract, App Release Overlay
   and VM replacement boundary for `app.notariat8.de`.
+- [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): prepared,
+  not executed Ponytail skill-only smoke for `notoclaw01` with owner apply
+  gate and evidence template.
 - [repository-consolidation.md](repository-consolidation.md): migrated, open and retire-ready standalone
   repositories.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): target structure and migration into one

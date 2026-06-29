@@ -82,6 +82,13 @@ runtime activation, matter-data processing, shortening security, privacy,
 owner-gate, test or validator duties, and GitHub or OCI write access from the
 target system are not allowed.
 
+The later [Ponytail skill-only smoke](../operations/ponytail-skill-only-smoke.md)
+is prepared only and not executed. It may check only public metadata, target
+paths and non-sensitive evidence preparation. The matching template is
+[workflows/evidence-templates/ponytail-skill-only-smoke.md](../../../workflows/evidence-templates/ponytail-skill-only-smoke.md)
+and must not contain secrets, PINs, tokens, keys, certificate material,
+personal data or matter data.
+
 Every installation, hook activation or OpenClaw runtime activation needs a
 separate owner apply gate. Ponytail must never override NaC governance.
 

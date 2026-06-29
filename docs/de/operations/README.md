@@ -19,6 +19,9 @@ Arbeitsmodell und Repo-Konsolidierung.
   für Agent-Regeln, Release-Memory und Runbooks ohne Secrets oder Mandatsdaten.
 - [oci-runtime.md](oci-runtime.md): Live-Runtime-Vertrag, App-Release-Overlay
   und Abgrenzung zu VM-Replacement für `app.notariat8.de`.
+- [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): vorbereiteter,
+  nicht ausgeführter Ponytail Skill-Only Smoke für `notoclaw01` mit
+  Owner-Apply-Gate und Evidence-Vorlage.
 - [repository-consolidation.md](repository-consolidation.md): migrierte, offene und stillzulegende
   Einzelrepos.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): Zielstruktur und Migration in einem Repo.
