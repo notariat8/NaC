@@ -43,6 +43,10 @@ Jeder Vertrag soll definieren:
   Kandidateninventar für juristische Recherche-, MCP- und Verlagsdatenbank-
   Connectoren ohne Produktintegration, Credentials oder Mandatsdaten, mit
   Lizenz-, AVV-, AI-SBOM- und Review-Gates.
+- [workflows/contracts/legal-source-inventory-license-tdm.contract.json](legal-source-inventory-license-tdm.contract.json):
+  Quelleninventar-, Lizenz- und TDM-Gate für spätere Legal-Nemotron- oder
+  Rechtsgraph-Arbeit ohne Quellentext-Ingestion, Benchmark-Datensatz,
+  Modelllauf oder Training.
 - [workflows/contracts/legal-graph.contract.json](legal-graph.contract.json):
   Vertrag für den mandatsdatenfreien NaC-Rechtsgraphen mit Primärquellen,
   Erbrechts-, Familienrechts- und Gesellschaftsrechts-MVPs, Review-Patches und

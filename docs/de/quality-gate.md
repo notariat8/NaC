@@ -35,7 +35,7 @@ CI:
   NaC-On-Prem-Agent-Runtime + notarielle On-Prem-Connector-Grenzen +
   Mandatsdaten-Klassifikation und Redaktionsgrenze + privater Betriebsrahmen +
   Private-Payload-Zielarchitektur + Private-Payload-Zugriffsmatrix +
-  Legal-Nemotron-Readiness +
+  Legal-Source-Inventar-Lizenz-TDM + Legal-Nemotron-Readiness +
   Legal-Model-Evaluationsbenchmark
 
 ## Feste Reihenfolge
@@ -68,10 +68,11 @@ CI:
 24. `gnotkg_costs` (nur `strict`)
 25. `secure_document_links` (nur `strict`)
 26. `legal_research_connectors` (nur `strict`)
-27. `legal_model_customization_readiness` (nur `strict`)
-28. `legal_model_evaluation_benchmark` (nur `strict`)
-29. `legal_graph_contracts` (nur `strict`)
-30. `oci_tenant_identity` (nur `strict`)
+27. `legal_source_inventory_license_tdm` (nur `strict`)
+28. `legal_model_customization_readiness` (nur `strict`)
+29. `legal_model_evaluation_benchmark` (nur `strict`)
+30. `legal_graph_contracts` (nur `strict`)
+31. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 

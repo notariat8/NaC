@@ -159,6 +159,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md):
   Readiness-Vertrag für spätere Legal-Nemotron-Modellanpassung ohne
   Trainingsstart.
+- [docs/de/architecture/legal-source-inventory-license-tdm.md](architecture/legal-source-inventory-license-tdm.md):
+  Quelleninventar-, Lizenz- und TDM-Gate für spätere Legal-Nemotron- oder
+  Rechtsgraph-Arbeit ohne Quellentext-Ingestion.
 - [docs/de/architecture/legal-model-evaluation-benchmark.md](architecture/legal-model-evaluation-benchmark.md):
   Benchmark-Blueprint für spätere Legal-Nemotron-Evaluationen ohne
   Benchmark-Datensatz, Modelllauf oder Qualitätsbehauptung.
@@ -209,6 +212,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [workflows/contracts/legal-model-customization-readiness.contract.json](../../workflows/contracts/legal-model-customization-readiness.contract.json)
   beschreibt Quellen-, Lizenz-, Benchmark-, Evaluation-, Model-Card-,
   AI-SBOM- und Owner-Apply-Gates für spätere Legal-Nemotron-Anpassungen.
+- [workflows/contracts/legal-source-inventory-license-tdm.contract.json](../../workflows/contracts/legal-source-inventory-license-tdm.contract.json)
+  beschreibt Quelleninventar-, Lizenz- und TDM-Gates vor jeder
+  Quellentext-Ingestion, Benchmark-Generierung, Evaluation oder
+  Modellanpassung.
 - [workflows/contracts/legal-model-evaluation-benchmark.contract.json](../../workflows/contracts/legal-model-evaluation-benchmark.contract.json)
   beschreibt Quellenhierarchie, Holdout-Regeln, Aufgabenfamilien,
   BYOB/MCQ- und `eval/model_eval`-Routing für spätere
