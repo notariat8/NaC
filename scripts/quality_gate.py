@@ -191,6 +191,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_legal_research_connectors.py"],
                 ),
                 (
+                    "legal_source_inventory_license_tdm",
+                    "Legal Source Inventory License TDM",
+                    [sys.executable, "scripts/validate_legal_source_inventory_license_tdm.py"],
+                ),
+                (
                     "legal_model_customization_readiness",
                     "Legal Model Customization Readiness",
                     [sys.executable, "scripts/validate_legal_model_customization_readiness.py"],

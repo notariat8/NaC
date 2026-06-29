@@ -35,8 +35,8 @@ CI:
   AI-SBOM, ATP runtime contract, knowledge graph, NaC on-prem agent runtime,
   notarial on-prem connector boundaries, matter-data classification/redaction
   and private operating frame gate, private-payload target design and
-  private-payload access policy plus Legal Nemotron readiness and legal model
-  evaluation benchmark
+  private-payload access policy plus legal source inventory/license TDM,
+  Legal Nemotron readiness and legal model evaluation benchmark
 
 ## Fixed Order
 
@@ -68,10 +68,11 @@ CI:
 24. `gnotkg_costs` only in `strict`
 25. `secure_document_links` only in `strict`
 26. `legal_research_connectors` only in `strict`
-27. `legal_model_customization_readiness` only in `strict`
-28. `legal_model_evaluation_benchmark` only in `strict`
-29. `legal_graph_contracts` only in `strict`
-30. `oci_tenant_identity` only in `strict`
+27. `legal_source_inventory_license_tdm` only in `strict`
+28. `legal_model_customization_readiness` only in `strict`
+29. `legal_model_evaluation_benchmark` only in `strict`
+30. `legal_graph_contracts` only in `strict`
+31. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

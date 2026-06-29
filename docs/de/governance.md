@@ -120,6 +120,8 @@ Referenz: [policies/role-model-policy.yaml](../../policies/role-model-policy.yam
   [docs/de/architecture/private-payload-access-policy.md](architecture/private-payload-access-policy.md)
 - Legal-Nemotron-Readiness:
   [docs/de/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md)
+- Legal-Source-Inventar und Lizenz-/TDM-Gate:
+  [docs/de/architecture/legal-source-inventory-license-tdm.md](architecture/legal-source-inventory-license-tdm.md)
 - Legal-Model-Evaluationsbenchmark:
   [docs/de/architecture/legal-model-evaluation-benchmark.md](architecture/legal-model-evaluation-benchmark.md)
 - Fork-Modell und Verantwortungen:

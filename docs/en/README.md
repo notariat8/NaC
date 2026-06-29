@@ -132,6 +132,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/legal-model-customization-readiness.md](architecture/legal-model-customization-readiness.md)
   defines the readiness contract for later Legal-Nemotron model customization
   without starting training.
+- [docs/en/architecture/legal-source-inventory-license-tdm.md](architecture/legal-source-inventory-license-tdm.md)
+  defines the source-inventory, license and TDM gate for later Legal-Nemotron
+  or legal-graph work without source-text ingestion.
 - [docs/en/architecture/legal-model-evaluation-benchmark.md](architecture/legal-model-evaluation-benchmark.md)
   defines the benchmark blueprint for later Legal-Nemotron evaluations without
   generating a benchmark dataset, running a model or claiming legal quality.
@@ -153,6 +156,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [workflows/contracts/private-payload-access-policy.contract.json](../../workflows/contracts/private-payload-access-policy.contract.json) defines roles, purposes, access matrix, step-up, human review, audit and global denials for later private payloads without live access.
 - [workflows/contracts/secure-document-link.contract.json](../../workflows/contracts/secure-document-link.contract.json) defines the minimum boundary for mobile upload and read links to an object store, database blob or OneDrive.
 - [workflows/contracts/legal-model-customization-readiness.contract.json](../../workflows/contracts/legal-model-customization-readiness.contract.json) defines source, license, benchmark, evaluation, model-card, AI-SBOM and owner-apply gates for later Legal-Nemotron customization.
+- [workflows/contracts/legal-source-inventory-license-tdm.contract.json](../../workflows/contracts/legal-source-inventory-license-tdm.contract.json) defines source-inventory, license and TDM gates before any source-text ingestion, benchmark generation, evaluation or model customization.
 - [workflows/contracts/legal-model-evaluation-benchmark.contract.json](../../workflows/contracts/legal-model-evaluation-benchmark.contract.json) defines source hierarchy, holdout rules, task families and BYOB/MCQ plus `eval/model_eval` routing for later Legal-Nemotron evaluations without a benchmark dataset or model run.
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.

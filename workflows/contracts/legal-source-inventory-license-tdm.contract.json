@@ -1,0 +1,230 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_source_inventory_license_tdm",
+  "title": "Legal Source Inventory License TDM",
+  "status": "source_inventory_readiness_no_ingestion",
+  "last_update": "2026-06-29",
+  "purpose": "Defines the source-inventory, license and TDM readiness gate for later German-law source work without ingesting source text, generating benchmark rows, training models or claiming legal-answer quality.",
+  "source_documents": {
+    "legal_research_connectors": "workflows/contracts/legal-research-connectors.contract.json",
+    "legal_model_customization_readiness": "workflows/contracts/legal-model-customization-readiness.contract.json",
+    "legal_model_evaluation_benchmark": "workflows/contracts/legal-model-evaluation-benchmark.contract.json",
+    "legal_graph_contract": "workflows/contracts/legal-graph.contract.json",
+    "build_now": "roadmap/BUILD_NOW.md"
+  },
+  "scope": {
+    "source_text_ingestion_enabled": false,
+    "benchmark_dataset_generated": false,
+    "model_training_enabled": false,
+    "model_evaluation_executed": false,
+    "mandate_data_allowed": false,
+    "publisher_full_text_allowed": false,
+    "automated_bulk_crawl_enabled": false,
+    "owner_apply_required_before_ingestion": true
+  },
+  "inventory_policy": {
+    "planning_only": true,
+    "primary_language": "de",
+    "minimum_record_fields": [
+      "source_id",
+      "canonical_url",
+      "source_class",
+      "jurisdiction_fit",
+      "license_status",
+      "tdm_status",
+      "terms_review_ref",
+      "attribution_plan",
+      "allowed_pre_apply_actions",
+      "blocked_pre_apply_actions",
+      "human_review_owner"
+    ],
+    "allowed_pre_apply_actions": [
+      "record_source_metadata",
+      "record_license_status",
+      "record_tdm_question",
+      "design_normalization_schema",
+      "design_attribution_plan",
+      "plan_human_review"
+    ],
+    "blocked_pre_apply_actions": [
+      "download_full_text_corpus",
+      "bulk_crawl_source",
+      "normalize_full_text_for_training",
+      "generate_benchmark_rows",
+      "run_model_evaluation",
+      "train_or_finetune_model",
+      "publish_checkpoint",
+      "store_publisher_full_text_in_product_repo",
+      "use_mandate_data"
+    ]
+  },
+  "source_inventory": [
+    {
+      "source_id": "nvidia-nemotron-pretraining-legal-v1",
+      "source_contract_candidate": "nvidia-nemotron-pretraining-legal-v1",
+      "canonical_url": "https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1",
+      "source_class": "baseline_training_dataset",
+      "jurisdiction_fit": "english_legal_baseline_not_german_law_source",
+      "license_status": "cc-by-4.0_claim_requires_review",
+      "tdm_status": "not_a_german_source_tdm_gate_still_required_for_reuse",
+      "terms_review_ref": "pending",
+      "attribution_plan": "required_before_reuse",
+      "allowed_pre_apply_actions": [
+        "record_source_metadata",
+        "record_license_status",
+        "record_tdm_question",
+        "plan_human_review"
+      ],
+      "blocked_pre_apply_actions": [
+        "normalize_full_text_for_training",
+        "train_or_finetune_model",
+        "publish_checkpoint",
+        "treat_as_german_law_source",
+        "use_mandate_data"
+      ],
+      "human_review_owner": "owner_required"
+    },
+    {
+      "source_id": "recht-bund-bgbl-data-access",
+      "source_contract_candidate": "recht-bund-bgbl-data-access",
+      "canonical_url": "https://www.recht.bund.de/de/service/webservice/webservice_node.html",
+      "source_class": "official_publication_data_access",
+      "jurisdiction_fit": "german_federal_publication_evidence",
+      "license_status": "official_publication_terms_require_review",
+      "tdm_status": "tdm_and_bulk_access_terms_require_review",
+      "terms_review_ref": "pending",
+      "attribution_plan": "required_before_ingestion",
+      "allowed_pre_apply_actions": [
+        "record_source_metadata",
+        "record_license_status",
+        "record_tdm_question",
+        "design_normalization_schema",
+        "design_attribution_plan",
+        "plan_human_review"
+      ],
+      "blocked_pre_apply_actions": [
+        "download_full_text_corpus",
+        "bulk_crawl_source",
+        "normalize_full_text_for_training",
+        "generate_benchmark_rows",
+        "train_or_finetune_model",
+        "use_mandate_data"
+      ],
+      "human_review_owner": "owner_required"
+    },
+    {
+      "source_id": "wikipedia-rechtsquelle-concept-reference",
+      "source_contract_candidate": "wikipedia-rechtsquelle-concept-reference",
+      "canonical_url": "https://de.wikipedia.org/wiki/Rechtsquelle",
+      "source_class": "concept_reference",
+      "jurisdiction_fit": "terminology_reference_not_primary_source",
+      "license_status": "cc-by-sa_claim_requires_review",
+      "tdm_status": "concept_reference_only_no_authoritative_corpus",
+      "terms_review_ref": "pending",
+      "attribution_plan": "required_before_quote_or_reuse",
+      "allowed_pre_apply_actions": [
+        "record_source_metadata",
+        "record_license_status",
+        "record_tdm_question",
+        "design_attribution_plan",
+        "plan_human_review"
+      ],
+      "blocked_pre_apply_actions": [
+        "treat_as_primary_legal_source",
+        "normalize_full_text_for_training",
+        "generate_benchmark_rows",
+        "train_or_finetune_model",
+        "use_mandate_data"
+      ],
+      "human_review_owner": "owner_required"
+    }
+  ],
+  "required_gates": [
+    {
+      "id": "source_record_completeness_gate",
+      "must_complete_before": "source_inventory_approval",
+      "required_evidence": [
+        "canonical_url",
+        "source_class",
+        "jurisdiction_fit",
+        "human_review_owner"
+      ]
+    },
+    {
+      "id": "license_basis_gate",
+      "must_complete_before": "source_text_ingestion",
+      "required_evidence": [
+        "license_status",
+        "terms_review_ref",
+        "permitted_use_summary",
+        "attribution_plan"
+      ]
+    },
+    {
+      "id": "tdm_permitted_use_gate",
+      "must_complete_before": "corpus_preparation_or_training",
+      "required_evidence": [
+        "tdm_status",
+        "bulk_access_decision",
+        "machine_processing_decision",
+        "exclusion_rules"
+      ]
+    },
+    {
+      "id": "storage_boundary_gate",
+      "must_complete_before": "source_cache_or_normalization",
+      "required_evidence": [
+        "storage_target",
+        "full_text_boundary",
+        "no_publisher_full_text_in_repo",
+        "no_mandate_data_attestation"
+      ]
+    },
+    {
+      "id": "owner_apply_gate",
+      "must_complete_before": "any_ingestion_benchmark_training_or_evaluation",
+      "required_evidence": [
+        "owner_approval_ref",
+        "approved_source_ids",
+        "approved_use",
+        "rollback_plan_ref"
+      ]
+    }
+  ],
+  "blocked_actions": [
+    "download_full_text_corpus_without_owner_apply",
+    "bulk_crawl_without_terms_review",
+    "generate_benchmark_dataset_without_license_tdm_gate",
+    "run_model_eval_without_approved_tasks",
+    "train_or_finetune_without_owner_apply",
+    "store_publisher_full_text_in_product_repo",
+    "use_mandate_data_for_source_inventory",
+    "treat_concept_reference_as_primary_source",
+    "claim_legal_truth_from_inventory_status"
+  ],
+  "required_evidence_fields": [
+    "schema_version",
+    "inventory_id",
+    "source_inventory_ref",
+    "license_review_ref",
+    "tdm_review_ref",
+    "terms_review_ref",
+    "attribution_plan_ref",
+    "storage_boundary_ref",
+    "owner_apply_ref",
+    "no_mandate_data_attestation",
+    "no_source_text_ingested_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_legal_source_inventory_license_tdm.py",
+    "python scripts/validate_legal_model_customization_readiness.py",
+    "python scripts/validate_legal_model_evaluation_benchmark.py",
+    "python scripts/validate_legal_research_connectors.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/legal-source-inventory-license-tdm.md",
+    "en": "docs/en/architecture/legal-source-inventory-license-tdm.md"
+  }
+}
