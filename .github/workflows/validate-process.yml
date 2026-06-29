@@ -6,6 +6,8 @@ on:
       - "processes/**/*.json"
       - "schemas/**/*.json"
       - "src/business_os/**/*.py"
+      - "src/nac_runtime/**/*.py"
+      - "src/nac_web/**/*.py"
       - "tests/**/*.py"
       - "pyproject.toml"
   workflow_dispatch:
