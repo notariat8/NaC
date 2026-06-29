@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/notariat8/NaC/plugins/nac-bnotk-xnp/contracts/workflow-gate-evidence.schema.json",
+  "title": "XNP-Prüfung Workflow-Gate-Nachweis",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plugin",
+    "workflow_gate",
+    "evidence_summary",
+    "decision",
+    "guardrails",
+    "actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "nac.xnp.workflow-gate/v1"
+    },
+    "plugin": {
+      "const": "nac-bnotk-xnp"
+    },
+    "workflow_gate": {
+      "type": "object",
+      "required": [
+        "id",
+        "workflow_id",
+        "usecase_slug",
+        "status",
+        "source_schema_version",
+        "source_prompt_id",
+        "source_status",
+        "source_policy_compliant",
+        "opens_next_step"
+      ],
+      "properties": {
+        "id": {
+          "const": "xnp.reader_prompt_gate"
+        },
+        "workflow_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:xnp-reader-prompt-gate$"
+        },
+        "usecase_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "status": {
+          "enum": [
+            "ready_for_operator_review",
+            "manual_review",
+            "blocked"
+          ]
+        },
+        "source_schema_version": {
+          "const": "nac.xnp.reader-prompt/v1"
+        },
+        "source_prompt_id": {
+          "type": "string"
+        },
+        "source_status": {
+          "enum": [
+            "prompted",
+            "manual_review",
+            "blocked"
+          ]
+        },
+        "source_policy_compliant": {
+          "type": "boolean"
+        },
+        "opens_next_step": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_summary": {
+      "type": "object",
+      "required": [
+        "reader_prompt_seen",
+        "card_gate_status",
+        "xnp_local_interface_status",
+        "checks"
+      ],
+      "properties": {
+        "reader_prompt_seen": {
+          "type": "boolean"
+        },
+        "card_gate_status": {
+          "type": "string"
+        },
+        "xnp_local_interface_status": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "status",
+              "severity"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "required": [
+        "workflow_can_prepare_next_step",
+        "requires_human_review",
+        "requires_local_workstation",
+        "productive_xnp_action_allowed",
+        "next_required_action"
+      ],
+      "properties": {
+        "workflow_can_prepare_next_step": {
+          "type": "boolean"
+        },
+        "requires_human_review": {
+          "const": true
+        },
+        "requires_local_workstation": {
+          "const": true
+        },
+        "productive_xnp_action_allowed": {
+          "const": false
+        },
+        "next_required_action": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "guardrails": {
+      "type": "object",
+      "required": [
+        "real_mandate_data_in_git",
+        "pin_captured",
+        "card_data_captured",
+        "xnp_api_key_captured",
+        "xnp_login_performed",
+        "external_network_calls",
+        "localhost_only",
+        "productive_xnp_write"
+      ],
+      "properties": {
+        "real_mandate_data_in_git": {
+          "const": false
+        },
+        "pin_captured": {
+          "const": false
+        },
+        "card_data_captured": {
+          "const": false
+        },
+        "xnp_api_key_captured": {
+          "const": false
+        },
+        "xnp_login_performed": {
+          "const": false
+        },
+        "external_network_calls": {
+          "const": false
+        },
+        "localhost_only": {
+          "const": true
+        },
+        "productive_xnp_write": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "review_xnp_reader_prompt_evidence",
+              "confirm_local_workstation_context",
+              "bind_gate_to_workflow_version",
+              "create_pull_request"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
