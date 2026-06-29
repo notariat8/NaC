@@ -9,6 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "nac-onprem-agent-runtime.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "nac-onprem-agent-runtime.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "nac-onprem-agent-runtime.md"
+RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "ponytail-skill-only-smoke.md"
+RUNBOOK_EN = REPO_ROOT / "docs" / "en" / "operations" / "ponytail-skill-only-smoke.md"
+OPERATIONS_DE = REPO_ROOT / "docs" / "de" / "operations" / "README.md"
+OPERATIONS_EN = REPO_ROOT / "docs" / "en" / "operations" / "README.md"
+EVIDENCE_TEMPLATE = REPO_ROOT / "workflows" / "evidence-templates" / "ponytail-skill-only-smoke.md"
 QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 
@@ -33,6 +38,19 @@ REQUIRED_PONYTAIL_BLOCKED_USE = {
     "mandate_data_processing",
     "shorten_security_privacy_owner_gates_tests_or_validators",
     "github_or_oci_write_from_target",
+}
+REQUIRED_PONYTAIL_SKILL_ONLY_SMOKE = {
+    "status": "prepared_not_executed",
+    "runbook_de": "docs/de/operations/ponytail-skill-only-smoke.md",
+    "runbook_en": "docs/en/operations/ponytail-skill-only-smoke.md",
+    "evidence_template": "workflows/evidence-templates/ponytail-skill-only-smoke.md",
+    "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
+}
+REQUIRED_PONYTAIL_SKILL_ONLY_FALSE_FLAGS = {
+    "execution_performed",
+    "installation_performed",
+    "hooks_enabled",
+    "runtime_activation_performed",
 }
 REQUIRED_AGENT_ROLES_OR_NAMES = {
     "main",
@@ -242,6 +260,29 @@ def _validate_optional_agent_tooling(payload: dict[str, Any]) -> list[str]:
     for gate in ("plugin_installation", "lifecycle_hook_activation", "runtime_activation"):
         if gate not in owner_gates:
             errors.append(f"optional_agent_tooling_candidates.ponytail.owner_gate_before missing {gate}")
+
+    skill_only = ponytail.get("skill_only_smoke")
+    if not isinstance(skill_only, dict):
+        errors.append("optional_agent_tooling_candidates.ponytail.skill_only_smoke must be an object")
+        return errors
+    for key, expected in REQUIRED_PONYTAIL_SKILL_ONLY_SMOKE.items():
+        if skill_only.get(key) != expected:
+            errors.append(
+                f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{key} must be {expected}"
+            )
+        if key.startswith("runbook_") or key == "evidence_template":
+            value = skill_only.get(key)
+            if isinstance(value, str) and not (REPO_ROOT / value).is_file():
+                errors.append(
+                    f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{key} points to missing file: {value}"
+                )
+    if skill_only.get("owner_apply_required_before_execution") is not True:
+        errors.append(
+            "optional_agent_tooling_candidates.ponytail.skill_only_smoke.owner_apply_required_before_execution must be true"
+        )
+    for flag in sorted(REQUIRED_PONYTAIL_SKILL_ONLY_FALSE_FLAGS):
+        if skill_only.get(flag) is not False:
+            errors.append(f"optional_agent_tooling_candidates.ponytail.skill_only_smoke.{flag} must be false")
     return errors
 
 
@@ -302,7 +343,15 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
 
     for path, required_text in (
         (DOC_DE, "NaC-On-Prem-Agent-Runtime"),
+        (DOC_DE, "Ponytail Skill-Only Smoke"),
         (DOC_EN, "NaC On-Prem Agent Runtime"),
+        (DOC_EN, "Ponytail skill-only smoke"),
+        (RUNBOOK_DE, "Status: vorbereitet, nicht ausgeführt"),
+        (RUNBOOK_EN, "Status: prepared, not executed"),
+        (OPERATIONS_DE, "ponytail-skill-only-smoke.md"),
+        (OPERATIONS_EN, "ponytail-skill-only-smoke.md"),
+        (EVIDENCE_TEMPLATE, "Evidence-Status: nur Vorlage"),
+        (EVIDENCE_TEMPLATE, "candidate_not_installed"),
         (QUALITY_DE, "nac_onprem_agent_runtime"),
         (QUALITY_EN, "nac_onprem_agent_runtime"),
     ):

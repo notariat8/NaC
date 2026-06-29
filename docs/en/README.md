@@ -143,6 +143,8 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/eventstream/](eventstream) contains event-journal, EventLock and cloud-runbook documentation.
 - [docs/en/issues/](issues) contains issue taxonomy, issue operations and public backlog.
 - [docs/en/operations/](operations) contains fork/release, upstream sync, version-binding and repository consolidation docs.
+- [docs/en/operations/ponytail-skill-only-smoke.md](operations/ponytail-skill-only-smoke.md)
+  prepares a not executed Ponytail skill-only smoke for `notoclaw01`.
 - [docs/en/service-model/](service-model) contains notarial scope, operating services, tenant and exit docs.
 - [policies/](../../policies) contains binding governance, technology, language, privacy, and role policies.
 - [schemas/](../../schemas) defines structured process requests.

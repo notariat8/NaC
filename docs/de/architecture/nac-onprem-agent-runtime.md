@@ -81,6 +81,14 @@ Lifecycle-Hooks, OpenClaw-Runtime-Aktivierung, Mandatsdatenverarbeitung,
 Kürzung von Security-, Datenschutz-, Owner-Gate-, Test- oder
 Validatorpflichten sowie GitHub- oder OCI-Schreibzugriff vom Zielsystem.
 
+Der spätere [Ponytail Skill-Only Smoke](../operations/ponytail-skill-only-smoke.md)
+ist nur vorbereitet und nicht ausgeführt. Er darf ausschließlich öffentliche
+Metadaten, Zielpfade und nicht-sensitive Evidence-Vorbereitung prüfen. Die
+zugehörige Vorlage steht unter
+[workflows/evidence-templates/ponytail-skill-only-smoke.md](../../../workflows/evidence-templates/ponytail-skill-only-smoke.md)
+und darf keine Secrets, PINs, Tokens, Schlüssel, Zertifikatsmaterialien,
+personenbezogenen Daten oder Mandatsdaten enthalten.
+
 Vor jeder Installation, Hook-Aktivierung oder OpenClaw-Runtime-Aktivierung
 braucht es ein eigenes Owner-Apply-Gate. Ponytail darf NaC-Governance nie
 überstimmen.
