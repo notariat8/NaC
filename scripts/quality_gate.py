@@ -126,6 +126,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_ai_sbom.py"],
                 ),
                 (
+                    "ai_sbom_export_mapping",
+                    "AI SBOM Export Mapping",
+                    [sys.executable, "scripts/validate_ai_sbom_export_mapping.py"],
+                ),
+                (
                     "atp_runtime_contracts",
                     "ATP Runtime Contract Parity",
                     [sys.executable, "scripts/validate_atp_runtime_contracts.py"],

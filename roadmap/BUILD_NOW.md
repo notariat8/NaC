@@ -40,6 +40,7 @@ for Fachpersonal without exposing `value` fields.
 | Legal Model Card AI-SBOM Delta gate | Implemented | `workflows/contracts/legal-model-card-ai-sbom-delta.contract.json`, `scripts/validate_legal_model_card_ai_sbom_delta.py`, strict quality gate |
 | Legal Model Card proposal status | Implemented | `workflows/legal-model/model-card-proposals/legal-nemotron-metadata-only.model-card.json`, `nac legal-graph model-card-proposal`, `scripts/validate_legal_model_card_proposal.py` |
 | Legal AI-SBOM delta proposal status | Implemented | `workflows/legal-model/ai-sbom-deltas/legal-nemotron-metadata-only.ai-sbom-delta.json`, `nac legal-graph ai-sbom-delta-proposal`, `scripts/validate_legal_ai_sbom_delta_proposal.py` |
+| AI-SBOM export mapping status | Implemented | `sbom/ai/nac-ai-sbom-export-mapping.json`, `nac ai-sbom export-mapping`, `scripts/validate_ai_sbom_export_mapping.py` |
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 
@@ -62,6 +63,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0013 | Legal model-card and AI-SBOM delta gate | Done | Strict quality gate validates that later Legal-Nemotron Model Card and AI-SBOM deltas cannot publish checkpoints, include placeholders, claim legal-answer quality, store source text or use mandate data before full evidence and owner apply. |
 | DEV-0014 | Legal model-card artifact proposal | Done | `nac legal-graph model-card-proposal` reports a concrete metadata-only Legal-Nemotron Model-Card proposal with candidate references, required sections, attestations and blocked actions, without training, checkpoint publication, model evaluation, source-text storage or mandate data. |
 | DEV-0015 | Legal AI-SBOM delta artifact proposal | Done | `nac legal-graph ai-sbom-delta-proposal` reports a concrete metadata-only Legal-Nemotron AI-SBOM delta proposal with components, candidates, attestations and blocked actions, without runtime activation, endpoint activation, training, checkpoint publication, source-text storage or mandate data. |
+| DEV-0016 | AI-SBOM baseline export mapping | Done | `nac ai-sbom export-mapping` reports CycloneDX JSON and SPDX JSON target mappings for the repo-wide AI-SBOM baseline while release export, external SBOM tool execution, mandate data, secrets and release binding remain blocked before owner apply. |
 
 ## Roadmap Review Notes
 
@@ -76,6 +78,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-30 | Legal Model Card AI-SBOM delta | Add a strict, metadata-only gate for later Legal-Nemotron Model Card and AI-SBOM delta evidence without enabling training, evaluation execution, checkpoint publication or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, concrete model-card artifact proposal or AI-SBOM baseline update in separate PRs; owner apply remains required before any runtime, checkpoint or quality claim. |
 | 2026-06-30 | Legal Model Card artifact proposal | Add the first concrete Legal-Nemotron Model-Card proposal artifact and CLI status, still metadata-only and blocked from training, evaluation, checkpoint publication, runtime activation or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, concrete AI-SBOM delta proposal or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
 | 2026-06-30 | Legal AI-SBOM delta artifact proposal | Add the first concrete Legal-Nemotron AI-SBOM delta proposal artifact and CLI status, still metadata-only and blocked from runtime activation, endpoint activation, training, evaluation, checkpoint publication or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, AI-SBOM baseline export mapping or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
+| 2026-06-30 | AI-SBOM baseline export mapping | Select CycloneDX JSON and SPDX JSON as machine-readable target profiles for the repo-wide AI-SBOM baseline and expose the status through CLI and strict quality gate. | Continue only with a separate owner-apply-gated release-binding PR; no external SBOM tooling, published release artifact, mandate data or secrets are enabled by this mapping. |
 
 ## Local Developer Commands
 
@@ -87,10 +90,12 @@ python scripts/nac.py legal-graph sources --format json
 python scripts/nac.py legal-graph source-inventory --format json
 python scripts/nac.py legal-graph model-card-proposal --format json
 python scripts/nac.py legal-graph ai-sbom-delta-proposal --format json
+python scripts/nac.py ai-sbom export-mapping --format json
 python scripts/validate_legal_model_customization_readiness.py
 python scripts/validate_legal_model_card_ai_sbom_delta.py
 python scripts/validate_legal_model_card_proposal.py
 python scripts/validate_legal_ai_sbom_delta_proposal.py
+python scripts/validate_ai_sbom_export_mapping.py
 python scripts/validate_legal_model_evaluation_benchmark.py
 python scripts/notary_kg.py --repo-root . --format json status
 python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag

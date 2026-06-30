@@ -138,6 +138,21 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(payload["base_fee"], "4138.00")
         self.assertEqual(payload["fee_amount"], "4138.00")
 
+    def test_ai_sbom_export_mapping_cli_returns_json(self) -> None:
+        rc, output = run_cli("ai-sbom", "export-mapping", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        profile_ids = {item["id"] for item in payload["target_profiles"]}
+        self.assertEqual(payload["schema_version"], "nac.ai-sbom-export-mapping-status/v0.1")
+        self.assertEqual(payload["status"], "mapping_selected_no_release_export")
+        self.assertEqual(profile_ids, {"cyclonedx-json", "spdx-json"})
+        self.assertFalse(payload["release_export_enabled"])
+        self.assertFalse(payload["external_tool_execution_enabled"])
+        self.assertFalse(payload["mandate_data_allowed"])
+        self.assertFalse(payload["secret_material_allowed"])
+        self.assertTrue(payload["owner_apply_required_before_release_binding"])
+
     def test_legal_graph_status_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "status", "--format", "json")
 

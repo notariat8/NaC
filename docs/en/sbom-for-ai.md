@@ -47,7 +47,9 @@ release/evidence binding.
 
 - Policy: `policies/sbom-policy.yaml`
 - Draft AI-SBOM: `sbom/ai/nac-ai-sbom-draft.json`
+- Export mapping: `sbom/ai/nac-ai-sbom-export-mapping.json`
 - Validator: `scripts/validate_ai_sbom.py`
+- Export mapping validator: `scripts/validate_ai_sbom_export_mapping.py`
 - Minimum requirements: `docs/en/minimum-requirements.md`
 - Classic SBOM products: `docs/en/sbom-products.md`
 - AVV/DPA gate: `docs/en/datenschutz-avv-dpa.md`
@@ -69,7 +71,7 @@ apply gate.
 | P0 | Update `sbom/ai/nac-ai-sbom-draft.json` for every new AI-enabled artifact. | Repository-wide AI-SBOM baseline. |
 | P0 | Track local minimum requirements for runtime, hardware, morris and XNP in the AI-SBOM. | Workstation and middleware dependencies are verifiably inventoried. |
 | P0 | Check external AI processing against `docs/en/datenschutz-avv-dpa.md`. | AVV/DPA status per channel. |
-| P1 | Decide the mapping to CycloneDX, SPDX or another approved AI-SBOM profile. | Machine-readable target profile. |
+| P1 | Record the mapping to CycloneDX JSON and SPDX JSON. | Target profiles are selected; release export stays blocked until owner apply. |
 | P1 | Extend release binding in `.github/workflows/sbom-export.yml`. | AI-SBOM as release artifact. |
 | P2 | Automate model-risk, vulnerability and drift review. | Day2 operation for the AI supply chain. |
 
@@ -96,4 +98,5 @@ An AI-enabled plugin, workflow or usecase is release-ready only when:
 3. runtime, middleware and hardware minimum requirements are documented,
 4. privacy/AVV-DPA status is documented,
 5. a human-review owner is named,
-6. `python scripts/nac.py doctor --profile strict` passes.
+6. the CycloneDX/SPDX export mapping is validated,
+7. `python scripts/nac.py doctor --profile strict` passes.

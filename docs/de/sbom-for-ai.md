@@ -48,7 +48,9 @@ Release-/Evidence-Bindung.
 
 - Policy: `policies/sbom-policy.yaml`
 - Draft AI-SBOM: `sbom/ai/nac-ai-sbom-draft.json`
+- Export-Mapping: `sbom/ai/nac-ai-sbom-export-mapping.json`
 - Validator: `scripts/validate_ai_sbom.py`
+- Export-Mapping-Validator: `scripts/validate_ai_sbom_export_mapping.py`
 - Mindestvoraussetzungen: `docs/de/minimum-requirements.md`
 - Klassische SBOM-Produkte: `docs/de/sbom-products.md`
 - AVV/DPA-Gate: `docs/de/datenschutz-avv-dpa.md`
@@ -70,7 +72,7 @@ OpenClaw-Runtime-Nutzung braucht ein separates Owner-Apply-Gate.
 | P0 | `sbom/ai/nac-ai-sbom-draft.json` je neuem AI-fähigen Artefakt fortschreiben. | Repo-weite AI-SBOM-Baseline. |
 | P0 | Lokale Mindestvoraussetzungen für Runtime, Hardware, morris und XNP in AI-SBOM führen. | Arbeitsplatz- und Middleware-Abhängigkeiten sind prüfbar inventarisiert. |
 | P0 | Externe KI-Verarbeitung gegen `docs/de/datenschutz-avv-dpa.md` prüfen. | AVV/DPA-Status je Kanal. |
-| P1 | Mapping auf CycloneDX, SPDX oder ein genehmigtes AI-SBOM-Profil festlegen. | Maschinenlesbares Zielprofil. |
+| P1 | Mapping auf CycloneDX JSON und SPDX JSON festhalten. | Zielprofile sind gewählt; Release-Export bleibt bis Owner-Apply gesperrt. |
 | P1 | Release-Bindung in `.github/workflows/sbom-export.yml` ausbauen. | AI-SBOM als Release-Artefakt. |
 | P2 | Modellrisiko-, Vulnerability- und Drift-Review automatisieren. | Day2-Betrieb für AI-Lieferkette. |
 
@@ -99,4 +101,5 @@ ist erst releasefähig, wenn:
 3. Runtime-, Middleware- und Hardware-Mindestvoraussetzungen dokumentiert sind,
 4. Datenschutz-/AVV-DPA-Status dokumentiert ist,
 5. Human-Review-Owner benannt ist,
-6. `python scripts/nac.py doctor --profile strict` erfolgreich läuft.
+6. das CycloneDX/SPDX-Export-Mapping geprüft ist,
+7. `python scripts/nac.py doctor --profile strict` erfolgreich läuft.

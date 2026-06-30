@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from business_os.engine import BusinessProcessEngine
+from nac_ai_sbom.export_mapping import ai_sbom_export_mapping_status
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
@@ -156,6 +157,15 @@ def build_parser() -> argparse.ArgumentParser:
     gnotkg_quote.add_argument("--usecase-slug", default="", help="Optionaler NaC-Usecase-Slug.")
     gnotkg_quote.add_argument("--format", choices=["text", "json"], default="text")
     gnotkg.set_defaults(func=command_gnotkg)
+
+    ai_sbom = subparsers.add_parser("ai-sbom", help="Steuert AI-SBOM-Governance-Artefakte.")
+    ai_sbom_sub = ai_sbom.add_subparsers(dest="ai_sbom_command", required=True)
+    ai_sbom_export_mapping = ai_sbom_sub.add_parser(
+        "export-mapping",
+        help="Zeigt das gewählte CycloneDX/SPDX-Mapping ohne Release-Export.",
+    )
+    ai_sbom_export_mapping.add_argument("--format", choices=["text", "json"], default="text")
+    ai_sbom.set_defaults(func=command_ai_sbom)
 
     bpmn = subparsers.add_parser("bpmn", help="Steuert BPMN-Prozessmodelle.")
     bpmn_sub = bpmn.add_subparsers(dest="bpmn_command", required=True)
@@ -490,6 +500,7 @@ def command_status(args: argparse.Namespace) -> int:
             "kg_status": "nac kg status",
             "legal_graph_status": "nac legal-graph status",
             "legal_graph_sources": "nac legal-graph sources",
+            "ai_sbom_export_mapping": "nac ai-sbom export-mapping",
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
             "config_validate": "nac config validate",
@@ -585,6 +596,44 @@ def command_gnotkg(args: argparse.Namespace) -> int:
         return 0
 
     raise AssertionError(f"Unknown GNotKG command: {args.gnotkg_command}")
+
+
+def command_ai_sbom(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    try:
+        if args.ai_sbom_command == "export-mapping":
+            payload = ai_sbom_export_mapping_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC AI-SBOM Export Mapping")
+            print(f"- Status: {payload['status']}")
+            print(f"- Release-Export aktiv: {payload['release_export_enabled']}")
+            print(f"- Externe Toolausführung aktiv: {payload['external_tool_execution_enabled']}")
+            print(f"- Mandatsdaten erlaubt: {payload['mandate_data_allowed']}")
+            print(f"- Secrets erlaubt: {payload['secret_material_allowed']}")
+            print(
+                "- Owner-Apply vor Release-Bindung: "
+                f"{payload['owner_apply_required_before_release_binding']}"
+            )
+            for item in payload["target_profiles"]:
+                print(f"- {item['id']}: {item['format']}, Release-Bindung: {item['release_binding']}")
+            return 0
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        message = str(exc.args[0]) if isinstance(exc, KeyError) and exc.args else str(exc)
+        if args.format == "json":
+            print_json(
+                {
+                    "schema_version": "nac.error/v0.1",
+                    "command": "ai-sbom",
+                    "error": message,
+                }
+            )
+            return 1
+        print(f"ERROR: {message}")
+        return 1
+
+    raise AssertionError(f"Unknown AI-SBOM command: {args.ai_sbom_command}")
 
 
 def command_legal_graph(args: argparse.Namespace) -> int:
