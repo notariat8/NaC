@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from nac_legal_graph.ai_sbom import legal_ai_sbom_delta_proposal_status
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status, load_domain_graph
 from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
@@ -159,6 +160,20 @@ class LegalGraphTests(unittest.TestCase):
         self.assertTrue(status["no_runtime_enabled"])
         self.assertIn("nvidia-nemotron-pretraining-legal-v1", candidates)
         self.assertIn("publish_checkpoint_from_model_card_proposal", status["blocked_actions"])
+
+    def test_ai_sbom_delta_proposal_status_reports_metadata_only_boundary(self) -> None:
+        status = legal_ai_sbom_delta_proposal_status(REPO_ROOT)
+        candidates = {item["id"]: item for item in status["candidate_components"]}
+
+        self.assertEqual(status["schema_version"], "nac.legal-ai-sbom-delta-proposal-status/v0.1")
+        self.assertEqual(status["status"], "proposal_no_runtime_no_checkpoint")
+        self.assertTrue(status["owner_apply_required_before_runtime_or_checkpoint"])
+        self.assertTrue(status["no_mandate_data"])
+        self.assertTrue(status["no_source_text_stored"])
+        self.assertTrue(status["no_checkpoint_published"])
+        self.assertTrue(status["no_runtime_enabled"])
+        self.assertIn("recht-bund-bgbl-data-access", candidates)
+        self.assertIn("activate_model_endpoint_from_ai_sbom_delta", status["blocked_actions"])
 
     def test_update_patch_works_for_all_primary_source_domains_without_commentary_changes(self) -> None:
         for domain in ("erbrecht", "familienrecht", "gesellschaftsrecht"):

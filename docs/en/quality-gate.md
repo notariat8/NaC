@@ -37,7 +37,7 @@ CI:
   and private operating frame gate, private-payload target design and
   private-payload access policy plus legal source inventory/license TDM,
   Legal Nemotron readiness, legal model-card/AI-SBOM delta, legal model-card
-  proposal and legal model evaluation benchmark
+  proposal, legal AI-SBOM delta proposal and legal model evaluation benchmark
 
 ## Fixed Order
 
@@ -73,9 +73,10 @@ CI:
 28. `legal_model_customization_readiness` only in `strict`
 29. `legal_model_card_ai_sbom_delta` only in `strict`
 30. `legal_model_card_proposal` only in `strict`
-31. `legal_model_evaluation_benchmark` only in `strict`
-32. `legal_graph_contracts` only in `strict`
-33. `oci_tenant_identity` only in `strict`
+31. `legal_ai_sbom_delta_proposal` only in `strict`
+32. `legal_model_evaluation_benchmark` only in `strict`
+33. `legal_graph_contracts` only in `strict`
+34. `oci_tenant_identity` only in `strict`
 
 ## Artifacts
 

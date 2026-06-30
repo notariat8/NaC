@@ -15,6 +15,7 @@ from business_os.engine import BusinessProcessEngine
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from nac_legal_graph.ai_sbom import legal_ai_sbom_delta_proposal_status
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
@@ -299,6 +300,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Zeigt den metadata-only Model-Card-Vorschlag ohne Checkpoint.",
     )
     legal_graph_model_card.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_ai_sbom_delta = legal_graph_sub.add_parser(
+        "ai-sbom-delta-proposal",
+        help="Zeigt den metadata-only AI-SBOM-Delta-Vorschlag ohne Runtime.",
+    )
+    legal_graph_ai_sbom_delta.add_argument("--format", choices=["text", "json"], default="text")
     legal_graph_review = legal_graph_sub.add_parser(
         "review",
         help="Zeigt eine Review-Ansicht für eine Legal-Graph-Domäne.",
@@ -639,6 +645,25 @@ def command_legal_graph(args: argparse.Namespace) -> int:
             print(f"- Kein Checkpoint: {payload['no_checkpoint_published']}")
             print(f"- Owner-Apply vor Nutzung: {payload['owner_apply_required_before_use']}")
             for item in payload["candidate_references"]:
+                print(f"- {item['id']}: {item['status']}")
+            return 0
+
+        if args.legal_graph_command == "ai-sbom-delta-proposal":
+            payload = legal_ai_sbom_delta_proposal_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Legal AI-SBOM Delta Proposal")
+            print(f"- Status: {payload['status']}")
+            print(f"- Delta-Komponenten: {len(payload['delta_components'])}")
+            print(f"- Keine Mandatsdaten: {payload['no_mandate_data']}")
+            print(f"- Kein Checkpoint: {payload['no_checkpoint_published']}")
+            print(f"- Keine Runtime: {payload['no_runtime_enabled']}")
+            print(
+                "- Owner-Apply vor Runtime oder Checkpoint: "
+                f"{payload['owner_apply_required_before_runtime_or_checkpoint']}"
+            )
+            for item in payload["candidate_components"]:
                 print(f"- {item['id']}: {item['status']}")
             return 0
 

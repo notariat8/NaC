@@ -189,6 +189,21 @@ class NaCCliTests(unittest.TestCase):
         self.assertTrue(payload["no_checkpoint_published"])
         self.assertIn("nvidia-nemotron-pretraining-legal-v1", candidates)
 
+    def test_legal_graph_ai_sbom_delta_proposal_cli_returns_gate_status(self) -> None:
+        rc, output = run_cli("legal-graph", "ai-sbom-delta-proposal", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        candidates = {item["id"]: item for item in payload["candidate_components"]}
+        self.assertEqual(payload["schema_version"], "nac.legal-ai-sbom-delta-proposal-status/v0.1")
+        self.assertEqual(payload["status"], "proposal_no_runtime_no_checkpoint")
+        self.assertTrue(payload["owner_apply_required_before_runtime_or_checkpoint"])
+        self.assertTrue(payload["no_mandate_data"])
+        self.assertTrue(payload["no_source_text_stored"])
+        self.assertTrue(payload["no_checkpoint_published"])
+        self.assertTrue(payload["no_runtime_enabled"])
+        self.assertIn("recht-bund-bgbl-data-access", candidates)
+
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")
 

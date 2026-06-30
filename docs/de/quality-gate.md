@@ -37,7 +37,7 @@ CI:
   Private-Payload-Zielarchitektur + Private-Payload-Zugriffsmatrix +
   Legal-Source-Inventar-Lizenz-TDM + Legal-Nemotron-Readiness +
   Legal-Model-Card-/AI-SBOM-Delta + Legal-Model-Card-Vorschlag +
-  Legal-Model-Evaluationsbenchmark
+  Legal-AI-SBOM-Delta-Vorschlag + Legal-Model-Evaluationsbenchmark
 
 ## Feste Reihenfolge
 
@@ -73,9 +73,10 @@ CI:
 28. `legal_model_customization_readiness` (nur `strict`)
 29. `legal_model_card_ai_sbom_delta` (nur `strict`)
 30. `legal_model_card_proposal` (nur `strict`)
-31. `legal_model_evaluation_benchmark` (nur `strict`)
-32. `legal_graph_contracts` (nur `strict`)
-33. `oci_tenant_identity` (nur `strict`)
+31. `legal_ai_sbom_delta_proposal` (nur `strict`)
+32. `legal_model_evaluation_benchmark` (nur `strict`)
+33. `legal_graph_contracts` (nur `strict`)
+34. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 
