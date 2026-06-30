@@ -81,6 +81,8 @@ Standardausgabe:
 - JSON: `out/quality/status.json`
 - Markdown: `out/quality/report.md`
 - PR-Kommentar: `out/quality/comment.md` (für Upsert in Pull Requests)
+  mit Build-Status, Check-Zusammenfassung und KG-Readiness aus den
+  usecase-lokalen Knowledge Graphs
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

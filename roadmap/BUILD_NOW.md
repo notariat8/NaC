@@ -32,6 +32,7 @@ for Fachpersonal without exposing `value` fields.
 | Workflow contract draft generator | Implemented | `src/notary_kg/workflow_contract.py`, `nac kg workflow-contract <slug>`, `tests/test_notary_kg.py` |
 | GmbH/UG pilot intake checklist | Implemented | `src/notary_kg/pilot_checklist.py`, `nac kg pilot-checklist online-gmbh-gruendung`, `tests/test_notary_kg.py` |
 | XNP reader workflow gate | Implemented | `nac plugins xnp-workflow-gate --evidence out/xnp-reader-prompt.json`, `tests/test_xnp_workflow_gate.py` |
+| Developer CI PR comment | Implemented | `scripts/render_quality_gate_comment.py`, `.github/workflows/quality-gate.yml`, `tests/test_render_quality_gate_comment.py` |
 | Legal Graph source pilot | In review | `workflows/legal-graph/sources/erbrecht-primary-source.json`, `nac legal-graph sources` |
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
@@ -50,7 +51,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0006 | Workflow contract generator from KG | Done | `nac kg workflow-contract <slug>` generates a draft contract skeleton for one case without real mandate data. |
 | DEV-0007 | First pilot workflow: GmbH/UG formation | Done | `nac kg pilot-checklist online-gmbh-gruendung` reads the KG node and creates a deterministic intake checklist without real mandate data. |
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Done | `nac plugins xnp-workflow-gate` consumes `nac-bnotk-xnp` reader-prompt evidence without copying prompt text, secrets, PINs, card data or mandate data. |
-| DEV-0009 | Developer CI comment renderer | Next | Shows build status and KG readiness in PR comments. |
+| DEV-0009 | Developer CI comment renderer | Done | PR comments show build status, check summary and KG readiness from usecase-local graphs without mandate data. |
 | DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
 | DEV-0011 | Legal Nemotron fine-tuning source and evaluation plan | Done | Records NVIDIA Nemotron Legal, Rechtsquelle concept framing and `recht.bund.de` BGBl data access as metadata-only candidates, adds readiness and German-law benchmark contracts, and keeps fine-tuning, checkpoint publication and legal-answer use blocked before license/TDM, source hierarchy, evaluation, model-card, AI-SBOM and owner-apply gates are approved. |
 
@@ -77,6 +78,7 @@ python scripts/notary_kg.py --repo-root . --format json editor-view immobilienka
 python scripts/notary_kg.py --repo-root . --format json workflow-contract immobilienkaufvertrag
 python scripts/notary_kg.py --repo-root . --format json pilot-checklist online-gmbh-gruendung
 python scripts/nac.py plugins xnp-workflow-gate --json
+python scripts/render_quality_gate_comment.py --input out/quality/status.json --output out/quality/comment.md
 ```
 
 ## Rule
