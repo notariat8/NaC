@@ -23,6 +23,15 @@ def read_runbooks() -> dict[str, str]:
     return {language: path.read_text(encoding="utf-8") for language, path in RUNBOOK_DOCS.items()}
 
 
+def markdown_section(content: str, heading: str) -> str:
+    start = content.index(heading)
+    rest = content[start + len(heading):]
+    next_heading = rest.find("\n## ")
+    if next_heading == -1:
+        return rest
+    return rest[:next_heading]
+
+
 class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
     def test_runbook_exists_in_german_and_english(self) -> None:
         for path in RUNBOOK_DOCS.values():
@@ -336,6 +345,28 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         for section in show_mode_sections:
             for term in forbidden_show_mode_terms:
                 self.assertNotIn(term, section)
+
+    def test_login_intent_is_not_visible_show_surface(self) -> None:
+        german = RUNBOOK_DOCS["de"].read_text(encoding="utf-8")
+        english = RUNBOOK_DOCS["en"].read_text(encoding="utf-8")
+        normalized_german = " ".join(german.split())
+        normalized_english = " ".join(english.split())
+
+        self.assertIn("Login-Intent bleibt ein redigierter Read-only-Check", normalized_german)
+        self.assertIn("keine sichtbare Nutzerfläche", normalized_german)
+        self.assertIn("nicht als Browserfläche", normalized_german)
+        self.assertIn("Login intent remains a redacted read-only check", normalized_english)
+        self.assertIn("not a visible user surface", normalized_english)
+        self.assertIn("not as a browser surface", normalized_english)
+
+        visible_sections = [
+            markdown_section(german, "## 60-Minuten Live-Folge"),
+            markdown_section(german, "## 5-Minuten Kurzfolge"),
+            markdown_section(english, "## 60-Minute Live Order"),
+            markdown_section(english, "## 5-Minute Short Order"),
+        ]
+        for section in visible_sections:
+            self.assertNotIn("api/tenant/login-intent", section)
 
 
 if __name__ == "__main__":

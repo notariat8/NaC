@@ -150,11 +150,12 @@ we now show the process path and check the technical cause after the meeting."
 5. 35-43 minutes: if locally available, show the BPMN editor; otherwise stay
    on the public process model. NaC BPMN/Evidence/Gate is the point, not live
    automation.
-6. 43-52 minutes: show `https://app.notariat8.de/login`,
-   `https://app.notariat8.de/api/tenant/login-intent?...` and
-   `https://app.notariat8.de/workspace` as the protected entry. Continue
-   login only if it was pre-approved for this demo; otherwise show the closed
-   workspace with the metadata-only gate as the expected result.
+6. 43-52 minutes: show `https://app.notariat8.de/login` and
+   `https://app.notariat8.de/workspace` as the protected entry. Login intent
+   remains a redacted read-only check for preparation, not a visible user
+   surface. Continue login only if it was pre-approved for this demo; otherwise
+   show the closed workspace with the metadata-only gate as the expected
+   result.
 7. 52-55 minutes: mention Unterschriftsbeglaubigung as the short comparison
    process.
 8. 55-60 minutes: close with visible domain-system boundaries, Protected PRs,
@@ -168,8 +169,9 @@ we now show the process path and check the technical cause after the meeting."
 4. Show public onboarding/DNS status as a GET-only setup path.
 5. Explain XNP local as a readiness Gate.
 6. Explain XNotar/XJustiz handoff as a package/exchange-folder boundary.
-7. Show `https://app.notariat8.de/login`, login intent and the closed
-   metadata-only workspace.
+7. Show `https://app.notariat8.de/login` and the closed metadata-only
+   workspace; mention login intent only as redacted preflight evidence, not as
+   a browser surface.
 8. Close with: NaC BPMN/Evidence/Gate makes work visible and auditable.
 
 ## 20-Minute Fallback
