@@ -6,6 +6,8 @@ Runtime-Änderung, kein Infrastruktur-Apply, keine Secrets.
 ## Einstieg
 
 - Start: `https://app.notariat8.de/login`
+- notariat8 ist die Produktoberfläche für Benutzer; direkte Anbieter-,
+  Cloud-Login- oder Admin-URLs sind kein Demo-Einstieg.
 - Nur der Login-Einstieg und die geschlossene Startgrenze sind im Scope.
 - Kein Zugriff auf Mandate, Akteninhalte, Urkunden, Register- oder
   Grundstücksdaten.
@@ -24,6 +26,8 @@ Runtime-Änderung, kein Infrastruktur-Apply, keine Secrets.
 - Keine Secrets, Tokens, Claims oder technischen Rohwerte zeigen.
 - Keine Callbacks, keine Parameter oder Browser-Adressdetails zeigen.
 - Keine Providerdetails, Konfigurationswerte oder Anbieterdiagnosen nennen.
+- Keine direkten Anbieter-, Cloud-Login- oder Admin-URLs als Benutzerführung
+  zeigen.
 - Keine Konsolen, Cloud-Ansichten oder Infrastrukturaktionen im Termin.
 - Keine echten Personen-, Akten-, Urkunden-, Register- oder
   Grundstücksdaten verwenden.

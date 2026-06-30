@@ -41,6 +41,8 @@ class NotarkammerDemoLoginChecklistTests(unittest.TestCase):
             "session",
             "redaktiert",
             "redacted",
+            "notariat8 ist die produktoberfläche",
+            "notariat8 is the user-facing product surface",
         ]
         for term in required_terms:
             self.assertIn(term, combined_lower)
@@ -57,6 +59,8 @@ class NotarkammerDemoLoginChecklistTests(unittest.TestCase):
             "no parameters",
             "keine providerdetails",
             "no provider details",
+            "keine direkten anbieter-, cloud-login- oder admin-urls",
+            "no direct provider, cloud-login or admin urls",
             "keine secrets",
             "no secrets",
         ]
