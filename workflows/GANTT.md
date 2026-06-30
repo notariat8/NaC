@@ -1,6 +1,6 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-06-29
+Letzte Aktualisierung: 2026-06-30
 
 ```mermaid
 gantt
@@ -27,6 +27,7 @@ gantt
     Legal-Research-Kandidatenvertrag           :done,   w4k, 2026-05-22, 1d
     GNotKG-Kostenvertrag und Reviewgraph        :done,   w4l, 2026-05-28, 1d
     Legal-Graph-MVP-Domänenpilot              :active, w4m, 2026-06-12, 7d
+    Legal-Graph-Primärquellenstatus            :done,   w4z, 2026-06-30, 1d
     Legal-Source-Inventar-Lizenz-TDM           :done,   w4u, 2026-06-29, 1d
     Legal-Nemotron-Readiness-Vertrag            :done,   w4s, 2026-06-28, 1d
     Legal-Model-Evaluationsbenchmark           :done,   w4t, 2026-06-28, 1d

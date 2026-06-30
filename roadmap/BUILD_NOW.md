@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-06-29
+Last update: 2026-06-30
 Branch: `main`
 
 ## What Is Being Built
@@ -33,7 +33,7 @@ for Fachpersonal without exposing `value` fields.
 | GmbH/UG pilot intake checklist | Implemented | `src/notary_kg/pilot_checklist.py`, `nac kg pilot-checklist online-gmbh-gruendung`, `tests/test_notary_kg.py` |
 | XNP reader workflow gate | Implemented | `nac plugins xnp-workflow-gate --evidence out/xnp-reader-prompt.json`, `tests/test_xnp_workflow_gate.py` |
 | Developer CI PR comment | Implemented | `scripts/render_quality_gate_comment.py`, `.github/workflows/quality-gate.yml`, `tests/test_render_quality_gate_comment.py` |
-| Legal Graph source pilot | In review | `workflows/legal-graph/sources/erbrecht-primary-source.json`, `nac legal-graph sources` |
+| Legal Graph source pilot | Implemented | `workflows/legal-graph/sources/*-primary-source.json`, `nac legal-graph sources`, `tests/test_legal_graph.py` |
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
@@ -52,7 +52,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0007 | First pilot workflow: GmbH/UG formation | Done | `nac kg pilot-checklist online-gmbh-gruendung` reads the KG node and creates a deterministic intake checklist without real mandate data. |
 | DEV-0008 | First plugin-bound workflow: XNP reader prompt gate | Done | `nac plugins xnp-workflow-gate` consumes `nac-bnotk-xnp` reader-prompt evidence without copying prompt text, secrets, PINs, card data or mandate data. |
 | DEV-0009 | Developer CI comment renderer | Done | PR comments show build status, check summary and KG readiness from usecase-local graphs without mandate data. |
-| DEV-0010 | Legal Graph primary-source pilot without commentary access | In review | `nac legal-graph sources` reports Erbrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
+| DEV-0010 | Legal Graph primary-source pilot without commentary access | Done | `nac legal-graph sources` reports Erbrecht, Familienrecht and Gesellschaftsrecht as metadata-only, with commentary access, provider queries and credentials blocked. |
 | DEV-0011 | Legal Nemotron fine-tuning source and evaluation plan | Done | Records NVIDIA Nemotron Legal, Rechtsquelle concept framing and `recht.bund.de` BGBl data access as metadata-only candidates, adds readiness and German-law benchmark contracts, and keeps fine-tuning, checkpoint publication and legal-answer use blocked before license/TDM, source hierarchy, evaluation, model-card, AI-SBOM and owner-apply gates are approved. |
 
 ## Roadmap Review Notes
@@ -63,6 +63,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-28 | Legal Nemotron fine-tuning with public legal sources | Add as a gated roadmap track, not as an active training job. NVIDIA Nemotron Legal is an English CC-BY-4.0 pretraining dataset candidate, `Rechtsquelle` is a concept anchor for source hierarchy, and `recht.bund.de` is an official BGBl publication access path. | Continue only with source inventory, license/TDM review, model-card delta, AI-SBOM update, approved runnable config and owner apply approval; never use mandate data or treat generated answers as legal truth. |
 | 2026-06-29 | Legal Nemotron gates after PRs 326-328 | Mark source candidates, readiness gates and German-law evaluation benchmark as implemented planning contracts. This closes the planning-board item without enabling training, dataset generation, checkpoint publication or legal-answer automation. | Next work item must be a separate gated contract or implementation PR for source inventory, model-card delta, AI-SBOM delta or approved benchmark generation. |
 | 2026-06-29 | Immutable.js for editor state | Defer. Immutable.js can be reconsidered only as a future frontend/editor state tool for undo, redo, snapshots and deterministic proposal diffs; it is not an audit, governance, retention, WORM, signature or notarial truth layer. No dependency or architecture change now. | Revisit only when NaC starts a real React, BPMN-js or xyflow editor-sidecar implementation and can keep exported artifacts as canonical JSON, BPMN or XML with hash, validator, PR review and event-journal evidence. |
+| 2026-06-30 | Legal Graph primary-source pilot status | Close DEV-0010 as implemented because the CLI exposes three metadata-only primary-source manifests and the Legal-Graph validator enforces no-commentary, no-fulltext, no-credential and review-gate boundaries. | Continue Legal Graph work only with a separate contract or implementation PR for source inventory depth, model-card delta, AI-SBOM delta, benchmark generation or licensed commentary connectors. |
 
 ## Local Developer Commands
 
