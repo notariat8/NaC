@@ -68,6 +68,18 @@ class NotarkammerDemoPreflightTests(unittest.TestCase):
             self.assertIn("healthcheck", content.lower())
             self.assertTrue("store gate" in content.lower() or "store-gate" in content.lower())
 
+    def test_preflight_keeps_login_intent_out_of_browser_surface(self) -> None:
+        de_content = PREFLIGHT_DOCS["de"].read_text(encoding="utf-8")
+        en_content = PREFLIGHT_DOCS["en"].read_text(encoding="utf-8")
+
+        self.assertIn("Login-Intent bleibt nur ein redigierter CLI-/curl-Read-only-Check", de_content)
+        self.assertIn("keine Browserfläche", de_content)
+        self.assertIn("Login intent remains a redacted CLI/curl read-only check", en_content)
+        self.assertIn("not a browser surface", en_content)
+
+        self.assertNotIn("zeigen den Start des Login-Flows", de_content)
+        self.assertNotIn("show the start of the login flow", en_content)
+
     def test_preflight_uses_exact_synthetic_dns_demo_url(self) -> None:
         for content in read_preflight_docs():
             self.assertIn(DEMO_DNS_CHECK_URL, content)
