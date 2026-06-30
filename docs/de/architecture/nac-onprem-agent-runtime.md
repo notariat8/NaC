@@ -1,7 +1,7 @@
 # NaC-On-Prem-Agent-Runtime
 
 Status: Vertrags- und Zielsystemgrenze
-Letzte inhaltliche Anpassung: 2026-06-29
+Letzte inhaltliche Anpassung: 2026-06-30
 
 ## Zweck
 
@@ -54,6 +54,12 @@ Erwartete Artefakte:
 - `bin/nac-target-smoke` und `bin/nac-runtime-smoke`: lokale Zielsystem-Smokes.
 - `evidence/2026-06-28-nac-onprem-agent-solution.md`: Nachweis des aktuellen
   Sandboxlaufs ohne Secrets und ohne Mandatsdaten.
+
+Der [NaC Runtime-Smoke](../operations/nac-runtime-smoke.md) ist als nächster
+Zielsystem-Smoke vorbereitet, aber noch nicht ausgeführt. Er darf nur vorhandene
+NemoClaw-/OpenClaw-Statussignale lesen und redigierte Evidence erzeugen; er darf
+keine Installation, kein Onboarding, keinen Rebuild, keine Policy-Änderung,
+keinen authentifizierten Dashboard-Link und keine Runtime-Mutation auslösen.
 
 ## Agentenrollen
 

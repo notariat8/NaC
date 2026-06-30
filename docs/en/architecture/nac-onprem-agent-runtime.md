@@ -1,7 +1,7 @@
 # NaC On-Prem Agent Runtime
 
 Status: contract and target-system boundary
-Last content update: 2026-06-29
+Last content update: 2026-06-30
 
 ## Purpose
 
@@ -54,6 +54,12 @@ Expected artifacts:
   smokes.
 - `evidence/2026-06-28-nac-onprem-agent-solution.md`: evidence for the current
   sandbox run without secrets or matter data.
+
+The [NaC runtime smoke](../operations/nac-runtime-smoke.md) is prepared as the
+next target-system smoke, but it has not been executed yet. It may only read
+existing NemoClaw/OpenClaw status signals and produce redacted evidence; it must
+not trigger installation, onboarding, rebuild, policy changes, authenticated
+dashboard-link retrieval or runtime mutation.
 
 ## Agent Roles
 

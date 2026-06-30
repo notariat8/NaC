@@ -22,6 +22,10 @@ Arbeitsmodell und Repo-Konsolidierung.
 - [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): Owner-gated
   ausgeführter Ponytail Skill-Only Smoke für `notoclaw01` mit
   Target-Control-Evidence und ohne Installation, Hooks oder Runtime-Aktivierung.
+- [nac-runtime-smoke.md](nac-runtime-smoke.md): vorbereiteter Owner-gated
+  Runtime-Smoke für `notoclaw01-host` mit read-only NemoClaw-/OpenClaw-Status,
+  redigierter Evidence und ohne Installation, Onboarding, Rebuild oder
+  Dashboard-Token-Erfassung.
 - [repository-consolidation.md](repository-consolidation.md): migrierte, offene und stillzulegende
   Einzelrepos.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): Zielstruktur und Migration in einem Repo.
