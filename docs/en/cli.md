@@ -269,7 +269,8 @@ requirements.
 The source-inventory, license and TDM gate is visible through
 `nac legal-graph source-inventory --format json`. The command only reads the
 gate contract, shows no source text, generates no benchmark dataset and starts
-no training.
+no training. For each source it also reports review depth for seed metadata,
+license/TDM, attribution, storage boundary and the next review.
 The spec traceability contract connects issue, spec, plan, AC IDs and
 validation commands for spec-driven work.
 

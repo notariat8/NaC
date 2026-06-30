@@ -143,6 +143,14 @@ class LegalGraphTests(unittest.TestCase):
             sources["recht-bund-bgbl-data-access"]["tdm_status"],
             "tdm_and_bulk_access_terms_require_review",
         )
+        self.assertEqual(
+            sources["recht-bund-bgbl-data-access"]["review_depth"]["record_completeness"],
+            "seed_metadata_complete",
+        )
+        self.assertEqual(
+            sources["recht-bund-bgbl-data-access"]["review_depth"]["next_required_review"],
+            "review_terms_tdm_bulk_access_and_storage_boundary",
+        )
         self.assertIn(
             "download_full_text_corpus_without_owner_apply",
             status["blocked_actions"],

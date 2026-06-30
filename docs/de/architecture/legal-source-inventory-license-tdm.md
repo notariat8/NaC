@@ -31,6 +31,12 @@ Jede Quelle braucht vor einer produktiven Nutzung mindestens:
 - Storage-Grenze,
 - menschlichen Review Owner.
 
+Zusätzlich führt das Inventar eine Prüftiefe je Quelle. Sie trennt, ob die
+Seed-Metadaten vollständig sind, ob Lizenzbedingungen, TDM/Bulk-Access,
+Attribution und Storage-Grenze bereits fachlich geprüft wurden und welcher
+nächste Review zwingend ist. Diese Prüftiefe ist weiterhin nur Metadaten:
+Sie lädt keine Quellentexte und ersetzt keine Owner-Apply-Freigabe.
+
 ## Aktuelle Startquellen
 
 - NVIDIA Nemotron Pretraining Legal v1 bleibt ein englischer
