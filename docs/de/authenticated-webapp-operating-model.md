@@ -82,6 +82,14 @@ tenant-aware: Bestandskunden übergeben einen Tenant-Hinweis, Neukunden werden
 zuerst über eine Domain-Readiness-Prüfung geführt. Danach erzeugt NaC einen
 prüfbaren Admin-Provisioning-Plan für OCI Identity Domains.
 
+Die Kundensicht heißt dabei `notariat8`. `https://app.notariat8.de/login` ist
+der kanonische Einstieg für Benutzer; direkte OCI-Identity-Domain-URLs,
+OCI-Console-Pfade oder interne Domain-Namen wie `nac-customers` sind
+Betriebsdetails und keine primäre Benutzerführung. Kurzfristig müssen
+kundensichtbare Login-Texte, Supporthinweise und Demo-Runbooks deshalb
+notariat8 als Produktoberfläche beschreiben. OCI Identity Domains bleibt die
+interne Broker- und Trust-Schicht hinter diesem Einstieg.
+
 Office 365 ergänzt diesen Pfad auf der Client- und Arbeitsplatzseite. OCI
 Identity Domains bleibt für den aktuellen SaaS-Pfad die IdP- und
 Tenant-Provisioning-Schicht; Microsoft 365 liefert Arbeitsplatzdienste und
@@ -92,6 +100,15 @@ Endbenutzer arbeiten nicht in der OCI Console. NaC bedient Identity Domains
 über geprüfte API- und CLI-Verträge; produktive Schreiboperationen an
 Benutzern, Gruppen oder Mitgliedschaften brauchen vor dem Apply einen
 separaten Owner-Review und eine ausdrückliche Freigabe.
+
+Spätere Kunden-IdP-Föderation ändert diese Kundensicht nicht. Ein Notariat
+kann dann seinen eigenen IdP anbinden, aber der Benutzer startet weiter auf
+`https://app.notariat8.de/login`; OCI Identity Domains vermittelt als Broker
+zwischen notariat8 und dem Kunden-IdP. Föderation, Branding, Gruppenmapping,
+SCIM-Synchronisierung oder App-Client-Änderungen brauchen jeweils separate
+Design-, Sicherheits-, AVV-/DPA-, Rollen- und Owner-Apply-Gates. Diese
+Dokumentation autorisiert keine OCI-Schreibaktion, keinen Secret-Zugriff und
+keine produktive Mandatsdatenverarbeitung.
 
 Die IdP-Anmeldung beantwortet nur die Frage, ob eine Person vertrauenswürdig
 angemeldet ist. Die fachliche Berechtigung entsteht danach im
@@ -233,7 +250,8 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
 1. Statische GitHub-Pages-Schicht für öffentliche Inhalte und synthetische
    Demos weiter nutzen.
 2. Interne authentifizierte Webapp für Notariatsbenutzer über OCI Identity
-   Domains und NaC-Rollen-Gate entwerfen.
+   Domains und NaC-Rollen-Gate entwerfen; Benutzer starten über
+   `https://app.notariat8.de/login`, nicht über direkte OCI-URLs.
 3. Office 365 als verpflichtende Client-Schicht und Microsoft Agent 365 Agent
    Registry als Preview-Governance-Anker in Zielarchitektur und Backlog
    führen.

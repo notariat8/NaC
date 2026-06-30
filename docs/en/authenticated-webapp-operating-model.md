@@ -80,6 +80,14 @@ existing customers pass a tenant hint, while new customers first run through a
 domain-readiness check. NaC then creates a reviewable admin-provisioning plan
 for OCI Identity Domains.
 
+The customer-facing surface is `notariat8`. `https://app.notariat8.de/login`
+is the canonical entry point for users; direct OCI Identity Domain URLs, OCI
+Console paths or internal domain names such as `nac-customers` are operational
+details and not primary user guidance. In the short term, customer-facing login
+copy, support guidance and demo runbooks must therefore describe notariat8 as
+the product surface. OCI Identity Domains remains the internal broker and
+trust layer behind that entry point.
+
 Office 365 complements this path on the client and workstation side. OCI
 Identity Domains remains the IdP and tenant-provisioning layer for the current
 SaaS path; Microsoft 365 supplies workstation services and agent governance
@@ -89,6 +97,14 @@ End users do not work in the OCI Console. NaC operates Identity Domains through
 reviewed API and CLI contracts; productive writes to users, groups or
 memberships require a separate owner review and explicit approval before
 apply.
+
+Later customer-IdP federation does not change that customer-facing surface. A
+notary office may connect its own IdP, but the user still starts at
+`https://app.notariat8.de/login`; OCI Identity Domains brokers between
+notariat8 and the customer IdP. Federation, branding, group mapping, SCIM sync
+or app-client changes each need separate design, security, DPA, role and owner
+apply gates. This document authorizes no OCI write, no secret access and no
+productive mandate-data processing.
 
 The IdP login only answers whether a person is trusted for login. The
 subject-matter permission is decided afterwards by the NaC role and case gate:
@@ -223,7 +239,8 @@ from a product idea into a checkable NaC artifact path.
 1. Keep using the static GitHub Pages layer for public content and synthetic
    demos.
 2. Design the internal authenticated web app for notary-office users through
-   OCI Identity Domains and the NaC role gate.
+   OCI Identity Domains and the NaC role gate; users start at
+   `https://app.notariat8.de/login`, not at direct OCI URLs.
 3. Track Office 365 as the mandatory client layer and Microsoft Agent 365 Agent
    Registry as a Preview governance anchor in the target architecture and
    backlog.
