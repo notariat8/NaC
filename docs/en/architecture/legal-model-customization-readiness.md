@@ -13,6 +13,10 @@ The machine-readable contract lives in
 [workflows/contracts/legal-model-customization-readiness.contract.json](../../../workflows/contracts/legal-model-customization-readiness.contract.json)
 and is checked by
 [scripts/validate_legal_model_customization_readiness.py](../../../scripts/validate_legal_model_customization_readiness.py).
+The separate model-card and AI-SBOM delta gate lives in
+[workflows/contracts/legal-model-card-ai-sbom-delta.contract.json](../../../workflows/contracts/legal-model-card-ai-sbom-delta.contract.json)
+and blocks checkpoint publication or quality claims until the model card,
+AI-SBOM delta, evaluation, limitations and owner apply are fully evidenced.
 
 ## Source Role
 

@@ -36,7 +36,7 @@ CI:
   Mandatsdaten-Klassifikation und Redaktionsgrenze + privater Betriebsrahmen +
   Private-Payload-Zielarchitektur + Private-Payload-Zugriffsmatrix +
   Legal-Source-Inventar-Lizenz-TDM + Legal-Nemotron-Readiness +
-  Legal-Model-Evaluationsbenchmark
+  Legal-Model-Card-/AI-SBOM-Delta + Legal-Model-Evaluationsbenchmark
 
 ## Feste Reihenfolge
 
@@ -70,9 +70,10 @@ CI:
 26. `legal_research_connectors` (nur `strict`)
 27. `legal_source_inventory_license_tdm` (nur `strict`)
 28. `legal_model_customization_readiness` (nur `strict`)
-29. `legal_model_evaluation_benchmark` (nur `strict`)
-30. `legal_graph_contracts` (nur `strict`)
-31. `oci_tenant_identity` (nur `strict`)
+29. `legal_model_card_ai_sbom_delta` (nur `strict`)
+30. `legal_model_evaluation_benchmark` (nur `strict`)
+31. `legal_graph_contracts` (nur `strict`)
+32. `oci_tenant_identity` (nur `strict`)
 
 ## Artefakte
 

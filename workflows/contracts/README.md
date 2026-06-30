@@ -55,6 +55,10 @@ Jeder Vertrag soll definieren:
   Readiness-Vertrag für spätere Legal-Nemotron-Modellanpassung mit
   Quellenhierarchie, Lizenz-/TDM-, Benchmark-, Evaluation-, Model-Card-,
   AI-SBOM- und Owner-Apply-Gates, ohne Trainingsstart.
+- [workflows/contracts/legal-model-card-ai-sbom-delta.contract.json](legal-model-card-ai-sbom-delta.contract.json):
+  Delta-Vertrag für spätere Legal-Nemotron-Model-Card- und AI-SBOM-
+  Aktualisierungen ohne Training, Checkpoint-Veröffentlichung,
+  Quellentextspeicherung oder Qualitätsbehauptung.
 - [workflows/contracts/legal-model-evaluation-benchmark.contract.json](legal-model-evaluation-benchmark.contract.json):
   Benchmark-Blueprint für spätere Legal-Nemotron-Evaluationen mit
   Quellenhierarchie, Holdout-Regeln, Aufgabenfamilien, BYOB/MCQ- und
