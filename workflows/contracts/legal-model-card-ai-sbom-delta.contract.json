@@ -1,0 +1,208 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.legal_model_card_ai_sbom_delta",
+  "title": "Legal Model Card AI-SBOM Delta",
+  "status": "model_card_ai_sbom_delta_no_checkpoint",
+  "last_update": "2026-06-30",
+  "purpose": "Defines the model-card and AI-SBOM delta gate for later Legal-Nemotron customization without training, model evaluation execution, checkpoint publication or legal-answer quality claims.",
+  "source_documents": {
+    "legal_model_customization_readiness": "workflows/contracts/legal-model-customization-readiness.contract.json",
+    "legal_source_inventory_license_tdm": "workflows/contracts/legal-source-inventory-license-tdm.contract.json",
+    "legal_model_evaluation_benchmark": "workflows/contracts/legal-model-evaluation-benchmark.contract.json",
+    "ai_sbom_baseline": "sbom/ai/nac-ai-sbom-draft.json",
+    "build_now": "roadmap/BUILD_NOW.md"
+  },
+  "scope": {
+    "training_enabled": false,
+    "model_evaluation_executed": false,
+    "benchmark_dataset_generated": false,
+    "checkpoint_publication_enabled": false,
+    "production_legal_answer_system_enabled": false,
+    "mandate_data_allowed": false,
+    "publisher_full_text_allowed": false,
+    "owner_apply_required_before_checkpoint_or_quality_claim": true
+  },
+  "model_card_delta_policy": {
+    "planning_only": true,
+    "minimum_sections": [
+      "base_model_or_checkpoint",
+      "intended_use",
+      "prohibited_use",
+      "source_inventory_summary",
+      "license_tdm_summary",
+      "data_lineage",
+      "evaluation_summary",
+      "known_limitations",
+      "human_review_protocol",
+      "ai_sbom_ref",
+      "owner_apply_ref",
+      "no_mandate_data_attestation"
+    ],
+    "blocked_sections_before_owner_apply": [
+      "production_quality_claim",
+      "notarial_decision_replacement",
+      "legal_truth_statement",
+      "checkpoint_download_url",
+      "benchmark_score_claim"
+    ]
+  },
+  "ai_sbom_delta_policy": {
+    "planning_only": true,
+    "ai_sbom_status": "pending_delta_no_runtime",
+    "required_delta_components": [
+      "base_model_or_checkpoint",
+      "dataset_candidates",
+      "legal_source_inventory",
+      "training_or_evaluation_runtime",
+      "third_party_services",
+      "license_and_tdm_status",
+      "risk_controls",
+      "human_review_boundary"
+    ],
+    "blocked_delta_components_before_owner_apply": [
+      "publisher_full_text_payload",
+      "mandate_data_payload",
+      "secret_or_credential_material",
+      "checkpoint_artifact",
+      "unreviewed_model_endpoint"
+    ]
+  },
+  "candidate_delta_entries": [
+    {
+      "id": "nvidia-nemotron-pretraining-legal-v1",
+      "model_card_role": "baseline_dataset_candidate",
+      "ai_sbom_role": "dataset_candidate_no_runtime",
+      "required_status_before_use": [
+        "license_review",
+        "attribution_plan",
+        "jurisdiction_fit_disclosure",
+        "no_german_law_source_claim"
+      ],
+      "blocked_before_owner_apply": [
+        "fine_tune_model",
+        "publish_checkpoint",
+        "claim_german_law_coverage"
+      ]
+    },
+    {
+      "id": "recht-bund-bgbl-data-access",
+      "model_card_role": "official_publication_candidate",
+      "ai_sbom_role": "source_inventory_candidate_no_ingestion",
+      "required_status_before_use": [
+        "terms_review",
+        "tdm_review",
+        "bulk_access_decision",
+        "storage_boundary"
+      ],
+      "blocked_before_owner_apply": [
+        "download_full_text_corpus",
+        "normalize_full_text_for_training",
+        "generate_benchmark_rows"
+      ]
+    },
+    {
+      "id": "wikipedia-rechtsquelle-concept-reference",
+      "model_card_role": "concept_reference_only",
+      "ai_sbom_role": "reference_candidate_no_authoritative_corpus",
+      "required_status_before_use": [
+        "attribution_plan",
+        "concept_reference_disclosure",
+        "primary_source_exclusion"
+      ],
+      "blocked_before_owner_apply": [
+        "treat_as_primary_legal_source",
+        "train_as_authoritative_law",
+        "claim_legal_truth"
+      ]
+    }
+  ],
+  "required_gates": [
+    {
+      "id": "model_card_completeness_gate",
+      "must_complete_before": "checkpoint_publication",
+      "required_evidence": [
+        "base_model_or_checkpoint",
+        "data_lineage",
+        "known_limitations",
+        "human_review_protocol"
+      ]
+    },
+    {
+      "id": "ai_sbom_delta_gate",
+      "must_complete_before": "runtime_or_endpoint_activation",
+      "required_evidence": [
+        "ai_sbom_ref",
+        "delta_components",
+        "license_and_tdm_status",
+        "risk_controls"
+      ]
+    },
+    {
+      "id": "legal_use_limitations_gate",
+      "must_complete_before": "quality_claim",
+      "required_evidence": [
+        "intended_use",
+        "prohibited_use",
+        "notarial_review_boundary",
+        "no_legal_truth_claim"
+      ]
+    },
+    {
+      "id": "evaluation_disclosure_gate",
+      "must_complete_before": "quality_claim",
+      "required_evidence": [
+        "evaluation_summary",
+        "benchmark_ref",
+        "human_review_protocol",
+        "unsupported_claim_policy"
+      ]
+    },
+    {
+      "id": "owner_apply_gate",
+      "must_complete_before": "checkpoint_publication_or_quality_claim",
+      "required_evidence": [
+        "owner_approval_ref",
+        "approved_model_card_ref",
+        "approved_ai_sbom_ref",
+        "rollback_plan_ref"
+      ]
+    }
+  ],
+  "blocked_actions": [
+    "publish_checkpoint_without_model_card",
+    "publish_model_card_with_placeholders",
+    "publish_ai_sbom_delta_with_placeholders",
+    "claim_legal_answer_quality_without_evaluation_and_human_review",
+    "omit_license_tdm_status",
+    "omit_no_mandate_data_attestation",
+    "start_training_from_model_card_delta",
+    "store_source_text_in_model_card_or_ai_sbom",
+    "use_mandate_data_for_model_card_or_ai_sbom"
+  ],
+  "required_evidence_fields": [
+    "schema_version",
+    "delta_id",
+    "model_card_ref",
+    "ai_sbom_ref",
+    "source_inventory_ref",
+    "license_review_ref",
+    "tdm_review_ref",
+    "evaluation_ref",
+    "limitations_ref",
+    "owner_apply_ref",
+    "no_mandate_data_attestation",
+    "no_checkpoint_published_attestation"
+  ],
+  "validation_commands": [
+    "python scripts/validate_legal_model_card_ai_sbom_delta.py",
+    "python scripts/validate_legal_model_customization_readiness.py",
+    "python scripts/validate_legal_source_inventory_license_tdm.py",
+    "python scripts/validate_legal_model_evaluation_benchmark.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/legal-model-card-ai-sbom-delta.md",
+    "en": "docs/en/architecture/legal-model-card-ai-sbom-delta.md"
+  }
+}

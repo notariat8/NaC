@@ -201,6 +201,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_legal_model_customization_readiness.py"],
                 ),
                 (
+                    "legal_model_card_ai_sbom_delta",
+                    "Legal Model Card AI-SBOM Delta",
+                    [sys.executable, "scripts/validate_legal_model_card_ai_sbom_delta.py"],
+                ),
+                (
                     "legal_model_evaluation_benchmark",
                     "Legal Model Evaluation Benchmark",
                     [sys.executable, "scripts/validate_legal_model_evaluation_benchmark.py"],

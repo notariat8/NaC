@@ -15,6 +15,11 @@ Der maschinenlesbare Vertrag steht in
 und wird durch
 [scripts/validate_legal_model_customization_readiness.py](../../../scripts/validate_legal_model_customization_readiness.py)
 geprüft.
+Das getrennte Model-Card-/AI-SBOM-Delta-Gate steht in
+[workflows/contracts/legal-model-card-ai-sbom-delta.contract.json](../../../workflows/contracts/legal-model-card-ai-sbom-delta.contract.json)
+und blockiert Checkpoint-Veröffentlichung oder Qualitätsbehauptungen, bis
+Model Card, AI-SBOM-Delta, Evaluation, Grenzen und Owner-Apply vollständig
+nachgewiesen sind.
 
 ## Quellenrolle
 
