@@ -38,6 +38,7 @@ for Fachpersonal without exposing `value` fields.
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
 | Legal Model Card AI-SBOM Delta gate | Implemented | `workflows/contracts/legal-model-card-ai-sbom-delta.contract.json`, `scripts/validate_legal_model_card_ai_sbom_delta.py`, strict quality gate |
+| Legal Model Card proposal status | Implemented | `workflows/legal-model/model-card-proposals/legal-nemotron-metadata-only.model-card.json`, `nac legal-graph model-card-proposal`, `scripts/validate_legal_model_card_proposal.py` |
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 
@@ -58,6 +59,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0011 | Legal Nemotron fine-tuning source and evaluation plan | Done | Records NVIDIA Nemotron Legal, Rechtsquelle concept framing and `recht.bund.de` BGBl data access as metadata-only candidates, adds readiness and German-law benchmark contracts, and keeps fine-tuning, checkpoint publication and legal-answer use blocked before license/TDM, source hierarchy, evaluation, model-card, AI-SBOM and owner-apply gates are approved. |
 | DEV-0012 | Legal source inventory CLI status | Done | `nac legal-graph source-inventory` reports source-inventory, license and TDM gate state without source-text ingestion, benchmark generation, model calls or training. |
 | DEV-0013 | Legal model-card and AI-SBOM delta gate | Done | Strict quality gate validates that later Legal-Nemotron Model Card and AI-SBOM deltas cannot publish checkpoints, include placeholders, claim legal-answer quality, store source text or use mandate data before full evidence and owner apply. |
+| DEV-0014 | Legal model-card artifact proposal | Done | `nac legal-graph model-card-proposal` reports a concrete metadata-only Legal-Nemotron Model-Card proposal with candidate references, required sections, attestations and blocked actions, without training, checkpoint publication, model evaluation, source-text storage or mandate data. |
 
 ## Roadmap Review Notes
 
@@ -70,6 +72,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-30 | Legal Graph primary-source pilot status | Close DEV-0010 as implemented because the CLI exposes three metadata-only primary-source manifests and the Legal-Graph validator enforces no-commentary, no-fulltext, no-credential and review-gate boundaries. | Continue Legal Graph work only with a separate contract or implementation PR for source inventory depth, model-card delta, AI-SBOM delta, benchmark generation or licensed commentary connectors. |
 | 2026-06-30 | Legal Source Inventory CLI status | Add a direct `nac legal-graph source-inventory` status surface for the existing source-inventory/license/TDM gate so the next Legal-Nemotron source review step is executable without ingestion. | Continue only with separate PRs for source inventory depth, model-card delta, AI-SBOM delta, approved benchmark generation or licensed commentary connector activation gates. |
 | 2026-06-30 | Legal Model Card AI-SBOM delta | Add a strict, metadata-only gate for later Legal-Nemotron Model Card and AI-SBOM delta evidence without enabling training, evaluation execution, checkpoint publication or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, concrete model-card artifact proposal or AI-SBOM baseline update in separate PRs; owner apply remains required before any runtime, checkpoint or quality claim. |
+| 2026-06-30 | Legal Model Card artifact proposal | Add the first concrete Legal-Nemotron Model-Card proposal artifact and CLI status, still metadata-only and blocked from training, evaluation, checkpoint publication, runtime activation or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, concrete AI-SBOM delta proposal or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
 
 ## Local Developer Commands
 
@@ -79,8 +82,10 @@ python scripts/validate_kg_editor.py
 python scripts/validate_knowledge_graph.py
 python scripts/nac.py legal-graph sources --format json
 python scripts/nac.py legal-graph source-inventory --format json
+python scripts/nac.py legal-graph model-card-proposal --format json
 python scripts/validate_legal_model_customization_readiness.py
 python scripts/validate_legal_model_card_ai_sbom_delta.py
+python scripts/validate_legal_model_card_proposal.py
 python scripts/validate_legal_model_evaluation_benchmark.py
 python scripts/notary_kg.py --repo-root . --format json status
 python scripts/notary_kg.py --repo-root . --format json editor-view immobilienkaufvertrag

@@ -60,6 +60,7 @@ python scripts/nac.py kg cost-view immobilienkaufvertrag
 python scripts/nac.py kg workflow-contract immobilienkaufvertrag
 python scripts/nac.py kg pilot-checklist online-gmbh-gruendung
 python scripts/nac.py legal-graph status
+python scripts/nac.py legal-graph model-card-proposal
 python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
@@ -80,6 +81,7 @@ nac kg cost-view immobilienkaufvertrag
 nac kg workflow-contract immobilienkaufvertrag
 nac kg pilot-checklist online-gmbh-gruendung
 nac legal-graph status
+nac legal-graph model-card-proposal
 nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
@@ -102,7 +104,7 @@ nac time-ledger summary
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
 | Knowledge graphs | `nac kg status`, `nac kg workflow-contract <slug>` and `nac kg pilot-checklist <slug>` | Shows the state of usecase-local knowledge graphs, creates mandate-data-free workflow contract drafts and builds deterministic pilot intake checklists from a usecase KG. |
-| Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, source-inventory/license/TDM gates, review points and update patches without auto-merge. |
+| Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph model-card-proposal`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, source-inventory/license/TDM gates, model-card proposal, review points and update patches without auto-merge. |
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
@@ -141,6 +143,7 @@ create review patches; a merge requires professional review.
 nac legal-graph status
 nac legal-graph sources --format json
 nac legal-graph source-inventory --format json
+nac legal-graph model-card-proposal --format json
 nac legal-graph review erbrecht --format json
 nac legal-graph update-dry-run erbrecht --format json
 ```
@@ -154,6 +157,10 @@ connector is professionally, contractually and technically approved.
 Licensed commentaries and publisher sources do not use scraping or full-text
 imports. They require reviewed MCP/API connectors with license, AVV/DPA,
 professional-secrecy, AI-SBOM and review gates.
+
+The model-card proposal is also metadata-only. It shows which sections,
+candidates and blocks must be reviewed before later Legal-Nemotron use; it
+does not start training, publish a checkpoint or claim legal-answer quality.
 
 ## QMS And ISO 9001 Layer
 
