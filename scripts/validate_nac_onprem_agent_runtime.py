@@ -11,9 +11,12 @@ DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "nac-onprem-agent-runtime.
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "nac-onprem-agent-runtime.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "ponytail-skill-only-smoke.md"
 RUNBOOK_EN = REPO_ROOT / "docs" / "en" / "operations" / "ponytail-skill-only-smoke.md"
+RUNTIME_SMOKE_RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "nac-runtime-smoke.md"
+RUNTIME_SMOKE_RUNBOOK_EN = REPO_ROOT / "docs" / "en" / "operations" / "nac-runtime-smoke.md"
 OPERATIONS_DE = REPO_ROOT / "docs" / "de" / "operations" / "README.md"
 OPERATIONS_EN = REPO_ROOT / "docs" / "en" / "operations" / "README.md"
 EVIDENCE_TEMPLATE = REPO_ROOT / "workflows" / "evidence-templates" / "ponytail-skill-only-smoke.md"
+RUNTIME_SMOKE_EVIDENCE_TEMPLATE = REPO_ROOT / "workflows" / "evidence-templates" / "nac-runtime-smoke.md"
 QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 
@@ -60,6 +63,30 @@ REQUIRED_PONYTAIL_SKILL_ONLY_FALSE_FLAGS = {
     "oci_write_performed",
     "repo_change_required",
     "owner_input_needed",
+}
+REQUIRED_RUNTIME_SMOKE = {
+    "status": "ready_owner_gated_not_executed",
+    "runbook_de": "docs/de/operations/nac-runtime-smoke.md",
+    "runbook_en": "docs/en/operations/nac-runtime-smoke.md",
+    "evidence_template": "workflows/evidence-templates/nac-runtime-smoke.md",
+    "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
+    "target_evidence_file_pattern": "evidence/nac-runtime-smoke-YYYY-MM-DD.md",
+}
+REQUIRED_RUNTIME_SMOKE_TRUE_FLAGS = {
+    "owner_apply_required_before_execution",
+}
+REQUIRED_RUNTIME_SMOKE_FALSE_FLAGS = {
+    "execution_performed",
+    "installation_performed",
+    "onboard_performed",
+    "rebuild_performed",
+    "lifecycle_hooks_enabled",
+    "openclaw_runtime_mutation_performed",
+    "dashboard_token_captured",
+    "github_write_performed",
+    "oci_write_performed",
+    "secrets_required",
+    "matter_data_required",
 }
 REQUIRED_AGENT_ROLES_OR_NAMES = {
     "main",
@@ -198,6 +225,23 @@ def _validate_target_control(payload: dict[str, Any]) -> list[str]:
     for command in ("bin/nac-target-smoke", "bin/nac-runtime-smoke"):
         if command not in smoke_commands:
             errors.append(f"target_control.smoke_commands missing {command}")
+    runtime_smoke = target.get("runtime_smoke")
+    if not isinstance(runtime_smoke, dict):
+        errors.append("target_control.runtime_smoke must be an object")
+        return errors
+    for key, expected in REQUIRED_RUNTIME_SMOKE.items():
+        if runtime_smoke.get(key) != expected:
+            errors.append(f"target_control.runtime_smoke.{key} must be {expected}")
+        if key.startswith("runbook_") or key == "evidence_template":
+            value = runtime_smoke.get(key)
+            if isinstance(value, str) and not (REPO_ROOT / value).is_file():
+                errors.append(f"target_control.runtime_smoke.{key} points to missing file: {value}")
+    for flag in sorted(REQUIRED_RUNTIME_SMOKE_TRUE_FLAGS):
+        if runtime_smoke.get(flag) is not True:
+            errors.append(f"target_control.runtime_smoke.{flag} must be true")
+    for flag in sorted(REQUIRED_RUNTIME_SMOKE_FALSE_FLAGS):
+        if runtime_smoke.get(flag) is not False:
+            errors.append(f"target_control.runtime_smoke.{flag} must be false")
     return errors
 
 
@@ -352,16 +396,26 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
     for path, required_text in (
         (DOC_DE, "NaC-On-Prem-Agent-Runtime"),
         (DOC_DE, "Ponytail Skill-Only Smoke"),
+        (DOC_DE, "NaC Runtime-Smoke"),
         (DOC_EN, "NaC On-Prem Agent Runtime"),
         (DOC_EN, "Ponytail skill-only smoke"),
+        (DOC_EN, "NaC runtime smoke"),
         (RUNBOOK_DE, "Status: ausgeführt, bestanden"),
         (RUNBOOK_DE, "ponytail-skill-only-smoke-2026-06-29.md"),
         (RUNBOOK_EN, "Status: executed, passed"),
         (RUNBOOK_EN, "ponytail-skill-only-smoke-2026-06-29.md"),
+        (RUNTIME_SMOKE_RUNBOOK_DE, "Status: vorbereitet, Owner-gated nicht ausgeführt"),
+        (RUNTIME_SMOKE_RUNBOOK_DE, "Owner Apply Approval for NaC runtime smoke"),
+        (RUNTIME_SMOKE_RUNBOOK_EN, "Status: prepared, owner-gated not executed"),
+        (RUNTIME_SMOKE_RUNBOOK_EN, "Owner Apply Approval for NaC runtime smoke"),
         (OPERATIONS_DE, "ponytail-skill-only-smoke.md"),
+        (OPERATIONS_DE, "nac-runtime-smoke.md"),
         (OPERATIONS_EN, "ponytail-skill-only-smoke.md"),
+        (OPERATIONS_EN, "nac-runtime-smoke.md"),
         (EVIDENCE_TEMPLATE, "Evidence-Status: nur Vorlage"),
         (EVIDENCE_TEMPLATE, "candidate_not_installed"),
+        (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "Evidence-Status: nur Vorlage"),
+        (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "ready_owner_gated_not_executed"),
         (QUALITY_DE, "nac_onprem_agent_runtime"),
         (QUALITY_EN, "nac_onprem_agent_runtime"),
     ):

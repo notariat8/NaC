@@ -22,6 +22,10 @@ model and repository consolidation.
 - [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): owner-gated
   executed Ponytail skill-only smoke for `notoclaw01` with target-control
   evidence and without installation, hooks or runtime activation.
+- [nac-runtime-smoke.md](nac-runtime-smoke.md): prepared owner-gated runtime
+  smoke for `notoclaw01-host` with read-only NemoClaw/OpenClaw status, redacted
+  evidence and without installation, onboarding, rebuild or dashboard-token
+  capture.
 - [repository-consolidation.md](repository-consolidation.md): migrated, open and retire-ready standalone
   repositories.
 - [single-repo-refactor-plan.md](single-repo-refactor-plan.md): target structure and migration into one

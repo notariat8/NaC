@@ -3,7 +3,7 @@
   "contract_id": "workflow.nac_onprem_agent_runtime",
   "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
   "status": "target_control_ready_no_productive_connector_apply",
-  "last_update": "2026-06-29",
+  "last_update": "2026-06-30",
   "purpose": "Definiert die Grenze, in der NaC als agentische On-Prem-Plattform auf notoclaw01 mit NemoClaw/OpenClaw vorbereitet wird, ohne NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz zu umgehen.",
   "operating_model": {
     "project_manager": {
@@ -64,6 +64,26 @@
       "bin/nac-target-smoke",
       "bin/nac-runtime-smoke"
     ],
+    "runtime_smoke": {
+      "status": "ready_owner_gated_not_executed",
+      "runbook_de": "docs/de/operations/nac-runtime-smoke.md",
+      "runbook_en": "docs/en/operations/nac-runtime-smoke.md",
+      "evidence_template": "workflows/evidence-templates/nac-runtime-smoke.md",
+      "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
+      "target_evidence_file_pattern": "evidence/nac-runtime-smoke-YYYY-MM-DD.md",
+      "owner_apply_required_before_execution": true,
+      "execution_performed": false,
+      "installation_performed": false,
+      "onboard_performed": false,
+      "rebuild_performed": false,
+      "lifecycle_hooks_enabled": false,
+      "openclaw_runtime_mutation_performed": false,
+      "dashboard_token_captured": false,
+      "github_write_performed": false,
+      "oci_write_performed": false,
+      "secrets_required": false,
+      "matter_data_required": false
+    },
     "evidence_path": "evidence/2026-06-28-nac-onprem-agent-solution.md"
   },
   "required_agent_roles_or_names": [
