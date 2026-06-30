@@ -190,6 +190,10 @@ class NaCCliTests(unittest.TestCase):
         self.assertTrue(payload["owner_apply_required_before_ingestion"])
         self.assertIn("recht-bund-bgbl-data-access", sources)
         self.assertEqual(sources["recht-bund-bgbl-data-access"]["terms_review_ref"], "pending")
+        self.assertEqual(
+            sources["recht-bund-bgbl-data-access"]["review_depth"]["next_required_review"],
+            "review_terms_tdm_bulk_access_and_storage_boundary",
+        )
 
     def test_legal_graph_model_card_proposal_cli_returns_gate_status(self) -> None:
         rc, output = run_cli("legal-graph", "model-card-proposal", "--format", "json")

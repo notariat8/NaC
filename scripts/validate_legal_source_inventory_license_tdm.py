@@ -47,6 +47,14 @@ REQUIRED_MINIMUM_FIELDS = {
     "blocked_pre_apply_actions",
     "human_review_owner",
 }
+REQUIRED_REVIEW_DEPTH_FIELDS = {
+    "record_completeness",
+    "license_terms_depth",
+    "tdm_depth",
+    "attribution_depth",
+    "storage_boundary_depth",
+    "next_required_review",
+}
 REQUIRED_GATES = {
     "source_record_completeness_gate",
     "license_basis_gate",
@@ -195,6 +203,15 @@ def _validate_source_inventory(payload: dict[str, Any]) -> list[str]:
             errors.append(f"{source_id}: terms_review_ref bleibt vor Review pending")
         if item.get("human_review_owner") != "owner_required":
             errors.append(f"{source_id}: human_review_owner muss owner_required sein")
+        review_depth = item.get("review_depth")
+        if not isinstance(review_depth, dict):
+            errors.append(f"{source_id}: review_depth muss ein Objekt sein")
+        else:
+            for field in sorted(REQUIRED_REVIEW_DEPTH_FIELDS):
+                if not isinstance(review_depth.get(field), str) or not review_depth[field]:
+                    errors.append(f"{source_id}: review_depth.{field} muss gesetzt sein")
+            if review_depth.get("record_completeness") != "seed_metadata_complete":
+                errors.append(f"{source_id}: review_depth.record_completeness muss seed_metadata_complete sein")
         if source_id == "nvidia-nemotron-pretraining-legal-v1":
             if "train_or_finetune_model" not in blocked or "treat_as_german_law_source" not in blocked:
                 errors.append("Nemotron-Datensatz muss Training und deutsche-Rechtsquelle-Fehlnutzung blockieren")

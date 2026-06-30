@@ -69,6 +69,14 @@
       "tdm_status": "not_a_german_source_tdm_gate_still_required_for_reuse",
       "terms_review_ref": "pending",
       "attribution_plan": "required_before_reuse",
+      "review_depth": {
+        "record_completeness": "seed_metadata_complete",
+        "license_terms_depth": "license_claim_recorded_terms_not_reviewed",
+        "tdm_depth": "not_applicable_as_german_source_but_reuse_review_required",
+        "attribution_depth": "attribution_plan_required_before_reuse",
+        "storage_boundary_depth": "no_storage_boundary_for_source_text_selected",
+        "next_required_review": "decide_reuse_scope_before_any_training_or_checkpoint"
+      },
       "allowed_pre_apply_actions": [
         "record_source_metadata",
         "record_license_status",
@@ -94,6 +102,14 @@
       "tdm_status": "tdm_and_bulk_access_terms_require_review",
       "terms_review_ref": "pending",
       "attribution_plan": "required_before_ingestion",
+      "review_depth": {
+        "record_completeness": "seed_metadata_complete",
+        "license_terms_depth": "official_publication_terms_not_reviewed",
+        "tdm_depth": "bulk_access_and_machine_processing_not_reviewed",
+        "attribution_depth": "attribution_plan_required_before_ingestion",
+        "storage_boundary_depth": "storage_target_not_selected",
+        "next_required_review": "review_terms_tdm_bulk_access_and_storage_boundary"
+      },
       "allowed_pre_apply_actions": [
         "record_source_metadata",
         "record_license_status",
@@ -122,6 +138,14 @@
       "tdm_status": "concept_reference_only_no_authoritative_corpus",
       "terms_review_ref": "pending",
       "attribution_plan": "required_before_quote_or_reuse",
+      "review_depth": {
+        "record_completeness": "seed_metadata_complete",
+        "license_terms_depth": "cc_by_sa_claim_recorded_terms_not_reviewed",
+        "tdm_depth": "concept_reference_only_no_corpus_use",
+        "attribution_depth": "attribution_plan_required_before_quote_or_reuse",
+        "storage_boundary_depth": "no_storage_boundary_for_source_text_selected",
+        "next_required_review": "keep_as_concept_reference_or_replace_with_primary_source"
+      },
       "allowed_pre_apply_actions": [
         "record_source_metadata",
         "record_license_status",

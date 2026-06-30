@@ -35,6 +35,7 @@ for Fachpersonal without exposing `value` fields.
 | Developer CI PR comment | Implemented | `scripts/render_quality_gate_comment.py`, `.github/workflows/quality-gate.yml`, `tests/test_render_quality_gate_comment.py` |
 | Legal Graph source pilot | Implemented | `workflows/legal-graph/sources/*-primary-source.json`, `nac legal-graph sources`, `tests/test_legal_graph.py` |
 | Legal Source Inventory CLI | Implemented | `nac legal-graph source-inventory`, `workflows/contracts/legal-source-inventory-license-tdm.contract.json`, `tests/test_legal_graph.py` |
+| Legal Source Inventory review depth | Implemented | `review_depth` in `workflows/contracts/legal-source-inventory-license-tdm.contract.json`, `nac legal-graph source-inventory --format json` |
 | Legal Graph contract validator | Implemented | `scripts/validate_legal_graph_contracts.py`, strict quality gate |
 | Legal model customization gates | Implemented | `workflows/contracts/legal-research-connectors.contract.json`, `workflows/contracts/legal-model-customization-readiness.contract.json`, `workflows/contracts/legal-model-evaluation-benchmark.contract.json`, strict quality gate |
 | Legal Model Card AI-SBOM Delta gate | Implemented | `workflows/contracts/legal-model-card-ai-sbom-delta.contract.json`, `scripts/validate_legal_model_card_ai_sbom_delta.py`, strict quality gate |
@@ -64,6 +65,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0014 | Legal model-card artifact proposal | Done | `nac legal-graph model-card-proposal` reports a concrete metadata-only Legal-Nemotron Model-Card proposal with candidate references, required sections, attestations and blocked actions, without training, checkpoint publication, model evaluation, source-text storage or mandate data. |
 | DEV-0015 | Legal AI-SBOM delta artifact proposal | Done | `nac legal-graph ai-sbom-delta-proposal` reports a concrete metadata-only Legal-Nemotron AI-SBOM delta proposal with components, candidates, attestations and blocked actions, without runtime activation, endpoint activation, training, checkpoint publication, source-text storage or mandate data. |
 | DEV-0016 | AI-SBOM baseline export mapping | Done | `nac ai-sbom export-mapping` reports CycloneDX JSON and SPDX JSON target mappings for the repo-wide AI-SBOM baseline while release export, external SBOM tool execution, mandate data, secrets and release binding remain blocked before owner apply. |
+| DEV-0017 | Legal source inventory review depth | Done | `nac legal-graph source-inventory --format json` now reports per-source review depth for seed metadata, license terms, TDM/bulk access, attribution, storage boundary and next required review while ingestion, benchmark generation, model evaluation, training and mandate data remain blocked. |
 
 ## Roadmap Review Notes
 
@@ -79,6 +81,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-30 | Legal Model Card artifact proposal | Add the first concrete Legal-Nemotron Model-Card proposal artifact and CLI status, still metadata-only and blocked from training, evaluation, checkpoint publication, runtime activation or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, concrete AI-SBOM delta proposal or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
 | 2026-06-30 | Legal AI-SBOM delta artifact proposal | Add the first concrete Legal-Nemotron AI-SBOM delta proposal artifact and CLI status, still metadata-only and blocked from runtime activation, endpoint activation, training, evaluation, checkpoint publication or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, AI-SBOM baseline export mapping or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
 | 2026-06-30 | AI-SBOM baseline export mapping | Select CycloneDX JSON and SPDX JSON as machine-readable target profiles for the repo-wide AI-SBOM baseline and expose the status through CLI and strict quality gate. | Continue only with a separate owner-apply-gated release-binding PR; no external SBOM tooling, published release artifact, mandate data or secrets are enabled by this mapping. |
+| 2026-06-30 | Legal Source Inventory review depth | Extend the source inventory from simple source status to per-source review depth without ingestion. | Continue with source-license/TDM evidence, approved benchmark generation or licensed commentary connector gates in separate PRs; owner apply remains required before any ingestion, corpus preparation, evaluation, training or release binding. |
 
 ## Local Developer Commands
 

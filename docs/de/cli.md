@@ -274,7 +274,9 @@ Credential-Pflicht einschleust.
 Das Quelleninventar-, Lizenz- und TDM-Gate ist über
 `nac legal-graph source-inventory --format json` als Statusfläche sichtbar. Der
 Befehl liest nur den Gate-Vertrag, zeigt keine Quellentexte an, erzeugt keinen
-Benchmark-Datensatz und startet kein Training.
+Benchmark-Datensatz und startet kein Training. Pro Quelle zeigt er zusätzlich
+die Prüftiefe für Seed-Metadaten, Lizenz/TDM, Attribution, Storage-Grenze und
+nächsten Review.
 Der Spec-Traceability-Vertrag verbindet Issue, Spec, Plan, AC-IDs und
 Validierungsbefehle für spec-driven Arbeit.
 

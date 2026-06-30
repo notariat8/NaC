@@ -30,6 +30,12 @@ Each source needs at least these fields before productive use:
 - storage boundary,
 - human review owner.
 
+The inventory also tracks review depth for each source. It separates whether
+the seed metadata is complete, whether license terms, TDM/bulk access,
+attribution and storage boundaries have already been professionally reviewed,
+and which review must happen next. This review depth is still metadata only:
+it downloads no source text and does not replace owner apply approval.
+
 ## Current Seed Sources
 
 - NVIDIA Nemotron Pretraining Legal v1 remains an English baseline dataset

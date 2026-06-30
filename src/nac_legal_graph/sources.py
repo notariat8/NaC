@@ -85,6 +85,7 @@ def legal_source_inventory_status(repo_root: Path) -> dict[str, Any]:
                 "terms_review_ref": source["terms_review_ref"],
                 "attribution_plan": source["attribution_plan"],
                 "human_review_owner": source["human_review_owner"],
+                "review_depth": source["review_depth"],
                 "allowed_pre_apply_actions": source["allowed_pre_apply_actions"],
                 "blocked_pre_apply_actions": source["blocked_pre_apply_actions"],
             }
@@ -168,6 +169,21 @@ def _validate_source_inventory_contract(payload: dict[str, Any]) -> None:
         ):
             if not isinstance(source.get(field), str) or not source[field]:
                 raise ValueError(f"source inventory contract Quelle braucht {field}")
+        review_depth = source.get("review_depth")
+        if not isinstance(review_depth, dict):
+            raise ValueError(f"source inventory contract {source['source_id']} braucht review_depth")
+        for field in (
+            "record_completeness",
+            "license_terms_depth",
+            "tdm_depth",
+            "attribution_depth",
+            "storage_boundary_depth",
+            "next_required_review",
+        ):
+            if not isinstance(review_depth.get(field), str) or not review_depth[field]:
+                raise ValueError(
+                    f"source inventory contract {source['source_id']} braucht review_depth.{field}"
+                )
         if not _strings(source.get("allowed_pre_apply_actions")):
             raise ValueError(f"source inventory contract {source['source_id']} braucht allowed_pre_apply_actions")
         if not _strings(source.get("blocked_pre_apply_actions")):
