@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,6 +25,10 @@ renderer = load_renderer_module()
 
 
 class RenderQualityGateCommentTests(unittest.TestCase):
+    def test_renderer_keeps_src_package_before_scripts_shadow_module(self) -> None:
+        self.assertEqual(sys.path[0], str(REPO_ROOT / "src"))
+        self.assertTrue(renderer.load_catalogs.__module__.startswith("notary_kg."))
+
     def test_comment_renders_build_status_and_kg_readiness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)

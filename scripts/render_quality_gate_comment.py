@@ -8,8 +8,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+SRC_ROOT_TEXT = str(SRC_ROOT)
+while SRC_ROOT_TEXT in sys.path:
+    sys.path.remove(SRC_ROOT_TEXT)
+sys.path.insert(0, SRC_ROOT_TEXT)
 
 from notary_kg.catalog import all_case_summaries, load_catalogs
 
