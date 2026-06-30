@@ -56,6 +56,8 @@ python scripts/nac.py bpmn validate
 
 These checks show status and readiness. They submit no forms, read no secrets,
 write nothing to the cloud control plane and open no real mandate data.
+The login-intent check remains a redacted technical preparation evidence item.
+It is not a browser surface for the Notarkammer demo.
 
 ## 60-Minute Run
 
@@ -201,9 +203,14 @@ Say:
 Show:
 
 1. Login page.
-2. Optional read-only: `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt`.
-3. Only with approval: protected start status or sign-in step.
-4. `https://app.notariat8.de/workspace` without a session as the closed view.
+2. Only with approval: protected start status or sign-in step.
+3. `https://app.notariat8.de/workspace` without a session as the closed view.
+
+Do not show:
+
+- No login-intent JSON and no technical login-intent endpoint as a browser
+  surface. If this read-only check is needed, evaluate it only in redacted
+  preparation.
 
 ### 52-55 Minutes: Short Comparison Process
 

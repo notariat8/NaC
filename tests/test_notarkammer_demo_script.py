@@ -11,6 +11,17 @@ DEMO_DOCS = {
 }
 
 
+def markdown_section(content: str, heading: str) -> str:
+    start = content.index(heading)
+    rest = content[start + len(heading):]
+    next_heading = rest.find("\n### ")
+    if next_heading == -1:
+        next_heading = rest.find("\n## ")
+    if next_heading == -1:
+        return rest
+    return rest[:next_heading]
+
+
 class NotarkammerDemoScriptTests(unittest.TestCase):
     def test_demo_script_exists_in_german_and_english(self) -> None:
         for path in DEMO_DOCS.values():
@@ -109,6 +120,24 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
         self.assertIn("continue the login flow only when the demo session is approved", english)
         self.assertIn("fail-closed", german)
         self.assertIn("fail-closed", english)
+
+    def test_login_intent_stays_redacted_preparation_evidence(self) -> None:
+        german = DEMO_DOCS["de"].read_text(encoding="utf-8")
+        english = DEMO_DOCS["en"].read_text(encoding="utf-8")
+        normalized_german = " ".join(german.split())
+        normalized_english = " ".join(english.split())
+
+        self.assertIn("redigierter technischer Vorbereitungsnachweis", normalized_german)
+        self.assertIn("keine Browserfläche", normalized_german)
+        self.assertIn("redacted technical preparation evidence", normalized_english)
+        self.assertIn("not a browser surface", normalized_english)
+
+        visible_sections = [
+            markdown_section(german, "### 43-52 Minuten: App-Einstieg und geschützter Arbeitsbereich"),
+            markdown_section(english, "### 43-52 Minutes: App Entry And Protected Workspace"),
+        ]
+        for section in visible_sections:
+            self.assertNotIn("api/tenant/login-intent", section)
 
 
 if __name__ == "__main__":
