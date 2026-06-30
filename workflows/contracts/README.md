@@ -40,9 +40,9 @@ Jeder Vertrag soll definieren:
   Leselinks auf Object Store, Datenbank-Blob oder OneDrive mit Zweckbindung,
   Ablauf, Aktenbindung, Widerruf und Auditnachweis.
 - [workflows/contracts/legal-research-connectors.contract.json](legal-research-connectors.contract.json):
-  Kandidateninventar für juristische Recherche-, MCP- und Verlagsdatenbank-
-  Connectoren ohne Produktintegration, Credentials oder Mandatsdaten, mit
-  Lizenz-, AVV-, AI-SBOM- und Review-Gates.
+  Kandidateninventar für juristische Recherche-, MCP-, Verlagsdatenbank- und
+  externe Legal-Produkt-Referenzen ohne Produktintegration, Credentials oder
+  Mandatsdaten, mit Lizenz-, AVV-, AI-SBOM- und Review-Gates.
 - [workflows/contracts/legal-source-inventory-license-tdm.contract.json](legal-source-inventory-license-tdm.contract.json):
   Quelleninventar-, Lizenz- und TDM-Gate für spätere Legal-Nemotron- oder
   Rechtsgraph-Arbeit ohne Quellentext-Ingestion, Benchmark-Datensatz,

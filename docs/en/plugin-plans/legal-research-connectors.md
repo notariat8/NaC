@@ -25,6 +25,7 @@ technical integration.
 | NVIDIA Nemotron Pretraining Legal v1 | [Hugging Face](https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1) | Source and license review needed | English legal pretraining dataset as a baseline/evaluation candidate; not a German legal source, no training start and no checkpoint publication without owner apply, AI-SBOM, license and model-card review. |
 | recht.bund.de data access | [Bundesgesetzblatt data access](https://www.recht.bund.de/de/service/webservice/webservice_node.html) | Official source review | Systematic BGBl access through ELI, PDF, ZIP and RSS as a later ingestion candidate; no bulk crawl, PDF fine-tuning or normalization without terms, license and review plan. |
 | Rechtsquelle concept | [Wikipedia Rechtsquelle](https://de.wikipedia.org/wiki/Rechtsquelle) | Concept anchor | Only for separating legal source, source-of-law evidence, hierarchy and collision rules; not a primary source and not a training corpus. |
+| Open Legal Products Mike | [GitHub](https://github.com/Open-Legal-Products/mike) | Reference product, no integration | AGPL-3.0 OSS legal AI platform with document versioning, citation-bound extraction, tabular reviews and MCP connector patterns; NaC may use only product and architecture observations, no code, no installation and no mandate data. |
 
 All URLs are kept without tracking parameters. The machine-readable boundary is
 defined in the
@@ -41,6 +42,8 @@ defined in the
   review and versioned NaC approval.
 - No portal scraping or TDM assumption without explicit legal and provider
   review.
+- No adoption of AGPL code, reference-product runtime or product architecture
+  without a separate license, AI-SBOM, security and architecture decision.
 - No fine-tuning, checkpoint publication or use as a legal-answer system
   without separate source, license, evaluation, model-card, AI-SBOM and owner
   apply evidence.
