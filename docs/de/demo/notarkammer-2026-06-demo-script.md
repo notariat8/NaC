@@ -59,6 +59,8 @@ python scripts/nac.py bpmn validate
 Diese Checks zeigen Status und Readiness. Sie senden keine Formulare ab,
 lesen kein Berechtigungsmaterial, schreiben nicht in den Cloud-Control-Plane
 und öffnen keine echten Mandatsdaten.
+Der Login-Intent-Check bleibt dabei ein redigierter technischer
+Vorbereitungsnachweis. Er ist keine Browserfläche für die Notarkammer-Demo.
 
 ## 60-Minuten-Ablauf
 
@@ -206,9 +208,14 @@ Sagen:
 Zeigen:
 
 1. Login-Seite.
-2. Optional read-only: `https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt`.
-3. Nur bei Freigabe: geschützter Startstatus oder Anmeldeschritt.
-4. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht.
+2. Nur bei Freigabe: geschützter Startstatus oder Anmeldeschritt.
+3. `https://app.notariat8.de/workspace` ohne Sitzung als geschlossene Sicht.
+
+Nicht zeigen:
+
+- Kein Login-Intent-JSON und keinen technischen Login-Intent-Endpunkt als
+  Browserfläche. Falls dieser Read-only-Check nötig ist, nur redigiert in der
+  Vorbereitung auswerten.
 
 ### 52-55 Minuten: Kurzer Vergleichsprozess
 
