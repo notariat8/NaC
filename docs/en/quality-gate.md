@@ -81,7 +81,8 @@ Default output:
 - JSON: [out/quality/status.json](../../out/quality/status.json)
 - Markdown: [out/quality/report.md](../../out/quality/report.md)
 - PR comment: [out/quality/comment.md](../../out/quality/comment.md) for pull
-  request upsert
+  request upsert with build status, check summary and KG readiness from the
+  usecase-local knowledge graphs
 
 These artifacts are uploaded during CI runs.
 
