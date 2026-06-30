@@ -6,6 +6,8 @@ no infrastructure apply, no secrets.
 ## Entry Point
 
 - Start: `https://app.notariat8.de/login`
+- notariat8 is the user-facing product surface; direct provider, cloud-login
+  or admin URLs are not demo entry points.
 - Only the login entry point and the closed start boundary are in scope.
 - No mandate data access, file content, deeds, register data or property data.
 
@@ -23,6 +25,7 @@ no infrastructure apply, no secrets.
 - Show no secrets, tokens, claims or technical raw values.
 - Show no callbacks, no parameters or browser address details.
 - Name no provider details, configuration values or vendor diagnostics.
+- Show no direct provider, cloud-login or admin URLs as user guidance.
 - Open no consoles, cloud views or infrastructure actions during the meeting.
 - Use no real person, file, deed, register or property data.
 
