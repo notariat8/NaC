@@ -1,7 +1,7 @@
 # Legal Source Inventory And License/TDM Gate
 
 Status: source-inventory readiness without ingestion
-Last content update: 2026-06-29
+Last content update: 2026-06-30
 
 ## Purpose
 
@@ -13,6 +13,10 @@ The machine-readable contract lives in
 [workflows/contracts/legal-source-inventory-license-tdm.contract.json](../../../workflows/contracts/legal-source-inventory-license-tdm.contract.json)
 and is checked by
 [scripts/validate_legal_source_inventory_license_tdm.py](../../../scripts/validate_legal_source_inventory_license_tdm.py).
+The current gate state is also available through
+`nac legal-graph source-inventory --format json`. The command only reads the
+inventory metadata model and remains without source-text ingestion, benchmark
+generation, model calls or training.
 
 ## Inventory Rule
 

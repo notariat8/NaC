@@ -1,7 +1,7 @@
 # Legal-Source-Inventar und Lizenz-/TDM-Gate
 
 Status: Quelleninventar-Readiness ohne Ingestion
-Letzte inhaltliche Anpassung: 2026-06-29
+Letzte inhaltliche Anpassung: 2026-06-30
 
 ## Zweck
 
@@ -14,6 +14,10 @@ Der maschinenlesbare Vertrag steht in
 und wird durch
 [scripts/validate_legal_source_inventory_license_tdm.py](../../../scripts/validate_legal_source_inventory_license_tdm.py)
 geprüft.
+Der aktuelle Gate-Stand ist zusätzlich über
+`nac legal-graph source-inventory --format json` abrufbar. Der Befehl liest nur
+das Inventar-Metadatenmodell und bleibt ohne Quellentext-Ingestion,
+Benchmark-Erzeugung, Modelllauf oder Training.
 
 ## Inventarregel
 

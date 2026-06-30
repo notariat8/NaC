@@ -103,7 +103,7 @@ nac time-ledger summary
 | Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status`, `nac kg workflow-contract <slug>` und `nac kg pilot-checklist <slug>` | Zeigt den Stand der usecase-lokalen Wissensgraphen, erzeugt mandatsdatenfreie Workflow-Vertragsentwürfe und baut deterministische Pilot-Aufnahmechecklisten aus einem Usecase-KG. |
-| Legal Graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph review erbrecht` und `nac legal-graph update-dry-run erbrecht` | Zeigt den mandatsdatenfreien Rechtsgraphen, Primärquellen, Reviewpunkte und Update-Patches ohne Auto-Merge. |
+| Legal Graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph review erbrecht` und `nac legal-graph update-dry-run erbrecht` | Zeigt den mandatsdatenfreien Rechtsgraphen, Primärquellen, Quelleninventar-/Lizenz-/TDM-Gates, Reviewpunkte und Update-Patches ohne Auto-Merge. |
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
@@ -141,6 +141,7 @@ erzeugen nur Review-Patches; ein Merge braucht fachliche Prüfung.
 ```bash
 nac legal-graph status
 nac legal-graph sources --format json
+nac legal-graph source-inventory --format json
 nac legal-graph review erbrecht --format json
 nac legal-graph update-dry-run erbrecht --format json
 ```
@@ -238,6 +239,10 @@ Credential-Betriebsmodell.
 Primärquellen-Manifeste werden zusätzlich als eigener Artefakttyp validiert,
 damit ein Update-Lauf keinen Kommentarzugriff, keine Provider-Abfrage und keine
 Credential-Pflicht einschleust.
+Das Quelleninventar-, Lizenz- und TDM-Gate ist über
+`nac legal-graph source-inventory --format json` als Statusfläche sichtbar. Der
+Befehl liest nur den Gate-Vertrag, zeigt keine Quellentexte an, erzeugt keinen
+Benchmark-Datensatz und startet kein Training.
 Der Spec-Traceability-Vertrag verbindet Issue, Spec, Plan, AC-IDs und
 Validierungsbefehle für spec-driven Arbeit.
 

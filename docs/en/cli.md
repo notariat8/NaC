@@ -102,7 +102,7 @@ nac time-ledger summary
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
 | Knowledge graphs | `nac kg status`, `nac kg workflow-contract <slug>` and `nac kg pilot-checklist <slug>` | Shows the state of usecase-local knowledge graphs, creates mandate-data-free workflow contract drafts and builds deterministic pilot intake checklists from a usecase KG. |
-| Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, review points and update patches without auto-merge. |
+| Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, source-inventory/license/TDM gates, review points and update patches without auto-merge. |
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
@@ -140,6 +140,7 @@ create review patches; a merge requires professional review.
 ```bash
 nac legal-graph status
 nac legal-graph sources --format json
+nac legal-graph source-inventory --format json
 nac legal-graph review erbrecht --format json
 nac legal-graph update-dry-run erbrecht --format json
 ```
@@ -235,6 +236,10 @@ status, AI-SBOM status, security boundary and credential operating model.
 Primary-source manifests are also validated as a separate artifact type so an
 update run cannot introduce commentary access, provider queries or credential
 requirements.
+The source-inventory, license and TDM gate is visible through
+`nac legal-graph source-inventory --format json`. The command only reads the
+gate contract, shows no source text, generates no benchmark dataset and starts
+no training.
 The spec traceability contract connects issue, spec, plan, AC IDs and
 validation commands for spec-driven work.
 
