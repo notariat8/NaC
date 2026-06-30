@@ -63,6 +63,7 @@ python scripts/nac.py kg pilot-checklist online-gmbh-gruendung
 python scripts/nac.py legal-graph status
 python scripts/nac.py legal-graph model-card-proposal
 python scripts/nac.py legal-graph ai-sbom-delta-proposal
+python scripts/nac.py ai-sbom export-mapping
 python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
@@ -85,6 +86,7 @@ nac kg pilot-checklist online-gmbh-gruendung
 nac legal-graph status
 nac legal-graph model-card-proposal
 nac legal-graph ai-sbom-delta-proposal
+nac ai-sbom export-mapping
 nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
@@ -108,6 +110,7 @@ nac time-ledger summary
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status`, `nac kg workflow-contract <slug>` und `nac kg pilot-checklist <slug>` | Zeigt den Stand der usecase-lokalen Wissensgraphen, erzeugt mandatsdatenfreie Workflow-Vertragsentwürfe und baut deterministische Pilot-Aufnahmechecklisten aus einem Usecase-KG. |
 | Legal Graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph model-card-proposal`, `nac legal-graph ai-sbom-delta-proposal`, `nac legal-graph review erbrecht` und `nac legal-graph update-dry-run erbrecht` | Zeigt den mandatsdatenfreien Rechtsgraphen, Primärquellen, Quelleninventar-/Lizenz-/TDM-Gates, Model-Card- und AI-SBOM-Delta-Vorschlag, Reviewpunkte und Update-Patches ohne Auto-Merge. |
+| AI-SBOM | `nac ai-sbom export-mapping` | Zeigt das gewählte CycloneDX-/SPDX-Export-Mapping, ohne Release-Export, externe Toolausführung, Mandatsdaten oder Secrets freizugeben. |
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
@@ -171,6 +174,19 @@ Der AI-SBOM-Delta-Vorschlag bleibt gleich begrenzt. Er zeigt spätere
 Komponenten, Kandidaten, Attestationen und Blockaden, aktiviert aber keine
 Runtime, keinen Endpunkt, kein Training, keine Evaluation und keinen
 Checkpoint.
+
+## `nac ai-sbom`
+
+Der Befehl zeigt repo-weite AI-SBOM-Governance-Artefakte. Das aktuelle
+Export-Mapping wählt CycloneDX JSON und SPDX JSON als Zielprofile, aktiviert
+aber keinen Release-Export und führt keine externen SBOM-Tools aus.
+
+```bash
+nac ai-sbom export-mapping --format json
+```
+
+Release-Bindung, Toolausführung und veröffentlichte Artefakte brauchen ein
+separates Owner-Apply-Gate.
 
 ## QMS- und ISO-9001-Schicht
 

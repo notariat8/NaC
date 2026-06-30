@@ -1,0 +1,108 @@
+{
+  "schema_version": "nac.ai-sbom-export-mapping/v0.1",
+  "artifact_id": "nac-ai-sbom-cyclonedx-spdx-export-mapping",
+  "status": "mapping_selected_no_release_export",
+  "last_update": "2026-06-30",
+  "source_documents": {
+    "ai_sbom_baseline": "sbom/ai/nac-ai-sbom-draft.json",
+    "sbom_for_ai_de": "docs/de/sbom-for-ai.md",
+    "sbom_for_ai_en": "docs/en/sbom-for-ai.md",
+    "sbom_products_de": "docs/de/sbom-products.md",
+    "sbom_products_en": "docs/en/sbom-products.md"
+  },
+  "scope": {
+    "release_export_enabled": false,
+    "external_tool_execution_enabled": false,
+    "dependency_scan_execution_enabled": false,
+    "model_runtime_inventory_enabled": false,
+    "mandate_data_allowed": false,
+    "secret_material_allowed": false,
+    "owner_apply_required_before_release_binding": true
+  },
+  "target_profiles": [
+    {
+      "id": "cyclonedx-json",
+      "format": "CycloneDX JSON",
+      "role": "component_and_ai_metadata_target",
+      "status": "selected_mapping_target_no_export",
+      "tooling_candidate": "cyclonedx-python",
+      "release_binding": "pending"
+    },
+    {
+      "id": "spdx-json",
+      "format": "SPDX JSON",
+      "role": "filesystem_and_artifact_inventory_target",
+      "status": "selected_mapping_target_no_export",
+      "tooling_candidate": "syft",
+      "release_binding": "pending"
+    }
+  ],
+  "cluster_mapping": [
+    {
+      "nac_cluster": "metadata",
+      "cyclonedx_target": "metadata.component.properties",
+      "spdx_target": "documentCreationInfo and packageAnnotations",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "system_level_properties",
+      "cyclonedx_target": "metadata.properties",
+      "spdx_target": "documentAnnotations",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "models",
+      "cyclonedx_target": "components with type machine-learning-model plus properties",
+      "spdx_target": "packages with AI model annotations",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "datasets",
+      "cyclonedx_target": "components with type data plus properties",
+      "spdx_target": "packages with dataset annotations",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "infrastructure",
+      "cyclonedx_target": "services and components",
+      "spdx_target": "packages and relationships",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "agent_tooling_candidates",
+      "cyclonedx_target": "components with tool governance properties",
+      "spdx_target": "packages with tool-governance annotations",
+      "required_before_release": false
+    },
+    {
+      "nac_cluster": "security_properties",
+      "cyclonedx_target": "properties and vulnerabilities placeholder",
+      "spdx_target": "annotations and externalRefs placeholder",
+      "required_before_release": true
+    },
+    {
+      "nac_cluster": "key_performance_indicators",
+      "cyclonedx_target": "properties",
+      "spdx_target": "annotations",
+      "required_before_release": false
+    }
+  ],
+  "required_release_evidence": [
+    "ai_sbom_baseline_ref",
+    "cyclonedx_json_ref",
+    "spdx_json_ref",
+    "tool_versions_ref",
+    "release_tag_ref",
+    "owner_apply_ref",
+    "no_mandate_data_attestation",
+    "no_secret_material_attestation"
+  ],
+  "blocked_actions": [
+    "attach_ai_sbom_to_release_without_owner_apply",
+    "run_external_sbom_tool_from_mapping",
+    "store_mandate_data_in_sbom_export",
+    "store_secret_material_in_sbom_export",
+    "claim_cyclonedx_or_spdx_compliance_without_generated_artifact",
+    "publish_release_bound_ai_sbom_without_review"
+  ]
+}

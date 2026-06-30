@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from nac_ai_sbom.export_mapping import load_export_mapping  # noqa: E402
+
 AI_SBOM_ROOT = REPO_ROOT / "sbom" / "ai"
 REQUIRED_FILES = [
     AI_SBOM_ROOT / "nac-ai-sbom-draft.json",
@@ -167,6 +174,10 @@ def main() -> int:
     errors: list[str] = []
     for path in REQUIRED_FILES:
         errors.extend(validate_file(path))
+    try:
+        load_export_mapping(REPO_ROOT)
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        errors.append(f"AI-SBOM-Export-Mapping ungueltig: {exc}")
 
     if errors:
         print("STATUS: FAILED")
@@ -175,7 +186,7 @@ def main() -> int:
         return 1
 
     print("STATUS: PASSED")
-    print("OK: AI-SBOM-Baseline ist vorhanden und enthaelt die Pflichtcluster.")
+    print("OK: AI-SBOM-Baseline und Export-Mapping sind vorhanden und enthalten die Pflichtcluster.")
     return 0
 
 
