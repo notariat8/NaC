@@ -176,6 +176,19 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("recht-bund-bgbl-data-access", sources)
         self.assertEqual(sources["recht-bund-bgbl-data-access"]["terms_review_ref"], "pending")
 
+    def test_legal_graph_model_card_proposal_cli_returns_gate_status(self) -> None:
+        rc, output = run_cli("legal-graph", "model-card-proposal", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        candidates = {item["id"]: item for item in payload["candidate_references"]}
+        self.assertEqual(payload["schema_version"], "nac.legal-model-card-proposal-status/v0.1")
+        self.assertEqual(payload["status"], "proposal_no_checkpoint_no_training")
+        self.assertTrue(payload["owner_apply_required_before_use"])
+        self.assertTrue(payload["no_mandate_data"])
+        self.assertTrue(payload["no_checkpoint_published"])
+        self.assertIn("nvidia-nemotron-pretraining-legal-v1", candidates)
+
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")
 

@@ -16,6 +16,7 @@ from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
+from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
 from nac_observability.time_ledger import (
@@ -293,6 +294,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Zeigt Quelleninventar-, Lizenz- und TDM-Gates ohne Ingestion.",
     )
     legal_graph_source_inventory.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_model_card = legal_graph_sub.add_parser(
+        "model-card-proposal",
+        help="Zeigt den metadata-only Model-Card-Vorschlag ohne Checkpoint.",
+    )
+    legal_graph_model_card.add_argument("--format", choices=["text", "json"], default="text")
     legal_graph_review = legal_graph_sub.add_parser(
         "review",
         help="Zeigt eine Review-Ansicht für eine Legal-Graph-Domäne.",
@@ -619,6 +625,21 @@ def command_legal_graph(args: argparse.Namespace) -> int:
                     f"- {item['source_id']}: {item['source_class']}, "
                     f"Lizenz: {item['license_status']}, TDM: {item['tdm_status']}"
                 )
+            return 0
+
+        if args.legal_graph_command == "model-card-proposal":
+            payload = legal_model_card_proposal_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Legal Model Card Proposal")
+            print(f"- Status: {payload['status']}")
+            print(f"- Abschnitte: {payload['sections']}")
+            print(f"- Keine Mandatsdaten: {payload['no_mandate_data']}")
+            print(f"- Kein Checkpoint: {payload['no_checkpoint_published']}")
+            print(f"- Owner-Apply vor Nutzung: {payload['owner_apply_required_before_use']}")
+            for item in payload["candidate_references"]:
+                print(f"- {item['id']}: {item['status']}")
             return 0
 
         if args.legal_graph_command == "review":

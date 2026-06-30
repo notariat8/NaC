@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status, load_domain_graph
+from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import load_source_manifest, legal_graph_source_status, legal_source_inventory_status
 
@@ -145,6 +146,19 @@ class LegalGraphTests(unittest.TestCase):
             "download_full_text_corpus_without_owner_apply",
             status["blocked_actions"],
         )
+
+    def test_model_card_proposal_status_reports_metadata_only_boundary(self) -> None:
+        status = legal_model_card_proposal_status(REPO_ROOT)
+        candidates = {item["id"]: item for item in status["candidate_references"]}
+
+        self.assertEqual(status["schema_version"], "nac.legal-model-card-proposal-status/v0.1")
+        self.assertEqual(status["status"], "proposal_no_checkpoint_no_training")
+        self.assertTrue(status["owner_apply_required_before_use"])
+        self.assertTrue(status["no_mandate_data"])
+        self.assertTrue(status["no_checkpoint_published"])
+        self.assertTrue(status["no_runtime_enabled"])
+        self.assertIn("nvidia-nemotron-pretraining-legal-v1", candidates)
+        self.assertIn("publish_checkpoint_from_model_card_proposal", status["blocked_actions"])
 
     def test_update_patch_works_for_all_primary_source_domains_without_commentary_changes(self) -> None:
         for domain in ("erbrecht", "familienrecht", "gesellschaftsrecht"):
