@@ -1,0 +1,140 @@
+{
+  "schema_version": "nac.legal-ai-sbom-delta-proposal/v0.1",
+  "artifact_id": "legal-nemotron-metadata-only-ai-sbom-delta-proposal",
+  "title": "Legal Nemotron Metadata-Only AI-SBOM Delta Proposal",
+  "status": "proposal_no_runtime_no_checkpoint",
+  "last_update": "2026-06-30",
+  "source_documents": {
+    "ai_sbom_baseline": "sbom/ai/nac-ai-sbom-draft.json",
+    "model_card_proposal": "workflows/legal-model/model-card-proposals/legal-nemotron-metadata-only.model-card.json",
+    "model_card_ai_sbom_delta_contract": "workflows/contracts/legal-model-card-ai-sbom-delta.contract.json",
+    "source_inventory_license_tdm_contract": "workflows/contracts/legal-source-inventory-license-tdm.contract.json",
+    "evaluation_benchmark_contract": "workflows/contracts/legal-model-evaluation-benchmark.contract.json"
+  },
+  "scope": {
+    "baseline_update_only": false,
+    "runtime_activation_enabled": false,
+    "endpoint_enabled": false,
+    "training_enabled": false,
+    "model_evaluation_executed": false,
+    "benchmark_dataset_generated": false,
+    "checkpoint_publication_enabled": false,
+    "mandate_data_allowed": false,
+    "publisher_full_text_allowed": false,
+    "owner_apply_required_before_runtime_or_checkpoint": true
+  },
+  "delta_components": [
+    {
+      "id": "base_model_or_checkpoint",
+      "status": "not_selected_no_checkpoint",
+      "summary": "No NaC model checkpoint, endpoint or runtime binding is selected. The delta records only future evidence fields required before any model artifact can be used.",
+      "evidence_ref": "model_card_ref:legal-nemotron-metadata-only-model-card-proposal"
+    },
+    {
+      "id": "dataset_candidates",
+      "status": "metadata_only",
+      "summary": "Dataset and source candidates are recorded as identifiers and review states only. No source text, publisher full text, benchmark rows or mandate data are stored.",
+      "evidence_ref": "source_inventory_ref:workflow.legal_source_inventory_license_tdm"
+    },
+    {
+      "id": "legal_source_inventory",
+      "status": "license_tdm_review_pending",
+      "summary": "The legal source inventory still requires terms, attribution, TDM and source hierarchy review before ingestion or benchmark generation.",
+      "evidence_ref": "license_tdm_review_ref:pending"
+    },
+    {
+      "id": "training_or_evaluation_runtime",
+      "status": "not_enabled",
+      "summary": "No training, evaluation execution, model call, GPU job, endpoint or container runtime is enabled by this proposal.",
+      "evidence_ref": "runtime_config_ref:not_applicable"
+    },
+    {
+      "id": "third_party_services",
+      "status": "not_bound",
+      "summary": "No third-party service or hosted model endpoint is activated. Any later service use requires AVV/DPA, secret handling, AI-SBOM and owner-apply review.",
+      "evidence_ref": "third_party_service_ref:none"
+    },
+    {
+      "id": "license_and_tdm_status",
+      "status": "pending_review",
+      "summary": "License and TDM status are unresolved for productive use. The delta cannot authorize source ingestion, training or benchmark generation.",
+      "evidence_ref": "tdm_review_ref:pending"
+    },
+    {
+      "id": "risk_controls",
+      "status": "active_boundary",
+      "summary": "Risk controls block legal-answer quality claims, source-text storage, mandate-data use, checkpoint publication and runtime activation before owner apply.",
+      "evidence_ref": "risk_controls_ref:workflow.legal_model_card_ai_sbom_delta"
+    },
+    {
+      "id": "human_review_boundary",
+      "status": "required_before_use",
+      "summary": "Later use needs notarial subject-matter review, AI governance review, source-license review and explicit owner apply.",
+      "evidence_ref": "human_review_protocol_ref:pending"
+    }
+  ],
+  "candidate_components": [
+    {
+      "id": "nvidia-nemotron-pretraining-legal-v1",
+      "component_type": "dataset_candidate",
+      "sbom_role": "candidate_no_runtime_no_ingestion",
+      "status": "license_tdm_and_jurisdiction_review_required",
+      "blocked_before_owner_apply": [
+        "fine_tune_model",
+        "publish_checkpoint",
+        "claim_german_law_coverage"
+      ]
+    },
+    {
+      "id": "recht-bund-bgbl-data-access",
+      "component_type": "official_publication_access_candidate",
+      "sbom_role": "source_inventory_candidate_no_fulltext",
+      "status": "terms_tdm_and_bulk_access_review_required",
+      "blocked_before_owner_apply": [
+        "download_full_text_corpus",
+        "normalize_full_text_for_training",
+        "generate_benchmark_rows"
+      ]
+    },
+    {
+      "id": "wikipedia-rechtsquelle-concept-reference",
+      "component_type": "concept_reference",
+      "sbom_role": "non_authoritative_reference_candidate",
+      "status": "attribution_and_disclosure_required",
+      "blocked_before_owner_apply": [
+        "treat_as_primary_legal_source",
+        "train_as_authoritative_law",
+        "claim_legal_truth"
+      ]
+    }
+  ],
+  "attestations": {
+    "no_mandate_data": true,
+    "no_source_text_stored": true,
+    "no_checkpoint_published": true,
+    "no_runtime_enabled": true,
+    "no_endpoint_enabled": true,
+    "no_quality_claim": true,
+    "no_secret_material": true
+  },
+  "blocked_actions": [
+    "activate_model_endpoint_from_ai_sbom_delta",
+    "publish_checkpoint_from_ai_sbom_delta",
+    "train_from_ai_sbom_delta",
+    "execute_model_evaluation_from_ai_sbom_delta",
+    "store_source_text_in_ai_sbom_delta",
+    "store_mandate_data_in_ai_sbom_delta",
+    "claim_legal_answer_quality_from_ai_sbom_delta",
+    "generate_benchmark_rows_without_owner_apply"
+  ],
+  "next_required_evidence": [
+    "approved_model_card_ref",
+    "approved_ai_sbom_delta_ref",
+    "license_review_ref",
+    "tdm_review_ref",
+    "source_inventory_ref",
+    "evaluation_ref",
+    "runtime_config_ref",
+    "owner_apply_ref"
+  ]
+}
