@@ -25,6 +25,7 @@ erst danach eine technische Integration planen.
 | NVIDIA Nemotron Pretraining Legal v1 | [Hugging Face](https://huggingface.co/datasets/nvidia/Nemotron-Pretraining-Legal-v1) | Quellen-/Lizenzprüfung nötig | Englischer Legal-Pretraining-Datensatz als Baseline-/Evaluationskandidat; keine deutsche Rechtsquelle, kein Trainingsstart und keine Checkpoint-Veröffentlichung ohne Owner-Apply, AI-SBOM, Lizenz- und Model-Card-Review. |
 | recht.bund.de Datenabruf | [Bundesgesetzblatt Datenabruf](https://www.recht.bund.de/de/service/webservice/webservice_node.html) | Amtliche Quelle prüfen | Systematischer BGBl.-Abruf über ELI, PDF, ZIP und RSS als späterer Ingest-Kandidat; kein Bulk-Crawl, kein PDF-Finetuning und keine Normalisierung ohne Nutzungs-, Lizenz- und Review-Plan. |
 | Rechtsquelle-Begriff | [Wikipedia Rechtsquelle](https://de.wikipedia.org/wiki/Rechtsquelle) | Begrifflicher Anker | Nur zur Trennung von Rechtsquelle, Rechtserkenntnisquelle, Normenhierarchie und Kollisionsregeln; keine Primärquelle und kein Trainingskorpus. |
+| Open Legal Products Mike | [GitHub](https://github.com/Open-Legal-Products/mike) | Referenzprodukt, keine Integration | AGPL-3.0 OSS-Legal-AI-Plattform mit Dokumentversionierung, zitierpflichtiger Extraktion, tabellarischen Reviews und MCP-Connector-Mustern; NaC nutzt nur Produkt- und Architekturbeobachtungen, keinen Code, keine Installation und keine Mandatsdaten. |
 
 Alle URLs werden ohne Trackingparameter geführt. Die maschinenlesbare Grenze
 steht im
@@ -41,6 +42,9 @@ steht im
   menschliche fachliche Prüfung und die versionierte NaC-Freigabe.
 - Keine Portal-Scraping- oder TDM-Annahme ohne ausdrückliche Rechts- und
   Anbieterprüfung.
+- Keine Übernahme von AGPL-Code, Referenzprodukt-Runtime oder
+  Produktarchitektur ohne separate Lizenz-, AI-SBOM-, Sicherheits- und
+  Architekturentscheidung.
 - Kein Fine-tuning, keine Checkpoint-Veröffentlichung und keine Nutzung als
   Rechtsantwortsystem ohne separaten Quellen-, Lizenz-, Evaluations-,
   Model-Card-, AI-SBOM- und Owner-Apply-Nachweis.

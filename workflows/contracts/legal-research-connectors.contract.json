@@ -3,7 +3,7 @@
   "contract_id": "workflow.legal_research_connectors",
   "title": "Legal Research Connector Candidates",
   "status": "candidate_backlog",
-  "last_update": "2026-05-22",
+  "last_update": "2026-06-30",
   "purpose": "Record external German-law research connector candidates as a reviewed watchlist without creating product integrations, credentials, automated queries or real mandate-data processing.",
   "candidate_policy": {
     "credentials_allowed_in_repo": false,
@@ -401,6 +401,57 @@
         "license_review"
       ],
       "notes": "Concept anchor for distinguishing source hierarchy, source-of-law classes and collision rules. It is not a primary legal source and not a training corpus."
+    },
+    {
+      "id": "open-legal-products-mike-reference",
+      "display_name": "Open Legal Products Mike",
+      "provider": "Open Legal Products",
+      "source_type": "reference_product_candidate",
+      "status": "reference_only_external_product_candidate",
+      "integration_level": "none",
+      "canonical_url": "https://github.com/Open-Legal-Products/mike",
+      "source_seen_at": "2026-06-30",
+      "credentials_required": true,
+      "credentials_in_repo_allowed": false,
+      "personal_data_allowed": false,
+      "llm_receives_source_content": false,
+      "tdm_or_scraping_allowed": "not_applicable",
+      "license_review_required": true,
+      "avv_dpa_required_before_personal_data": true,
+      "ai_sbom_status": "pending",
+      "allowed_actions": [
+        "document_candidate",
+        "record_research_metadata",
+        "record_license_status",
+        "plan_manual_review"
+      ],
+      "blocked_actions": [
+        "store_credentials",
+        "store_secret_material",
+        "send_mandate_data_to_external_ai",
+        "automated_provider_query_without_contract",
+        "treat_ai_answer_as_legal_truth",
+        "store_provider_full_text_in_product_repo",
+        "copy_agpl_code_without_license_decision",
+        "deploy_reference_product_with_nac_data",
+        "treat_reference_product_as_nac_architecture"
+      ],
+      "evidence_fields": [
+        "source_url",
+        "checked_at",
+        "checked_by",
+        "license_basis",
+        "data_classes",
+        "notes"
+      ],
+      "human_review_required_for": [
+        "activation",
+        "code_adoption",
+        "license_review",
+        "ai_sbom_decision",
+        "personal_data_processing"
+      ],
+      "notes": "AGPL-3.0 OSS AI legal platform with Next.js, Express, Supabase/Postgres, S3-compatible storage, model-provider adapters, MCP connector patterns, document versioning, citation-bound extraction and tabular reviews. NaC treats it as reference-only product research; no fork, install, code copy, provider connection, mandate-data processing or architecture substitution is authorized."
     }
   ]
 }

@@ -42,6 +42,7 @@ LICENSE_REVIEW_SOURCE_TYPES = {
     "training_dataset_candidate",
     "official_publication_data_access",
     "concept_reference",
+    "reference_product_candidate",
 }
 AI_OR_MCP_SOURCE_TYPES = {
     "mcp_server_listing",
@@ -49,6 +50,7 @@ AI_OR_MCP_SOURCE_TYPES = {
     "ai_answer_product",
     "market_landscape",
     "training_dataset_candidate",
+    "reference_product_candidate",
 }
 REQUIRED_EVIDENCE_FIELDS = {"source_url", "checked_at", "checked_by", "data_classes", "notes"}
 REQUIRED_BLOCKED_ACTIONS = {
@@ -155,6 +157,14 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
             errors.append(f"{candidate_id}: amtlicher Datenabruf muss bulk_crawl_without_terms_review blockieren")
         if source_type == "concept_reference" and "treat_concept_reference_as_primary_legal_source" not in candidate.get("blocked_actions", []):
             errors.append(f"{candidate_id}: Begriffshinweis muss treat_concept_reference_as_primary_legal_source blockieren")
+        if source_type == "reference_product_candidate":
+            for action in (
+                "copy_agpl_code_without_license_decision",
+                "deploy_reference_product_with_nac_data",
+                "treat_reference_product_as_nac_architecture",
+            ):
+                if action not in candidate.get("blocked_actions", []):
+                    errors.append(f"{candidate_id}: Referenzprodukt muss {action} blockieren")
 
         allowed_actions = set(_string_list(candidate.get("allowed_actions")))
         blocked_actions = set(_string_list(candidate.get("blocked_actions")))
