@@ -17,7 +17,7 @@ from nac_identity.customer_onboarding import build_customer_tenant_plan, build_l
 from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.patches import build_update_patch
-from nac_legal_graph.sources import legal_graph_source_status
+from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
 from nac_observability.time_ledger import (
     CATEGORY_CHOICES,
     append_entry,
@@ -288,6 +288,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Zeigt Primärquellen-Manifeste und Zugriffspolitik.",
     )
     legal_graph_sources.add_argument("--format", choices=["text", "json"], default="text")
+    legal_graph_source_inventory = legal_graph_sub.add_parser(
+        "source-inventory",
+        help="Zeigt Quelleninventar-, Lizenz- und TDM-Gates ohne Ingestion.",
+    )
+    legal_graph_source_inventory.add_argument("--format", choices=["text", "json"], default="text")
     legal_graph_review = legal_graph_sub.add_parser(
         "review",
         help="Zeigt eine Review-Ansicht für eine Legal-Graph-Domäne.",
@@ -596,6 +601,23 @@ def command_legal_graph(args: argparse.Namespace) -> int:
                 print(
                     f"- {item['domain']}: {item['source_id']}, "
                     f"{item['retrieval_mode']}, Kommentarzugriff: {item['commentary_access_allowed']}"
+                )
+            return 0
+
+        if args.legal_graph_command == "source-inventory":
+            payload = legal_source_inventory_status(repo_root)
+            if args.format == "json":
+                print_json(payload)
+                return 0
+            print("NaC Legal Source Inventory")
+            print(f"- Status: {payload['status']}")
+            print(f"- Quellen: {payload['sources']}")
+            print(f"- Planung ohne Ingestion: {payload['planning_only']}")
+            print(f"- Owner-Apply vor Ingestion: {payload['owner_apply_required_before_ingestion']}")
+            for item in payload["source_status"]:
+                print(
+                    f"- {item['source_id']}: {item['source_class']}, "
+                    f"Lizenz: {item['license_status']}, TDM: {item['tdm_status']}"
                 )
             return 0
 

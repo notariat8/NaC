@@ -160,6 +160,22 @@ class NaCCliTests(unittest.TestCase):
             self.assertEqual(source["retrieval_mode"], "metadata_only_fixture")
             self.assertFalse(source["commentary_access_allowed"])
 
+    def test_legal_graph_source_inventory_cli_returns_gate_status(self) -> None:
+        rc, output = run_cli("legal-graph", "source-inventory", "--format", "json")
+
+        self.assertEqual(rc, 0, output)
+        payload = json.loads(output)
+        sources = {item["source_id"]: item for item in payload["source_status"]}
+        self.assertEqual(payload["schema_version"], "nac.legal-source-inventory-status/v0.1")
+        self.assertEqual(payload["sources"], 3)
+        self.assertTrue(payload["planning_only"])
+        self.assertFalse(payload["source_text_ingestion_enabled"])
+        self.assertFalse(payload["benchmark_dataset_generated"])
+        self.assertFalse(payload["model_training_enabled"])
+        self.assertTrue(payload["owner_apply_required_before_ingestion"])
+        self.assertIn("recht-bund-bgbl-data-access", sources)
+        self.assertEqual(sources["recht-bund-bgbl-data-access"]["terms_review_ref"], "pending")
+
     def test_legal_graph_review_cli_returns_json(self) -> None:
         rc, output = run_cli("legal-graph", "review", "erbrecht", "--format", "json")
 

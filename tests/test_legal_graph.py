@@ -8,7 +8,7 @@ from pathlib import Path
 
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status, load_domain_graph
 from nac_legal_graph.patches import build_update_patch
-from nac_legal_graph.sources import load_source_manifest, legal_graph_source_status
+from nac_legal_graph.sources import load_source_manifest, legal_graph_source_status, legal_source_inventory_status
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -121,6 +121,30 @@ class LegalGraphTests(unittest.TestCase):
         for source in sources.values():
             self.assertEqual(source["retrieval_mode"], "metadata_only_fixture")
             self.assertFalse(source["commentary_access_allowed"])
+
+    def test_source_inventory_status_reports_license_tdm_gate_without_ingestion(self) -> None:
+        status = legal_source_inventory_status(REPO_ROOT)
+        sources = {item["source_id"]: item for item in status["source_status"]}
+
+        self.assertEqual(status["schema_version"], "nac.legal-source-inventory-status/v0.1")
+        self.assertEqual(status["status"], "source_inventory_readiness_no_ingestion")
+        self.assertEqual(status["sources"], 3)
+        self.assertTrue(status["planning_only"])
+        self.assertFalse(status["source_text_ingestion_enabled"])
+        self.assertFalse(status["benchmark_dataset_generated"])
+        self.assertFalse(status["model_training_enabled"])
+        self.assertTrue(status["owner_apply_required_before_ingestion"])
+        self.assertIn("nvidia-nemotron-pretraining-legal-v1", sources)
+        self.assertIn("recht-bund-bgbl-data-access", sources)
+        self.assertIn("wikipedia-rechtsquelle-concept-reference", sources)
+        self.assertEqual(
+            sources["recht-bund-bgbl-data-access"]["tdm_status"],
+            "tdm_and_bulk_access_terms_require_review",
+        )
+        self.assertIn(
+            "download_full_text_corpus_without_owner_apply",
+            status["blocked_actions"],
+        )
 
     def test_update_patch_works_for_all_primary_source_domains_without_commentary_changes(self) -> None:
         for domain in ("erbrecht", "familienrecht", "gesellschaftsrecht"):
