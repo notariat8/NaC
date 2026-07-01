@@ -36,8 +36,8 @@ und
 ## Public-Origin
 
 Public-Origin ist in Produktions-Smokes Pflichtkonfiguration. Der Runtime-Smoke
-darf nicht auf eine hardcodierte oder zufällig erzeugte `trycloudflare.com`-
-Adresse zurückfallen. Zulässige Quellen sind, in dieser Reihenfolge:
+darf nicht auf eine hardcodierte, zufällig erzeugte oder provider-spezifische
+Tunnel-Domain zurückfallen. Zulässige Quellen sind, in dieser Reihenfolge:
 
 1. explizit gesetztes `NAC_PUBLIC_ORIGIN`,
 2. nicht-sensitive Target-Control-Konfiguration
@@ -50,10 +50,10 @@ temporäre Tunnel ist `NAC_PUBLIC_ORIGIN=... bin/nac-runtime-smoke
 zum Produktions-Default.
 
 Produktions-Smokes müssen eine feste, DNS-gestützte Domain verwenden.
-`*.trycloudflare.com` ist nur ein temporärer Demo- oder Diagnose-Override und
-darf nicht als Produktionswert in `config/public-origin` stehen. Ein Smoke mit
-temporärer Tunnel-Origin bestätigt höchstens die Erreichbarkeit des
-Zielsystems, aber nicht die Produktionsreife der Public-Origin-Schicht.
+Temporäre Tunnel-Origins sind nur ein Demo- oder Diagnose-Override und dürfen
+nicht als Produktionswert in `config/public-origin` stehen. Ein Smoke mit
+temporärer Tunnel-Origin bestätigt höchstens die Erreichbarkeit des Zielsystems,
+aber nicht die Produktionsreife der Public-Origin-Schicht.
 
 ## Blockiert
 
