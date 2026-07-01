@@ -1,7 +1,7 @@
 # NaC-On-Prem-Agent-Runtime
 
 Status: Vertrags- und Zielsystemgrenze
-Letzte inhaltliche Anpassung: 2026-06-30
+Letzte inhaltliche Anpassung: 2026-07-01
 
 ## Zweck
 
@@ -60,6 +60,19 @@ Zielsystem-Smoke vorbereitet, aber noch nicht ausgeführt. Er darf nur vorhanden
 NemoClaw-/OpenClaw-Statussignale lesen und redigierte Evidence erzeugen; er darf
 keine Installation, kein Onboarding, keinen Rebuild, keine Policy-Änderung,
 keinen authentifizierten Dashboard-Link und keine Runtime-Mutation auslösen.
+
+## Public-Origin Und Feste Domain
+
+Die produktive On-Prem-Agent-Runtime braucht für öffentliche Erreichbarkeit eine
+feste, DNS-gestützte Domain. Zufällig erzeugte Tunnel-Origins wie
+`*.trycloudflare.com` sind nur für Demo- oder Diagnose-Smokes zulässig und
+bestätigen nicht die Produktionsreife.
+
+Der konkrete Hostname wird nicht im NaC-Repo hardcodiert. Er wird als
+nicht-sensitive Zielsystemkonfiguration in
+`/home/ubuntu/nac-target-control/config/public-origin` oder als explizites
+`NAC_PUBLIC_ORIGIN` für einzelne Smokes gesetzt. Die Domain-, TLS- und
+Reverse-Proxy-Einrichtung bleibt ein separater Owner-gated Betriebsschritt.
 
 ## Agentenrollen
 

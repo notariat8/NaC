@@ -1,7 +1,7 @@
 # NaC Runtime-Smoke Evidence
 
 Evidence-Status: nur Vorlage
-Template-Version: 2026-06-30
+Template-Version: 2026-07-01
 Contract-Status: `ready_owner_gated_not_executed`
 
 ## Umfang
@@ -26,6 +26,9 @@ Contract-Status: `ready_owner_gated_not_executed`
 - [ ] Kein Installations-, Onboarding-, Rebuild- oder Policy-Apply-Auftrag.
 - [ ] Public-Origin-Konfiguration wurde explizit über `NAC_PUBLIC_ORIGIN`
       oder `config/public-origin` bereitgestellt.
+- [ ] Für Produktions-Smokes zeigt die Public-Origin auf eine feste,
+      DNS-gestützte Domain; temporäre Tunnel sind als nicht-produktiver
+      Override gekennzeichnet.
 - [ ] Keine Secrets, personenbezogenen Daten, PINs, Gateway-Tokens,
       Dashboard-Auth-URLs, Schlüssel, Zertifikatsmaterialien oder Mandatsdaten.
 - [ ] Kein GitHub-Write vom Zielsystem.
@@ -39,7 +42,9 @@ Nur nicht-sensitive Statuswerte erfassen:
 - `bin/nac-target-smoke` Ergebnis:
 - `bin/nac-runtime-smoke --summary-only` Ergebnis:
 - Public-Origin-Quelle: `NAC_PUBLIC_ORIGIN | config/public-origin | missing`
+- Public-Origin-Klasse: `fixed_domain | temporary_tunnel | missing | redacted`
 - Public-Origin-Ergebnis: `reachable | unreachable | not_checked | redacted`
+- Produktionsgeeignete Public-Origin: `yes | no | not_checked`
 - `nemoclaw` CLI erkannt:
 - Sandbox-Status: `running | stopped | not_found | not_checked | redacted`
 - Gateway-/Dashboard-Status: `reachable | unreachable | not_checked | redacted`
@@ -49,7 +54,7 @@ Nur nicht-sensitive Statuswerte erfassen:
 
 ## Ergebnis
 
-- Ergebnis: `not_run | passed | blocked_missing_runtime | blocked_missing_cli | blocked_missing_public_origin | blocked_policy`
+- Ergebnis: `not_run | passed | blocked_missing_runtime | blocked_missing_cli | blocked_missing_public_origin | blocked_temporary_public_origin | blocked_policy`
 - Zusammenfassung:
 - Folgearbeit erforderlich:
 - Erforderlicher NaC-Repo-Change:
