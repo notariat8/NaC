@@ -36,8 +36,8 @@ and
 ## Public Origin
 
 Public origin is required configuration for production smokes. The runtime
-smoke must not fall back to a hardcoded or randomly generated
-`trycloudflare.com` address. The allowed sources are, in this order:
+smoke must not fall back to a hardcoded, randomly generated or
+provider-specific tunnel domain. The allowed sources are, in this order:
 
 1. explicitly set `NAC_PUBLIC_ORIGIN`,
 2. non-sensitive target-control configuration
@@ -48,11 +48,11 @@ clear status such as `blocked_missing_public_origin`. For demos or temporary
 tunnels, `NAC_PUBLIC_ORIGIN=... bin/nac-runtime-smoke --summary-only` remains
 allowed; the random tunnel address does not become the production default.
 
-Production smokes must use a fixed, DNS-backed domain. `*.trycloudflare.com` is
-only a temporary demo or diagnostic override and must not be stored as the
-production value in `config/public-origin`. A smoke with a temporary tunnel
-origin confirms at most target-system reachability, not production readiness of
-the public-origin layer.
+Production smokes must use a fixed, DNS-backed domain. Temporary tunnel origins
+are only demo or diagnostic overrides and must not be stored as the production
+value in `config/public-origin`. A smoke with a temporary tunnel origin confirms
+at most target-system reachability, not production readiness of the
+public-origin layer.
 
 ## Blocked
 

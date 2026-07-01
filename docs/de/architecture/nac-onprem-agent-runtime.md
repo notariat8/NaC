@@ -65,8 +65,8 @@ keinen authentifizierten Dashboard-Link und keine Runtime-Mutation auslösen.
 
 Die produktive On-Prem-Agent-Runtime braucht für öffentliche Erreichbarkeit eine
 feste, DNS-gestützte Domain. Zufällig erzeugte Tunnel-Origins wie
-`*.trycloudflare.com` sind nur für Demo- oder Diagnose-Smokes zulässig und
-bestätigen nicht die Produktionsreife.
+provider-spezifische Tunnel-Domains sind nur für Demo- oder Diagnose-Smokes
+zulässig und bestätigen nicht die Produktionsreife.
 
 Der konkrete Hostname wird nicht im NaC-Repo hardcodiert. Er wird als
 nicht-sensitive Zielsystemkonfiguration in

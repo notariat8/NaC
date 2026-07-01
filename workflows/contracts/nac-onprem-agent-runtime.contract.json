@@ -77,7 +77,7 @@
       "production_public_origin_requires_fixed_domain": true,
       "production_public_origin_dns_backed_required": true,
       "temporary_tunnel_origin_allowed_for_demo_only": true,
-      "temporary_tunnel_origin_host_suffix": ".trycloudflare.com",
+      "temporary_tunnel_origin_provider_specific_production_default_allowed": false,
       "temporary_tunnel_origin_production_allowed": false,
       "hardcoded_public_origin_default_allowed": false,
       "quick_tunnel_origin_default_allowed": false,

@@ -64,8 +64,8 @@ dashboard-link retrieval or runtime mutation.
 ## Public Origin And Fixed Domain
 
 The production on-prem agent runtime needs a fixed, DNS-backed domain for public
-reachability. Random tunnel origins such as `*.trycloudflare.com` are allowed
-only for demo or diagnostic smokes and do not confirm production readiness.
+reachability. Random provider-specific tunnel domains are allowed only for demo
+or diagnostic smokes and do not confirm production readiness.
 
 The concrete hostname is not hardcoded in the NaC repository. It is supplied as
 non-sensitive target-system configuration in

@@ -73,7 +73,6 @@ REQUIRED_RUNTIME_SMOKE = {
     "target_evidence_file_pattern": "evidence/nac-runtime-smoke-YYYY-MM-DD.md",
     "public_origin_env": "NAC_PUBLIC_ORIGIN",
     "public_origin_config_path": "config/public-origin",
-    "temporary_tunnel_origin_host_suffix": ".trycloudflare.com",
 }
 REQUIRED_RUNTIME_SMOKE_TRUE_FLAGS = {
     "owner_apply_required_before_execution",
@@ -94,6 +93,7 @@ REQUIRED_RUNTIME_SMOKE_FALSE_FLAGS = {
     "oci_write_performed",
     "secrets_required",
     "matter_data_required",
+    "temporary_tunnel_origin_provider_specific_production_default_allowed",
     "temporary_tunnel_origin_production_allowed",
     "hardcoded_public_origin_default_allowed",
     "quick_tunnel_origin_default_allowed",
@@ -420,10 +420,12 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (RUNTIME_SMOKE_RUNBOOK_DE, "Owner Apply Approval for NaC runtime smoke"),
         (RUNTIME_SMOKE_RUNBOOK_DE, "Public-Origin ist in Produktions-Smokes Pflichtkonfiguration"),
         (RUNTIME_SMOKE_RUNBOOK_DE, "Produktions-Smokes müssen eine feste, DNS-gestützte Domain verwenden"),
+        (RUNTIME_SMOKE_RUNBOOK_DE, "provider-spezifische"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Status: prepared, owner-gated not executed"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Owner Apply Approval for NaC runtime smoke"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Public origin is required configuration for production smokes"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Production smokes must use a fixed, DNS-backed domain"),
+        (RUNTIME_SMOKE_RUNBOOK_EN, "provider-specific tunnel domain"),
         (OPERATIONS_DE, "ponytail-skill-only-smoke.md"),
         (OPERATIONS_DE, "nac-runtime-smoke.md"),
         (OPERATIONS_EN, "ponytail-skill-only-smoke.md"),
