@@ -3,7 +3,7 @@
   "contract_id": "workflow.nac_onprem_agent_runtime",
   "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
   "status": "target_control_ready_no_productive_connector_apply",
-  "last_update": "2026-06-30",
+  "last_update": "2026-07-01",
   "purpose": "Definiert die Grenze, in der NaC als agentische On-Prem-Plattform auf notoclaw01 mit NemoClaw/OpenClaw vorbereitet wird, ohne NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz zu umgehen.",
   "operating_model": {
     "project_manager": {
@@ -74,6 +74,11 @@
       "public_origin_env": "NAC_PUBLIC_ORIGIN",
       "public_origin_config_path": "config/public-origin",
       "public_origin_required": true,
+      "production_public_origin_requires_fixed_domain": true,
+      "production_public_origin_dns_backed_required": true,
+      "temporary_tunnel_origin_allowed_for_demo_only": true,
+      "temporary_tunnel_origin_host_suffix": ".trycloudflare.com",
+      "temporary_tunnel_origin_production_allowed": false,
       "hardcoded_public_origin_default_allowed": false,
       "quick_tunnel_origin_default_allowed": false,
       "owner_apply_required_before_execution": true,

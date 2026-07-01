@@ -1,7 +1,7 @@
 # NaC Runtime Smoke
 
 Status: prepared, owner-gated not executed
-Last content update: 2026-06-30
+Last content update: 2026-07-01
 
 ## Purpose
 
@@ -48,6 +48,12 @@ clear status such as `blocked_missing_public_origin`. For demos or temporary
 tunnels, `NAC_PUBLIC_ORIGIN=... bin/nac-runtime-smoke --summary-only` remains
 allowed; the random tunnel address does not become the production default.
 
+Production smokes must use a fixed, DNS-backed domain. `*.trycloudflare.com` is
+only a temporary demo or diagnostic override and must not be stored as the
+production value in `config/public-origin`. A smoke with a temporary tunnel
+origin confirms at most target-system reachability, not production readiness of
+the public-origin layer.
+
 ## Blocked
 
 - no installation and no `curl ... | bash` installer,
@@ -78,12 +84,14 @@ activation, installation, onboarding or a production connection.
 1. Check the contract state from the NaC repository.
 2. Run `/home/ubuntu/nac-target-control/bin/nac-target-smoke`.
 3. Confirm the public origin from `NAC_PUBLIC_ORIGIN` or
-   `/home/ubuntu/nac-target-control/config/public-origin`.
+   `/home/ubuntu/nac-target-control/config/public-origin` and classify it as a
+   fixed domain or temporary tunnel.
 4. Run `/home/ubuntu/nac-target-control/bin/nac-runtime-smoke --summary-only`.
 5. If the runtime smoke names a sandbox, check only `nemoclaw <name> status`
    read-only.
 6. Write evidence with result `passed`, `blocked_missing_runtime`,
-   `blocked_missing_cli`, `blocked_missing_public_origin` or `blocked_policy`.
+   `blocked_missing_cli`, `blocked_missing_public_origin`,
+   `blocked_temporary_public_origin` or `blocked_policy`.
 7. Hand off to the Project Manager if a NaC repository change, architecture
    decision, secret or owner gate is needed for the next step.
 

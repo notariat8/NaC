@@ -1,7 +1,7 @@
 # NaC On-Prem Agent Runtime
 
 Status: contract and target-system boundary
-Last content update: 2026-06-30
+Last content update: 2026-07-01
 
 ## Purpose
 
@@ -60,6 +60,18 @@ next target-system smoke, but it has not been executed yet. It may only read
 existing NemoClaw/OpenClaw status signals and produce redacted evidence; it must
 not trigger installation, onboarding, rebuild, policy changes, authenticated
 dashboard-link retrieval or runtime mutation.
+
+## Public Origin And Fixed Domain
+
+The production on-prem agent runtime needs a fixed, DNS-backed domain for public
+reachability. Random tunnel origins such as `*.trycloudflare.com` are allowed
+only for demo or diagnostic smokes and do not confirm production readiness.
+
+The concrete hostname is not hardcoded in the NaC repository. It is supplied as
+non-sensitive target-system configuration in
+`/home/ubuntu/nac-target-control/config/public-origin` or as an explicit
+`NAC_PUBLIC_ORIGIN` for individual smokes. Domain, TLS and reverse-proxy setup
+remain a separate owner-gated operations step.
 
 ## Agent Roles
 
