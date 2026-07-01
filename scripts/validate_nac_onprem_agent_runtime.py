@@ -71,9 +71,12 @@ REQUIRED_RUNTIME_SMOKE = {
     "evidence_template": "workflows/evidence-templates/nac-runtime-smoke.md",
     "target_evidence_directory": "/home/ubuntu/nac-target-control/evidence",
     "target_evidence_file_pattern": "evidence/nac-runtime-smoke-YYYY-MM-DD.md",
+    "public_origin_env": "NAC_PUBLIC_ORIGIN",
+    "public_origin_config_path": "config/public-origin",
 }
 REQUIRED_RUNTIME_SMOKE_TRUE_FLAGS = {
     "owner_apply_required_before_execution",
+    "public_origin_required",
 }
 REQUIRED_RUNTIME_SMOKE_FALSE_FLAGS = {
     "execution_performed",
@@ -87,6 +90,8 @@ REQUIRED_RUNTIME_SMOKE_FALSE_FLAGS = {
     "oci_write_performed",
     "secrets_required",
     "matter_data_required",
+    "hardcoded_public_origin_default_allowed",
+    "quick_tunnel_origin_default_allowed",
 }
 REQUIRED_AGENT_ROLES_OR_NAMES = {
     "main",
@@ -406,8 +411,10 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (RUNBOOK_EN, "ponytail-skill-only-smoke-2026-06-29.md"),
         (RUNTIME_SMOKE_RUNBOOK_DE, "Status: vorbereitet, Owner-gated nicht ausgeführt"),
         (RUNTIME_SMOKE_RUNBOOK_DE, "Owner Apply Approval for NaC runtime smoke"),
+        (RUNTIME_SMOKE_RUNBOOK_DE, "Public-Origin ist in Produktions-Smokes Pflichtkonfiguration"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Status: prepared, owner-gated not executed"),
         (RUNTIME_SMOKE_RUNBOOK_EN, "Owner Apply Approval for NaC runtime smoke"),
+        (RUNTIME_SMOKE_RUNBOOK_EN, "Public origin is required configuration for production smokes"),
         (OPERATIONS_DE, "ponytail-skill-only-smoke.md"),
         (OPERATIONS_DE, "nac-runtime-smoke.md"),
         (OPERATIONS_EN, "ponytail-skill-only-smoke.md"),
@@ -416,6 +423,7 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (EVIDENCE_TEMPLATE, "candidate_not_installed"),
         (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "Evidence-Status: nur Vorlage"),
         (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "ready_owner_gated_not_executed"),
+        (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "Public-Origin-Konfiguration"),
         (QUALITY_DE, "nac_onprem_agent_runtime"),
         (QUALITY_EN, "nac_onprem_agent_runtime"),
     ):

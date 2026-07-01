@@ -33,6 +33,22 @@ und
   [workflows/evidence-templates/nac-runtime-smoke.md](../../../workflows/evidence-templates/nac-runtime-smoke.md)
   unter `/home/ubuntu/nac-target-control/evidence/` ablegen.
 
+## Public-Origin
+
+Public-Origin ist in Produktions-Smokes Pflichtkonfiguration. Der Runtime-Smoke
+darf nicht auf eine hardcodierte oder zufällig erzeugte `trycloudflare.com`-
+Adresse zurückfallen. Zulässige Quellen sind, in dieser Reihenfolge:
+
+1. explizit gesetztes `NAC_PUBLIC_ORIGIN`,
+2. nicht-sensitive Target-Control-Konfiguration
+   `/home/ubuntu/nac-target-control/config/public-origin`.
+
+Fehlt die Public-Origin, muss `bin/nac-runtime-smoke` fail-closed mit einem
+klaren Status wie `blocked_missing_public_origin` enden. Für Demos oder
+temporäre Tunnel ist `NAC_PUBLIC_ORIGIN=... bin/nac-runtime-smoke
+--summary-only` zulässig; die zufällige Tunnel-Adresse wird dadurch aber nicht
+zum Produktions-Default.
+
 ## Blockiert
 
 - keine Installation und kein `curl ... | bash`-Installer,
@@ -66,13 +82,16 @@ Produktivverbindung.
 
 1. Contract-Stand aus dem NaC-Repo prüfen.
 2. `/home/ubuntu/nac-target-control/bin/nac-target-smoke` ausführen.
-3. `/home/ubuntu/nac-target-control/bin/nac-runtime-smoke --summary-only`
+3. Public-Origin aus `NAC_PUBLIC_ORIGIN` oder
+   `/home/ubuntu/nac-target-control/config/public-origin` bestätigen.
+4. `/home/ubuntu/nac-target-control/bin/nac-runtime-smoke --summary-only`
    ausführen.
-4. Falls der Runtime-Smoke eine Sandbox nennt, nur `nemoclaw <name> status`
+5. Falls der Runtime-Smoke eine Sandbox nennt, nur `nemoclaw <name> status`
    read-only prüfen.
-5. Evidence mit Ergebnis `passed`, `blocked_missing_runtime`,
-   `blocked_missing_cli` oder `blocked_policy` schreiben.
-6. Handoff an den Project Manager geben, falls eine NaC-Repo-Änderung,
+6. Evidence mit Ergebnis `passed`, `blocked_missing_runtime`,
+   `blocked_missing_cli`, `blocked_missing_public_origin` oder
+   `blocked_policy` schreiben.
+7. Handoff an den Project Manager geben, falls eine NaC-Repo-Änderung,
    Architekturentscheidung, ein Secret oder ein Owner-Gate für den nächsten
    Schritt nötig ist.
 

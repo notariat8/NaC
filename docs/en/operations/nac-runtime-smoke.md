@@ -33,6 +33,21 @@ and
   [workflows/evidence-templates/nac-runtime-smoke.md](../../../workflows/evidence-templates/nac-runtime-smoke.md)
   under `/home/ubuntu/nac-target-control/evidence/`.
 
+## Public Origin
+
+Public origin is required configuration for production smokes. The runtime
+smoke must not fall back to a hardcoded or randomly generated
+`trycloudflare.com` address. The allowed sources are, in this order:
+
+1. explicitly set `NAC_PUBLIC_ORIGIN`,
+2. non-sensitive target-control configuration
+   `/home/ubuntu/nac-target-control/config/public-origin`.
+
+If the public origin is missing, `bin/nac-runtime-smoke` must fail closed with a
+clear status such as `blocked_missing_public_origin`. For demos or temporary
+tunnels, `NAC_PUBLIC_ORIGIN=... bin/nac-runtime-smoke --summary-only` remains
+allowed; the random tunnel address does not become the production default.
+
 ## Blocked
 
 - no installation and no `curl ... | bash` installer,
@@ -62,12 +77,14 @@ activation, installation, onboarding or a production connection.
 
 1. Check the contract state from the NaC repository.
 2. Run `/home/ubuntu/nac-target-control/bin/nac-target-smoke`.
-3. Run `/home/ubuntu/nac-target-control/bin/nac-runtime-smoke --summary-only`.
-4. If the runtime smoke names a sandbox, check only `nemoclaw <name> status`
+3. Confirm the public origin from `NAC_PUBLIC_ORIGIN` or
+   `/home/ubuntu/nac-target-control/config/public-origin`.
+4. Run `/home/ubuntu/nac-target-control/bin/nac-runtime-smoke --summary-only`.
+5. If the runtime smoke names a sandbox, check only `nemoclaw <name> status`
    read-only.
-5. Write evidence with result `passed`, `blocked_missing_runtime`,
-   `blocked_missing_cli` or `blocked_policy`.
-6. Hand off to the Project Manager if a NaC repository change, architecture
+6. Write evidence with result `passed`, `blocked_missing_runtime`,
+   `blocked_missing_cli`, `blocked_missing_public_origin` or `blocked_policy`.
+7. Hand off to the Project Manager if a NaC repository change, architecture
    decision, secret or owner gate is needed for the next step.
 
 ## Completion Criterion
