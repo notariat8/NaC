@@ -10,6 +10,7 @@ CONTRACT = REPO_ROOT / "workflows" / "contracts" / "agent-control-api.contract.j
 REGISTRY_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "agent-runtime-registry.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "agent-control-api.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "agent-control-api.md"
+SERVER = REPO_ROOT / "src" / "nac_web" / "server.py"
 
 REQUIRED_ROUTES = {
     ("GET", "/agent/status"),
@@ -81,6 +82,7 @@ def validate() -> list[str]:
     errors.extend(_validate_contract(contract))
     errors.extend(_validate_registry_parity(contract, registry))
     errors.extend(_validate_docs())
+    errors.extend(_validate_route_implementation())
     return errors
 
 
@@ -106,7 +108,7 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     expected = {
         "schema_version": "nac.agent-control-api/v0.1",
         "contract_id": "runtime.agent_control_api",
-        "status": "contract_first_no_route_apply",
+        "status": "metadata_route_handlers_implemented_no_route_apply",
     }
     for key, value in expected.items():
         if payload.get(key) != value:
@@ -203,14 +205,20 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     else:
         for flag in (
             "nac_web_route_implementation_in_scope",
+            "metadata_route_handlers_implemented",
+            "connector_control_metadata_test_auth_requires_local_env",
+        ):
+            if boundary.get(flag) is not True:
+                errors.append(f"implementation_boundary.{flag} must be true")
+        for flag in (
             "oci_gateway_apply_in_scope",
             "notoclaw_connector_start_in_scope",
             "atp_schema_apply_in_scope",
         ):
             if boundary.get(flag) is not False:
                 errors.append(f"implementation_boundary.{flag} must be false")
-        if boundary.get("contract_and_validator_only") is not True:
-            errors.append("implementation_boundary.contract_and_validator_only must be true")
+        if boundary.get("contract_and_validator_only") is not False:
+            errors.append("implementation_boundary.contract_and_validator_only must be false")
 
     owner_gates = set(_strings(payload.get("owner_gates")))
     for missing in sorted(REQUIRED_OWNER_GATES - owner_gates):
@@ -255,14 +263,14 @@ def _validate_docs() -> list[str]:
             "GET /agent/status",
             "POST /api/agent/heartbeat",
             "tenant + user + vorgang + rolle",
-            "keine Routenimplementierung",
+            "metadata-only Routenimplementierung",
         ],
         DOC_EN: [
             "Agent Control API For agent.notariat8.de",
             "GET /agent/status",
             "POST /api/agent/heartbeat",
             "tenant + user + matter + role",
-            "no route implementation",
+            "metadata-only route implementation",
         ],
     }
     for path, markers in required.items():
@@ -274,6 +282,32 @@ def _validate_docs() -> list[str]:
         for marker in markers:
             if marker not in text:
                 errors.append(f"{path.relative_to(REPO_ROOT)} missing marker {marker}")
+    return errors
+
+
+def _validate_route_implementation() -> list[str]:
+    errors: list[str] = []
+    if not SERVER.is_file():
+        errors.append(f"missing server implementation: {SERVER.relative_to(REPO_ROOT)}")
+        return errors
+    text = SERVER.read_text(encoding="utf-8")
+    _reject_prohibited_text(SERVER, text, errors)
+    for method, route in sorted(REQUIRED_ROUTES):
+        if f'"{route}"' not in text:
+            errors.append(f"server implementation missing route {method} {route}")
+    for marker in (
+        "raw_mandate_data_loaded",
+        "secret_material_loaded",
+        "dashboard_token_captured",
+        "oci_gateway_apply_performed",
+        "atp_schema_apply_performed",
+        "notoclaw_connector_started",
+        "blocked_payload_field",
+        "active_lease_required",
+        "NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER",
+    ):
+        if marker not in text:
+            errors.append(f"server implementation missing marker {marker}")
     return errors
 
 

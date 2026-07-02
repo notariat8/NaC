@@ -170,6 +170,8 @@ class NaCLocalWebApp:
                     runtime_metadata_source=self.first_matter_runtime_metadata_source,
                 )
                 return _html_response(page, status)
+            if route == "/agent/status":
+                return self._agent_status_api(headers or {})
             if route == "/onboarding/readiness":
                 return _html_response(build_customer_readiness_page(parsed.query, dns_resolver=self.dns_resolver))
             if route == "/onboarding/dns-check":
@@ -193,6 +195,8 @@ class NaCLocalWebApp:
                 return self._tenant_domain_check_api(parsed.query)
             if route == "/api/tenant/login-intent":
                 return self._tenant_login_intent_api(parsed.query)
+            if route == "/api/agent/work/next":
+                return self._agent_work_next_api(headers or {})
             if route == "/api/bpmn-moddle":
                 return _json_text_response((self.repo_root / "bpmn" / "nac-moddle.json").read_text(encoding="utf-8"))
             if route.startswith("/bpmn/"):
@@ -215,10 +219,23 @@ class NaCLocalWebApp:
             return _html_response(_layout("Ungültiges Modell", f"<p>{html.escape(str(exc))}</p>"), HTTPStatus.BAD_REQUEST)
         return _html_response(_layout("Nicht Gefunden", "<p>Diese lokale NaC-Seite gibt es nicht.</p>"), HTTPStatus.NOT_FOUND)
 
-    def handle_post(self, path: str, body: bytes) -> tuple[int, str, bytes]:
+    def handle_post(
+        self,
+        path: str,
+        body: bytes,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[int, str, bytes]:
         parsed = urlparse(path)
         route = unquote(parsed.path)
         try:
+            if route == "/agent/leases/prepare":
+                return self._agent_lease_prepare_api(headers or {}, body)
+            if route == "/api/agent/connect":
+                return self._agent_connector_api(headers or {}, body, action="connect")
+            if route == "/api/agent/heartbeat":
+                return self._agent_connector_api(headers or {}, body, action="heartbeat")
+            if route == "/api/agent/work/result":
+                return self._agent_connector_api(headers or {}, body, action="work_result")
             if route.startswith("/api/bpmn/"):
                 return self._bpmn_api_post(route.removeprefix("/api/bpmn/"), body)
             if route == "/api/gnotkg/quote":
@@ -239,6 +256,87 @@ class NaCLocalWebApp:
         except ValueError as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
         return _json_response({"error": "Diese lokale NaC-POST-Route gibt es nicht."}, HTTPStatus.NOT_FOUND)
+
+    def _agent_status_api(self, headers: dict[str, str]) -> tuple[int, str, bytes]:
+        access = _evaluate_workspace_access(
+            headers,
+            secret_text_provider=self.secret_text_provider,
+            session_store=self.session_store,
+        )
+        if access["status"] != "open":
+            return _agent_fail_closed_response("agent_session_required")
+        return _json_response(
+            _agent_metadata_payload(
+                status="prepared",
+                reason_class="metadata_only_no_active_lease",
+                lease_status="not_prepared",
+            )
+        )
+
+    def _agent_lease_prepare_api(self, headers: dict[str, str], body: bytes) -> tuple[int, str, bytes]:
+        access = _evaluate_workspace_access(
+            headers,
+            secret_text_provider=self.secret_text_provider,
+            session_store=self.session_store,
+        )
+        if access["status"] != "open":
+            return _agent_fail_closed_response("agent_session_required")
+        payload = _safe_json_object(body)
+        if _contains_agent_control_blocked_fields(payload):
+            return _agent_fail_closed_response("blocked_payload_field")
+        return _json_response(
+            _agent_metadata_payload(
+                status="prepared",
+                reason_class="lease_prepare_metadata_only",
+                lease_status="prepared",
+                extra={
+                    "sandbox_binding_id": "sandbox-binding.pending",
+                    "sandbox_lease_id": "sandbox-lease.pending",
+                    "expires_at": "not_issued_without_atp",
+                },
+            ),
+            HTTPStatus.ACCEPTED,
+        )
+
+    def _agent_connector_api(
+        self,
+        headers: dict[str, str],
+        body: bytes,
+        *,
+        action: str,
+    ) -> tuple[int, str, bytes]:
+        if not _connector_control_authorized(headers):
+            return _agent_fail_closed_response("connector_auth_required")
+        payload = _safe_json_object(body)
+        if _contains_agent_control_blocked_fields(payload):
+            return _agent_fail_closed_response("blocked_payload_field")
+        status_by_action = {
+            "connect": "connected_metadata_received",
+            "heartbeat": "heartbeat_metadata_received",
+            "work_result": "work_result_metadata_received",
+        }
+        return _json_response(
+            _agent_metadata_payload(
+                status=status_by_action[action],
+                reason_class="connector_control_metadata_only",
+                lease_status="not_mutated",
+            ),
+            HTTPStatus.ACCEPTED,
+        )
+
+    def _agent_work_next_api(self, headers: dict[str, str]) -> tuple[int, str, bytes]:
+        if not _connector_control_authorized(headers):
+            return _agent_fail_closed_response("connector_auth_required")
+        if not _workspace_header_bool(headers, "X-NaC-Agent-Lease-Active"):
+            return _agent_fail_closed_response("active_lease_required")
+        return _json_response(
+            _agent_metadata_payload(
+                status="no_work",
+                reason_class="metadata_only_no_work_envelope",
+                lease_status="active",
+                extra={"work_envelope_id": "none"},
+            )
+        )
 
     def _onboarding_request_post(self, query: str, body: bytes) -> tuple[int, str, bytes]:
         params = parse_qs(query, keep_blank_values=True)
@@ -634,7 +732,13 @@ def build_server(repo_root: Path, host: str, port: int) -> ThreadingHTTPServer:
 
         def do_POST(self) -> None:  # noqa: N802
             length = int(self.headers.get("Content-Length", "0"))
-            self._send_app_response(app.handle_post(self.path, self.rfile.read(length)))
+            self._send_app_response(
+                app.handle_post(
+                    self.path,
+                    self.rfile.read(length),
+                    headers=dict(self.headers.items()),
+                )
+            )
 
         def log_message(self, format: str, *args: Any) -> None:
             sanitized_args = tuple(_sanitize_request_log_text(str(arg)) for arg in args)
@@ -1281,6 +1385,105 @@ def _workspace_role_from_binding_or_header(bindings: dict[str, bool], headers: d
     if bindings.get("role_bound"):
         return "nac-tenant-admin"
     return _request_header(headers, "X-NaC-Role")
+
+
+AGENT_CONTROL_BLOCKED_FIELDS = {
+    "id_token",
+    "access_token",
+    "refresh_token",
+    "session_cookie",
+    "provider_claims",
+    "dashboard_token",
+    "private_key",
+    "client_secret",
+    "environment_dump",
+    "raw_mandate_content",
+    "document_full_text",
+    "card_pin",
+    "xnp_payload",
+}
+
+
+def _agent_metadata_payload(
+    *,
+    status: str,
+    reason_class: str,
+    lease_status: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema_version": "nac.agent-control-api/v0.1",
+        "request_id": "local.metadata-only",
+        "tenant_id": "server_session",
+        "user_binding_id": "server_session",
+        "agent_id": "nac-onprem",
+        "endpoint_id": "notoclaw01.outbound",
+        "sandbox_binding_id": "",
+        "sandbox_lease_id": "",
+        "lease_status": lease_status,
+        "redacted_health_state": "not_connected_in_contract_slice",
+        "work_envelope_id": "",
+        "status": status,
+        "reason_class": reason_class,
+        "created_at": "runtime_generated",
+        "expires_at": "",
+        "raw_mandate_data_loaded": False,
+        "secret_material_loaded": False,
+        "dashboard_token_captured": False,
+        "oci_gateway_apply_performed": False,
+        "atp_schema_apply_performed": False,
+        "notoclaw_connector_started": False,
+    }
+    if extra:
+        for key, value in extra.items():
+            if key in AGENT_CONTROL_BLOCKED_FIELDS:
+                continue
+            payload[key] = value
+    return payload
+
+
+def _agent_fail_closed_response(reason_class: str) -> tuple[int, str, bytes]:
+    return _json_response(
+        _agent_metadata_payload(
+            status="closed",
+            reason_class=reason_class,
+            lease_status="closed",
+        ),
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+def _safe_json_object(body: bytes) -> dict[str, Any]:
+    if not body.strip():
+        return {}
+    payload = json.loads(body.decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("agent_control_payload_must_be_object")
+    return payload
+
+
+def _contains_agent_control_blocked_fields(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if str(key).lower() in AGENT_CONTROL_BLOCKED_FIELDS:
+                return True
+            if _contains_agent_control_blocked_fields(nested):
+                return True
+    if isinstance(value, list):
+        return any(_contains_agent_control_blocked_fields(item) for item in value)
+    return False
+
+
+def _connector_control_authorized(headers: dict[str, str]) -> bool:
+    metadata_auth_enabled = os.environ.get("NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER", "").strip().lower()
+    if metadata_auth_enabled not in {"1", "true", "yes", "on"}:
+        return False
+    return _request_header(headers, "X-NaC-Connector-Authenticated").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def build_operator_access_required_page() -> str:

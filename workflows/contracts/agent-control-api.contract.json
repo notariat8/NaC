@@ -2,9 +2,9 @@
   "schema_version": "nac.agent-control-api/v0.1",
   "contract_id": "runtime.agent_control_api",
   "title": "Agent Control API Boundary",
-  "status": "contract_first_no_route_apply",
+  "status": "metadata_route_handlers_implemented_no_route_apply",
   "last_update": "2026-07-02",
-  "purpose": "Defines the allowed OCI/BFF API boundary for agent.notariat8.de and the outbound notoclaw01 connector before any live route, gateway apply, connector start or private payload access.",
+  "purpose": "Defines the allowed OCI/BFF API boundary for agent.notariat8.de and the outbound notoclaw01 connector with local metadata-only route handlers before any productive gateway route, gateway apply, connector start or private payload access.",
   "public_origin": {
     "hostname": "agent.notariat8.de",
     "edge": "oci_identity_api_gateway_or_bff",
@@ -117,11 +117,13 @@
     "shared_sandbox_for_multiple_users_allowed": false
   },
   "implementation_boundary": {
-    "nac_web_route_implementation_in_scope": false,
+    "nac_web_route_implementation_in_scope": true,
+    "metadata_route_handlers_implemented": true,
+    "connector_control_metadata_test_auth_requires_local_env": true,
     "oci_gateway_apply_in_scope": false,
     "notoclaw_connector_start_in_scope": false,
     "atp_schema_apply_in_scope": false,
-    "contract_and_validator_only": true
+    "contract_and_validator_only": false
   },
   "owner_gates": [
     "route_implementation",
