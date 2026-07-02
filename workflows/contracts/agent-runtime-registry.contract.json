@@ -1,0 +1,167 @@
+{
+  "schema_version": "nac.agent-runtime-registry/v0.1",
+  "contract_id": "runtime.agent_registry",
+  "title": "Agent Runtime Registry And Sandbox Lease Contract",
+  "status": "contract_first_no_schema_apply",
+  "last_update": "2026-07-02",
+  "purpose": "Defines the first ATP-backed metadata boundary for agent registration, sandbox binding and sandbox leases in the Variant C outbound connector architecture, without applying schema, starting sandboxes or exposing the raw NemoClaw/OpenClaw UI.",
+  "public_entry": {
+    "hostname": "agent.notariat8.de",
+    "edge": "oci_identity_api_gateway_or_bff",
+    "browser_to_brev_allowed": false,
+    "raw_notoclaw_ui_publication_allowed": false,
+    "cloudflare_dependency_allowed": false
+  },
+  "transport": {
+    "productive_default": "outbound_mtls_or_websocket_https_from_notoclaw_to_oci",
+    "ssh_user_traffic_allowed": false,
+    "ssh_operations_diagnostics_allowed": true,
+    "connector_origin": "notoclaw01",
+    "target_runtime": "NemoClaw/OpenClaw"
+  },
+  "atp_schema_artifact": {
+    "status": "artifact_only_no_apply",
+    "path": "deploy/database/atp-agent-runtime-registry-schema.sql",
+    "tables": [
+      {
+        "name": "nac_agent_registry",
+        "purpose": "Approved agent types, runtime class and capability metadata."
+      },
+      {
+        "name": "nac_agent_endpoints",
+        "purpose": "Outbound connector endpoint registration and redacted health state."
+      },
+      {
+        "name": "nac_sandbox_bindings",
+        "purpose": "Tenant, user, role, optional matter and sandbox reference binding."
+      },
+      {
+        "name": "nac_sandbox_leases",
+        "purpose": "Active or revoked lease for a sandbox binding."
+      },
+      {
+        "name": "nac_agent_session_bindings",
+        "purpose": "Server-side binding between an authenticated session and a sandbox lease."
+      }
+    ],
+    "guardrails": {
+      "idempotent_create_only": true,
+      "drop_or_truncate_allowed": false,
+      "raw_mandate_payload_columns_allowed": false,
+      "secret_columns_allowed": false,
+      "token_columns_allowed": false,
+      "json_payload_check_required": true,
+      "tenant_boundary_required": true,
+      "lease_expiry_required": true
+    }
+  },
+  "entities": [
+    {
+      "id": "agent_registry",
+      "table": "nac_agent_registry",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "agent_type",
+        "runtime_class",
+        "approved_capability_names",
+        "git_contract_reference"
+      ],
+      "blocked_data_classes": [
+        "secrets",
+        "tokens",
+        "raw_mandate_content"
+      ]
+    },
+    {
+      "id": "agent_endpoints",
+      "table": "nac_agent_endpoints",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "connector_status",
+        "redacted_health_state",
+        "target_host_label"
+      ],
+      "blocked_data_classes": [
+        "private_keys",
+        "dashboard_tokens",
+        "env_dump"
+      ]
+    },
+    {
+      "id": "sandbox_bindings",
+      "table": "nac_sandbox_bindings",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "tenant_user_role_binding",
+        "matter_reference_optional",
+        "sandbox_reference"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "personal_identifier_dump",
+        "openclaw_workspace_payload"
+      ]
+    },
+    {
+      "id": "sandbox_leases",
+      "table": "nac_sandbox_leases",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "lease_status",
+        "expiry_metadata",
+        "revocation_metadata"
+      ],
+      "blocked_data_classes": [
+        "tokens",
+        "secrets",
+        "raw_mandate_content"
+      ]
+    },
+    {
+      "id": "agent_session_bindings",
+      "table": "nac_agent_session_bindings",
+      "allowed_data_classes": [
+        "safe_metadata_only",
+        "session_reference_hash",
+        "lease_reference",
+        "server_side_status"
+      ],
+      "blocked_data_classes": [
+        "raw_mandate_content",
+        "session_cookie",
+        "id_token",
+        "access_token",
+        "provider_claim_dump"
+      ]
+    }
+  ],
+  "allocation_policy": {
+    "minimum_isolation_key": "tenant_user",
+    "preferred_isolation_key": "tenant_user_matter_role",
+    "shared_sandbox_for_multiple_users_allowed": false,
+    "active_lease_required_before_reuse": true,
+    "matter_context_requires_private_payload_gate": true
+  },
+  "owner_gates": [
+    "productive_schema_apply",
+    "connector_credential_material",
+    "mtls_material_import",
+    "productive_connector_start",
+    "sandbox_auto_start_policy",
+    "private_payload_access"
+  ],
+  "blocked_actions_without_separate_owner_gate": [
+    "oci_resource_manager_apply",
+    "atp_schema_apply",
+    "notoclaw_runtime_mutation",
+    "dashboard_token_capture",
+    "secret_read_or_write",
+    "raw_mandate_data_processing",
+    "direct_publication_of_raw_openclaw_ui"
+  ],
+  "validation_commands": [
+    "python scripts/validate_agent_runtime_registry.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py"
+  ]
+}

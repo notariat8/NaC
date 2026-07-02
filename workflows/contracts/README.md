@@ -89,6 +89,11 @@ Jeder Vertrag soll definieren:
   outbound Connector-Zielbild, ATP-gestützter Agent-/Sandbox-Lease-Bindung,
   bestandenem Ponytail Skill-Only Smoke, vorbereitetem NaC Runtime-Smoke,
   Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
+- [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
+  Vertrag für die ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
+  Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter
+  `agent.notariat8.de`, ohne produktiven Schema-Apply, Secrets oder
+  Mandatsdaten.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](notarial-onprem-connector-boundaries.contract.json):
   Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
   und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen
