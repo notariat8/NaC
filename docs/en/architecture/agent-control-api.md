@@ -1,14 +1,15 @@
 # Agent Control API For agent.notariat8.de
 
-Status: API boundary contract, no route implementation and no apply
+Status: metadata-only route implementation, no gateway or runtime apply
 Last content update: 2026-07-02
 
 ## Purpose
 
 This page describes the allowed API boundary between OCI/BFF,
 `agent.notariat8.de`, ATP and the outbound connector on `notoclaw01`. It builds
-on the [agent runtime registry](agent-runtime-registry.md) and defines no
-productive route, API Gateway apply or connector start.
+on the [agent runtime registry](agent-runtime-registry.md) and defines local
+metadata-only handlers without a productive gateway route, API Gateway apply or
+connector start.
 
 The machine-readable contract is
 [workflows/contracts/agent-control-api.contract.json](../../../workflows/contracts/agent-control-api.contract.json)
@@ -46,9 +47,21 @@ non-revoked lease. Expired or revoked leases fail closed. The minimum
 isolation remains `tenant + user`; the preferred key is
 `tenant + user + matter + role`.
 
+## Implementation Boundary
+
+`src/nac_web/server.py` implements the routes as local BFF handlers. These
+handlers return metadata only, fail closed without a verified session or active
+lease, and explicitly mark that no raw matter data, secrets, dashboard tokens,
+ATP schema apply, OCI Gateway apply or `notoclaw01` connector start happened.
+
+Connector-control routes do not accept a header by itself in this slice. The
+local metadata-only test path also requires
+`NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER=true`; productive mTLS or
+signed-connector authentication remains separately owner-gated.
+
 ## Non-Goals
 
-- no route implementation in `src/nac_web/server.py`,
+- no productive API Gateway route,
 - no OCI API Gateway apply,
 - no ATP schema apply,
 - no start or restart of the `notoclaw01` connector,

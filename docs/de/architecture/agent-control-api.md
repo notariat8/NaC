@@ -1,6 +1,6 @@
 # Agent-Control-API Für agent.notariat8.de
 
-Status: API-Grenzvertrag, keine Routenimplementierung und kein Apply
+Status: metadata-only Routenimplementierung, kein Gateway- oder Runtime-Apply
 Letzte inhaltliche Anpassung: 2026-07-02
 
 ## Zweck
@@ -8,7 +8,8 @@ Letzte inhaltliche Anpassung: 2026-07-02
 Diese Seite beschreibt die zulässige API-Grenze zwischen OCI/BFF,
 `agent.notariat8.de`, ATP und dem outbound Connector auf `notoclaw01`. Sie baut
 auf der [Agent-Runtime-Registry](agent-runtime-registry.md) auf und definiert
-noch keine produktive Route, keinen API-Gateway-Apply und keinen Connector-Start.
+lokale metadata-only Handler ohne produktive Gateway-Route, ohne
+API-Gateway-Apply und ohne Connector-Start.
 
 Der maschinenlesbare Vertrag steht in
 [workflows/contracts/agent-control-api.contract.json](../../../workflows/contracts/agent-control-api.contract.json)
@@ -48,9 +49,22 @@ widerrufene Lease antworten. Abgelaufene oder widerrufene Leases schlagen
 fail-closed fehl. Die Mindestisolierung bleibt `tenant + user`; bevorzugt ist
 `tenant + user + vorgang + rolle`.
 
+## Implementierungsgrenze
+
+`src/nac_web/server.py` implementiert die Routen als lokale BFF-Handler. Diese
+Handler liefern nur Metadaten, schlagen ohne geprüfte Sitzung oder aktive Lease
+fail-closed fehl und markieren explizit, dass keine Rohmandatsdaten, keine
+Secrets, keine Dashboard-Tokens, kein ATP-Schema-Apply, kein OCI-Gateway-Apply
+und kein `notoclaw01` Connector-Start erfolgt sind.
+
+Connector-Control-Routen akzeptieren in diesem Slice keinen Header allein. Der
+lokale metadata-only Testpfad benötigt zusätzlich
+`NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER=true`; produktive
+mTLS- oder Signed-Connector-Authentifizierung bleibt separat owner-gated.
+
 ## Nicht-Ziele
 
-- keine Routenimplementierung in `src/nac_web/server.py`,
+- keine produktive API-Gateway-Route,
 - kein OCI API-Gateway-Apply,
 - kein ATP-Schema-Apply,
 - kein Start oder Neustart des `notoclaw01` Connectors,

@@ -200,6 +200,160 @@ class NaCLocalWebTests(unittest.TestCase):
         quote_payload = json.loads(quote_body.decode("utf-8"))
         self.assertEqual(quote_payload["fee_amount"], "4138.00")
 
+    def test_agent_status_fails_closed_without_server_session(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, content_type, body = app.handle("/agent/status")
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 403)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["schema_version"], "nac.agent-control-api/v0.1")
+        self.assertEqual(payload["status"], "closed")
+        self.assertEqual(payload["reason_class"], "agent_session_required")
+        self.assertFalse(payload["raw_mandate_data_loaded"])
+        self.assertFalse(payload["secret_material_loaded"])
+        self.assertFalse(payload["dashboard_token_captured"])
+        self.assertNotIn("access_token", payload)
+        self.assertNotIn("document_full_text", payload)
+
+    def test_agent_status_returns_metadata_only_for_bound_session(self) -> None:
+        app, cookie_header = _bound_workspace_app_and_cookie()
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, content_type, body = app.handle("/agent/status", headers={"Cookie": cookie_header})
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 200)
+        self.assertEqual(content_type, "application/json; charset=utf-8")
+        self.assertEqual(payload["status"], "prepared")
+        self.assertEqual(payload["lease_status"], "not_prepared")
+        self.assertEqual(payload["agent_id"], "nac-onprem")
+        self.assertEqual(payload["endpoint_id"], "notoclaw01.outbound")
+        self.assertFalse(payload["oci_gateway_apply_performed"])
+        self.assertFalse(payload["atp_schema_apply_performed"])
+        self.assertFalse(payload["notoclaw_connector_started"])
+
+    def test_agent_lease_prepare_is_metadata_only_and_blocks_private_payload(self) -> None:
+        app, cookie_header = _bound_workspace_app_and_cookie()
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            status, _content_type, body = app.handle_post(
+                "/agent/leases/prepare",
+                json.dumps({"agent_id": "nac-onprem"}).encode("utf-8"),
+                headers={"Cookie": cookie_header},
+            )
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 202)
+        self.assertEqual(payload["status"], "prepared")
+        self.assertEqual(payload["lease_status"], "prepared")
+        self.assertEqual(payload["reason_class"], "lease_prepare_metadata_only")
+        self.assertFalse(payload["raw_mandate_data_loaded"])
+
+        with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
+            blocked_status, _blocked_type, blocked_body = app.handle_post(
+                "/agent/leases/prepare",
+                json.dumps({"raw_mandate_content": "not allowed"}).encode("utf-8"),
+                headers={"Cookie": cookie_header},
+            )
+        blocked_payload = json.loads(blocked_body.decode("utf-8"))
+
+        self.assertEqual(blocked_status, 403)
+        self.assertEqual(blocked_payload["reason_class"], "blocked_payload_field")
+        self.assertNotIn("not allowed", blocked_body.decode("utf-8"))
+
+    def test_agent_connector_routes_require_connector_auth_and_active_lease_for_work(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        unauth_status, _unauth_type, unauth_body = app.handle_post(
+            "/api/agent/heartbeat",
+            json.dumps({"redacted_health_state": "ok"}).encode("utf-8"),
+        )
+        unauth_payload = json.loads(unauth_body.decode("utf-8"))
+        self.assertEqual(unauth_status, 403)
+        self.assertEqual(unauth_payload["reason_class"], "connector_auth_required")
+
+        headers = {"X-NaC-Connector-Authenticated": "true"}
+        header_only_status, _header_only_type, header_only_body = app.handle_post(
+            "/api/agent/connect",
+            json.dumps({"endpoint_id": "notoclaw01.outbound", "redacted_health_state": "ok"}).encode("utf-8"),
+            headers=headers,
+        )
+        header_only_payload = json.loads(header_only_body.decode("utf-8"))
+        self.assertEqual(header_only_status, 403)
+        self.assertEqual(header_only_payload["reason_class"], "connector_auth_required")
+
+        with patch.dict(os.environ, {"NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER": "true"}, clear=False):
+            connect_status, _connect_type, connect_body = app.handle_post(
+                "/api/agent/connect",
+                json.dumps({"endpoint_id": "notoclaw01.outbound", "redacted_health_state": "ok"}).encode("utf-8"),
+                headers=headers,
+            )
+        connect_payload = json.loads(connect_body.decode("utf-8"))
+        self.assertEqual(connect_status, 202)
+        self.assertEqual(connect_payload["status"], "connected_metadata_received")
+        self.assertFalse(connect_payload["dashboard_token_captured"])
+
+        with patch.dict(os.environ, {"NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER": "true"}, clear=False):
+            no_lease_status, _no_lease_type, no_lease_body = app.handle(
+                "/api/agent/work/next",
+                headers=headers,
+            )
+        no_lease_payload = json.loads(no_lease_body.decode("utf-8"))
+        self.assertEqual(no_lease_status, 403)
+        self.assertEqual(no_lease_payload["reason_class"], "active_lease_required")
+
+        with patch.dict(os.environ, {"NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER": "true"}, clear=False):
+            work_status, _work_type, work_body = app.handle(
+                "/api/agent/work/next",
+                headers={**headers, "X-NaC-Agent-Lease-Active": "true"},
+            )
+        work_payload = json.loads(work_body.decode("utf-8"))
+        self.assertEqual(work_status, 200)
+        self.assertEqual(work_payload["status"], "no_work")
+        self.assertEqual(work_payload["lease_status"], "active")
+        self.assertEqual(work_payload["work_envelope_id"], "none")
+
+    def test_agent_connector_result_accepts_metadata_under_local_test_auth_only(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        status, _content_type, body = app.handle_post(
+            "/api/agent/work/result",
+            json.dumps({"result": {"status": "done"}}).encode("utf-8"),
+            headers={"X-NaC-Connector-Authenticated": "true"},
+        )
+        payload = json.loads(body.decode("utf-8"))
+        self.assertEqual(status, 403)
+        self.assertEqual(payload["reason_class"], "connector_auth_required")
+
+        with patch.dict(os.environ, {"NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER": "true"}, clear=False):
+            status, _content_type, body = app.handle_post(
+                "/api/agent/work/result",
+                json.dumps({"result": {"status": "done"}}).encode("utf-8"),
+                headers={"X-NaC-Connector-Authenticated": "true"},
+            )
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 202)
+        self.assertEqual(payload["status"], "work_result_metadata_received")
+        self.assertEqual(payload["reason_class"], "connector_control_metadata_only")
+
+    def test_agent_connector_result_blocks_secret_fields(self) -> None:
+        app = NaCLocalWebApp(REPO_ROOT)
+
+        with patch.dict(os.environ, {"NAC_AGENT_CONTROL_ALLOW_METADATA_CONNECTOR_HEADER": "true"}, clear=False):
+            status, _content_type, body = app.handle_post(
+                "/api/agent/work/result",
+                json.dumps({"result": {"dashboard_token": "secret-dashboard-token"}}).encode("utf-8"),
+                headers={"X-NaC-Connector-Authenticated": "true"},
+            )
+        payload = json.loads(body.decode("utf-8"))
+
+        self.assertEqual(status, 403)
+        self.assertEqual(payload["reason_class"], "blocked_payload_field")
+        self.assertNotIn("secret-dashboard-token", body.decode("utf-8"))
+
     def test_runtime_server_supports_head_healthz_for_lb_monitoring(self) -> None:
         server = nac_server.build_server(REPO_ROOT, "127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
