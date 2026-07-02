@@ -94,6 +94,10 @@ Jeder Vertrag soll definieren:
   Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter
   `agent.notariat8.de`, ohne produktiven Schema-Apply, Secrets oder
   Mandatsdaten.
+- [workflows/contracts/agent-control-api.contract.json](agent-control-api.contract.json):
+  Vertrag für die erlaubte OCI/BFF-API-Grenze von `agent.notariat8.de` zum
+  outbound `notoclaw01` Connector mit Browser-Session- und Connector-Control-
+  Routen, Payload-Policy, Lease-Regeln und Owner-Gates, ohne Route-Apply.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](notarial-onprem-connector-boundaries.contract.json):
   Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
   und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen

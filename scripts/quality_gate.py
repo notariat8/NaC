@@ -161,6 +161,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_agent_runtime_registry.py"],
                 ),
                 (
+                    "agent_control_api",
+                    "Agent Control API Contract",
+                    [sys.executable, "scripts/validate_agent_control_api.py"],
+                ),
+                (
                     "notarial_onprem_connector_boundaries",
                     "Notarial On-Prem Connector Boundaries",
                     [sys.executable, "scripts/validate_notarial_onprem_connector_boundaries.py"],

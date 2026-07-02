@@ -148,6 +148,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/agent-runtime-registry.md](architecture/agent-runtime-registry.md):
   ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
   Sandbox-Bindungen und Sandbox-Leases hinter `agent.notariat8.de`.
+- [docs/de/architecture/agent-control-api.md](architecture/agent-control-api.md):
+  OCI/BFF-API-Grenze für `agent.notariat8.de`, Browser-Session-Routen,
+  Connector-Control-Routen und metadata-only Payload-Regeln.
 - [docs/de/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md):
   notarielle On-Prem-Connector-Grenzen für XNP/SNP, XNotar,
   cyberJack/Kartenarbeitsplatz, Register und Grundbuch ohne Live-Apply.
@@ -200,6 +203,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   beschreibt die ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
   Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter
   `agent.notariat8.de`.
+- [workflows/contracts/agent-control-api.contract.json](../../workflows/contracts/agent-control-api.contract.json)
+  beschreibt die erlaubte OCI/BFF-API-Grenze von `agent.notariat8.de` zum
+  outbound `notoclaw01` Connector ohne Route-Apply.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json)
   beschreibt XNP/SNP-, XNotar-, Kartenarbeitsplatz-, Register- und
   Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen.
