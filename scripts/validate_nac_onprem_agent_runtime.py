@@ -9,6 +9,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "nac-onprem-agent-runtime.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "nac-onprem-agent-runtime.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "nac-onprem-agent-runtime.md"
+DATA_SOVEREIGNTY_DE = REPO_ROOT / "docs" / "de" / "architecture" / "data-sovereignty-git-vs-atp.md"
+DATA_SOVEREIGNTY_EN = REPO_ROOT / "docs" / "en" / "architecture" / "data-sovereignty-git-vs-atp.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "ponytail-skill-only-smoke.md"
 RUNBOOK_EN = REPO_ROOT / "docs" / "en" / "operations" / "ponytail-skill-only-smoke.md"
 RUNTIME_SMOKE_RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "nac-runtime-smoke.md"
@@ -165,6 +167,8 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
 
     errors.extend(_validate_operating_model(payload))
     errors.extend(_validate_source_of_truth(payload))
+    errors.extend(_validate_variant_c_outbound_connector(payload))
+    errors.extend(_validate_runtime_persistence(payload))
     errors.extend(_validate_target_control(payload))
     errors.extend(_validate_roles_and_connectors(payload))
     errors.extend(_validate_optional_agent_tooling(payload))
@@ -197,7 +201,13 @@ def _validate_source_of_truth(payload: dict[str, Any]) -> list[str]:
     if not isinstance(source, dict):
         return ["source_of_truth must be an object"]
     git_items = set(_string_list(source.get("git")))
-    for required in ("nac_repo_code", "nac_repo_contracts", "nac_repo_governance"):
+    for required in (
+        "nac_repo_code",
+        "nac_repo_contracts",
+        "nac_repo_governance",
+        "nac_outbound_connector_code",
+        "oci_landing_zone_iac",
+    ):
         if required not in git_items:
             errors.append(f"source_of_truth.git missing {required}")
     target_items = set(_string_list(source.get("target_control")))
@@ -208,6 +218,124 @@ def _validate_source_of_truth(payload: dict[str, Any]) -> list[str]:
     for required in ("/home/ubuntu/.codex", "/home/ubuntu/.nemoclaw", "/sandbox/.openclaw/workspace-*"):
         if required not in excluded:
             errors.append(f"source_of_truth.not_source_of_truth missing {required}")
+    return errors
+
+
+def _validate_variant_c_outbound_connector(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    connector = payload.get("variant_c_outbound_connector")
+    if not isinstance(connector, dict):
+        return ["variant_c_outbound_connector must be an object"]
+
+    expected_values = {
+        "status": "architecture_decision_no_productive_apply",
+        "public_entry": "oci_idp_api_gateway_or_bff",
+        "recommended_transport": "outbound_mtls_or_websocket_https_from_notoclaw_to_oci",
+    }
+    for key, expected in expected_values.items():
+        if connector.get(key) != expected:
+            errors.append(f"variant_c_outbound_connector.{key} must be {expected}")
+
+    for flag in (
+        "ssh_productive_transport_allowed",
+        "direct_browser_to_brev_allowed",
+        "raw_notoclaw_ui_publication_allowed",
+    ):
+        if connector.get(flag) is not False:
+            errors.append(f"variant_c_outbound_connector.{flag} must be false")
+
+    oci_controls = set(_string_list(connector.get("oci_controls")))
+    for required in (
+        "identity_authentication",
+        "session_binding",
+        "tenant_policy",
+        "agent_registry_api",
+        "audit_metadata",
+        "optional_atp_runtime_store",
+    ):
+        if required not in oci_controls:
+            errors.append(f"variant_c_outbound_connector.oci_controls missing {required}")
+
+    notoclaw_controls = set(_string_list(connector.get("notoclaw_controls")))
+    for required in (
+        "sandbox_lifecycle",
+        "local_agent_runtime",
+        "local_runtime_state",
+        "redacted_status_signals",
+    ):
+        if required not in notoclaw_controls:
+            errors.append(f"variant_c_outbound_connector.notoclaw_controls missing {required}")
+
+    allocation = connector.get("sandbox_allocation")
+    if not isinstance(allocation, dict):
+        return errors + ["variant_c_outbound_connector.sandbox_allocation must be an object"]
+    if allocation.get("shared_sandbox_for_multiple_users_allowed") is not False:
+        errors.append(
+            "variant_c_outbound_connector.sandbox_allocation.shared_sandbox_for_multiple_users_allowed must be false"
+        )
+    if allocation.get("minimum_isolation_key") != "tenant_user":
+        errors.append("variant_c_outbound_connector.sandbox_allocation.minimum_isolation_key must be tenant_user")
+    if allocation.get("preferred_isolation_key") != "tenant_user_matter_role":
+        errors.append(
+            "variant_c_outbound_connector.sandbox_allocation.preferred_isolation_key must be tenant_user_matter_role"
+        )
+    for flag in ("reuse_requires_active_lease_check", "owner_gate_before_productive_auto_start"):
+        if allocation.get(flag) is not True:
+            errors.append(f"variant_c_outbound_connector.sandbox_allocation.{flag} must be true")
+    return errors
+
+
+def _validate_runtime_persistence(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    persistence = payload.get("runtime_persistence")
+    if not isinstance(persistence, dict):
+        return ["runtime_persistence must be an object"]
+
+    expected_lists = {
+        "git": {
+            "connector_source_code",
+            "contracts",
+            "runbooks",
+            "policies",
+            "tests",
+            "bpmn_templates",
+            "knowledge_graph_templates",
+        },
+        "atp": {
+            "tenant_registry",
+            "idp_subject_binding",
+            "user_role_binding",
+            "agent_registry",
+            "sandbox_binding",
+            "sandbox_lease",
+            "session_binding",
+            "audit_event_metadata",
+        },
+        "notoclaw01": {
+            "running_sandboxes",
+            "sandbox_runtime_state",
+            "local_openclaw_workspace_state",
+            "non_sensitive_target_control_evidence",
+        },
+        "oci_vault": {
+            "connector_credentials",
+            "mtls_material",
+            "api_shared_secrets",
+            "private_keys",
+        },
+        "forbidden_in_git": {
+            "runtime_sandbox_state",
+            "idp_tokens_or_claims",
+            "connector_credentials",
+            "private_keys",
+            "matter_payloads",
+            "dashboard_tokens",
+        },
+    }
+    for key, required_items in expected_lists.items():
+        actual_items = set(_string_list(persistence.get(key)))
+        for missing in sorted(required_items - actual_items):
+            errors.append(f"runtime_persistence.{key} missing {missing}")
     return errors
 
 
@@ -408,10 +536,24 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (DOC_DE, "Ponytail Skill-Only Smoke"),
         (DOC_DE, "NaC Runtime-Smoke"),
         (DOC_DE, "feste, DNS-gestützte Domain"),
+        (DOC_DE, "Variante C: Outbound Connector"),
+        (DOC_DE, "Speichergrenze für Variante C"),
+        (DOC_DE, "tenant + user + vorgang + rolle"),
         (DOC_EN, "NaC On-Prem Agent Runtime"),
         (DOC_EN, "fixed, DNS-backed domain"),
         (DOC_EN, "Ponytail skill-only smoke"),
         (DOC_EN, "NaC runtime smoke"),
+        (DOC_EN, "Variant C: Outbound Connector"),
+        (DOC_EN, "Storage Boundary For Variant C"),
+        (DOC_EN, "tenant + user + matter + role"),
+        (DATA_SOVEREIGNTY_DE, "Agent- und Sandbox-Bindungen"),
+        (DATA_SOVEREIGNTY_DE, "agent_registry"),
+        (DATA_SOVEREIGNTY_DE, "sandbox_bindings"),
+        (DATA_SOVEREIGNTY_DE, "sandbox_leases"),
+        (DATA_SOVEREIGNTY_EN, "Agent and sandbox bindings"),
+        (DATA_SOVEREIGNTY_EN, "agent_registry"),
+        (DATA_SOVEREIGNTY_EN, "sandbox_bindings"),
+        (DATA_SOVEREIGNTY_EN, "sandbox_leases"),
         (RUNBOOK_DE, "Status: ausgeführt, bestanden"),
         (RUNBOOK_DE, "ponytail-skill-only-smoke-2026-06-29.md"),
         (RUNBOOK_EN, "Status: executed, passed"),

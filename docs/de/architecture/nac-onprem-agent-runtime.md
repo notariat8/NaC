@@ -1,7 +1,7 @@
 # NaC-On-Prem-Agent-Runtime
 
 Status: Vertrags- und Zielsystemgrenze
-Letzte inhaltliche Anpassung: 2026-07-01
+Letzte inhaltliche Anpassung: 2026-07-02
 
 ## Zweck
 
@@ -33,6 +33,45 @@ Der maschinenlesbare Vertrag steht in
 Er wird durch
 [scripts/validate_nac_onprem_agent_runtime.py](../../../scripts/validate_nac_onprem_agent_runtime.py)
 geprüft.
+
+## Variante C: Outbound Connector
+
+Für das Zielbild wird die direkte Veröffentlichung der rohen
+NemoClaw-/OpenClaw-Oberfläche nicht als Produktionsmuster festgelegt.
+Die bevorzugte Architektur ist ein outbound Connector von `notoclaw01` nach OCI:
+
+1. Der Browser erreicht ausschließlich die OCI-Schicht unter
+   `agent.notariat8.de`.
+2. OCI Identity Domain authentifiziert den Benutzer, zum Beispiel
+   `user@example.com`.
+3. Ein OCI API Gateway oder ein BFF prüft Session, Tenant, Rolle und Zweck.
+4. ATP führt die Bindung zwischen IdP-Subjekt, Tenant, Benutzer, Agent,
+   Sandbox, Lease und Audit-Metadaten.
+5. `notoclaw01` baut ausgehend eine mTLS- oder WebSocket/HTTPS-Verbindung zur
+   OCI-Steuerung auf und nimmt nur geprüfte Agent-Aufträge entgegen.
+6. NemoClaw/OpenClaw startet, hält oder verbindet die passende Sandbox lokal.
+
+SSH ist damit nur ein Betriebs- und Diagnoseweg, nicht der produktive
+User-Traffic. Ebenso dürfen Browser nicht direkt auf Brev oder die rohe
+OpenClaw-UI zeigen. Die OCI-Schicht bleibt die öffentliche Isolations-,
+Identitäts- und Policy-Grenze.
+
+## Speichergrenze für Variante C
+
+Die dauerhafte Wahrheit liegt nicht in NemoClaw. NemoClaw ist Zielruntime.
+
+| Ebene | Gespeichert wird | Nicht gespeichert wird |
+| --- | --- | --- |
+| Git / NaC | Connector-Code, Verträge, Policies, Tests, BPMN- und KG-Templates | Runtime-Sandbox-State, IdP-Tokens, Credentials, private Schlüssel, Mandatsinhalte |
+| Git / OCI Landing Zone | API-Gateway-, ATP-, Vault- und Netzwerk-Absicht als IaC | Live-Secrets, TLS-Private-Key-Material, produktive Laufzeitwerte |
+| ATP | Tenant-, Benutzer-, Rollen-, Agent-, Sandbox-, Lease-, Session- und Audit-Metadaten | Tokens, Claims-Rohdaten, PINs, unredigierte Mandatsinhalte |
+| OCI Vault | Connector-Credentials, mTLS-Material, API-Secrets und private Schlüssel | frei lesbare Konfiguration oder fachliche Payloads |
+| `notoclaw01` | laufende Sandboxes, lokaler Runtime-State, redigierte Target-Control-Evidence | NaC-GitOps-Wahrheit, produktive Mandatsdaten, globale Benutzer-/Tenant-Registry |
+
+Für Nutzertrennung gilt: Eine produktive Sandbox darf nicht mehrere unabhängige
+Benutzer teilen. Die Mindestisolierung ist `tenant + user`; bevorzugt ist
+`tenant + user + vorgang + rolle`, wenn Mandats- oder Vorgangskontext geladen
+wird. Wiederverwendung einer Sandbox braucht eine aktive Lease-Prüfung in ATP.
 
 ## Zielsystem-Layout
 

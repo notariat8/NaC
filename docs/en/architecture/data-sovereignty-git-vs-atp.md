@@ -26,6 +26,8 @@ ATP becomes the binding runtime database for:
 - server-side sessions and revocation information
 - matter and case metadata
 - activated process versions per tenant
+- agent registrations, sandbox bindings and active leases for the on-prem
+  agent runtime
 - process instances, process events, statuses and deadlines
 - XNP/SNP, register, land-register and signature gates as safely redacted metadata
 - audit metadata without tokens, claims, secrets or raw mandate data in browser output
@@ -64,6 +66,7 @@ move back into Git.
 | Activated process version | ATP | tenant points to approved template version |
 | Process instance | ATP | concrete matter, status, deadlines, events |
 | Tenants and user bindings | ATP / IdP | ATP stores NaC binding, IdP authenticates |
+| Agent and sandbox bindings | ATP | user/tenant/agent/sandbox lease, not local NemoClaw-only ownership |
 | Sessions | ATP | only hashed/derived session data, no tokens or claims |
 | Document metadata | ATP | file name, type, status, evidence reference without raw content |
 | Document binaries | later Object Storage | encrypted, with retention and audit under [private-payload-target-design.md](private-payload-target-design.md) |
@@ -78,6 +81,12 @@ expansion, these logical tables or equivalent store boundaries are sufficient:
 
 - `tenants`: tenant, status, domain binding, activated process versions.
 - `users`: NaC user binding, role class, tenant assignment, IdP subject hash.
+- `agent_registry`: agent types, target-system class, approved capabilities and
+  references to Git-versioned contracts.
+- `sandbox_bindings`: binding between tenant, user, role, matter, agent and
+  local sandbox reference.
+- `sandbox_leases`: active lease, expiry, revocation status and reuse boundary
+  for the on-prem agent runtime.
 - `matters`: matter/case metadata, tenant, use case, status, no raw documents.
 - `process_templates`: activatable template reference to Git version, BPMN ID, hash.
 - `process_instances`: concrete process instance per matter, template version, runtime status.

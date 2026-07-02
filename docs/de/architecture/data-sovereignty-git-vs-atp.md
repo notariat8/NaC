@@ -26,6 +26,8 @@ ATP wird die verbindliche Laufzeitdatenbank für:
 - serverseitige Sessions und Widerrufsinformationen
 - Vorgangs- und Akten-Metadaten
 - aktivierte Prozessversionen je Mandant
+- Agent-Registrierungen, Sandbox-Bindungen und aktive Leases für die
+  On-Prem-Agent-Runtime
 - Prozessinstanzen, Prozessereignisse, Status und Fristen
 - XNP/SNP-, Register-, Grundbuch- und Signatur-Gates als redaktionell sichere Metadaten
 - Audit-Metadaten ohne Tokens, Claims, Secrets oder Rohmandatsdaten in Browserausgaben
@@ -68,6 +70,7 @@ damit nicht zurück nach Git.
 | Aktivierte Prozessversion | ATP | Mandant verweist auf freigegebene Template-Version |
 | Prozessinstanz | ATP | konkreter Vorgang, Status, Fristen, Ereignisse |
 | Mandanten und Benutzerbindungen | ATP / IdP | ATP speichert NaC-Bindung, IdP authentifiziert |
+| Agent- und Sandbox-Bindungen | ATP | User-/Tenant-/Agent-/Sandbox-Lease, kein lokaler NemoClaw-Alleinbesitz |
 | Sessions | ATP | nur gehashte/abgeleitete Sessiondaten, keine Tokens oder Claims |
 | Dokument-Metadaten | ATP | Dateiname, Typ, Status, Nachweisreferenz ohne Rohinhalt |
 | Dokument-Binärdaten | später Object Storage | verschlüsselt, mit Retention und Audit nach [private-payload-target-design.md](private-payload-target-design.md) |
@@ -82,6 +85,12 @@ reichen folgende logische Tabellen oder gleichwertige Store-Grenzen:
 
 - `tenants`: Mandant, Status, Domainbindung, aktivierte Prozessversionen.
 - `users`: NaC-Benutzerbindung, Rollenklasse, Mandantenzuordnung, IdP-Subjekt-Hash.
+- `agent_registry`: Agent-Typen, Zielsystemklasse, freigegebene Fähigkeiten und
+  Verweis auf Git-versionierte Verträge.
+- `sandbox_bindings`: Bindung zwischen Tenant, Benutzer, Rolle, Vorgang,
+  Agent und lokaler Sandbox-Referenz.
+- `sandbox_leases`: aktive Lease, Ablauf, Revocation-Status und
+  Wiederverwendungsgrenze für die On-Prem-Agent-Runtime.
 - `matters`: Vorgangs-/Akten-Metadaten, Mandant, Usecase, Status, keine Rohdokumente.
 - `process_templates`: aktivierbare Template-Referenz auf Git-Version, BPMN-ID, Hash.
 - `process_instances`: konkrete Prozessinstanz je Vorgang, Template-Version, Laufzeitstatus.

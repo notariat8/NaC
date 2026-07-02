@@ -3,7 +3,7 @@
   "contract_id": "workflow.nac_onprem_agent_runtime",
   "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
   "status": "target_control_ready_no_productive_connector_apply",
-  "last_update": "2026-07-01",
+  "last_update": "2026-07-02",
   "purpose": "Definiert die Grenze, in der NaC als agentische On-Prem-Plattform auf notoclaw01 mit NemoClaw/OpenClaw vorbereitet wird, ohne NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz zu umgehen.",
   "operating_model": {
     "project_manager": {
@@ -26,7 +26,9 @@
       "nac_repo_governance",
       "nac_repo_bpmn",
       "nac_repo_knowledge_graphs",
-      "nac_repo_tests"
+      "nac_repo_tests",
+      "nac_outbound_connector_code",
+      "oci_landing_zone_iac"
     ],
     "target_control": [
       "target_manifests",
@@ -38,6 +40,76 @@
       "/home/ubuntu/.codex",
       "/home/ubuntu/.nemoclaw",
       "/sandbox/.openclaw/workspace-*"
+    ]
+  },
+  "variant_c_outbound_connector": {
+    "status": "architecture_decision_no_productive_apply",
+    "public_entry": "oci_idp_api_gateway_or_bff",
+    "recommended_transport": "outbound_mtls_or_websocket_https_from_notoclaw_to_oci",
+    "ssh_productive_transport_allowed": false,
+    "direct_browser_to_brev_allowed": false,
+    "raw_notoclaw_ui_publication_allowed": false,
+    "oci_controls": [
+      "identity_authentication",
+      "session_binding",
+      "tenant_policy",
+      "agent_registry_api",
+      "audit_metadata",
+      "optional_atp_runtime_store"
+    ],
+    "notoclaw_controls": [
+      "sandbox_lifecycle",
+      "local_agent_runtime",
+      "local_runtime_state",
+      "redacted_status_signals"
+    ],
+    "sandbox_allocation": {
+      "shared_sandbox_for_multiple_users_allowed": false,
+      "minimum_isolation_key": "tenant_user",
+      "preferred_isolation_key": "tenant_user_matter_role",
+      "reuse_requires_active_lease_check": true,
+      "owner_gate_before_productive_auto_start": true
+    }
+  },
+  "runtime_persistence": {
+    "git": [
+      "connector_source_code",
+      "contracts",
+      "runbooks",
+      "policies",
+      "tests",
+      "bpmn_templates",
+      "knowledge_graph_templates"
+    ],
+    "atp": [
+      "tenant_registry",
+      "idp_subject_binding",
+      "user_role_binding",
+      "agent_registry",
+      "sandbox_binding",
+      "sandbox_lease",
+      "session_binding",
+      "audit_event_metadata"
+    ],
+    "notoclaw01": [
+      "running_sandboxes",
+      "sandbox_runtime_state",
+      "local_openclaw_workspace_state",
+      "non_sensitive_target_control_evidence"
+    ],
+    "oci_vault": [
+      "connector_credentials",
+      "mtls_material",
+      "api_shared_secrets",
+      "private_keys"
+    ],
+    "forbidden_in_git": [
+      "runtime_sandbox_state",
+      "idp_tokens_or_claims",
+      "connector_credentials",
+      "private_keys",
+      "matter_payloads",
+      "dashboard_tokens"
     ]
   },
   "target_control": {

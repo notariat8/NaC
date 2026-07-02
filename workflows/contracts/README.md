@@ -86,6 +86,7 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](nac-onprem-agent-runtime.contract.json):
   Vertrag für die NaC-On-Prem-Agent-Runtime auf `notoclaw01` mit
   NemoClaw/OpenClaw-Zielsystemgrenze, Target-Control-Pfaden, Connector-Stubs,
+  outbound Connector-Zielbild, ATP-gestützter Agent-/Sandbox-Lease-Bindung,
   bestandenem Ponytail Skill-Only Smoke, vorbereitetem NaC Runtime-Smoke,
   Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](notarial-onprem-connector-boundaries.contract.json):
