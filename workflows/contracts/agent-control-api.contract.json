@@ -1,0 +1,140 @@
+{
+  "schema_version": "nac.agent-control-api/v0.1",
+  "contract_id": "runtime.agent_control_api",
+  "title": "Agent Control API Boundary",
+  "status": "contract_first_no_route_apply",
+  "last_update": "2026-07-02",
+  "purpose": "Defines the allowed OCI/BFF API boundary for agent.notariat8.de and the outbound notoclaw01 connector before any live route, gateway apply, connector start or private payload access.",
+  "public_origin": {
+    "hostname": "agent.notariat8.de",
+    "edge": "oci_identity_api_gateway_or_bff",
+    "provider_specific_tunnel_allowed_for_production": false,
+    "raw_openclaw_ui_publication_allowed": false,
+    "direct_browser_to_brev_allowed": false
+  },
+  "route_groups": [
+    {
+      "id": "browser_session",
+      "caller": "authenticated_browser_via_oci",
+      "authentication": "oci_identity_session_required",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/agent/status",
+          "purpose": "Return redacted agent availability and lease readiness for the signed-in user.",
+          "response_class": "safe_metadata_only"
+        },
+        {
+          "method": "POST",
+          "path": "/agent/leases/prepare",
+          "purpose": "Prepare a server-side sandbox lease after tenant, role, purpose and optional matter binding pass.",
+          "response_class": "safe_metadata_only"
+        }
+      ]
+    },
+    {
+      "id": "connector_control",
+      "caller": "notoclaw01_outbound_connector",
+      "authentication": "mtls_or_signed_connector_session_required",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/api/agent/connect",
+          "purpose": "Register or refresh the outbound connector endpoint using redacted health metadata.",
+          "response_class": "connector_control_metadata"
+        },
+        {
+          "method": "POST",
+          "path": "/api/agent/heartbeat",
+          "purpose": "Report redacted connector and sandbox health state.",
+          "response_class": "connector_control_metadata"
+        },
+        {
+          "method": "GET",
+          "path": "/api/agent/work/next",
+          "purpose": "Fetch the next metadata-only work envelope for an active lease.",
+          "response_class": "work_envelope_metadata"
+        },
+        {
+          "method": "POST",
+          "path": "/api/agent/work/result",
+          "purpose": "Submit redacted completion or failure metadata for an assigned work envelope.",
+          "response_class": "work_result_metadata"
+        }
+      ]
+    }
+  ],
+  "payload_policy": {
+    "allowed_fields": [
+      "schema_version",
+      "request_id",
+      "tenant_id",
+      "user_binding_id",
+      "agent_id",
+      "endpoint_id",
+      "sandbox_binding_id",
+      "sandbox_lease_id",
+      "lease_status",
+      "redacted_health_state",
+      "work_envelope_id",
+      "status",
+      "reason_class",
+      "created_at",
+      "expires_at"
+    ],
+    "blocked_fields": [
+      "id_token",
+      "access_token",
+      "refresh_token",
+      "session_cookie",
+      "provider_claims",
+      "dashboard_token",
+      "private_key",
+      "client_secret",
+      "environment_dump",
+      "raw_mandate_content",
+      "document_full_text",
+      "card_pin",
+      "xnp_payload"
+    ],
+    "raw_mandate_data_allowed": false,
+    "secret_material_allowed": false,
+    "dashboard_token_capture_allowed": false,
+    "full_identity_claim_dump_allowed": false
+  },
+  "lease_policy": {
+    "atp_tables": [
+      "nac_agent_registry",
+      "nac_agent_endpoints",
+      "nac_sandbox_bindings",
+      "nac_sandbox_leases",
+      "nac_agent_session_bindings"
+    ],
+    "active_lease_required_before_work_fetch": true,
+    "expired_or_revoked_lease_fails_closed": true,
+    "tenant_user_isolation_required": true,
+    "tenant_user_matter_role_preferred": true,
+    "shared_sandbox_for_multiple_users_allowed": false
+  },
+  "implementation_boundary": {
+    "nac_web_route_implementation_in_scope": false,
+    "oci_gateway_apply_in_scope": false,
+    "notoclaw_connector_start_in_scope": false,
+    "atp_schema_apply_in_scope": false,
+    "contract_and_validator_only": true
+  },
+  "owner_gates": [
+    "route_implementation",
+    "oci_api_gateway_apply",
+    "connector_secret_material",
+    "mtls_material_import",
+    "notoclaw_connector_start",
+    "private_payload_access"
+  ],
+  "validation_commands": [
+    "python scripts/validate_agent_control_api.py",
+    "python scripts/validate_agent_runtime_registry.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py"
+  ]
+}
