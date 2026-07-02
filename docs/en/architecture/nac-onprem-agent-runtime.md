@@ -1,7 +1,7 @@
 # NaC On-Prem Agent Runtime
 
 Status: contract and target-system boundary
-Last content update: 2026-07-01
+Last content update: 2026-07-02
 
 ## Purpose
 
@@ -32,6 +32,42 @@ The machine-readable contract is
 [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../../workflows/contracts/nac-onprem-agent-runtime.contract.json).
 It is validated by
 [scripts/validate_nac_onprem_agent_runtime.py](../../../scripts/validate_nac_onprem_agent_runtime.py).
+
+## Variant C: Outbound Connector
+
+The target architecture does not make the raw NemoClaw/OpenClaw UI the
+production publication pattern. The preferred architecture is an outbound
+connector from `notoclaw01` to OCI:
+
+1. The browser reaches only the OCI layer at `agent.notariat8.de`.
+2. OCI Identity Domain authenticates the user, for example `user@example.com`.
+3. An OCI API Gateway or BFF checks session, tenant, role and purpose.
+4. ATP stores the binding between IdP subject, tenant, user, agent, sandbox,
+   lease and audit metadata.
+5. `notoclaw01` opens an outbound mTLS or WebSocket/HTTPS connection to the OCI
+   control plane and accepts only verified agent work.
+6. NemoClaw/OpenClaw starts, keeps or reconnects the matching sandbox locally.
+
+SSH is therefore only an operations and diagnostic path, not productive user
+traffic. Browsers must also not point directly at Brev or the raw OpenClaw UI.
+The OCI layer remains the public isolation, identity and policy boundary.
+
+## Storage Boundary For Variant C
+
+The durable truth does not live in NemoClaw. NemoClaw is the target runtime.
+
+| Layer | Stored there | Not stored there |
+| --- | --- | --- |
+| Git / NaC | Connector code, contracts, policies, tests, BPMN and KG templates | Runtime sandbox state, IdP tokens, credentials, private keys, matter payloads |
+| Git / OCI Landing Zone | API Gateway, ATP, Vault and network intent as IaC | Live secrets, TLS private key material, productive runtime values |
+| ATP | Tenant, user, role, agent, sandbox, lease, session and audit metadata | Tokens, raw claims, PINs, unredacted matter content |
+| OCI Vault | Connector credentials, mTLS material, API secrets and private keys | freely readable configuration or subject-matter payloads |
+| `notoclaw01` | running sandboxes, local runtime state, redacted target-control evidence | NaC GitOps truth, productive matter data, global user or tenant registry |
+
+For user separation, one productive sandbox must not be shared across
+independent users. The minimum isolation is `tenant + user`; the preferred key
+is `tenant + user + matter + role` once matter or case context is loaded.
+Reusing a sandbox requires an active lease check in ATP.
 
 ## Target-System Layout
 
