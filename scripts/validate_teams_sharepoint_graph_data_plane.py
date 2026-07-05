@@ -29,6 +29,9 @@ PROVISIONED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mv
 PRIVILEGED_APPLIED_STATE = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
 )
+RUNTIME_SMOKE_STATE = (
+    REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-smoke.f8.json"
+)
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "runbooks" / "m365-cli-admin-accelerator.md"
@@ -106,6 +109,7 @@ def validate() -> list[str]:
     privileged_change_config = _read_json(PRIVILEGED_CHANGE_CONFIG, errors)
     provisioned_state = _read_json(PROVISIONED_STATE, errors)
     privileged_applied_state = _read_json(PRIVILEGED_APPLIED_STATE, errors)
+    runtime_smoke_state = _read_json(RUNTIME_SMOKE_STATE, errors)
     if contract:
         errors.extend(_validate_contract(contract))
     if schema:
@@ -145,6 +149,8 @@ def validate() -> list[str]:
                 provisioned_state,
             )
         )
+    if runtime_smoke_state:
+        errors.extend(_validate_runtime_smoke_state(runtime_smoke_state, privileged_applied_state, provisioned_state))
     errors.extend(_validate_docs())
     errors.extend(_validate_code_boundary())
     return errors
@@ -552,6 +558,78 @@ def _validate_privileged_applied_state(
                 errors.append(f"privileged applied {workspace_id} application_client_id must match runtime app")
             if permission.get("role") != "write":
                 errors.append(f"privileged applied {workspace_id} role must be write")
+    return errors
+
+
+def _validate_runtime_smoke_state(
+    state: dict[str, Any],
+    privileged_state: dict[str, Any],
+    provisioned_state: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    if state.get("state_version") != "nac.m365-runtime-smoke/v0.1":
+        errors.append("runtime smoke state_version must be nac.m365-runtime-smoke/v0.1")
+    if state.get("source_provisioned_state") != "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json":
+        errors.append("runtime smoke source_provisioned_state must point to nac-mvp.provisioned.f8.json")
+    if state.get("source_privileged_applied_state") != "deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.applied.f8.json":
+        errors.append("runtime smoke source_privileged_applied_state must point to privileged applied state")
+
+    tenant = state.get("tenant")
+    if not isinstance(tenant, dict) or tenant.get("tenant_id") != "870c862b-56f7-4c9b-b0d9-f1f7d32c835c":
+        errors.append("runtime smoke tenant.tenant_id must match f8 tenant")
+
+    runtime = state.get("runtime_application")
+    privileged_apps = privileged_state.get("applications", {}) if isinstance(privileged_state, dict) else {}
+    privileged_runtime = privileged_apps.get("m365_runtime_app") if isinstance(privileged_apps, dict) else {}
+    if not isinstance(runtime, dict):
+        errors.append("runtime smoke runtime_application must be an object")
+    else:
+        if runtime.get("client_id") != privileged_runtime.get("client_id"):
+            errors.append("runtime smoke runtime application client_id must match privileged state")
+        if runtime.get("application_object_id") != privileged_runtime.get("application_object_id"):
+            errors.append("runtime smoke runtime application object id must match privileged state")
+        if runtime.get("authentication_mode") != "client_credentials_with_certificate":
+            errors.append("runtime smoke authentication_mode must be client_credentials_with_certificate")
+        _require_nonempty_string(runtime, "certificate_thumbprint_sha1", "runtime smoke runtime_application", errors)
+        _require_nonempty_string(runtime, "certificate_expires_at_utc", "runtime smoke runtime_application", errors)
+        if set(_strings(runtime.get("application_permissions"))) != {"Sites.Selected"}:
+            errors.append("runtime smoke runtime_application.application_permissions must be Sites.Selected only")
+
+    smoke = state.get("smoke_result")
+    if not isinstance(smoke, dict):
+        errors.append("runtime smoke smoke_result must be an object")
+    else:
+        if smoke.get("status") != "PASSED":
+            errors.append("runtime smoke status must be PASSED")
+        if smoke.get("sites_read") != len(REQUIRED_WORKSPACES):
+            errors.append("runtime smoke sites_read must match required workspaces")
+        if smoke.get("missing_lists") != 0:
+            errors.append("runtime smoke missing_lists must be 0")
+
+    provisioned_workspaces = {
+        workspace.get("id"): workspace
+        for workspace in provisioned_state.get("workspaces", [])
+        if isinstance(workspace, dict) and isinstance(workspace.get("id"), str)
+    } if isinstance(provisioned_state, dict) else {}
+    workspaces = state.get("workspaces")
+    if not isinstance(workspaces, list):
+        errors.append("runtime smoke workspaces must be a list")
+    else:
+        by_workspace = {item.get("workspace_id"): item for item in workspaces if isinstance(item, dict)}
+        for workspace_id in sorted(REQUIRED_WORKSPACES):
+            workspace = by_workspace.get(workspace_id)
+            provisioned = provisioned_workspaces.get(workspace_id, {})
+            if not isinstance(workspace, dict):
+                errors.append(f"runtime smoke workspaces missing {workspace_id}")
+                continue
+            if workspace.get("site_id") != provisioned.get("site_id"):
+                errors.append(f"runtime smoke {workspace_id} site_id must match provisioned state")
+            if workspace.get("expected_list_count") != len(provisioned.get("lists", {}) or {}):
+                errors.append(f"runtime smoke {workspace_id} expected_list_count must match provisioned lists")
+            if workspace.get("observed_list_count", 0) < workspace.get("expected_list_count", 0):
+                errors.append(f"runtime smoke {workspace_id} observed_list_count must cover expected lists")
+            if workspace.get("missing_lists") != []:
+                errors.append(f"runtime smoke {workspace_id} missing_lists must be empty")
     return errors
 
 

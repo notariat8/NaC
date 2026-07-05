@@ -1,0 +1,53 @@
+{
+  "state_version": "nac.m365-runtime-smoke/v0.1",
+  "captured_at_utc": "2026-07-05T15:16:04Z",
+  "source_provisioned_state": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
+  "source_privileged_applied_state": "deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.applied.f8.json",
+  "tenant": {
+    "display_name": "f8",
+    "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "primary_domain": "funktion8.de"
+  },
+  "runtime_application": {
+    "display_name": "NaC M365 Runtime",
+    "application_object_id": "b53c0805-ac67-469b-9539-dc15d84fd3dd",
+    "client_id": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+    "certificate_thumbprint_sha1": "316556FE00B228235DC066C82CF615AF08B738D1",
+    "certificate_expires_at_utc": "2026-08-04T15:11:33Z",
+    "authentication_mode": "client_credentials_with_certificate",
+    "application_permissions": [
+      "Sites.Selected"
+    ]
+  },
+  "smoke_result": {
+    "status": "PASSED",
+    "workspaces": 2,
+    "sites_read": 2,
+    "missing_lists": 0
+  },
+  "workspaces": [
+    {
+      "workspace_id": "notary_team_01",
+      "team_display_name": "NaC-Notar-01",
+      "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "site_web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+      "expected_list_count": 6,
+      "observed_list_count": 9,
+      "missing_lists": []
+    },
+    {
+      "workspace_id": "notary_team_02",
+      "team_display_name": "NaC-Notar-02",
+      "site_id": "funktion8.sharepoint.com,e1f7e026-a02c-4607-bc48-d36fdb94b71c,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "site_web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02",
+      "expected_list_count": 6,
+      "observed_list_count": 9,
+      "missing_lists": []
+    }
+  ],
+  "operational_notes": [
+    "No OAuth token, client secret, private key or certificate body is stored in this file.",
+    "The runtime certificate private key was generated locally under /tmp for the owner-gated smoke and must be moved to approved secret storage before production use.",
+    "The smoke read only the provisioned sites and lists through Microsoft Graph REST v1.0; it did not create or mutate Teams, groups, SharePoint lists, list items or site permissions."
+  ]
+}

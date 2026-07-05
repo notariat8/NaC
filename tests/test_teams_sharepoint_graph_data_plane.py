@@ -35,6 +35,7 @@ from nac_m365_graph.schema import (  # noqa: E402
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
 APPLIED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
+RUNTIME_SMOKE_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-smoke.f8.json"
 GRAPH_APP_ID = "00000003-0000-0000-c000-000000000000"
 
 
@@ -400,6 +401,24 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             self.assertEqual(permission["role"], "write")
         for owner_check in state["team_owner_checks"]:
             self.assertGreaterEqual(owner_check["licensed_human_owner_count"], 1)
+
+    def test_runtime_smoke_state_captures_site_readiness(self) -> None:
+        privileged = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
+        state = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
+        runtime_app = state["runtime_application"]
+
+        self.assertEqual(state["state_version"], "nac.m365-runtime-smoke/v0.1")
+        self.assertEqual(state["smoke_result"]["status"], "PASSED")
+        self.assertEqual(state["smoke_result"]["sites_read"], 2)
+        self.assertEqual(state["smoke_result"]["missing_lists"], 0)
+        self.assertEqual(runtime_app["client_id"], privileged["applications"]["m365_runtime_app"]["client_id"])
+        self.assertEqual(runtime_app["application_permissions"], ["Sites.Selected"])
+        self.assertEqual(runtime_app["authentication_mode"], "client_credentials_with_certificate")
+        self.assertNotIn("private_key", json.dumps(state).lower())
+        self.assertNotIn("access_token", json.dumps(state).lower())
+        for workspace in state["workspaces"]:
+            self.assertGreaterEqual(workspace["observed_list_count"], workspace["expected_list_count"])
+            self.assertEqual(workspace["missing_lists"], [])
 
     def test_column_mapping_uses_graph_column_payloads(self) -> None:
         payload = column_create_payload(
