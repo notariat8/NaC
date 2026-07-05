@@ -1,0 +1,491 @@
+{
+  "schema_version": "nac.teams-sharepoint-graph-data-plane/v0.1",
+  "name": "nac-mvp-teams-sharepoint",
+  "description": "MVP schema for Teams-connected SharePoint storage using Microsoft Graph REST only.",
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false
+  },
+  "workspaces": [
+    {
+      "id": "notary_team_01",
+      "team_display_name": "NaC-Notar-01",
+      "team_description": "NaC MVP-Arbeitsraum für Notar 01 und zugeordnete Sachbearbeitung.",
+      "visibility": "private",
+      "membership_model": "notary_and_assigned_clerk",
+      "first_channel_name": "Akten"
+    },
+    {
+      "id": "notary_team_02",
+      "team_display_name": "NaC-Notar-02",
+      "team_description": "NaC MVP-Arbeitsraum für Notar 02 und zugeordnete Sachbearbeitung.",
+      "visibility": "private",
+      "membership_model": "notary_and_assigned_clerk",
+      "first_channel_name": "Akten"
+    }
+  ],
+  "sharepoint": {
+    "lists": [
+      {
+        "display_name": "Akten",
+        "template": "genericList",
+        "description": "Akten-Metadaten und Prozessstatus ohne Rohdokumente.",
+        "indexed_columns": [
+          "NacCaseId",
+          "NotarTeam",
+          "Status",
+          "FristNaechsteAktion"
+        ],
+        "columns": [
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "Aktenzeichen",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Vorgangstyp",
+            "type": "choice",
+            "choices": [
+              "immobilienkaufvertrag",
+              "unterschriftsbeglaubigung",
+              "online-gmbh-gruendung",
+              "handelsregisteranmeldung"
+            ],
+            "required": true
+          },
+          {
+            "name": "Status",
+            "type": "choice",
+            "choices": [
+              "Entwurf",
+              "InPrüfung",
+              "Beurkundung",
+              "Vollzug",
+              "Abgeschlossen",
+              "Pausiert"
+            ],
+            "required": true
+          },
+          {
+            "name": "NotarTeam",
+            "type": "choice",
+            "choices": [
+              "NaC-Notar-01",
+              "NaC-Notar-02"
+            ],
+            "required": true
+          },
+          {
+            "name": "FederfuehrenderNotar",
+            "type": "user",
+            "required": false
+          },
+          {
+            "name": "Sachbearbeitung",
+            "type": "user",
+            "required": false
+          },
+          {
+            "name": "Vertraulichkeitsstufe",
+            "type": "choice",
+            "choices": [
+              "Normal",
+              "Sensibel",
+              "Hoch"
+            ],
+            "required": true
+          },
+          {
+            "name": "FristNaechsteAktion",
+            "type": "dateTime",
+            "required": false
+          },
+          {
+            "name": "NacWorkflowVersion",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "KgVersion",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      {
+        "display_name": "Beteiligte",
+        "template": "genericList",
+        "description": "Beteiligten-Metadaten ohne Ausweisrohdaten.",
+        "indexed_columns": [
+          "NacPartyId",
+          "NacCaseId"
+        ],
+        "columns": [
+          {
+            "name": "NacPartyId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "RolleImVorgang",
+            "type": "choice",
+            "choices": [
+              "Verkäufer",
+              "Käufer",
+              "Vertreter",
+              "Makler",
+              "Bank",
+              "Register",
+              "Sonstige"
+            ],
+            "required": true
+          },
+          {
+            "name": "Anzeigename",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "KontaktRef",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "IdentStatus",
+            "type": "choice",
+            "choices": [
+              "NichtGeprüft",
+              "Angefordert",
+              "Geprüft",
+              "Abgelehnt"
+            ],
+            "required": true
+          }
+        ]
+      },
+      {
+        "display_name": "AufgabenFristen",
+        "template": "genericList",
+        "description": "Aufgaben, Fristen und BPMN-Schritte.",
+        "indexed_columns": [
+          "NacTaskId",
+          "NacCaseId",
+          "AssignedTo",
+          "DueDate",
+          "Status"
+        ],
+        "columns": [
+          {
+            "name": "NacTaskId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnStepCode",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "AssignedTo",
+            "type": "user",
+            "required": false
+          },
+          {
+            "name": "DueDate",
+            "type": "dateTime",
+            "required": false
+          },
+          {
+            "name": "Status",
+            "type": "choice",
+            "choices": [
+              "Offen",
+              "InArbeit",
+              "Blockiert",
+              "Erledigt"
+            ],
+            "required": true
+          },
+          {
+            "name": "RequiresNotaryApproval",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "BlockedReason",
+            "type": "text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "display_name": "Vertretungsfreigaben",
+        "template": "genericList",
+        "description": "Befristete Vertretungsfreigaben mit Grund, Dauer und Audit-Korrelation.",
+        "indexed_columns": [
+          "GrantId",
+          "NacCaseId",
+          "ToUser",
+          "ValidUntil",
+          "Status"
+        ],
+        "columns": [
+          {
+            "name": "GrantId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "FromUser",
+            "type": "user",
+            "required": true
+          },
+          {
+            "name": "ToUser",
+            "type": "user",
+            "required": true
+          },
+          {
+            "name": "GrantedRole",
+            "type": "choice",
+            "choices": [
+              "NotarVertretung",
+              "SachbearbeitungVertretung",
+              "NurLesen"
+            ],
+            "required": true
+          },
+          {
+            "name": "Reason",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "ValidFrom",
+            "type": "dateTime",
+            "required": true
+          },
+          {
+            "name": "ValidUntil",
+            "type": "dateTime",
+            "required": true
+          },
+          {
+            "name": "ApprovedBy",
+            "type": "user",
+            "required": true
+          },
+          {
+            "name": "Status",
+            "type": "choice",
+            "choices": [
+              "Aktiv",
+              "Abgelaufen",
+              "Widerrufen"
+            ],
+            "required": true
+          },
+          {
+            "name": "AuditCorrelationId",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      {
+        "display_name": "AuditJournalLite",
+        "template": "genericList",
+        "description": "Start-Audit ohne WORM-Anspruch; später durch append-only Journal zu ergänzen.",
+        "indexed_columns": [
+          "EventId",
+          "Timestamp",
+          "NacCaseId",
+          "CorrelationId"
+        ],
+        "columns": [
+          {
+            "name": "EventId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "Timestamp",
+            "type": "dateTime",
+            "required": true
+          },
+          {
+            "name": "Actor",
+            "type": "user",
+            "required": false
+          },
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Action",
+            "type": "choice",
+            "choices": [
+              "CaseCreated",
+              "StatusChanged",
+              "TaskCreated",
+              "GrantRequested",
+              "GrantApproved",
+              "GrantRevoked",
+              "DocumentRegistered",
+              "AgentRead"
+            ],
+            "required": true
+          },
+          {
+            "name": "ObjectType",
+            "type": "choice",
+            "choices": [
+              "Case",
+              "Task",
+              "Grant",
+              "Document",
+              "Team",
+              "SharePointList"
+            ],
+            "required": true
+          },
+          {
+            "name": "ObjectId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Reason",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "CorrelationId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "HashAfter",
+            "type": "text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "display_name": "DokumentRegister",
+        "template": "genericList",
+        "description": "Dokument-Pointer, Metadaten, Hashes und Versionen ohne Rohdokumentinhalt.",
+        "indexed_columns": [
+          "NacDocumentId",
+          "NacCaseId",
+          "DocumentType",
+          "DraftStatus"
+        ],
+        "columns": [
+          {
+            "name": "NacDocumentId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "NacCaseId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "DocumentType",
+            "type": "choice",
+            "choices": [
+              "Entwurf",
+              "Urkunde",
+              "Anlage",
+              "Korrespondenz",
+              "Nachweis"
+            ],
+            "required": true
+          },
+          {
+            "name": "DraftStatus",
+            "type": "choice",
+            "choices": [
+              "Neu",
+              "InBearbeitung",
+              "InPrüfung",
+              "Freigegeben",
+              "Archiviert"
+            ],
+            "required": true
+          },
+          {
+            "name": "TrackChangesState",
+            "type": "choice",
+            "choices": [
+              "Unbekannt",
+              "Aktiv",
+              "Bereinigt",
+              "NichtAnwendbar"
+            ],
+            "required": true
+          },
+          {
+            "name": "ContainsPersonalData",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "DocumentHash",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "DriveItemId",
+            "type": "text",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "document_libraries": [
+      {
+        "display_name": "AktenDokumente",
+        "template": "documentLibrary",
+        "description": "Aktennahe Dokumente; Metadaten werden im DokumentRegister gespiegelt."
+      },
+      {
+        "display_name": "Vorlagen",
+        "template": "documentLibrary",
+        "description": "Geprüfte Vorlagen und Textbausteine."
+      }
+    ]
+  }
+}

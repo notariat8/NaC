@@ -3,8 +3,8 @@
   "contract_id": "workflow.nac_onprem_agent_runtime",
   "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
   "status": "target_control_ready_no_productive_connector_apply",
-  "last_update": "2026-07-02",
-  "purpose": "Definiert die Grenze, in der NaC als agentische On-Prem-Plattform auf notoclaw01 mit NemoClaw/OpenClaw vorbereitet wird, ohne NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz zu umgehen.",
+  "last_update": "2026-07-05",
+  "purpose": "Definiert die Grenze, in der NaC produktive agentische Workflows mit NVIDIA NeMo Agent Toolkit und AI-Q führt, während der bestehende NemoClaw/OpenClaw-Lauf auf notoclaw01 nur Target-Control-Evidence bleibt und NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz nicht umgeht.",
   "operating_model": {
     "project_manager": {
       "location": "brev01 main chat",
@@ -18,6 +18,34 @@
       "location": "notoclaw01-host:/home/ubuntu/nac-target-control",
       "responsibility": "NemoClaw/OpenClaw-Zielsystem, Agent-Manifest, lokale Smokes, Evidence und Runbooks prüfen."
     }
+  },
+  "agentic_toolkit_decision": {
+    "approved_agentic_toolkit": "nvidia_nemo_agent_toolkit",
+    "approved_agentic_toolkit_docs": "https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html",
+    "aiq_blueprint": "https://build.nvidia.com/nvidia/aiq",
+    "exclusive_for_productive_agentic_workflows": true,
+    "python_first": true,
+    "exceptions_require_owner_gate": true,
+    "scope": [
+      "agent_orchestration",
+      "agent_workflows",
+      "tool_calling",
+      "mcp_client_tool_binding",
+      "agent_runtime_packaging"
+    ],
+    "exceptions_allowed_for": [
+      "deterministic_python_validators",
+      "office_addin_ui",
+      "mcp_server_adapters",
+      "event_store_and_worm_storage",
+      "local_device_connectors"
+    ],
+    "blocked_without_owner_gate": [
+      "langchain_as_primary_runtime",
+      "crewai_as_primary_runtime",
+      "openclaw_runtime_activation",
+      "custom_agent_framework_as_primary_runtime"
+    ]
   },
   "source_of_truth": {
     "git": [
@@ -174,6 +202,78 @@
     "evidence",
     "connector-ops"
   ],
+  "required_mcp_servers": [
+    {
+      "id": "nac-workflow-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "NaC-BPMN-, Knowledge-Graph-, Prozessstatus- und nächste-Aktion-Werkzeuge für NeMo/AI-Q.",
+      "data_boundary": "metadata_only_no_raw_matter_payloads",
+      "write_policy": "owner_or_role_gate_required"
+    },
+    {
+      "id": "nac-access-grant-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "Rollen-, Akten-, Zweck-, Vertretungs- und zeitbegrenzte Freigabeprüfung.",
+      "data_boundary": "grant_metadata_and_audit_only",
+      "write_policy": "human_approval_and_duration_required"
+    },
+    {
+      "id": "m365-mail-calendar-mcp",
+      "placement": "central_serverless_or_workstation_sidecar",
+      "purpose": "Outlook-Mail-, Kalender-, Frei- und Belegt- sowie Meeting-Kontext über Microsoft Graph.",
+      "data_boundary": "least_privilege_graph_access_no_bulk_export",
+      "write_policy": "draft_or_send_only_after_human_approval"
+    },
+    {
+      "id": "m365-teams-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "Teams-Chat-, Kanal-, Thread- und Meetingnachrichten über Microsoft Graph.",
+      "data_boundary": "case_bound_retrieval_no_unbounded_chat_dump",
+      "write_policy": "reply_or_post_only_after_human_approval"
+    },
+    {
+      "id": "m365-files-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "OneDrive- und SharePoint-Drives, Dokumentbibliotheken, Listen, Delta- und Webhook-Signale über Microsoft Graph.",
+      "data_boundary": "document_pointer_metadata_first_private_payload_gate_for_content",
+      "write_policy": "document_mutation_only_after_role_case_gate"
+    },
+    {
+      "id": "entra-identity-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "Entra-ID-Subjekte, Gruppen, App-Rollen und Consent-Evidence für NaC-Rollenbindung.",
+      "data_boundary": "identity_metadata_only_no_token_or_raw_claim_storage",
+      "write_policy": "admin_owner_gate_required_for_directory_writes"
+    },
+    {
+      "id": "nac-document-mcp",
+      "placement": "central_private_runtime",
+      "purpose": "Dokumentenumschläge, Pointer, Hashes, Versionen, Track-Changes-Status und Extraktionsjobs.",
+      "data_boundary": "raw_documents_remain_in_approved_private_storage",
+      "write_policy": "private_payload_gate_and_audit_required"
+    },
+    {
+      "id": "nac-audit-evidence-mcp",
+      "placement": "central_serverless_or_container",
+      "purpose": "Append-only Ereignisjournal, WORM-Nachweis, Zugriff, Freigabe, Widerruf und Runtime-Evidence.",
+      "data_boundary": "redacted_evidence_no_secret_or_raw_payload",
+      "write_policy": "append_only"
+    },
+    {
+      "id": "local-workstation-mcp",
+      "placement": "per_workstation_wsl_container_or_local_sidecar",
+      "purpose": "Lokale Word-/Office-Brücke, Kartenarbeitsplatz, Scanner/OCR, XNP-Readiness und Arbeitsplatzsignale.",
+      "data_boundary": "local_cache_or_outbox_only_central_truth_required",
+      "write_policy": "outbound_only_after_central_lease"
+    },
+    {
+      "id": "nac-office-addin-mcp",
+      "placement": "optional_workstation_or_app_backend",
+      "purpose": "Optionale Word- und Teams-Add-in-Kommandos, falls die Benutzeroberfläche nicht direkt über NeMo/AI-Q-UI abgebildet wird.",
+      "data_boundary": "ui_commands_and_document_pointers_only",
+      "write_policy": "human_in_the_loop_required"
+    }
+  ],
   "connector_boundaries": [
     {
       "id": "xnp_snp",
@@ -284,6 +384,8 @@
   "documentation": {
     "de": "docs/de/architecture/nac-onprem-agent-runtime.md",
     "en": "docs/en/architecture/nac-onprem-agent-runtime.md",
+    "nemo_aiq_m365_de": "docs/de/architecture/nemo-agent-toolkit-aiq-m365.md",
+    "nemo_aiq_m365_en": "docs/en/architecture/nemo-agent-toolkit-aiq-m365.md",
     "operating_model_de": "docs/de/architecture/nemoclaw-operating-model.md",
     "operating_model_en": "docs/en/architecture/nemoclaw-operating-model.md"
   }

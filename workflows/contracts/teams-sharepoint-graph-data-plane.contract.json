@@ -1,0 +1,264 @@
+{
+  "schema_version": "nac.m365-data-plane/v0.1",
+  "contract_id": "m365.teams_sharepoint_graph_data_plane",
+  "title": "Teams SharePoint Graph Data Plane",
+  "status": "planned_mvp_contract_and_skeleton_no_live_apply",
+  "last_update": "2026-07-05",
+  "purpose": "Defines the MVP data plane in which NaC uses a Microsoft Teams team per notary team, the connected Microsoft 365 group and its SharePoint team site for starter storage, provisioned and accessed only through Microsoft Graph REST or MCP servers that use Microsoft Graph REST internally.",
+  "target_decision": {
+    "workspace_model": "team_per_notary_team",
+    "backing_services": [
+      "microsoft_teams_team",
+      "microsoft_365_group",
+      "sharepoint_team_site"
+    ],
+    "graph_rest_only": true,
+    "mcp_allowed_only_when_backed_by_graph_rest": true,
+    "sharepoint_as_start_data_store": true,
+    "nac_remains_process_logic_and_authorization_gate": true
+  },
+  "graph_policy": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "raw_http_required": true,
+    "sdk_usage_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "pnp_allowed": false,
+    "csom_allowed": false,
+    "allowed_resource_families": [
+      "teams",
+      "groups",
+      "sites",
+      "lists",
+      "columns",
+      "drives",
+      "channels"
+    ],
+    "allowed_endpoint_patterns": [
+      "POST /teams",
+      "GET /teams/{team-id}",
+      "GET /teams/{team-id}/channels",
+      "GET /teams/{team-id}/channels/{channel-id}/filesFolder",
+      "GET /groups/{group-id}/sites/root",
+      "GET /sites/{site-id}/lists",
+      "POST /sites/{site-id}/lists",
+      "GET /sites/{site-id}/lists/{list-id}/columns",
+      "POST /sites/{site-id}/lists/{list-id}/columns",
+      "GET /sites/{site-id}/drives"
+    ],
+    "forbidden_api_families": [
+      "sharepoint_legacy_rest_api",
+      "sharepoint_csom",
+      "pnp_powershell",
+      "microsoft_graph_sdk",
+      "sharepoint_sdk",
+      "direct_sql",
+      "office_automation_for_server_side_provisioning"
+    ]
+  },
+  "admin_tooling": {
+    "cli_microsoft365_allowed": true,
+    "cli_microsoft365_role": "owner_gated_admin_bootstrap_and_graph_smoke_only",
+    "cli_microsoft365_runtime_dependency_allowed": false,
+    "cli_microsoft365_product_data_path_allowed": false,
+    "graph_request_base": "@graph",
+    "graph_request_endpoint_version": "v1.0",
+    "setup_can_create_cli_app_registration": true,
+    "setup_create_app_uses_azure_cli_login": true,
+    "direct_login_requires_explicit_app_id": true,
+    "tenant_scoped_login_required": true,
+    "separate_cli_app_and_nac_runtime_app_required": true,
+    "legacy_sharepoint_rest_blocked": true,
+    "admin_consent_owner_gate_required": true,
+    "secrets_in_cli_output_must_not_be_committed": true,
+    "allowed_commands": [
+      "m365 setup",
+      "m365 login --appId <app-id> --tenant <tenant-id> --authType deviceCode",
+      "m365 status",
+      "m365 request --url @graph/...",
+      "m365 entra app add"
+    ],
+    "bootstrap_routes": [
+      "m365_setup_create_cli_app_registration_via_azure_cli",
+      "existing_cli_app_registration_device_code_login",
+      "authenticated_m365_entra_app_add_for_nac_bootstrap_or_runtime_apps"
+    ],
+    "forbidden_commands": [
+      "m365 spo",
+      "m365 request --url @spo/...",
+      "m365 request --url .../_api/...",
+      "m365 request --url @graphbeta/..."
+    ],
+    "runbook_de": "docs/de/runbooks/m365-cli-admin-accelerator.md",
+    "runbook_en": "docs/en/runbooks/m365-cli-admin-accelerator.md"
+  },
+  "operator_handoff": {
+    "prepared_request_required": true,
+    "applies_before_requesting_user_values": true,
+    "applies_before_admin_portal_actions": true,
+    "plain_unprepared_value_requests_allowed": false,
+    "secrets_in_chat_allowed": false,
+    "live_tenant_change_without_explicit_owner_approval_allowed": false,
+    "minimum_sections": [
+      "purpose_and_risk",
+      "exact_values_or_actions_needed",
+      "source_links",
+      "copy_paste_commands_with_placeholders",
+      "secret_handling",
+      "owner_gate_and_stop_condition",
+      "expected_next_step_after_user_action"
+    ]
+  },
+  "permission_model": {
+    "bootstrap_application_permissions": [
+      "Team.Create",
+      "Sites.Manage.All"
+    ],
+    "optional_discovery_permissions": [
+      "Group.Read.All",
+      "Team.ReadBasic.All"
+    ],
+    "runtime_target_permissions": [
+      "Sites.Selected"
+    ],
+    "team_member_mutation_in_mvp": false,
+    "team_member_mutation_owner_gate_required": true,
+    "runtime_app_must_be_site_scoped_after_bootstrap": true,
+    "standard_users_must_not_hold_m365_admin_permissions": true,
+    "privileged_m365_changes_must_run_through_app_or_api": true,
+    "application_governance_group_required": true,
+    "application_governance_group_target": "nac_platform_admins",
+    "direct_application_owner_group_supported_by_graph": false,
+    "direct_application_owner_must_be_user_or_service_principal": true,
+    "technical_application_owner_user_allowed": true,
+    "technical_application_owner_user_target": "funktion8@funktion8.de",
+    "human_team_owner_still_required": true,
+    "technical_bootstrap_owner_user_allowed": true,
+    "technical_bootstrap_owner_user_target": "funktion8@funktion8.de",
+    "technical_bootstrap_owner_user_must_not_be_sole_owner": true,
+    "licensed_human_team_owner_required": true,
+    "technical_owner_must_not_hold_m365_admin_roles": true,
+    "technical_owner_use_requires_license_terms_review": true,
+    "privileged_change_audit_required": true
+  },
+  "next_iteration_roadmap": [
+    {
+      "id": "m365-application-owned-privileged-change-path",
+      "title": "Application-owned M365 privileged change path",
+      "status": "planned_next_iteration",
+      "decision": "Standard users work with least privilege. Privileged Microsoft 365 changes such as Teams, SharePoint schema, site permission grants and membership mutation are routed through a controlled provisioning app/API. Direct Graph application owners are users or service principals; governance is held by a small Entra group.",
+      "boundaries": [
+        "The app is a privileged change actor, not a replacement for human notarial responsibility.",
+        "Microsoft Graph application owners can be individual users, the associated service principal or another service principal, not an Entra group.",
+        "Microsoft Teams still requires at least one human team owner for team ownership and operational accountability.",
+        "A dedicated technical bootstrap owner user such as funktion8@funktion8.de may be used only as a non-personal creation anchor when required by Microsoft Teams, never as sole owner or privileged admin.",
+        "Runtime access remains site-scoped through Sites.Selected after bootstrap.",
+        "Every privileged mutation needs reason, duration or change ticket context and audit evidence.",
+        "Break-glass or manual portal changes remain owner-gated exceptions."
+      ],
+      "implementation_targets": [
+        "Create a dedicated NaC M365 Provisioning app separate from the runtime app.",
+        "Use funktion8@funktion8.de or a service principal as the direct technical app owner, and govern changes through nac_platform_admins.",
+        "Move Teams, SharePoint schema and permission mutations behind an owner-gated Graph REST API.",
+        "Grant runtime access through Sites.Selected per approved SharePoint site.",
+        "Add drift/export evidence before and after privileged changes."
+      ]
+    }
+  ],
+  "provisioning_model": {
+    "schema_artifact": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+    "provisioner_script": "scripts/provision_teams_sharepoint_graph.py",
+    "python_package": "src/nac_m365_graph",
+    "team_creation_owner_gated": true,
+    "schema_apply_owner_gated": true,
+    "live_apply_by_default": false,
+    "plan_without_credentials_required": true,
+    "drift_requires_credentials": true,
+    "export_requires_credentials": true,
+    "stores_secret_values_in_repo": false,
+    "stores_tenant_specific_ids_in_public_contract": false
+  },
+  "workspace_templates": [
+    {
+      "id": "notary_team_01",
+      "team_display_name": "NaC-Notar-01",
+      "membership_model": "notary_and_assigned_clerk",
+      "sharepoint_lists": [
+        "Akten",
+        "Beteiligte",
+        "AufgabenFristen",
+        "Vertretungsfreigaben",
+        "AuditJournalLite",
+        "DokumentRegister"
+      ],
+      "document_libraries": [
+        "AktenDokumente",
+        "Vorlagen"
+      ]
+    },
+    {
+      "id": "notary_team_02",
+      "team_display_name": "NaC-Notar-02",
+      "membership_model": "notary_and_assigned_clerk",
+      "sharepoint_lists": [
+        "Akten",
+        "Beteiligte",
+        "AufgabenFristen",
+        "Vertretungsfreigaben",
+        "AuditJournalLite",
+        "DokumentRegister"
+      ],
+      "document_libraries": [
+        "AktenDokumente",
+        "Vorlagen"
+      ]
+    }
+  ],
+  "required_lists": [
+    "Akten",
+    "Beteiligte",
+    "AufgabenFristen",
+    "Vertretungsfreigaben",
+    "AuditJournalLite",
+    "DokumentRegister"
+  ],
+  "required_document_libraries": [
+    "AktenDokumente",
+    "Vorlagen"
+  ],
+  "guardrails": {
+    "one_team_for_all_notary_users_allowed": false,
+    "team_per_case_default_allowed": false,
+    "private_channel_per_case_default_allowed": false,
+    "standard_channel_is_security_boundary": false,
+    "chat_files_as_matter_source_of_truth_allowed": false,
+    "item_level_permissions_as_default_allowed": false,
+    "nac_role_case_gate_required": true,
+    "substitution_requires_reason_duration_audit": true,
+    "raw_matter_payload_in_product_repo_allowed": false
+  },
+  "mcp_boundary": {
+    "server_id": "teams-sharepoint-data-mcp",
+    "mcp_server_required_for_runtime": true,
+    "mcp_must_use_graph_rest_only": true,
+    "allowed_runtime_tools": [
+      "case_get",
+      "case_create",
+      "case_update_status",
+      "task_create",
+      "grant_request",
+      "audit_append",
+      "document_list"
+    ],
+    "runtime_writes_require_role_case_gate": true
+  },
+  "validation_commands": [
+    "python scripts/validate_teams_sharepoint_graph_data_plane.py",
+    "python scripts/validate_language_parity.py",
+    "python scripts/validate_doc_links.py",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "documentation": {
+    "de": "docs/de/architecture/teams-sharepoint-graph-data-plane.md",
+    "en": "docs/en/architecture/teams-sharepoint-graph-data-plane.md"
+  }
+}

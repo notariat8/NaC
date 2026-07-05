@@ -122,6 +122,17 @@ bleibt die aktuelle SaaS-IdP-Schicht. Agent Registry ist ein Zielbild-Kontroll-
 und Review-Anker für künftige NaC-Agenten, MCP-Connectoren und externe
 Agent-Plattformen.
 
+Die produktive agentische Runtime ist
+[NVIDIA NeMo Agent Toolkit / AI-Q](architecture/nemo-agent-toolkit-aiq-m365.md).
+Microsoft-365-Daten aus Outlook, Teams, OneDrive und SharePoint werden für NaC
+über Microsoft Graph und akten-, rollen- und zweckgebundene MCP-Server
+angebunden. NemoClaw/OpenClaw bleibt nur Target-Control- und Sandbox-Evidence,
+solange kein gesondertes Owner-Gate eine andere Runtime-Entscheidung trifft.
+Die MVP-Datenhaltung ist in der
+[Teams-SharePoint-Graph-Datenebene](architecture/teams-sharepoint-graph-data-plane.md)
+festgelegt: Teams Team pro Notar-Team, verbundene Microsoft-365-Gruppe,
+SharePoint-Team-Site als Speicher und ausschließlich Microsoft Graph REST.
+
 ### `monthly-close.yml`
 
 - läuft periodisch oder manuell

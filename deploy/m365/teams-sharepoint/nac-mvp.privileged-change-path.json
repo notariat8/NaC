@@ -1,0 +1,82 @@
+{
+  "schema_version": "nac.m365-privileged-change-path/v0.1",
+  "name": "nac-mvp-application-owned-privileged-change-path",
+  "description": "Owner-gated Microsoft 365 privileged change path using Microsoft Graph REST only.",
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false
+  },
+  "governance": {
+    "standard_users_must_not_hold_m365_admin_permissions": true,
+    "privileged_changes_must_run_through_app_or_api": true,
+    "human_team_owner_still_required": true,
+    "privileged_change_audit_required": true,
+    "owner_gate_required_for_live_apply": true
+  },
+  "governance_group": {
+    "display_name": "nac_platform_admins",
+    "mail_nickname": "nac-platform-admins",
+    "security_enabled": true,
+    "mail_enabled": false,
+    "direct_application_owner_supported": false,
+    "purpose": "Governance and four-eyes group for privileged Microsoft 365 changes; not a direct Microsoft Graph application owner."
+  },
+  "technical_owner_user": {
+    "display_name": "funktion8",
+    "user_principal_name": "funktion8@funktion8.de",
+    "lookup_strategy": "user_principal_name",
+    "allowed_as_direct_application_owner": true,
+    "allowed_as_team_creation_anchor": true,
+    "must_not_be_sole_team_owner": true,
+    "must_not_hold_m365_admin_roles": true,
+    "license_terms_review_required": true
+  },
+  "applications": [
+    {
+      "id": "m365_provisioning_app",
+      "display_name": "NaC M365 Provisioning",
+      "purpose": "Owner-gated Teams, SharePoint schema, site-permission and membership mutation path.",
+      "direct_owner": "technical_owner_user",
+      "governance_group": "nac_platform_admins",
+      "bootstrap_application_permissions": [
+        "Team.Create",
+        "Sites.Manage.All"
+      ],
+      "runtime_allowed": false,
+      "sites_selected_grants": false
+    },
+    {
+      "id": "m365_runtime_app",
+      "display_name": "NaC M365 Runtime",
+      "purpose": "Site-scoped runtime access for NaC MCP/API operations after bootstrap.",
+      "direct_owner": "technical_owner_user",
+      "governance_group": "nac_platform_admins",
+      "bootstrap_application_permissions": [
+        "Sites.Selected"
+      ],
+      "runtime_allowed": true,
+      "sites_selected_grants": true,
+      "site_permission_role": "write"
+    }
+  ],
+  "team_owner_policy": {
+    "technical_owner_user_may_be_owner": true,
+    "technical_owner_user_must_not_be_sole_owner": true,
+    "licensed_human_team_owner_required": true,
+    "verify_existing_team_owners_before_membership_mutation": true
+  },
+  "provisioned_state": {
+    "source": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
+    "contains_secrets": false,
+    "used_for_site_selected_grant_plan": true
+  },
+  "live_apply": {
+    "enabled_by_default": false,
+    "requires_owner_approval": true,
+    "requires_drift_export_before": true,
+    "requires_drift_export_after": true,
+    "requires_license_terms_review_for_technical_owner_user": true
+  }
+}

@@ -113,7 +113,17 @@ regardless of the language used in the prompt. The binding rule is defined in
   `notoclaw01` target operation.
 - [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
   defines the target-system contract for NaC as an on-prem agent runtime with
-  NemoClaw/OpenClaw, target-control, connector stubs and owner gates.
+  the NeMo/AIQ decision, NemoClaw/OpenClaw target-control, connector stubs and
+  owner gates.
+- [docs/en/architecture/nemo-agent-toolkit-aiq-m365.md](architecture/nemo-agent-toolkit-aiq-m365.md)
+  defines the productive agentic runtime decision for NVIDIA NeMo Agent
+  Toolkit / AI-Q, Microsoft 365 MCP servers and local workstation sidecars.
+- [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
+  defines MVP storage through Teams, Microsoft 365 group, SharePoint team site
+  and Microsoft Graph REST without legacy SharePoint APIs or SDKs.
+- [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
+  defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
+  setup and smoke tests.
 - [docs/en/architecture/agent-runtime-registry.md](architecture/agent-runtime-registry.md)
   defines the ATP-backed agent registry, outbound connector endpoint,
   sandbox-binding and sandbox-lease boundary behind `agent.notariat8.de`.

@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-06-30
+Last update: 2026-07-05
 Branch: `main`
 
 ## What Is Being Built
@@ -82,6 +82,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-30 | Legal AI-SBOM delta artifact proposal | Add the first concrete Legal-Nemotron AI-SBOM delta proposal artifact and CLI status, still metadata-only and blocked from runtime activation, endpoint activation, training, evaluation, checkpoint publication or legal-answer quality claims. | Continue only with source inventory depth, approved benchmark generation, AI-SBOM baseline export mapping or licensed commentary connector activation gates; owner apply remains required before any runtime, checkpoint or quality claim. |
 | 2026-06-30 | AI-SBOM baseline export mapping | Select CycloneDX JSON and SPDX JSON as machine-readable target profiles for the repo-wide AI-SBOM baseline and expose the status through CLI and strict quality gate. | Continue only with a separate owner-apply-gated release-binding PR; no external SBOM tooling, published release artifact, mandate data or secrets are enabled by this mapping. |
 | 2026-06-30 | Legal Source Inventory review depth | Extend the source inventory from simple source status to per-source review depth without ingestion. | Continue with source-license/TDM evidence, approved benchmark generation or licensed commentary connector gates in separate PRs; owner apply remains required before any ingestion, corpus preparation, evaluation, training or release binding. |
+| 2026-07-05 | M365 application-owned privileged change path | Add as the next iteration for the Teams/SharePoint data plane. Standard users stay least-privilege; Teams, SharePoint schema, site permission and membership mutations move behind a controlled provisioning app/API. Direct Graph app owners are users or service principals, so `technical_owner_user` or a service principal is the technical owner anchor while `nac_platform_admins` is the governance group. | Implement as a separate owner-gated PR: dedicated provisioning app, technical app owner anchor, governance group, Graph REST mutation API, `Sites.Selected` runtime grants, drift/export evidence and explicit audit records. |
 
 ## Local Developer Commands
 

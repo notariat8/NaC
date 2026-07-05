@@ -127,6 +127,17 @@ OCI Identity Domains remains the current SaaS IdP layer. Agent Registry is a
 target-state control and review anchor for future NaC agents, MCP connectors
 and external agent platforms.
 
+The productive agentic runtime is
+[NVIDIA NeMo Agent Toolkit / AI-Q](architecture/nemo-agent-toolkit-aiq-m365.md).
+Microsoft 365 data from Outlook, Teams, OneDrive and SharePoint is connected
+to NaC through Microsoft Graph and matter-, role- and purpose-bound MCP
+servers. NemoClaw/OpenClaw remains target-control and sandbox evidence unless
+a separate owner gate makes a different runtime decision.
+MVP storage is defined in the
+[Teams SharePoint Graph Data Plane](architecture/teams-sharepoint-graph-data-plane.md):
+one Teams team per notary team, connected Microsoft 365 group, SharePoint team
+site as storage and Microsoft Graph REST only.
+
 ### `monthly-close.yml`
 
 - runs periodically or manually,

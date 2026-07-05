@@ -39,6 +39,9 @@ flowchart TD
     Workstation --> O365["Office 365 / Microsoft 365 client layer"]
     O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
     O365 --> AgentRegistry["Microsoft Agent 365 Agent Registry"]
+    O365 --> M365Mcp["Microsoft 365 MCP servers through Microsoft Graph"]
+    M365Mcp --> AiQ["NVIDIA AI-Q / NeMo Agent Toolkit"]
+    AiQ --> Runtime
     Workstation["local notary workstation"] --> Card["card reader, XNP, eID bridge"]
     Card --> Runtime
 ```
@@ -61,6 +64,15 @@ For NaC it is not a production integration requirement. It is a future
 control anchor: when NaC agents, MCP connectors or external agent platforms are
 connected productively, their registration, visibility, accountability and
 deactivation must be reconciled with Microsoft 365 agent governance.
+
+The productive agentic runtime for these integrations is
+[NVIDIA NeMo Agent Toolkit / AI-Q](architecture/nemo-agent-toolkit-aiq-m365.md).
+Outlook, Teams, OneDrive and SharePoint are not bulk-copied into agent memory;
+they are connected through Microsoft Graph and matter-, role- and
+purpose-bound MCP servers. The required MCP servers are defined in the
+architecture paper; they separate Microsoft 365 mail/calendar, Teams messages,
+OneDrive/SharePoint files, Entra ID identity, NaC workflow, grants, document
+pointers, audit evidence and local workstation sidecars.
 
 The static site may link to the authenticated web app. It must not serve
 tokens, secret upload links, raw documents, identity-card data, certificate
@@ -244,11 +256,13 @@ from a product idea into a checkable NaC artifact path.
 3. Track Office 365 as the mandatory client layer and Microsoft Agent 365 Agent
    Registry as a Preview governance anchor in the target architecture and
    backlog.
-4. Explicitly disallow consumer ChatGPT as a client-upload gateway.
-5. Check card-reader, XNP and eID paths only locally through the
+4. Add NeMo Agent Toolkit / AI-Q as the productive agentic runtime and
+   Microsoft 365 MCP boundary to integration planning.
+5. Explicitly disallow consumer ChatGPT as a client-upload gateway.
+6. Check card-reader, XNP and eID paths only locally through the
    `notary-workstation` profile.
-6. Connect the mobile web app or PWA to storage targets first through
+7. Connect the mobile web app or PWA to storage targets first through
    short-lived secure links; build native apps only for concrete device needs.
-7. Treat uploads as inbox items or import proposals first.
-8. Make contract, validator, audit and human approval mandatory before
+8. Treat uploads as inbox items or import proposals first.
+9. Make contract, validator, audit and human approval mandatory before
    productive links.

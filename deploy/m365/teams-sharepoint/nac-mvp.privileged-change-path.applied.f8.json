@@ -1,0 +1,90 @@
+{
+  "state_version": "nac.m365-privileged-change-path.applied/v0.1",
+  "captured_at_utc": "2026-07-05T14:32:10Z",
+  "source_config": "deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json",
+  "tenant": {
+    "display_name": "f8",
+    "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "primary_domain": "funktion8.de"
+  },
+  "technical_owner_user": {
+    "id": "dcebf7ba-53d1-475b-af8f-2fed971e415c",
+    "display_name": "funktion8",
+    "user_principal_name": "funktion8@funktion8.de",
+    "assigned_license_count": 0,
+    "purpose": "Technical application owner and optional Teams creation anchor; not sole team owner and not a Microsoft 365 admin role holder."
+  },
+  "governance_group": {
+    "id": "c8b60549-dec0-4621-b417-90d2db6c6173",
+    "display_name": "nac_platform_admins",
+    "mail_nickname": "nac-platform-admins",
+    "security_enabled": true,
+    "mail_enabled": false,
+    "purpose": "Governance and four-eyes group for privileged Microsoft 365 changes; not a direct Microsoft Graph application owner."
+  },
+  "applications": {
+    "m365_provisioning_app": {
+      "display_name": "NaC M365 Provisioning",
+      "application_object_id": "b8dcafad-0472-4002-b0f8-49c6028e892d",
+      "client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+      "service_principal_id": "ec1b7911-4e9f-4d42-9948-452019068d6c",
+      "direct_technical_owner_user": "funktion8@funktion8.de",
+      "application_permissions": [
+        "Team.Create",
+        "Sites.Manage.All"
+      ],
+      "runtime_allowed": false
+    },
+    "m365_runtime_app": {
+      "display_name": "NaC M365 Runtime",
+      "application_object_id": "b53c0805-ac67-469b-9539-dc15d84fd3dd",
+      "client_id": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+      "service_principal_id": "226b2a94-fc18-4dc4-8c82-8c357b180171",
+      "direct_technical_owner_user": "funktion8@funktion8.de",
+      "application_permissions": [
+        "Sites.Selected"
+      ],
+      "runtime_allowed": true
+    }
+  },
+  "team_owner_checks": [
+    {
+      "workspace_id": "notary_team_01",
+      "team_display_name": "NaC-Notar-01",
+      "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a",
+      "owner_count": 1,
+      "licensed_human_owner_count": 1,
+      "licensed_human_owner": "ofunk@funktion8.de"
+    },
+    {
+      "workspace_id": "notary_team_02",
+      "team_display_name": "NaC-Notar-02",
+      "team_id": "ce7733fc-c3e2-4866-85cf-6a196d95eba1",
+      "owner_count": 1,
+      "licensed_human_owner_count": 1,
+      "licensed_human_owner": "ofunk@funktion8.de"
+    }
+  ],
+  "runtime_site_permissions": [
+    {
+      "workspace_id": "notary_team_01",
+      "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "application_client_id": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+      "role": "write",
+      "status": "existing_after_idempotence_check"
+    },
+    {
+      "workspace_id": "notary_team_02",
+      "site_id": "funktion8.sharepoint.com,e1f7e026-a02c-4607-bc48-d36fdb94b71c,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "application_client_id": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
+      "role": "write",
+      "status": "existing_after_idempotence_check"
+    }
+  ],
+  "operational_notes": [
+    "No OAuth token, client secret, certificate or private key is stored in this file.",
+    "The governance group was created but no group members were added by this owner-gated apply.",
+    "The runtime app has Sites.Selected grants but no credential material yet; runtime authentication must be added through a later owner-gated secret or certificate process.",
+    "The technical owner user is unlicensed; production use still requires license/terms review."
+  ]
+}

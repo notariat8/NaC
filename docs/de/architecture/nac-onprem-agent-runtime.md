@@ -1,13 +1,17 @@
 # NaC-On-Prem-Agent-Runtime
 
 Status: Vertrags- und Zielsystemgrenze
-Letzte inhaltliche Anpassung: 2026-07-02
+Letzte inhaltliche Anpassung: 2026-07-05
 
 ## Zweck
 
-Diese Seite beschreibt, wie NaC als agentische On-Prem-Plattform auf einem
-NemoClaw-/OpenClaw-Zielsystem betrieben werden kann, ohne die GitOps-Grenzen
-des NaC-Repositorys aufzugeben. Sie ergänzt das
+Diese Seite beschreibt, wie NaC seine produktive agentische Runtime von
+Target-Control- und Sandbox-Evidence trennt. Für neue produktive
+NaC-Agenten ist
+[NVIDIA NeMo Agent Toolkit / AI-Q](nemo-agent-toolkit-aiq-m365.md) die
+führende Agentic-Runtime. Der bestehende NemoClaw-/OpenClaw-Lauf auf
+`notoclaw01` bleibt ein Zielsystem- und Evidence-Pfad, ohne die
+GitOps-Grenzen des NaC-Repositorys aufzugeben. Diese Seite ergänzt das
 [NemoClaw-Betriebsmodell](nemoclaw-operating-model.md) um die technische
 Runtime-Grenze zwischen Quellrepo, Target-Control und produktiven
 Notariats-Workflows.
@@ -33,6 +37,34 @@ Der maschinenlesbare Vertrag steht in
 Er wird durch
 [scripts/validate_nac_onprem_agent_runtime.py](../../../scripts/validate_nac_onprem_agent_runtime.py)
 geprüft.
+
+## Agentic-Toolkit-Entscheidung: NeMo Agent Toolkit / AI-Q
+
+Produktive agentische NaC-Workflows nutzen
+[NVIDIA NeMo Agent Toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html)
+als einziges führendes Agentic Toolkit. Die bevorzugte Blueprint- und
+Paketierungsstrecke ist
+[NVIDIA AI-Q](https://build.nvidia.com/nvidia/aiq).
+
+Damit werden Workflow-Orchestrierung, Tool-Calling, MCP-Client-Bindung,
+Agent-Runtime und lokale oder zentrale Agent-Worker auf NeMo/AI-Q ausgerichtet.
+CrewAI, LangChain als primäre Runtime, OpenClaw-Runtime-Aktivierung oder
+eigene Agent-Frameworks bleiben für produktive NaC-Agenten gesperrt, solange
+kein bewusstes Owner-Gate mit dokumentierter Ausnahme vorliegt.
+
+Diese Entscheidung ersetzt nicht:
+
+- deterministische Python-Validatoren,
+- `nac`-CLI- und Contract-Pruefungen,
+- Office-, Word- oder Teams-Add-ins als Benutzeroberfläche,
+- schlanke Python-MCP-Server,
+- Runtime-Speicher, Event-Journal, WORM- oder Vault-Schichten.
+
+Die Microsoft-365-Anbindung läuft über die in
+[NeMo Agent Toolkit, AI-Q und Microsoft-365-MCP-Zielarchitektur](nemo-agent-toolkit-aiq-m365.md)
+definierten MCP-Server. Outlook, Teams, OneDrive und SharePoint bleiben ihre
+Quellsysteme; NeMo/AI-Q greift über MCP und Microsoft Graph akten-,
+rollen- und zweckgebunden darauf zu.
 
 ## Variante C: Outbound Connector
 

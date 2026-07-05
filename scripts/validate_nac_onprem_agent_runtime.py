@@ -9,6 +9,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "nac-onprem-agent-runtime.contract.json"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "nac-onprem-agent-runtime.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "nac-onprem-agent-runtime.md"
+NEMO_AIQ_M365_DE = REPO_ROOT / "docs" / "de" / "architecture" / "nemo-agent-toolkit-aiq-m365.md"
+NEMO_AIQ_M365_EN = REPO_ROOT / "docs" / "en" / "architecture" / "nemo-agent-toolkit-aiq-m365.md"
 DATA_SOVEREIGNTY_DE = REPO_ROOT / "docs" / "de" / "architecture" / "data-sovereignty-git-vs-atp.md"
 DATA_SOVEREIGNTY_EN = REPO_ROOT / "docs" / "en" / "architecture" / "data-sovereignty-git-vs-atp.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "operations" / "ponytail-skill-only-smoke.md"
@@ -106,6 +108,38 @@ REQUIRED_AGENT_ROLES_OR_NAMES = {
     "evidence",
     "connector-ops",
 }
+REQUIRED_AGENTIC_TOOLKIT_SCOPE = {
+    "agent_orchestration",
+    "agent_workflows",
+    "tool_calling",
+    "mcp_client_tool_binding",
+    "agent_runtime_packaging",
+}
+REQUIRED_AGENTIC_TOOLKIT_EXCEPTIONS = {
+    "deterministic_python_validators",
+    "office_addin_ui",
+    "mcp_server_adapters",
+    "event_store_and_worm_storage",
+    "local_device_connectors",
+}
+REQUIRED_AGENTIC_TOOLKIT_BLOCKED = {
+    "langchain_as_primary_runtime",
+    "crewai_as_primary_runtime",
+    "openclaw_runtime_activation",
+    "custom_agent_framework_as_primary_runtime",
+}
+REQUIRED_MCP_SERVER_IDS = {
+    "nac-workflow-mcp",
+    "nac-access-grant-mcp",
+    "m365-mail-calendar-mcp",
+    "m365-teams-mcp",
+    "m365-files-mcp",
+    "entra-identity-mcp",
+    "nac-document-mcp",
+    "nac-audit-evidence-mcp",
+    "local-workstation-mcp",
+    "nac-office-addin-mcp",
+}
 REQUIRED_OWNER_GATES = {
     "architecture_decision",
     "secret_or_credential",
@@ -166,11 +200,13 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         errors.append("status must be target_control_ready_no_productive_connector_apply")
 
     errors.extend(_validate_operating_model(payload))
+    errors.extend(_validate_agentic_toolkit_decision(payload))
     errors.extend(_validate_source_of_truth(payload))
     errors.extend(_validate_variant_c_outbound_connector(payload))
     errors.extend(_validate_runtime_persistence(payload))
     errors.extend(_validate_target_control(payload))
     errors.extend(_validate_roles_and_connectors(payload))
+    errors.extend(_validate_required_mcp_servers(payload))
     errors.extend(_validate_optional_agent_tooling(payload))
     errors.extend(_validate_guardrails(payload))
     errors.extend(_validate_handoff(payload))
@@ -192,6 +228,40 @@ def _validate_operating_model(payload: dict[str, Any]) -> list[str]:
             errors.append(f"operating_model.{key}.location must be set")
         if not isinstance(entry.get("responsibility"), str) or not entry["responsibility"]:
             errors.append(f"operating_model.{key}.responsibility must be set")
+    return errors
+
+
+def _validate_agentic_toolkit_decision(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    decision = payload.get("agentic_toolkit_decision")
+    if not isinstance(decision, dict):
+        return ["agentic_toolkit_decision must be an object"]
+
+    expected_values = {
+        "approved_agentic_toolkit": "nvidia_nemo_agent_toolkit",
+        "approved_agentic_toolkit_docs": "https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html",
+        "aiq_blueprint": "https://build.nvidia.com/nvidia/aiq",
+    }
+    for key, expected in expected_values.items():
+        if decision.get(key) != expected:
+            errors.append(f"agentic_toolkit_decision.{key} must be {expected}")
+
+    for flag in ("exclusive_for_productive_agentic_workflows", "python_first", "exceptions_require_owner_gate"):
+        if decision.get(flag) is not True:
+            errors.append(f"agentic_toolkit_decision.{flag} must be true")
+
+    scope = set(_string_list(decision.get("scope")))
+    for missing in sorted(REQUIRED_AGENTIC_TOOLKIT_SCOPE - scope):
+        errors.append(f"agentic_toolkit_decision.scope missing {missing}")
+
+    exceptions = set(_string_list(decision.get("exceptions_allowed_for")))
+    for missing in sorted(REQUIRED_AGENTIC_TOOLKIT_EXCEPTIONS - exceptions):
+        errors.append(f"agentic_toolkit_decision.exceptions_allowed_for missing {missing}")
+
+    blocked = set(_string_list(decision.get("blocked_without_owner_gate")))
+    for missing in sorted(REQUIRED_AGENTIC_TOOLKIT_BLOCKED - blocked):
+        errors.append(f"agentic_toolkit_decision.blocked_without_owner_gate missing {missing}")
+
     return errors
 
 
@@ -412,6 +482,43 @@ def _validate_roles_and_connectors(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_required_mcp_servers(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    servers = payload.get("required_mcp_servers")
+    if not isinstance(servers, list) or not servers:
+        return ["required_mcp_servers must be a non-empty list"]
+
+    by_id = {
+        item.get("id"): item
+        for item in servers
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    for missing in sorted(REQUIRED_MCP_SERVER_IDS - set(by_id)):
+        errors.append(f"required_mcp_servers missing {missing}")
+
+    for server_id in sorted(REQUIRED_MCP_SERVER_IDS & set(by_id)):
+        entry = by_id[server_id]
+        for key in ("placement", "purpose", "data_boundary", "write_policy"):
+            if not isinstance(entry.get(key), str) or not entry[key]:
+                errors.append(f"required_mcp_servers.{server_id}.{key} must be set")
+
+    files_mcp = by_id.get("m365-files-mcp")
+    if isinstance(files_mcp, dict):
+        purpose = files_mcp.get("purpose", "")
+        if "OneDrive" not in purpose or "SharePoint" not in purpose:
+            errors.append("required_mcp_servers.m365-files-mcp.purpose must mention OneDrive and SharePoint")
+
+    local_mcp = by_id.get("local-workstation-mcp")
+    if isinstance(local_mcp, dict):
+        placement = local_mcp.get("placement", "")
+        if "workstation" not in placement:
+            errors.append("required_mcp_servers.local-workstation-mcp.placement must be workstation-local")
+        if "central_truth" not in local_mcp.get("data_boundary", ""):
+            errors.append("required_mcp_servers.local-workstation-mcp.data_boundary must require central truth")
+
+    return errors
+
+
 def _validate_optional_agent_tooling(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     candidates = payload.get("optional_agent_tooling_candidates")
@@ -524,6 +631,8 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         expected = {
             "de": "docs/de/architecture/nac-onprem-agent-runtime.md",
             "en": "docs/en/architecture/nac-onprem-agent-runtime.md",
+            "nemo_aiq_m365_de": "docs/de/architecture/nemo-agent-toolkit-aiq-m365.md",
+            "nemo_aiq_m365_en": "docs/en/architecture/nemo-agent-toolkit-aiq-m365.md",
             "operating_model_de": "docs/de/architecture/nemoclaw-operating-model.md",
             "operating_model_en": "docs/en/architecture/nemoclaw-operating-model.md",
         }
@@ -539,6 +648,7 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (DOC_DE, "Variante C: Outbound Connector"),
         (DOC_DE, "Speichergrenze für Variante C"),
         (DOC_DE, "tenant + user + vorgang + rolle"),
+        (DOC_DE, "Agentic-Toolkit-Entscheidung: NeMo Agent Toolkit / AI-Q"),
         (DOC_EN, "NaC On-Prem Agent Runtime"),
         (DOC_EN, "fixed, DNS-backed domain"),
         (DOC_EN, "Ponytail skill-only smoke"),
@@ -546,6 +656,17 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (DOC_EN, "Variant C: Outbound Connector"),
         (DOC_EN, "Storage Boundary For Variant C"),
         (DOC_EN, "tenant + user + matter + role"),
+        (DOC_EN, "Agentic Toolkit Decision: NeMo Agent Toolkit / AI-Q"),
+        (NEMO_AIQ_M365_DE, "NeMo Agent Toolkit, AI-Q Und Microsoft-365-MCP-Zielarchitektur"),
+        (NEMO_AIQ_M365_DE, "Erforderliche MCP-Server"),
+        (NEMO_AIQ_M365_DE, "`nac-workflow-mcp`"),
+        (NEMO_AIQ_M365_DE, "`m365-files-mcp`"),
+        (NEMO_AIQ_M365_DE, "Lokaler Betrieb Mit WSL-Containern"),
+        (NEMO_AIQ_M365_EN, "NeMo Agent Toolkit, AI-Q And Microsoft 365 MCP Target Architecture"),
+        (NEMO_AIQ_M365_EN, "Required MCP Servers"),
+        (NEMO_AIQ_M365_EN, "`nac-workflow-mcp`"),
+        (NEMO_AIQ_M365_EN, "`m365-files-mcp`"),
+        (NEMO_AIQ_M365_EN, "Local Operation With WSL Containers"),
         (DATA_SOVEREIGNTY_DE, "Agent- und Sandbox-Bindungen"),
         (DATA_SOVEREIGNTY_DE, "agent_registry"),
         (DATA_SOVEREIGNTY_DE, "sandbox_bindings"),
@@ -612,7 +733,10 @@ def main() -> int:
             print(f"ERROR: {error}")
         return 1
     print("STATUS: PASSED")
-    print("OK: NaC on-prem agent runtime contract keeps notoclaw target-control, GitOps ownership, connector stubs and owner gates aligned.")
+    print(
+        "OK: NaC on-prem agent runtime contract keeps NeMo/AIQ, Microsoft 365 MCP boundaries, "
+        "notoclaw target-control, GitOps ownership, connector stubs and owner gates aligned."
+    )
     return 0
 
 

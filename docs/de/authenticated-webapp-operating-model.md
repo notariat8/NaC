@@ -39,6 +39,9 @@ flowchart TD
     Workstation --> O365["Office 365 / Microsoft 365 Client-Schicht"]
     O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
     O365 --> AgentRegistry["Microsoft Agent 365 Agent Registry"]
+    O365 --> M365Mcp["Microsoft-365-MCP-Server über Microsoft Graph"]
+    M365Mcp --> AiQ["NVIDIA AI-Q / NeMo Agent Toolkit"]
+    AiQ --> Runtime
     Workstation["lokaler Notariatsarbeitsplatz"] --> Card["Kartenleser, XNP, eID-Brücke"]
     Card --> Runtime
 ```
@@ -63,6 +66,16 @@ ein künftiger Kontrollanker: Wenn NaC-Agenten, MCP-Connectoren oder externe
 Agent-Plattformen produktiv angebunden werden, muss ihre Registrierung,
 Sichtbarkeit, Verantwortlichkeit und Deaktivierbarkeit mit der
 Microsoft-365-Agent-Governance abgeglichen werden.
+
+Die produktive agentische Runtime für diese Integrationen ist
+[NVIDIA NeMo Agent Toolkit / AI-Q](architecture/nemo-agent-toolkit-aiq-m365.md).
+Outlook, Teams, OneDrive und SharePoint werden nicht pauschal in eine
+Agenten-Memory kopiert, sondern über Microsoft Graph und akten-, rollen- und
+zweckgebundene MCP-Server angebunden. Die erforderlichen MCP-Server sind im
+Architekturpapier definiert; sie trennen Microsoft-365-Mail/Kalender,
+Teams-Nachrichten, OneDrive/SharePoint-Dateien, Entra-ID-Identität,
+NaC-Workflow, Freigaben, Dokument-Pointer, Audit-Evidence und lokale
+Workstation-Sidecars.
 
 Die statische Seite kann auf die authentifizierte Webapp verlinken. Sie darf
 aber keine Tokens, geheimen Uploadlinks, Rohdokumente, Ausweisdaten,
@@ -255,8 +268,10 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
 3. Office 365 als verpflichtende Client-Schicht und Microsoft Agent 365 Agent
    Registry als Preview-Governance-Anker in Zielarchitektur und Backlog
    führen.
-4. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
-5. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
+4. NeMo Agent Toolkit / AI-Q als produktive Agentic-Runtime und
+   Microsoft-365-MCP-Grenze in die Integrationsplanung aufnehmen.
+5. Consumer-ChatGPT ausdrücklich nicht als Mandanten-Upload-Gateway zulassen.
+6. Kartenleser-, XNP- und eID-Pfade nur lokal über das Profil
    `notary-workstation` prüfen.
 6. Mobile Web-App oder PWA zuerst über kurzlebige sichere Links an
    Speicherziele anbinden; native Apps nur bei konkretem Gerätebedarf bauen.

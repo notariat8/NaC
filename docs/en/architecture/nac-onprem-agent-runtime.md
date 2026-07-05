@@ -1,13 +1,16 @@
 # NaC On-Prem Agent Runtime
 
 Status: contract and target-system boundary
-Last content update: 2026-07-02
+Last content update: 2026-07-05
 
 ## Purpose
 
-This page describes how NaC can run as an agentic on-prem platform on a
-NemoClaw/OpenClaw target system without giving up the GitOps boundaries of the
-NaC repository. It extends the
+This page describes how NaC separates its productive agentic runtime from
+target-control and sandbox evidence. For new productive NaC agents,
+[NVIDIA NeMo Agent Toolkit / AI-Q](nemo-agent-toolkit-aiq-m365.md) is the
+leading agentic runtime. The existing NemoClaw/OpenClaw run on `notoclaw01`
+remains a target-system and evidence path without giving up the GitOps
+boundaries of the NaC repository. This page extends the
 [NemoClaw operating model](nemoclaw-operating-model.md) with the technical
 runtime boundary between source repository, target-control and production
 notarial workflows.
@@ -32,6 +35,33 @@ The machine-readable contract is
 [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../../workflows/contracts/nac-onprem-agent-runtime.contract.json).
 It is validated by
 [scripts/validate_nac_onprem_agent_runtime.py](../../../scripts/validate_nac_onprem_agent_runtime.py).
+
+## Agentic Toolkit Decision: NeMo Agent Toolkit / AI-Q
+
+Productive agentic NaC workflows use
+[NVIDIA NeMo Agent Toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html)
+as the only leading agentic toolkit. The preferred blueprint and packaging path
+is [NVIDIA AI-Q](https://build.nvidia.com/nvidia/aiq).
+
+This aligns workflow orchestration, tool calling, MCP client binding, agent
+runtime and local or central agent workers with NeMo/AI-Q. CrewAI, LangChain
+as the primary runtime, OpenClaw runtime activation or custom agent frameworks
+remain blocked for productive NaC agents unless an explicit owner gate
+documents a deliberate exception.
+
+This decision does not replace:
+
+- deterministic Python validators,
+- `nac` CLI and contract checks,
+- Office, Word or Teams add-ins as the user interface,
+- slim Python MCP servers,
+- runtime storage, event journal, WORM or Vault layers.
+
+Microsoft 365 integration runs through the MCP servers defined in
+[NeMo Agent Toolkit, AI-Q and Microsoft 365 MCP Target Architecture](nemo-agent-toolkit-aiq-m365.md).
+Outlook, Teams, OneDrive and SharePoint remain their own source systems;
+NeMo/AI-Q accesses them through MCP and Microsoft Graph with matter, role and
+purpose binding.
 
 ## Variant C: Outbound Connector
 

@@ -89,6 +89,10 @@ Jeder Vertrag soll definieren:
   outbound Connector-Zielbild, ATP-gestützter Agent-/Sandbox-Lease-Bindung,
   bestandenem Ponytail Skill-Only Smoke, vorbereitetem NaC Runtime-Smoke,
   Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
+- [workflows/contracts/teams-sharepoint-graph-data-plane.contract.json](teams-sharepoint-graph-data-plane.contract.json):
+  Vertrag für die MVP-Datenhaltung über Teams Team, Microsoft-365-Gruppe,
+  SharePoint-Team-Site, Microsoft Graph REST only, declaratives Schema,
+  Provisioner-Skeleton, MCP-Grenze und Owner-Gates ohne Live-Apply.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   Vertrag für die ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
   Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter

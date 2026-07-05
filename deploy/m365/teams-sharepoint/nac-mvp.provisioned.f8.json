@@ -1,0 +1,128 @@
+{
+  "state_version": "nac.m365.teams-sharepoint.provisioned/v0.1",
+  "captured_at_utc": "2026-07-05T14:05:38Z",
+  "source_schema": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+  "tenant": {
+    "display_name": "f8",
+    "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "primary_domain": "funktion8.de"
+  },
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false
+  },
+  "admin_applications": {
+    "cli_delegated_app": {
+      "display_name": "NaC M365 CLI Admin",
+      "client_id": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
+      "purpose": "Delegated admin bootstrap and consent operations."
+    },
+    "graph_bootstrap_app": {
+      "display_name": "NaC Graph Bootstrap",
+      "client_id": "111391d1-00d1-42cd-b7dc-36caa7b50f8b",
+      "application_object_id": "663540d6-8170-47ea-b006-3dc5dad11cc6",
+      "service_principal_id": "2bf613af-2c90-4cc3-bfe0-1c41ef0fd24f",
+      "certificate_thumbprint_sha1": "7B7F2796C15042649BC3225C5F0277DC6E1BD0DE",
+      "certificate_expires_at_utc": "2026-08-04T13:54:48Z",
+      "application_permissions": [
+        "Team.Create",
+        "Sites.Manage.All"
+      ]
+    }
+  },
+  "workspaces": [
+    {
+      "id": "notary_team_01",
+      "team_display_name": "NaC-Notar-01",
+      "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a",
+      "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+      "lists": {
+        "Akten": {
+          "id": "588d4a41-f538-4f37-acfb-63ff283e0910",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/Akten"
+        },
+        "Beteiligte": {
+          "id": "0d6b2034-743b-4f6d-87ec-a555a2e3c355",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/Beteiligte"
+        },
+        "AufgabenFristen": {
+          "id": "720ef1d4-8496-4ecb-aa1f-5fa4568343f2",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/AufgabenFristen"
+        },
+        "Vertretungsfreigaben": {
+          "id": "ec12d339-d9b7-45e9-be45-38dadd917746",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/Vertretungsfreigaben"
+        },
+        "AuditJournalLite": {
+          "id": "327181c2-e402-48e9-bcfa-1f5081b45d9c",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/AuditJournalLite"
+        },
+        "DokumentRegister": {
+          "id": "8f378629-f495-4432-8eb9-cecf71f9f86d",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Lists/DokumentRegister"
+        }
+      },
+      "document_libraries": {
+        "AktenDokumente": {
+          "id": "5dc053f5-068c-4f50-834d-4ea942e08c41",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/AktenDokumente"
+        },
+        "Vorlagen": {
+          "id": "0b7ad92b-eabf-40f1-84ae-0f62bd17e159",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/Vorlagen"
+        }
+      }
+    },
+    {
+      "id": "notary_team_02",
+      "team_display_name": "NaC-Notar-02",
+      "team_id": "ce7733fc-c3e2-4866-85cf-6a196d95eba1",
+      "site_id": "funktion8.sharepoint.com,e1f7e026-a02c-4607-bc48-d36fdb94b71c,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02",
+      "lists": {
+        "Akten": {
+          "id": "12e85913-9770-4ec9-9f43-11f038c5c3e5",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/Akten"
+        },
+        "Beteiligte": {
+          "id": "8e22b805-c990-489c-bb9f-ce678435622a",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/Beteiligte"
+        },
+        "AufgabenFristen": {
+          "id": "983e988a-307d-467b-8ad9-01d711ad53b8",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/AufgabenFristen"
+        },
+        "Vertretungsfreigaben": {
+          "id": "36c851aa-969b-43b0-9a61-a418299b7428",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/Vertretungsfreigaben"
+        },
+        "AuditJournalLite": {
+          "id": "4e91bde8-a277-4361-9c5a-2f8f46209ca0",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/AuditJournalLite"
+        },
+        "DokumentRegister": {
+          "id": "98d81b63-d954-43a7-9936-1f10e4b165c5",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Lists/DokumentRegister"
+        }
+      },
+      "document_libraries": {
+        "AktenDokumente": {
+          "id": "f8dc90ea-3f48-412a-95db-5006c0536630",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/AktenDokumente"
+        },
+        "Vorlagen": {
+          "id": "374d3271-31f5-4d6e-a0bf-f541bc70a85f",
+          "web_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-02/Vorlagen"
+        }
+      }
+    }
+  ],
+  "operational_notes": [
+    "No tokens, client secrets, certificates or private keys are stored in this file.",
+    "The temporary bootstrap certificate was generated locally and must be replaced by managed secret storage before production use.",
+    "The schema uses NacWorkflowVersion because WorkflowVersion is a hidden read-only SharePoint system field."
+  ]
+}

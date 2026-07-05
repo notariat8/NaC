@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-06-30
+Letzte Aktualisierung: 2026-07-05
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter
@@ -75,6 +75,7 @@ gantt
     Akten-Datenmodell mit ID-Pointern            :done,    b1v, 2026-05-19, 1d
     Agenten-Workflow-Regel synchronisieren       :done,    b1y, 2026-05-20, 1d
     NaC-MCP-Chat-Integrationsschicht planen      :         b1w, after b3, 14d
+    M365-App-geführtes Privilegienänderungs-Gate :         b1wa, after b1w, 7d
     Legal-Graph-Domänen-MVP planen              :active,  b1z, 2026-06-12, 14d
     Legal-Graph-Primärquellenpilot ohne Kommentarzugriff :done,   b1za, 2026-06-12, 7d
     Legal-Nemotron-Finetuning-Gates planen       :done,    b1zb, 2026-06-28, 2d
@@ -159,6 +160,17 @@ Domains bleiben interne Broker- und Trust-Schicht hinter notariat8; direkte
 OCI-URLs, OCI Console und interne Domain-Namen sind keine primäre
 Benutzerführung. Spätere Kunden-IdP-Föderation bleibt ein Zielbild und braucht
 separate Design-, Sicherheits-, AVV-/DPA-, Rollen- und Owner-Apply-Gates.
+
+M365-Roadmap-Hinweis 2026-07-05: Privilegierte Änderungen an Teams,
+SharePoint-Schema, Site-Permissions und Mitgliedschaften sollen in der nächsten
+Iteration nicht durch normale Nutzerrechte erfolgen, sondern über eine
+kontrollierte Provisioning-App beziehungsweise NaC-API. Standardnutzer bleiben
+least-privilege; direkte technische App-Ownership liegt beim
+`technical_owner_user` oder einem Service Principal, weil Microsoft Graph Gruppen nicht als direkte
+Application-Owner vorsieht. Eine kleine Entra-Gruppe wie `nac_platform_admins`
+bleibt Governance- und Betriebsgruppe. Menschliche Team-Owner, fachliche
+Aktenfreigabe, Vertretungsgrund, Dauer und Audit bleiben weiterhin
+verpflichtend.
 
 ## Regel
 

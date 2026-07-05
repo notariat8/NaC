@@ -156,6 +156,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_nac_onprem_agent_runtime.py"],
                 ),
                 (
+                    "teams_sharepoint_graph_data_plane",
+                    "Teams SharePoint Graph Data Plane",
+                    [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
+                ),
+                (
                     "agent_runtime_registry",
                     "Agent Runtime Registry Contract",
                     [sys.executable, "scripts/validate_agent_runtime_registry.py"],
