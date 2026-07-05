@@ -31,6 +31,7 @@ from nac_m365_graph.schema import (  # noqa: E402
 
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
+APPLIED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
 
 
 class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
@@ -123,6 +124,20 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(summary["by_action"]["assign_direct_application_owner"], 2)
         self.assertEqual(summary["by_action"]["verify_human_team_owner"], 2)
         self.assertEqual(summary["by_action"]["grant_runtime_sites_selected_site_permission"], 2)
+
+    def test_applied_privileged_state_captures_runtime_site_grants(self) -> None:
+        state = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
+        runtime_app = state["applications"]["m365_runtime_app"]
+
+        self.assertEqual(state["state_version"], "nac.m365-privileged-change-path.applied/v0.1")
+        self.assertEqual(runtime_app["application_permissions"], ["Sites.Selected"])
+        self.assertTrue(runtime_app["runtime_allowed"])
+        self.assertEqual(len(state["runtime_site_permissions"]), 2)
+        for permission in state["runtime_site_permissions"]:
+            self.assertEqual(permission["application_client_id"], runtime_app["client_id"])
+            self.assertEqual(permission["role"], "write")
+        for owner_check in state["team_owner_checks"]:
+            self.assertGreaterEqual(owner_check["licensed_human_owner_count"], 1)
 
     def test_column_mapping_uses_graph_column_payloads(self) -> None:
         payload = column_create_payload(

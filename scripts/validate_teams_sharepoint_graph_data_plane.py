@@ -26,6 +26,9 @@ PRIVILEGED_CHANGE_CONFIG = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.json"
 )
 PROVISIONED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.provisioned.f8.json"
+PRIVILEGED_APPLIED_STATE = (
+    REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
+)
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "runbooks" / "m365-cli-admin-accelerator.md"
@@ -102,6 +105,7 @@ def validate() -> list[str]:
     schema = _read_json(SCHEMA, errors)
     privileged_change_config = _read_json(PRIVILEGED_CHANGE_CONFIG, errors)
     provisioned_state = _read_json(PROVISIONED_STATE, errors)
+    privileged_applied_state = _read_json(PRIVILEGED_APPLIED_STATE, errors)
     if contract:
         errors.extend(_validate_contract(contract))
     if schema:
@@ -133,6 +137,14 @@ def validate() -> list[str]:
                     errors.append(f"privileged change plan missing action {action}")
             except ValueError as exc:
                 errors.append(str(exc))
+    if privileged_applied_state:
+        errors.extend(
+            _validate_privileged_applied_state(
+                privileged_applied_state,
+                privileged_change_config,
+                provisioned_state,
+            )
+        )
     errors.extend(_validate_docs())
     errors.extend(_validate_code_boundary())
     return errors
@@ -435,6 +447,117 @@ def _validate_schema_against_contract(schema: dict[str, Any], contract: dict[str
     if libraries != set(_strings(contract.get("required_document_libraries"))):
         errors.append("schema document libraries must match contract.required_document_libraries")
     return errors
+
+
+def _validate_privileged_applied_state(
+    state: dict[str, Any],
+    config: dict[str, Any],
+    provisioned_state: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    if state.get("state_version") != "nac.m365-privileged-change-path.applied/v0.1":
+        errors.append("privileged applied state_version must be nac.m365-privileged-change-path.applied/v0.1")
+    if state.get("source_config") != "deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json":
+        errors.append("privileged applied source_config must point to nac-mvp.privileged-change-path.json")
+
+    tenant = state.get("tenant")
+    if not isinstance(tenant, dict) or tenant.get("tenant_id") != "870c862b-56f7-4c9b-b0d9-f1f7d32c835c":
+        errors.append("privileged applied tenant.tenant_id must match f8 tenant")
+
+    config_owner = config.get("technical_owner_user", {}) if isinstance(config, dict) else {}
+    technical_owner = state.get("technical_owner_user")
+    if not isinstance(technical_owner, dict):
+        errors.append("privileged applied technical_owner_user must be an object")
+    else:
+        if technical_owner.get("user_principal_name") != config_owner.get("user_principal_name"):
+            errors.append("privileged applied technical owner must match privileged config")
+        if technical_owner.get("assigned_license_count") != 0:
+            errors.append("privileged applied technical owner must remain unlicensed in the captured state")
+        _require_nonempty_string(technical_owner, "id", "privileged applied technical_owner_user", errors)
+
+    config_group = config.get("governance_group", {}) if isinstance(config, dict) else {}
+    governance_group = state.get("governance_group")
+    if not isinstance(governance_group, dict):
+        errors.append("privileged applied governance_group must be an object")
+    else:
+        if governance_group.get("display_name") != config_group.get("display_name"):
+            errors.append("privileged applied governance_group.display_name must match privileged config")
+        if governance_group.get("security_enabled") is not True:
+            errors.append("privileged applied governance_group.security_enabled must be true")
+        if governance_group.get("mail_enabled") is not False:
+            errors.append("privileged applied governance_group.mail_enabled must be false")
+        _require_nonempty_string(governance_group, "id", "privileged applied governance_group", errors)
+
+    applications = state.get("applications")
+    config_apps = {
+        app.get("id"): app
+        for app in config.get("applications", [])
+        if isinstance(app, dict) and isinstance(app.get("id"), str)
+    } if isinstance(config, dict) else {}
+    if not isinstance(applications, dict):
+        errors.append("privileged applied applications must be an object")
+        applications = {}
+    for app_id in ("m365_provisioning_app", "m365_runtime_app"):
+        app = applications.get(app_id)
+        config_app = config_apps.get(app_id, {})
+        if not isinstance(app, dict):
+            errors.append(f"privileged applied applications missing {app_id}")
+            continue
+        for key in ("application_object_id", "client_id", "service_principal_id"):
+            _require_nonempty_string(app, key, f"privileged applied {app_id}", errors)
+        if app.get("display_name") != config_app.get("display_name"):
+            errors.append(f"privileged applied {app_id}.display_name must match privileged config")
+        if set(_strings(app.get("application_permissions"))) != set(_strings(config_app.get("bootstrap_application_permissions"))):
+            errors.append(f"privileged applied {app_id}.application_permissions must match privileged config")
+        if app.get("runtime_allowed") is not bool(config_app.get("runtime_allowed")):
+            errors.append(f"privileged applied {app_id}.runtime_allowed must match privileged config")
+        if app.get("direct_technical_owner_user") != config_owner.get("user_principal_name"):
+            errors.append(f"privileged applied {app_id}.direct_technical_owner_user must match technical owner")
+
+    team_owner_checks = state.get("team_owner_checks")
+    provisioned_workspaces = {
+        workspace.get("id"): workspace
+        for workspace in provisioned_state.get("workspaces", [])
+        if isinstance(workspace, dict) and isinstance(workspace.get("id"), str)
+    } if isinstance(provisioned_state, dict) else {}
+    if not isinstance(team_owner_checks, list):
+        errors.append("privileged applied team_owner_checks must be a list")
+    else:
+        by_workspace = {item.get("workspace_id"): item for item in team_owner_checks if isinstance(item, dict)}
+        for workspace_id in sorted(REQUIRED_WORKSPACES):
+            check = by_workspace.get(workspace_id)
+            if not isinstance(check, dict):
+                errors.append(f"privileged applied team_owner_checks missing {workspace_id}")
+                continue
+            if check.get("team_id") != provisioned_workspaces.get(workspace_id, {}).get("team_id"):
+                errors.append(f"privileged applied {workspace_id} team_id must match provisioned state")
+            if not isinstance(check.get("licensed_human_owner_count"), int) or check["licensed_human_owner_count"] < 1:
+                errors.append(f"privileged applied {workspace_id} must retain at least one licensed human owner")
+
+    site_permissions = state.get("runtime_site_permissions")
+    runtime_app = applications.get("m365_runtime_app") if isinstance(applications, dict) else None
+    runtime_client_id = runtime_app.get("client_id") if isinstance(runtime_app, dict) else None
+    if not isinstance(site_permissions, list):
+        errors.append("privileged applied runtime_site_permissions must be a list")
+    else:
+        by_workspace = {item.get("workspace_id"): item for item in site_permissions if isinstance(item, dict)}
+        for workspace_id in sorted(REQUIRED_WORKSPACES):
+            permission = by_workspace.get(workspace_id)
+            if not isinstance(permission, dict):
+                errors.append(f"privileged applied runtime_site_permissions missing {workspace_id}")
+                continue
+            if permission.get("site_id") != provisioned_workspaces.get(workspace_id, {}).get("site_id"):
+                errors.append(f"privileged applied {workspace_id} site_id must match provisioned state")
+            if permission.get("application_client_id") != runtime_client_id:
+                errors.append(f"privileged applied {workspace_id} application_client_id must match runtime app")
+            if permission.get("role") != "write":
+                errors.append(f"privileged applied {workspace_id} role must be write")
+    return errors
+
+
+def _require_nonempty_string(payload: dict[str, Any], key: str, label: str, errors: list[str]) -> None:
+    if not isinstance(payload.get(key), str) or not payload[key]:
+        errors.append(f"{label}.{key} must be a non-empty string")
 
 
 def _validate_docs() -> list[str]:
