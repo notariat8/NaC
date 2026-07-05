@@ -218,3 +218,16 @@ in chat, shell output or repository artifacts.
 
 Any further live apply remains owner-gated and may only run after plan review,
 target team confirmation, drift snapshot and admin consent.
+
+After a separately approved runtime-app credential exists, the smallest
+product-like read smoke can verify the existing SharePoint lists through the
+runtime app:
+
+```bash
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<local-runtime-token-file>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --json
+```
+
+Alternatively, the smoke uses `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and
+`M365_RUNTIME_CLIENT_SECRET`. This step only reads the sites and lists
+referenced in the non-secret provisioned state. It does not create teams,
+groups, app roles, site permissions or SharePoint list items.

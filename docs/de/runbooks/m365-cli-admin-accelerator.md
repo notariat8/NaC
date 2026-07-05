@@ -223,3 +223,16 @@ in Chat, Shell-Ausgabe oder Repo-Artefakten abgelegt.
 
 Ein weiterer Live-Apply bleibt owner-gated und darf erst nach Review des Plans,
 Bestätigung der Ziel-Teams, Drift-Snapshot und Admin Consent ausgeführt werden.
+
+Nach einem separat freigegebenen Runtime-App-Credential kann der kleinste
+produktnahe Read-Smoke die vorhandenen SharePoint-Listen mit der Runtime-App
+prüfen:
+
+```bash
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --json
+```
+
+Alternativ nutzt der Smoke `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
+`M365_RUNTIME_CLIENT_SECRET`. Dieser Schritt liest nur die im nicht-geheimen
+Provisioning-State referenzierten Sites und Listen. Er setzt keine Teams,
+Gruppen, App-Rollen, Site-Permissions oder SharePoint-Listenelemente.

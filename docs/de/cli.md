@@ -68,6 +68,7 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
+python scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
@@ -92,6 +93,7 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac m365 teams-sharepoint privileged-plan --format json
+nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run
@@ -117,7 +119,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Spec-Traceability, Secure-Link-Grenzen, OCI-Tenant-Identity und Legal-Research-Connector-Kandidaten. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan` und `nac m365 teams-sharepoint privileged-apply --owner-approved` | Plant die Teams/SharePoint-Datenebene und führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved` und `nac m365 teams-sharepoint runtime-smoke --owner-approved` | Plant die Teams/SharePoint-Datenebene, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus und prüft den Runtime-App-Lesezugriff. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |

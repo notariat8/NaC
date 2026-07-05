@@ -592,6 +592,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_DE, "https://microsoft.com/devicelogin"),
         (RUNBOOK_DE, "m365 request --url \"@graph/organization\""),
         (RUNBOOK_DE, "privileged-apply --owner-approved"),
+        (RUNBOOK_DE, "runtime-smoke --owner-approved"),
         (RUNBOOK_EN, "Microsoft 365 CLI Admin Accelerator"),
         (RUNBOOK_EN, "Required Handoff Before User Action"),
         (RUNBOOK_EN, "Bootstrap Route A: CLI App Through `m365 setup`"),
@@ -601,6 +602,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_EN, "https://microsoft.com/devicelogin"),
         (RUNBOOK_EN, "m365 request --url \"@graph/organization\""),
         (RUNBOOK_EN, "privileged-apply --owner-approved"),
+        (RUNBOOK_EN, "runtime-smoke --owner-approved"),
     )
     for path, marker in required_markers:
         if not path.is_file():

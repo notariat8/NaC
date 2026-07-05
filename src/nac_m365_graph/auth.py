@@ -21,19 +21,25 @@ class GraphConfig:
     graph_base_url: str = "https://graph.microsoft.com/v1.0"
 
     @classmethod
-    def from_env(cls, env: Mapping[str, str] | None = None) -> "GraphConfig":
+    def from_env(
+        cls,
+        env: Mapping[str, str] | None = None,
+        *,
+        client_id_name: str = "M365_PROVISIONER_CLIENT_ID",
+        client_credential_name: str = "M365_PROVISIONER_CLIENT_SECRET",
+    ) -> "GraphConfig":
         values = env or os.environ
         tenant_id = values.get("M365_TENANT_ID", "").strip()
-        client_id = values.get("M365_PROVISIONER_CLIENT_ID", "").strip()
-        client_credential = values.get("M365_PROVISIONER_CLIENT_SECRET", "").strip()
+        client_id = values.get(client_id_name, "").strip()
+        client_credential = values.get(client_credential_name, "").strip()
         graph_base_url = values.get("M365_GRAPH_BASE_URL", "https://graph.microsoft.com/v1.0").strip()
 
         missing = [
             name
             for name, value in (
                 ("M365_TENANT_ID", tenant_id),
-                ("M365_PROVISIONER_CLIENT_ID", client_id),
-                ("M365_PROVISIONER_CLIENT_SECRET", client_credential),
+                (client_id_name, client_id),
+                (client_credential_name, client_credential),
             )
             if not value
         ]
@@ -86,17 +92,42 @@ class StaticAccessTokenProvider:
         return self._token
 
 
-def token_provider_from_env(env: Mapping[str, str] | None = None) -> ClientCredentialsTokenProvider | StaticAccessTokenProvider:
+def token_provider_from_env(
+    env: Mapping[str, str] | None = None,
+    *,
+    token_name: str = "M365_GRAPH_ACCESS_TOKEN",
+    token_file_name: str = "M365_GRAPH_ACCESS_TOKEN_FILE",
+    client_id_name: str = "M365_PROVISIONER_CLIENT_ID",
+    client_credential_name: str = "M365_PROVISIONER_CLIENT_SECRET",
+) -> ClientCredentialsTokenProvider | StaticAccessTokenProvider:
     values = env or os.environ
-    inline_token = values.get("M365_GRAPH_ACCESS_TOKEN", "").strip()
-    token_file = values.get("M365_GRAPH_ACCESS_TOKEN_FILE", "").strip()
+    inline_token = values.get(token_name, "").strip()
+    token_file = values.get(token_file_name, "").strip()
     if inline_token and token_file:
-        raise GraphConfigError("set only one of M365_GRAPH_ACCESS_TOKEN or M365_GRAPH_ACCESS_TOKEN_FILE")
+        raise GraphConfigError(f"set only one of {token_name} or {token_file_name}")
     if token_file:
         try:
             return StaticAccessTokenProvider(Path(token_file).expanduser().read_text(encoding="utf-8"))
         except OSError as exc:
-            raise GraphConfigError(f"cannot read M365_GRAPH_ACCESS_TOKEN_FILE: {exc}") from exc
+            raise GraphConfigError(f"cannot read {token_file_name}: {exc}") from exc
     if inline_token:
         return StaticAccessTokenProvider(inline_token)
-    return ClientCredentialsTokenProvider(GraphConfig.from_env(values))
+    return ClientCredentialsTokenProvider(
+        GraphConfig.from_env(
+            values,
+            client_id_name=client_id_name,
+            client_credential_name=client_credential_name,
+        )
+    )
+
+
+def runtime_token_provider_from_env(
+    env: Mapping[str, str] | None = None,
+) -> ClientCredentialsTokenProvider | StaticAccessTokenProvider:
+    return token_provider_from_env(
+        env,
+        token_name="M365_RUNTIME_GRAPH_ACCESS_TOKEN",
+        token_file_name="M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE",
+        client_id_name="M365_RUNTIME_CLIENT_ID",
+        client_credential_name="M365_RUNTIME_CLIENT_SECRET",
+    )

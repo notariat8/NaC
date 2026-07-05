@@ -202,7 +202,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     teams_sharepoint.add_argument(
         "teams_sharepoint_command",
-        choices=["validate", "plan", "privileged-plan", "privileged-apply", "apply", "drift", "export"],
+        choices=[
+            "validate",
+            "plan",
+            "privileged-plan",
+            "privileged-apply",
+            "runtime-smoke",
+            "apply",
+            "drift",
+            "export",
+        ],
     )
     teams_sharepoint.add_argument("--schema", type=Path, help="Optionales Teams/SharePoint-Schema.")
     teams_sharepoint.add_argument(

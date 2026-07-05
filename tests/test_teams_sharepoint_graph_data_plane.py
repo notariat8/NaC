@@ -24,6 +24,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
 )
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import (  # noqa: E402
     DEFAULT_SCHEMA,
     column_create_payload,
@@ -114,6 +115,28 @@ class FakeGraphWriteClient:
         if path.startswith("/servicePrincipals/") and path.endswith("/appRoleAssignments"):
             service_principal_id = path.split("/")[2]
             return {"value": self.assignments_by_service_principal_id.get(service_principal_id, [])}
+        if path.startswith("/sites/") and "/lists?" in path:
+            site_id = urllib.parse.unquote(path.removeprefix("/sites/").split("/lists?", 1)[0])
+            workspace = self._workspace_by_site_id(site_id)
+            return {
+                "value": [
+                    {
+                        "id": details.get("id", display_name),
+                        "displayName": display_name,
+                        "webUrl": details.get("web_url", ""),
+                    }
+                    for display_name, details in workspace.get("lists", {}).items()
+                    if isinstance(details, dict)
+                ]
+            }
+        if path.startswith("/sites/") and "?$select=id,displayName,webUrl" in path:
+            site_id = urllib.parse.unquote(path.removeprefix("/sites/").split("?", 1)[0])
+            workspace = self._workspace_by_site_id(site_id)
+            return {
+                "id": site_id,
+                "displayName": workspace["team_display_name"],
+                "webUrl": workspace.get("site_url", ""),
+            }
         if path.startswith("/sites/") and path.endswith("/permissions"):
             site_id = self._site_id_from_path(path)
             return {"value": self.site_permissions_by_site_id.get(site_id, [])}
@@ -194,6 +217,12 @@ class FakeGraphWriteClient:
     @staticmethod
     def _site_id_from_path(path: str) -> str:
         return urllib.parse.unquote(path.removeprefix("/sites/").removesuffix("/permissions"))
+
+    def _workspace_by_site_id(self, site_id: str) -> dict:
+        for workspace in self.provisioned_state.get("workspaces", []):
+            if isinstance(workspace, dict) and workspace.get("site_id") == site_id:
+                return workspace
+        raise AssertionError(f"unknown site id {site_id}")
 
 
 class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
@@ -333,6 +362,31 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(len(site_permission_posts), 2)
         self.assertEqual(len(assignment_posts), 3)
 
+    def test_runtime_site_smoke_reads_expected_lists_with_runtime_boundary(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                        "Beteiligte": {"id": "list-beteiligte", "web_url": "https://example.test/beteiligte"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        result = run_runtime_site_smoke(client, state)
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["sites_read"], 1)
+        self.assertEqual(result["workspaces"][0]["expectedListCount"], 2)
+        self.assertEqual(result["workspaces"][0]["observedListCount"], 2)
+
     def test_applied_privileged_state_captures_runtime_site_grants(self) -> None:
         state = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
         runtime_app = state["applications"]["m365_runtime_app"]
@@ -431,6 +485,20 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("privileged-apply requires --owner-approved", payload["errors"])
 
+    def test_cli_runtime_smoke_requires_owner_approval_before_credentials(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "runtime-smoke", "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("runtime-smoke requires --owner-approved", payload["errors"])
+
     def test_nac_cli_exposes_m365_teams_sharepoint_privileged_plan(self) -> None:
         result = subprocess.run(
             [
@@ -454,6 +522,30 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["by_action"]["ensure_application"], 2)
+
+    def test_nac_cli_exposes_m365_teams_sharepoint_runtime_smoke_gate(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "runtime-smoke",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("runtime-smoke requires --owner-approved", payload["errors"])
 
 
 if __name__ == "__main__":

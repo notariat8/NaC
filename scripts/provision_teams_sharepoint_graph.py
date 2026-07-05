@@ -12,7 +12,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from nac_m365_graph.auth import GraphConfig, GraphConfigError, token_provider_from_env  # noqa: E402
+from nac_m365_graph.auth import GraphConfig, GraphConfigError, runtime_token_provider_from_env, token_provider_from_env  # noqa: E402
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
@@ -25,6 +25,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     validate_privileged_change_config,
 )
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
 
 
@@ -34,10 +35,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "command",
-        choices=["validate", "plan", "privileged-plan", "privileged-apply", "apply", "drift", "export"],
+        choices=[
+            "validate",
+            "plan",
+            "privileged-plan",
+            "privileged-apply",
+            "runtime-smoke",
+            "apply",
+            "drift",
+            "export",
+        ],
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
-            "privileged-apply is owner-gated and uses Graph REST only."
+            "privileged-apply and runtime-smoke are owner-gated and use Graph REST only."
         ),
     )
     parser.add_argument(
@@ -73,6 +83,47 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "runtime-smoke":
+        state = load_provisioned_state(args.provisioned_state)
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["runtime-smoke requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            result = run_runtime_site_smoke(client, state)
+        except GraphConfigError as exc:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=2,
+            )
+        except (GraphHttpError, RuntimeError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": result["summary"],
+                "result": result,
+            },
+            args.json,
+        )
+
     if args.command in {"privileged-plan", "privileged-apply"}:
         config = load_privileged_change_config(args.privileged_config)
         state = load_provisioned_state(args.provisioned_state)
