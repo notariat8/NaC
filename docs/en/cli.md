@@ -66,6 +66,7 @@ python scripts/nac.py ai-sbom export-mapping
 python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
+python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
@@ -89,6 +90,7 @@ nac ai-sbom export-mapping
 nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21100
 nac bpmn validate
 nac config list
+nac m365 teams-sharepoint privileged-plan --format json
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run
@@ -114,6 +116,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, OCI tenant identity and legal-research connector candidates. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan` and `nac m365 teams-sharepoint privileged-apply --owner-approved` | Plans the Teams/SharePoint data plane and runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |

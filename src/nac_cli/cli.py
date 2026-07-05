@@ -194,6 +194,31 @@ def build_parser() -> argparse.ArgumentParser:
     contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge, Secure-Link- und Connector-Grenzen.")
     contracts.set_defaults(func=command_contracts)
 
+    m365 = subparsers.add_parser("m365", help="Steuert Microsoft-365-Graph-REST-Bedienkanten.")
+    m365_sub = m365.add_subparsers(dest="m365_command", required=True)
+    teams_sharepoint = m365_sub.add_parser(
+        "teams-sharepoint",
+        help="Plant und steuert die Teams/SharePoint-MVP-Datenebene.",
+    )
+    teams_sharepoint.add_argument(
+        "teams_sharepoint_command",
+        choices=["validate", "plan", "privileged-plan", "privileged-apply", "apply", "drift", "export"],
+    )
+    teams_sharepoint.add_argument("--schema", type=Path, help="Optionales Teams/SharePoint-Schema.")
+    teams_sharepoint.add_argument(
+        "--privileged-config",
+        type=Path,
+        help="Optionaler privilegierter M365-Change-Path.",
+    )
+    teams_sharepoint.add_argument(
+        "--provisioned-state",
+        type=Path,
+        help="Optionaler nicht-geheimer provisionierter Teams/SharePoint-State.",
+    )
+    teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
+    teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
+    m365.set_defaults(func=command_m365)
+
     import_parser = subparsers.add_parser("import", help="Steuert Eingang, OCR-/Extraktionsjobs und Import-Vorschläge.")
     import_sub = import_parser.add_subparsers(dest="import_command", required=True)
     import_jobs = import_sub.add_parser("jobs", help="Steuert begrenzte Import-Jobs für Codex.")
@@ -503,6 +528,7 @@ def command_status(args: argparse.Namespace) -> int:
             "ai_sbom_export_mapping": "nac ai-sbom export-mapping",
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
+            "m365_teams_sharepoint_plan": "nac m365 teams-sharepoint plan",
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
             "tenant_status": "nac tenant status --repo ../demo8notariat",
@@ -851,6 +877,36 @@ def command_contracts(args: argparse.Namespace) -> int:
         return overall_rc
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
+
+
+def command_m365(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    if args.m365_command == "teams-sharepoint":
+        script_args = [args.teams_sharepoint_command]
+        if args.schema:
+            script_args.extend(["--schema", str(args.schema)])
+        if args.privileged_config:
+            script_args.extend(["--privileged-config", str(args.privileged_config)])
+        if args.provisioned_state:
+            script_args.extend(["--provisioned-state", str(args.provisioned_state)])
+        if args.owner_approved:
+            script_args.append("--owner-approved")
+        if args.format == "json":
+            script_args.append("--json")
+        result = subprocess.run(
+            [sys.executable, str(repo_root / "scripts" / "provision_teams_sharepoint_graph.py"), *script_args],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.stdout:
+            print(result.stdout.rstrip())
+        if result.stderr:
+            print(result.stderr.rstrip())
+        return result.returncode
+
+    raise AssertionError(f"Unknown Microsoft 365 command: {args.m365_command}")
 
 
 def command_import(args: argparse.Namespace) -> int:

@@ -205,7 +205,21 @@ Danach kann der Python-Provisioner weiter genutzt werden:
 
 ```bash
 python3 scripts/provision_teams_sharepoint_graph.py plan
+python3 scripts/provision_teams_sharepoint_graph.py privileged-plan --json
 ```
 
-Ein Live-Apply bleibt owner-gated und darf erst nach Review des Plans,
-Bestätigung der Ziel-Teams und Admin Consent ausgeführt werden.
+Der wiederholbare privilegierte Apply-Pfad nutzt ebenfalls nur Microsoft Graph
+REST v1.0. Er ist kein Standardnutzerpfad und benötigt eine explizite
+Owner-Freigabe:
+
+```bash
+M365_GRAPH_ACCESS_TOKEN_FILE="<lokale-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py privileged-apply --owner-approved --json
+```
+
+Alternativ kann später eine app-only Konfiguration mit `M365_TENANT_ID`,
+`M365_PROVISIONER_CLIENT_ID` und `M365_PROVISIONER_CLIENT_SECRET` genutzt
+werden. Tokens, Client Secrets, Zertifikate und private Schlüssel werden nicht
+in Chat, Shell-Ausgabe oder Repo-Artefakten abgelegt.
+
+Ein weiterer Live-Apply bleibt owner-gated und darf erst nach Review des Plans,
+Bestätigung der Ziel-Teams, Drift-Snapshot und Admin Consent ausgeführt werden.

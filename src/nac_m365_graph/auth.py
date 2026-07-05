@@ -5,6 +5,7 @@ import os
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping
 
 
@@ -72,3 +73,30 @@ class ClientCredentialsTokenProvider:
         if not isinstance(token, str) or not token:
             raise GraphConfigError("token response did not contain access_token")
         return token
+
+
+class StaticAccessTokenProvider:
+    def __init__(self, token: str):
+        token = token.strip()
+        if not token:
+            raise GraphConfigError("Microsoft Graph access token is empty")
+        self._token = token
+
+    def fetch_access_token(self) -> str:
+        return self._token
+
+
+def token_provider_from_env(env: Mapping[str, str] | None = None) -> ClientCredentialsTokenProvider | StaticAccessTokenProvider:
+    values = env or os.environ
+    inline_token = values.get("M365_GRAPH_ACCESS_TOKEN", "").strip()
+    token_file = values.get("M365_GRAPH_ACCESS_TOKEN_FILE", "").strip()
+    if inline_token and token_file:
+        raise GraphConfigError("set only one of M365_GRAPH_ACCESS_TOKEN or M365_GRAPH_ACCESS_TOKEN_FILE")
+    if token_file:
+        try:
+            return StaticAccessTokenProvider(Path(token_file).expanduser().read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise GraphConfigError(f"cannot read M365_GRAPH_ACCESS_TOKEN_FILE: {exc}") from exc
+    if inline_token:
+        return StaticAccessTokenProvider(inline_token)
+    return ClientCredentialsTokenProvider(GraphConfig.from_env(values))

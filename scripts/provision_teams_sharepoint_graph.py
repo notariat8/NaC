@@ -12,7 +12,9 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from nac_m365_graph.auth import GraphConfig, GraphConfigError  # noqa: E402
+from nac_m365_graph.auth import GraphConfig, GraphConfigError, token_provider_from_env  # noqa: E402
+from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
+from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_CHANGE_CONFIG,
     DEFAULT_PROVISIONED_STATE,
@@ -32,8 +34,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "command",
-        choices=["validate", "plan", "privileged-plan", "apply", "drift", "export"],
-        help="Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials.",
+        choices=["validate", "plan", "privileged-plan", "privileged-apply", "apply", "drift", "export"],
+        help=(
+            "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
+            "privileged-apply is owner-gated and uses Graph REST only."
+        ),
     )
     parser.add_argument(
         "--schema",
@@ -68,7 +73,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.command == "privileged-plan":
+    if args.command in {"privileged-plan", "privileged-apply"}:
         config = load_privileged_change_config(args.privileged_config)
         state = load_provisioned_state(args.provisioned_state)
         errors = validate_privileged_change_config(config)
@@ -80,6 +85,40 @@ def main() -> int:
                 },
                 as_json=args.json,
                 return_code=1,
+            )
+        if args.command == "privileged-apply":
+            if not args.owner_approved:
+                return _emit(
+                    {
+                        "status": "BLOCKED",
+                        "errors": ["privileged-apply requires --owner-approved"],
+                    },
+                    args.json,
+                    return_code=2,
+                )
+            try:
+                client = GraphRestClient(token_provider_from_env())
+                result = apply_privileged_change_path(client, config, state)
+            except (GraphConfigError, GraphHttpError, RuntimeError, KeyError) as exc:
+                return _emit(
+                    {
+                        "status": "FAILED",
+                        "errors": [str(exc)],
+                    },
+                    args.json,
+                    return_code=1,
+                )
+            return _emit(
+                {
+                    "status": result["status"],
+                    "summary": {
+                        "applications": len(result["applications"]),
+                        "team_owner_checks": len(result["teamOwnerChecks"]),
+                        "site_permissions": len(result["sitePermissions"]),
+                    },
+                    "result": result,
+                },
+                args.json,
             )
         plan = build_privileged_change_plan(config, state)
         return _emit(
@@ -162,6 +201,8 @@ def _emit(payload: dict, as_json: bool, return_code: int = 0) -> int:
         print(payload["message"])
     if payload.get("summary"):
         print(json.dumps(payload["summary"], indent=2, ensure_ascii=False))
+    if payload.get("result"):
+        print(json.dumps(payload["result"], indent=2, ensure_ascii=False))
     for error in payload.get("errors", []):
         print(f"ERROR: {error}")
     return return_code

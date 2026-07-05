@@ -201,7 +201,20 @@ After that, continue with the Python provisioner:
 
 ```bash
 python3 scripts/provision_teams_sharepoint_graph.py plan
+python3 scripts/provision_teams_sharepoint_graph.py privileged-plan --json
 ```
 
-A live apply remains owner-gated and may only run after plan review, target team
-confirmation and admin consent.
+The repeatable privileged apply path also uses Microsoft Graph REST v1.0 only.
+It is not a standard-user path and needs explicit owner approval:
+
+```bash
+M365_GRAPH_ACCESS_TOKEN_FILE="<local-token-file>" python3 scripts/provision_teams_sharepoint_graph.py privileged-apply --owner-approved --json
+```
+
+Later, an app-only configuration with `M365_TENANT_ID`,
+`M365_PROVISIONER_CLIENT_ID` and `M365_PROVISIONER_CLIENT_SECRET` can be used
+instead. Tokens, client secrets, certificates and private keys are not stored
+in chat, shell output or repository artifacts.
+
+Any further live apply remains owner-gated and may only run after plan review,
+target team confirmation, drift snapshot and admin consent.

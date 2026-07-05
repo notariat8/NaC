@@ -63,6 +63,9 @@ class GraphRestClient:
     def post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.request("POST", path, payload)
 
+    def patch(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.request("PATCH", path, payload)
+
 
 def encode_path_segment(value: str) -> str:
     return urllib.parse.quote(value, safe="")

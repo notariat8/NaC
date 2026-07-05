@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import urllib.parse
 import unittest
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     summarize_privileged_change_plan,
     validate_privileged_change_config,
 )
+from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
 from nac_m365_graph.schema import (  # noqa: E402
     DEFAULT_SCHEMA,
@@ -32,6 +34,166 @@ from nac_m365_graph.schema import (  # noqa: E402
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
 APPLIED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
+GRAPH_APP_ID = "00000003-0000-0000-c000-000000000000"
+
+
+class FakeGraphWriteClient:
+    def __init__(self, provisioned_state: dict) -> None:
+        self.provisioned_state = provisioned_state
+        self.posts: list[tuple[str, dict]] = []
+        self.patches: list[tuple[str, dict]] = []
+        self.group: dict | None = None
+        self.applications_by_display_name: dict[str, dict] = {}
+        self.service_principals_by_app_id: dict[str, dict] = {}
+        self.owners_by_application_id: dict[str, list[dict]] = {}
+        self.assignments_by_service_principal_id: dict[str, list[dict]] = {}
+        self.site_permissions_by_site_id: dict[str, list[dict]] = {}
+
+    def get(self, path: str) -> dict:
+        if path.startswith("/users?"):
+            return {
+                "value": [
+                    {
+                        "id": "technical-owner",
+                        "displayName": "funktion8",
+                        "userPrincipalName": "funktion8@funktion8.de",
+                        "assignedLicenses": [],
+                    }
+                ]
+            }
+        if path.startswith("/groups/") and "/owners/" in path:
+            return {
+                "value": [
+                    {
+                        "id": "licensed-human-owner",
+                        "displayName": "Owner",
+                        "userPrincipalName": "owner@example.test",
+                        "assignedLicenses": [{"skuId": "m365"}],
+                    }
+                ]
+            }
+        if path.startswith("/groups?"):
+            return {"value": [] if self.group is None else [self.group]}
+        if path.startswith("/servicePrincipals?"):
+            app_id = self._filter_value(path, "appId")
+            if app_id == GRAPH_APP_ID:
+                return {
+                    "value": [
+                        {
+                            "id": "graph-service-principal",
+                            "appId": GRAPH_APP_ID,
+                            "displayName": "Microsoft Graph",
+                            "appRoles": [
+                                {
+                                    "id": "role-team-create",
+                                    "value": "Team.Create",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
+                                    "id": "role-sites-manage-all",
+                                    "value": "Sites.Manage.All",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                                {
+                                    "id": "role-sites-selected",
+                                    "value": "Sites.Selected",
+                                    "allowedMemberTypes": ["Application"],
+                                },
+                            ],
+                        }
+                    ]
+                }
+            service_principal = self.service_principals_by_app_id.get(app_id)
+            return {"value": [] if service_principal is None else [service_principal]}
+        if path.startswith("/applications?"):
+            app = self.applications_by_display_name.get(self._filter_value(path, "displayName"))
+            return {"value": [] if app is None else [app]}
+        if path.startswith("/applications/") and path.endswith("/owners?$select=id,displayName"):
+            app_id = path.split("/")[2]
+            return {"value": self.owners_by_application_id.get(app_id, [])}
+        if path.startswith("/servicePrincipals/") and path.endswith("/appRoleAssignments"):
+            service_principal_id = path.split("/")[2]
+            return {"value": self.assignments_by_service_principal_id.get(service_principal_id, [])}
+        if path.startswith("/sites/") and path.endswith("/permissions"):
+            site_id = self._site_id_from_path(path)
+            return {"value": self.site_permissions_by_site_id.get(site_id, [])}
+        raise AssertionError(f"unexpected GET {path}")
+
+    def post(self, path: str, payload: dict) -> dict:
+        self.posts.append((path, payload))
+        if path == "/groups":
+            self.group = {
+                "id": "governance-group",
+                "displayName": payload["displayName"],
+                "mailNickname": payload["mailNickname"],
+                "securityEnabled": payload["securityEnabled"],
+                "mailEnabled": payload["mailEnabled"],
+            }
+            return self.group
+        if path == "/applications":
+            app = {
+                "id": "app-" + payload["displayName"].lower().replace(" ", "-"),
+                "appId": "client-" + payload["displayName"].lower().replace(" ", "-"),
+                "displayName": payload["displayName"],
+                "requiredResourceAccess": payload["requiredResourceAccess"],
+            }
+            self.applications_by_display_name[app["displayName"]] = app
+            return app
+        if path == "/servicePrincipals":
+            service_principal = {
+                "id": "sp-" + payload["appId"],
+                "appId": payload["appId"],
+                "displayName": payload["appId"],
+            }
+            self.service_principals_by_app_id[payload["appId"]] = service_principal
+            return service_principal
+        if path.startswith("/applications/") and path.endswith("/owners/$ref"):
+            app_id = path.split("/")[2]
+            self.owners_by_application_id.setdefault(app_id, []).append(
+                {"id": "technical-owner", "displayName": "funktion8"}
+            )
+            return {}
+        if path.startswith("/servicePrincipals/") and path.endswith("/appRoleAssignments"):
+            service_principal_id = path.split("/")[2]
+            assignment = {
+                "principalId": payload["principalId"],
+                "resourceId": payload["resourceId"],
+                "appRoleId": payload["appRoleId"],
+            }
+            self.assignments_by_service_principal_id.setdefault(service_principal_id, []).append(assignment)
+            return assignment
+        if path.startswith("/sites/") and path.endswith("/permissions"):
+            site_id = self._site_id_from_path(path)
+            permission = {
+                "id": f"permission-{len(self.site_permissions_by_site_id.get(site_id, [])) + 1}",
+                **payload,
+            }
+            self.site_permissions_by_site_id.setdefault(site_id, []).append(permission)
+            return permission
+        raise AssertionError(f"unexpected POST {path}")
+
+    def patch(self, path: str, payload: dict) -> dict:
+        self.patches.append((path, payload))
+        if path.startswith("/applications/"):
+            app_id = path.split("/")[2]
+            for app in self.applications_by_display_name.values():
+                if app["id"] == app_id:
+                    app.update(payload)
+                    return app
+        raise AssertionError(f"unexpected PATCH {path}")
+
+    @staticmethod
+    def _filter_value(path: str, field: str) -> str:
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(path).query)
+        filter_text = query.get("$filter", [""])[0]
+        prefix = f"{field} eq '"
+        if prefix not in filter_text:
+            return ""
+        return filter_text.split(prefix, 1)[1].split("'", 1)[0]
+
+    @staticmethod
+    def _site_id_from_path(path: str) -> str:
+        return urllib.parse.unquote(path.removeprefix("/sites/").removesuffix("/permissions"))
 
 
 class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
@@ -125,6 +287,52 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(summary["by_action"]["verify_human_team_owner"], 2)
         self.assertEqual(summary["by_action"]["grant_runtime_sites_selected_site_permission"], 2)
 
+    def test_privileged_apply_is_idempotent_with_graph_rest_client_boundary(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                },
+                {
+                    "id": "notary_team_02",
+                    "team_display_name": "NaC-Notar-02",
+                    "team_id": "team-02",
+                    "site_id": "example.sharepoint.com,site-02,web-02",
+                },
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        first = apply_privileged_change_path(client, config, state)
+        second = apply_privileged_change_path(client, config, state)
+
+        self.assertEqual(first["status"], "PASSED")
+        self.assertEqual(second["status"], "PASSED")
+        self.assertEqual(second["governanceGroup"]["status"], "existing")
+        self.assertEqual(len(second["sitePermissions"]), 2)
+        self.assertTrue(all(item["status"] == "existing" for item in second["sitePermissions"]))
+        for app in second["applications"].values():
+            self.assertEqual(app["applicationStatus"], "existing")
+            self.assertEqual(app["servicePrincipalStatus"], "existing")
+            self.assertEqual(app["technicalOwnerStatus"], "existing")
+            self.assertTrue(all(item["status"] == "existing" for item in app["appRoleAssignments"]))
+        site_permission_posts = [
+            path
+            for path, _payload in client.posts
+            if path.startswith("/sites/") and path.endswith("/permissions")
+        ]
+        assignment_posts = [
+            path
+            for path, _payload in client.posts
+            if path.startswith("/servicePrincipals/") and path.endswith("/appRoleAssignments")
+        ]
+        self.assertEqual(len(site_permission_posts), 2)
+        self.assertEqual(len(assignment_posts), 3)
+
     def test_applied_privileged_state_captures_runtime_site_grants(self) -> None:
         state = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
         runtime_app = state["applications"]["m365_runtime_app"]
@@ -208,6 +416,44 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             payload["summary"]["by_action"]["grant_runtime_sites_selected_site_permission"],
             2,
         )
+
+    def test_cli_privileged_apply_requires_owner_approval_before_credentials(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "privileged-apply", "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("privileged-apply requires --owner-approved", payload["errors"])
+
+    def test_nac_cli_exposes_m365_teams_sharepoint_privileged_plan(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "privileged-plan",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["by_action"]["ensure_application"], 2)
 
 
 if __name__ == "__main__":
