@@ -58,6 +58,8 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
 
         self.assertEqual(manifest["serverId"], "teams-sharepoint-data-mcp")
         self.assertFalse(manifest["executesGraphRequests"])
+        self.assertEqual(manifest["ownerGatedLiveRead"]["allowed_tools"], ["case_get", "document_list"])
+        self.assertFalse(manifest["ownerGatedLiveRead"]["writes_allowed"])
         self.assertEqual(len(manifest["tools"]), 7)
         for tool in manifest["tools"]:
             self.assertTrue(tool["requiresRoleCasePurposeGate"])
@@ -123,6 +125,111 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(structured["executesGraphRequests"])
         self.assertEqual(structured["requestPlan"]["method"], "GET")
         self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", structured["requestPlan"]["path"])
+
+    def test_stdio_live_read_executes_case_get_with_injected_graph_client(self) -> None:
+        graph_client = _FakeGraphReadClient({"value": [{"id": "item-1", "fields": {"NacCaseId": "case-1"}}]})
+        server = _mcp_server(live_read_enabled=True, graph_client=graph_client)
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 33,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_get",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {"case_id": "case-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        structured = result["structuredContent"]
+        self.assertEqual(structured["runtimeMode"], "owner_gated_live_read")
+        self.assertTrue(structured["executesGraphRequests"])
+        self.assertEqual(structured["graphResponse"]["value"][0]["id"], "item-1")
+        self.assertEqual(len(graph_client.paths), 1)
+        self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", graph_client.paths[0])
+
+    def test_stdio_live_read_executes_document_list_with_injected_graph_client(self) -> None:
+        graph_client = _FakeGraphReadClient({"value": [{"id": "doc-1", "fields": {"NacCaseId": "case-1"}}]})
+        server = _mcp_server(live_read_enabled=True, graph_client=graph_client)
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 34,
+                "method": "tools/call",
+                "params": {
+                    "name": "document_list",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {"case_id": "case-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        structured = result["structuredContent"]
+        self.assertTrue(structured["executesGraphRequests"])
+        self.assertEqual(structured["requestPlan"]["list_name"], "DokumentRegister")
+        self.assertEqual(structured["graphResponse"]["value"][0]["id"], "doc-1")
+        self.assertIn("/lists/list-docs/items", graph_client.paths[0])
+
+    def test_stdio_live_read_without_graph_client_returns_tool_error(self) -> None:
+        server = _mcp_server(live_read_enabled=True)
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 35,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_get",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {"case_id": "case-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertTrue(result["isError"])
+        self.assertEqual(result["structuredContent"]["errorType"], "McpLiveReadMissingClient")
+        self.assertFalse(result["structuredContent"]["executesGraphRequests"])
+
+    def test_stdio_live_read_blocks_write_tools_even_when_write_approved(self) -> None:
+        graph_client = _FakeGraphReadClient({"unexpected": True})
+        server = _mcp_server(live_read_enabled=True, graph_client=graph_client)
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 36,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_create",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1", write_approved=True),
+                        "arguments": _case_create_arguments(),
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertTrue(result["isError"])
+        self.assertEqual(result["structuredContent"]["errorType"], "McpLiveReadBlocked")
+        self.assertFalse(result["structuredContent"]["executesGraphRequests"])
+        self.assertEqual(graph_client.paths, [])
 
     def test_stdio_tools_call_closed_gate_returns_tool_error(self) -> None:
         server = _mcp_server()
@@ -325,6 +432,30 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(lines[0]["result"]["protocolVersion"], MCP_PROTOCOL_VERSION)
         self.assertEqual(len(lines[1]["result"]["tools"]), 7)
 
+    def test_central_cli_mcp_live_read_requires_owner_approval_before_stdio(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "mcp-stdio",
+                "--mcp-live-read",
+            ],
+            cwd=REPO_ROOT,
+            input="",
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("--owner-approved", result.stderr)
+
 
 def _open_context(case_id: str, write_approved: bool = False) -> RuntimeContext:
     return RuntimeContext(
@@ -364,8 +495,27 @@ def _case_create_arguments() -> dict:
     }
 
 
-def _mcp_server() -> TeamsSharePointDataMcpServer:
-    return TeamsSharePointDataMcpServer(load_mcp_contract(DEFAULT_MCP_CONTRACT), _provisioned_state())
+class _FakeGraphReadClient:
+    def __init__(self, response: dict) -> None:
+        self.response = response
+        self.paths: list[str] = []
+
+    def get(self, path: str) -> dict:
+        self.paths.append(path)
+        return self.response
+
+
+def _mcp_server(
+    *,
+    live_read_enabled: bool = False,
+    graph_client: _FakeGraphReadClient | None = None,
+) -> TeamsSharePointDataMcpServer:
+    return TeamsSharePointDataMcpServer(
+        load_mcp_contract(DEFAULT_MCP_CONTRACT),
+        _provisioned_state(),
+        live_read_enabled=live_read_enabled,
+        graph_client=graph_client,
+    )
 
 
 def _mcp_context(case_id: str, role_case_gate: str = "open", write_approved: bool = False) -> dict:

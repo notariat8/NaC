@@ -83,10 +83,32 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
             errors.append("teams-sharepoint-data-mcp mcp_protocol.jsonrpc_version must be 2.0")
         if protocol.get("tool_calls_execute_graph_requests") is not False:
             errors.append("teams-sharepoint-data-mcp tool calls must not execute Graph requests")
+        if protocol.get("owner_gated_live_read_tool_calls_execute_graph_requests") is not True:
+            errors.append("teams-sharepoint-data-mcp live-read tool calls must be owner-gated and explicit")
         methods = set(protocol.get("supported_methods", []))
         for method in ("initialize", "notifications/initialized", "tools/list", "tools/call"):
             if method not in methods:
                 errors.append(f"teams-sharepoint-data-mcp mcp_protocol.supported_methods missing {method}")
+    live_read = contract.get("runtime_boundary", {}).get("owner_gated_live_read_mode")
+    if not isinstance(live_read, dict):
+        errors.append("teams-sharepoint-data-mcp runtime_boundary.owner_gated_live_read_mode must be an object")
+    else:
+        if live_read.get("available") is not True:
+            errors.append("teams-sharepoint-data-mcp live-read mode must be available")
+        for flag in (
+            "disabled_by_default",
+            "requires_owner_approved_cli_flag",
+            "requires_runtime_graph_credentials",
+        ):
+            if live_read.get(flag) is not True:
+                errors.append(f"teams-sharepoint-data-mcp live-read {flag} must be true")
+        for flag in ("writes_allowed", "reads_sharepoint_file_content", "stores_tokens_or_secrets"):
+            if live_read.get(flag) is not False:
+                errors.append(f"teams-sharepoint-data-mcp live-read {flag} must be false")
+        if set(live_read.get("allowed_tools", [])) != {"case_get", "document_list"}:
+            errors.append("teams-sharepoint-data-mcp live-read allowed_tools must be case_get and document_list")
+        if set(live_read.get("allowed_graph_methods", [])) != {"GET"}:
+            errors.append("teams-sharepoint-data-mcp live-read allowed_graph_methods must be GET only")
 
     tools = _tools_by_id(contract)
     required = {
@@ -122,6 +144,7 @@ def build_tool_manifest(contract: dict[str, Any] | None = None) -> dict[str, Any
         "graphBaseUrl": contract["graph"]["base_url"],
         "graphRestOnly": contract["graph"]["rest_only"],
         "executesGraphRequests": contract["runtime_boundary"]["executes_graph_requests"],
+        "ownerGatedLiveRead": contract["runtime_boundary"].get("owner_gated_live_read_mode", {}),
         "tools": [
             {
                 "name": tool["id"],

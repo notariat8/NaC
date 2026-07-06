@@ -89,8 +89,9 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/teams-sharepoint-data-mcp.contract.json](teams-sharepoint-data-mcp.contract.json):
   Vertrag für den ersten `teams-sharepoint-data-mcp`-Runtime-Skeleton mit
   Tool-Manifest, MCP-stdio-Adapter, Rollen-/Akten-/Zweckgate,
-  Graph-REST-Request-Planung und ohne Live-Ausführung, Secrets, Dateiinhalt
-  oder Mandatsdaten im Produktrepo.
+  Graph-REST-Request-Planung, owner-gated Live-Reads für `case_get` und
+  `document_list` sowie ohne Live-Writes, Secrets, Dateiinhalt oder
+  Mandatsdaten im Produktrepo.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

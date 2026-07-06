@@ -228,6 +228,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optionaler nicht-geheimer provisionierter Teams/SharePoint-State.",
     )
     teams_sharepoint.add_argument("--mcp-contract", type=Path, help="Optionaler Teams/SharePoint-Data-MCP-Vertrag.")
+    teams_sharepoint.add_argument(
+        "--mcp-live-read",
+        action="store_true",
+        help="Aktiviert owner-gated Live-Reads fuer case_get und document_list im MCP-stdio-Adapter.",
+    )
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
     m365.set_defaults(func=command_m365)
@@ -882,6 +887,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--provisioned-state", str(args.provisioned_state)])
         if args.mcp_contract:
             script_args.extend(["--mcp-contract", str(args.mcp_contract)])
+        if args.mcp_live_read:
+            script_args.append("--mcp-live-read")
         if args.owner_approved:
             script_args.append("--owner-approved")
         if args.format == "json":

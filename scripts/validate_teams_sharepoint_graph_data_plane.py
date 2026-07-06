@@ -445,10 +445,16 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("mcp_boundary.current_transport must be stdio")
         if mcp.get("current_protocol_version") != "2025-11-25":
             errors.append("mcp_boundary.current_protocol_version must be 2025-11-25")
-        if mcp.get("current_runtime_mode") != "request_planning_only":
-            errors.append("mcp_boundary.current_runtime_mode must be request_planning_only")
+        if mcp.get("current_runtime_mode") != "request_planning_with_owner_gated_live_read":
+            errors.append("mcp_boundary.current_runtime_mode must be request_planning_with_owner_gated_live_read")
         if mcp.get("mcp_must_use_graph_rest_only") is not True:
             errors.append("mcp_boundary.mcp_must_use_graph_rest_only must be true")
+        if mcp.get("owner_gated_live_read_allowed") is not True:
+            errors.append("mcp_boundary.owner_gated_live_read_allowed must be true")
+        if set(_strings(mcp.get("owner_gated_live_read_allowed_tools"))) != {"case_get", "document_list"}:
+            errors.append("mcp_boundary.owner_gated_live_read_allowed_tools must be case_get and document_list")
+        if mcp.get("runtime_writes_executed_by_mcp") is not False:
+            errors.append("mcp_boundary.runtime_writes_executed_by_mcp must be false")
         for tool in ("case_get", "case_create", "grant_request", "audit_append", "document_list"):
             if tool not in set(_strings(mcp.get("allowed_runtime_tools"))):
                 errors.append(f"mcp_boundary.allowed_runtime_tools missing {tool}")
@@ -814,6 +820,8 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "`teams-sharepoint-data-mcp`"),
         (DOC_DE, "mcp-manifest"),
         (DOC_DE, "mcp-stdio"),
+        (DOC_DE, "mcp-live-read"),
+        (DOC_DE, "owner-gated Live-Read-Modus"),
         (DOC_DE, "MCP-Protokollversion `2025-11-25`"),
         (DOC_DE, "nac_m365_graph.mcp_runtime"),
         (DOC_DE, "nac_m365_graph.mcp_stdio"),
@@ -829,6 +837,8 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "`teams-sharepoint-data-mcp`"),
         (DOC_EN, "mcp-manifest"),
         (DOC_EN, "mcp-stdio"),
+        (DOC_EN, "mcp-live-read"),
+        (DOC_EN, "owner-gated live-read mode"),
         (DOC_EN, "MCP protocol version `2025-11-25`"),
         (DOC_EN, "nac_m365_graph.mcp_runtime"),
         (DOC_EN, "nac_m365_graph.mcp_stdio"),

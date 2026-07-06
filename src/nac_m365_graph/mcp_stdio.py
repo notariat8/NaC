@@ -4,8 +4,9 @@ import json
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, Protocol, TextIO
 
+from .graph_client import GraphHttpError
 from .mcp_runtime import (
     DEFAULT_MCP_CONTRACT,
     McpGateError,
@@ -21,6 +22,12 @@ from .privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state
 MCP_PROTOCOL_VERSION = "2025-11-25"
 JSONRPC_VERSION = "2.0"
 SERVER_NAME = "teams-sharepoint-data-mcp"
+LIVE_READ_TOOLS = {"case_get", "document_list"}
+
+
+class GraphReadClient(Protocol):
+    def get(self, path: str) -> dict[str, Any]:
+        ...
 
 
 class McpProtocolError(ValueError):
@@ -32,12 +39,21 @@ class McpProtocolError(ValueError):
 
 
 class TeamsSharePointDataMcpServer:
-    def __init__(self, contract: dict[str, Any], provisioned_state: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        contract: dict[str, Any],
+        provisioned_state: dict[str, Any],
+        *,
+        live_read_enabled: bool = False,
+        graph_client: GraphReadClient | None = None,
+    ) -> None:
         errors = validate_mcp_contract(contract)
         if errors:
             raise McpRuntimeError("; ".join(errors))
         self.contract = contract
         self.provisioned_state = provisioned_state
+        self.live_read_enabled = live_read_enabled
+        self.graph_client = graph_client
 
     def handle_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
         is_notification = "id" not in message
@@ -74,8 +90,9 @@ class TeamsSharePointDataMcpServer:
             },
             "instructions": (
                 "Plans Microsoft Graph REST v1.0 requests for Teams-connected "
-                "SharePoint list metadata only. This adapter does not execute "
-                "Graph requests or store tokens."
+                "SharePoint list metadata. Live reads for case_get and document_list "
+                "are available only when the server is started in owner-gated "
+                "live-read mode. The adapter never executes write tools or stores tokens."
             ),
         }
 
@@ -105,11 +122,17 @@ class TeamsSharePointDataMcpServer:
                 "content": [{"type": "text", "text": str(exc)}],
                 "structuredContent": {
                     "serverId": SERVER_NAME,
+                    "runtimeMode": self._runtime_mode(),
                     "errorType": type(exc).__name__,
                     "message": str(exc),
                     "executesGraphRequests": False,
                 },
             }
+
+        if self.live_read_enabled:
+            live_read_result = self._live_read_result(tool_name, plan)
+            if live_read_result is not None:
+                return live_read_result
 
         return {
             "content": [
@@ -123,10 +146,101 @@ class TeamsSharePointDataMcpServer:
             ],
             "structuredContent": {
                 "serverId": SERVER_NAME,
+                "runtimeMode": self._runtime_mode(),
                 "graphBaseUrl": self.contract["graph"]["base_url"],
                 "executesGraphRequests": False,
                 "requestPlan": plan.to_dict(),
                 "runtimeContext": asdict(context),
+            },
+        }
+
+    def _runtime_mode(self) -> str:
+        if self.live_read_enabled:
+            return "owner_gated_live_read"
+        return "request_planning_only"
+
+    def _live_read_result(self, tool_name: str, plan: Any) -> dict[str, Any] | None:
+        if tool_name not in LIVE_READ_TOOLS:
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "owner-gated live-read mode only executes case_get and "
+                            "document_list. This tool was not executed."
+                        ),
+                    }
+                ],
+                "structuredContent": {
+                    "serverId": SERVER_NAME,
+                    "runtimeMode": self._runtime_mode(),
+                    "graphBaseUrl": self.contract["graph"]["base_url"],
+                    "executesGraphRequests": False,
+                    "requestPlan": plan.to_dict(),
+                    "errorType": "McpLiveReadBlocked",
+                    "message": "live-read mode does not execute write or non-read tools",
+                },
+            }
+        if plan.method != "GET" or plan.payload is not None or plan.writes_items:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "live-read mode only executes safe GET request plans"}],
+                "structuredContent": {
+                    "serverId": SERVER_NAME,
+                    "runtimeMode": self._runtime_mode(),
+                    "graphBaseUrl": self.contract["graph"]["base_url"],
+                    "executesGraphRequests": False,
+                    "requestPlan": plan.to_dict(),
+                    "errorType": "McpLiveReadBlocked",
+                    "message": "planned request is not an allowed read-only Graph GET",
+                },
+            }
+        if self.graph_client is None:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "live-read mode requires a configured Graph REST client"}],
+                "structuredContent": {
+                    "serverId": SERVER_NAME,
+                    "runtimeMode": self._runtime_mode(),
+                    "graphBaseUrl": self.contract["graph"]["base_url"],
+                    "executesGraphRequests": False,
+                    "requestPlan": plan.to_dict(),
+                    "errorType": "McpLiveReadMissingClient",
+                    "message": "live-read mode requires a configured Graph REST client",
+                },
+            }
+        try:
+            graph_response = self.graph_client.get(plan.path)
+        except GraphHttpError as exc:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": str(exc)}],
+                "structuredContent": {
+                    "serverId": SERVER_NAME,
+                    "runtimeMode": self._runtime_mode(),
+                    "graphBaseUrl": self.contract["graph"]["base_url"],
+                    "executesGraphRequests": True,
+                    "requestPlan": plan.to_dict(),
+                    "errorType": "GraphHttpError",
+                    "status": exc.status,
+                    "message": str(exc),
+                },
+            }
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"{tool_name} executed as live Graph REST read. No write request was executed.",
+                }
+            ],
+            "structuredContent": {
+                "serverId": SERVER_NAME,
+                "runtimeMode": self._runtime_mode(),
+                "graphBaseUrl": self.contract["graph"]["base_url"],
+                "executesGraphRequests": True,
+                "requestPlan": plan.to_dict(),
+                "graphResponse": graph_response,
             },
         }
 
@@ -177,12 +291,17 @@ def run_stdio_server(
     provisioned_state_path: Path = DEFAULT_PROVISIONED_STATE,
     input_stream: TextIO | None = None,
     output_stream: TextIO | None = None,
+    *,
+    live_read_enabled: bool = False,
+    graph_client: GraphReadClient | None = None,
 ) -> int:
     input_stream = input_stream or sys.stdin
     output_stream = output_stream or sys.stdout
     server = TeamsSharePointDataMcpServer(
         load_mcp_contract(contract_path),
         load_provisioned_state(provisioned_state_path),
+        live_read_enabled=live_read_enabled,
+        graph_client=graph_client,
     )
     for line in input_stream:
         if not line.strip():

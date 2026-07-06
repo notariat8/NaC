@@ -229,11 +229,26 @@ nac m365 teams-sharepoint mcp-stdio
 ```
 
 `mcp-manifest` ist Discovery für Tool-Grenzen. `mcp-stdio` ist die lokale
-Runtime-Bedienkante für MCP-Clients wie AIQ/Codex, bleibt aber im aktuellen
-MVP im Modus `request_planning_only`: `tools/call` liefert
+Runtime-Bedienkante für MCP-Clients wie AIQ/Codex. Der Default bleibt
+`request_planning_only`: `tools/call` liefert
 `structuredContent.requestPlan` mit Methode, Graph-v1.0-Pfad und Payload,
 setzt `executesGraphRequests` auf `false` und gibt Gate-Verstöße als MCP
 Tool-Error zurück.
+
+Der erste owner-gated Live-Read-Modus wird explizit gestartet:
+
+```bash
+nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
+```
+
+Dieser Modus braucht die Runtime-Graph-Konfiguration
+`M365_RUNTIME_GRAPH_ACCESS_TOKEN` oder `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE`
+beziehungsweise `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
+`M365_RUNTIME_CLIENT_SECRET`. Er führt nur Graph-REST-`GET` für `case_get` und
+`document_list` aus. Write-Tools, Team-/Mitgliedschaftsänderungen,
+SharePoint-Schemaänderungen und Dateiinhalt bleiben blockiert. Erfolgreiche
+Live-Reads liefern neben dem Request-Plan die Graph-Antwort in
+`structuredContent.graphResponse`.
 
 Erste Tool-Grenzen:
 
