@@ -45,7 +45,7 @@ Diese Liste ist als Vorlage für GitHub Issues gedacht.
 - **Typ:** Compliance Automation
 - **Akzeptanzkriterien:**
   - Check blockiert nicht erlaubte Technikpfade
-  - Check prüft Cross-IDE Sync Dokumente
+  - Check prüft Codex-Agent-Sync-Dokumente
 
 ### 6) Release Checklist für Prozessversionen
 - **Typ:** Release Governance

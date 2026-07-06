@@ -1,20 +1,20 @@
-# Platform Matrix For Onboarding And Rules
+# Codex Onboarding Matrix
 
 ## Goal
 
 Ensure that concept, rule and onboarding changes are maintained synchronously
-for all supported platforms.
+for the active Codex path.
 
 ## Mandatory Paths
 
 | Platform | Mandatory files |
 | --- | --- |
-| Cursor | [AGENTS.md](../../AGENTS.md), [.cursor/rules/](../../.cursor/rules), [docs/en/START_HERE.md](START_HERE.md), [docs/en/plugin-plans/README.md](plugin-plans/README.md) |
-| VS Code + Copilot | [AGENTS.md](../../AGENTS.md), [.github/copilot-instructions.md](../../.github/copilot-instructions.md), [docs/en/vscode-copilot-start.md](vscode-copilot-start.md), [docs/en/plugin-plans/README.md](plugin-plans/README.md) |
+| Codex | [AGENTS.md](../../AGENTS.md), [.codex/agents/](../../.codex/agents), [docs/en/START_HERE.md](START_HERE.md), [docs/en/plugin-plans/README.md](plugin-plans/README.md) |
 
 ## Shared Core
 
-The following content must remain equivalent on both platforms:
+The following content must remain equivalent between policy, AGENTS.md and
+Codex profiles:
 
 - compliance and governance principles,
 - review and approval logic,
@@ -29,9 +29,8 @@ The following content must remain equivalent on both platforms:
 For every conceptual change:
 
 1. Update core content.
-2. Update Cursor path.
-3. Update VS Code Copilot path.
-4. Check links in [README.md](../../README.md) and
+2. Update the Codex agent path.
+3. Check links in [README.md](../../README.md) and
    [docs/en/START_HERE.md](START_HERE.md).
 
 ## Current Synchronous MVP Default

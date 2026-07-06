@@ -1,6 +1,6 @@
 # Onboarding Prompt: Startup Verification
 
-Use this prompt in Cursor or Copilot before the first content change.
+Use this prompt in Codex before the first content change.
 
 ```text
 Run a structured startup check for this repository.

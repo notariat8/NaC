@@ -17,14 +17,14 @@ PLUGIN_MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Startup verification for local IDE/tooling setup.")
+    parser = argparse.ArgumentParser(description="Startup verification for local Codex tooling setup.")
     parser.add_argument(
         "--profile",
         choices=["base", "plugin-dev", "notary-workstation"],
         default="base",
         help="Environment profile to verify.",
     )
-    parser.add_argument("--ide", choices=["auto", "cursor", "vscode"], default="auto")
+    parser.add_argument("--ide", choices=["auto", "codex"], default="auto")
     parser.add_argument("--run-tests", action="store_true")
     return parser.parse_args()
 
@@ -365,15 +365,6 @@ def main() -> int:
             ok.append(f"Datei vorhanden: {rel_path}")
         else:
             errors.append(f"Datei fehlt: {rel_path}")
-
-    ide_mode = args.ide
-    if ide_mode == "vscode" or (ide_mode == "auto" and command_exists("code")):
-        ext_ok, ext_warn, ext_err = check_vscode_extensions(
-            requirements.get("vscode_extensions_required", [])
-        )
-        ok.extend(ext_ok)
-        warnings.extend(ext_warn)
-        errors.extend(ext_err)
 
     if args.run_tests:
         python_env = build_python_env()

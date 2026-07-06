@@ -18,7 +18,7 @@ Leistungen mit AVV-Pflicht müssen als solche gekennzeichnet und mit den erforde
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | f8-eventlock-saas | EventLock-as-a-Service | managed_saas | yes | event_journal_and_metadata | `policies/revisionssicherheit-eventstream-policy.yaml`, `policies/tenant-ownership-policy.yaml`, `policies/provider-open-services-policy.yaml` | `docs/de/eventstream/revisionssicherheit.md`, `docs/de/eventstream/implementation-templates.md`, `docs/de/eventstream/runbook-aws.md`, `docs/de/eventstream/runbook-azure.md`, `docs/de/eventstream/runbook-gcp.md`, `docs/de/eventstream/runbook-oci.md` | dedizierte Subinstanz pro Kunde, dokumentierter Exit |
 | f8-nac-governance-pack | Governance und Policy Pack | documentation_and_controls | no | governance_metadata | `policies/process-policy.yaml`, `policies/role-model-policy.yaml`, `policies/access-control-policy.yaml` | `docs/de/governance.md`, `docs/de/issues/operations.md` | vollständig repo-basiert, durch Dritte übernehmbar |
-| f8-onboarding-pack | Onboarding und Einführungsunterlagen | documentation | no | onboarding_metadata | `policies/onboarding-flow.json`, `policies/provider-open-services-policy.yaml` | `docs/de/START_HERE.md`, `docs/de/vscode-copilot-start.md`, `docs/de/platform-onboarding-matrix.md` | offen dokumentiert, kein proprietärer Zwang |
+| f8-onboarding-pack | Onboarding und Einführungsunterlagen | documentation | no | onboarding_metadata | `policies/onboarding-flow.json`, `policies/provider-open-services-policy.yaml` | `docs/de/START_HERE.md`, `docs/de/platform-onboarding-matrix.md` | offen dokumentiert, kein proprietärer Zwang |
 
 ## AVV-Referenz
 

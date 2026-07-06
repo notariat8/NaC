@@ -7,7 +7,7 @@ Die vorherigen Public-Blocker sind jetzt umgesetzt; aus Sicht dieser Checkliste 
 
 ## Ampelstatus
 
-- Gruen: Fachkonzept, Governance, Policies, Onboarding für Cursor und Copilot
+- Grün: Fachkonzept, Governance, Policies und Codex-Onboarding
 - Gruen: lauffähige Python-Referenz, Tests und Beispielprozesse
 - Gruen: Community- und Open-Source-Standards vorhanden (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`)
 - Gruen: BPMN-2.0 Referenzmodelle vorhanden (`bpmn/invoice-process.bpmn`, `bpmn/bookkeeping-process.bpmn`)

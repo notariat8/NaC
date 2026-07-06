@@ -23,7 +23,7 @@ Mit der vorliegenden Policy wird das geschlossen.
 
 ### Bewertung
 
-- `Markdown`: beste Lesbarkeit, breiteste Toolunterstützung, ideal für LLM/Copilot/Cursor-Kollaboration.
+- `Markdown`: beste Lesbarkeit, breiteste Toolunterstützung, ideal für Codex-gestützte Zusammenarbeit.
 - `AsciiDoc`: staerker für komplexe Publikations-Layouts und klassische Handbuchstrukturen.
 - `Superdoc`: kein belastbarer De-facto-Standard für langfristige, revisionsfeste Unternehmensdokumentation.
 

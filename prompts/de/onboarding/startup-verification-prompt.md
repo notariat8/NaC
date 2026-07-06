@@ -1,6 +1,6 @@
 # Onboarding-Prompt: Startup Verification
 
-Nutze diesen Prompt in Cursor oder Copilot vor der ersten inhaltlichen Arbeit.
+Nutze diesen Prompt in Codex vor der ersten inhaltlichen Arbeit.
 
 ```text
 Fuehre einen strukturierten Startcheck fuer dieses Repository durch.

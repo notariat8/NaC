@@ -10,12 +10,10 @@ from scripts import validate_technology_policy
 class TechnologyPolicyValidationTest(unittest.TestCase):
     def _write_required_sync_targets(self, root: Path) -> None:
         for rel_path in (
-            ".cursor/rules",
-            ".github/copilot-instructions.md",
+            "AGENTS.md",
+            ".codex/agents",
             "docs/de/START_HERE.md",
             "docs/en/START_HERE.md",
-            "docs/de/vscode-copilot-start.md",
-            "docs/en/vscode-copilot-start.md",
             "policies/language-policy.yaml",
         ):
             path = root / rel_path
@@ -61,14 +59,12 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
                 "      - mermaid",
                 "      - plantuml",
                 "repository_constraints:",
-                "  enforce_cross_ide_sync: true",
+                "  enforce_codex_agent_sync: true",
                 "  required_sync_targets:",
-                "    - .cursor/rules",
-                "    - .github/copilot-instructions.md",
+                "    - AGENTS.md",
+                "    - .codex/agents",
                 "    - docs/de/START_HERE.md",
                 "    - docs/en/START_HERE.md",
-                "    - docs/de/vscode-copilot-start.md",
-                "    - docs/en/vscode-copilot-start.md",
                 "    - policies/language-policy.yaml",
             )
         )
@@ -97,9 +93,9 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
                         "    disallowed_for_bpmn_source:",
                         "      - mermaid",
                         "repository_constraints:",
-                        "  enforce_cross_ide_sync: false",
+                        "  enforce_codex_agent_sync: false",
                         "  required_sync_targets:",
-                        "    - .cursor/rules",
+                        "    - AGENTS.md",
                     )
                 ),
             )
@@ -118,7 +114,7 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
         )
         self.assertIn(
             "Pflichtwert fehlt in technology-policy: "
-            "repository_constraints.enforce_cross_ide_sync.true",
+            "repository_constraints.enforce_codex_agent_sync.true",
             errors,
         )
         self.assertIn(
@@ -144,12 +140,12 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
             root = Path(temp_dir)
             self._write_policy(root)
             self._write_required_sync_targets(root)
-            (root / ".github" / "copilot-instructions.md").unlink()
+            (root / "AGENTS.md").unlink()
 
             errors = validate_technology_policy.validate(root)
 
         self.assertIn(
-            "Pflichtziel fuer Cross-IDE-Sync fehlt: .github/copilot-instructions.md",
+            "Pflichtziel fuer Codex-Agent-Sync fehlt: AGENTS.md",
             errors,
         )
 
@@ -163,7 +159,7 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
             errors = validate_technology_policy.validate(root)
 
         self.assertIn(
-            "Pflichtziel fuer Cross-IDE-Sync fehlt: docs/de/custom-sync.md",
+            "Pflichtziel fuer Codex-Agent-Sync fehlt: docs/de/custom-sync.md",
             errors,
         )
 
@@ -183,12 +179,12 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
             errors = validate_technology_policy.validate(root)
 
         self.assertIn(
-            "Cross-IDE-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
+            "Codex-Agent-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
             "/etc/passwd",
             errors,
         )
         self.assertIn(
-            "Cross-IDE-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
+            "Codex-Agent-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
             "../outside.md",
             errors,
         )

@@ -5,9 +5,8 @@ Status: verbindliche Erklärung der NaC-Regelgruppen
 Diese Seite erklärt, welche Regeln hart blockieren, welche Regeln
 Arbeitsdisziplin sind und welche Regeln nur Orientierung geben. Führende
 maschinenlesbare Quelle ist [policies/process-policy.yaml](../../policies/process-policy.yaml).
-Agentenflächen wie [AGENTS.md](../../AGENTS.md), Cursor-Regeln und
-[.github/copilot-instructions.md](../../.github/copilot-instructions.md) sind
-Spiegel dieser Policy.
+Agentenflächen wie [AGENTS.md](../../AGENTS.md) und die Codex-Agentenprofile
+unter [.codex/agents/](../../.codex/agents) sind Spiegel dieser Policy.
 
 ## Grundsatz
 
@@ -68,6 +67,12 @@ Fertig ist ein Update erst, wenn der im Issue dokumentierte Delivery Mode
 erfüllt ist und die verpflichtenden `remote_ci_checks` erfolgreich sind. Das
 Project ersetzt keine Repo-Rechte: Nutzer sehen nur Issues aus Repos, auf die
 sie bereits Zugriff haben.
+
+Jede Abschlussmeldung nennt danach trotzdem einen Abschnitt `Nächster Schritt`.
+Dort steht konkret, welche technische oder operative Fortsetzung ansteht und ob
+Owner-Input benötigt wird. Wenn kein Owner-Input nötig ist, wird das
+ausdrücklich gesagt; ein uneindeutiger Wartezustand ist kein gültiger
+Abschluss.
 
 ## Spec-Traceability
 
@@ -137,7 +142,8 @@ von NaC. Die kompatible Regel lautet:
 - Offener Scope: erst erkunden, Design/Plan bestätigen lassen.
 - Fehler: erst Ursache finden, dann ändern.
 - Nichttriviale Codeänderung: Test oder Prüfziel zuerst festhalten.
-- Abschluss: keine Erfolgsaussage ohne frische Verifikation.
+- Abschluss: keine Erfolgsaussage ohne frische Verifikation und ohne benannten
+  nächsten Schritt.
 
 Diese Methode ergänzt die NaC-Regeln; sie ersetzt keine Datenschutz-,
 Sprach-, Lizenz- oder Freigaberegel.

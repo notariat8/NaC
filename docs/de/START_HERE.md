@@ -35,8 +35,7 @@ Dieses Dokument ist zu verwenden:
 
 1. Repo-Regeln lesen:
    - [AGENTS.md](../../AGENTS.md), sofern im Workspace vorhanden.
-   - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
-   - [.cursor/rules/](../../.cursor/rules)
+   - [.codex/agents/](../../.codex/agents)
    - [docs/de/regelarchitektur.md](regelarchitektur.md)
 2. Projektstatus lesen:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
@@ -162,6 +161,10 @@ zulässig, wenn der Owner direkte Lieferung ausdrücklich beauftragt.
 strict` frisch bestanden hat, `HEAD` dem GitHub-Zielstand entspricht und der
 lokale Arbeitsbaum sauber ist. Lokale Änderungen und unge-mergte PR-Branches
 sind Zwischenstand.
+
+Jede Abschlussmeldung enthält zusätzlich `Nächster Schritt`: die konkrete
+Fortsetzung und ob Owner-Input benötigt wird. Wenn kein Owner-Input nötig ist,
+wird das ausdrücklich gesagt.
 
 Für versionierte Prozesspakete ist vor Tag und GitHub Release zusätzlich die
 [Release-Checkliste](operations/release-checklist.md) auszufüllen oder im

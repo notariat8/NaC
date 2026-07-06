@@ -52,7 +52,7 @@ This list is intended as a template for GitHub issues.
 - **Type:** compliance automation
 - **Acceptance criteria:**
   - check blocks disallowed technology paths,
-  - check verifies cross-IDE synchronization documents.
+  - check verifies Codex agent synchronization documents.
 
 ### 6. Release Checklist For Process Versions
 

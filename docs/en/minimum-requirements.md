@@ -28,8 +28,7 @@ The base workspace is the minimum environment for repository work:
 | Git | installed and available in `PATH` | versioning, branches, pull requests |
 | GitHub CLI `gh` | installed and authenticated | PR, Actions and repository operations |
 | Python | `>= 3.11` | deterministic checks, KG runtime, workflow runtime |
-| VS Code or Cursor | recommended | IDE-supported contribution |
-| VS Code Copilot extensions | required for the VS Code path | agent and Copilot synchronization |
+| Codex | required | agent-assisted contribution |
 | `pandoc` | recommended | later document export |
 
 Mandatory check:

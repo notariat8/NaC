@@ -5,9 +5,8 @@ Status: binding explanation of the NaC rule groups
 This page explains which rules block work, which rules are work discipline and
 which rules are guidance only. The leading machine-readable source is
 [policies/process-policy.yaml](../../policies/process-policy.yaml). Agent
-surfaces such as [AGENTS.md](../../AGENTS.md), Cursor rules and
-[.github/copilot-instructions.md](../../.github/copilot-instructions.md) mirror
-that policy.
+surfaces such as [AGENTS.md](../../AGENTS.md) and the Codex agent profiles under
+[.codex/agents/](../../.codex/agents) mirror that policy.
 
 ## Principle
 
@@ -68,6 +67,11 @@ An update is finished only when the Delivery Mode documented in the issue is
 satisfied and the required `remote_ci_checks` are successful. The Project does
 not bypass repository permissions: users see only issues from repositories
 they can already access.
+
+Every final status message still includes a `Next Step` section. It names the
+concrete technical or operational continuation and states whether owner input is
+needed. If no owner input is needed, that is stated explicitly; an ambiguous
+waiting state is not a valid completion.
 
 ## Spec Traceability
 
@@ -136,7 +140,8 @@ compatible rule is:
 - Open scope: explore first, then get design/plan confirmation.
 - Bug: find the root cause before changing code.
 - Non-trivial code change: record the test or check objective first.
-- Completion: make no success claim without fresh verification.
+- Completion: make no success claim without fresh verification and a named next
+  step.
 
 This method complements NaC rules; it does not replace data protection,
 language, license or approval rules.

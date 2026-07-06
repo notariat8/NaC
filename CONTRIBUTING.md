@@ -6,7 +6,7 @@ Vielen Dank fuer Beitraege zum Musterrepo.
 
 - Aenderungen nur ueber Branch und Pull Request.
 - Jede Aenderung braucht Zweck und Auswirkungsbeschreibung.
-- Konzeptaenderungen muessen Cursor- und VS-Code-Copilot-Pfade synchron aktualisieren.
+- Konzeptaenderungen muessen AGENTS.md, Policies und Codex-Agentenpfade synchron halten.
 - Technikvorgaben aus `policies/technology-policy.yaml` sind verbindlich.
 
 ## Vorgehen

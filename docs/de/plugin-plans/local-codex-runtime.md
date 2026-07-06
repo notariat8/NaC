@@ -35,7 +35,7 @@ python3 scripts/startup_check.py --ide auto --run-tests
 
 - Plugin-Pläne lokal in `docs/de/plugin-plans/` regenerieren.
 - Änderungen nur über Branch, Review und Merge nach `main` führen.
-- Bei Konzeptänderungen Cursor- und VS-Code-Copilot-Pfade synchron halten.
+- Bei Konzeptänderungen Policy, AGENTS.md und Codex-Agentenprofile synchron halten.
 - Plan Preview als Markdown erzeugen, bevor ein Connector echte Zielsysteme verändert.
 
 ## Day2

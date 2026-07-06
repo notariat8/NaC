@@ -99,6 +99,7 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "agent_workflows:",
                 "  require_plan_review_fix_for_nontrivial_work: true",
                 "  require_implementation_review_before_user_acceptance: true",
+                "  require_final_response_next_step: true",
                 "  require_diagnosis_before_fix_for_repeated_or_unclear_failures: true",
                 "  require_full_pr_diff_review_before_merge: true",
                 "  routine_read_only_github_oci_checks_do_not_need_owner_approval: true",

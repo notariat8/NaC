@@ -25,14 +25,15 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Vor Merge, Owner-Merge oder PR-Abschluss wird die vollständige PR-Diff gegen den Zielbranch geprüft: `base...head`, Datei- und Commitliste. Ein einzelner HEAD-Commit reicht nicht. Wenn die Diff nicht freigegebenen Scope enthält, stoppen und Branch neu schneiden oder den kombinierten Scope ausdrücklich dokumentieren.
 - Ein Update gilt erst als abgeschlossen, wenn die Änderung validiert, committed, zu GitHub gepusht, je nach Auslieferungsmodus entweder in den Zielbranch gemerged oder direkt auf dem Zielbranch angekommen ist und die verpflichtenden `remote_ci_checks` erfolgreich sind.
 - Wenn gefragt wird, ob die Arbeit fertig ist, darf `fertig` nur gemeldet werden, wenn `nac doctor --profile strict` frisch bestanden hat, `HEAD` dem GitHub-Zielstand entspricht, der lokale Workspace sauber ist und die GitHub-Checks `Privacy and Secrets Guard / secret-scan`, `Privacy and Secrets Guard / privacy-lint` und `NaC Quality Gate / quality-gate` erfolgreich sind.
+- Jede Abschlussmeldung enthält einen expliziten Abschnitt `Nächster Schritt`. Dort steht, ob Owner-Input nötig ist, welcher konkrete technische oder operative Folgeschritt ansteht, oder dass aktuell kein Owner-Input nötig ist. Ein Agent darf nicht mit einem uneindeutigen Wartezustand schließen.
 - [roadmap/GANTT.md](roadmap/GANTT.md) wird aktualisiert, wenn Roadmap, Scope, Status, Meilenstein oder aktives Build-Board betroffen sind; Änderungen unter [plugins/](plugins), [workflows/](workflows) oder [usecases/](usecases) aktualisieren das jeweilige Themen-Gantt nur bei fachlicher Scope-, Status- oder Meilensteinwirkung. Kleine Bugfixes, Tippfehler, lokale Doku-Klarstellungen, Test-/Validator-Fixes oder UI-Details ohne Roadmap-Wirkung brauchen keine künstliche Gantt-Änderung.
 - Für das Fortschrittsbild genügt ein wöchentliches Gantt-Update; unter der Woche wird nur bei echter Roadmap-, Scope-, Status-, Meilenstein-, Pilotbereitschafts- oder Build-Board-Wirkung aktualisiert.
 - Lizenzmodell ist verbindlich nach [policies/license-policy.yaml](policies/license-policy.yaml): Code, Plugins, Workflows, Validatoren, Schemas und ausführbare Beispiele stehen unter `AGPL-3.0-or-later`; Dokumentation, Policies, Roadmap, Prompts und fachliche Usecases stehen unter `CC-BY-4.0`.
 - Attribution nach [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md) und [CITATION.cff](CITATION.cff) sichtbar erhalten; Marken- und Namensgrenzen nach [TRADEMARK.md](TRADEMARK.md) beachten.
 - Das Repo trennt installierbare Plugin-Artefakte in [plugins/](plugins), ausführbare Notariats-Workflows in [workflows/](workflows) und konkrete notarielle Usecases in [usecases/](usecases).
 - Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
-- Konzeptänderungen werden IDE-übergreifend synchron gepflegt (Cursor und VS Code + Copilot).
-- Onboarding wird nie nur für eine Plattform gepflegt, sondern für alle unterstützten Plattformen.
+- Konzeptänderungen werden Codex-first synchron zwischen Policy, AGENTS.md und Codex-Agentenprofilen gepflegt.
+- Onboarding wird für den Codex-Pfad und alle aktiven Repo-Startdokumente gepflegt.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; reine Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Der verbindliche Technikstack steht in [policies/technology-policy.yaml](policies/technology-policy.yaml).
 - Neue NaC-Funktionalität braucht eine Bedienkante in der zentralen `nac`-CLI; direkte Skripte dürfen als interne Kompatibilität bleiben, aber Produktdokumentation führt über [docs/de/cli.md](docs/de/cli.md) und [docs/en/cli.md](docs/en/cli.md).
@@ -84,6 +85,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Wiederkehrende OCI-/GitHub-Read-only-Checks im Release-Hotpath werden direkt mit den genehmigten CLI-Prefixen ausgeführt; keine `bash -lc`-Wrapper, Pipes, Environment-Präfixe oder `nac time-ledger run`-Wrapper verwenden, wenn dadurch Sandbox-/Approval-Prefixe nicht greifen. Observability danach separat protokollieren.
 - routine GitHub-/OCI-Read-only-Checks brauchen keine Owner-Freigabe, solange sie nur Status, Metadaten, Logs oder GitHub-Informationen lesen, keine Secrets ausgeben und keine GitHub- oder OCI-Schreiboperation starten. Design/Release/Apply/Secret/destruktiv bleiben Owner-gated.
 - Wenn mehrere unabhängige Gate-Vorbereitungen bekannt sind, werden unabhängige Gate-Vorbereitungen parallel vorbereitet; nur echte Design-, Release-, Apply-, Secret- oder destruktive Gates werden als Owner-Freigabe vorgelegt.
+- Jede Abschlussmeldung nennt unter `Nächster Schritt` die konkrete Fortsetzung und ob Owner-Input benötigt wird. Wenn kein weiterer Owner-Input nötig ist, wird das ausdrücklich gesagt.
 - Bei klar beauftragten, eng abgegrenzten Änderungen darf direkt umgesetzt werden; Annahmen und Validierung werden trotzdem dokumentiert.
 - Codeänderungen brauchen vor Abschluss Test- oder Validierungsnachweis. Bei nichttrivialem Verhalten zuerst Test, Prüfziel oder bestehende Testlücke festhalten, dann implementieren, iterieren und erneut validieren.
 - UI-, Frontend- und andere visuelle Änderungen brauchen vor Abschluss Screenshot oder vergleichbaren visuellen Nachweis und Iteration, bis das Ergebnis zur Anforderung passt.
@@ -109,6 +111,5 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 ## Plattform-Synchronität
 
 - Bei Regel- oder Konzeptänderungen immer beide Pfade aktualisieren:
-  - Cursor: [.cursor/rules/](.cursor/rules)
-  - VS Code + Copilot: [.github/copilot-instructions.md](.github/copilot-instructions.md), [docs/de/vscode-copilot-start.md](docs/de/vscode-copilot-start.md) und [docs/en/vscode-copilot-start.md](docs/en/vscode-copilot-start.md)
+  - Codex: [AGENTS.md](AGENTS.md), [.codex/agents/](.codex/agents) und die Startdokumente unter [docs/de/START_HERE.md](docs/de/START_HERE.md) sowie [docs/en/START_HERE.md](docs/en/START_HERE.md)
 - Bei sprachabhängigen Änderungen immer alle Standardsprachen nach [policies/language-policy.yaml](policies/language-policy.yaml) aktualisieren.

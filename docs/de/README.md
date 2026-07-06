@@ -194,8 +194,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Fortschritt je Themenbereich.
 - [policies/](../../policies) enthält Kultur-, Sprach-, Prozess-, Technik-, Datenschutz-,
   Rollen-, Zugriffs-, SBOM- und Drittbetriebsregeln.
-- [.cursor/rules/](../../.cursor/rules) und [.github/copilot-instructions.md](../../.github/copilot-instructions.md) spiegeln die
-  verbindlichen Agentenregeln.
+- [AGENTS.md](../../AGENTS.md) und [.codex/agents/](../../.codex/agents) spiegeln die
+  verbindlichen Codex-Agentenregeln.
 - [schemas/](../../schemas), [bpmn/](../../bpmn), [processes/](../../processes), [src/](../../src) und [scripts/](../../scripts) enthalten
   strukturierte Prozessanträge, Prozessmodelle, technische Fixtures, Runtime
   und lokale Werkzeuge.
@@ -306,14 +306,13 @@ stehen in [TRADEMARK.md](../../TRADEMARK.md).
 ## Notariats-Onboarding
 
 - Notariat: [prompts/de/onboarding/notary-first-setup.md](../../prompts/de/onboarding/notary-first-setup.md)
-- VS Code + Copilot Start: [prompts/de/onboarding/vscode-copilot-notariat-setup.md](../../prompts/de/onboarding/vscode-copilot-notariat-setup.md)
-
 Default für den synchronen MVP-Pfad in diesem Repo: `notary`.
 Fachliche Beispiele werden nur aus [usecases/](../../usecases) abgeleitet.
 
-## Plattform-Regel
+## Codex-Regel
 
-Konzeptänderungen werden immer für Cursor und VS Code + Copilot synchron gepflegt.
+Konzeptänderungen werden immer zwischen Policy, [AGENTS.md](../../AGENTS.md)
+und Codex-Agentenprofilen synchron gepflegt.
 
 ## Startcheck
 

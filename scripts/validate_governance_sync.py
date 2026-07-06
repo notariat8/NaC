@@ -25,10 +25,9 @@ POLICY_FILES = {
 
 MIRROR_FILES = {
     "AGENTS.md",
-    ".github/copilot-instructions.md",
 }
 
-MIRROR_PREFIXES = (".cursor/rules/",)
+MIRROR_PREFIXES = ()
 
 MANDATORY_ACCESS_POLICY_KEYS = (
     "source_of_truth:",
@@ -117,6 +116,7 @@ EXPECTED_GITHUB_FIRST_BRANCH_PREFIXES = {
 EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
     "require_plan_review_fix_for_nontrivial_work",
     "require_implementation_review_before_user_acceptance",
+    "require_final_response_next_step",
     "require_diagnosis_before_fix_for_repeated_or_unclear_failures",
     "require_full_pr_diff_review_before_merge",
     "routine_read_only_github_oci_checks_do_not_need_owner_approval",
@@ -485,7 +485,7 @@ def main() -> int:
     if policy_changed and not mirror_changed:
         errors.append(
             "Policy-Änderung ohne Spiegel-Aktualisierung erkannt. "
-            "Bitte AGENTS.md, .github/copilot-instructions.md und relevante .cursor/rules/ synchronisieren."
+            "Bitte AGENTS.md als Codex-Agentenspiegel synchronisieren."
         )
 
     if errors:

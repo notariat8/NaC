@@ -3,6 +3,20 @@
 Status: Design-Spezifikation
 Datum: 2026-05-26
 
+```nac-spec-traceability
+schema_version: nac.spec-traceability/v0.1
+spec_id: github-first-agentic-operating-model
+leading_issue: thread:2026-05-26-github-first-agentic-operating-model
+risk_gate: Governance
+delivery_mode: Owner Direct
+acceptance_ids:
+  - AC-001
+validation_commands:
+  - python3 scripts/validate_spec_traceability.py
+  - python3 scripts/validate_governance_sync.py
+  - python3 scripts/quality_gate.py --profile strict
+```
+
 ## Ausgangspunkt
 
 NaC nutzt bereits Git, Pull Requests, Reviews, Actions, Issue-Taxonomie,
@@ -103,6 +117,11 @@ Issue-Typen:
 | `Docs` | Doku-Änderung mit fachlicher Steuerungswirkung |
 
 Abgeleitete Issues in anderen Repos müssen das führende Issue verlinken.
+
+## Akzeptanzkriterien
+
+- AC-001: Agentische Arbeitssteuerung bleibt über führende Issues,
+  Project-Felder, Delivery Mode und `remote_ci_checks` nachvollziehbar.
 Das entspricht der vorhandenen Issue-Taxonomie und verhindert verteilte
 Schatten-Backlogs.
 
@@ -166,9 +185,7 @@ Die Implementierung soll `policies/process-policy.yaml` um einen Abschnitt
 Die Spiegel müssen synchronisiert werden:
 
 - `AGENTS.md`
-- `.github/copilot-instructions.md`
-- `.cursor/rules/00-core-governance.mdc`
-- `.cursor/rules/02-agent-common-workflows.mdc`
+- `.codex/agents/`
 - `docs/de/regelarchitektur.md`
 - `docs/en/regelarchitektur.md`
 - `docs/de/issues/operations.md`

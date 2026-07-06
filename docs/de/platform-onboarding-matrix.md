@@ -1,19 +1,20 @@
-# Plattform-Matrix für Onboarding und Regeln
+# Codex-Onboarding-Matrix
 
 ## Ziel
 
-Sicherstellen, dass Konzept-, Regel- und Onboarding-Änderungen für alle Plattformen synchron gepflegt werden.
+Sicherstellen, dass Konzept-, Regel- und Onboarding-Änderungen für den aktiven
+Codex-Pfad synchron gepflegt werden.
 
 ## Pflichtpfade
 
 | Plattform | Pflichtdateien |
 | --- | --- |
-| Cursor | `AGENTS.md`, `.cursor/rules/`, `docs/de/START_HERE.md` |
-| VS Code + Copilot | `AGENTS.md`, `.github/copilot-instructions.md`, `docs/de/vscode-copilot-start.md` |
+| Codex | `AGENTS.md`, `.codex/agents/`, `docs/de/START_HERE.md` |
 
 ## Gemeinsamer Kern
 
-Die folgenden Inhalte müssen inhaltlich auf beiden Plattformen gleich bleiben:
+Die folgenden Inhalte müssen zwischen Policy, AGENTS.md und Codex-Profilen
+gleich bleiben:
 
 - Compliance- und Governance-Prinzipien
 - Review- und Freigabelogik
@@ -26,9 +27,8 @@ Die folgenden Inhalte müssen inhaltlich auf beiden Plattformen gleich bleiben:
 Bei jeder konzeptuellen Änderung:
 
 1. Kerninhalt aktualisieren
-2. Cursor-Pfad aktualisieren
-3. VS-Code-Copilot-Pfad aktualisieren
-4. Verlinkungen im `README.md` und `docs/de/START_HERE.md` prüfen
+2. Codex-Agentenpfad aktualisieren
+3. Verlinkungen im `README.md` und `docs/de/START_HERE.md` prüfen
 
 ## Aktueller synchroner MVP-Default
 

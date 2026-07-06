@@ -19,12 +19,10 @@ GERMAN_TEXT_SCAN_FILES = (
     "README.md",
     "HERAUSGEBER.md",
     "AGENTS.md",
-    ".github/copilot-instructions.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/ISSUE_TEMPLATE/compliance_change.md",
 )
 GERMAN_TEXT_SCAN_ROOTS = (
-    ".cursor/rules",
     "docs/de",
     "plugins",
     "workflows",

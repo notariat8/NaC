@@ -5,9 +5,8 @@ on:
     paths:
       - "policies/**/*.yaml"
       - "policies/**/*.json"
-      - ".cursor/rules/**/*.mdc"
-      - ".github/copilot-instructions.md"
       - "AGENTS.md"
+      - ".codex/agents/**"
       - "scripts/validate_governance_sync.py"
   workflow_dispatch:
 

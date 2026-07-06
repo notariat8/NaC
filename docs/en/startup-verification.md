@@ -6,11 +6,10 @@ The startup check verifies locally:
 
 - required commands (`git`, `python`, `gh`)
 - profile-dependent commands (`node`, `npm`)
-- recommended commands (`pandoc`, `code`)
+- recommended commands (`pandoc`)
 - minimum Python version
 - minimum Node.js version when the selected profile requires it
 - required files and policies
-- optional VS Code Copilot extensions
 - optional process validation and tests
 - local Windows, morris and driver indicators for the notary workstation
 
@@ -26,12 +25,6 @@ Check the base setup plus process and unit tests:
 
 ```bash
 python scripts/startup_check.py --profile base --ide auto --run-tests
-```
-
-Strict VS Code path including Copilot extensions:
-
-```bash
-python scripts/startup_check.py --profile base --ide vscode --run-tests
 ```
 
 For plugin development:

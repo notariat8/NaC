@@ -29,8 +29,7 @@ Der Base-Workspace ist die Mindestumgebung für Arbeit am Repository:
 | Git | installiert und im `PATH` | Versionierung, Branches, Pull Requests |
 | GitHub CLI `gh` | installiert und authentifiziert | PR-, Actions- und Repo-Operationen |
 | Python | `>= 3.11` | deterministische Checks, KG-Runtime, Workflow-Runtime |
-| VS Code oder Cursor | empfohlen | IDE-gestützte Mitarbeit |
-| VS Code Copilot Extensions | erforderlich für VS-Code-Pfad | Agenten- und Copilot-Synchronität |
+| Codex | erforderlich | Agentenunterstützte Mitarbeit |
 | `pandoc` | empfohlen | späterer Dokumentexport |
 
 Pflichtcheck:

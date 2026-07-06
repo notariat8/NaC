@@ -73,8 +73,7 @@ rule_architecture:
   human_explanation_en: docs/en/regelarchitektur.md
   mirror_surfaces:
     - AGENTS.md
-    - .github/copilot-instructions.md
-    - .cursor/rules
+    - .codex/agents
     - docs/de/START_HERE.md
     - docs/en/START_HERE.md
   groups:
@@ -131,6 +130,7 @@ agent_workflows:
   require_plan_before_code_when_scope_is_open: true
   require_plan_review_fix_for_nontrivial_work: true
   require_implementation_review_before_user_acceptance: true
+  require_final_response_next_step: true
   require_diagnosis_before_fix_for_repeated_or_unclear_failures: true
   require_full_pr_diff_review_before_merge: true
   routine_read_only_github_oci_checks_do_not_need_owner_approval: true
@@ -195,6 +195,11 @@ agent_workflows:
   require_layer_sync_check_for_data_controller_view_changes: true
   require_error_test_security_review_for_code_reviewer: true
   require_user_confirmation_before_code_for_ambiguous_requests: true
+  final_response_next_step:
+    required_even_when_work_is_complete: true
+    must_state_owner_input_needed_or_not_needed: true
+    must_name_concrete_next_engineering_or_operational_step: true
+    must_not_end_with_ambiguous_waiting_state: true
   allow_direct_implementation_for_clear_small_changes: true
   require_tests_or_validation_evidence_for_code_changes: true
   prefer_test_checkpoint_before_non_trivial_implementation: true

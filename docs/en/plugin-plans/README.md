@@ -106,8 +106,6 @@ The current local startup check still expects:
 
 - `python` as an alias or command in addition to `python3`.
 - `gh` for GitHub operations.
-- VS Code extensions `github.copilot` and `github.copilot-chat` when VS Code is
-  the target IDE.
 - Package installation or `PYTHONPATH=src` so the internal legacy module `business_os` can be found in
   tests.
 - Optional `pandoc` for manual PDF exports only.

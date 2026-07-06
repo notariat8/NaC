@@ -140,12 +140,10 @@ def gantt_update_guidance(files: set[str]) -> list[str]:
         path.startswith("roadmap/")
         or path in {
             "AGENTS.md",
-            ".github/copilot-instructions.md",
             "policies/process-policy.yaml",
             "docs/de/START_HERE.md",
             "docs/en/START_HERE.md",
         }
-        or path.startswith(".cursor/rules/")
         for path in files
     )
     area_relevant = any(

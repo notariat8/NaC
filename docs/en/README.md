@@ -182,7 +182,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [processes/](../../processes) contains legacy runtime fixtures; product examples live only in [usecases/](../../usecases).
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.
-- [.cursor/rules/](../../.cursor/rules) and [.github/copilot-instructions.md](../../.github/copilot-instructions.md) mirror agent-facing rules.
+- [AGENTS.md](../../AGENTS.md) and [.codex/agents/](../../.codex/agents) mirror Codex-facing rules.
 
 ## Quick Start
 
@@ -229,7 +229,5 @@ documented in [TRADEMARK.md](../../TRADEMARK.md).
 ## Notary-Office Onboarding
 
 - Notary office: [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
-- VS Code + Copilot: [prompts/en/onboarding/vscode-copilot-notariat-setup.md](../../prompts/en/onboarding/vscode-copilot-notariat-setup.md)
-
 The synchronous MVP path in this repository is `notary`. Subject-matter
 examples are derived only from [usecases/](../../usecases).

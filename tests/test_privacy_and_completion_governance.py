@@ -29,9 +29,6 @@ class PrivacyAndCompletionGovernanceTest(unittest.TestCase):
         files = (
             "policies/process-policy.yaml",
             "AGENTS.md",
-            ".github/copilot-instructions.md",
-            ".cursor/rules/00-core-governance.mdc",
-            ".cursor/rules/02-agent-common-workflows.mdc",
             "docs/de/regelarchitektur.md",
             "docs/en/regelarchitektur.md",
         )

@@ -22,7 +22,7 @@
   - Responsibility: define the machine-readable GitHub-first operating model.
 - Modify: `policies/data-protection-policy.yaml`
   - Responsibility: make the no-secret/no-matter-data rule explicit for Issues, Pull Requests and Projects.
-- Modify: `AGENTS.md`, `.github/copilot-instructions.md`, `.cursor/rules/00-core-governance.mdc`, `.cursor/rules/02-agent-common-workflows.mdc`, `.cursor/rules/08-data-protection-no-secrets.mdc`
+- Modify: `AGENTS.md`, `.codex/agents/`
   - Responsibility: mirror the operating rule to agent-facing surfaces.
 - Modify: `docs/de/regelarchitektur.md`, `docs/en/regelarchitektur.md`
   - Responsibility: explain hardness and completion meaning for GitHub-first work.
@@ -218,9 +218,7 @@ class GithubFirstOperatingModelTest(unittest.TestCase):
     def test_agent_surfaces_mirror_github_first_rule(self) -> None:
         files = (
             "AGENTS.md",
-            ".github/copilot-instructions.md",
-            ".cursor/rules/00-core-governance.mdc",
-            ".cursor/rules/02-agent-common-workflows.mdc",
+            ".codex/agents",
         )
 
         for rel_path in files:
@@ -414,10 +412,7 @@ Expected: governance-sync missing-section tests pass; remaining failures point o
 
 **Files:**
 - Modify: `AGENTS.md`
-- Modify: `.github/copilot-instructions.md`
-- Modify: `.cursor/rules/00-core-governance.mdc`
-- Modify: `.cursor/rules/02-agent-common-workflows.mdc`
-- Modify: `.cursor/rules/08-data-protection-no-secrets.mdc`
+- Modify: `.codex/agents/`
 - Modify: `docs/de/regelarchitektur.md`
 - Modify: `docs/en/regelarchitektur.md`
 - Modify: `docs/de/issues/operations.md`
@@ -427,7 +422,7 @@ Expected: governance-sync missing-section tests pass; remaining failures point o
 
 - [ ] **Step 1: Mirror core agent rule**
 
-Add one concise GitHub-first paragraph to `AGENTS.md`, `.github/copilot-instructions.md`, `.cursor/rules/00-core-governance.mdc` and `.cursor/rules/02-agent-common-workflows.mdc`:
+Add one concise GitHub-first paragraph to `AGENTS.md` and the Codex agent profiles:
 
 ```markdown
 - GitHub-first gilt für nichttriviale agentische Arbeit: ein führendes Issue beschreibt Auftrag, Scope, Akzeptanzkriterien, Risk Gate, Delivery Mode und Validierung; das Organization Project `NaC Control Plane` zeigt Status und Blocker; ein Update ist erst nach dem jeweiligen Delivery Mode und erfolgreichen `remote_ci_checks` fertig.
@@ -435,7 +430,7 @@ Add one concise GitHub-first paragraph to `AGENTS.md`, `.github/copilot-instruct
 
 - [ ] **Step 2: Mirror no-secret rule**
 
-Add this sentence to `.cursor/rules/08-data-protection-no-secrets.mdc`:
+Add this sentence to the Codex-facing agent rules:
 
 ```markdown
 Issues, Pull Requests, Project-Felder und Kommentare sind GitHub-Oberflächen und dürfen keine Secrets, PINs, Tokens, privaten Dokumentinhalte oder echten Mandatsdaten enthalten.
@@ -623,7 +618,7 @@ Run:
 
 ```bash
 git status --short
-git add tests/test_github_first_operating_model.py tests/test_governance_sync.py scripts/validate_governance_sync.py policies/process-policy.yaml policies/data-protection-policy.yaml AGENTS.md .github/copilot-instructions.md .cursor/rules/00-core-governance.mdc .cursor/rules/02-agent-common-workflows.mdc .cursor/rules/08-data-protection-no-secrets.mdc docs/de/regelarchitektur.md docs/en/regelarchitektur.md docs/de/issues/operations.md docs/en/issues/operations.md docs/de/operations/README.md docs/en/operations/README.md .github/ISSUE_TEMPLATE/bug_report.md .github/ISSUE_TEMPLATE/feature_request.md .github/ISSUE_TEMPLATE/compliance_change.md .github/PULL_REQUEST_TEMPLATE.md
+git add tests/test_github_first_operating_model.py tests/test_governance_sync.py scripts/validate_governance_sync.py policies/process-policy.yaml policies/data-protection-policy.yaml AGENTS.md .codex/agents docs/de/regelarchitektur.md docs/en/regelarchitektur.md docs/de/issues/operations.md docs/en/issues/operations.md docs/de/operations/README.md docs/en/operations/README.md .github/ISSUE_TEMPLATE/bug_report.md .github/ISSUE_TEMPLATE/feature_request.md .github/ISSUE_TEMPLATE/compliance_change.md .github/PULL_REQUEST_TEMPLATE.md
 git commit -m "feat: add github first operating model controls"
 ```
 

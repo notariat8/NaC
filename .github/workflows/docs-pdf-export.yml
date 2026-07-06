@@ -26,8 +26,6 @@ jobs:
             docs/de/notariat-as-code.md \
             docs/de/governance.md \
             docs/de/technology-decision.md \
-            docs/de/vscode-copilot-start.md \
-            docs/de/copilot-quickstart-15min.md \
             docs/de/public-readiness.md \
             --from gfm \
             --toc \
@@ -45,8 +43,6 @@ jobs:
             docs/en/notariat-as-code.md \
             docs/en/governance.md \
             docs/en/technology-decision.md \
-            docs/en/vscode-copilot-start.md \
-            docs/en/copilot-quickstart-15min.md \
             docs/en/public-readiness.md \
             --from gfm \
             --toc \

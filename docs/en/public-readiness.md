@@ -8,8 +8,7 @@ perspective of this checklist, a public go-live is possible.
 
 ## Traffic-Light Status
 
-- Green: subject concept, governance, policies, onboarding for Cursor and
-  Copilot.
+- Green: subject concept, governance, policies and Codex onboarding.
 - Green: runnable Python reference, tests and example processes.
 - Green: community and open-source standards are present
   ([CONTRIBUTING.md](../../CONTRIBUTING.md), [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md),

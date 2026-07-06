@@ -14,9 +14,7 @@ def target_files() -> list[Path]:
     files = {
         REPO_ROOT / "README.md",
         REPO_ROOT / "AGENTS.md",
-        REPO_ROOT / ".github" / "copilot-instructions.md",
     }
-    files.update((REPO_ROOT / ".cursor" / "rules").glob("*.mdc"))
     for language in ("de", "en"):
         root = REPO_ROOT / "docs" / language
         files.add(root / "README.md")

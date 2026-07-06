@@ -38,14 +38,12 @@ approved_stack:
       - "PlantUML ist optional für technische Architektur, nicht für BPMN-Quellen."
 
 repository_constraints:
-  enforce_cross_ide_sync: true
+  enforce_codex_agent_sync: true
   required_sync_targets:
-    - .cursor/rules
-    - .github/copilot-instructions.md
+    - AGENTS.md
+    - .codex/agents
     - docs/de/START_HERE.md
     - docs/en/START_HERE.md
-    - docs/de/vscode-copilot-start.md
-    - docs/en/vscode-copilot-start.md
     - policies/language-policy.yaml
 
 exceptions:

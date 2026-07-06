@@ -10,7 +10,6 @@ recommended_commands:
   - node
   - npm
   - pandoc
-  - code
 
 python:
   min_version: "3.11"
@@ -43,7 +42,3 @@ required_files:
   - policies/onboarding-flow.json
   - policies/onboarding-diagrams.json
   - policies/github-identity-registry.json
-
-vscode_extensions_required:
-  - github.copilot
-  - github.copilot-chat

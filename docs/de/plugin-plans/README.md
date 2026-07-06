@@ -96,7 +96,6 @@ Der aktuelle lokale Startcheck erwartet noch:
 
 - `python` als Alias oder Command neben `python3`.
 - `gh` für GitHub-Operationen.
-- VS-Code-Extensions `github.copilot` und `github.copilot-chat`, falls VS Code als Ziel-IDE genutzt wird.
 - Paketinstallation oder `PYTHONPATH=src`, damit das interne Legacy-Modul `business_os` in Tests gefunden wird.
 - Optional `pandoc` für PDF-Exporte.
 

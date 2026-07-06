@@ -34,8 +34,7 @@ Use this document:
 
 1. Read repository rules:
    - [AGENTS.md](../../AGENTS.md), if present in the workspace.
-   - [.github/copilot-instructions.md](../../.github/copilot-instructions.md)
-   - [.cursor/rules/](../../.cursor/rules)
+   - [.codex/agents/](../../.codex/agents)
    - [docs/en/regelarchitektur.md](regelarchitektur.md)
 2. Read project status:
    - [roadmap/BUILD_NOW.md](../../roadmap/BUILD_NOW.md)
@@ -160,6 +159,10 @@ when the owner explicitly asks for direct delivery.
 --profile strict` pass, `HEAD` equals the GitHub target state and the local
 working tree is clean. Local changes and unmerged PR branches are intermediate
 states.
+
+Every final status message also contains `Next Step`: the concrete
+continuation and whether owner input is needed. If no owner input is needed,
+that is stated explicitly.
 
 For versioned process packages, the
 [release checklist](operations/release-checklist.md) must additionally be

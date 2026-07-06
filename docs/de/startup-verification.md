@@ -6,11 +6,10 @@ Der Startup-Check prüft lokal:
 
 - benötigte Commands (`git`, `python`, `gh`)
 - profilabhängige Commands (`node`, `npm`)
-- empfohlene Commands (`pandoc`, `code`)
+- empfohlene Commands (`pandoc`)
 - Mindest-Python-Version
 - Mindest-Node-Version für Plugin-Arbeit, sofern das Profil sie verlangt
 - Pflichtdateien und Policies
-- optional VS-Code-Copilot-Extensions
 - optional Prozessvalidierung und Tests
 - lokale Windows-/morris-/Treiber-Indikatoren für den Notariatsarbeitsplatz
 
@@ -26,12 +25,6 @@ Base-Setup plus Fach- und Testlauf:
 
 ```bash
 python scripts/startup_check.py --profile base --ide auto --run-tests
-```
-
-Für VS Code strikt (inkl. Copilot Extensions):
-
-```bash
-python scripts/startup_check.py --profile base --ide vscode --run-tests
 ```
 
 Für Plugin-Entwicklung:

@@ -26,7 +26,7 @@ EXPECTED_SCALARS = {
 }
 
 EXPECTED_TRUE_KEYS = (
-    ("repository_constraints", "enforce_cross_ide_sync"),
+    ("repository_constraints", "enforce_codex_agent_sync"),
 )
 
 EXPECTED_LISTS = {
@@ -35,12 +35,10 @@ EXPECTED_LISTS = {
         "plantuml",
     ),
     ("repository_constraints", "required_sync_targets"): (
-        ".cursor/rules",
-        ".github/copilot-instructions.md",
+        "AGENTS.md",
+        ".codex/agents",
         "docs/de/START_HERE.md",
         "docs/en/START_HERE.md",
-        "docs/de/vscode-copilot-start.md",
-        "docs/en/vscode-copilot-start.md",
         "policies/language-policy.yaml",
     ),
 }
@@ -245,7 +243,7 @@ def validate_required_sync_targets(root: Path) -> list[str]:
 
     for rel_path in sync_targets:
         if not isinstance(rel_path, str):
-            errors.append("Pflichtziel fuer Cross-IDE-Sync ist kein Pfad-String")
+            errors.append("Pflichtziel fuer Codex-Agent-Sync ist kein Pfad-String")
             continue
         target = Path(rel_path)
         normalized_parts = PurePosixPath(rel_path.replace("\\", "/")).parts
@@ -256,12 +254,12 @@ def validate_required_sync_targets(root: Path) -> list[str]:
             or ".." in normalized_parts
         ):
             errors.append(
-                "Cross-IDE-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
+                "Codex-Agent-Sync-Ziel muss relativer Repo-Pfad innerhalb des Repos sein: "
                 f"{rel_path}"
             )
             continue
         if not (root / target).exists():
-            errors.append(f"Pflichtziel fuer Cross-IDE-Sync fehlt: {rel_path}")
+            errors.append(f"Pflichtziel fuer Codex-Agent-Sync fehlt: {rel_path}")
     return errors
 
 
@@ -318,7 +316,7 @@ def main() -> int:
         return 1
 
     print("STATUS: PASSED")
-    print("OK: Technology-Policy-Struktur, Cross-IDE-Sync und Dateiformate stimmen.")
+    print("OK: Technology-Policy-Struktur, Codex-Agent-Sync und Dateiformate stimmen.")
     return 0
 
 

@@ -80,9 +80,6 @@ class GitHubFirstOperatingModelGovernanceTest(unittest.TestCase):
     def test_agent_instruction_surfaces_contain_github_first_markers(self) -> None:
         for relative_path in (
             "AGENTS.md",
-            ".github/copilot-instructions.md",
-            ".cursor/rules/00-core-governance.mdc",
-            ".cursor/rules/02-agent-common-workflows.mdc",
         ):
             self.assert_file_contains(
                 relative_path,

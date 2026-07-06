@@ -47,8 +47,6 @@ class AgenticParallelGatePrepPolicyTests(unittest.TestCase):
     def test_agent_mirrors_explain_when_not_to_request_owner_approval(self) -> None:
         mirror_paths = (
             "AGENTS.md",
-            ".github/copilot-instructions.md",
-            ".cursor/rules/02-agent-common-workflows.mdc",
         )
 
         for path in mirror_paths:
