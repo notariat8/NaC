@@ -92,6 +92,24 @@ The run may only create or clean synthetic IDs with the
 `NAC-SMOKE-WRITE-READ-` prefix. Evidence is stored redacted; tokens, secrets,
 raw data from real matters and complete personal content are not logged.
 
+## Standard Runtime Evidence For MCP/Runtime Changes
+
+The smoke suite is the standard runtime evidence after a merged change set
+when that change touches one of these surfaces:
+
+- `teams-sharepoint-data-mcp` contract, tool boundaries or adapter behavior,
+- `nac_m365_graph` runtime, Graph client, smoke or cleanup modules,
+- central `nac` CLI surface for M365 MCP smokes,
+- runtime Graph configuration, certificate path or Sites.Selected access,
+- runbook or operator changes that affect the live write/read/cleanup path.
+
+The evidence run must not start automatically without approval. It remains a
+separate owner gate because it writes and deletes a synthetic matter in the live
+tenant. After approval, the agent must complete the run end to end: write,
+read, cleanup, redacted artifact, workspace clean state and concrete result in
+the final status. If a synthetic leftover remains after the run, the agent must
+immediately prepare the owner-gated `mcp-smoke-leftover-cleanup` path.
+
 ## Completion Rule
 
 After an approved batch, the agent is done only when all approved actions have
