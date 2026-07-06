@@ -58,7 +58,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
-            "mcp-stdio starts the offline local MCP adapter."
+            "mcp-stdio starts the local MCP adapter."
         ),
     )
     parser.add_argument(
@@ -91,6 +91,14 @@ def parse_args() -> argparse.Namespace:
         help="Path to the teams-sharepoint-data-mcp contract.",
     )
     parser.add_argument(
+        "--mcp-live-read",
+        action="store_true",
+        help=(
+            "Enable owner-gated live Graph REST reads for MCP tools case_get and document_list. "
+            "Requires --owner-approved and M365 runtime credentials."
+        ),
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON output.",
@@ -103,9 +111,21 @@ def main() -> int:
     if args.command == "mcp-stdio":
         from nac_m365_graph.mcp_stdio import run_stdio_server
 
+        graph_client = None
+        if args.mcp_live_read:
+            if not args.owner_approved:
+                print("ERROR: mcp-stdio --mcp-live-read requires --owner-approved", file=sys.stderr)
+                return 2
+            try:
+                graph_client = GraphRestClient(runtime_token_provider_from_env())
+            except GraphConfigError as exc:
+                print(f"ERROR: {exc}", file=sys.stderr)
+                return 2
         return run_stdio_server(
             contract_path=args.mcp_contract,
             provisioned_state_path=args.provisioned_state,
+            live_read_enabled=args.mcp_live_read,
+            graph_client=graph_client,
         )
 
     if args.command == "mcp-manifest":

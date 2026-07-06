@@ -241,6 +241,7 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac m365 teams-sharepoint mcp-stdio
+nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 ```
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
@@ -249,6 +250,12 @@ the discovered lists and document libraries against the declarative MVP schema.
 Graph REST boundaries. `mcp-stdio` is also offline and speaks newline-delimited
 JSON-RPC over stdin/stdout. `tools/call` only plans Microsoft Graph v1.0
 requests and does not execute requests.
+
+`mcp-stdio --owner-approved --mcp-live-read` additionally enables live reads for
+`case_get` and `document_list`. Runtime credentials must be set outside the
+repository, for example through `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE` or
+through `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and
+`M365_RUNTIME_CLIENT_SECRET`. Write tools are not executed in this mode.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 

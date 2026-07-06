@@ -3,7 +3,7 @@
   "contract_id": "m365.teams_sharepoint_data_mcp",
   "server_id": "teams-sharepoint-data-mcp",
   "title": "Teams/SharePoint Data MCP runtime boundary",
-  "status": "skeleton_no_live_apply",
+  "status": "owner_gated_live_read_no_live_write",
   "last_update": "2026-07-06",
   "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence and document pointers stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
   "mcp_protocol": {
@@ -16,7 +16,8 @@
       "tools/list",
       "tools/call"
     ],
-    "tool_calls_execute_graph_requests": false
+    "tool_calls_execute_graph_requests": false,
+    "owner_gated_live_read_tool_calls_execute_graph_requests": true
   },
   "graph": {
     "base_url": "https://graph.microsoft.com/v1.0",
@@ -34,7 +35,23 @@
     "reads_sharepoint_list_items_only_after_role_case_purpose_gate": true,
     "writes_sharepoint_items_only_after_role_case_purpose_gate": true,
     "tenant_mutation_allowed": false,
-    "team_or_membership_mutation_allowed": false
+    "team_or_membership_mutation_allowed": false,
+    "owner_gated_live_read_mode": {
+      "available": true,
+      "disabled_by_default": true,
+      "requires_owner_approved_cli_flag": true,
+      "requires_runtime_graph_credentials": true,
+      "allowed_tools": [
+        "case_get",
+        "document_list"
+      ],
+      "allowed_graph_methods": [
+        "GET"
+      ],
+      "writes_allowed": false,
+      "reads_sharepoint_file_content": false,
+      "stores_tokens_or_secrets": false
+    }
   },
   "required_context": [
     "actor_id",

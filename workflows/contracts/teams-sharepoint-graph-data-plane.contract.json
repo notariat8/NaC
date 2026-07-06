@@ -242,8 +242,14 @@
     "mcp_server_required_for_runtime": true,
     "current_transport": "stdio",
     "current_protocol_version": "2025-11-25",
-    "current_runtime_mode": "request_planning_only",
+    "current_runtime_mode": "request_planning_with_owner_gated_live_read",
     "mcp_must_use_graph_rest_only": true,
+    "owner_gated_live_read_allowed": true,
+    "owner_gated_live_read_allowed_tools": [
+      "case_get",
+      "document_list"
+    ],
+    "runtime_writes_executed_by_mcp": false,
     "allowed_runtime_tools": [
       "case_get",
       "case_create",
