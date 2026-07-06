@@ -273,3 +273,15 @@ python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-
 All evidence files are redacted under `out/m365/teams-sharepoint/` and are not
 versioned. Tokens, private keys, raw Graph responses, real matter values and
 SharePoint file content belong neither in chat nor in the repository.
+
+The full runtime/MCP sequence can be rendered offline as a repeatable release
+gate:
+
+```bash
+python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
+```
+
+The renderer performs no Graph request. It creates the copyable approval text
+and the fixed sequence of `runtime-smoke`, `runtime-metadata`,
+`mcp-smoke-suite --mcp-suite-cleanup` and
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`.

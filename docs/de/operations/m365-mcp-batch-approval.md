@@ -99,6 +99,26 @@ erzeugen oder bereinigen. Evidence wird redigiert abgelegt; Tokens, Secrets,
 Rohdaten echter Akten und vollständige personenbezogene Inhalte werden nicht
 protokolliert.
 
+## Runtime-Release-Gate-Freigabe
+
+Nach Runtime- oder MCP-Änderungen rendert der Agent das komplette Gate offline:
+
+```bash
+python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
+```
+
+Der Renderer führt keine GitHub- oder Graph-Schreibaktion aus. Er gibt die
+kopierbare Owner-Freigabe und die feste Sequenz aus:
+
+1. `runtime-smoke`
+2. `runtime-metadata`
+3. `mcp-smoke-suite --mcp-suite-cleanup`
+4. `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`
+
+Die ausgegebenen Live-Kommandos bleiben owner-gated. `runtime-smoke` und
+`runtime-metadata` sind read-only, die MCP Smoke Suite schreibt und löscht eine
+synthetische Akte, der Leftover-Dry-Run liest nur die Trefferanzahl.
+
 ## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
 
 Die Smoke Suite ist der Standard-Betriebsnachweis nach einem gemergten

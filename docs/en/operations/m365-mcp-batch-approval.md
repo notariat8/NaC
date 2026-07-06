@@ -92,6 +92,26 @@ The run may only create or clean synthetic IDs with the
 `NAC-SMOKE-WRITE-READ-` prefix. Evidence is stored redacted; tokens, secrets,
 raw data from real matters and complete personal content are not logged.
 
+## Runtime Release Gate Approval
+
+After runtime or MCP changes, the agent renders the complete gate offline:
+
+```bash
+python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
+```
+
+The renderer performs no GitHub or Graph write action. It emits the copyable
+owner approval and the fixed sequence:
+
+1. `runtime-smoke`
+2. `runtime-metadata`
+3. `mcp-smoke-suite --mcp-suite-cleanup`
+4. `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`
+
+The emitted live commands remain owner-gated. `runtime-smoke` and
+`runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
+synthetic matter, and the leftover dry-run only reads the match count.
+
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
 The smoke suite is the standard runtime evidence after a merged change set

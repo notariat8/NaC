@@ -280,3 +280,15 @@ Alle Evidence-Dateien liegen redigiert unter `out/m365/teams-sharepoint/` und
 werden nicht versioniert. Tokens, private Schlüssel, Roh-Graph-Antworten,
 echte Aktenwerte und SharePoint-Dateiinhalte gehören weder in den Chat noch in
 das Repository.
+
+Die komplette Runtime-/MCP-Sequenz kann als wiederholbares Release-Gate offline
+gerendert werden:
+
+```bash
+python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
+```
+
+Der Renderer führt keine Graph-Anfrage aus. Er erzeugt den kopierbaren
+Freigabetext und die feste Sequenz aus `runtime-smoke`, `runtime-metadata`,
+`mcp-smoke-suite --mcp-suite-cleanup` und
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`.
