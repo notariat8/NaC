@@ -15,6 +15,8 @@ model and repository consolidation.
 - [agile-cadence.md](agile-cadence.md): work method and team cadence.
 - [codex-time-ledger.md](codex-time-ledger.md): local time ledger for Codex work blocks,
   tool time, approvals and repeated waiting time.
+- [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
+  prepared M365 MCP PRs and separately approved live smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index
   for agent rules, release memory and runbooks without secrets or mandate data.
 - [oci-runtime.md](oci-runtime.md): archived legacy runtime contract for OCI,

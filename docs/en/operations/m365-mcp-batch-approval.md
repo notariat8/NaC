@@ -1,0 +1,101 @@
+# M365 MCP Batch Approval
+
+This runbook groups recurring approvals for the active M365 MVP lane. The goal
+is that agents fully prepare several independent PRs and smoke preparations
+instead of waiting for owner input after each small step.
+
+The active MVP lane remains Entra ID, Microsoft Teams, Microsoft 365 group,
+SharePoint team site and Microsoft Graph REST or MCP. Legacy SharePoint APIs,
+SharePoint SDKs and the archived OCI path are outside this runbook.
+
+## No Owner Gate
+
+The agent executes these steps autonomously:
+
+- Create a GitHub issue with scope, acceptance criteria, risk and validation.
+- Create a feature branch from the current `main`.
+- Prepare code, tests, CLI surface, MCP contracts and documentation.
+- Run local validators and repository quality gates.
+- Open the PR, watch checks and fix check failures.
+- Read read-only metadata as long as no secrets, tokens or real matter data are
+  exposed.
+- Produce a batch status with all prepared PRs, check results and exact
+  approval text.
+
+An agent does not end the work block with an open technical next step when that
+step is executable without an owner gate.
+
+## Owner Gates
+
+These steps remain explicitly owner-gated:
+
+- Merge PRs into `main`.
+- Delete GitHub branches after merge when this is part of an approved batch.
+- Run live write actions in the M365 tenant, even when only synthetic test
+  matters are used.
+- Run live delete actions in the M365 tenant.
+- Change Entra app permissions, consent, certificates, secrets or credential
+  flows.
+- Change Teams, groups, sites, lists, columns, roles, membership or permissions
+  in the live tenant.
+- Process real matter data, personal data or confidential documents.
+
+## Batch Packet
+
+A batch packet includes at least this information for each PR:
+
+| Field | Content |
+| --- | --- |
+| PR | number, title and branch |
+| Scope | functional and technical scope |
+| Checks | local validators and GitHub checks |
+| Live tenant | `no live action`, `read-only` or the concrete write/delete action |
+| Risk | relevant data, permission, tenant or operating boundary |
+| Approval text | copyable owner approval |
+
+The agent may prepare several PRs in parallel. It collects approvals only when
+the PRs are review-ready or when a real owner gate is reached.
+
+## Merge Approval
+
+For a pure merge batch, one concrete sentence is enough:
+
+```text
+Freigabe: PRs #383, #385 mergen und Branches nach Merge aufräumen.
+```
+
+After this approval, the agent completes the approved merges, remote checks,
+local synchronization and branch cleanup. It stops only on merge conflict,
+failed check, permission error or unexpected scope.
+
+## Live Smoke Approval
+
+Live smokes are approved separately from the merge batch because they can write
+or delete in the M365 tenant. For synthetic test matters, the standard text is:
+
+```text
+Freigabe: M365 MCP Smoke Suite live mit synthetischer Testakte im Workspace notary_team_01 ausführen, positive write-read und Cleanup im gleichen Lauf.
+```
+
+The technical run uses the central `nac` CLI:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite \
+  --owner-approved \
+  --mcp-suite-cleanup \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --format json
+```
+
+The run may only create or clean synthetic IDs with the
+`NAC-SMOKE-WRITE-READ-` prefix. Evidence is stored redacted; tokens, secrets,
+raw data from real matters and complete personal content are not logged.
+
+## Completion Rule
+
+After an approved batch, the agent is done only when all approved actions have
+run, checks are green, local branches are cleaned up and the target branch is
+synchronized. If another agent-executable step is still open, the agent keeps
+working. If owner input is required, the agent names the exact next copyable
+approval text.
