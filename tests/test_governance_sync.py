@@ -104,6 +104,9 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "  require_full_pr_diff_review_before_merge: true",
                 "  routine_read_only_github_oci_checks_do_not_need_owner_approval: true",
                 "  parallel_gate_preparation_required_when_independent_inputs_known: true",
+                "  prohibit_finished_with_agent_executable_next_step: true",
+                "  require_continue_when_no_owner_input_needed: true",
+                "  require_concrete_blocker_when_owner_input_needed: true",
                 "  codex_parallel_review_default_when_net_benefit_expected: true",
                 "  codex_parallel_review_assessment_dimensions:",
                 "    - layer_count",
@@ -119,6 +122,14 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "    - destructive_operations",
                 "  require_layer_sync_check_for_data_controller_view_changes: true",
                 "  require_error_test_security_review_for_code_reviewer: true",
+                "  final_response_next_step:",
+                "    required_even_when_work_is_complete: true",
+                "    must_state_owner_input_needed_or_not_needed: true",
+                "    must_name_concrete_next_engineering_or_operational_step: true",
+                "    must_not_end_with_ambiguous_waiting_state: true",
+                "    no_owner_input_needed_means_continue_not_wait: true",
+                "    finished_requires_no_agent_executable_next_step: true",
+                "    owner_input_needed_requires_actionable_request: true",
                 "rule_architecture:",
                 "  human_explanation_de: docs/de/regelarchitektur.md",
                 "  human_explanation_en: docs/en/regelarchitektur.md",
@@ -328,6 +339,32 @@ class GovernanceSyncValidationTest(unittest.TestCase):
         self.assertIn(
             "Pflichtwert fehlt in process-policy: "
             "agent_workflows.require_full_pr_diff_review_before_merge.true",
+            errors,
+        )
+
+    def test_process_policy_reports_missing_actual_completion_rule(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = self._minimal_valid_process_policy().replace(
+                "  prohibit_finished_with_agent_executable_next_step: true\n",
+                "",
+            ).replace(
+                "    no_owner_input_needed_means_continue_not_wait: true\n",
+                "",
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.prohibit_finished_with_agent_executable_next_step.true",
+            errors,
+        )
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.final_response_next_step.no_owner_input_needed_means_continue_not_wait.true",
             errors,
         )
 

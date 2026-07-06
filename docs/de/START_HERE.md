@@ -164,7 +164,11 @@ sind Zwischenstand.
 
 Jede Abschlussmeldung enthält zusätzlich `Nächster Schritt`: die konkrete
 Fortsetzung und ob Owner-Input benötigt wird. Wenn kein Owner-Input nötig ist,
-wird das ausdrücklich gesagt.
+wird das ausdrücklich gesagt. Wenn der genannte nächste Schritt ohne
+Owner-Input mit den verfügbaren Werkzeugen ausführbar ist, ist die Arbeit noch
+nicht fertig; der Agent führt diesen Schritt aus, statt den Lauf zu beenden.
+Nur konkrete externe Blocker, fehlende Daten, Owner-Gates oder nicht verfügbare
+Werkzeuge dürfen als wartender nächster Schritt stehen bleiben.
 
 Für versionierte Prozesspakete ist vor Tag und GitHub Release zusätzlich die
 [Release-Checkliste](operations/release-checklist.md) auszufüllen oder im

@@ -71,8 +71,11 @@ sie bereits Zugriff haben.
 Jede Abschlussmeldung nennt danach trotzdem einen Abschnitt `Nächster Schritt`.
 Dort steht konkret, welche technische oder operative Fortsetzung ansteht und ob
 Owner-Input benötigt wird. Wenn kein Owner-Input nötig ist, wird das
-ausdrücklich gesagt; ein uneindeutiger Wartezustand ist kein gültiger
-Abschluss.
+ausdrücklich gesagt. Ein nächster Schritt, der ohne Owner-Input mit den
+verfügbaren Werkzeugen ausführbar ist, ist kein gültiger Abschluss, sondern
+weiter auszuführende Agentenarbeit. Nur konkrete externe Blocker, fehlende
+Daten, Owner-Gates oder nicht verfügbare Werkzeuge dürfen als wartender
+nächster Schritt stehen bleiben.
 
 ## Spec-Traceability
 
@@ -143,7 +146,8 @@ von NaC. Die kompatible Regel lautet:
 - Fehler: erst Ursache finden, dann ändern.
 - Nichttriviale Codeänderung: Test oder Prüfziel zuerst festhalten.
 - Abschluss: keine Erfolgsaussage ohne frische Verifikation und ohne benannten
-  nächsten Schritt.
+  nächsten Schritt; wenn dieser Schritt agentisch ausführbar ist und keinen
+  Owner-Input braucht, wird er ausgeführt statt als Wartezustand gemeldet.
 
 Diese Methode ergänzt die NaC-Regeln; sie ersetzt keine Datenschutz-,
 Sprach-, Lizenz- oder Freigaberegel.

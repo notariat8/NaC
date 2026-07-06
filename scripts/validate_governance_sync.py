@@ -121,9 +121,22 @@ EXPECTED_AGENT_WORKFLOW_TRUE_KEYS = (
     "require_full_pr_diff_review_before_merge",
     "routine_read_only_github_oci_checks_do_not_need_owner_approval",
     "parallel_gate_preparation_required_when_independent_inputs_known",
+    "prohibit_finished_with_agent_executable_next_step",
+    "require_continue_when_no_owner_input_needed",
+    "require_concrete_blocker_when_owner_input_needed",
     "codex_parallel_review_default_when_net_benefit_expected",
     "require_layer_sync_check_for_data_controller_view_changes",
     "require_error_test_security_review_for_code_reviewer",
+)
+
+EXPECTED_FINAL_RESPONSE_NEXT_STEP_TRUE_KEYS = (
+    "required_even_when_work_is_complete",
+    "must_state_owner_input_needed_or_not_needed",
+    "must_name_concrete_next_engineering_or_operational_step",
+    "must_not_end_with_ambiguous_waiting_state",
+    "no_owner_input_needed_means_continue_not_wait",
+    "finished_requires_no_agent_executable_next_step",
+    "owner_input_needed_requires_actionable_request",
 )
 
 EXPECTED_GITHUB_SURFACES = (
@@ -423,6 +436,19 @@ def validate_process_policy_file() -> list[str]:
                 "destructive_operations",
             ),
         )
+        final_response_next_step = agent_workflows.get("final_response_next_step")
+        if not isinstance(final_response_next_step, dict):
+            errors.append(
+                "Pflichtabschnitt fehlt in process-policy: "
+                "agent_workflows.final_response_next_step"
+            )
+        else:
+            for key in EXPECTED_FINAL_RESPONSE_NEXT_STEP_TRUE_KEYS:
+                if final_response_next_step.get(key) is not True:
+                    errors.append(
+                        "Pflichtwert fehlt in process-policy: "
+                        f"agent_workflows.final_response_next_step.{key}.true"
+                    )
 
     for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
         if not (REPO_ROOT / rel_path).exists():
