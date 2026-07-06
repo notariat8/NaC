@@ -247,6 +247,7 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
         self.assertEqual(payload["contract_id"], "m365.teams_sharepoint_graph_data_plane")
+        self.assertEqual(payload["status"], "final_m365_mvp_data_plane")
         self.assertTrue(payload["target_decision"]["graph_rest_only"])
         self.assertTrue(payload["target_decision"]["mcp_allowed_only_when_backed_by_graph_rest"])
         self.assertFalse(payload["graph_policy"]["sdk_usage_allowed"])

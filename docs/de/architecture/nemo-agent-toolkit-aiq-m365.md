@@ -1,7 +1,7 @@
 # NeMo Agent Toolkit, AI-Q Und Microsoft-365-MCP-Zielarchitektur
 
 Status: Architekturentscheidung und Integrationsgrenze
-Letzte inhaltliche Anpassung: 2026-07-05
+Letzte inhaltliche Anpassung: 2026-07-06
 
 ## Zweck
 
@@ -75,7 +75,9 @@ flowchart TD
     Agent --> M365Mcp
     Agent --> WorkflowMcp["NaC-Workflow-MCP"]
     Agent --> AuditMcp["NaC-Audit-Evidence-MCP"]
-    WorkflowMcp --> Store["ATP/Event-Journal/Graph-Projektion"]
+    Agent --> OntologyMcp["NaC-Ontologie-Graph-MCP, optional"]
+    WorkflowMcp --> Store["SharePoint/Event-Journal/Graph-Projektion"]
+    OntologyMcp --> Store
     AuditMcp --> Evidence["WORM-/Audit-Nachweis"]
     Local["Lokaler Workstation-Sidecar"] --> Agent
     Local --> Devices["Word-Brücke, Scanner, Kartenarbeitsplatz, XNP"]
@@ -94,8 +96,9 @@ Das Zielbild bleibt möglichst serverless:
 - API Gateway oder BFF für Browser-, Office- und Teams-Aufrufe,
 - Functions für metadata-only APIs, Webhooks, Delta-Sync, Grant-Prüfung und
   kurze Werkzeugaufrufe,
-- ATP oder freigegebener Runtime-Store für Prozessinstanzen, Leases,
-  Rollenbindungen, Grant-Metadaten und Audit-Anker,
+- SharePoint-Listen, ein freigegebener Runtime-Store oder ein späteres
+  Event-Journal für Prozessinstanzen, Leases, Rollenbindungen,
+  Grant-Metadaten und Audit-Anker,
 - Object Store oder private Payload-Schicht für Dokumente,
 - Queue/Streaming für idempotente Agent-Jobs,
 - Vault für Secrets, Zertifikate und Connector-Credentials.
@@ -127,6 +130,7 @@ eigene federierte MCP-Connectoren nutzt.
 | --- | --- | --- | --- |
 | `nac-workflow-mcp` | zentral, serverless oder Container | BPMN, Knowledge Graph, Prozessstatus, nächste Aktionen, Tool-Gates | metadata-only, keine rohen Mandatsdaten |
 | `nac-access-grant-mcp` | zentral | Rollen, Aktenbindung, Zweck, Vertretung, befristete Freigaben | Freigabe-Metadaten und Audit; jede Vertretung mit Grund und Dauer |
+| `nac-ontology-graph-mcp` | optional zentral | Abgeleitete Graph-Projektion über BPMN, usecase-lokale KGs, SharePoint-Metadaten und Audit-Ereignisse; Omnigraph ist nur eine spätere Backend-Option | read-only Start, keine führende Datenhaltung, keine BPMN-Engine, keine Rohmandatsdaten |
 | `m365-mail-calendar-mcp` | zentral oder Workstation-Sidecar | Outlook-Mail, Kalender, Frei/Belegt, Meeting-Kontext über Graph | least privilege, kein Bulk-Export; Senden nur nach menschlicher Freigabe |
 | `m365-teams-mcp` | zentral | Teams-Chats, Kanäle, Threads, Meetingnachrichten über Graph | aktengebundene Suche, keine unbeschränkten Chat-Dumps |
 | `m365-files-mcp` | zentral | OneDrive, SharePoint-Drives, Dokumentbibliotheken, Listen, Delta/Webhooks | zuerst Pointer/Metadaten; Inhalte nur über Private-Payload-Gate |
@@ -187,9 +191,12 @@ NaC-Agenten gesperrt.
 3. Einen ersten Vorgang, etwa Immobilienkaufvertrag, als NeMo-Workflow gegen
    `nac-workflow-mcp`, `nac-access-grant-mcp` und `nac-audit-evidence-mcp`
    ausführen.
-4. Microsoft-365-Zugriffe zuerst read-only, least privilege und
+4. Omnigraph nur als optionale Projektion nach
+   [omnigraph-ontology-projection.md](omnigraph-ontology-projection.md)
+   evaluieren; nicht als MVP-Store, nicht als BPMN-Engine.
+5. Microsoft-365-Zugriffe zuerst read-only, least privilege und
    aktengebunden über Graph prüfen.
-5. Workstation-Sidecar für Word-/Track-Changes-, Scanner-, Karten- und
+6. Workstation-Sidecar für Word-/Track-Changes-, Scanner-, Karten- und
    XNP-nahe Funktionen getrennt von der zentralen Wahrheit bauen.
-6. Schreibende Microsoft-365- und Dokumentoperationen erst nach
+7. Schreibende Microsoft-365- und Dokumentoperationen erst nach
    Human-in-the-loop, Audit und Owner-Gate aktivieren.

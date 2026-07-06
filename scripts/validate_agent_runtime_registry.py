@@ -7,7 +7,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "agent-runtime-registry.contract.json"
-SCHEMA = REPO_ROOT / "deploy" / "database" / "atp-agent-runtime-registry-schema.sql"
+SCHEMA = REPO_ROOT / "archive" / "legacy-oci-atp" / "deploy" / "database" / "atp-agent-runtime-registry-schema.sql"
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "agent-runtime-registry.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "agent-runtime-registry.md"
 
@@ -127,7 +127,7 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     else:
         if schema_artifact.get("status") != "artifact_only_no_apply":
             errors.append("atp_schema_artifact.status must be artifact_only_no_apply")
-        if schema_artifact.get("path") != "deploy/database/atp-agent-runtime-registry-schema.sql":
+        if schema_artifact.get("path") != "archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql":
             errors.append("atp_schema_artifact.path must point to the agent runtime schema artifact")
         contract_tables = {
             table.get("name")

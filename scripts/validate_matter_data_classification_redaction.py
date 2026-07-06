@@ -16,7 +16,7 @@ REQUIRED_SOURCE_DOCUMENTS = {
     "data_protection_policy",
     "matter_model_de",
     "matter_model_en",
-    "atp_storage_contract",
+    "m365_storage_contract",
     "secure_document_link_contract",
     "onprem_runtime_contract",
     "onprem_connector_contract",
@@ -90,7 +90,7 @@ REQUIRED_FALSE_POLICY = {
     "raw_matter_data_in_github_surfaces_allowed",
     "raw_matter_data_in_target_control_allowed",
     "raw_matter_data_in_public_webapp_allowed",
-    "raw_matter_data_in_atp_metadata_slice_allowed",
+    "raw_matter_data_in_m365_metadata_slice_allowed",
     "secrets_in_product_repo_allowed",
     "secrets_in_target_control_allowed",
     "provider_claim_dumps_allowed",
@@ -274,7 +274,7 @@ def _validate_evidence_and_gates(payload: dict[str, Any]) -> list[str]:
         "python scripts/validate_matter_data_classification_redaction.py",
         "python scripts/validate_notarial_onprem_connector_boundaries.py",
         "python scripts/validate_nac_onprem_agent_runtime.py",
-        "python scripts/validate_atp_runtime_contracts.py",
+        "python scripts/validate_teams_sharepoint_graph_data_plane.py",
         "python scripts/validate_language_parity.py",
     ):
         if command not in commands:

@@ -1,7 +1,7 @@
 # Teams-SharePoint-Graph-Datenebene
 
-Status: MVP-Zieldefinition, Contract und Provisioner-Skeleton
-Letzte inhaltliche Anpassung: 2026-07-05
+Status: finale MVP-Datenebenenentscheidung
+Letzte inhaltliche Anpassung: 2026-07-06
 
 ## Zweck
 
@@ -10,6 +10,10 @@ nutzt nicht eine isolierte SharePoint-Site als Startpunkt, sondern ein
 Microsoft Teams Team pro Notar-Team. Dieses Team bringt eine
 Microsoft-365-Gruppe und eine verbundene SharePoint-Team-Site mit. NaC nutzt
 diese SharePoint-Site für Listen, Dokumentbibliotheken und Dokument-Pointer.
+
+OCI/ATP ist für den MVP nicht mehr aktive Datenhaltung. Die frühere OCI-/ATP-
+Architektur bleibt als Legacy-Archiv und Rückholoption erhalten, ist aber kein
+Default-Pfad für Provisioning, Runtime, Quality Gate oder Agent-Workflow.
 
 Zugriff und Provisioning laufen ausschließlich über
 [Microsoft Graph REST](https://learn.microsoft.com/en-us/graph/overview) oder

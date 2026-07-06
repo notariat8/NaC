@@ -15,7 +15,7 @@ from business_os.engine import BusinessProcessEngine
 from nac_ai_sbom.export_mapping import ai_sbom_export_mapping_status
 from nac_gnotkg.costs import quote_fee
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
-from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from nac_identity.tenant_readiness import check_domain_ready
 from nac_legal_graph.ai_sbom import legal_ai_sbom_delta_proposal_status
 from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.model_card import legal_model_card_proposal_status
@@ -395,28 +395,6 @@ def build_parser() -> argparse.ArgumentParser:
     tenant_domain.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug, keine Secrets.")
     tenant_domain.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
     tenant_domain.add_argument("--format", choices=["text", "json"], default="text")
-    tenant_admin = tenant_sub.add_parser("provision-admin", help="Erzeugt einen OCI-Identity-Admin-Dry-run-Plan.")
-    tenant_admin.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
-    tenant_admin.add_argument("--domain", required=True, help="Kundendomain.")
-    tenant_admin.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
-    tenant_admin.add_argument("--admin-display-name", required=True, help="Anzeigename des initialen Tenant-Admins.")
-    tenant_admin.add_argument("--identity-domain-url", required=True, help="OCI Identity Domain URL ohne /admin/v1.")
-    tenant_admin.add_argument("--identity-domain-id", required=True, help="OCI Identity Domain OCID.")
-    tenant_admin.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Plan erzeugen, keine OCI-Schreiboperation.")
-    tenant_admin.add_argument("--format", choices=["text", "json"], default="text")
-    tenant_apply = tenant_sub.add_parser("apply-request", help="Erzeugt einen OCI-Identity-Apply-Readiness-Request.")
-    tenant_apply.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
-    tenant_apply.add_argument("--domain", required=True, help="Kundendomain.")
-    tenant_apply.add_argument("--admin-email", required=True, help="Initiale Admin-E-Mail zur Kundendomain.")
-    tenant_apply.add_argument("--admin-display-name", required=True, help="Anzeigename des initialen Tenant-Admins.")
-    tenant_apply.add_argument("--identity-domain-url", required=True, help="OCI Identity Domain URL ohne /admin/v1.")
-    tenant_apply.add_argument("--identity-domain-id", required=True, help="OCI Identity Domain OCID.")
-    tenant_apply.add_argument("--dns-verified", action="store_true", help="DNS-TXT-Domainverifikation wurde extern geprüft.")
-    tenant_apply.add_argument("--owner-approval-id", default="", help="Owner-Apply-Freigabe-ID.")
-    tenant_apply.add_argument("--audit-event-id", default="", help="Audit-Event-ID für die Apply-Absicht.")
-    tenant_apply.add_argument("--rollback-plan-id", default="", help="Rollback-Plan-ID für späteren Connector-Apply.")
-    tenant_apply.add_argument("--dry-run", action="store_true", help="Pflicht: Nur Review-Artefakt erzeugen.")
-    tenant_apply.add_argument("--format", choices=["text", "json"], default="text")
     tenant_customer_plan = tenant_sub.add_parser("customer-plan", help="Erzeugt einen Customer-Tenant-Onboarding-Plan.")
     tenant_customer_plan.add_argument("--domain", required=True, help="Kundendomain.")
     tenant_customer_plan.add_argument("--tenant-slug", required=True, help="Stabiler Tenant-Slug.")
@@ -865,7 +843,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Secure Document Link Contract", "validate_secure_document_links.py"),
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
             ("Legal Graph Contracts", "validate_legal_graph_contracts.py"),
-            ("OCI Tenant Identity Contract", "validate_oci_tenant_identity.py"),
+            ("Teams SharePoint Graph Data Plane", "validate_teams_sharepoint_graph_data_plane.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
         ]
         overall_rc = 0
@@ -1304,63 +1282,6 @@ def command_tenant(args: argparse.Namespace) -> int:
                 print(f"- Blocker: {finding}")
             return 0 if payload["ready"] else 1
 
-        if args.tenant_command == "provision-admin":
-            if not args.dry_run:
-                print("ERROR: OCI-Admin-Provisioning ist in diesem Track nur mit --dry-run zulässig.")
-                return 1
-            payload = build_admin_provisioning_plan(
-                tenant_slug=args.tenant_slug,
-                domain=args.domain,
-                admin_email=args.admin_email,
-                admin_display_name=args.admin_display_name,
-                identity_domain_url=args.identity_domain_url,
-                identity_domain_id=args.identity_domain_id,
-            )
-            if args.format == "json":
-                print_json(payload)
-                return 0
-            print("OCI-Identity-Admin-Provisioning-Plan")
-            print("- Modus: dry_run")
-            print(f"- Tenant: {payload['tenant_slug']}")
-            print(f"- Admin: {payload['admin_user']['user_name']}")
-            print(f"- Benutzer-Endpunkt: {payload['target']['users_endpoint']}")
-            print(f"- Gruppen-Endpunkt: {payload['target']['groups_endpoint']}")
-            print("- Owner-Freigabe vor Apply: erforderlich")
-            return 0
-
-        if args.tenant_command == "apply-request":
-            if not args.dry_run:
-                print("ERROR: OCI-Apply-Requests sind in diesem Track nur mit --dry-run zulässig.")
-                return 1
-            plan = build_admin_provisioning_plan(
-                tenant_slug=args.tenant_slug,
-                domain=args.domain,
-                admin_email=args.admin_email,
-                admin_display_name=args.admin_display_name,
-                identity_domain_url=args.identity_domain_url,
-                identity_domain_id=args.identity_domain_id,
-            )
-            payload = build_apply_request(
-                plan,
-                dns_verified=args.dns_verified,
-                owner_approval_id=args.owner_approval_id,
-                audit_event_id=args.audit_event_id,
-                rollback_plan_id=args.rollback_plan_id,
-            )
-            if args.format == "json":
-                print_json(payload)
-                return 0 if payload["ready_to_apply"] else 1
-            print("OCI-Identity-Apply-Readiness")
-            print("- Modus: review_artifact_only")
-            print(f"- Tenant: {payload['tenant_slug']}")
-            print(f"- Status: {'bereit' if payload['ready_to_apply'] else 'blockiert'}")
-            print(f"- Owner-Approval: {payload['approval']['owner_approval_id'] or 'fehlt'}")
-            print(f"- Audit-Event: {payload['audit']['audit_event_id'] or 'fehlt'}")
-            print(f"- Rollback-Plan: {payload['rollback']['rollback_plan_id'] or 'fehlt'}")
-            for finding in payload["blocking_findings"]:
-                print(f"- Blocker: {finding}")
-            return 0 if payload["ready_to_apply"] else 1
-
         if args.tenant_command == "customer-plan":
             payload = build_customer_tenant_plan(
                 domain=args.domain,
@@ -1376,10 +1297,10 @@ def command_tenant(args: argparse.Namespace) -> int:
             print(f"- Domain: {payload['tenant']['domain']}")
             print(f"- Admin: {payload['admin_user']['email']}")
             print(f"- SaaS-Owner: {payload['saas_admin']['email']}")
-            print(f"- Identity: {payload['oci']['identity']['customer_domain_strategy']}")
-            print(f"- Compartment: {payload['oci']['resource_isolation']['compartment_strategy']}")
-            print(f"- ATP: {payload['atp']['strategy']}")
-            print("- Owner-Apply vor OCI-Schreiboperation: erforderlich")
+            print(f"- Identity: {payload['m365']['identity']['provider']}")
+            print(f"- Workspace: {payload['m365']['workspace']['strategy']}")
+            print(f"- Datenhaltung: {payload['m365']['data_plane']['strategy']}")
+            print("- Owner-Gate vor privilegierter Graph-Änderung: erforderlich")
             return 0
 
         if args.tenant_command == "dns-check":

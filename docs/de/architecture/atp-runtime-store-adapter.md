@@ -1,5 +1,8 @@
 # ATP Runtime Store Adapter
 
+Archivstatus seit 2026-07-06: Dieser Adapter bleibt Legacy-Kompatibilität für
+Tests und frühere Demos. Er ist kein aktiver M365-MVP-Zieladapter.
+
 Status: owner-freier Contract-First-Schnitt, testbar ohne Live-OCI und ohne
 Schema-Apply.
 

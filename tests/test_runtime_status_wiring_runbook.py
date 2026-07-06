@@ -20,33 +20,26 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
         self.assertEqual(contract["schema_version"], "nac.workflow-contract/v0.1")
         self.assertEqual(contract["contract_id"], "workflow.runtime_status_wiring_runbook")
         self.assertEqual(contract["status"], "owner_free_contract_first")
-        self.assertEqual(contract["runtime_store"], "atp_adapter_future_slice")
+        self.assertEqual(contract["runtime_store"], "m365_sharepoint_adapter_future_slice")
         self.assertEqual(contract["current_store"], "in_memory_demo_adapter")
         self.assertEqual(
             contract["route"],
             "/workspace/immobilienkaufvertrag",
         )
-        seam = contract["atp_metadata_seam_v0"]
+        seam = contract["runtime_metadata_source_v0"]
         self.assertEqual(seam["source_env"], "NAC_FIRST_MATTER_RUNTIME_SOURCE")
         self.assertEqual(
             seam["accepted_source_values"],
-            ["atp", "atp-json", "atp_metadata", "atp-runtime-metadata"],
+            ["json", "metadata-json", "sharepoint", "m365", "m365-sharepoint"],
         )
         self.assertEqual(seam["object_key_env"], "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY")
         self.assertEqual(seam["default_object_key"], "DEMO-PROCESS-IMMOBILIENKAUF-01")
         self.assertEqual(seam["payload_column_env"], "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN")
-        self.assertEqual(seam["table_env"], "NAC_FIRST_MATTER_RUNTIME_TABLE")
-        self.assertEqual(seam["default_table"], "nac_process_instances")
-        self.assertEqual(seam["key_column_env"], "NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN")
-        self.assertEqual(seam["default_key_column"], "process_instance_id")
-        self.assertIn("nac_process_instances", seam["allowed_tables"])
-        self.assertEqual(seam["sql_identifier_policy"], "allowlisted_table_key_and_payload_columns_only")
-        self.assertFalse(seam["packaged_fallback_when_atp_enabled"])
-        self.assertTrue(seam["requires_existing_atp_secret_reference"])
-        self.assertTrue(seam["wallet_references_reused_only"])
-        self.assertFalse(seam["plaintext_password_env_allowed"])
+        self.assertEqual(seam["legacy_atp_values_behavior"], "fail_closed_legacy_atp_runtime_source_archived")
+        self.assertFalse(seam["packaged_fallback_when_explicit_source_enabled"])
+        self.assertTrue(seam["requires_existing_graph_access"])
         self.assertFalse(seam["database_migration_required"])
-        self.assertFalse(seam["oci_apply_required"])
+        self.assertFalse(seam["cloud_apply_required"])
         self.assertFalse(seam["secrets_or_wallet_change_required"])
 
         guardrails = contract["guardrails"]
@@ -73,7 +66,8 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
                 "notariat8",
                 "RuntimeStoreAdapter",
                 "InMemoryRuntimeStore",
-                "ATP",
+                "M365/SharePoint",
+                "Graph REST",
                 "process_events",
                 "graph projection",
                 "/workspace",
@@ -81,14 +75,11 @@ class RuntimeStatusWiringRunbookTests(unittest.TestCase):
                 "Immobilienkaufvertrag",
                 "XNP/SNP",
                 "fail-closed",
-                "NAC_FIRST_MATTER_RUNTIME_TABLE",
-                "NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN",
-                "NAC_ATP_PASSWORD_SECRET_OCID",
+                "NAC_FIRST_MATTER_RUNTIME_SOURCE",
+                "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN",
                 "DEMO-PROCESS-IMMOBILIENKAUF-01",
-                "nac_process_instances",
-                "process_instance_id",
                 "no mandate data",
-                "no OCI Apply",
+                "no productive cloud apply",
             ):
                 self.assertIn(required, content, f"{required} missing in {path}")
 

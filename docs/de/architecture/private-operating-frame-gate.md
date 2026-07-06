@@ -1,14 +1,14 @@
 # Privater Betriebsrahmen und Private-Payload-Gate
 
 Status: Vertragsgrenze ohne produktiven Apply
-Letzte inhaltliche Anpassung: 2026-06-28
+Letzte inhaltliche Anpassung: 2026-07-06
 
 ## Zweck
 
 Diese Seite definiert, was passieren muss, bevor echte Mandatsdaten die
 metadata-only Grenze von NaC verlassen dürfen. Sie ergänzt die
 [Mandatsdaten-Klassifikation](matter-data-classification-redaction.md) um den
-privaten Betriebsrahmen für spätere ATP-Private-Payload-Schemas, verschlüsselte
+privaten Betriebsrahmen für spätere private Payload-Stores, verschlüsselte
 Dokumentablage oder lokale Fachsystem-/DMS-Pfade.
 
 Der maschinenlesbare Vertrag steht in
@@ -23,12 +23,13 @@ Dieser Vertrag aktiviert keine produktive Verarbeitung. Er ist ein Gate:
 Solange er nicht mit konkreten Datenschutz-, Sicherheits-, Rollen-,
 Aufbewahrungs- und Owner-Nachweisen erfüllt ist, bleiben echte Mandatsdaten aus
 GitHub, `notoclaw01`, öffentlicher Demo, Quality-Gate-Artefakten und
-metadata-only ATP-Slices ausgeschlossen.
+M365/SharePoint-Metadatenlisten ohne Private-Payload-Gate ausgeschlossen.
 
 Nach diesem Gate können private Runtime-Designs entstehen. Das kann ein
-separates ATP-Private-Payload-Schema, verschlüsselte Object-Storage-Ablage oder
-ein lokaler Fachsystem-/DMS-Pfad sein. Jeder dieser Pfade braucht weiterhin
-einen separaten Apply- oder Live-Gate.
+separates Private-Payload-Schema, verschlüsselte Object-Storage-Ablage,
+Microsoft-365-geschützte Dokumentablage oder ein lokaler Fachsystem-/DMS-Pfad
+sein. Jeder dieser Pfade braucht weiterhin einen separaten Apply- oder
+Live-Gate.
 
 Das erste logische Zielbild für diese späteren Designs steht in
 [private-payload-target-design.md](private-payload-target-design.md).
@@ -60,7 +61,7 @@ Ohne diesen privaten Betriebsrahmen bleiben gesperrt:
   Grundbuchrohdaten,
 - XNP-/XNotar-Payloads,
 - private Secure-Document-Links,
-- ATP-Private-Payload-Schema-Apply,
+- Private-Payload-Schema-Apply,
 - Object-Storage-Dokumentwrites,
 - lokale DMS- oder Fachsystemwrites,
 - Graph-Projektionen über private Payloads.
@@ -69,7 +70,8 @@ Ohne diesen privaten Betriebsrahmen bleiben gesperrt:
 
 | Ziel | Status | Mindestgrenze |
 | --- | --- | --- |
-| ATP-Private-Payload-Schema | künftiges Design | Tenant-, Vorgangs-, Zweck-, Rollen-, Verschlüsselungs-, Retention-, Audit- und Owner-Apply-Gate |
+| Private-Payload-Metadatenstore | künftiges Design | Tenant-, Vorgangs-, Zweck-, Rollen-, Verschlüsselungs-, Retention-, Audit- und Owner-Apply-Gate |
+| Microsoft-365-geschützte Dokumentablage | künftiges Design | Site-/Bibliotheksbindung, Dokumentklassifikation, Linkablauf, Widerruf, Versionierung, Retention, Audit und Human Review |
 | Verschlüsselte Dokumentablage | künftiges Design | Dokumentklassifikation, Kurzzeitlink, Widerruf, Malware-/Dateitypprüfung, Retention, Audit und Human Review |
 | On-Prem-DMS oder Fachsystem | künftiges Design | lokale Operator-Grenze, Credential Vault, Human Review, keine Fernsteuerung per Default, redigierte Evidence zurück nach NaC |
 
@@ -97,10 +99,11 @@ Ein Gate-Nachweis enthält nur Metadaten:
 Der Nachweis darf den privaten Payload nicht selbst enthalten. Er belegt nur,
 dass die Freigabegrenze erfüllt wurde.
 
-## Bezug Zu ATP Und NemoClaw
+## Bezug Zu M365 Und Lokalen Sidecars
 
-ATP bleibt bis zu einem separaten Schema-Apply metadata-only. `notoclaw01`
-bleibt Target-Control für Smokes, Stubs und redigierte Evidence. Beide Flächen
+M365/SharePoint bleibt bis zum separaten Private-Payload-Gate metadata-only
+für Listen, Pointer, Hashes und redigierte Evidence. Lokale Sidecars bleiben
+Arbeitsplatzadapter für Smokes, Stubs und redigierte Evidence. Diese Flächen
 werden durch diesen Vertrag nicht automatisch zu Mandatsdatenspeichern.
 
 Erst ein späterer, explizit freigegebener privater Betriebsrahmen darf echte

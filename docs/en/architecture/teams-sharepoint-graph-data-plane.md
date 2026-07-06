@@ -1,7 +1,7 @@
 # Teams SharePoint Graph Data Plane
 
-Status: MVP target definition, contract and provisioner skeleton
-Last content update: 2026-07-05
+Status: final MVP data-plane decision
+Last content update: 2026-07-06
 
 ## Purpose
 
@@ -10,6 +10,10 @@ start with an isolated SharePoint site. It starts with one Microsoft Teams team
 per notary team. That team provides a Microsoft 365 group and a connected
 SharePoint team site. NaC uses that SharePoint site for lists, document
 libraries and document pointers.
+
+OCI/ATP is no longer the active MVP data store. The former OCI/ATP architecture
+is kept as a legacy archive and recovery option, but it is not the default path
+for provisioning, runtime, quality gates or agent workflows.
 
 Access and provisioning run exclusively through
 [Microsoft Graph REST](https://learn.microsoft.com/en-us/graph/overview) or

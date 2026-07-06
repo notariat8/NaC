@@ -334,15 +334,14 @@ def _role_evidence(status: str, *, required_role: str, failure_class: str = "") 
 def _safe_role_lookup_failure_class(value: Any) -> str:
     failure_class = str(value or "")
     if failure_class in {
-        "identity_domain_client_error",
-        "identity_domain_forbidden",
-        "identity_domain_http_error",
-        "identity_domain_lookup_unavailable",
-        "identity_domain_network_error",
-        "identity_domain_server_error",
-        "identity_domain_timeout",
-        "identity_domain_unauthorized",
-        "resource_principal_signer_unavailable",
+        "idp_lookup_client_error",
+        "idp_lookup_forbidden",
+        "idp_lookup_http_error",
+        "idp_lookup_network_error",
+        "idp_lookup_server_error",
+        "idp_lookup_timeout",
+        "idp_lookup_unavailable",
+        "idp_lookup_unauthorized",
     }:
         return failure_class
     return ""

@@ -5,7 +5,7 @@
   "primary_demo_usecase": "immobilienkaufvertrag",
   "purpose": "Demo-safe editing and viewing boundary for Notarkammer BPMN process models with XNP/SNP-facing gates, durations, parallel work and critical-path hints.",
   "template_source_of_truth": "git",
-  "runtime_data_plane": "atp",
+  "runtime_data_plane": "m365_sharepoint_event_journal",
   "editable_surfaces": [
     "bpmn_template",
     "step_label",

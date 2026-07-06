@@ -11,7 +11,8 @@
   },
   "graph_projection": {
     "source": "process_events",
-    "contract": "nac.atp-runtime-graph-projection/v0.1"
+    "contract": "nac.runtime-graph-projection/v0.2",
+    "legacy_contract": "nac.atp-runtime-graph-projection/v0.1"
   },
   "guardrails": {
     "metadata_only": true,
@@ -23,7 +24,8 @@
   },
   "data_model_slice": {
     "id": "runtime_graph_metadata_v0",
-    "contract": "nac.atp-runtime-storage/v0.1",
+    "contract": "nac.m365-sharepoint-runtime-metadata/v0.1",
+    "legacy_contract": "nac.atp-runtime-storage/v0.1",
     "fixture_profile": "runtime_event_profile"
   },
   "runtime_event_profile": {

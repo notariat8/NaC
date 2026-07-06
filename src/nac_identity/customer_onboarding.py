@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nac_identity.oci_tenant import check_domain_ready
+from nac_identity.tenant_readiness import check_domain_ready
 
 
 def build_customer_tenant_plan(
@@ -21,7 +21,7 @@ def build_customer_tenant_plan(
     normalized_domain = readiness["domain"]
     normalized_slug = readiness["tenant_slug"]
     tenant_id = f"tenant.{normalized_slug}"
-    compartment_name = f"nac-{normalized_slug}"
+    team_mail_nickname = f"nac-{normalized_slug}".replace("-", "")
 
     return {
         "schema_version": "nac.customer-tenant-plan/v0.1",
@@ -39,25 +39,32 @@ def build_customer_tenant_plan(
             "email": normalized_saas_admin,
             "role": "nac-saas-owner",
         },
-        "oci": {
+        "m365": {
             "identity": {
-                "admin_domain": "Default",
-                "customer_domain_strategy": "single_secondary_domain",
+                "provider": "entra_id",
+                "tenant_binding": "microsoft_365_group_membership",
                 "customer_domain_key": normalized_domain,
             },
-            "resource_isolation": {
-                "compartment_strategy": "one_compartment_per_customer_domain",
-                "compartment_name": compartment_name,
+            "workspace": {
+                "strategy": "team_per_notary_team",
+                "team_display_name": f"NaC {normalized_slug}",
+                "mail_nickname": team_mail_nickname[:64],
+            },
+            "data_plane": {
+                "strategy": "teams_sharepoint_graph_rest",
+                "sharepoint_as_start_data_store": True,
+                "graph_rest_only": True,
+                "legacy_sharepoint_api_allowed": False,
             },
         },
-        "atp": {
-            "strategy": "shared_atp_with_tenant_id",
-            "tenant_registry_table": "tenant_registry",
+        "sharepoint": {
+            "strategy": "team_site_lists_and_document_libraries",
             "required_controls": [
-                "tenant_registry",
                 "tenant_id",
-                "row_level_tenant_scope",
-                "audit_tenant_context",
+                "matter_id",
+                "role_bound_site_permission",
+                "time_limited_delegation_grant",
+                "audit_journal_lite",
             ],
         },
         "readiness": readiness,

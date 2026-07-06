@@ -12,7 +12,7 @@ DEFAULT_OIDC_SCOPES = ("openid", "profile", "email")
 def build_login_intent(
     *,
     tenant_hint: str,
-    identity_domain_url: str,
+    issuer_url: str,
     client_id: str,
     redirect_uri: str,
     scopes: tuple[str, ...] = DEFAULT_OIDC_SCOPES,
@@ -20,7 +20,7 @@ def build_login_intent(
     now: int | None = None,
     state_ttl_seconds: int = DEFAULT_STATE_TTL_SECONDS,
 ) -> dict:
-    base_url = _normalize_identity_domain_url(identity_domain_url)
+    issuer = _normalize_issuer_url(issuer_url)
     normalized_client_id = _normalize_client_id(client_id)
     normalized_redirect_uri = _normalize_redirect_uri(redirect_uri)
     normalized_hint = tenant_hint.strip()[:120]
@@ -51,7 +51,7 @@ def build_login_intent(
     if "openid" not in scope.split():
         raise ValueError("scope_openid_missing")
 
-    authorization_endpoint = f"{base_url}/oauth2/v1/authorize"
+    endpoints = _oidc_endpoints_from_issuer(issuer)
     authorization_params = {
         "response_type": "code",
         "client_id": normalized_client_id,
@@ -62,18 +62,18 @@ def build_login_intent(
     }
 
     return {
-        "schema_version": "nac.oci-login-intent/v0.1",
+        "schema_version": "nac.oidc-login-intent/v0.1",
         "mode": "authorization_code_redirect_intent",
-        "provider": "oracle_oci_identity_domains",
+        "provider": _provider_from_issuer(issuer),
         "tenant_context": {
             "tenant_hint": normalized_hint,
             "tenant_authorized_by_hint": False,
         },
         "endpoints": {
-            "identity_domain_url": base_url,
-            "discovery_endpoint": f"{base_url}/.well-known/openid-configuration",
-            "authorization_endpoint": authorization_endpoint,
-            "token_endpoint": f"{base_url}/oauth2/v1/token",
+            "issuer_url": issuer,
+            "discovery_endpoint": f"{issuer}/.well-known/openid-configuration",
+            "authorization_endpoint": endpoints["authorization_endpoint"],
+            "token_endpoint": endpoints["token_endpoint"],
         },
         "oidc": {
             "response_type": "code",
@@ -84,16 +84,16 @@ def build_login_intent(
             "nonce": normalized_nonce,
         },
         "state_binding": state_binding,
-        "authorization_url": f"{authorization_endpoint}?{urlencode(authorization_params)}",
+        "authorization_url": f"{endpoints['authorization_endpoint']}?{urlencode(authorization_params)}",
         "guardrails": {
             "contains_credentials": False,
             "server_generated_state_required": True,
             "server_generated_nonce_required": True,
             "tenant_hint_is_authorization": False,
             "nac_role_gate_required_after_idp_login": True,
-            "end_user_oci_console_work_allowed": False,
+            "end_user_identity_console_work_allowed": False,
         },
-        "next_step": "redirect_to_oci_idp_then_validate_callback_and_apply_nac_role_gate",
+        "next_step": "redirect_to_oidc_idp_then_validate_callback_and_apply_nac_role_gate",
     }
 
 
@@ -111,18 +111,16 @@ def _normalize_client_id(value: str) -> str:
     return normalized
 
 
-def _normalize_identity_domain_url(value: str) -> str:
+def _normalize_issuer_url(value: str) -> str:
     raw = value.strip().rstrip("/")
-    if raw.endswith("/admin/v1"):
-        raw = raw.removesuffix("/admin/v1").rstrip("/")
     parsed = urlparse(raw)
     if parsed.scheme != "https" or not parsed.netloc:
-        raise ValueError("identity_domain_url_invalid")
+        raise ValueError("issuer_url_invalid")
     hostname = parsed.hostname or ""
-    if not _is_oci_identity_domain_host(hostname):
-        raise ValueError("identity_domain_url_not_oci_identity_domain")
-    if _is_placeholder_identity_domain_host(hostname):
-        raise ValueError("identity_domain_url_placeholder")
+    if _is_placeholder_issuer_host(hostname):
+        raise ValueError("issuer_url_placeholder")
+    if raw.endswith("/oauth2/v2.0") and _is_entra_host(hostname):
+        raw = raw.removesuffix("/oauth2/v2.0").rstrip("/") + "/v2.0"
     return raw
 
 
@@ -134,15 +132,37 @@ def _normalize_redirect_uri(value: str) -> str:
     return raw
 
 
-def _is_oci_identity_domain_host(hostname: str) -> bool:
-    return hostname.endswith(".identity.oraclecloud.com") or (
-        ".identity." in hostname and hostname.endswith(".oci.oraclecloud.com")
-    )
+def _oidc_endpoints_from_issuer(issuer: str) -> dict[str, str]:
+    parsed = urlparse(issuer)
+    hostname = (parsed.hostname or "").lower()
+    if _is_entra_host(hostname) and parsed.path.rstrip("/").endswith("/v2.0"):
+        tenant_base = issuer.removesuffix("/v2.0").rstrip("/")
+        return {
+            "authorization_endpoint": f"{tenant_base}/oauth2/v2.0/authorize",
+            "token_endpoint": f"{tenant_base}/oauth2/v2.0/token",
+        }
+    return {
+        "authorization_endpoint": f"{issuer}/oauth2/v1/authorize",
+        "token_endpoint": f"{issuer}/oauth2/v1/token",
+    }
 
 
-def _is_placeholder_identity_domain_host(hostname: str) -> bool:
+def _provider_from_issuer(issuer: str) -> str:
+    parsed = urlparse(issuer)
+    return "microsoft_entra_id" if _is_entra_host((parsed.hostname or "").lower()) else "oidc"
+
+
+def _is_entra_host(hostname: str) -> bool:
+    return hostname in {"login.microsoftonline.com", "login.windows.net", "sts.windows.net"}
+
+
+def _is_placeholder_issuer_host(hostname: str) -> bool:
     normalized = hostname.lower().strip(".")
-    return normalized.startswith("idcs.example.") or ".example." in normalized
+    return (
+        normalized in {"example.com", "example.invalid", "example.net", "example.org"}
+        or ".example." in normalized
+        or normalized.endswith(".invalid")
+    )
 
 
 def _server_nonce(prefix: str) -> str:

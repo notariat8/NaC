@@ -108,7 +108,7 @@ Reference: [policies/role-model-policy.yaml](../../policies/role-model-policy.ya
 
 - NemoClaw target operation and agent work split:
   [docs/en/architecture/nemoclaw-operating-model.md](architecture/nemoclaw-operating-model.md)
-- NaC on-prem agent runtime on `notoclaw01`:
+- Archived legacy state of the OCI-bound NaC on-prem agent runtime:
   [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
 - Notarial on-prem connector boundaries:
   [docs/en/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)

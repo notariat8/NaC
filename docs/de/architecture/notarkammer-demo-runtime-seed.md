@@ -1,13 +1,13 @@
 # Notarkammer Demo Runtime Seed
 
-Status: owner-freier Contract-first-Slice, kein OCI-Apply.
+Status: owner-freier Contract-first-Slice, kein produktiver Cloud-Apply.
 
 Der Demo Runtime Seed verbindet den mandatsdatenfreien
-Immobilienkaufvertrag-Fixture mit dem ATP Runtime Store Adapter. Er schreibt nur
-Demo-Metadaten für Tenant, Vorgang, Prozessinstanz, Prozessereignisse und Audit.
-Aus den Prozessereignissen kann die Runtime Graph Projection eine sichtbare
-Graph-Sicht mit XNP/SNP-Gates, externen Grenzen, Parallelgruppen, Dauerbändern
-und kritischem Pfad ableiten.
+Immobilienkaufvertrag-Fixture mit dem `RuntimeStoreAdapter`. Er schreibt nur
+Demo-Metadaten für Tenant, Vorgang, Prozessinstanz, Prozessereignisse und
+Audit. Aus den Prozessereignissen kann die Runtime Graph Projection eine
+sichtbare Graph-Sicht mit XNP/SNP-Gates, externen Grenzen, Parallelgruppen,
+Dauerbändern und kritischem Pfad ableiten.
 
 Der Seed ist der erste konkrete Fixture für `runtime_graph_metadata_v0`. Die
 Fixture enthält ein strukturiertes `runtime_event_profile`; daraus schreibt der
@@ -18,9 +18,10 @@ Parallelgruppen, externen Boundary-Labels und kritischem Pfad.
 
 - Keine Mandatsdaten.
 - Keine produktive XNP/SNP-Aktion.
-- Kein OCI-Apply.
+- Kein M365-/SharePoint-/Cloud-Apply.
 - Keine Secrets.
 - Keine echten Register- oder Grundbuchdaten.
 
-Der Seed ist ein Vorführ- und Testvertrag. Eine produktive Speicherung in ATP
-bleibt ein eigener Owner-Gate-Schnitt.
+Der Seed ist ein Vorführ- und Testvertrag. Eine produktive Speicherung in der
+M365/SharePoint-Runtime oder einem späteren Event-Journal bleibt ein eigener
+Owner-Gate-Schnitt.

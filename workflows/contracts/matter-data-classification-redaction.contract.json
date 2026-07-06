@@ -4,12 +4,12 @@
   "title": "Mandatsdaten-Klassifikation und Redaktionsgrenze",
   "status": "boundary_contract_metadata_only_until_private_gate",
   "last_update": "2026-06-28",
-  "purpose": "Definiert, welche Datenklassen in NaC-GitOps, notoclaw01-Target-Control, Webapp-Status, ATP-Metadaten und Secure-Document-Link-Evidence zulässig sind, bevor ein separater privater Betriebsrahmen echte Mandatsdaten freigibt.",
+  "purpose": "Definiert, welche Datenklassen in NaC-GitOps, notoclaw01-Target-Control, Webapp-Status, M365-/SharePoint-Metadaten und Secure-Document-Link-Evidence zulässig sind, bevor ein separater privater Betriebsrahmen echte Mandatsdaten freigibt.",
   "source_documents": {
     "data_protection_policy": "policies/data-protection-policy.yaml",
     "matter_model_de": "docs/de/notarsoftware-datenmodell.md",
     "matter_model_en": "docs/en/notarsoftware-datenmodell.md",
-    "atp_storage_contract": "workflows/contracts/atp-runtime-storage.contract.json",
+    "m365_storage_contract": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
     "secure_document_link_contract": "workflows/contracts/secure-document-link.contract.json",
     "onprem_runtime_contract": "workflows/contracts/nac-onprem-agent-runtime.contract.json",
     "onprem_connector_contract": "workflows/contracts/notarial-onprem-connector-boundaries.contract.json"
@@ -19,7 +19,7 @@
     "raw_matter_data_in_github_surfaces_allowed": false,
     "raw_matter_data_in_target_control_allowed": false,
     "raw_matter_data_in_public_webapp_allowed": false,
-    "raw_matter_data_in_atp_metadata_slice_allowed": false,
+    "raw_matter_data_in_m365_metadata_slice_allowed": false,
     "secrets_in_product_repo_allowed": false,
     "secrets_in_target_control_allowed": false,
     "provider_claim_dumps_allowed": false,
@@ -382,7 +382,7 @@
     "python scripts/validate_matter_data_classification_redaction.py",
     "python scripts/validate_notarial_onprem_connector_boundaries.py",
     "python scripts/validate_nac_onprem_agent_runtime.py",
-    "python scripts/validate_atp_runtime_contracts.py",
+    "python scripts/validate_teams_sharepoint_graph_data_plane.py",
     "python scripts/validate_language_parity.py",
     "python scripts/validate_doc_links.py",
     "python scripts/quality_gate.py --profile strict"

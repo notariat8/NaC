@@ -17,24 +17,26 @@ from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from nac_gnotkg.costs import quote_fee
-from nac_identity.customer_onboarding import build_dns_check_result, build_live_dns_check_result
+from nac_identity.customer_onboarding import (
+    build_customer_tenant_plan,
+    build_dns_check_result,
+    build_live_dns_check_result,
+)
 from nac_identity.onboarding_requests import (
     DisabledOnboardingRequestStore,
-    OciVaultSecretTextProvider,
     OnboardingRequestStoreDisabled,
     OnboardingRequestStoreUnavailable,
     build_onboarding_request,
     build_onboarding_request_store_from_env,
 )
-from nac_identity.oci_callback import build_auth_callback_result
-from nac_identity.oci_login import build_login_intent
-from nac_identity.oci_role_lookup import build_oci_identity_domain_role_membership_resolver
-from nac_identity.oidc_jwt import build_oci_identity_domain_json_fetcher, build_oidc_id_token_verifier
+from nac_identity.oidc_callback import build_auth_callback_result
+from nac_identity.oidc_login import build_login_intent
+from nac_identity.oidc_jwt import build_oidc_id_token_verifier
 from nac_identity.oidc_session import DEFAULT_SESSION_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, validate_session_cookie
 from nac_identity.session_store import RuntimeSessionStoreAdapter, build_session_store_from_env
 from nac_identity.oidc_token_exchange import exchange_oidc_authorization_code
 from nac_identity.oidc_state import validate_signed_state
-from nac_identity.oci_tenant import build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from nac_identity.tenant_readiness import check_domain_ready
 from nac_identity.role_case_gate import (
     evaluate_role_case_gate,
     normalize_workspace_case_binding_context,
@@ -85,9 +87,6 @@ ROLE_LABELS_DE = {
 }
 
 LOGGER = logging.getLogger(__name__)
-DEFAULT_OWNER_APPLY_APPROVAL_ID = "OWNER-APPLY-2026-0001"
-DEFAULT_AUDIT_EVENT_ID = "AUDIT-2026-0001"
-DEFAULT_ROLLBACK_PLAN_ID = "ROLLBACK-2026-0001"
 
 
 class AppResponse:
@@ -128,11 +127,7 @@ class NaCLocalWebApp:
         self.session_store = session_store
         self.operator_access = operator_access
         self.secret_text_provider = secret_text_provider
-        self.role_membership_resolver = (
-            role_membership_resolver
-            if role_membership_resolver is not None
-            else _auth_callback_role_membership_resolver()
-        )
+        self.role_membership_resolver = role_membership_resolver
         self.first_matter_runtime_metadata_source = first_matter_runtime_metadata_source
 
     def handle(self, path: str, headers: dict[str, str] | None = None) -> tuple[int, str, bytes]:
@@ -497,7 +492,7 @@ class NaCLocalWebApp:
             config = _login_intent_config_from_env(secret_text_provider=self.secret_text_provider)
             payload = build_login_intent(
                 tenant_hint=_optional_query_text(params, "tenant_hint", max_length=120),
-                identity_domain_url=config["identity_domain_url"],
+                issuer_url=config["issuer_url"],
                 client_id=config["client_id"],
                 redirect_uri=config["redirect_uri"],
                 state_signing_key=config.get("state_signing_key") or None,
@@ -511,13 +506,11 @@ class NaCLocalWebApp:
             payload = json.loads(body.decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("Request Body muss ein JSON-Objekt sein")
-            plan = build_admin_provisioning_plan(
+            plan = build_customer_tenant_plan(
                 tenant_slug=_payload_text(payload, "tenant_slug"),
                 domain=_payload_text(payload, "domain"),
                 admin_email=_payload_text(payload, "admin_email"),
-                admin_display_name=_payload_text(payload, "admin_display_name"),
-                identity_domain_url=_payload_text(payload, "identity_domain_url"),
-                identity_domain_id=_payload_text(payload, "identity_domain_id"),
+                saas_admin_email=str(payload.get("saas_admin_email", "saas-owner@example.com")),
             )
         except (ValueError, json.JSONDecodeError) as exc:
             return _json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
@@ -578,7 +571,7 @@ class NaCLocalWebApp:
         if not public_context and readiness["ready"] and result["status"] == "verified":
             admin_action = (
                 f'<a class="button-link" href="/admin/onboarding/provisioning-preview?'
-                f'{html.escape(preview_query, quote=True)}">Admin-Dry-Run vorbereiten</a>'
+                f'{html.escape(preview_query, quote=True)}">M365-Plan vorbereiten</a>'
             )
         nav = _customer_onboarding_nav(readiness_query) if public_context else (
             f'<nav class="topline"><a href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">← Readiness</a>'
@@ -654,7 +647,7 @@ class NaCLocalWebApp:
           <p class="eyebrow">Live DNS</p>
           <h1>DNS-Prüfergebnis</h1>
           <p>NaC hat den DNS-TXT-Record über den konfigurierten Resolver geprüft. Diese Seite speichert keine
-          Mandatsdaten, Zugangsdaten oder OCI-Credentials.</p>
+          Mandatsdaten, Zugangsdaten oder Cloud-Credentials.</p>
         </section>
         <div class="grid">
           <section class="notice">
@@ -1947,7 +1940,7 @@ def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
     if not public_context:
         admin_action = (
             f'<a class="button-link" href="/admin/onboarding/provisioning-preview?'
-            f'{html.escape(preview_query, quote=True)}">Admin-Dry-Run vorbereiten</a>'
+            f'{html.escape(preview_query, quote=True)}">M365-Plan vorbereiten</a>'
         )
     dns_action = (
         f'<a class="button-link" href="/onboarding/dns-check?{html.escape(check_query, quote=True)}">DNS jetzt prüfen</a>'
@@ -2036,118 +2029,67 @@ def build_customer_readiness_page(query: str, *, dns_resolver=None) -> str:
     return _layout("notariat8 Domain vorbereiten" if public_context else "NaC Domain-Readiness", body)
 
 
-def build_admin_identity_config_required_page(reason: str) -> str:
-    safe_reason = html.escape(reason)
-    body = f"""
-    <nav class="topline"><a href="/admin/onboarding">← Admin-Queue</a></nav>
-    <section class="hero">
-      <p class="eyebrow">OCI Identity</p>
-      <h1>Konfiguration erforderlich</h1>
-      <p>Admin-Provisioning startet nur mit einer echten OCI Identity Domain aus der Serverumgebung.</p>
-    </section>
-    <section class="notice">
-      <h2>Blockiert</h2>
-      <p><strong>Grund:</strong> <code>{safe_reason}</code></p>
-      <ul class="link-list">
-        <li><span><code>NAC_OCI_IDENTITY_DOMAIN_URL</code> muss auf eine echte OCI Identity Domain zeigen.</span></li>
-        <li><span><code>NAC_OCI_IDENTITY_DOMAIN_ID</code> muss die echte Identity-Domain-OCID enthalten.</span></li>
-      </ul>
-    </section>
-    """
-    return _layout("NaC OCI-Konfiguration erforderlich", body)
-
-
 def build_admin_provisioning_preview_page(query: str) -> str:
     params = parse_qs(query, keep_blank_values=True)
     domain = _query_text(params, "domain")
     tenant_slug = _query_text(params, "tenant_slug")
     admin_email = _query_text(params, "admin_email")
+    saas_admin_email = _optional_query_text(params, "saas_admin_email", max_length=160) or "saas-owner@example.com"
     try:
-        identity_target = _admin_identity_target_from_env()
-        plan = build_admin_provisioning_plan(
-            tenant_slug=tenant_slug,
+        plan = build_customer_tenant_plan(
             domain=domain,
+            tenant_slug=tenant_slug,
             admin_email=admin_email,
-            admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
-            identity_domain_url=identity_target["identity_domain_url"],
-            identity_domain_id=identity_target["identity_domain_id"],
+            saas_admin_email=saas_admin_email,
         )
     except ValueError as exc:
-        return build_admin_identity_config_required_page(str(exc))
-    planned_write_items = "".join(
-        f"<li><span>{html.escape(write)}</span></li>" for write in plan["planned_writes"]
-    )
-    group_items = "".join(f"<li><span>{html.escape(group)}</span></li>" for group in plan["groups"])
-    binding_rows = "".join(
-        "<tr>"
-        f'<td data-label="Gruppe">{html.escape(binding["group"])}</td>'
-        f'<td data-label="Mitglied">{html.escape(binding["member"])}</td>'
-        f'<td data-label="Zweck">{html.escape(binding["purpose"])}</td>'
-        "</tr>"
-        for binding in plan["role_bindings"]
-    )
-    apply_query = urlencode(
-        {
-            "domain": plan["domain"],
-            "tenant_slug": plan["tenant_slug"],
-            "admin_email": plan["admin_user"]["primary_email"],
-        }
-    )
+        return _layout(
+            "NaC M365-Plan blockiert",
+            f"""
+            <nav class="topline"><a href="/admin/onboarding">← Admin-Queue</a></nav>
+            <section class="hero">
+              <p class="eyebrow">M365 Graph Plan</p>
+              <h1>Konfiguration blockiert</h1>
+              <p><strong>Grund:</strong> <code>{html.escape(str(exc))}</code></p>
+            </section>
+            """,
+        )
+    data_plane = plan["m365"]["data_plane"]
+    workspace = plan["m365"]["workspace"]
+    controls = "".join(f"<li><span>{html.escape(control)}</span></li>" for control in plan["sharepoint"]["required_controls"])
+    apply_query = urlencode({"domain": domain, "tenant_slug": tenant_slug, "admin_email": admin_email})
     body = f"""
-    <nav class="topline"><a href="/onboarding/readiness?{html.escape(urlencode({"domain_hint": plan["domain"], "tenant_slug": plan["tenant_slug"], "admin_email": plan["admin_user"]["primary_email"]}), quote=True)}">← Readiness</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+    <nav class="topline"><a href="/onboarding/readiness?{html.escape(urlencode({"domain_hint": domain, "tenant_slug": tenant_slug, "admin_email": admin_email}), quote=True)}">← Readiness</a><span><a href="/admin/onboarding">Admin-Queue</a></span></nav>
     <section class="hero">
-      <p class="eyebrow">OCI Identity Preview</p>
-      <h1>OCI-Admin-Dry-Run</h1>
-      <p>Lokale Vorschau für die initiale Tenant-Admin-Einladung. Diese Seite schreibt nicht nach OCI
-      und enthält keine Zugangsdaten.</p>
+      <p class="eyebrow">M365 Graph Plan</p>
+      <h1>Teams-/SharePoint-Plan</h1>
+      <p>Lokale Vorschau für Entra ID, Teams und SharePoint. Diese Seite schreibt nicht nach Microsoft Graph und enthält keine Zugangsdaten.</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Tenant</h2>
-        <p><strong>Domain:</strong> {html.escape(plan["domain"])}</p>
-        <p><strong>Tenant-Slug:</strong> {html.escape(plan["tenant_slug"])}</p>
-        <p><strong>Modus:</strong> <code>{html.escape(plan["mode"])}</code></p>
-        <p><strong>Approval-Gate:</strong> <code>{html.escape(plan["approval_gate"])}</code></p>
+        <p><strong>Domain:</strong> {html.escape(plan["tenant"]["domain"])}</p>
+        <p><strong>Tenant-Slug:</strong> {html.escape(plan["tenant"]["slug"])}</p>
+        <p><strong>Datenhaltung:</strong> <code>{html.escape(data_plane["strategy"])}</code></p>
+        <p><strong>Graph REST only:</strong> <code>{html.escape(str(data_plane["graph_rest_only"]).lower())}</code></p>
         <div class="toolbar">
-          <a class="button-link" href="/admin/onboarding/apply-readiness?{html.escape(apply_query, quote=True)}">Apply-Readiness vorbereiten</a>
+          <a class="button-link" href="/admin/onboarding/apply-readiness?{html.escape(apply_query, quote=True)}">Privileged-Plan vorbereiten</a>
         </div>
       </section>
       <section>
-        <h2>Initialer Admin</h2>
-        <p><strong>E-Mail:</strong> {html.escape(plan["admin_user"]["primary_email"])}</p>
-        <p><strong>Anzeigename:</strong> {html.escape(plan["admin_user"]["display_name"])}</p>
-        <p><strong>OCI Console für Endnutzer:</strong> nein</p>
-      </section>
-    </div>
-    <div class="grid">
-      <section>
-        <h2>Geplante Writes</h2>
-        <ul class="link-list">{planned_write_items}</ul>
-      </section>
-      <section>
-        <h2>Gruppen</h2>
-        <ul class="link-list">{group_items}</ul>
+        <h2>Arbeitsbereich</h2>
+        <p><strong>Team:</strong> {html.escape(workspace["team_display_name"])}</p>
+        <p><strong>Mail-Nickname:</strong> {html.escape(workspace["mail_nickname"])}</p>
+        <p><strong>Initialer Admin:</strong> {html.escape(plan["admin_user"]["email"])}</p>
+        <p><strong>Rolle:</strong> <code>{html.escape(plan["admin_user"]["role"])}</code></p>
       </section>
     </div>
     <section>
-      <h2>Rollenbindung</h2>
-      <div class="table-scroll responsive-table">
-        <table>
-          <thead><tr><th>Gruppe</th><th>Mitglied</th><th>Zweck</th></tr></thead>
-          <tbody>{binding_rows}</tbody>
-        </table>
-      </div>
-    </section>
-    <section>
-      <h2>Guardrails</h2>
-      <ul class="link-list">
-        <li><span>Produktive Identity-Writes bleiben bis Owner-Apply-Freigabe gesperrt.</span></li>
-        <li><span>DNS-Verifikation, Audit-Event und Rollback-Plan bleiben Pflicht-Gates.</span></li>
-        <li><span>Client-Zugangsdaten, API Keys und Token werden nicht erfasst.</span></li>
-      </ul>
+      <h2>SharePoint-Kontrollen</h2>
+      <ul class="link-list">{controls}</ul>
     </section>
     """
-    return _layout("NaC OCI-Admin-Dry-Run", body)
+    return _layout("NaC Teams-/SharePoint-Plan", body)
 
 
 def build_admin_apply_readiness_page(query: str) -> str:
@@ -2155,146 +2097,51 @@ def build_admin_apply_readiness_page(query: str) -> str:
     domain = _query_text(params, "domain")
     tenant_slug = _query_text(params, "tenant_slug")
     admin_email = _query_text(params, "admin_email")
+    saas_admin_email = _optional_query_text(params, "saas_admin_email", max_length=160) or "saas-owner@example.com"
     try:
-        identity_target = _admin_identity_target_from_env()
-        plan = build_admin_provisioning_plan(
-            tenant_slug=tenant_slug,
+        plan = build_customer_tenant_plan(
             domain=domain,
+            tenant_slug=tenant_slug,
             admin_email=admin_email,
-            admin_display_name=_optional_query_text(params, "admin_display_name", max_length=120) or "Admin Notariat",
-            identity_domain_url=identity_target["identity_domain_url"],
-            identity_domain_id=identity_target["identity_domain_id"],
+            saas_admin_email=saas_admin_email,
         )
     except ValueError as exc:
-        return build_admin_identity_config_required_page(str(exc))
-    apply_request = build_apply_request(
-        plan,
-        dns_verified=_optional_query_bool(params, "dns_verified", default=True),
-        owner_approval_id=(
-            _optional_query_text(params, "owner_approval_id", max_length=120) or DEFAULT_OWNER_APPLY_APPROVAL_ID
-        ),
-        audit_event_id=_optional_query_text(params, "audit_event_id", max_length=120) or DEFAULT_AUDIT_EVENT_ID,
-        rollback_plan_id=(
-            _optional_query_text(params, "rollback_plan_id", max_length=120) or DEFAULT_ROLLBACK_PLAN_ID
-        ),
-    )
-    readiness_query = urlencode(
-        {
-            "domain_hint": apply_request["domain"],
-            "tenant_slug": apply_request["tenant_slug"],
-            "admin_email": apply_request["admin_user"]["primary_email"],
-        }
-    )
-    preview_query = urlencode(
-        {
-            "domain": apply_request["domain"],
-            "tenant_slug": apply_request["tenant_slug"],
-            "admin_email": apply_request["admin_user"]["primary_email"],
-        }
-    )
-    gate_rows = "".join(
-        "<tr>"
-        f'<td data-label="Gate"><code>{html.escape(gate)}</code></td>'
-        f'<td data-label="Status">{html.escape("erfüllt" if bool(value) else "fehlt")}</td>'
-        "</tr>"
-        for gate, value in apply_request["gates"].items()
-    )
-    guardrail_rows = "".join(
-        "<tr>"
-        f'<td data-label="Guardrail"><code>{html.escape(guardrail)}</code></td>'
-        f'<td data-label="Wert">{html.escape(str(value).lower())}</td>'
-        "</tr>"
-        for guardrail, value in apply_request["guardrails"].items()
-    )
-    planned_write_items = "".join(
-        f"<li><span>{html.escape(write)}</span></li>" for write in apply_request["planned_writes"]
-    )
-    finding_items = "".join(
-        f"<li><span>{html.escape(finding)}</span></li>" for finding in apply_request["blocking_findings"]
-    ) or "<li><span>keine Blocker</span></li>"
-    binding_rows = "".join(
-        "<tr>"
-        f'<td data-label="Gruppe">{html.escape(str(binding.get("group", "")))}</td>'
-        f'<td data-label="Mitglied">{html.escape(str(binding.get("member", "")))}</td>'
-        f'<td data-label="Zweck">{html.escape(str(binding.get("purpose", "")))}</td>'
-        "</tr>"
-        for binding in apply_request["role_bindings"]
-        if isinstance(binding, dict)
-    )
+        return _layout(
+            "NaC M365 Privileged-Plan blockiert",
+            f"""
+            <nav class="topline"><a href="/admin/onboarding">← Admin-Queue</a></nav>
+            <section class="hero">
+              <p class="eyebrow">Owner Apply Review</p>
+              <h1>Privileged-Plan blockiert</h1>
+              <p><strong>Grund:</strong> <code>{html.escape(str(exc))}</code></p>
+            </section>
+            """,
+        )
+    readiness_query = urlencode({"domain_hint": domain, "tenant_slug": tenant_slug, "admin_email": admin_email})
+    preview_query = urlencode({"domain": domain, "tenant_slug": tenant_slug, "admin_email": admin_email})
     body = f"""
-    <nav class="topline"><a href="/admin/onboarding/provisioning-preview?{html.escape(preview_query, quote=True)}">← Admin-Dry-Run</a><span><a href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Readiness</a><a href="/admin/onboarding">Admin-Queue</a></span></nav>
+    <nav class="topline"><a href="/admin/onboarding/provisioning-preview?{html.escape(preview_query, quote=True)}">← Teams-/SharePoint-Plan</a><span><a href="/onboarding/readiness?{html.escape(readiness_query, quote=True)}">Readiness</a><a href="/admin/onboarding">Admin-Queue</a></span></nav>
     <section class="hero">
       <p class="eyebrow">Owner Apply Review</p>
-      <h1>Apply-Readiness</h1>
-      <p>Lokales Review-Artefakt für den späteren OCI-Connector-Apply. Diese Seite dokumentiert Gates,
-      schreibt nicht nach OCI und enthält keine Zugangsdaten.</p>
+      <h1>Privileged-Plan</h1>
+      <p>Review-Artefakt für Teams, SharePoint-Schema, Site-Permissions und App-Owner. Produktive Graph-Änderungen bleiben Owner-gated.</p>
     </section>
     <div class="grid">
       <section class="notice">
         <h2>Review-Artefakt</h2>
-        <p><strong>Schema:</strong> <code>{html.escape(apply_request["schema_version"])}</code></p>
-        <p><strong>Modus:</strong> <code>{html.escape(apply_request["mode"])}</code></p>
-        <p><strong>Status-Feld:</strong> <code>ready_to_apply</code></p>
-        <p><strong>Status:</strong> {html.escape("bereit" if apply_request["ready_to_apply"] else "blockiert")}</p>
-        <p><strong>Nächster Schritt:</strong> <code>{html.escape(apply_request["next_step"])}</code></p>
+        <p><strong>Modus:</strong> <code>review_artifact_only</code></p>
+        <p><strong>Status:</strong> <code>owner_apply_required</code></p>
+        <p><strong>CLI:</strong> <code>nac m365 teams-sharepoint privileged-plan --format json</code></p>
       </section>
       <section>
         <h2>Tenant</h2>
-        <p><strong>Domain:</strong> {html.escape(apply_request["domain"])}</p>
-        <p><strong>Tenant-Slug:</strong> {html.escape(apply_request["tenant_slug"])}</p>
-        <p><strong>Admin:</strong> {html.escape(apply_request["admin_user"]["primary_email"])}</p>
-        <p><strong>Quelle:</strong> <code>{html.escape(apply_request["source_plan"]["mode"])}</code></p>
-      </section>
-    </div>
-    <div class="grid">
-      <section>
-        <h2>Apply-Gates</h2>
-        <div class="table-scroll responsive-table compact-table">
-          <table>
-            <thead><tr><th>Gate</th><th>Status</th></tr></thead>
-            <tbody>{gate_rows}</tbody>
-          </table>
-        </div>
-      </section>
-      <section>
-        <h2>Freigabe-Nachweise</h2>
-        <p><strong>Owner:</strong> <code>{html.escape(apply_request["approval"]["owner_approval_id"])}</code></p>
-        <p><strong>Audit:</strong> <code>{html.escape(apply_request["audit"]["audit_event_id"])}</code></p>
-        <p><strong>Rollback:</strong> <code>{html.escape(apply_request["rollback"]["rollback_plan_id"])}</code></p>
-      </section>
-    </div>
-    <div class="grid">
-      <section>
-        <h2>Guardrails</h2>
-        <div class="table-scroll responsive-table compact-table">
-          <table>
-            <thead><tr><th>Guardrail</th><th>Wert</th></tr></thead>
-            <tbody>{guardrail_rows}<tr><td data-label="Guardrail"><code>productive_write_executed</code></td><td data-label="Wert">{html.escape(str(apply_request["productive_write_executed"]).lower())}</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-      <section>
-        <h2>Blocker</h2>
-        <ul class="link-list">{finding_items}</ul>
-      </section>
-    </div>
-    <div class="grid">
-      <section>
-        <h2>Geplante Writes</h2>
-        <ul class="link-list">{planned_write_items}</ul>
-      </section>
-      <section>
-        <h2>Rollenbindung</h2>
-        <div class="table-scroll responsive-table">
-          <table>
-            <thead><tr><th>Gruppe</th><th>Mitglied</th><th>Zweck</th></tr></thead>
-            <tbody>{binding_rows}</tbody>
-          </table>
-        </div>
+        <p><strong>Domain:</strong> {html.escape(plan["tenant"]["domain"])}</p>
+        <p><strong>Team-Strategie:</strong> <code>{html.escape(plan["m365"]["workspace"]["strategy"])}</code></p>
+        <p><strong>Datenhaltung:</strong> <code>{html.escape(plan["m365"]["data_plane"]["strategy"])}</code></p>
       </section>
     </div>
     """
-    return _layout("NaC Apply-Readiness", body)
+    return _layout("NaC M365 Privileged-Plan", body)
 
 
 def _tenant_slug_from_domain_hint(domain_hint: str) -> str:
@@ -3028,7 +2875,9 @@ def _optional_query_bool(params: dict[str, list[str]], key: str, *, default: boo
 
 def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
     server_side_fields = {
-        "identity_domain_url",
+        "issuer_url",
+        "authorization_endpoint",
+        "token_endpoint",
         "client_id",
         "redirect_uri",
         "state",
@@ -3038,34 +2887,17 @@ def _reject_caller_supplied_login_config(params: dict[str, list[str]]) -> None:
         raise ValueError("login_intent_config_is_server_side")
 
 
-def _admin_identity_target_from_env() -> dict[str, str]:
-    config = {
-        "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
-        "identity_domain_id": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_ID", "").strip(),
-    }
-    if not all(config.values()):
-        raise ValueError("admin_identity_config_missing")
-    if _is_placeholder_identity_domain_id(config["identity_domain_id"]):
-        raise ValueError("identity_domain_id_placeholder")
-    return config
-
-
-def _is_placeholder_identity_domain_id(value: str) -> bool:
-    normalized = value.strip().lower()
-    return normalized in {"example", "demo"} or normalized.endswith(".example")
-
-
 def _login_intent_config_from_env(
     *,
     secret_text_provider: Callable[[str], str] | None = None,
 ) -> dict[str, str]:
     config = {
-        "identity_domain_url": os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip(),
+        "issuer_url": os.environ.get("NAC_OIDC_ISSUER_URL", "").strip(),
         "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
         "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
         "state_signing_key": _oidc_state_signing_key_from_env(secret_text_provider=secret_text_provider),
     }
-    if not all(config[field] for field in ("identity_domain_url", "client_id", "redirect_uri")):
+    if not all(config[field] for field in ("issuer_url", "client_id", "redirect_uri")):
         raise ValueError("login_intent_config_missing")
     return config
 
@@ -3073,7 +2905,7 @@ def _login_intent_config_from_env(
 def _auth_callback_state_validation_configured() -> bool:
     return bool(
         os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
-        or os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID", "").strip()
+        or os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF", "").strip()
         or os.environ.get("NAC_OIDC_STATE_VALIDATION_KEY_REF", "").strip()
     )
 
@@ -3099,13 +2931,12 @@ def _oidc_state_signing_key_from_env(
     inline_key = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY", "").strip()
     if inline_key:
         return inline_key
-    secret_id = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID", "").strip()
-    if not secret_id:
+    secret_ref = os.environ.get("NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF", "").strip()
+    if not secret_ref:
         return ""
-    provider = secret_text_provider or OciVaultSecretTextProvider(secret_id)
     try:
-        signing_key = provider(secret_id).strip()
-    except Exception as exc:  # pragma: no cover - concrete OCI SDK errors are integration concerns
+        signing_key = _secret_text(secret_ref, secret_text_provider, error_class="state_signing_key_unavailable")
+    except ValueError as exc:
         raise ValueError("state_signing_key_unavailable") from exc
     if not signing_key:
         raise ValueError("state_signing_key_unavailable")
@@ -3158,13 +2989,15 @@ def _auth_callback_oidc_client_secret_from_env(
     *,
     secret_text_provider: Callable[[str], str] | None = None,
 ) -> str:
+    inline_secret = os.environ.get("NAC_OIDC_CLIENT_SECRET", "").strip()
+    if inline_secret:
+        return inline_secret
     secret_ref = os.environ.get("NAC_OIDC_CLIENT_SECRET_REF", "").strip()
     if not secret_ref:
         return ""
-    provider = secret_text_provider or OciVaultSecretTextProvider(secret_ref)
     try:
-        client_secret = provider(secret_ref).strip()
-    except Exception as exc:  # pragma: no cover - concrete OCI SDK errors are integration concerns
+        client_secret = _secret_text(secret_ref, secret_text_provider, error_class="oidc_client_secret_unavailable")
+    except ValueError as exc:
         raise ValueError("oidc_client_secret_unavailable") from exc
     if not client_secret:
         raise ValueError("oidc_client_secret_unavailable")
@@ -3177,22 +3010,16 @@ def _auth_callback_id_token_verifier() -> Callable[[str], dict[str, Any] | None]
     return build_oidc_id_token_verifier(
         issuer=issuer,
         audience=audience,
-        discovery_base_url=_auth_callback_identity_domain_url(),
-        jwks_fetcher=build_oci_identity_domain_json_fetcher(),
-    )
-
-
-def _auth_callback_role_membership_resolver() -> Callable[..., dict[str, Any]] | None:
-    return build_oci_identity_domain_role_membership_resolver(
-        identity_domain_url=_auth_callback_identity_domain_url(),
+        discovery_base_url=_auth_callback_issuer_url(),
     )
 
 
 def _auth_callback_token_exchange_metadata() -> dict[str, str]:
-    identity_domain_url = _auth_callback_identity_domain_url()
+    issuer_url = _auth_callback_issuer_url()
+    token_endpoint = _token_endpoint_from_issuer(issuer_url) if issuer_url else ""
     return {
         "redirect_uri": os.environ.get("NAC_OIDC_REDIRECT_URI", "").strip(),
-        "token_endpoint": f"{identity_domain_url}/oauth2/v1/token" if identity_domain_url else "",
+        "token_endpoint": token_endpoint,
         "client_id": os.environ.get("NAC_OIDC_CLIENT_ID", "").strip(),
     }
 
@@ -3200,12 +3027,20 @@ def _auth_callback_token_exchange_metadata() -> dict[str, str]:
 def _auth_callback_expected_issuer() -> str:
     return (
         os.environ.get("NAC_OIDC_EXPECTED_ISSUER", "").strip().rstrip("/")
-        or _auth_callback_identity_domain_url()
+        or _auth_callback_issuer_url()
     )
 
 
-def _auth_callback_identity_domain_url() -> str:
-    return os.environ.get("NAC_OCI_IDENTITY_DOMAIN_URL", "").strip().rstrip("/")
+def _auth_callback_issuer_url() -> str:
+    return os.environ.get("NAC_OIDC_ISSUER_URL", "").strip().rstrip("/")
+
+
+def _token_endpoint_from_issuer(issuer_url: str) -> str:
+    parsed = urlparse(issuer_url)
+    hostname = (parsed.hostname or "").lower()
+    if hostname in {"login.microsoftonline.com", "login.windows.net", "sts.windows.net"} and parsed.path.rstrip("/").endswith("/v2.0"):
+        return f"{issuer_url.removesuffix('/v2.0').rstrip('/')}/oauth2/v2.0/token"
+    return f"{issuer_url}/oauth2/v1/token"
 
 
 def _auth_callback_session_signing_key(
@@ -3218,11 +3053,24 @@ def _auth_callback_session_signing_key(
     secret_ref = os.environ.get("NAC_SESSION_SIGNING_KEY_REF", "").strip()
     if not secret_ref:
         return ""
-    provider = secret_text_provider or OciVaultSecretTextProvider(secret_ref)
     try:
-        return provider(secret_ref).strip()
+        return _secret_text(secret_ref, secret_text_provider, error_class="session_signing_key_unavailable")
     except Exception:
         return ""
+
+
+def _secret_text(
+    secret_ref: str,
+    secret_text_provider: Callable[[str], str] | None,
+    *,
+    error_class: str,
+) -> str:
+    if secret_text_provider is None:
+        raise ValueError(error_class)
+    try:
+        return secret_text_provider(secret_ref).strip()
+    except Exception as exc:
+        raise ValueError(error_class) from exc
 
 
 def _auth_callback_session_ttl_seconds() -> int:
@@ -3477,15 +3325,14 @@ def _safe_role_lookup_log_detail(role_evidence: Any) -> str:
         return "none"
     failure_class = str(role_evidence.get("failure_class") or "")
     if failure_class in {
-        "identity_domain_client_error",
-        "identity_domain_forbidden",
-        "identity_domain_http_error",
-        "identity_domain_lookup_unavailable",
-        "identity_domain_network_error",
-        "identity_domain_server_error",
-        "identity_domain_timeout",
-        "identity_domain_unauthorized",
-        "resource_principal_signer_unavailable",
+        "idp_lookup_client_error",
+        "idp_lookup_forbidden",
+        "idp_lookup_http_error",
+        "idp_lookup_unavailable",
+        "idp_lookup_network_error",
+        "idp_lookup_server_error",
+        "idp_lookup_timeout",
+        "idp_lookup_unauthorized",
     }:
         return failure_class
     status = str(role_evidence.get("status") or "")

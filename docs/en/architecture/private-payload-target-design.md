@@ -1,7 +1,7 @@
 # Private-Payload Target Design
 
 Status: logical design without apply
-Last content update: 2026-06-28
+Last content update: 2026-07-06
 
 ## Purpose
 
@@ -21,8 +21,8 @@ NaC models private payloads as an envelope and pointer architecture:
 
 - The envelope only holds binding, purpose, data class, storage target,
   pointer, hash, key reference, retention, access policy and audit.
-- The private content is not stored in Git, GitHub artifacts, `notoclaw01`
-  target control or the metadata-only ATP slice.
+- The private content is not stored in Git, GitHub artifacts, local target
+  control or M365/SharePoint metadata lists without the private-payload gate.
 - Access runs through purpose-bound access grants with expiry, revocation,
   role class, step-up and human review.
 - Documents are referenced as encrypted objects or local specialist-system
@@ -49,7 +49,8 @@ None of these components contains plaintext payloads.
 
 | Target | Status | Job |
 | --- | --- | --- |
-| ATP private-payload metadata | future schema design | envelopes, access grants and redacted audit events. |
+| Private-payload metadata store | future schema design | envelopes, access grants and redacted audit events. |
+| Microsoft-365 protected document storage | future storage design | matter-bound document libraries, versions, hashes, short-lived links and redacted access evidence. |
 | Encrypted object-storage payloads | future storage design | document objects, hashes and short-lived access paths. |
 | On-prem private store | future integration design | local DMS/specialist-system references and redacted evidence back to NaC. |
 

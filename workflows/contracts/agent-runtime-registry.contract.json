@@ -21,7 +21,7 @@
   },
   "atp_schema_artifact": {
     "status": "artifact_only_no_apply",
-    "path": "deploy/database/atp-agent-runtime-registry-schema.sql",
+    "path": "archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql",
     "tables": [
       {
         "name": "nac_agent_registry",

@@ -55,8 +55,8 @@ class NotarkammerFirstMatterMetadataTests(unittest.TestCase):
         self.assertEqual(data["duration_bands"]["external_responses"], "weeks")
         self.assertEqual(data["duration_bands"]["complex_completion"], "weeks_to_months")
         self.assertEqual(data["data_model_slice"], "runtime_graph_metadata_v0")
-        self.assertEqual(data["runtime_storage_contract"], "nac.atp-runtime-storage/v0.1")
-        self.assertEqual(data["graph_projection_contract"], "nac.atp-runtime-graph-projection/v0.1")
+        self.assertEqual(data["runtime_storage_contract"], "nac.m365-sharepoint-runtime-metadata/v0.1")
+        self.assertEqual(data["graph_projection_contract"], "nac.runtime-graph-projection/v0.2")
         self.assertGreaterEqual(len(data["runtime_event_profile"]), 10)
         event_types = {event["event_type"] for event in data["runtime_event_profile"]}
         self.assertIn("runtime_external_boundary_visible", event_types)

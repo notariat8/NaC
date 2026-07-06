@@ -29,7 +29,7 @@ class AtpRuntimeContractValidatorTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("STATUS: PASSED", result.stdout)
 
-    def test_strict_quality_gate_runs_atp_runtime_contract_validator(self) -> None:
+    def test_strict_quality_gate_no_longer_runs_archived_atp_runtime_validator(self) -> None:
         from scripts import quality_gate
 
         checks = {
@@ -37,8 +37,8 @@ class AtpRuntimeContractValidatorTests(unittest.TestCase):
             for check_id, _title, command in quality_gate.build_checks("strict")
         }
 
-        self.assertIn("atp_runtime_contracts", checks)
-        self.assertIn("scripts/validate_atp_runtime_contracts.py", checks["atp_runtime_contracts"])
+        self.assertNotIn("atp_runtime_contracts", checks)
+        self.assertIn("teams_sharepoint_graph_data_plane", checks)
 
     def test_adapter_scope_matches_storage_contract_and_externalizes_sessions(self) -> None:
         storage = json.loads(STORAGE_CONTRACT.read_text(encoding="utf-8"))
@@ -117,12 +117,12 @@ class AtpRuntimeContractValidatorTests(unittest.TestCase):
         self.assertFalse(projection["schema_apply_enabled"])
         self.assertFalse(projection["mandate_data_loaded"])
 
-    def test_notarsoftware_data_model_points_productive_runtime_to_atp(self) -> None:
+    def test_notarsoftware_data_model_points_productive_runtime_to_m365(self) -> None:
         german = (REPO_ROOT / "docs" / "de" / "notarsoftware-datenmodell.md").read_text(encoding="utf-8")
         english = (REPO_ROOT / "docs" / "en" / "notarsoftware-datenmodell.md").read_text(encoding="utf-8")
 
-        self.assertIn("SaaS-Laufzeitmetadaten gehören nach der ATP-Zielarchitektur in ATP", german)
-        self.assertIn("SaaS runtime metadata belongs in ATP according to the ATP target", english)
+        self.assertIn("SaaS-Laufzeitmetadaten gehören nach der M365-MVP-Entscheidung", german)
+        self.assertIn("Productive SaaS runtime metadata belongs in Teams", english)
         self.assertNotIn("Produktive Daten brauchen\neinen geprüften Sovereign-/DSGVO-Git-Anbieter", german)
         self.assertNotIn("Production data needs\na reviewed sovereign/GDPR Git provider", english)
 

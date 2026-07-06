@@ -74,8 +74,8 @@
     "no_secret_material"
   ],
   "data_model_slice": "runtime_graph_metadata_v0",
-  "runtime_storage_contract": "nac.atp-runtime-storage/v0.1",
-  "graph_projection_contract": "nac.atp-runtime-graph-projection/v0.1",
+  "runtime_storage_contract": "nac.m365-sharepoint-runtime-metadata/v0.1",
+  "graph_projection_contract": "nac.runtime-graph-projection/v0.2",
   "runtime_event_profile": [
     {
       "gate": "domain_verified",

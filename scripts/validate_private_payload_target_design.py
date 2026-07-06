@@ -15,7 +15,7 @@ QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 REQUIRED_SOURCES = {
     "private_operating_frame_gate",
     "matter_data_boundary",
-    "atp_metadata_storage",
+    "m365_metadata_storage",
     "secure_document_link",
     "data_sovereignty_de",
     "data_sovereignty_en",
@@ -91,7 +91,7 @@ REQUIRED_COMPONENT_FIELDS = {
     },
 }
 REQUIRED_TARGETS = {
-    "oracle_atp_private_payload_metadata",
+    "sharepoint_private_payload_metadata",
     "encrypted_object_storage_payload",
     "onprem_private_store_reference",
 }

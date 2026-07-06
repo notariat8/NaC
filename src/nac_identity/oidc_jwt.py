@@ -6,8 +6,6 @@ import hmac
 import json
 import time
 from typing import Any, Callable, Mapping
-from urllib.error import HTTPError
-from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
@@ -16,18 +14,6 @@ OidcIdTokenVerifier = Callable[[str], dict[str, Any] | None]
 
 _DISCOVERY_PATH = "/.well-known/openid-configuration"
 _RS256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
-
-
-class _SignableGetRequest:
-    def __init__(self, url: str) -> None:
-        self.method = "GET"
-        self.url = url
-        self.body = None
-        parsed = urlparse(url)
-        self.path_url = parsed.path or "/"
-        if parsed.query:
-            self.path_url = f"{self.path_url}?{parsed.query}"
-        self.headers: dict[str, str] = {"Accept": "application/json"}
 
 
 def build_oidc_id_token_verifier(
@@ -64,29 +50,6 @@ def build_oidc_id_token_verifier(
         )
 
     return verify
-
-
-def build_oci_identity_domain_json_fetcher(
-    *,
-    timeout_seconds: float = 5.0,
-    signer_factory: Callable[[], Any] | None = None,
-    public_fetcher: OidcJsonFetcher | None = None,
-) -> OidcJsonFetcher:
-    public = public_fetcher or (lambda url: _fetch_json(url, timeout_seconds=timeout_seconds))
-
-    def fetch(url: str) -> Mapping[str, Any]:
-        try:
-            return public(url)
-        except HTTPError as exc:
-            if exc.code not in (401, 403) or not _is_oracle_identity_domain_url(url):
-                raise
-        return _fetch_json_with_resource_principal(
-            url,
-            timeout_seconds=timeout_seconds,
-            signer_factory=signer_factory,
-        )
-
-    return fetch
 
 
 def _verify_id_token(
@@ -242,42 +205,3 @@ def _fetch_json(url: str, *, timeout_seconds: float) -> Mapping[str, Any]:
     with urlopen(request, timeout=timeout_seconds) as response:  # nosec B310 - URL is trusted IdP config.
         payload = json.loads(response.read().decode("utf-8"))
     return payload if isinstance(payload, Mapping) else {}
-
-
-def _fetch_json_with_resource_principal(
-    url: str,
-    *,
-    timeout_seconds: float,
-    signer_factory: Callable[[], Any] | None,
-) -> Mapping[str, Any]:
-    signer = _oci_resource_principal_signer(signer_factory=signer_factory)
-    signed_request = _SignableGetRequest(url)
-    try:
-        signer(signed_request, enforce_content_headers=False)
-    except TypeError:
-        signer(signed_request)
-    request = Request(url, headers=dict(signed_request.headers), method="GET")
-    with urlopen(request, timeout=timeout_seconds) as response:  # nosec B310 - URL is trusted IdP config.
-        payload = json.loads(response.read().decode("utf-8"))
-    return payload if isinstance(payload, Mapping) else {}
-
-
-def _oci_resource_principal_signer(*, signer_factory: Callable[[], Any] | None) -> Any:
-    if signer_factory is not None:
-        return signer_factory()
-    try:
-        import oci
-
-        return oci.auth.signers.get_resource_principals_signer()
-    except Exception as exc:  # pragma: no cover - requires OCI Resource Principal integration
-        raise RuntimeError("oci_resource_principal_signer_unavailable") from exc
-
-
-def _is_oracle_identity_domain_url(url: str) -> bool:
-    try:
-        parsed = urlparse(url)
-    except ValueError:
-        return False
-    return parsed.scheme == "https" and parsed.hostname is not None and parsed.hostname.endswith(
-        ".identity.oraclecloud.com"
-    )

@@ -13,7 +13,7 @@ raw NemoClaw/OpenClaw UI is not published directly.
 The machine-readable contract is
 [workflows/contracts/agent-runtime-registry.contract.json](../../../workflows/contracts/agent-runtime-registry.contract.json).
 The matching DDL artifact is
-[deploy/database/atp-agent-runtime-registry-schema.sql](../../../deploy/database/atp-agent-runtime-registry-schema.sql).
+[archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql](../../../archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql).
 Both are contract-first and must not be applied to ATP without a separate owner
 apply gate.
 

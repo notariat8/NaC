@@ -131,11 +131,6 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_ai_sbom_export_mapping.py"],
                 ),
                 (
-                    "atp_runtime_contracts",
-                    "ATP Runtime Contract Parity",
-                    [sys.executable, "scripts/validate_atp_runtime_contracts.py"],
-                ),
-                (
                     "knowledge_graph",
                     "Knowledge Graph Baseline",
                     [sys.executable, "scripts/validate_knowledge_graph.py"],
@@ -151,29 +146,9 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_parallel_review.py"],
                 ),
                 (
-                    "nac_onprem_agent_runtime",
-                    "NaC On-Prem Agent Runtime Contract",
-                    [sys.executable, "scripts/validate_nac_onprem_agent_runtime.py"],
-                ),
-                (
                     "teams_sharepoint_graph_data_plane",
                     "Teams SharePoint Graph Data Plane",
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
-                ),
-                (
-                    "agent_runtime_registry",
-                    "Agent Runtime Registry Contract",
-                    [sys.executable, "scripts/validate_agent_runtime_registry.py"],
-                ),
-                (
-                    "agent_control_api",
-                    "Agent Control API Contract",
-                    [sys.executable, "scripts/validate_agent_control_api.py"],
-                ),
-                (
-                    "notarial_onprem_connector_boundaries",
-                    "Notarial On-Prem Connector Boundaries",
-                    [sys.executable, "scripts/validate_notarial_onprem_connector_boundaries.py"],
                 ),
                 (
                     "matter_data_classification_redaction",
@@ -244,11 +219,6 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     "legal_graph_contracts",
                     "Legal Graph Contracts",
                     [sys.executable, "scripts/validate_legal_graph_contracts.py"],
-                ),
-                (
-                    "oci_tenant_identity",
-                    "OCI Tenant Identity Contract",
-                    [sys.executable, "scripts/validate_oci_tenant_identity.py"],
                 ),
             ]
         )

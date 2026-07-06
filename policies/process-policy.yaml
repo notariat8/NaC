@@ -171,11 +171,12 @@ agent_workflows:
       may_propose_changes: true
       may_apply_changes_without_owner_approval: false
   release_memory:
-    enabled: true
+    enabled: false
+    status: archived_legacy_oci_release_lane
     skill_path: workflows/skills/nac-release-memory/SKILL.md
     dev_release_lane_context_pack: /home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json
     dev_release_lane_context_pack_review_url: https://github.com/notariat8/oci-landing-zone/blob/main/runbooks/release-lane-context.dev.json
-    require_before_oci_release_work: true
+    require_before_oci_release_work: false
     applies_to:
       - oci_devops
       - oci_functions

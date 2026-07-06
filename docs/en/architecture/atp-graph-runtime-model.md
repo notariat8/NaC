@@ -1,5 +1,10 @@
 # ATP, JSON And Graph Runtime Model
 
+Archive status since 2026-07-06: this target architecture has been superseded
+for the M365 MVP. The active path is Teams, SharePoint team sites, Microsoft
+Graph REST/MCP and optional graph/ontology projections. This document remains
+only as a legacy reference for a later explicit ATP reactivation.
+
 Status: target-architecture decision, without OCI apply and without productive
 schema apply.
 

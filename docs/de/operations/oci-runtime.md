@@ -1,4 +1,11 @@
-# NaC OCI Runtime
+# NaC OCI Runtime (Archiviert)
+
+Status seit 2026-07-06: archivierter Legacy-Pfad. Der M365-MVP nutzt keine OCI
+Functions, kein OCI API Gateway, kein OCI DevOps, keine ATP-Datenhaltung und
+keine OCI-gebundene On-Prem-Agent-Runtime. Dieses Dokument bleibt nur als
+historische Betriebs- und Sicherheitsreferenz erhalten, falls OCI später
+ausdrücklich reaktiviert wird. Aktive Datenhaltung und Workspace-Integration
+laufen über Teams, SharePoint Team Site und Microsoft Graph REST/MCP.
 
 Dieses Dokument beschreibt den ersten Live-Runtime-Vertrag für die NaC-Web-App
 in OCI. Diese Umgebung verarbeitet keine Mandatsdaten. Keine Mandatsdaten,
@@ -109,7 +116,7 @@ Owner-gated Infrastruktur-Track über `notariat8/oci-landing-zone#44`. Der
 App-Adapter-Track ist `notariat8/NaC#85`.
 
 Das versionierte Bootstrap-Artefakt für die ersten Tabellen liegt in
-[deploy/database/atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+[archive/legacy-oci-atp/deploy/database/atp-onboarding-request-store.sql](../../../archive/legacy-oci-atp/deploy/database/atp-onboarding-request-store.sql).
 Es legt `onboarding_requests` und `nac_sessions` mit den aktuellen
 Vertragsfeldern an. `nac_sessions` speichert nur gehashte Session-IDs,
 Tenant-/Benutzer-/Vorgangs-/Zweck-Bindungen und redaktierte Audit-Metadaten.

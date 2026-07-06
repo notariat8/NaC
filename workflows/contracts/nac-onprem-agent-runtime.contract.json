@@ -2,8 +2,8 @@
   "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.nac_onprem_agent_runtime",
   "title": "NaC-On-Prem-Agent-Runtime-Vertrag",
-  "status": "target_control_ready_no_productive_connector_apply",
-  "last_update": "2026-07-05",
+  "status": "archived_legacy_no_productive_connector_apply",
+  "last_update": "2026-07-06",
   "purpose": "Definiert die Grenze, in der NaC produktive agentische Workflows mit NVIDIA NeMo Agent Toolkit und AI-Q führt, während der bestehende NemoClaw/OpenClaw-Lauf auf notoclaw01 nur Target-Control-Evidence bleibt und NaC-GitOps, Review, Owner-Gates oder Mandatsdatenschutz nicht umgeht.",
   "operating_model": {
     "project_manager": {

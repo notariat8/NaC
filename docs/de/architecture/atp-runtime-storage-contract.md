@@ -1,5 +1,10 @@
 # ATP Runtime-Storage-Vertrag
 
+Archivstatus seit 2026-07-06: Dieser Vertrag bleibt als Legacy-Referenz
+erhalten, ist aber kein aktiver M365-MVP-Storage-Track. Aktive Runtime-
+Metadaten starten über Teams, SharePoint-Team-Sites, Microsoft Graph REST/MCP
+und spätere Event-Journal-/Graph-Projektionen.
+
 Dieser Vertrag schneidet aus dem ATP-Graph-Zielbild den ersten
 Implementierungs-Track heraus. Er aktiviert noch kein produktives Schema und
 keine Graph-Funktion. Er legt fest, welche Laufzeitobjekte NaC in ATP halten
@@ -7,7 +12,7 @@ darf und wie diese später in eine Graph- oder Ontologie-Sicht projiziert
 werden können.
 
 Der maschinenlesbare Vertrag liegt in
-`workflows/contracts/atp-runtime-storage.contract.json`.
+`archive/legacy-oci-atp/workflows/contracts/atp-runtime-storage.contract.json`.
 
 ## Entscheidung
 
@@ -70,7 +75,7 @@ Adapterfläche um:
 - `sessions` gehören zum ATP-Runtime-Zielmodell, sind aber in diesem
   Graph-Slice externalisiert: der Portal-Session-Pfad läuft über
   `nac_identity.session_store.AtpSessionStore` und
-  [atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+  [atp-onboarding-request-store.sql](../../../archive/legacy-oci-atp/deploy/database/atp-onboarding-request-store.sql).
 
 Damit bleibt die Prozessgraph-Projektion klar auf `process_events` begrenzt und
 vermischt keine Auth-/Session-Widerrufslogik mit Vorgangsstatus.
@@ -78,7 +83,7 @@ vermischt keine Auth-/Session-Widerrufslogik mit Vorgangsstatus.
 ## Schema-Artefakt
 
 Der erste technische Schema-Zuschnitt liegt als nicht-destruktives Artefakt in
-`deploy/database/atp-runtime-anchor-schema.sql`. Das Artefakt ist noch kein
+`archive/legacy-oci-atp/deploy/database/atp-runtime-anchor-schema.sql`. Das Artefakt ist noch kein
 Apply-Auftrag. Es beschreibt idempotente Runtime-Anker für:
 
 - `nac_tenants`

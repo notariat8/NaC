@@ -1,5 +1,10 @@
 # ATP, JSON und Graph als Laufzeitmodell
 
+Archivstatus seit 2026-07-06: Diese Zielarchitektur ist für den M365-MVP
+abgelöst. Aktiver Pfad sind Teams, SharePoint-Team-Sites, Microsoft Graph
+REST/MCP und optionale Graph-/Ontologie-Projektionen. Dieses Dokument bleibt
+nur als Legacy-Referenz für eine spätere ausdrückliche ATP-Reaktivierung.
+
 Status: Zielarchitektur-Entscheidung, ohne OCI-Apply und ohne produktiven
 Schema-Apply.
 

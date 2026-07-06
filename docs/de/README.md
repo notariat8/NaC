@@ -92,7 +92,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   prüfbarer NaC-Kern zusammenspielen.
 - [authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md):
   Zielbild für GitHub Pages als statische Leseschicht, authentifizierte Webapp,
-  OCI-Identity-Domains, Karten-Gates und mobile sichere Dokumentlinks.
+  Entra-ID-/M365-Anbindung, Karten-Gates und mobile sichere Dokumentlinks.
 - [cli.md](cli.md): technische `nac`-Steuerfläche hinter der Bürooberfläche,
   erste Befehle und Architekturregel für neue Funktionen.
 - [bpmn-js-business-layer.md](bpmn-js-business-layer.md): warum der Business
@@ -143,11 +143,14 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Arbeitsteilung zwischen Project Manager, `brev01`-Entwicklung und
   `notoclaw01`-Zielbetrieb.
 - [docs/de/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md):
-  Zielsystemvertrag für NaC als On-Prem-Agent-Runtime mit NeMo/AIQ-Entscheid,
-  NemoClaw/OpenClaw-Target-Control, Connector-Stubs und Owner-Gates.
+  archivierter Legacy-Zielsystemvertrag für NaC als OCI-gebundene
+  On-Prem-Agent-Runtime; nicht Teil der aktiven M365-MVP-Spur.
 - [docs/de/architecture/nemo-agent-toolkit-aiq-m365.md](architecture/nemo-agent-toolkit-aiq-m365.md):
   produktive Agentic-Runtime-Entscheidung für NVIDIA NeMo Agent Toolkit /
   AI-Q, Microsoft-365-MCP-Server und lokale Workstation-Sidecars.
+- [docs/de/architecture/omnigraph-ontology-projection.md](architecture/omnigraph-ontology-projection.md):
+  Decision-Note zu Omnigraph als späterer optionaler Ontologie-Projektion,
+  nicht als MVP-Datenhaltung und nicht als BPMN-Engine.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   MVP-Datenhaltung über Teams, Microsoft-365-Gruppe, SharePoint-Team-Site und
   Microsoft Graph REST ohne alte SharePoint-APIs oder SDKs.
@@ -155,17 +158,16 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Owner-gated Admin-Runbook für CLI for Microsoft 365 als Graph-only Setup- und
   Smoke-Test-Hülle.
 - [docs/de/architecture/agent-runtime-registry.md](architecture/agent-runtime-registry.md):
-  ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
-  Sandbox-Bindungen und Sandbox-Leases hinter `agent.notariat8.de`.
+  archivierter Legacy-Stand einer ATP-gestützten Agent-Registry; nicht aktive
+  MVP-Datenhaltung.
 - [docs/de/architecture/agent-control-api.md](architecture/agent-control-api.md):
-  OCI/BFF-API-Grenze für `agent.notariat8.de`, Browser-Session-Routen,
-  Connector-Control-Routen und metadata-only Payload-Regeln.
+  archivierter Legacy-Stand einer OCI/BFF-API-Grenze für `agent.notariat8.de`.
 - [docs/de/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md):
   notarielle On-Prem-Connector-Grenzen für XNP/SNP, XNotar,
   cyberJack/Kartenarbeitsplatz, Register und Grundbuch ohne Live-Apply.
 - [docs/de/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md):
-  Mandatsdaten-Klassifikation und Redaktionsgrenze für GitHub, `notoclaw01`,
-  Webapp-Status, ATP-Metadaten und spätere private Runtime-Speicher.
+  Mandatsdaten-Klassifikation und Redaktionsgrenze für GitHub, Webapp-Status,
+  archivierte ATP-Metadaten und spätere private Runtime-Speicher.
 - [docs/de/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md):
   privater Betriebsrahmen und Private-Payload-Gate vor echter
   Mandatsdatenverarbeitung.
@@ -206,21 +208,20 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   beschreibt den Vertrag für explizite, parallele Codex-Reviews mit
   read-only Agentprofilen und frischer Validierung.
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json)
-  beschreibt den Vertrag für NaC als On-Prem-Agent-Runtime auf `notoclaw01`
-  mit Target-Control-Pfaden, Connector-Stubs und Owner-Gates.
+  ist als Legacy-Vertrag für die nicht mehr aktive OCI-gebundene
+  On-Prem-Agent-Runtime archiviert.
 - [workflows/contracts/agent-runtime-registry.contract.json](../../workflows/contracts/agent-runtime-registry.contract.json)
-  beschreibt die ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
-  Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter
-  `agent.notariat8.de`.
+  ist als Legacy-Vertrag für die nicht mehr aktive ATP-gestützte
+  Agent-Registry archiviert.
 - [workflows/contracts/agent-control-api.contract.json](../../workflows/contracts/agent-control-api.contract.json)
-  beschreibt die erlaubte OCI/BFF-API-Grenze von `agent.notariat8.de` zum
-  outbound `notoclaw01` Connector ohne Route-Apply.
+  ist als Legacy-Vertrag für die nicht mehr aktive OCI/BFF-API-Grenze
+  archiviert.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json)
   beschreibt XNP/SNP-, XNotar-, Kartenarbeitsplatz-, Register- und
   Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen.
 - [workflows/contracts/matter-data-classification-redaction.contract.json](../../workflows/contracts/matter-data-classification-redaction.contract.json)
   beschreibt Mandatsdaten-Klassifikation, Redaktionsnachweise und
-  Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status,
+  Speichergrenzen zwischen GitHub, Webapp-Status, archivierten
   ATP-Metadaten und privatem Betriebsrahmen.
 - [workflows/contracts/private-operating-frame-gate.contract.json](../../workflows/contracts/private-operating-frame-gate.contract.json)
   beschreibt den Gate-Vertrag für spätere private Payloads mit Datenschutz-,

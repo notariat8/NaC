@@ -77,6 +77,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("Secure Document Link", output)
         self.assertIn("Legal Research Connectors", output)
         self.assertIn("Legal Graph Contracts", output)
+        self.assertIn("Teams SharePoint Graph Data Plane", output)
         self.assertIn("Spec Traceability", output)
         self.assertIn("STATUS: PASSED", output)
 
@@ -271,68 +272,6 @@ class NaCCliTests(unittest.TestCase):
         self.assertTrue(payload["ready"])
         self.assertEqual(payload["verification"]["dns_record_name"], "_nac.kanzlei-notariat.example")
 
-    def test_tenant_provision_admin_cli_is_dry_run(self) -> None:
-        rc, output = run_cli(
-            "tenant",
-            "provision-admin",
-            "--tenant-slug",
-            "kanzlei-notariat",
-            "--domain",
-            "kanzlei-notariat.example",
-            "--admin-email",
-            "admin@kanzlei-notariat.example",
-            "--admin-display-name",
-            "Admin Notariat",
-            "--identity-domain-url",
-            "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            "--identity-domain-id",
-            "ocid1.domain.oc1..aaaaaaaarealidentitydomain",
-            "--dry-run",
-            "--format",
-            "json",
-        )
-
-        self.assertEqual(rc, 0, output)
-        payload = json.loads(output)
-        self.assertEqual(payload["mode"], "dry_run")
-        self.assertTrue(payload["requires_human_approval"])
-        self.assertFalse(payload["console_access_required_for_end_users"])
-
-    def test_tenant_apply_request_cli_is_review_artifact_only(self) -> None:
-        rc, output = run_cli(
-            "tenant",
-            "apply-request",
-            "--tenant-slug",
-            "kanzlei-notariat",
-            "--domain",
-            "kanzlei-notariat.example",
-            "--admin-email",
-            "admin@kanzlei-notariat.example",
-            "--admin-display-name",
-            "Admin Notariat",
-            "--identity-domain-url",
-            "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            "--identity-domain-id",
-            "ocid1.domain.oc1..aaaaaaaarealidentitydomain",
-            "--dns-verified",
-            "--owner-approval-id",
-            "OWNER-APPROVED-32",
-            "--audit-event-id",
-            "AUDIT-32",
-            "--rollback-plan-id",
-            "ROLLBACK-32",
-            "--dry-run",
-            "--format",
-            "json",
-        )
-
-        self.assertEqual(rc, 0, output)
-        payload = json.loads(output)
-        self.assertTrue(payload["ready_to_apply"])
-        self.assertEqual(payload["mode"], "review_artifact_only")
-        self.assertFalse(payload["productive_write_executed"])
-        self.assertEqual(payload["approval"]["owner_approval_id"], "OWNER-APPROVED-32")
-
     def test_customer_onboarding_plan_cli_returns_json(self) -> None:
         rc, output = run_cli(
             "tenant",
@@ -352,10 +291,12 @@ class NaCCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         payload = json.loads(output)
         self.assertEqual(payload["schema_version"], "nac.customer-tenant-plan/v0.1")
-        self.assertEqual(payload["oci"]["identity"]["customer_domain_strategy"], "single_secondary_domain")
-        self.assertEqual(payload["oci"]["resource_isolation"]["compartment_strategy"], "one_compartment_per_customer_domain")
-        self.assertEqual(payload["atp"]["strategy"], "shared_atp_with_tenant_id")
-        self.assertIn("tenant_id", payload["atp"]["required_controls"])
+        self.assertEqual(payload["m365"]["identity"]["provider"], "entra_id")
+        self.assertEqual(payload["m365"]["workspace"]["strategy"], "team_per_notary_team")
+        self.assertEqual(payload["m365"]["data_plane"]["strategy"], "teams_sharepoint_graph_rest")
+        self.assertTrue(payload["m365"]["data_plane"]["graph_rest_only"])
+        self.assertEqual(payload["sharepoint"]["strategy"], "team_site_lists_and_document_libraries")
+        self.assertIn("tenant_id", payload["sharepoint"]["required_controls"])
         self.assertTrue(payload["requires_owner_apply"])
 
     def test_tenant_dns_check_cli_returns_live_dns_json(self) -> None:

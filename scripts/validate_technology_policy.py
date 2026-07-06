@@ -23,10 +23,16 @@ EXPECTED_SCALARS = {
     ("approved_stack", "visualization", "model_extension"): "bpmn/nac-moddle.json",
     ("approved_stack", "visualization", "validator"): "scripts/validate_bpmn_models.py",
     ("approved_stack", "visualization", "allowed_overview_format"): "mermaid",
+    ("repository_constraints", "active_ai_ide"): "codex",
 }
 
 EXPECTED_TRUE_KEYS = (
     ("repository_constraints", "enforce_codex_agent_sync"),
+)
+
+EXPECTED_FALSE_KEYS = (
+    ("repository_constraints", "cursor_workspace_files_allowed"),
+    ("repository_constraints", "github_copilot_workspace_files_allowed"),
 )
 
 EXPECTED_LISTS = {
@@ -215,6 +221,13 @@ def validate_policy_structure(root: Path) -> list[str]:
                 f"{dotted(keys)}.true"
             )
 
+    for keys in EXPECTED_FALSE_KEYS:
+        if get_nested(policy, keys) is not False:
+            errors.append(
+                "Pflichtwert fehlt in technology-policy: "
+                f"{dotted(keys)}.false"
+            )
+
     for keys, expected_values in EXPECTED_LISTS.items():
         actual = get_nested(policy, keys)
         if not isinstance(actual, list):
@@ -285,11 +298,26 @@ def validate_forbidden_formats(root: Path) -> list[str]:
     return errors
 
 
+def validate_codex_only_workspace(root: Path) -> list[str]:
+    errors: list[str] = []
+    forbidden_paths = (
+        ".cursor",
+        ".github/copilot-instructions.md",
+        ".github/copilot-instructions.yml",
+        ".github/copilot-instructions.yaml",
+    )
+    for rel_path in forbidden_paths:
+        if (root / rel_path).exists():
+            errors.append(f"Codex-only Workspace darf kein {rel_path} enthalten")
+    return errors
+
+
 def validate(repo_root: Path = REPO_ROOT) -> list[str]:
     root = repo_root.resolve()
     errors = validate_policy_structure(root)
     errors.extend(validate_required_sync_targets(root))
     errors.extend(validate_forbidden_formats(root))
+    errors.extend(validate_codex_only_workspace(root))
     return sorted(errors)
 
 

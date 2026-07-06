@@ -93,7 +93,10 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
         self.assertEqual(contract["source_fixture"], str(FIXTURE.relative_to(REPO_ROOT)))
         self.assertEqual(contract["data_model_slice"]["id"], "runtime_graph_metadata_v0")
         self.assertTrue(contract["writes"]["process_events"])
-        self.assertEqual(contract["graph_projection"]["contract"], "nac.atp-runtime-graph-projection/v0.1")
+        self.assertEqual(contract["graph_projection"]["contract"], "nac.runtime-graph-projection/v0.2")
+        self.assertEqual(contract["graph_projection"]["legacy_contract"], "nac.atp-runtime-graph-projection/v0.1")
+        self.assertEqual(contract["data_model_slice"]["contract"], "nac.m365-sharepoint-runtime-metadata/v0.1")
+        self.assertEqual(contract["data_model_slice"]["legacy_contract"], "nac.atp-runtime-storage/v0.1")
         self.assertEqual(contract["runtime_event_profile"]["source"], str(FIXTURE.relative_to(REPO_ROOT)) + "#runtime_event_profile")
         self.assertTrue(contract["runtime_event_profile"]["dependencies"])
         self.assertTrue(contract["runtime_event_profile"]["critical_path"])
@@ -102,7 +105,8 @@ class NotarkammerDemoRuntimeSeedTests(unittest.TestCase):
         self.assertFalse(contract["guardrails"]["live_oci"])
         self.assertFalse(contract["guardrails"]["schema_apply"])
         for term in (
-            "ATP Runtime Store Adapter",
+            "RuntimeStoreAdapter",
+            "M365/SharePoint",
             "Runtime Graph Projection",
             "XNP/SNP",
             "Dauerbändern",

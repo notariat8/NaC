@@ -1,7 +1,5 @@
 from .customer_onboarding import build_customer_tenant_plan, build_dns_check_result, build_live_dns_check_result
 from .onboarding_requests import (
-    AtpOnboardingRequestStore,
-    AtpWalletZipMaterializer,
     DisabledOnboardingRequestStore,
     OnboardingRequestStoreDisabled,
     OnboardingRequestStoreUnavailable,
@@ -9,9 +7,9 @@ from .onboarding_requests import (
     build_onboarding_review_audit_metadata,
     build_onboarding_request_store_from_env,
 )
-from .oci_callback import build_auth_callback_result
-from .oci_login import DEFAULT_OIDC_SCOPES, build_login_intent
-from .oci_tenant import NAC_TENANT_ROLES, build_admin_provisioning_plan, build_apply_request, check_domain_ready
+from .oidc_callback import build_auth_callback_result
+from .oidc_login import DEFAULT_OIDC_SCOPES, build_login_intent
+from .tenant_readiness import check_domain_ready, check_domain_ready as check_m365_domain_ready
 from .oidc_jwt import build_oidc_id_token_verifier
 from .oidc_role_gate import DEFAULT_REQUIRED_ROLE, evaluate_oidc_role_gate
 from .oidc_session import evaluate_oidc_session_boundary, validate_session_cookie
@@ -34,16 +32,11 @@ __all__ = [
     "DEFAULT_OIDC_SCOPES",
     "DEFAULT_REQUIRED_ROLE",
     "DEFAULT_STATE_TTL_SECONDS",
-    "AtpOnboardingRequestStore",
-    "AtpWalletZipMaterializer",
     "DisabledOnboardingRequestStore",
-    "NAC_TENANT_ROLES",
     "OnboardingRequestStoreDisabled",
     "OnboardingRequestStoreUnavailable",
     "OidcTokenExchangeContract",
     "MappingSessionStoreAdapter",
-    "build_admin_provisioning_plan",
-    "build_apply_request",
     "build_auth_callback_result",
     "build_customer_tenant_plan",
     "build_dns_check_result",
@@ -57,6 +50,7 @@ __all__ = [
     "build_onboarding_request_store_from_env",
     "build_signed_state",
     "check_domain_ready",
+    "check_m365_domain_ready",
     "evaluate_oidc_role_gate",
     "evaluate_oidc_session_boundary",
     "evaluate_role_case_gate",

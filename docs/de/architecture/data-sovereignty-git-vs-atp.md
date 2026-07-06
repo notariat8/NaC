@@ -1,5 +1,10 @@
 # Datenhoheit: Git-Templates und ATP-Laufzeitdaten
 
+Archivstatus seit 2026-07-06: Diese Datenhoheitsentscheidung ist für den
+M365-MVP abgelöst. Aktive Datenhaltung startet über Teams,
+SharePoint-Team-Sites und Microsoft Graph REST/MCP; ATP bleibt nur
+Legacy-Referenz.
+
 Status: entschieden für Zielarchitektur, noch ohne produktiven Schema-Apply.
 
 Ergänzende Modellentscheidung:

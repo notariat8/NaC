@@ -14,7 +14,7 @@ nicht direkt veröffentlicht.
 Der maschinenlesbare Vertrag steht in
 [workflows/contracts/agent-runtime-registry.contract.json](../../../workflows/contracts/agent-runtime-registry.contract.json).
 Das dazugehörige DDL-Artefakt steht in
-[deploy/database/atp-agent-runtime-registry-schema.sql](../../../deploy/database/atp-agent-runtime-registry-schema.sql).
+[archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql](../../../archive/legacy-oci-atp/deploy/database/atp-agent-runtime-registry-schema.sql).
 Beides ist contract-first und darf ohne eigenes Owner-Apply-Gate nicht auf ATP
 angewendet werden.
 

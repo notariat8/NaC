@@ -8,7 +8,7 @@
   "source_documents": {
     "private_operating_frame_gate": "workflows/contracts/private-operating-frame-gate.contract.json",
     "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json",
-    "atp_metadata_storage": "workflows/contracts/atp-runtime-storage.contract.json",
+    "m365_metadata_storage": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
     "secure_document_link": "workflows/contracts/secure-document-link.contract.json",
     "data_sovereignty_de": "docs/de/architecture/data-sovereignty-git-vs-atp.md",
     "data_sovereignty_en": "docs/en/architecture/data-sovereignty-git-vs-atp.md"
@@ -100,7 +100,7 @@
   ],
   "candidate_storage_targets": [
     {
-      "id": "oracle_atp_private_payload_metadata",
+      "id": "sharepoint_private_payload_metadata",
       "status": "future_schema_design_only",
       "allowed_content": [
         "private_payload_envelope",
