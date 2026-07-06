@@ -87,6 +87,17 @@ def main() -> int:
     args = parse_args()
     if args.command in {"runtime-smoke", "runtime-metadata"}:
         state = load_provisioned_state(args.provisioned_state)
+        schema = load_schema(args.schema)
+        errors = validate_schema(schema)
+        if errors:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": errors,
+                },
+                as_json=args.json,
+                return_code=1,
+            )
         if not args.owner_approved:
             return _emit(
                 {
@@ -99,9 +110,9 @@ def main() -> int:
         try:
             client = GraphRestClient(runtime_token_provider_from_env())
             if args.command == "runtime-smoke":
-                result = run_runtime_site_smoke(client, state)
+                result = run_runtime_site_smoke(client, state, schema)
             else:
-                result = build_runtime_metadata_snapshot(client, state)
+                result = build_runtime_metadata_snapshot(client, state, schema)
         except GraphConfigError as exc:
             return _emit(
                 {

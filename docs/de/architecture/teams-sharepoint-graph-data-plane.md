@@ -194,6 +194,13 @@ jedem Live-Apply als Graph-REST-Operationsliste sichtbar zu machen. `apply`,
 Credential. Der Provisioner speichert keine Tokens, Secrets oder Rohdaten im
 Repo.
 
+`runtime-smoke` und `runtime-metadata` verwenden das deklarative MVP-Schema als
+Erwartungsquelle. Der Smoke liest mit der Runtime-App nur Site-, Listen- und
+Bibliotheksmetadaten über Microsoft Graph REST v1.0 und schlägt fehl, wenn
+eine laut Schema erforderliche Liste oder Dokumentbibliothek fehlt. Dadurch
+prüft der Smoke Basisrechte über `Sites.Selected` und Schema-Drift, ohne
+Listenelemente, Dateien oder Mandatsdaten zu lesen.
+
 ## MCP-Grenze
 
 Der spätere Runtime-Server heißt `teams-sharepoint-data-mcp`. Er darf nur

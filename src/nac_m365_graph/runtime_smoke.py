@@ -15,6 +15,7 @@ class GraphReadClient(Protocol):
 def run_runtime_site_smoke(
     client: GraphReadClient,
     provisioned_state: dict[str, Any],
+    expected_schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     workspace_results: list[dict[str, Any]] = []
     for workspace in _workspaces(provisioned_state):
@@ -22,7 +23,7 @@ def run_runtime_site_smoke(
         site_path = urllib.parse.quote(site_id, safe=",")
         site = client.get(f"/sites/{site_path}?$select=id,displayName,webUrl")
         lists = _paged(client, f"/sites/{site_path}/lists?$select=id,displayName,webUrl")
-        expected_lists = set(_mapping_keys(workspace.get("lists")))
+        expected_lists = set(_expected_list_names(workspace, expected_schema))
         actual_lists = {item.get("displayName") for item in lists if isinstance(item.get("displayName"), str)}
         missing_lists = sorted(expected_lists - actual_lists)
         if missing_lists:
@@ -39,6 +40,7 @@ def run_runtime_site_smoke(
                 "siteWebUrl": site.get("webUrl"),
                 "expectedListCount": len(expected_lists),
                 "observedListCount": len(actual_lists),
+                "expectationSource": _expectation_source(expected_schema),
                 "missingLists": [],
             }
         )
@@ -51,6 +53,22 @@ def run_runtime_site_smoke(
         },
         "workspaces": workspace_results,
     }
+
+
+def _expected_list_names(workspace: dict[str, Any], expected_schema: dict[str, Any] | None) -> list[str]:
+    if expected_schema is None:
+        return _mapping_keys(workspace.get("lists"))
+    return [
+        item["display_name"]
+        for item in expected_schema.get("sharepoint", {}).get("lists", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    ]
+
+
+def _expectation_source(expected_schema: dict[str, Any] | None) -> str:
+    if expected_schema is None:
+        return "provisioned_state"
+    return "schema"
 
 
 def _paged(client: GraphReadClient, path: str) -> list[dict[str, Any]]:
