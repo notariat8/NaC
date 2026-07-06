@@ -119,7 +119,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, Teams/SharePoint Graph data plane and legal-research connector candidates. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access and starts the local MCP stdio adapter for request planning. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access, starts the local MCP stdio adapter for request planning and cleans synthetic smoke leftovers only owner-gated. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -244,6 +244,8 @@ nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
+nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
+nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --format json
 ```
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
@@ -271,6 +273,12 @@ redacted artifact
 `out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json`. The artifact
 contains no raw Graph response, no cleartext case ID, no Graph path, no field
 values and no tokens or secrets.
+
+`mcp-smoke-leftover-cleanup` finds and deletes only synthetic `Akten` list items
+whose `NacCaseId` starts with `NAC-SMOKE-WRITE-READ-`. The command refuses
+pagination and non-smoke results before any delete. With `--mcp-leftover-dry-run`
+it only reads the owner-gated match count. The redacted artifact is written to
+`out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json`.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 
