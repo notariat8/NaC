@@ -296,6 +296,17 @@ und verifiziert danach, dass kein Treffer mehr gelesen wird. Ungebundene
 Listendumps, Prefix-Massenlöschungen, Rohantworten, Tokens und Datei-Inhalte
 bleiben blockiert.
 
+Für einen kompakten Operator-Lauf gibt es zusätzlich die Suite:
+
+```bash
+nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup
+```
+
+Die Suite erzeugt eine synthetische Case-ID nur im Prozessspeicher, führt
+`case_create` und `case_get` aus und bereinigt dieselbe synthetische Akte bei
+gesetztem `--mcp-suite-cleanup` im selben Lauf. Das Suite-Artefakt speichert
+ebenfalls nur redigierte Hashes, Status- und Zählerinformationen.
+
 Erste Tool-Grenzen:
 
 - `case_get`
