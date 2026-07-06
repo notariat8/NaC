@@ -256,7 +256,11 @@ requests and does not execute requests.
 `case_get` and `document_list`. Runtime credentials must be set outside the
 repository, for example through `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE` or
 through `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and
-`M365_RUNTIME_CLIENT_SECRET`. Write tools are not executed in this mode.
+`M365_RUNTIME_CLIENT_SECRET`. For the preferred certificate-based runtime path,
+set `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID`,
+`M365_RUNTIME_CLIENT_CERTIFICATE_PATH` and `M365_RUNTIME_CLIENT_KEY_PATH`; for
+an encrypted key also set `M365_RUNTIME_CLIENT_KEY_PASSWORD`. Write tools are
+not executed in this mode.
 
 `mcp-live-read-smoke` executes exactly one owner-gated live read and writes the
 redacted artifact
