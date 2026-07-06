@@ -38,6 +38,8 @@ class GraphRestClient:
             "Authorization": f"Bearer {self.token_provider.fetch_access_token()}",
             "Accept": "application/json",
         }
+        if method.upper() == "GET" and "$filter=fields/" in path:
+            headers["Prefer"] = "HonorNonIndexedQueriesWarningMayFailRandomly"
         if body is not None:
             headers["Content-Type"] = "application/json"
 
