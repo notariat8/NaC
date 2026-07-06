@@ -249,6 +249,10 @@
       "case_get",
       "document_list"
     ],
+    "owner_gated_live_read_smoke_command": "nac m365 teams-sharepoint mcp-live-read-smoke",
+    "owner_gated_live_read_smoke_redacted_artifact": "out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json",
+    "owner_gated_live_read_smoke_stores_raw_graph_response": false,
+    "owner_gated_live_read_smoke_stores_raw_matter_values": false,
     "runtime_writes_executed_by_mcp": false,
     "allowed_runtime_tools": [
       "case_get",

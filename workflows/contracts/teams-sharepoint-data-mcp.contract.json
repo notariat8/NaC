@@ -50,7 +50,17 @@
       ],
       "writes_allowed": false,
       "reads_sharepoint_file_content": false,
-      "stores_tokens_or_secrets": false
+      "stores_tokens_or_secrets": false,
+      "smoke": {
+        "command": "nac m365 teams-sharepoint mcp-live-read-smoke",
+        "redacted_artifact_path": "out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json",
+        "writes_redacted_artifact": true,
+        "stores_raw_graph_response": false,
+        "stores_raw_case_id": false,
+        "stores_raw_graph_path": false,
+        "stores_raw_matter_values": false,
+        "stores_tokens_or_secrets": false
+      }
     }
   },
   "required_context": [

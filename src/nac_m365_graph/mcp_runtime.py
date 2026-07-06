@@ -109,6 +109,25 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
             errors.append("teams-sharepoint-data-mcp live-read allowed_tools must be case_get and document_list")
         if set(live_read.get("allowed_graph_methods", [])) != {"GET"}:
             errors.append("teams-sharepoint-data-mcp live-read allowed_graph_methods must be GET only")
+        smoke = live_read.get("smoke")
+        if not isinstance(smoke, dict):
+            errors.append("teams-sharepoint-data-mcp live-read smoke must be an object")
+        else:
+            if smoke.get("command") != "nac m365 teams-sharepoint mcp-live-read-smoke":
+                errors.append("teams-sharepoint-data-mcp live-read smoke command is invalid")
+            if smoke.get("redacted_artifact_path") != "out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json":
+                errors.append("teams-sharepoint-data-mcp live-read smoke artifact path is invalid")
+            if smoke.get("writes_redacted_artifact") is not True:
+                errors.append("teams-sharepoint-data-mcp live-read smoke must write a redacted artifact")
+            for flag in (
+                "stores_raw_graph_response",
+                "stores_raw_case_id",
+                "stores_raw_graph_path",
+                "stores_raw_matter_values",
+                "stores_tokens_or_secrets",
+            ):
+                if smoke.get(flag) is not False:
+                    errors.append(f"teams-sharepoint-data-mcp live-read smoke {flag} must be false")
 
     tools = _tools_by_id(contract)
     required = {

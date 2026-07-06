@@ -211,6 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
             "runtime-metadata",
             "mcp-manifest",
             "mcp-stdio",
+            "mcp-live-read-smoke",
             "apply",
             "drift",
             "export",
@@ -232,6 +233,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-live-read",
         action="store_true",
         help="Aktiviert owner-gated Live-Reads fuer case_get und document_list im MCP-stdio-Adapter.",
+    )
+    teams_sharepoint.add_argument(
+        "--mcp-smoke-tool",
+        choices=["case_get", "document_list"],
+        help="Optionales Tool fuer den MCP-Live-Read-Smoke.",
+    )
+    teams_sharepoint.add_argument("--mcp-smoke-workspace-id", help="Workspace-ID fuer den MCP-Live-Read-Smoke.")
+    teams_sharepoint.add_argument("--mcp-smoke-case-id", help="Case-ID fuer den MCP-Live-Read-Smoke.")
+    teams_sharepoint.add_argument("--mcp-smoke-correlation-id", help="Correlation-ID fuer den MCP-Live-Read-Smoke.")
+    teams_sharepoint.add_argument(
+        "--mcp-smoke-output",
+        type=Path,
+        help="Pfad fuer das redigierte MCP-Live-Read-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
@@ -889,6 +903,16 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-contract", str(args.mcp_contract)])
         if args.mcp_live_read:
             script_args.append("--mcp-live-read")
+        if args.mcp_smoke_tool:
+            script_args.extend(["--mcp-smoke-tool", args.mcp_smoke_tool])
+        if args.mcp_smoke_workspace_id:
+            script_args.extend(["--mcp-smoke-workspace-id", args.mcp_smoke_workspace_id])
+        if args.mcp_smoke_case_id:
+            script_args.extend(["--mcp-smoke-case-id", args.mcp_smoke_case_id])
+        if args.mcp_smoke_correlation_id:
+            script_args.extend(["--mcp-smoke-correlation-id", args.mcp_smoke_correlation_id])
+        if args.mcp_smoke_output:
+            script_args.extend(["--mcp-smoke-output", str(args.mcp_smoke_output)])
         if args.owner_approved:
             script_args.append("--owner-approved")
         if args.format == "json":

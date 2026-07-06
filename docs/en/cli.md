@@ -242,6 +242,7 @@ nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
+nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
 ```
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
@@ -256,6 +257,12 @@ requests and does not execute requests.
 repository, for example through `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE` or
 through `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and
 `M365_RUNTIME_CLIENT_SECRET`. Write tools are not executed in this mode.
+
+`mcp-live-read-smoke` executes exactly one owner-gated live read and writes the
+redacted artifact
+`out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json`. The artifact
+contains no raw Graph response, no cleartext case ID, no Graph path, no field
+values and no tokens or secrets.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 

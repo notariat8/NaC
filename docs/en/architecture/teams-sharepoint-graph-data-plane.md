@@ -241,6 +241,19 @@ team or membership mutations, SharePoint schema changes and file content remain
 blocked. Successful live reads return the request plan and the Graph response
 in `structuredContent.graphResponse`.
 
+The owner-gated smoke for this live-read mode does not run through a long-lived
+MCP stdio process. It uses a single CLI invocation:
+
+```bash
+nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id>
+```
+
+By default, the smoke writes
+`out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json`. This artifact
+stores only status, tool, workspace, case-id hash, request-plan hash, response
+shape and counters. Raw Graph responses, cleartext case IDs, Graph paths, field
+values, tokens, secrets and file content are not stored.
+
 Initial tool boundaries:
 
 - `case_get`
