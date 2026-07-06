@@ -230,9 +230,12 @@ prüfen:
 
 ```bash
 M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --json
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-metadata --owner-approved --json
 ```
 
 Alternativ nutzt der Smoke `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
 `M365_RUNTIME_CLIENT_SECRET`. Dieser Schritt liest nur die im nicht-geheimen
-Provisioning-State referenzierten Sites und Listen. Er setzt keine Teams,
-Gruppen, App-Rollen, Site-Permissions oder SharePoint-Listenelemente.
+Provisioning-State referenzierten Sites, Listen und Dokumentbibliotheken.
+`runtime-metadata` liest ausdrücklich keine Listenelemente und keine
+Mandatsdaten. Er setzt keine Teams, Gruppen, App-Rollen, Site-Permissions oder
+SharePoint-Listenelemente.

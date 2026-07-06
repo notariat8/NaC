@@ -32,6 +32,9 @@ PRIVILEGED_APPLIED_STATE = (
 RUNTIME_SMOKE_STATE = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-smoke.f8.json"
 )
+RUNTIME_METADATA_STATE = (
+    REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-metadata.f8.json"
+)
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "runbooks" / "m365-cli-admin-accelerator.md"
@@ -110,6 +113,7 @@ def validate() -> list[str]:
     provisioned_state = _read_json(PROVISIONED_STATE, errors)
     privileged_applied_state = _read_json(PRIVILEGED_APPLIED_STATE, errors)
     runtime_smoke_state = _read_json(RUNTIME_SMOKE_STATE, errors)
+    runtime_metadata_state = _read_json(RUNTIME_METADATA_STATE, errors)
     if contract:
         errors.extend(_validate_contract(contract))
     if schema:
@@ -151,6 +155,14 @@ def validate() -> list[str]:
         )
     if runtime_smoke_state:
         errors.extend(_validate_runtime_smoke_state(runtime_smoke_state, privileged_applied_state, provisioned_state))
+    if runtime_metadata_state:
+        errors.extend(
+            _validate_runtime_metadata_state(
+                runtime_metadata_state,
+                runtime_smoke_state,
+                provisioned_state,
+            )
+        )
     errors.extend(_validate_docs())
     errors.extend(_validate_code_boundary())
     return errors
@@ -633,6 +645,79 @@ def _validate_runtime_smoke_state(
     return errors
 
 
+def _validate_runtime_metadata_state(
+    state: dict[str, Any],
+    runtime_smoke_state: dict[str, Any],
+    provisioned_state: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    if state.get("state_version") != "nac.m365-runtime-metadata/v0.1":
+        errors.append("runtime metadata state_version must be nac.m365-runtime-metadata/v0.1")
+    if state.get("source_runtime_smoke_state") != "deploy/m365/teams-sharepoint/nac-mvp.runtime-smoke.f8.json":
+        errors.append("runtime metadata source_runtime_smoke_state must point to runtime smoke state")
+    if state.get("source_provisioned_state") != "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json":
+        errors.append("runtime metadata source_provisioned_state must point to provisioned state")
+
+    runtime = state.get("runtime_application")
+    smoke_runtime = runtime_smoke_state.get("runtime_application", {}) if isinstance(runtime_smoke_state, dict) else {}
+    if not isinstance(runtime, dict):
+        errors.append("runtime metadata runtime_application must be an object")
+    else:
+        if runtime.get("client_id") != smoke_runtime.get("client_id"):
+            errors.append("runtime metadata runtime application client_id must match runtime smoke")
+        if runtime.get("certificate_thumbprint_sha1") != smoke_runtime.get("certificate_thumbprint_sha1"):
+            errors.append("runtime metadata certificate thumbprint must match runtime smoke")
+        if runtime.get("authentication_mode") != "client_credentials_with_certificate":
+            errors.append("runtime metadata authentication_mode must be client_credentials_with_certificate")
+        if set(_strings(runtime.get("application_permissions"))) != {"Sites.Selected"}:
+            errors.append("runtime metadata runtime_application.application_permissions must be Sites.Selected only")
+
+    metadata = state.get("metadata_result")
+    if not isinstance(metadata, dict):
+        errors.append("runtime metadata metadata_result must be an object")
+    else:
+        if metadata.get("status") != "PASSED":
+            errors.append("runtime metadata status must be PASSED")
+        if metadata.get("sites_read") != len(REQUIRED_WORKSPACES):
+            errors.append("runtime metadata sites_read must match required workspaces")
+        if metadata.get("missing_lists") != 0:
+            errors.append("runtime metadata missing_lists must be 0")
+        if metadata.get("missing_document_libraries") != 0:
+            errors.append("runtime metadata missing_document_libraries must be 0")
+        if metadata.get("list_items_read") != 0:
+            errors.append("runtime metadata list_items_read must be 0")
+
+    provisioned_workspaces = {
+        workspace.get("id"): workspace
+        for workspace in provisioned_state.get("workspaces", [])
+        if isinstance(workspace, dict) and isinstance(workspace.get("id"), str)
+    } if isinstance(provisioned_state, dict) else {}
+    workspaces = state.get("workspaces")
+    if not isinstance(workspaces, list):
+        errors.append("runtime metadata workspaces must be a list")
+    else:
+        by_workspace = {item.get("workspace_id"): item for item in workspaces if isinstance(item, dict)}
+        for workspace_id in sorted(REQUIRED_WORKSPACES):
+            workspace = by_workspace.get(workspace_id)
+            provisioned = provisioned_workspaces.get(workspace_id, {})
+            if not isinstance(workspace, dict):
+                errors.append(f"runtime metadata workspaces missing {workspace_id}")
+                continue
+            if workspace.get("site_id") != provisioned.get("site_id"):
+                errors.append(f"runtime metadata {workspace_id} site_id must match provisioned state")
+            if set(_strings(workspace.get("lists"))) != set(provisioned.get("lists", {}) or {}):
+                errors.append(f"runtime metadata {workspace_id} lists must match provisioned state")
+            if set(_strings(workspace.get("document_libraries"))) != set(provisioned.get("document_libraries", {}) or {}):
+                errors.append(
+                    f"runtime metadata {workspace_id} document_libraries must match provisioned state"
+                )
+            if workspace.get("missing_lists") != []:
+                errors.append(f"runtime metadata {workspace_id} missing_lists must be empty")
+            if workspace.get("missing_document_libraries") != []:
+                errors.append(f"runtime metadata {workspace_id} missing_document_libraries must be empty")
+    return errors
+
+
 def _require_nonempty_string(payload: dict[str, Any], key: str, label: str, errors: list[str]) -> None:
     if not isinstance(payload.get(key), str) or not payload[key]:
         errors.append(f"{label}.{key} must be a non-empty string")
@@ -671,6 +756,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_DE, "m365 request --url \"@graph/organization\""),
         (RUNBOOK_DE, "privileged-apply --owner-approved"),
         (RUNBOOK_DE, "runtime-smoke --owner-approved"),
+        (RUNBOOK_DE, "runtime-metadata --owner-approved"),
         (RUNBOOK_EN, "Microsoft 365 CLI Admin Accelerator"),
         (RUNBOOK_EN, "Required Handoff Before User Action"),
         (RUNBOOK_EN, "Bootstrap Route A: CLI App Through `m365 setup`"),
@@ -681,6 +767,7 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_EN, "m365 request --url \"@graph/organization\""),
         (RUNBOOK_EN, "privileged-apply --owner-approved"),
         (RUNBOOK_EN, "runtime-smoke --owner-approved"),
+        (RUNBOOK_EN, "runtime-metadata --owner-approved"),
     )
     for path, marker in required_markers:
         if not path.is_file():

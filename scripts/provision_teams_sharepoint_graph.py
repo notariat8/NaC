@@ -25,6 +25,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     validate_privileged_change_config,
 )
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
 from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
 
@@ -41,13 +42,14 @@ def parse_args() -> argparse.Namespace:
             "privileged-plan",
             "privileged-apply",
             "runtime-smoke",
+            "runtime-metadata",
             "apply",
             "drift",
             "export",
         ],
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
-            "privileged-apply and runtime-smoke are owner-gated and use Graph REST only."
+            "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only."
         ),
     )
     parser.add_argument(
@@ -83,20 +85,23 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.command == "runtime-smoke":
+    if args.command in {"runtime-smoke", "runtime-metadata"}:
         state = load_provisioned_state(args.provisioned_state)
         if not args.owner_approved:
             return _emit(
                 {
                     "status": "BLOCKED",
-                    "errors": ["runtime-smoke requires --owner-approved"],
+                    "errors": [f"{args.command} requires --owner-approved"],
                 },
                 args.json,
                 return_code=2,
             )
         try:
             client = GraphRestClient(runtime_token_provider_from_env())
-            result = run_runtime_site_smoke(client, state)
+            if args.command == "runtime-smoke":
+                result = run_runtime_site_smoke(client, state)
+            else:
+                result = build_runtime_metadata_snapshot(client, state)
         except GraphConfigError as exc:
             return _emit(
                 {

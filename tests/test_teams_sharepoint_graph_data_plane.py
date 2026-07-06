@@ -24,6 +24,7 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
 )
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
 from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import (  # noqa: E402
     DEFAULT_SCHEMA,
@@ -137,6 +138,21 @@ class FakeGraphWriteClient:
                 "id": site_id,
                 "displayName": workspace["team_display_name"],
                 "webUrl": workspace.get("site_url", ""),
+            }
+        if path.startswith("/sites/") and "/drives?" in path:
+            site_id = urllib.parse.unquote(path.removeprefix("/sites/").split("/drives?", 1)[0])
+            workspace = self._workspace_by_site_id(site_id)
+            return {
+                "value": [
+                    {
+                        "id": details.get("id", name),
+                        "name": name,
+                        "webUrl": details.get("web_url", ""),
+                        "driveType": "documentLibrary",
+                    }
+                    for name, details in workspace.get("document_libraries", {}).items()
+                    if isinstance(details, dict)
+                ]
             }
         if path.startswith("/sites/") and path.endswith("/permissions"):
             site_id = self._site_id_from_path(path)
@@ -388,6 +404,43 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(result["workspaces"][0]["expectedListCount"], 2)
         self.assertEqual(result["workspaces"][0]["observedListCount"], 2)
 
+    def test_runtime_metadata_reads_lists_and_libraries_without_items(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                        "Beteiligte": {"id": "list-beteiligte", "web_url": "https://example.test/beteiligte"},
+                    },
+                    "document_libraries": {
+                        "AktenDokumente": {"id": "drive-akten", "web_url": "https://example.test/akten-docs"},
+                        "Vorlagen": {"id": "drive-vorlagen", "web_url": "https://example.test/vorlagen"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        result = build_runtime_metadata_snapshot(client, state)
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["expected_lists"], 2)
+        self.assertEqual(result["summary"]["expected_document_libraries"], 2)
+        self.assertEqual(result["summary"]["list_items_read"], 0)
+        self.assertEqual(
+            [item["displayName"] for item in result["workspaces"][0]["lists"]],
+            ["Akten", "Beteiligte"],
+        )
+        self.assertEqual(
+            [item["name"] for item in result["workspaces"][0]["documentLibraries"]],
+            ["AktenDokumente", "Vorlagen"],
+        )
+
     def test_applied_privileged_state_captures_runtime_site_grants(self) -> None:
         state = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
         runtime_app = state["applications"]["m365_runtime_app"]
@@ -518,6 +571,20 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("runtime-smoke requires --owner-approved", payload["errors"])
 
+    def test_cli_runtime_metadata_requires_owner_approval_before_credentials(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "runtime-metadata", "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("runtime-metadata requires --owner-approved", payload["errors"])
+
     def test_nac_cli_exposes_m365_teams_sharepoint_privileged_plan(self) -> None:
         result = subprocess.run(
             [
@@ -565,6 +632,30 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("runtime-smoke requires --owner-approved", payload["errors"])
+
+    def test_nac_cli_exposes_m365_teams_sharepoint_runtime_metadata_gate(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "runtime-metadata",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("runtime-metadata requires --owner-approved", payload["errors"])
 
 
 if __name__ == "__main__":

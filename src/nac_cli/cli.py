@@ -208,6 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
             "privileged-plan",
             "privileged-apply",
             "runtime-smoke",
+            "runtime-metadata",
             "apply",
             "drift",
             "export",
