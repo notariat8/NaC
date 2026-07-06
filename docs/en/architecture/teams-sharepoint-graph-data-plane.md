@@ -258,6 +258,20 @@ stores only status, tool, workspace, case-id hash, request-plan hash, response
 shape and counters. Raw Graph responses, cleartext case IDs, Graph paths, field
 values, tokens, secrets and file content are not stored.
 
+A positive write-read smoke is deliberately not a permanently enabled MCP live
+write mode. It runs as a single owner-gated operator command:
+
+```bash
+nac m365 teams-sharepoint mcp-positive-write-read-smoke --owner-approved
+```
+
+The command plans `case_create` through the MCP contract, writes exactly one
+synthetic `Akten` item through Microsoft Graph REST v1.0 and then reads the
+same synthetic matter through the existing `case_get` live read. The redacted
+artifact is written by default to
+`out/m365/teams-sharepoint/mcp-positive-write-read-smoke.redacted.json`. It
+stores no raw case ID, raw payloads, raw responses, tokens or file content.
+
 Initial tool boundaries:
 
 - `case_get`
