@@ -120,7 +120,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Spec-Traceability, Secure-Link-Grenzen, Teams-/SharePoint-Graph-Datenebene und Legal-Research-Connector-Kandidaten. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved` und `nac m365 teams-sharepoint runtime-metadata --owner-approved` | Plant die Teams/SharePoint-Datenebene, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus und prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved` und `nac m365 teams-sharepoint mcp-manifest` | Plant die Teams/SharePoint-Datenebene, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus, prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente und zeigt das sichere Tool-Manifest von `teams-sharepoint-data-mcp` ohne Live-Zugriff. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
@@ -242,11 +242,14 @@ brauchen ein Owner-Gate:
 ```bash
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
+nac m365 teams-sharepoint mcp-manifest --format json
 ```
 
 `runtime-smoke` und `runtime-metadata` lesen dabei nur Graph-REST-Metadaten und
 prüfen die gefundenen Listen und Dokumentbibliotheken gegen das deklarative
 MVP-Schema.
+`mcp-manifest` ist offline und gibt nur die geplanten Runtime-Tools, Gates und
+Graph-REST-Grenzen aus.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

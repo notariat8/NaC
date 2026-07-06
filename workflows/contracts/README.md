@@ -86,6 +86,10 @@ Jeder Vertrag soll definieren:
   Vertrag für die MVP-Datenhaltung über Teams Team, Microsoft-365-Gruppe,
   SharePoint-Team-Site, Microsoft Graph REST only, declaratives Schema,
   Provisioner-Skeleton, MCP-Grenze und Owner-Gates ohne Live-Apply.
+- [workflows/contracts/teams-sharepoint-data-mcp.contract.json](teams-sharepoint-data-mcp.contract.json):
+  Vertrag für den ersten `teams-sharepoint-data-mcp`-Runtime-Skeleton mit
+  Tool-Manifest, Rollen-/Akten-/Zweckgate, Graph-REST-Request-Planung und
+  ohne Live-Ausführung, Secrets, Dateiinhalt oder Mandatsdaten im Produktrepo.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.
