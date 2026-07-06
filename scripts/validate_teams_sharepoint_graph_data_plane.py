@@ -453,6 +453,19 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("mcp_boundary.owner_gated_live_read_allowed must be true")
         if set(_strings(mcp.get("owner_gated_live_read_allowed_tools"))) != {"case_get", "document_list"}:
             errors.append("mcp_boundary.owner_gated_live_read_allowed_tools must be case_get and document_list")
+        if mcp.get("owner_gated_live_read_smoke_command") != "nac m365 teams-sharepoint mcp-live-read-smoke":
+            errors.append("mcp_boundary.owner_gated_live_read_smoke_command is invalid")
+        if (
+            mcp.get("owner_gated_live_read_smoke_redacted_artifact")
+            != "out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json"
+        ):
+            errors.append("mcp_boundary.owner_gated_live_read_smoke_redacted_artifact is invalid")
+        for flag in (
+            "owner_gated_live_read_smoke_stores_raw_graph_response",
+            "owner_gated_live_read_smoke_stores_raw_matter_values",
+        ):
+            if mcp.get(flag) is not False:
+                errors.append(f"mcp_boundary.{flag} must be false")
         if mcp.get("runtime_writes_executed_by_mcp") is not False:
             errors.append("mcp_boundary.runtime_writes_executed_by_mcp must be false")
         for tool in ("case_get", "case_create", "grant_request", "audit_append", "document_list"):
@@ -821,6 +834,8 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "mcp-manifest"),
         (DOC_DE, "mcp-stdio"),
         (DOC_DE, "mcp-live-read"),
+        (DOC_DE, "mcp-live-read-smoke"),
+        (DOC_DE, "mcp-live-read-smoke.redacted.json"),
         (DOC_DE, "owner-gated Live-Read-Modus"),
         (DOC_DE, "MCP-Protokollversion `2025-11-25`"),
         (DOC_DE, "nac_m365_graph.mcp_runtime"),
@@ -838,6 +853,8 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "mcp-manifest"),
         (DOC_EN, "mcp-stdio"),
         (DOC_EN, "mcp-live-read"),
+        (DOC_EN, "mcp-live-read-smoke"),
+        (DOC_EN, "mcp-live-read-smoke.redacted.json"),
         (DOC_EN, "owner-gated live-read mode"),
         (DOC_EN, "MCP protocol version `2025-11-25`"),
         (DOC_EN, "nac_m365_graph.mcp_runtime"),

@@ -22,6 +22,10 @@ from nac_m365_graph.mcp_runtime import (  # noqa: E402
     plan_tool_request,
     validate_mcp_contract,
 )
+from nac_m365_graph.mcp_live_read_smoke import (  # noqa: E402
+    run_mcp_live_read_smoke,
+    write_mcp_live_read_smoke_artifact,
+)
 from nac_m365_graph.mcp_stdio import (  # noqa: E402
     MCP_PROTOCOL_VERSION,
     TeamsSharePointDataMcpServer,
@@ -230,6 +234,92 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(result["structuredContent"]["errorType"], "McpLiveReadBlocked")
         self.assertFalse(result["structuredContent"]["executesGraphRequests"])
         self.assertEqual(graph_client.paths, [])
+
+    def test_mcp_live_read_smoke_artifact_redacts_graph_values_case_id_and_path(self) -> None:
+        graph_client = _FakeGraphReadClient(
+            {
+                "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#items",
+                "@odata.nextLink": "https://graph.microsoft.com/v1.0/sites/site/items?$skiptoken=case-1",
+                "value": [
+                    {
+                        "id": "raw-item-id",
+                        "webUrl": "https://example.sharepoint.com/sites/notary/raw-item",
+                        "fields": {
+                            "NacCaseId": "case-1",
+                            "Aktenzeichen": "AZ-1",
+                            "BeteiligterName": "Alice Example",
+                        },
+                    }
+                ],
+            }
+        )
+
+        result = run_mcp_live_read_smoke(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            tool_name="case_get",
+            workspace_id="notary_team_01",
+            case_id="case-1",
+            correlation_id="corr-smoke",
+            timestamp="2026-07-06T00:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertTrue(result["summary"]["graph_read_executed"])
+        self.assertEqual(result["graphResponseShape"]["valueCount"], 1)
+        self.assertEqual(
+            result["graphResponseShape"]["fieldNames"],
+            ["Aktenzeichen", "BeteiligterName", "NacCaseId"],
+        )
+        self.assertNotIn("path", result["requestPlan"])
+        self.assertIn("pathSha256", result["requestPlan"])
+        serialized = json.dumps(result, ensure_ascii=False)
+        for raw_value in (
+            "case-1",
+            "AZ-1",
+            "Alice Example",
+            "raw-item-id",
+            "example.sharepoint.com",
+            "$skiptoken",
+        ):
+            self.assertNotIn(raw_value, serialized)
+
+    def test_mcp_live_read_smoke_rejects_write_tools_before_graph_read(self) -> None:
+        graph_client = _FakeGraphReadClient({"unexpected": True})
+
+        with self.assertRaisesRegex(ValueError, "case_get or document_list"):
+            run_mcp_live_read_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                tool_name="case_create",
+                workspace_id="notary_team_01",
+                case_id="case-1",
+            )
+
+        self.assertEqual(graph_client.paths, [])
+
+    def test_mcp_live_read_smoke_writes_redacted_artifact(self) -> None:
+        graph_client = _FakeGraphReadClient({"value": [{"id": "item-1", "fields": {"NacCaseId": "case-1"}}]})
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "smoke.json"
+            result = run_mcp_live_read_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                tool_name="case_get",
+                workspace_id="notary_team_01",
+                case_id="case-1",
+                timestamp="2026-07-06T00:00:00Z",
+            )
+            write_mcp_live_read_smoke_artifact(result, output)
+
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
+        self.assertNotIn("case-1", json.dumps(payload))
 
     def test_stdio_tools_call_closed_gate_returns_tool_error(self) -> None:
         server = _mcp_server()
@@ -455,6 +545,53 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
         self.assertIn("--owner-approved", result.stderr)
+
+    def test_central_cli_mcp_live_read_smoke_requires_owner_approval(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "mcp-live-read-smoke",
+                "--mcp-smoke-case-id",
+                "case-1",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("STATUS: BLOCKED", result.stdout)
+        self.assertIn("--owner-approved", result.stdout)
+
+    def test_central_cli_mcp_live_read_smoke_requires_case_id_before_credentials(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "mcp-live-read-smoke",
+                "--owner-approved",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("STATUS: BLOCKED", result.stdout)
+        self.assertIn("--mcp-smoke-case-id", result.stdout)
 
 
 def _open_context(case_id: str, write_approved: bool = False) -> RuntimeContext:

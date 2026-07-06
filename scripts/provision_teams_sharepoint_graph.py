@@ -31,6 +31,11 @@ from nac_m365_graph.mcp_runtime import (  # noqa: E402
     load_mcp_contract,
     validate_mcp_contract,
 )
+from nac_m365_graph.mcp_live_read_smoke import (  # noqa: E402
+    DEFAULT_MCP_LIVE_READ_SMOKE_OUTPUT,
+    run_mcp_live_read_smoke_from_paths,
+    write_mcp_live_read_smoke_artifact,
+)
 from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
 from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
@@ -51,6 +56,7 @@ def parse_args() -> argparse.Namespace:
             "runtime-metadata",
             "mcp-manifest",
             "mcp-stdio",
+            "mcp-live-read-smoke",
             "apply",
             "drift",
             "export",
@@ -99,6 +105,32 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mcp-smoke-tool",
+        choices=["case_get", "document_list"],
+        default="case_get",
+        help="MCP live-read smoke tool. Only case_get and document_list are allowed.",
+    )
+    parser.add_argument(
+        "--mcp-smoke-workspace-id",
+        default="notary_team_01",
+        help="Provisioned workspace id for the MCP live-read smoke.",
+    )
+    parser.add_argument(
+        "--mcp-smoke-case-id",
+        help="Case id used only to build the live-read filter; the redacted artifact stores only its SHA-256 hash.",
+    )
+    parser.add_argument(
+        "--mcp-smoke-correlation-id",
+        default="mcp-live-read-smoke",
+        help="Non-secret correlation id for the redacted MCP live-read smoke artifact.",
+    )
+    parser.add_argument(
+        "--mcp-smoke-output",
+        type=Path,
+        default=DEFAULT_MCP_LIVE_READ_SMOKE_OUTPUT,
+        help="Path for the redacted MCP live-read smoke artifact under out/.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON output.",
@@ -108,6 +140,67 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "mcp-live-read-smoke":
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["mcp-live-read-smoke requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        if not args.mcp_smoke_case_id:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["mcp-live-read-smoke requires --mcp-smoke-case-id"],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            result = run_mcp_live_read_smoke_from_paths(
+                client,
+                contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                tool_name=args.mcp_smoke_tool,
+                workspace_id=args.mcp_smoke_workspace_id,
+                case_id=args.mcp_smoke_case_id,
+                correlation_id=args.mcp_smoke_correlation_id,
+            )
+            write_mcp_live_read_smoke_artifact(result, args.mcp_smoke_output)
+        except GraphConfigError as exc:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=2,
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.mcp_smoke_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
     if args.command == "mcp-stdio":
         from nac_m365_graph.mcp_stdio import run_stdio_server
 
