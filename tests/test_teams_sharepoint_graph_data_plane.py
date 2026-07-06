@@ -405,6 +405,26 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(result["workspaces"][0]["expectedListCount"], 2)
         self.assertEqual(result["workspaces"][0]["observedListCount"], 2)
 
+    def test_runtime_site_smoke_uses_schema_expectations_to_detect_list_drift(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        with self.assertRaisesRegex(RuntimeError, "missing lists: DokumentRegister"):
+            run_runtime_site_smoke(client, state, _schema_expectations(["Akten", "DokumentRegister"]))
+
     def test_runtime_metadata_reads_lists_and_libraries_without_items(self) -> None:
         state = {
             "workspaces": [
@@ -441,6 +461,33 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             [item["name"] for item in result["workspaces"][0]["documentLibraries"]],
             ["AktenDokumente", "Vorlagen"],
         )
+
+    def test_runtime_metadata_uses_schema_expectations_to_detect_library_drift(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                    },
+                    "document_libraries": {
+                        "AktenDokumente": {"id": "drive-akten", "web_url": "https://example.test/akten-docs"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        with self.assertRaisesRegex(RuntimeError, "missing_libraries=\\['Vorlagen'\\]"):
+            build_runtime_metadata_snapshot(
+                client,
+                state,
+                _schema_expectations(["Akten"], ["AktenDokumente", "Vorlagen"]),
+            )
 
     def test_applied_privileged_state_captures_runtime_site_grants(self) -> None:
         state = json.loads(APPLIED_STATE.read_text(encoding="utf-8"))
@@ -657,6 +704,20 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("runtime-metadata requires --owner-approved", payload["errors"])
+
+def _schema_expectations(
+    lists: list[str],
+    document_libraries: list[str] | None = None,
+) -> dict:
+    return {
+        "sharepoint": {
+            "lists": [{"display_name": name} for name in lists],
+            "document_libraries": [
+                {"display_name": name}
+                for name in (document_libraries or [])
+            ],
+        },
+    }
 
 
 if __name__ == "__main__":

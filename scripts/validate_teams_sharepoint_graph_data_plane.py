@@ -154,13 +154,21 @@ def validate() -> list[str]:
             )
         )
     if runtime_smoke_state:
-        errors.extend(_validate_runtime_smoke_state(runtime_smoke_state, privileged_applied_state, provisioned_state))
+        errors.extend(
+            _validate_runtime_smoke_state(
+                runtime_smoke_state,
+                privileged_applied_state,
+                provisioned_state,
+                schema,
+            )
+        )
     if runtime_metadata_state:
         errors.extend(
             _validate_runtime_metadata_state(
                 runtime_metadata_state,
                 runtime_smoke_state,
                 provisioned_state,
+                schema,
             )
         )
     errors.extend(_validate_docs())
@@ -577,6 +585,7 @@ def _validate_runtime_smoke_state(
     state: dict[str, Any],
     privileged_state: dict[str, Any],
     provisioned_state: dict[str, Any],
+    schema: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
     if state.get("state_version") != "nac.m365-runtime-smoke/v0.1":
@@ -623,6 +632,7 @@ def _validate_runtime_smoke_state(
         for workspace in provisioned_state.get("workspaces", [])
         if isinstance(workspace, dict) and isinstance(workspace.get("id"), str)
     } if isinstance(provisioned_state, dict) else {}
+    schema_lists = _schema_list_names(schema)
     workspaces = state.get("workspaces")
     if not isinstance(workspaces, list):
         errors.append("runtime smoke workspaces must be a list")
@@ -636,8 +646,8 @@ def _validate_runtime_smoke_state(
                 continue
             if workspace.get("site_id") != provisioned.get("site_id"):
                 errors.append(f"runtime smoke {workspace_id} site_id must match provisioned state")
-            if workspace.get("expected_list_count") != len(provisioned.get("lists", {}) or {}):
-                errors.append(f"runtime smoke {workspace_id} expected_list_count must match provisioned lists")
+            if workspace.get("expected_list_count") != len(schema_lists):
+                errors.append(f"runtime smoke {workspace_id} expected_list_count must match schema lists")
             if workspace.get("observed_list_count", 0) < workspace.get("expected_list_count", 0):
                 errors.append(f"runtime smoke {workspace_id} observed_list_count must cover expected lists")
             if workspace.get("missing_lists") != []:
@@ -649,6 +659,7 @@ def _validate_runtime_metadata_state(
     state: dict[str, Any],
     runtime_smoke_state: dict[str, Any],
     provisioned_state: dict[str, Any],
+    schema: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
     if state.get("state_version") != "nac.m365-runtime-metadata/v0.1":
@@ -692,6 +703,8 @@ def _validate_runtime_metadata_state(
         for workspace in provisioned_state.get("workspaces", [])
         if isinstance(workspace, dict) and isinstance(workspace.get("id"), str)
     } if isinstance(provisioned_state, dict) else {}
+    schema_lists = set(_schema_list_names(schema))
+    schema_libraries = set(_schema_library_names(schema))
     workspaces = state.get("workspaces")
     if not isinstance(workspaces, list):
         errors.append("runtime metadata workspaces must be a list")
@@ -705,11 +718,11 @@ def _validate_runtime_metadata_state(
                 continue
             if workspace.get("site_id") != provisioned.get("site_id"):
                 errors.append(f"runtime metadata {workspace_id} site_id must match provisioned state")
-            if set(_strings(workspace.get("lists"))) != set(provisioned.get("lists", {}) or {}):
-                errors.append(f"runtime metadata {workspace_id} lists must match provisioned state")
-            if set(_strings(workspace.get("document_libraries"))) != set(provisioned.get("document_libraries", {}) or {}):
+            if set(_strings(workspace.get("lists"))) != schema_lists:
+                errors.append(f"runtime metadata {workspace_id} lists must match schema lists")
+            if set(_strings(workspace.get("document_libraries"))) != schema_libraries:
                 errors.append(
-                    f"runtime metadata {workspace_id} document_libraries must match provisioned state"
+                    f"runtime metadata {workspace_id} document_libraries must match schema document libraries"
                 )
             if workspace.get("missing_lists") != []:
                 errors.append(f"runtime metadata {workspace_id} missing_lists must be empty")
@@ -721,6 +734,22 @@ def _validate_runtime_metadata_state(
 def _require_nonempty_string(payload: dict[str, Any], key: str, label: str, errors: list[str]) -> None:
     if not isinstance(payload.get(key), str) or not payload[key]:
         errors.append(f"{label}.{key} must be a non-empty string")
+
+
+def _schema_list_names(schema: dict[str, Any]) -> list[str]:
+    return [
+        item["display_name"]
+        for item in schema.get("sharepoint", {}).get("lists", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    ]
+
+
+def _schema_library_names(schema: dict[str, Any]) -> list[str]:
+    return [
+        item["display_name"]
+        for item in schema.get("sharepoint", {}).get("document_libraries", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    ]
 
 
 def _validate_docs() -> list[str]:

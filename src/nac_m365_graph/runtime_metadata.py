@@ -15,6 +15,7 @@ class GraphReadClient(Protocol):
 def build_runtime_metadata_snapshot(
     client: GraphReadClient,
     provisioned_state: dict[str, Any],
+    expected_schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     workspaces: list[dict[str, Any]] = []
     for workspace in _workspaces(provisioned_state):
@@ -24,13 +25,13 @@ def build_runtime_metadata_snapshot(
         lists = _paged(client, f"/sites/{site_path}/lists?$select=id,displayName,webUrl")
         drives = _paged(client, f"/sites/{site_path}/drives?$select=id,name,webUrl,driveType")
 
-        expected_lists = set(_mapping_keys(workspace.get("lists")))
+        expected_lists = set(_expected_list_names(workspace, expected_schema))
         actual_lists = {
             item.get("displayName"): item
             for item in lists
             if isinstance(item.get("displayName"), str)
         }
-        expected_libraries = set(_mapping_keys(workspace.get("document_libraries")))
+        expected_libraries = set(_expected_library_names(workspace, expected_schema))
         actual_libraries = {
             item.get("name"): item
             for item in drives
@@ -51,6 +52,7 @@ def build_runtime_metadata_snapshot(
                 "siteId": site_id,
                 "siteDisplayName": site.get("displayName"),
                 "siteWebUrl": site.get("webUrl"),
+                "expectationSource": _expectation_source(expected_schema),
                 "lists": [
                     _list_view(actual_lists[name])
                     for name in sorted(expected_lists)
@@ -77,6 +79,32 @@ def build_runtime_metadata_snapshot(
         },
         "workspaces": workspaces,
     }
+
+
+def _expected_list_names(workspace: dict[str, Any], expected_schema: dict[str, Any] | None) -> list[str]:
+    if expected_schema is None:
+        return _mapping_keys(workspace.get("lists"))
+    return [
+        item["display_name"]
+        for item in expected_schema.get("sharepoint", {}).get("lists", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    ]
+
+
+def _expected_library_names(workspace: dict[str, Any], expected_schema: dict[str, Any] | None) -> list[str]:
+    if expected_schema is None:
+        return _mapping_keys(workspace.get("document_libraries"))
+    return [
+        item["display_name"]
+        for item in expected_schema.get("sharepoint", {}).get("document_libraries", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    ]
+
+
+def _expectation_source(expected_schema: dict[str, Any] | None) -> str:
+    if expected_schema is None:
+        return "provisioned_state"
+    return "schema"
 
 
 def _list_view(item: dict[str, Any]) -> dict[str, Any]:

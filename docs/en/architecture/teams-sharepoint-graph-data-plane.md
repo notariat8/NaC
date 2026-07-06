@@ -188,6 +188,13 @@ REST operation list before any live apply. `apply`, `drift` and `export` need
 environment variables for tenant, app and credential. The provisioner does not
 store tokens, secret values or raw data in the repository.
 
+`runtime-smoke` and `runtime-metadata` use the declarative MVP schema as the
+expectation source. The smoke reads only site, list and library metadata with
+the runtime app through Microsoft Graph REST v1.0 and fails when a list or
+document library required by the schema is missing. This verifies
+`Sites.Selected` baseline access and schema drift without reading list items,
+files or matter data.
+
 ## MCP Boundary
 
 The later runtime server is `teams-sharepoint-data-mcp`. It may only use Graph

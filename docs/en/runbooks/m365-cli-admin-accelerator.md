@@ -229,7 +229,8 @@ M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<local-runtime-token-file>" python3 script
 ```
 
 Alternatively, the smoke uses `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and
-`M365_RUNTIME_CLIENT_SECRET`. This step only reads the sites, lists and
-document libraries referenced in the non-secret provisioned state.
+`M365_RUNTIME_CLIENT_SECRET`. This step only reads the sites referenced in the
+non-secret provisioned state and compares the discovered lists and document
+libraries with the declarative MVP schema.
 `runtime-metadata` explicitly does not read list items or mandate data. It does
 not create teams, groups, app roles, site permissions or SharePoint list items.

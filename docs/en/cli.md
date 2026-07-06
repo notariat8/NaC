@@ -241,6 +241,9 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 ```
 
+`runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
+the discovered lists and document libraries against the declarative MVP schema.
+
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 
 The leading matter model uses small JSON files with stable IDs for matters,
