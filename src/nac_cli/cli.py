@@ -213,6 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-stdio",
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
+            "mcp-smoke-cleanup",
             "apply",
             "drift",
             "export",
@@ -243,7 +244,10 @@ def build_parser() -> argparse.ArgumentParser:
     teams_sharepoint.add_argument("--mcp-smoke-workspace-id", help="Workspace-ID fuer den MCP-Live-Read-Smoke.")
     teams_sharepoint.add_argument(
         "--mcp-smoke-case-id",
-        help="Case-ID fuer den MCP-Live-Read-Smoke oder optional fuer den Positive-Write-Read-Smoke.",
+        help=(
+            "Case-ID fuer den MCP-Live-Read-Smoke, Pflicht fuer Smoke-Cleanup "
+            "oder optional fuer den Positive-Write-Read-Smoke."
+        ),
     )
     teams_sharepoint.add_argument("--mcp-smoke-correlation-id", help="Correlation-ID fuer den MCP-Live-Read-Smoke.")
     teams_sharepoint.add_argument(
@@ -255,6 +259,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-positive-smoke-output",
         type=Path,
         help="Pfad fuer das redigierte MCP-Positive-Write-Read-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--mcp-cleanup-output",
+        type=Path,
+        help="Pfad fuer das redigierte MCP-Smoke-Cleanup-Artefakt.",
     )
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
@@ -924,6 +933,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-smoke-output", str(args.mcp_smoke_output)])
         if args.mcp_positive_smoke_output:
             script_args.extend(["--mcp-positive-smoke-output", str(args.mcp_positive_smoke_output)])
+        if args.mcp_cleanup_output:
+            script_args.extend(["--mcp-cleanup-output", str(args.mcp_cleanup_output)])
         if args.owner_approved:
             script_args.append("--owner-approved")
         if args.format == "json":

@@ -272,6 +272,19 @@ artifact is written by default to
 `out/m365/teams-sharepoint/mcp-positive-write-read-smoke.redacted.json`. It
 stores no raw case ID, raw payloads, raw responses, tokens or file content.
 
+Synthetic smoke matters are removed through a separate owner-gated cleanup
+command:
+
+```bash
+nac m365 teams-sharepoint mcp-smoke-cleanup --owner-approved --mcp-smoke-case-id <case-id>
+```
+
+Cleanup accepts only exact case IDs with the `NAC-SMOKE-WRITE-READ-` prefix,
+reads exactly one matching `Akten` item before deletion, deletes that item
+through Microsoft Graph REST v1.0 `DELETE` and verifies afterwards that no
+match is returned. Unbounded list dumps, prefix mass deletion, raw responses,
+tokens and file content remain blocked.
+
 Initial tool boundaries:
 
 - `case_get`

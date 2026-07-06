@@ -36,6 +36,18 @@ class GraphRestClientTests(unittest.TestCase):
 
         self.assertNotIn("Prefer", request.headers)
 
+    def test_delete_uses_graph_delete_without_payload(self) -> None:
+        client = GraphRestClient(_TokenProvider())
+
+        with patch("nac_m365_graph.graph_client.urllib.request.urlopen", return_value=_JsonResponse({})) as urlopen:
+            result = client.delete("/sites/site-id/lists/list-id/items/item-id")
+
+        request = urlopen.call_args.args[0]
+
+        self.assertEqual(result, {})
+        self.assertEqual(request.get_method(), "DELETE")
+        self.assertIsNone(request.data)
+
 
 class _TokenProvider:
     def fetch_access_token(self) -> str:
