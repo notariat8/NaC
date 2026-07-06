@@ -25,6 +25,12 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     validate_privileged_change_config,
 )
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.mcp_runtime import (  # noqa: E402
+    DEFAULT_MCP_CONTRACT,
+    build_tool_manifest,
+    load_mcp_contract,
+    validate_mcp_contract,
+)
 from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
 from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
@@ -43,6 +49,7 @@ def parse_args() -> argparse.Namespace:
             "privileged-apply",
             "runtime-smoke",
             "runtime-metadata",
+            "mcp-manifest",
             "apply",
             "drift",
             "export",
@@ -76,6 +83,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to the non-secret provisioned Teams/SharePoint state export.",
     )
     parser.add_argument(
+        "--mcp-contract",
+        type=Path,
+        default=DEFAULT_MCP_CONTRACT,
+        help="Path to the teams-sharepoint-data-mcp contract.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON output.",
@@ -85,6 +98,31 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "mcp-manifest":
+        contract = load_mcp_contract(args.mcp_contract)
+        errors = validate_mcp_contract(contract)
+        if errors:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": errors,
+                },
+                as_json=args.json,
+                return_code=1,
+            )
+        return _emit(
+            {
+                "status": "PASSED",
+                "summary": {
+                    "server_id": contract["server_id"],
+                    "tool_count": len(contract["tools"]),
+                    "executes_graph_requests": contract["runtime_boundary"]["executes_graph_requests"],
+                },
+                "result": build_tool_manifest(contract),
+            },
+            args.json,
+        )
+
     if args.command in {"runtime-smoke", "runtime-metadata"}:
         state = load_provisioned_state(args.provisioned_state)
         schema = load_schema(args.schema)

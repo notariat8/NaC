@@ -1,0 +1,190 @@
+{
+  "schema_version": "nac.m365-teams-sharepoint-data-mcp/v0.1",
+  "contract_id": "m365.teams_sharepoint_data_mcp",
+  "server_id": "teams-sharepoint-data-mcp",
+  "title": "Teams/SharePoint Data MCP runtime boundary",
+  "status": "skeleton_no_live_apply",
+  "last_update": "2026-07-06",
+  "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence and document pointers stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "graph_beta_allowed": false
+  },
+  "runtime_boundary": {
+    "executes_graph_requests": false,
+    "plans_graph_requests_only": true,
+    "stores_tokens_or_secrets": false,
+    "stores_raw_matter_payloads": false,
+    "reads_sharepoint_file_content": false,
+    "reads_sharepoint_list_items_only_after_role_case_purpose_gate": true,
+    "writes_sharepoint_items_only_after_role_case_purpose_gate": true,
+    "tenant_mutation_allowed": false,
+    "team_or_membership_mutation_allowed": false
+  },
+  "required_context": [
+    "actor_id",
+    "actor_role",
+    "workspace_id",
+    "purpose",
+    "correlation_id",
+    "role_case_gate"
+  ],
+  "allowed_roles": [
+    "notary",
+    "notary_clerk",
+    "substitution_notary",
+    "substitution_clerk",
+    "runtime_service"
+  ],
+  "tools": [
+    {
+      "id": "case_get",
+      "description": "Read a single matter metadata record from the Akten list.",
+      "graph_method": "GET",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items?$expand=fields&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27",
+      "list_name": "Akten",
+      "required_inputs": [
+        "case_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    },
+    {
+      "id": "case_create",
+      "description": "Create a starter matter metadata record in the Akten list.",
+      "graph_method": "POST",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "list_name": "Akten",
+      "required_inputs": [
+        "case_id",
+        "aktenzeichen",
+        "vorgangstyp",
+        "status",
+        "notar_team",
+        "vertraulichkeitsstufe",
+        "nac_workflow_version",
+        "kg_version"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": true
+    },
+    {
+      "id": "case_update_status",
+      "description": "Update only the status field for an existing matter metadata record.",
+      "graph_method": "PATCH",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items/{item-id}/fields",
+      "list_name": "Akten",
+      "required_inputs": [
+        "item_id",
+        "status"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": true
+    },
+    {
+      "id": "task_create",
+      "description": "Create a BPMN-bound task or deadline record.",
+      "graph_method": "POST",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "list_name": "AufgabenFristen",
+      "required_inputs": [
+        "task_id",
+        "case_id",
+        "bpmn_step_code",
+        "status",
+        "requires_notary_approval"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": true
+    },
+    {
+      "id": "grant_request",
+      "description": "Create a time-limited substitution grant request with reason and audit correlation.",
+      "graph_method": "POST",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "list_name": "Vertretungsfreigaben",
+      "required_inputs": [
+        "grant_id",
+        "case_id",
+        "from_user",
+        "to_user",
+        "granted_role",
+        "reason",
+        "valid_from",
+        "valid_until",
+        "approved_by",
+        "status"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": true
+    },
+    {
+      "id": "audit_append",
+      "description": "Append a redacted starter audit event to AuditJournalLite.",
+      "graph_method": "POST",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items",
+      "list_name": "AuditJournalLite",
+      "required_inputs": [
+        "event_id",
+        "case_id",
+        "timestamp",
+        "action",
+        "object_type",
+        "object_id"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": true
+    },
+    {
+      "id": "document_list",
+      "description": "Read document pointer metadata from DokumentRegister without reading files.",
+      "graph_method": "GET",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items?$expand=fields&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27",
+      "list_name": "DokumentRegister",
+      "required_inputs": [
+        "case_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    }
+  ],
+  "blocked_operations": [
+    "m365_group_membership_mutation",
+    "team_creation_or_deletion",
+    "sharepoint_schema_mutation",
+    "sharepoint_file_content_read",
+    "unbounded_list_dump",
+    "legacy_sharepoint_rest",
+    "graph_beta",
+    "secret_or_token_storage"
+  ],
+  "validation_commands": [
+    "python3 scripts/validate_teams_sharepoint_graph_data_plane.py",
+    "python3 -m unittest tests.test_teams_sharepoint_data_mcp",
+    "python3 scripts/quality_gate.py --profile strict"
+  ]
+}

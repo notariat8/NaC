@@ -201,6 +201,18 @@ The later runtime server is `teams-sharepoint-data-mcp`. It may only use Graph
 REST endpoints and needs the NaC role, matter and purpose gate before every
 write action.
 
+The first skeleton lives in
+[workflows/contracts/teams-sharepoint-data-mcp.contract.json](../../../workflows/contracts/teams-sharepoint-data-mcp.contract.json)
+and the Python module `nac_m365_graph.mcp_runtime`. It does not execute Graph
+requests yet, stores no tokens or secrets and reads no files. It only creates
+auditable Graph REST request plans behind an open role, matter and purpose
+gate. The central operating edge exposes the safe tool manifest without
+Microsoft 365 access:
+
+```bash
+nac m365 teams-sharepoint mcp-manifest --format json
+```
+
 Initial tool boundaries:
 
 - `case_get`
@@ -230,4 +242,4 @@ Not part of the MVP:
 3. Configure the Entra app and admin consent outside the repository.
 4. Run a first smoke against `NaC-Notar-01`.
 5. Build the application-owned privileged M365 change path as the next iteration.
-6. Then build `teams-sharepoint-data-mcp` as the runtime layer.
+6. Then extend `teams-sharepoint-data-mcp` from request planning to owner-gated live execution.

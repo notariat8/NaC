@@ -17,10 +17,12 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     validate_privileged_change_config,
 )
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
+from nac_m365_graph.mcp_runtime import build_tool_manifest, validate_mcp_contract  # noqa: E402
 from nac_m365_graph.schema import validate_schema  # noqa: E402
 
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
+MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 SCHEMA = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.teams-sharepoint.json"
 PRIVILEGED_CHANGE_CONFIG = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.json"
@@ -108,6 +110,7 @@ def main() -> int:
 def validate() -> list[str]:
     errors: list[str] = []
     contract = _read_json(CONTRACT, errors)
+    mcp_contract = _read_json(MCP_CONTRACT, errors)
     schema = _read_json(SCHEMA, errors)
     privileged_change_config = _read_json(PRIVILEGED_CHANGE_CONFIG, errors)
     provisioned_state = _read_json(PROVISIONED_STATE, errors)
@@ -116,6 +119,8 @@ def validate() -> list[str]:
     runtime_metadata_state = _read_json(RUNTIME_METADATA_STATE, errors)
     if contract:
         errors.extend(_validate_contract(contract))
+    if mcp_contract:
+        errors.extend(_validate_mcp_runtime_contract(mcp_contract, contract))
     if schema:
         errors.extend(validate_schema(schema))
         errors.extend(_validate_schema_against_contract(schema, contract))
@@ -454,6 +459,42 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_mcp_runtime_contract(payload: dict[str, Any], data_plane_contract: dict[str, Any]) -> list[str]:
+    errors = validate_mcp_contract(payload)
+    if errors:
+        return errors
+    manifest = build_tool_manifest(payload)
+    if manifest.get("serverId") != "teams-sharepoint-data-mcp":
+        errors.append("teams-sharepoint-data-mcp manifest serverId is invalid")
+    if manifest.get("executesGraphRequests") is not False:
+        errors.append("teams-sharepoint-data-mcp manifest must not execute Graph requests")
+
+    tool_names = {
+        tool.get("name")
+        for tool in manifest.get("tools", [])
+        if isinstance(tool, dict)
+    }
+    data_plane_tools = set(
+        _strings(data_plane_contract.get("mcp_boundary", {}).get("allowed_runtime_tools"))
+    ) if data_plane_contract else set()
+    if tool_names != data_plane_tools:
+        errors.append("teams-sharepoint-data-mcp tools must match data-plane mcp_boundary.allowed_runtime_tools")
+
+    for tool in payload.get("tools", []):
+        if not isinstance(tool, dict):
+            errors.append("teams-sharepoint-data-mcp tools entries must be objects")
+            continue
+        if tool.get("graph_method") not in {"GET", "POST", "PATCH"}:
+            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} graph_method is invalid")
+        if tool.get("list_name") not in REQUIRED_LISTS:
+            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} list_name must target an MVP list")
+        if tool.get("reads_files") is not False:
+            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} must not read files")
+        if tool.get("writes_items") is True and tool.get("graph_method") == "GET":
+            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} write tool cannot use GET")
+    return errors
+
+
 def _validate_schema_against_contract(schema: dict[str, Any], contract: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if not contract:
@@ -765,6 +806,8 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "privileged-plan"),
         (DOC_DE, "CLI for Microsoft 365"),
         (DOC_DE, "`teams-sharepoint-data-mcp`"),
+        (DOC_DE, "mcp-manifest"),
+        (DOC_DE, "nac_m365_graph.mcp_runtime"),
         (DOC_EN, "Teams SharePoint Graph Data Plane"),
         (DOC_EN, "Microsoft Teams team per notary team"),
         (DOC_EN, "Graph REST Boundary"),
@@ -775,6 +818,8 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "privileged-plan"),
         (DOC_EN, "CLI for Microsoft 365"),
         (DOC_EN, "`teams-sharepoint-data-mcp`"),
+        (DOC_EN, "mcp-manifest"),
+        (DOC_EN, "nac_m365_graph.mcp_runtime"),
         (RUNBOOK_DE, "Microsoft-365-CLI-Admin-Beschleuniger"),
         (RUNBOOK_DE, "Pflicht-Handoff Vor Nutzeraktion"),
         (RUNBOOK_DE, "Bootstrap-Route A: CLI-App durch `m365 setup`"),
