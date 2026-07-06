@@ -12,11 +12,17 @@ def read(path: str) -> str:
 
 
 class ReleaseLaneContextMemoryTests(unittest.TestCase):
-    def test_release_memory_points_to_context_pack_and_dev_ocid_boundary(self) -> None:
+    def test_release_memory_is_archived_but_keeps_context_pack_boundary(self) -> None:
+        process_policy = read("policies/process-policy.yaml")
         skill = read("workflows/skills/nac-release-memory/SKILL.md")
         reference = read("workflows/skills/nac-release-memory/references/release-lane.md")
 
+        self.assertIn("status: archived_legacy_oci_release_lane", process_policy)
+        self.assertIn("enabled: false", process_policy)
+        self.assertIn("require_before_oci_release_work: false", process_policy)
+
         for content in (skill, reference):
+            self.assertIn("archivierter Legacy-Pfad", content)
             self.assertIn(
                 "/home/ubuntu/src/oci-landing-zone/runbooks/release-lane-context.dev.json",
                 content,

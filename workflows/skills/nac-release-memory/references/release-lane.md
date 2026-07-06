@@ -1,5 +1,8 @@
 # NaC Release Lane Reference
 
+Status: archivierter Legacy-Pfad. Diese Referenz ist nicht Teil der aktiven
+M365-/Teams-/SharePoint-MVP-Spur.
+
 Diese Referenz enthält nur nicht-geheime Release-Prozedur und Entscheidungslogik.
 Dev-only nicht-sensitive OCIDs dürfen im OCI-Landing-Zone Release-Lane Context
 Pack stehen:

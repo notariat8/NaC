@@ -5,15 +5,17 @@ description: Nutzen, wenn ein NaC-Release über OCI DevOps, OCI Functions, OCIR,
 
 # NaC Release Memory
 
+Status: archivierter Legacy-Pfad. Für den M365-/Teams-/SharePoint-MVP ist
+dieser Skill keine aktive Arbeitsvoraussetzung mehr.
+
 Deutsch ist die führende fachliche Skill-Sprache. Technische Namen,
 Variablennamen, Commands und IDs bleiben englisch/ASCII.
 
 ## Englische Kurzfassung
 
-English summary: Supports commit-bound NaC OCI DevOps releases. It keeps the
-release lane from rediscovering the same facts, enforces owner gates, avoids
-broad OCI discovery loops, and records repeated friction as durable process
-improvements.
+English summary: Archived legacy memory for commit-bound NaC OCI DevOps
+releases. It is retained for audit and possible future reference, not as an
+active M365 MVP operating path.
 
 ## Einsatzgrenze
 
