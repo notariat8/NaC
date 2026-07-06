@@ -46,6 +46,11 @@ from nac_m365_graph.mcp_smoke_cleanup import (  # noqa: E402
     run_mcp_smoke_cleanup_from_paths,
     write_mcp_smoke_cleanup_artifact,
 )
+from nac_m365_graph.mcp_smoke_suite import (  # noqa: E402
+    DEFAULT_MCP_SMOKE_SUITE_OUTPUT,
+    run_mcp_smoke_suite_from_paths,
+    write_mcp_smoke_suite_artifact,
+)
 from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
 from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
@@ -69,6 +74,7 @@ def parse_args() -> argparse.Namespace:
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
             "mcp-smoke-cleanup",
+            "mcp-smoke-suite",
             "apply",
             "drift",
             "export",
@@ -131,8 +137,8 @@ def parse_args() -> argparse.Namespace:
         "--mcp-smoke-case-id",
         help=(
             "Case id used to build the live-read filter. Required for mcp-smoke-cleanup. "
-            "For mcp-positive-write-read-smoke it is optional; the command generates a synthetic case id when omitted. "
-            "Redacted artifacts store only its SHA-256 hash."
+            "For mcp-positive-write-read-smoke and mcp-smoke-suite it is optional; "
+            "these commands generate a synthetic case id when omitted. Redacted artifacts store only its SHA-256 hash."
         ),
     )
     parser.add_argument(
@@ -159,6 +165,17 @@ def parse_args() -> argparse.Namespace:
         help="Path for the redacted MCP smoke cleanup artifact under out/.",
     )
     parser.add_argument(
+        "--mcp-suite-output",
+        type=Path,
+        default=DEFAULT_MCP_SMOKE_SUITE_OUTPUT,
+        help="Path for the redacted MCP smoke suite artifact under out/.",
+    )
+    parser.add_argument(
+        "--mcp-suite-cleanup",
+        action="store_true",
+        help="Run positive write-read smoke and then clean up the same synthetic item in one owner-gated suite.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON output.",
@@ -168,6 +185,71 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "mcp-smoke-suite":
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["mcp-smoke-suite requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            result = run_mcp_smoke_suite_from_paths(
+                client,
+                contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                case_id=args.mcp_smoke_case_id,
+                correlation_id=args.mcp_smoke_correlation_id,
+                cleanup_after=args.mcp_suite_cleanup,
+            )
+            write_mcp_smoke_suite_artifact(result, args.mcp_suite_output)
+        except GraphConfigError as exc:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=2,
+            )
+        except GraphHttpError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": ["Microsoft Graph request failed during smoke suite"],
+                    "summary": {
+                        "graph_http_status": exc.status,
+                        "graph_error_code": _graph_error_code(exc.body),
+                    },
+                },
+                args.json,
+                return_code=1,
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.mcp_suite_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
     if args.command == "mcp-smoke-cleanup":
         if not args.owner_approved:
             return _emit(

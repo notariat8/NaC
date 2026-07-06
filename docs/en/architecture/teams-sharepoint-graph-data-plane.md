@@ -285,6 +285,17 @@ through Microsoft Graph REST v1.0 `DELETE` and verifies afterwards that no
 match is returned. Unbounded list dumps, prefix mass deletion, raw responses,
 tokens and file content remain blocked.
 
+For a compact operator run, the suite is available as well:
+
+```bash
+nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup
+```
+
+The suite creates a synthetic case ID only in process memory, executes
+`case_create` and `case_get`, and cleans up the same synthetic matter in the
+same run when `--mcp-suite-cleanup` is set. The suite artifact also stores only
+redacted hashes, status and counter information.
+
 Initial tool boundaries:
 
 - `case_get`

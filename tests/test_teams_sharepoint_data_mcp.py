@@ -34,6 +34,10 @@ from nac_m365_graph.mcp_smoke_cleanup import (  # noqa: E402
     run_mcp_smoke_cleanup,
     write_mcp_smoke_cleanup_artifact,
 )
+from nac_m365_graph.mcp_smoke_suite import (  # noqa: E402
+    run_mcp_smoke_suite,
+    write_mcp_smoke_suite_artifact,
+)
 from nac_m365_graph.mcp_stdio import (  # noqa: E402
     MCP_PROTOCOL_VERSION,
     TeamsSharePointDataMcpServer,
@@ -474,6 +478,115 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
         self.assertNotIn(case_id, json.dumps(payload))
 
+    def test_mcp_smoke_suite_runs_write_read_without_cleanup_and_redacts(self) -> None:
+        case_id = "NAC-SMOKE-WRITE-READ-20260706T120223Z"
+        graph_client = _FakeGraphSmokeSuiteClient(
+            post_response={"id": "raw-created-item-id"},
+            get_responses=[
+                {"value": [{"id": "raw-created-item-id", "fields": {"NacCaseId": case_id, "Aktenzeichen": "AZ-1"}}]},
+            ],
+            delete_response={},
+        )
+
+        result = run_mcp_smoke_suite(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            case_id=case_id,
+            correlation_id="corr-suite",
+            timestamp="2026-07-06T00:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["positive_write_read_status"], "PASSED")
+        self.assertFalse(result["summary"]["cleanup_requested"])
+        self.assertIsNone(result["summary"]["cleanup_status"])
+        self.assertEqual(len(graph_client.posts), 1)
+        self.assertEqual(len(graph_client.gets), 1)
+        self.assertEqual(graph_client.deletes, [])
+        serialized = json.dumps(result, ensure_ascii=False)
+        for raw_value in (case_id, "AZ-1", "raw-created-item-id", "example.sharepoint.com"):
+            self.assertNotIn(raw_value, serialized)
+
+    def test_mcp_smoke_suite_runs_write_read_cleanup_in_one_redacted_flow(self) -> None:
+        case_id = "NAC-SMOKE-WRITE-READ-20260706T120223Z"
+        graph_client = _FakeGraphSmokeSuiteClient(
+            post_response={"id": "raw-created-item-id"},
+            get_responses=[
+                {"value": [{"id": "raw-created-item-id", "fields": {"NacCaseId": case_id, "Aktenzeichen": "AZ-1"}}]},
+                {"value": [{"id": "raw-created-item-id", "fields": {"NacCaseId": case_id, "Aktenzeichen": "AZ-1"}}]},
+                {"value": []},
+            ],
+            delete_response={},
+        )
+
+        result = run_mcp_smoke_suite(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            case_id=case_id,
+            cleanup_after=True,
+            correlation_id="corr-suite",
+            timestamp="2026-07-06T00:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertTrue(result["summary"]["cleanup_requested"])
+        self.assertEqual(result["summary"]["cleanup_status"], "PASSED")
+        self.assertEqual(result["summary"]["cleanup_read_after_value_count"], 0)
+        self.assertEqual(len(graph_client.posts), 1)
+        self.assertEqual(len(graph_client.gets), 3)
+        self.assertEqual(len(graph_client.deletes), 1)
+        self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", graph_client.deletes[0])
+        serialized = json.dumps(result, ensure_ascii=False)
+        for raw_value in (case_id, "AZ-1", "raw-created-item-id", "example.sharepoint.com"):
+            self.assertNotIn(raw_value, serialized)
+
+    def test_mcp_smoke_suite_rejects_non_smoke_case_id_before_graph_calls(self) -> None:
+        graph_client = _FakeGraphSmokeSuiteClient(post_response={}, get_responses=[], delete_response={})
+
+        with self.assertRaisesRegex(ValueError, "NAC-SMOKE-WRITE-READ-"):
+            run_mcp_smoke_suite(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                case_id="case-1",
+            )
+
+        self.assertEqual(graph_client.posts, [])
+        self.assertEqual(graph_client.gets, [])
+        self.assertEqual(graph_client.deletes, [])
+
+    def test_mcp_smoke_suite_writes_redacted_artifact(self) -> None:
+        case_id = "NAC-SMOKE-WRITE-READ-20260706T120223Z"
+        graph_client = _FakeGraphSmokeSuiteClient(
+            post_response={"id": "raw-created-item-id"},
+            get_responses=[
+                {"value": [{"id": "raw-created-item-id", "fields": {"NacCaseId": case_id}}]},
+            ],
+            delete_response={},
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "suite.json"
+            result = run_mcp_smoke_suite(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                case_id=case_id,
+                timestamp="2026-07-06T00:00:00Z",
+            )
+            write_mcp_smoke_suite_artifact(result, output)
+
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
+        self.assertNotIn(case_id, json.dumps(payload))
+
     def test_stdio_tools_call_closed_gate_returns_tool_error(self) -> None:
         server = _mcp_server()
 
@@ -815,6 +928,29 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertIn("STATUS: BLOCKED", result.stdout)
         self.assertIn("--mcp-smoke-case-id", result.stdout)
 
+    def test_central_cli_mcp_smoke_suite_requires_owner_approval(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "mcp-smoke-suite",
+                "--mcp-suite-cleanup",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("STATUS: BLOCKED", result.stdout)
+        self.assertIn("--owner-approved", result.stdout)
+
 
 def _open_context(case_id: str, write_approved: bool = False) -> RuntimeContext:
     return RuntimeContext(
@@ -886,6 +1022,30 @@ class _FakeGraphCleanupClient:
         self.delete_response = delete_response
         self.gets: list[str] = []
         self.deletes: list[str] = []
+
+    def get(self, path: str) -> dict:
+        self.gets.append(path)
+        if not self.get_responses:
+            return {"value": []}
+        return self.get_responses.pop(0)
+
+    def delete(self, path: str) -> dict:
+        self.deletes.append(path)
+        return self.delete_response
+
+
+class _FakeGraphSmokeSuiteClient:
+    def __init__(self, post_response: dict, get_responses: list[dict], delete_response: dict) -> None:
+        self.post_response = post_response
+        self.get_responses = list(get_responses)
+        self.delete_response = delete_response
+        self.posts: list[tuple[str, dict]] = []
+        self.gets: list[str] = []
+        self.deletes: list[str] = []
+
+    def post(self, path: str, payload: dict) -> dict:
+        self.posts.append((path, payload))
+        return self.post_response
 
     def get(self, path: str) -> dict:
         self.gets.append(path)
