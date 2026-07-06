@@ -282,7 +282,10 @@ def build_parser() -> argparse.ArgumentParser:
             "oder optional fuer Positive-Write-Read-Smoke und Smoke-Suite."
         ),
     )
-    teams_sharepoint.add_argument("--mcp-smoke-correlation-id", help="Correlation-ID fuer den MCP-Live-Read-Smoke.")
+    teams_sharepoint.add_argument(
+        "--mcp-smoke-correlation-id",
+        help="Correlation-ID fuer MCP-Smoke- und Cleanup-Artefakte.",
+    )
     teams_sharepoint.add_argument(
         "--mcp-smoke-output",
         type=Path,

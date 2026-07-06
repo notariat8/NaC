@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -12,6 +13,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+SCRIPTS_ROOT = REPO_ROOT / "scripts"
+PROVISION_CLI_SPEC = importlib.util.spec_from_file_location(
+    "provision_teams_sharepoint_graph",
+    SCRIPTS_ROOT / "provision_teams_sharepoint_graph.py",
+)
+if PROVISION_CLI_SPEC is None or PROVISION_CLI_SPEC.loader is None:
+    raise ImportError("Could not load provision_teams_sharepoint_graph.py")
+provision_cli = importlib.util.module_from_spec(PROVISION_CLI_SPEC)
+PROVISION_CLI_SPEC.loader.exec_module(provision_cli)
 
 from nac_m365_graph.mcp_runtime import (  # noqa: E402
     DEFAULT_MCP_CONTRACT,
@@ -49,6 +59,32 @@ from nac_m365_graph.mcp_stdio import (  # noqa: E402
 
 
 class TeamsSharePointDataMcpTests(unittest.TestCase):
+    def test_mcp_smoke_correlation_defaults_are_command_specific(self) -> None:
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-live-read-smoke", None),
+            "mcp-live-read-smoke",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-positive-write-read-smoke", None),
+            "mcp-positive-write-read-smoke",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-smoke-cleanup", None),
+            "mcp-smoke-cleanup",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-smoke-leftover-cleanup", None),
+            "mcp-smoke-leftover-cleanup",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-smoke-suite", None),
+            "mcp-smoke-suite",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-smoke-leftover-cleanup", "explicit-corr"),
+            "explicit-corr",
+        )
+
     def test_contract_defines_graph_rest_only_mcp_boundary(self) -> None:
         contract = load_mcp_contract(DEFAULT_MCP_CONTRACT)
 
