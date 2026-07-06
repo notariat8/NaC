@@ -1,7 +1,7 @@
 # Microsoft 365 CLI Admin Accelerator
 
 Status: owner-gated admin runbook
-Last content update: 2026-07-05
+Last content update: 2026-07-06
 
 ## Purpose
 
@@ -234,3 +234,42 @@ non-secret provisioned state and compares the discovered lists and document
 libraries with the declarative MVP schema.
 `runtime-metadata` explicitly does not read list items or mandate data. It does
 not create teams, groups, app roles, site permissions or SharePoint list items.
+
+## Canonical M365 MVP Operating Sequence
+
+For new operator runs, the central `nac` CLI is the leading operating edge.
+Direct calls to `scripts/provision_teams_sharepoint_graph.py` remain allowed as
+internal compatibility, but product documentation and agent handoffs go through
+`nac`.
+
+The normal sequence is:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
+```
+
+`privileged-plan` is read-only and creates the review plan.
+`privileged-apply` changes tenant state and may run only after review, drift
+snapshot and owner approval. `runtime-smoke` and `runtime-metadata` then verify
+Sites.Selected runtime access without list items or matter data.
+`mcp-smoke-suite --mcp-suite-cleanup` is the standard runtime evidence after
+MCP/runtime changes because it verifies synthetic write, read and cleanup in
+one run.
+
+The `mcp-smoke-leftover-cleanup` dry-run is the follow-up when the suite failed,
+a previous smoke was interrupted or the operator wants to rule out synthetic
+leftovers. If the dry-run reports matches, the delete run remains a separate
+owner gate:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --format json
+```
+
+All evidence files are redacted under `out/m365/teams-sharepoint/` and are not
+versioned. Tokens, private keys, raw Graph responses, real matter values and
+SharePoint file content belong neither in chat nor in the repository.
