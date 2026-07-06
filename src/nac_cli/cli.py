@@ -215,7 +215,10 @@ def build_parser() -> argparse.ArgumentParser:
     batch_m365.add_argument("--workspace-id", default="notary_team_01", help="Workspace-ID fuer Live-Smoke-Text.")
     batch_m365.add_argument(
         "--synthetic-case-id",
-        help="Synthetische Case-ID fuer Live-Smoke- und Cleanup-Freigabetext.",
+        help=(
+            "Optionale synthetische Case-ID fuer Live-Smoke-Freigabetext. "
+            "Ohne Wert erzeugt die Smoke Suite die ID nur im Prozessspeicher."
+        ),
     )
     batch_m365.add_argument(
         "--correlation-id",
@@ -1005,33 +1008,46 @@ def _build_m365_batch_approval_payload(
         }
 
     if mode in {"live-smoke", "merge-and-live-smoke"}:
-        case_id = synthetic_case_id or "<NAC-SMOKE-WRITE-READ-YYYYMMDDTHHMMSSZ>"
+        suite_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
+        suite_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint "
+            "mcp-smoke-suite --owner-approved --mcp-suite-cleanup "
+            f"--mcp-smoke-workspace-id {workspace_id} "
+            f"{suite_case_id_arg}"
+            f"--mcp-smoke-correlation-id {correlation_id} "
+            "--format json"
+        )
+        leftover_dry_run_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint "
+            "mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run "
+            f"--mcp-smoke-workspace-id {workspace_id} "
+            f"--mcp-smoke-correlation-id {correlation_id} "
+            "--format json"
+        )
         approvals["live_smoke"] = {
             "approval_text": (
-                "Freigabe: M365 MCP positive write-read smoke mit synthetischer Testakte "
-                f"{case_id} im Workspace {workspace_id} ausführen und anschließend exakt "
-                "diese synthetische Testakte per Cleanup löschen."
+                "Freigabe: M365 MCP Smoke Suite live mit synthetischer Testakte "
+                f"im Workspace {workspace_id} ausführen, positive write-read und Cleanup "
+                "im gleichen Lauf."
             ),
             "owner_gate": "m365_tenant_write_and_delete",
             "workspace_id": workspace_id,
-            "synthetic_case_id": case_id,
+            "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
             "commands": [
-                (
-                    "python3 scripts/nac.py m365 teams-sharepoint "
-                    "mcp-positive-write-read-smoke --owner-approved "
-                    f"--mcp-smoke-workspace-id {workspace_id} "
-                    f"--mcp-smoke-case-id {case_id} "
-                    f"--mcp-smoke-correlation-id {correlation_id} "
-                    "--format json"
-                ),
-                (
-                    "python3 scripts/nac.py m365 teams-sharepoint "
-                    "mcp-smoke-cleanup --owner-approved "
-                    f"--mcp-smoke-workspace-id {workspace_id} "
-                    f"--mcp-smoke-case-id {case_id} "
-                    f"--mcp-smoke-correlation-id {correlation_id} "
-                    "--format json"
-                ),
+                suite_command,
+                leftover_dry_run_command,
+            ],
+            "operator_sequence": [
+                {
+                    "step": "mcp_smoke_suite",
+                    "owner_gate": "m365_tenant_write_and_delete",
+                    "command": suite_command,
+                },
+                {
+                    "step": "mcp_smoke_leftover_cleanup_dry_run",
+                    "owner_gate": "m365_tenant_read_only",
+                    "command": leftover_dry_run_command,
+                },
             ],
         }
 
