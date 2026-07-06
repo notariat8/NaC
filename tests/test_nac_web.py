@@ -27,7 +27,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from nac_web.bpmn import find_bpmn_model, list_bpmn_models, render_bpmn_svg  # noqa: E402
 import nac_web.server as nac_server  # noqa: E402
-from nac_runtime.status_source import AtpJsonRuntimeMetadataSource  # noqa: E402
+from nac_runtime.status_source import JsonRuntimeMetadataSource  # noqa: E402
 from nac_web.server import NaCLocalWebApp, build_bpmn_editor_page, build_bpmn_page, build_cost_page, build_home_page, build_kg_page  # noqa: E402
 from nac_gnotkg.views import build_cost_review_view  # noqa: E402
 from notary_kg.editor import build_editor_view  # noqa: E402
@@ -54,15 +54,15 @@ def _bound_workspace_app_and_cookie(first_matter_runtime_metadata_source=None) -
         token_exchange_result={
             "status": "verified",
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": "nonce-from-id-token",
                 "groups": ["nac-notary"],
                 "email": "notar@example.test",
             },
         },
-        expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-        expected_audience="notariat8_nac_app",
+        expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+        expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
         required_role="nac-notary",
         session_signing_key="unit-test-session-signing-key",
         now=1_800_000_000,
@@ -380,7 +380,7 @@ class NaCLocalWebTests(unittest.TestCase):
             pass
 
         session_store = DummySessionStore()
-        runtime_source = AtpJsonRuntimeMetadataSource(lambda _object_key: {})
+        runtime_source = JsonRuntimeMetadataSource(lambda _object_key: {})
         with (
             patch("nac_web.server.build_session_store_from_env", return_value=session_store) as session_factory,
             patch("nac_web.server.build_onboarding_request_store_from_env") as onboarding_factory,
@@ -458,9 +458,7 @@ class NaCLocalWebTests(unittest.TestCase):
                     "tenant_slug": "kanzlei-notariat",
                     "domain": "kanzlei-notariat.example",
                     "admin_email": "admin@kanzlei-notariat.example",
-                    "admin_display_name": "Admin Notariat",
-                    "identity_domain_url": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "identity_domain_id": "ocid1.domain.oc1..aaaaaaaarealidentitydomain",
+                    "saas_admin_email": "saas-owner@example.com",
                 }
             ).encode("utf-8"),
         )
@@ -468,8 +466,10 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "application/json; charset=utf-8")
         payload = json.loads(body.decode("utf-8"))
-        self.assertEqual(payload["mode"], "dry_run")
-        self.assertTrue(payload["requires_human_approval"])
+        self.assertEqual(payload["m365"]["identity"]["provider"], "entra_id")
+        self.assertEqual(payload["m365"]["data_plane"]["strategy"], "teams_sharepoint_graph_rest")
+        self.assertEqual(payload["sharepoint"]["strategy"], "team_site_lists_and_document_libraries")
+        self.assertTrue(payload["requires_owner_apply"])
 
     def test_admin_queue_page_fails_closed_without_static_demo_request(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
@@ -631,8 +631,9 @@ class NaCLocalWebTests(unittest.TestCase):
                         "review_surface": "admin.onboarding.review",
                         "contains_mandate_data": False,
                         "customer_mail_dispatched": False,
-                        "oci_write_executed": False,
-                        "atp_schema_change_required": False,
+                        "cloud_write_executed": False,
+                        "legacy_oci_atp_write_executed": False,
+                        "sharepoint_schema_change_required": False,
                     },
                 }
 
@@ -752,30 +753,22 @@ class NaCLocalWebTests(unittest.TestCase):
     def test_admin_provisioning_preview_page_renders_dry_run_without_credentials(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
-        with patch.dict(
-            os.environ,
-            {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OCI_IDENTITY_DOMAIN_ID": "ocid1.domain.oc1..aaaaaaaarealidentitydomain",
-            },
-        ):
-            status, content_type, body = app.handle(
-                "/admin/onboarding/provisioning-preview"
-                "?domain=kanzlei-notariat.example"
-                "&tenant_slug=kanzlei-notariat"
-                "&admin_email=admin@kanzlei-notariat.example"
-            )
+        status, content_type, body = app.handle(
+            "/admin/onboarding/provisioning-preview"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
         html = body.decode("utf-8")
 
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
-        self.assertIn("OCI-Admin-Dry-Run", html)
-        self.assertIn("dry_run", html)
-        self.assertIn("owner_apply_approval", html)
-        self.assertIn("users.create", html)
+        self.assertIn("Teams-/SharePoint-Plan", html)
+        self.assertIn("teams_sharepoint_graph_rest", html)
+        self.assertIn("Graph REST only", html)
         self.assertIn("nac-tenant-admin", html)
         self.assertIn("admin@kanzlei-notariat.example", html)
-        self.assertIn("Apply-Readiness vorbereiten", html)
+        self.assertIn("Privileged-Plan vorbereiten", html)
         self.assertIn(
             "/admin/onboarding/apply-readiness?domain=kanzlei-notariat.example&amp;tenant_slug=kanzlei-notariat&amp;admin_email=admin%40kanzlei-notariat.example",
             html,
@@ -784,7 +777,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("password", html.lower())
         self.assertNotIn("client_secret", html.lower())
 
-    def test_admin_provisioning_preview_page_fails_closed_without_identity_env(self) -> None:
+    def test_admin_provisioning_preview_page_does_not_require_oci_identity_env(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
         with patch.dict(os.environ, {}, clear=True):
@@ -798,44 +791,29 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
-        self.assertIn("Konfiguration erforderlich", html)
-        self.assertIn("admin_identity_config_missing", html)
-        self.assertNotIn("OCI-Admin-Dry-Run", html)
+        self.assertIn("Teams-/SharePoint-Plan", html)
+        self.assertIn("teams_sharepoint_graph_rest", html)
         self.assertNotIn("users.create", html)
 
     def test_admin_apply_readiness_preview_page_renders_review_artifact_without_credentials(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT, operator_access=True)
 
-        with patch.dict(
-            os.environ,
-            {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OCI_IDENTITY_DOMAIN_ID": "ocid1.domain.oc1..aaaaaaaarealidentitydomain",
-            },
-        ):
-            status, content_type, body = app.handle(
-                "/admin/onboarding/apply-readiness"
-                "?domain=kanzlei-notariat.example"
-                "&tenant_slug=kanzlei-notariat"
-                "&admin_email=admin@kanzlei-notariat.example"
-            )
+        status, content_type, body = app.handle(
+            "/admin/onboarding/apply-readiness"
+            "?domain=kanzlei-notariat.example"
+            "&tenant_slug=kanzlei-notariat"
+            "&admin_email=admin@kanzlei-notariat.example"
+        )
         html = body.decode("utf-8")
 
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
-        self.assertIn("Apply-Readiness", html)
+        self.assertIn("Privileged-Plan", html)
         self.assertIn("review_artifact_only", html)
-        self.assertIn("ready_to_apply", html)
-        self.assertIn("bereit", html)
-        self.assertIn("OWNER-APPLY-2026-0001", html)
-        self.assertIn("AUDIT-2026-0001", html)
-        self.assertIn("ROLLBACK-2026-0001", html)
-        self.assertIn("dns_verified", html)
-        self.assertIn("connector_apply_in_scope", html)
-        self.assertIn("productive_write_executed", html)
-        self.assertIn("compact-table", html)
-        self.assertIn(".compact-table table { min-width: 0;", html)
-        self.assertIn("admin@kanzlei-notariat.example", html)
+        self.assertIn("owner_apply_required", html)
+        self.assertIn("nac m365 teams-sharepoint privileged-plan --format json", html)
+        self.assertIn("teams_sharepoint_graph_rest", html)
+        self.assertIn("team_per_notary_team", html)
         self.assertNotIn("api_key", html.lower())
         self.assertNotIn("password", html.lower())
         self.assertNotIn("client_secret", html.lower())
@@ -1284,8 +1262,8 @@ class NaCLocalWebTests(unittest.TestCase):
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
                 "NAC_OIDC_CLIENT_SECRET_REF": "vault://nac/oidc-client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
             clear=False,
@@ -1304,8 +1282,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(nonce, html)
         self.assertNotIn(nonce_hash, html)
         self.assertNotIn("vault://nac/oidc-client-secret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
         self.assertNotIn("unit-test-state-signing-key", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
@@ -1325,11 +1303,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1367,9 +1345,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(state, html)
         self.assertNotIn(nonce, html)
         self.assertNotIn("unit-test-client-secret", html)
-        self.assertNotIn("ocid1.vaultsecret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("secret-ref", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -1387,11 +1365,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1420,9 +1398,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("sample-id-token-value", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
-        self.assertNotIn("ocid1.vaultsecret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("secret-ref", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -1440,11 +1418,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1472,9 +1450,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("sample-id-token-value", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
-        self.assertNotIn("ocid1.vaultsecret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("secret-ref", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -1492,11 +1470,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1524,9 +1502,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("network-or-secret-detail", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
-        self.assertNotIn("ocid1.vaultsecret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("secret-ref", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -1554,11 +1532,11 @@ class NaCLocalWebTests(unittest.TestCase):
                 os.environ,
                 {
                     "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                    "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                    "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                    "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                    "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                    "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                    "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
                 },
                 clear=False,
             ), patch.object(
@@ -1587,9 +1565,9 @@ class NaCLocalWebTests(unittest.TestCase):
             self.assertNotIn("provider failure detail", html)
             self.assertNotIn("secret-code-from-idp", html)
             self.assertNotIn(state, html)
-            self.assertNotIn("ocid1.vaultsecret", html)
-            self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-            self.assertNotIn("notariat8_nac_app", html)
+            self.assertNotIn("secret-ref", html)
+            self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+            self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
             self.assertNotIn("Oracle", html)
             self.assertNotIn("OCI", html)
 
@@ -1607,11 +1585,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1649,13 +1627,13 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("nonce-secret-for-id-token", log_text)
         self.assertNotIn("sample-id-token-value", log_text)
         self.assertNotIn("unit-test-client-secret", log_text)
-        self.assertNotIn("ocid1.vaultsecret", log_text)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", log_text)
-        self.assertNotIn("notariat8_nac_app", log_text)
+        self.assertNotIn("secret-ref", log_text)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", log_text)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", log_text)
         self.assertNotIn("Oracle", log_text)
         self.assertNotIn("OCI", log_text)
 
-    def test_auth_callback_prints_redacted_status_evidence_for_oci_function_logs(self) -> None:
+    def test_auth_callback_prints_redacted_status_evidence_for_runtime_logs(self) -> None:
         from nac_identity.oidc_state import build_signed_state
 
         app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=lambda _secret_id: "unit-test-client-secret")
@@ -1670,11 +1648,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1712,9 +1690,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("nonce-secret-for-id-token", output)
         self.assertNotIn("sample-id-token-value", output)
         self.assertNotIn("unit-test-client-secret", output)
-        self.assertNotIn("ocid1.vaultsecret", output)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", output)
-        self.assertNotIn("notariat8_nac_app", output)
+        self.assertNotIn("secret-ref", output)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", output)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", output)
         self.assertNotIn("Oracle", output)
         self.assertNotIn("OCI", output)
 
@@ -1733,8 +1711,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "email": "admin@example.test",
             },
@@ -1744,11 +1722,11 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_SESSION_SIGNING_KEY_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.session-key",
+                "NAC_SESSION_SIGNING_KEY_REF": "secret-ref-session-key",
             },
             clear=False,
         ), patch.object(
@@ -1783,9 +1761,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("admin@example.test", log_text)
         self.assertNotIn("admin@example.test", html)
         self.assertNotIn("unit-test-client-secret", log_text)
-        self.assertNotIn("ocid1.vaultsecret", log_text)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", log_text)
-        self.assertNotIn("notariat8_nac_app", log_text)
+        self.assertNotIn("secret-ref", log_text)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", log_text)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", log_text)
         self.assertNotIn("Oracle", log_text)
         self.assertNotIn("OCI", log_text)
 
@@ -1805,14 +1783,14 @@ class NaCLocalWebTests(unittest.TestCase):
             signing_key="unit-test-state-signing-key",
             nonce=nonce,
         )
-        client_secret_ref = "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret"
+        client_secret_ref = "secret-ref-client-secret"
         exchange_result = {
             "status": "verified",
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -1824,8 +1802,8 @@ class NaCLocalWebTests(unittest.TestCase):
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
                 "NAC_OIDC_CLIENT_SECRET_REF": client_secret_ref,
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
             clear=False,
@@ -1854,9 +1832,9 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(kwargs["redirect_uri"], "https://app.notariat8.de/auth/callback")
         self.assertEqual(
             kwargs["token_endpoint"],
-            "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com/oauth2/v1/token",
+            "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/oauth2/v2.0/token",
         )
-        self.assertEqual(kwargs["client_id"], "notariat8_nac_app")
+        self.assertEqual(kwargs["client_id"], "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2")
         self.assertEqual(kwargs["client_secret"], "unit-test-client-secret")
         self.assertIsNotNone(kwargs["id_token_verifier"])
         self.assertIn("Anmeldung empfangen", html)
@@ -1867,8 +1845,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("unit-test-client-secret", html)
         self.assertNotIn(client_secret_ref, html)
         self.assertNotIn("admin@example.test", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
-        self.assertNotIn("notariat8_nac_app", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
 
     def test_auth_callback_builds_runtime_id_token_verifier_from_env(self) -> None:
         created: list[dict[str, object]] = []
@@ -1893,9 +1871,9 @@ class NaCLocalWebTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_EXPECTED_ISSUER": "https://identity.oraclecloud.com/",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_EXPECTED_ISSUER": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0/",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             },
             clear=False,
         ), patch.object(
@@ -1911,10 +1889,10 @@ class NaCLocalWebTests(unittest.TestCase):
             created,
             [
                 {
-                    "issuer": "https://identity.oraclecloud.com",
-                    "audience": "notariat8_nac_app",
-                    "discovery_base_url": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "jwks_fetcher_injected": True,
+                    "issuer": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "audience": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
+                    "discovery_base_url": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "jwks_fetcher_injected": False,
                 }
             ],
         )
@@ -1934,8 +1912,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -1946,9 +1924,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
             clear=False,
@@ -1980,8 +1958,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(state, html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn("unit-test-client-secret", html)
-        self.assertNotIn("ocid1.vaultsecret", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("secret-ref", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -1995,7 +1973,7 @@ class NaCLocalWebTests(unittest.TestCase):
             return {
                 "status": "confirmed",
                 "role": required_role,
-                "source": "oci_identity_domain_server_lookup",
+                "source": "injected_role_membership_resolver",
             }
 
         app = NaCLocalWebApp(
@@ -2014,8 +1992,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "sub": "subject-secret-from-provider",
                 "email": "admin@example.test",
@@ -2026,9 +2004,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
                 "NAC_SESSION_TTL_SECONDS": "600",
@@ -2061,12 +2039,12 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(nonce, html)
         self.assertNotIn("subject-secret-from-provider", html)
         self.assertNotIn("admin@example.test", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
         self.assertNotIn("subject-secret-from-provider", log_text)
         self.assertNotIn("admin@example.test", log_text)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", log_text)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", log_text)
         self.assertNotIn("Oracle", log_text)
         self.assertNotIn("OCI", log_text)
 
@@ -2077,7 +2055,7 @@ class NaCLocalWebTests(unittest.TestCase):
             return {
                 "status": "unavailable",
                 "role": required_role,
-                "failure_class": "identity_domain_forbidden",
+                "failure_class": "idp_lookup_forbidden",
                 "contains_credentials": False,
                 "tokens_returned": False,
                 "claims_exposed": False,
@@ -2100,8 +2078,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "sub": "subject-secret-from-provider",
                 "email": "admin@example.test",
@@ -2112,9 +2090,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
             },
@@ -2141,15 +2119,15 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertIn("Rollenprüfung: Berechtigung offen", html)
         self.assertIn("Sitzung offen", html)
         self.assertIn("role_gate_reason=server_membership_unavailable", log_text)
-        self.assertIn("role_lookup_detail=identity_domain_forbidden", log_text)
+        self.assertIn("role_lookup_detail=idp_lookup_forbidden", log_text)
         self.assertIn("session_cookie=false", log_text)
-        self.assertNotIn("identity_domain_forbidden", html)
+        self.assertNotIn("idp_lookup_forbidden", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn(state, html)
         self.assertNotIn(nonce, html)
         self.assertNotIn("subject-secret-from-provider", html)
         self.assertNotIn("admin@example.test", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -2168,8 +2146,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -2180,9 +2158,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
                 "NAC_SESSION_TTL_SECONDS": "600",
@@ -2222,10 +2200,10 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(state, set_cookie)
         self.assertNotIn(nonce, set_cookie)
         self.assertNotIn("unit-test-client-secret", set_cookie)
-        self.assertNotIn("ocid1.vaultsecret", set_cookie)
+        self.assertNotIn("secret-ref", set_cookie)
         self.assertNotIn("admin@example.test", set_cookie)
-        self.assertNotIn("notariat8_nac_app", set_cookie)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", set_cookie)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", set_cookie)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", set_cookie)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -2260,8 +2238,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -2273,9 +2251,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
                 "NAC_SESSION_TTL_SECONDS": "600",
@@ -2334,8 +2312,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -2346,9 +2324,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "",
             },
@@ -2417,8 +2395,8 @@ class NaCLocalWebTests(unittest.TestCase):
             "mode": "server_side_token_exchange",
             "live_token_exchange_performed": True,
             "claims": {
-                "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "aud": "notariat8_nac_app",
+                "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "nonce": nonce,
                 "groups": ["nac-tenant-admin"],
                 "email": "admin@example.test",
@@ -2429,9 +2407,9 @@ class NaCLocalWebTests(unittest.TestCase):
             os.environ,
             {
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
-                "NAC_OIDC_CLIENT_SECRET_REF": "ocid1.vaultsecret.oc1.eu-frankfurt-1.client-secret",
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                "NAC_OIDC_CLIENT_ID": "notariat8_nac_app",
+                "NAC_OIDC_CLIENT_SECRET_REF": "secret-ref-client-secret",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                "NAC_OIDC_CLIENT_ID": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key",
                 "NAC_SESSION_TTL_SECONDS": "600",
@@ -2467,10 +2445,10 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(nonce, html)
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("unit-test-client-secret", html)
-        self.assertNotIn("ocid1.vaultsecret", html)
+        self.assertNotIn("secret-ref", html)
         self.assertNotIn("admin@example.test", html)
-        self.assertNotIn("notariat8_nac_app", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
 
     def test_workspace_requires_q2q_role_case_and_purpose_binding_after_session(self) -> None:
@@ -2487,15 +2465,15 @@ class NaCLocalWebTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "aud": "notariat8_nac_app",
+                    "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-notary"],
                     "email": "notar@example.test",
                 },
             },
-            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            expected_audience="notariat8_nac_app",
+            expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+            expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             required_role="nac-notary",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -2546,7 +2524,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("notar@example.test", html)
         self.assertNotIn("myjur", html)
         self.assertNotIn("nonce-from-id-token", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -2564,15 +2542,15 @@ class NaCLocalWebTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "aud": "notariat8_nac_app",
+                    "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-notary"],
                     "email": "notar@example.test",
                 },
             },
-            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            expected_audience="notariat8_nac_app",
+            expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+            expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             required_role="nac-notary",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -2607,7 +2585,7 @@ class NaCLocalWebTests(unittest.TestCase):
             "X-NaC-Purpose-Bound": "true",
             "X-NaC-Case-Id": "case-secret-1",
             "X-NaC-Tenant-Hint": "myjur",
-            "X-NaC-Provider-Url": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            "X-NaC-Provider-Url": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
         }
 
         with patch.dict(os.environ, {"NAC_SESSION_SIGNING_KEY": "unit-test-session-signing-key"}, clear=False):
@@ -2625,7 +2603,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("notar@example.test", html)
         self.assertNotIn("nonce-from-id-token", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -2643,15 +2621,15 @@ class NaCLocalWebTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "aud": "notariat8_nac_app",
+                    "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-notary"],
                     "email": "notar@example.test",
                 },
             },
-            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            expected_audience="notariat8_nac_app",
+            expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+            expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             required_role="nac-notary",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -2740,15 +2718,15 @@ class NaCLocalWebTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "aud": "notariat8_nac_app",
+                    "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-notary"],
                     "email": "notar@example.test",
                 },
             },
-            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            expected_audience="notariat8_nac_app",
+            expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+            expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             required_role="nac-notary",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -2828,8 +2806,8 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn("audit-event-secret", html)
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("notar@example.test", html)
-        self.assertNotIn("notariat8_nac_app", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
@@ -2854,7 +2832,7 @@ class NaCLocalWebTests(unittest.TestCase):
             "Cookie": cookie_header,
             "X-NaC-Case-Id": "case-secret-1",
             "X-NaC-Tenant-Hint": "myjur",
-            "X-NaC-Provider-Url": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            "X-NaC-Provider-Url": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
             "X-NaC-Callback-State": "state-secret-1",
         }
 
@@ -2896,24 +2874,24 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("notar@example.test", html)
         self.assertNotIn("nonce-from-id-token", html)
-        self.assertNotIn("notariat8_nac_app", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("state-secret-1", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
 
-    def test_first_matter_status_accepts_injected_atp_json_runtime_source(self) -> None:
+    def test_first_matter_status_accepts_injected_json_runtime_source(self) -> None:
         fixture = json.loads(FIRST_MATTER_METADATA_FIXTURE.read_text(encoding="utf-8"))
         requested_keys: list[str] = []
 
-        def read_atp_json(object_key: str) -> dict[str, object]:
+        def read_json(object_key: str) -> dict[str, object]:
             requested_keys.append(object_key)
             return dict(fixture)
 
         app, cookie_header = _bound_workspace_app_and_cookie(
-            AtpJsonRuntimeMetadataSource(
-                read_atp_json,
-                object_key="runtime/atp/notarkammer-first.json",
+            JsonRuntimeMetadataSource(
+                read_json,
+                object_key="runtime/m365/notarkammer-first.json",
             )
         )
 
@@ -2923,11 +2901,11 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
-        self.assertEqual(requested_keys, ["runtime/atp/notarkammer-first.json"])
+        self.assertEqual(requested_keys, ["runtime/m365/notarkammer-first.json"])
         self.assertIn("Immobilienkaufvertrag Status", html)
         self.assertIn("Vorgangsstatus ohne Mandatsdaten", html)
         self.assertIn("Keine Mandatsdaten geladen", html)
-        self.assertNotIn("runtime/atp", html)
+        self.assertNotIn("runtime/m365", html)
         self.assertNotIn("DEMO-MATTER", html)
         self.assertNotIn("DEMO-TENANT", html)
         self.assertNotIn(cookie_header, html)
@@ -2994,15 +2972,15 @@ class NaCLocalWebTests(unittest.TestCase):
             token_exchange_result={
                 "status": "verified",
                 "claims": {
-                    "iss": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-                    "aud": "notariat8_nac_app",
+                    "iss": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+                    "aud": "d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
                     "nonce": "nonce-from-id-token",
                     "groups": ["nac-notary"],
                     "email": "notar@example.test",
                 },
             },
-            expected_issuer="https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
-            expected_audience="notariat8_nac_app",
+            expected_issuer="https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
+            expected_audience="d6692be7-8cc0-4fe8-b6c4-70a29d95eeb2",
             required_role="nac-notary",
             session_signing_key="unit-test-session-signing-key",
             now=1_800_000_000,
@@ -3041,7 +3019,7 @@ class NaCLocalWebTests(unittest.TestCase):
             "X-NaC-Purpose-Bound": "true",
             "X-NaC-Case-Id": "case-secret-1",
             "X-NaC-Tenant-Hint": "myjur",
-            "X-NaC-Provider-Url": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+            "X-NaC-Provider-Url": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
             "X-NaC-Callback-State": "state-secret-1",
         }
 
@@ -3059,7 +3037,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertNotIn(cookie_header, html)
         self.assertNotIn("notar@example.test", html)
         self.assertNotIn("nonce-from-id-token", html)
-        self.assertNotIn("idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com", html)
+        self.assertNotIn("login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0", html)
         self.assertNotIn("state-secret-1", html)
         self.assertNotIn("Oracle", html)
         self.assertNotIn("OCI", html)
@@ -3078,11 +3056,11 @@ class NaCLocalWebTests(unittest.TestCase):
             tenant_hint="myjur",
             signing_key="unit-test-state-signing-key",
         )
-        secret_ocid = "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"
+        secret_ref = "secret-ref-state-key"
 
         with patch.dict(
             os.environ,
-            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": secret_ocid},
+            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF": secret_ref},
             clear=False,
         ):
             status, content_type, body = app.handle(
@@ -3094,11 +3072,11 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "text/html; charset=utf-8")
-        self.assertEqual(requested_secret_ids, [secret_ocid])
+        self.assertEqual(requested_secret_ids, [secret_ref])
         self.assertIn("Sicherheitsprüfung bestätigt", html)
         self.assertIn("Arbeitsbereich bleibt geschlossen", html)
         self.assertNotIn("unit-test-state-signing-key", html)
-        self.assertNotIn(secret_ocid, html)
+        self.assertNotIn(secret_ref, html)
         self.assertNotIn(state, html)
         self.assertEqual(admin_status, 403)
         self.assertIn("notariat8 Anmeldung erforderlich", admin_html)
@@ -3111,7 +3089,7 @@ class NaCLocalWebTests(unittest.TestCase):
 
         with patch.dict(
             os.environ,
-            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"},
+            {"NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF": "secret-ref-state-key"},
             clear=False,
         ):
             status, content_type, body = app.handle(
@@ -3123,7 +3101,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(content_type, "text/html; charset=utf-8")
         self.assertIn("Anmeldung nicht abgeschlossen", html)
         self.assertNotIn("vault down", html)
-        self.assertNotIn("ocid1.vaultsecret", html)
+        self.assertNotIn("secret-ref", html)
         self.assertNotIn("secret-code-from-idp", html)
         self.assertNotIn("attacker-state", html)
 
@@ -3150,7 +3128,7 @@ class NaCLocalWebTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
@@ -3160,20 +3138,25 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "application/json; charset=utf-8")
-        self.assertEqual(payload["schema_version"], "nac.oci-login-intent/v0.1")
-        self.assertIn("/oauth2/v1/authorize", payload["authorization_url"])
+        self.assertEqual(payload["schema_version"], "nac.oidc-login-intent/v0.1")
+        self.assertEqual(payload["provider"], "microsoft_entra_id")
+        self.assertIn("/oauth2/v2.0/authorize", payload["authorization_url"])
+        self.assertEqual(
+            payload["endpoints"]["token_endpoint"],
+            "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/oauth2/v2.0/token",
+        )
         self.assertNotIn("notariat-musterstadt", payload["authorization_url"])
         self.assertFalse(payload["tenant_context"]["tenant_authorized_by_hint"])
         self.assertNotEqual(payload["oidc"]["state"], "state-1234567890")
         self.assertNotEqual(payload["oidc"]["nonce"], "nonce-1234567890")
 
-    def test_login_intent_api_rejects_placeholder_identity_domain_url(self) -> None:
+    def test_login_intent_api_rejects_placeholder_issuer_url(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
 
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs.example.identity.oraclecloud.com:443",
+                "NAC_OIDC_ISSUER_URL": "https://example.invalid",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
@@ -3183,7 +3166,7 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 400)
         self.assertEqual(content_type, "application/json; charset=utf-8")
-        self.assertEqual(payload["error"], "identity_domain_url_placeholder")
+        self.assertEqual(payload["error"], "issuer_url_placeholder")
 
     def test_login_intent_api_rejects_placeholder_client_id(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -3191,7 +3174,7 @@ class NaCLocalWebTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
                 "NAC_OIDC_CLIENT_ID": "nac-local-preview",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
             },
@@ -3211,7 +3194,7 @@ class NaCLocalWebTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
                 "NAC_OIDC_STATE_SIGNING_KEY": "unit-test-state-signing-key",
@@ -3249,15 +3232,15 @@ class NaCLocalWebTests(unittest.TestCase):
             return "unit-test-state-signing-key"
 
         app = NaCLocalWebApp(REPO_ROOT, secret_text_provider=secret_text_provider)
-        secret_ocid = "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key"
+        secret_ref = "secret-ref-state-key"
 
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": secret_ocid,
+                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF": secret_ref,
             },
         ):
             status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
@@ -3270,7 +3253,7 @@ class NaCLocalWebTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(content_type, "application/json; charset=utf-8")
-        self.assertEqual(requested_secret_ids, [secret_ocid])
+        self.assertEqual(requested_secret_ids, [secret_ref])
         self.assertEqual(payload["state_binding"]["status"], "signed")
         self.assertTrue(payload["state_binding"]["nonce_bound"])
         self.assertEqual(validation["status"], "valid")
@@ -3281,7 +3264,7 @@ class NaCLocalWebTests(unittest.TestCase):
             hashlib.sha256(payload["oidc"]["nonce"].encode("utf-8")).hexdigest(),
         )
         self.assertNotIn("unit-test-state-signing-key", serialized)
-        self.assertNotIn(secret_ocid, serialized)
+        self.assertNotIn(secret_ref, serialized)
         self.assertNotIn("client_secret", serialized)
 
     def test_login_intent_api_fails_closed_when_vault_state_key_is_unavailable(self) -> None:
@@ -3293,10 +3276,10 @@ class NaCLocalWebTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "NAC_OCI_IDENTITY_DOMAIN_URL": "https://idcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com",
+                "NAC_OIDC_ISSUER_URL": "https://login.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0",
                 "NAC_OIDC_CLIENT_ID": "nac-web-app",
                 "NAC_OIDC_REDIRECT_URI": "https://app.notariat8.de/auth/callback",
-                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_OCID": "ocid1.vaultsecret.oc1.eu-frankfurt-1.state-key",
+                "NAC_OIDC_STATE_SIGNING_KEY_SECRET_REF": "secret-ref-state-key",
             },
         ):
             status, content_type, body = app.handle("/api/tenant/login-intent?tenant_hint=notariat-musterstadt")
@@ -3306,7 +3289,7 @@ class NaCLocalWebTests(unittest.TestCase):
         self.assertEqual(content_type, "application/json; charset=utf-8")
         self.assertEqual(payload["error"], "state_signing_key_unavailable")
         self.assertNotIn("vault down", json.dumps(payload, sort_keys=True))
-        self.assertNotIn("ocid1.vaultsecret", json.dumps(payload, sort_keys=True))
+        self.assertNotIn("secret-ref", json.dumps(payload, sort_keys=True))
 
     def test_login_intent_api_rejects_caller_supplied_oidc_config(self) -> None:
         app = NaCLocalWebApp(REPO_ROOT)
@@ -3314,7 +3297,7 @@ class NaCLocalWebTests(unittest.TestCase):
         status, content_type, body = app.handle(
             "/api/tenant/login-intent"
             "?tenant_hint=notariat-musterstadt"
-            "&identity_domain_url=https%3A%2F%2Fidcs-c98667d9d2e74ab288ad6bcd0830c774.identity.oraclecloud.com"
+            "&issuer_url=https%3A%2F%2Flogin.microsoftonline.com/870c862b-56f7-4c9b-b0d9-f1f7d32c835c/v2.0"
             "&state=attacker-state"
             "&nonce=attacker-nonce"
         )

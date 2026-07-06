@@ -20,14 +20,27 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         )
 
         self.assertEqual(contract["schema_version"], "nac.customer-tenant-onboarding/v0.1")
+        self.assertEqual(contract["status"], "final_m365_mvp")
         self.assertEqual(contract["public_entry_surface"], "www-n8")
         self.assertEqual(contract["app_surface"], "app.notariat8.de")
         self.assertIn("customer_domain_readiness", contract["customer_journey"])
         self.assertIn("live_dns_txt_check", contract["customer_journey"])
         self.assertIn("saas_admin_review_queue", contract["saas_admin_journey"])
+        self.assertIn("m365_graph_privileged_change_plan", contract["saas_admin_journey"])
+        self.assertNotIn("oci_identity_apply_plan", contract["saas_admin_journey"])
+        self.assertEqual(contract["m365_target_model"]["identity_provider"], "entra_id")
+        self.assertEqual(contract["m365_target_model"]["workspace_strategy"], "team_per_notary_team")
+        self.assertTrue(contract["m365_target_model"]["graph_rest_only"])
+        self.assertEqual(contract["sharepoint_target_model"]["strategy"], "team_site_lists_and_document_libraries")
+        self.assertNotIn("oci_target_model", contract)
+        self.assertNotIn("atp_target_model", contract)
         self.assertFalse(contract["guardrails"]["customer_oci_console_required"])
+        self.assertTrue(contract["guardrails"]["oci_atp_mvp_data_plane_archived"])
+        self.assertTrue(contract["guardrails"]["m365_graph_rest_only"])
+        self.assertFalse(contract["guardrails"]["legacy_sharepoint_api_allowed"])
+        self.assertFalse(contract["guardrails"]["productive_graph_write_without_owner_apply"])
 
-    def test_customer_tenant_plan_uses_compartment_and_shared_atp_mapping(self) -> None:
+    def test_customer_tenant_plan_uses_m365_group_and_sharepoint_mapping(self) -> None:
         from nac_identity.customer_onboarding import build_customer_tenant_plan
 
         plan = build_customer_tenant_plan(
@@ -41,10 +54,13 @@ class CustomerTenantOnboardingTests(unittest.TestCase):
         self.assertEqual(plan["schema_version"], "nac.customer-tenant-plan/v0.1")
         self.assertEqual(plan["tenant"]["domain"], "kanzlei-notariat.example")
         self.assertEqual(plan["admin_user"]["email"], "admin@kanzlei-notariat.example")
-        self.assertEqual(plan["oci"]["identity"]["customer_domain_strategy"], "single_secondary_domain")
-        self.assertEqual(plan["oci"]["resource_isolation"]["compartment_strategy"], "one_compartment_per_customer_domain")
-        self.assertEqual(plan["atp"]["strategy"], "shared_atp_with_tenant_id")
-        self.assertIn("tenant_id", plan["atp"]["required_controls"])
+        self.assertEqual(plan["m365"]["identity"]["provider"], "entra_id")
+        self.assertEqual(plan["m365"]["workspace"]["strategy"], "team_per_notary_team")
+        self.assertEqual(plan["m365"]["data_plane"]["strategy"], "teams_sharepoint_graph_rest")
+        self.assertTrue(plan["m365"]["data_plane"]["graph_rest_only"])
+        self.assertFalse(plan["m365"]["data_plane"]["legacy_sharepoint_api_allowed"])
+        self.assertEqual(plan["sharepoint"]["strategy"], "team_site_lists_and_document_libraries")
+        self.assertIn("tenant_id", plan["sharepoint"]["required_controls"])
         self.assertTrue(plan["requires_owner_apply"])
         self.assertNotIn("private_key", serialized)
         self.assertNotIn("client_secret", serialized)

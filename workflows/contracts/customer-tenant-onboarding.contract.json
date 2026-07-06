@@ -2,9 +2,9 @@
   "schema_version": "nac.customer-tenant-onboarding/v0.1",
   "contract_id": "workflow.customer_tenant_onboarding",
   "title": "Customer-Centric Tenant Onboarding",
-  "status": "planned_mvp",
-  "last_update": "2026-05-28",
-  "purpose": "Definiert die sichtbare Neukundenreise von www-n8 bis zum initialen Kundenadmin in NaC. NaC führt Domain-Readiness, DNS-Challenge, SaaS-Admin-Review, Owner-Apply-Plan und Tenant Registry.",
+  "status": "final_m365_mvp",
+  "last_update": "2026-07-06",
+  "purpose": "Definiert die sichtbare Neukundenreise von www-n8 bis zum initialen Kundenadmin in NaC. NaC führt Domain-Readiness, DNS-Challenge, SaaS-Admin-Review, Owner-Apply-Plan und die M365-/SharePoint-Tenant-Registry.",
   "public_entry_surface": "www-n8",
   "app_surface": "app.notariat8.de",
   "customer_journey": [
@@ -22,23 +22,26 @@
     "domain_readiness_review",
     "tenant_registry_plan_review",
     "owner_apply_approval",
-    "oci_identity_apply_plan",
+    "m365_graph_privileged_change_plan",
     "invitation_audit_record"
   ],
-  "oci_target_model": {
-    "saas_admin_domain": "Default",
-    "customer_identity_domain_strategy": "single_secondary_domain",
-    "resource_isolation": "one_compartment_per_customer_domain",
-    "customer_console_required": false,
-    "productive_write_gate": "owner_apply_approval"
+  "m365_target_model": {
+    "identity_provider": "entra_id",
+    "tenant_binding": "microsoft_365_group_membership",
+    "workspace_strategy": "team_per_notary_team",
+    "technical_owner_user": "funktion8@funktion8.de",
+    "productive_write_gate": "owner_apply_approval",
+    "graph_rest_only": true
   },
-  "atp_target_model": {
-    "strategy": "shared_atp_with_tenant_id",
+  "sharepoint_target_model": {
+    "strategy": "team_site_lists_and_document_libraries",
     "required_controls": [
       "tenant_registry",
       "tenant_id",
-      "row_level_tenant_scope",
-      "audit_tenant_context"
+      "matter_id",
+      "role_bound_site_permission",
+      "time_limited_delegation_grant",
+      "audit_journal_lite"
     ]
   },
   "apply_gates": [
@@ -51,8 +54,11 @@
   ],
   "guardrails": {
     "customer_oci_console_required": false,
+    "oci_atp_mvp_data_plane_archived": true,
+    "m365_graph_rest_only": true,
+    "legacy_sharepoint_api_allowed": false,
     "www_n8_accepts_mandate_data": false,
-    "productive_oci_write_without_owner_apply": false,
+    "productive_graph_write_without_owner_apply": false,
     "github_contains_secrets": false
   }
 }
