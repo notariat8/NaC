@@ -120,7 +120,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Spec-Traceability, Secure-Link-Grenzen, Teams-/SharePoint-Graph-Datenebene und Legal-Research-Connector-Kandidaten. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac m365 teams-sharepoint mcp-manifest` und `nac m365 teams-sharepoint mcp-stdio` | Plant die Teams/SharePoint-Datenebene, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus, prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente, zeigt das sichere Tool-Manifest von `teams-sharepoint-data-mcp` ohne Live-Zugriff und startet den lokalen MCP-stdio-Adapter für Request-Planung. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint mcp-manifest` und `nac m365 teams-sharepoint mcp-stdio` | Plant die Teams/SharePoint-Datenebene, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus, prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente, rendert Batch-Freigabetexte ohne Live-Zugriff, zeigt das sichere Tool-Manifest von `teams-sharepoint-data-mcp` ohne Live-Zugriff und startet den lokalen MCP-stdio-Adapter für Request-Planung. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
@@ -243,6 +243,7 @@ brauchen ein Owner-Gate:
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
+nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
@@ -255,6 +256,10 @@ MVP-Schema.
 Graph-REST-Grenzen aus. `mcp-stdio` ist ebenfalls offline und spricht
 newline-delimited JSON-RPC über stdin/stdout. `tools/call` plant nur
 Microsoft-Graph-v1.0-Requests und führt keine Requests aus.
+`nac batch-approval m365` ist ebenfalls offline. Der Befehl rendert kopierbare
+Owner-Freigabetexte für vorbereitete PR-Batches und synthetische
+Live-Smoke-Batches, führt aber weder GitHub- noch
+Microsoft-Graph-Schreibaktionen aus.
 
 `mcp-stdio --owner-approved --mcp-live-read` aktiviert zusätzlich Live-Reads
 für `case_get` und `document_list`. Dafür müssen Runtime-Credentials außerhalb
