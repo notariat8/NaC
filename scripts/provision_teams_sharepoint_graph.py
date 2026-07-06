@@ -46,6 +46,11 @@ from nac_m365_graph.mcp_smoke_cleanup import (  # noqa: E402
     run_mcp_smoke_cleanup_from_paths,
     write_mcp_smoke_cleanup_artifact,
 )
+from nac_m365_graph.mcp_smoke_leftover_cleanup import (  # noqa: E402
+    DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT,
+    run_mcp_smoke_leftover_cleanup_from_paths,
+    write_mcp_smoke_leftover_cleanup_artifact,
+)
 from nac_m365_graph.mcp_smoke_suite import (  # noqa: E402
     DEFAULT_MCP_SMOKE_SUITE_OUTPUT,
     run_mcp_smoke_suite_from_paths,
@@ -74,6 +79,7 @@ def parse_args() -> argparse.Namespace:
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
             "mcp-smoke-cleanup",
+            "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
             "apply",
             "drift",
@@ -165,6 +171,17 @@ def parse_args() -> argparse.Namespace:
         help="Path for the redacted MCP smoke cleanup artifact under out/.",
     )
     parser.add_argument(
+        "--mcp-leftover-output",
+        type=Path,
+        default=DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT,
+        help="Path for the redacted MCP smoke leftover cleanup artifact under out/.",
+    )
+    parser.add_argument(
+        "--mcp-leftover-dry-run",
+        action="store_true",
+        help="Only read and report synthetic smoke leftovers; do not delete.",
+    )
+    parser.add_argument(
         "--mcp-suite-output",
         type=Path,
         default=DEFAULT_MCP_SMOKE_SUITE_OUTPUT,
@@ -185,6 +202,69 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "mcp-smoke-leftover-cleanup":
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["mcp-smoke-leftover-cleanup requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            result = run_mcp_smoke_leftover_cleanup_from_paths(
+                client,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=args.mcp_smoke_correlation_id,
+                delete_after=not args.mcp_leftover_dry_run,
+            )
+            write_mcp_smoke_leftover_cleanup_artifact(result, args.mcp_leftover_output)
+        except GraphConfigError as exc:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=2,
+            )
+        except GraphHttpError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": ["Microsoft Graph request failed during smoke leftover cleanup"],
+                    "summary": {
+                        "graph_http_status": exc.status,
+                        "graph_error_code": _graph_error_code(exc.body),
+                    },
+                },
+                args.json,
+                return_code=1,
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.mcp_leftover_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
     if args.command == "mcp-smoke-suite":
         if not args.owner_approved:
             return _emit(

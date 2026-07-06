@@ -26,6 +26,16 @@ class GraphRestClientTests(unittest.TestCase):
 
         self.assertEqual(request.headers["Prefer"], "HonorNonIndexedQueriesWarningMayFailRandomly")
 
+    def test_get_with_sharepoint_startswith_fields_filter_sets_nonindexed_query_prefer_header(self) -> None:
+        client = GraphRestClient(_TokenProvider())
+
+        with patch("nac_m365_graph.graph_client.urllib.request.urlopen", return_value=_JsonResponse({})) as urlopen:
+            client.get("/sites/site-id/lists/list-id/items?$filter=startswith(fields/NacCaseId,'NAC-SMOKE')")
+
+        request = urlopen.call_args.args[0]
+
+        self.assertEqual(request.headers["Prefer"], "HonorNonIndexedQueriesWarningMayFailRandomly")
+
     def test_get_without_sharepoint_fields_filter_does_not_set_prefer_header(self) -> None:
         client = GraphRestClient(_TokenProvider())
 

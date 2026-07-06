@@ -245,6 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
             "mcp-smoke-cleanup",
+            "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
             "apply",
             "drift",
@@ -296,6 +297,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-cleanup-output",
         type=Path,
         help="Pfad fuer das redigierte MCP-Smoke-Cleanup-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--mcp-leftover-output",
+        type=Path,
+        help="Pfad fuer das redigierte MCP-Smoke-Leftover-Cleanup-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--mcp-leftover-dry-run",
+        action="store_true",
+        help="Liest synthetische Smoke-Reste nur owner-gated, ohne zu löschen.",
     )
     teams_sharepoint.add_argument(
         "--mcp-suite-output",
@@ -1088,6 +1099,10 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-positive-smoke-output", str(args.mcp_positive_smoke_output)])
         if args.mcp_cleanup_output:
             script_args.extend(["--mcp-cleanup-output", str(args.mcp_cleanup_output)])
+        if args.mcp_leftover_output:
+            script_args.extend(["--mcp-leftover-output", str(args.mcp_leftover_output)])
+        if args.mcp_leftover_dry_run:
+            script_args.append("--mcp-leftover-dry-run")
         if args.mcp_suite_output:
             script_args.extend(["--mcp-suite-output", str(args.mcp_suite_output)])
         if args.mcp_suite_cleanup:
