@@ -17,8 +17,8 @@ Arbeitsmodell und Repo-Konsolidierung.
   Toolzeit, Freigaben und wiederkehrende Wartezeiten.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optionaler lokaler qmd-Suchindex
   für Agent-Regeln, Release-Memory und Runbooks ohne Secrets oder Mandatsdaten.
-- [oci-runtime.md](oci-runtime.md): Live-Runtime-Vertrag, App-Release-Overlay
-  und Abgrenzung zu VM-Replacement für `app.notariat8.de`.
+- [oci-runtime.md](oci-runtime.md): archivierter Legacy-Runtime-Vertrag für
+  OCI, ATP und OCI-Release-Pfade; nicht Teil des aktiven M365-MVP.
 - [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): Owner-gated
   ausgeführter Ponytail Skill-Only Smoke für `notoclaw01` mit
   Target-Control-Evidence und ohne Installation, Hooks oder Runtime-Aktivierung.

@@ -50,6 +50,7 @@ https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanz
 https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
 https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt
 python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
 python scripts/nac.py bpmn validate
 ```
@@ -142,15 +143,15 @@ Say:
   setup status, but no mandate data."
 - "The DNS check is a readiness status. `pending`, `mismatch` or `verified`
   are setup states, not live debugging."
-- "An existing request can be shown as a status page. If the ATP store is
-  `disabled` or `unavailable`, that remains a gate and we do not debug the
+- "An existing request can be shown as a status page. If the M365/SharePoint
+  plan is `unavailable`, that remains a gate and we do not debug the legacy
   database during the meeting."
 
 Do not:
 
 - Submit a new onboarding request.
 - Run admin review POSTs.
-- Open ATP wallet, DSN, secret reference or cloud console.
+- Open no legacy ATP wallet, DSN, secret reference or cloud console.
 
 Fallback:
 
@@ -195,7 +196,7 @@ Say:
   closed."
 - "Protected start is metadata-only: status, gate and reason, but no matter
   file and no document contents."
-- "The ATP healthcheck is only a store gate. `https://app.notariat8.de/healthz`
+- "The M365/SharePoint plan is only a store gate. `https://app.notariat8.de/healthz`
   intentionally stays short and non-sensitive."
 - "We continue login only if it is approved for this demo; otherwise
   fail-closed is the intended result."

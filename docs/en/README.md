@@ -70,7 +70,7 @@ regardless of the language used in the prompt. The binding rule is defined in
   office UI and the checkable NaC core work together.
 - [docs/en/authenticated-webapp-operating-model.md](authenticated-webapp-operating-model.md)
   defines the target model for GitHub Pages as a static reading layer, the
-  authenticated web app, OCI Identity Domains, card gates and mobile secure document links.
+  authenticated web app, Entra ID/M365 binding, card gates and mobile secure document links.
 - [docs/en/cli.md](cli.md) explains the technical `nac` control surface behind
   the office UI, first commands and the architecture rule for new functionality.
 - [docs/en/bpmn-js-business-layer.md](bpmn-js-business-layer.md) explains why
@@ -112,30 +112,31 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the work split between Project Manager, `brev01` development and
   `notoclaw01` target operation.
 - [docs/en/architecture/nac-onprem-agent-runtime.md](architecture/nac-onprem-agent-runtime.md)
-  defines the target-system contract for NaC as an on-prem agent runtime with
-  the NeMo/AIQ decision, NemoClaw/OpenClaw target-control, connector stubs and
-  owner gates.
+  is the archived legacy target-system contract for the OCI-bound NaC on-prem
+  agent runtime; it is not part of the active M365 MVP path.
 - [docs/en/architecture/nemo-agent-toolkit-aiq-m365.md](architecture/nemo-agent-toolkit-aiq-m365.md)
   defines the productive agentic runtime decision for NVIDIA NeMo Agent
   Toolkit / AI-Q, Microsoft 365 MCP servers and local workstation sidecars.
 - [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
   defines MVP storage through Teams, Microsoft 365 group, SharePoint team site
   and Microsoft Graph REST without legacy SharePoint APIs or SDKs.
+- [docs/en/architecture/omnigraph-ontology-projection.md](architecture/omnigraph-ontology-projection.md)
+  records the decision note for Omnigraph as a later optional ontology
+  projection, not as MVP storage and not as a BPMN engine.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.
 - [docs/en/architecture/agent-runtime-registry.md](architecture/agent-runtime-registry.md)
-  defines the ATP-backed agent registry, outbound connector endpoint,
-  sandbox-binding and sandbox-lease boundary behind `agent.notariat8.de`.
+  is the archived legacy ATP-backed agent registry; it is not active MVP
+  storage.
 - [docs/en/architecture/agent-control-api.md](architecture/agent-control-api.md)
-  defines the OCI/BFF API boundary for `agent.notariat8.de`, browser-session
-  routes, connector-control routes and metadata-only payload rules.
+  is the archived legacy OCI/BFF API boundary for `agent.notariat8.de`.
 - [docs/en/architecture/notarial-onprem-connector-boundaries.md](architecture/notarial-onprem-connector-boundaries.md)
   defines notarial on-prem connector boundaries for XNP/SNP, XNotar,
   cyberJack/card workstation, registers and land registers without live apply.
 - [docs/en/architecture/matter-data-classification-redaction.md](architecture/matter-data-classification-redaction.md)
   defines matter-data classification and redaction boundaries for GitHub,
-  `notoclaw01`, web-app status, ATP metadata and later private runtime stores.
+  web-app status, archived ATP metadata and later private runtime stores.
 - [docs/en/architecture/private-operating-frame-gate.md](architecture/private-operating-frame-gate.md)
   defines the private operating frame and private-payload gate before real
   matter-data processing.
@@ -167,11 +168,11 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [schemas/](../../schemas) defines structured process requests.
 - [workflows/contracts/kg-editor.contract.json](../../workflows/contracts/kg-editor.contract.json) defines the implemented KG editor contract for the usecase-local knowledge graphs.
 - [workflows/contracts/codex-parallel-review.contract.json](../../workflows/contracts/codex-parallel-review.contract.json) defines the contract for explicit parallel Codex reviews with read-only agent profiles and fresh validation.
-- [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json) defines the contract for NaC as an on-prem agent runtime on `notoclaw01` with target-control paths, connector stubs and owner gates.
-- [workflows/contracts/agent-runtime-registry.contract.json](../../workflows/contracts/agent-runtime-registry.contract.json) defines the ATP-backed agent registry, outbound connector endpoints, sandbox bindings, sandbox leases and session-lease bindings behind `agent.notariat8.de`.
-- [workflows/contracts/agent-control-api.contract.json](../../workflows/contracts/agent-control-api.contract.json) defines the allowed OCI/BFF API boundary from `agent.notariat8.de` to the outbound `notoclaw01` connector without route apply.
+- [workflows/contracts/nac-onprem-agent-runtime.contract.json](../../workflows/contracts/nac-onprem-agent-runtime.contract.json) is archived as the legacy contract for the inactive OCI-bound on-prem agent runtime.
+- [workflows/contracts/agent-runtime-registry.contract.json](../../workflows/contracts/agent-runtime-registry.contract.json) is archived as the legacy contract for the inactive ATP-backed agent registry.
+- [workflows/contracts/agent-control-api.contract.json](../../workflows/contracts/agent-control-api.contract.json) is archived as the legacy contract for the inactive OCI/BFF API boundary.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](../../workflows/contracts/notarial-onprem-connector-boundaries.contract.json) defines XNP/SNP, XNotar, card-workstation, register and land-register paths as local readiness and redacted evidence boundaries.
-- [workflows/contracts/matter-data-classification-redaction.contract.json](../../workflows/contracts/matter-data-classification-redaction.contract.json) defines matter-data classification, redaction evidence and storage boundaries between GitHub, `notoclaw01`, web-app status, ATP metadata and the private operating frame.
+- [workflows/contracts/matter-data-classification-redaction.contract.json](../../workflows/contracts/matter-data-classification-redaction.contract.json) defines matter-data classification, redaction evidence and storage boundaries between GitHub, web-app status, archived ATP metadata and the private operating frame.
 - [workflows/contracts/private-operating-frame-gate.contract.json](../../workflows/contracts/private-operating-frame-gate.contract.json) defines the gate contract for later private payloads with privacy, role, storage, encryption, retention, audit and owner gates.
 - [workflows/contracts/private-payload-target-design.contract.json](../../workflows/contracts/private-payload-target-design.contract.json) defines the logical envelope/pointer target model for private payloads without a DDL artifact, apply or private example data.
 - [workflows/contracts/private-payload-access-policy.contract.json](../../workflows/contracts/private-payload-access-policy.contract.json) defines roles, purposes, access matrix, step-up, human review, audit and global denials for later private payloads without live access.

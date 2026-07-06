@@ -1,5 +1,9 @@
 # Data Sovereignty: Git Templates And ATP Runtime Data
 
+Archive status since 2026-07-06: this data-sovereignty decision has been
+superseded for the M365 MVP. Active storage starts through Teams, SharePoint
+team sites and Microsoft Graph REST/MCP; ATP remains only a legacy reference.
+
 Status: target-architecture decision, without productive schema apply.
 
 Companion model decision:

@@ -1,15 +1,16 @@
 # Mandatsdaten-Klassifikation und Redaktion
 
 Status: Vertragsgrenze für metadata-only Betrieb
-Letzte inhaltliche Anpassung: 2026-06-28
+Letzte inhaltliche Anpassung: 2026-07-06
 
 ## Zweck
 
 Diese Seite definiert die Datenklassifikation zwischen NaC-GitOps,
-`notoclaw01`-Target-Control, Webapp-Status, ATP-Metadaten und späteren
-privaten Runtime-Speichern. Sie beantwortet die Frage, wann ein Datum noch
-als sichere Prozessmetadaten gilt und wann es als Mandatsdatum einen
-separaten privaten Betriebsrahmen braucht.
+Webapp-Status, M365/SharePoint-Metadaten, redigierter Evidence und späteren
+privaten Runtime-Speichern. Sie beantwortet die Frage, wann ein Datum noch als
+sichere Prozessmetadaten gilt und wann es als Mandatsdatum einen separaten
+privaten Betriebsrahmen braucht. Frühere ATP-Metadaten-Slices sind archivierte
+Legacy-Referenzen, nicht aktive MVP-Datenhaltung.
 
 Der maschinenlesbare Vertrag steht in
 [workflows/contracts/matter-data-classification-redaction.contract.json](../../../workflows/contracts/matter-data-classification-redaction.contract.json)
@@ -20,9 +21,9 @@ geprüft.
 ## Grundregel
 
 GitHub, das Produktrepo, die öffentliche Demo, der geschützte Startstatus,
-ATP in der ersten Metadaten-Scheibe und `/home/ubuntu/nac-target-control`
-speichern keine echten Mandatsdaten. Sie dürfen nur Prozessmetadaten,
-synthetische Beispiele, Policy-Verweise und redigierte Evidence führen.
+M365/SharePoint-Metadatenlisten und lokale Target-Control-Smokes speichern
+keine echten Mandatsdaten. Sie dürfen nur Prozessmetadaten, synthetische
+Beispiele, Policy-Verweise, Hashes, Pointer und redigierte Evidence führen.
 
 Echte Mandatsinhalte beginnen bereits bei Beteiligten-, Objekt-, Register-,
 Grundbuch-, Zahlungs-, Familien-, Erb-, Dokument- oder Ausweisbezug. Diese
@@ -65,9 +66,9 @@ Gesperrt bleiben insbesondere:
 | Fläche | Grenze |
 | --- | --- |
 | Produktrepo und GitHub | Nur Quellartefakte, Policies, synthetische Beispiele und redigierte Evidence. Private Payloads sind hier nicht erlaubt. |
-| `notoclaw01` Target-Control | Nur Manifeste, Smokes, Stubs und nicht-sensitive Evidence. Sobald private Payloads nötig werden, erfolgt Handoff an den Project Manager. |
+| Lokale Target-Control-Smokes | Nur Manifeste, Smokes, Stubs und nicht-sensitive Evidence. Sobald private Payloads nötig werden, erfolgt Handoff an den Project Manager. |
 | Webapp-Startstatus | Nur geschuetzter Status ohne Mandatsdaten. Der eigentliche Arbeitsbereich bleibt bis zum privaten Gate geschlossen. |
-| ATP-Metadaten-Scheibe | Nur sichere Runtime-Metadaten, Events, Bindungen und Hashes ohne Rohinhalt. Private Payloads brauchen ein separates Schema- und Apply-Gate. |
+| M365/SharePoint-Metadatenebene | Nur sichere Runtime-Metadaten, Events, Bindungen, Hashes und Pointer ohne Rohinhalt. Private Payloads brauchen ein separates Speicher-, Rollen- und Apply-Gate. |
 | Secure-Document-Link-Evidence | Nur Zweck, Ablauf, Bindung, Widerruf, Audit und Hash/Pointer. Dokumentinhalt bleibt außerhalb der Evidence. |
 
 ## Redaktionsnachweis
@@ -93,19 +94,19 @@ Diese Evidence beweist nicht den privaten Inhalt. Sie beweist nur, dass eine
 Grenze geprüft wurde und keine Secrets oder Mandatsdaten in die falsche
 Fläche gelangt sind.
 
-## Bezug Zu NemoClaw Und ATP
+## Bezug Zu Lokalen Smokes Und M365
 
-NemoClaw/OpenClaw darf im Zielsystem Agenten, Connector-Stubs und lokale Smokes
-führen. Es wird dadurch nicht zum Speicher für Mandatsdaten und nicht zur
-Quelle der NaC-Verträge. ATP darf in der ersten Runtime-Schicht nur
-Metadaten, Ereignisse, Bindungen und Hashes halten. Ein Graph- oder Ontologie-
-Ausbau kann darauf modellieren, muss aber Mandatsinhalte bis zum privaten Gate
-ausklammern.
+Lokale Sidecars oder Target-Control-Smokes dürfen Agenten, Connector-Stubs und
+Arbeitsplatzprüfungen führen. Sie werden dadurch nicht zum Speicher für
+Mandatsdaten und nicht zur Quelle der NaC-Verträge. Die M365/SharePoint-
+Metadatenebene darf im MVP nur Metadaten, Ereignisse, Bindungen, Hashes und
+Pointer halten. Ein Graph- oder Ontologie-Ausbau kann darauf modellieren, muss
+aber Mandatsinhalte bis zum privaten Gate ausklammern.
 
 Damit bleibt die Aufteilung klar:
 
 - NaC-GitOps führt Contracts, BPMN, KG, Policies, Tests und PRs.
-- `notoclaw01` führt Zielsystem-Smokes und nicht-sensitive Evidence.
+- lokale Sidecars führen Arbeitsplatz-Smokes und nicht-sensitive Evidence.
 - Ein späterer privater Runtime-Speicher führt echte Mandatsdaten erst nach
   explizitem Owner-, Datenschutz-, Sicherheits- und Rollen-Gate nach
   [private-operating-frame-gate.md](private-operating-frame-gate.md).

@@ -1,10 +1,11 @@
 # Runtime Status Wiring Runbook
 
-Status: owner-free contract-first boundary, no OCI Apply.
+Status: owner-free contract-first boundary, no productive cloud apply.
 
 This runbook describes how the current notariat8 portal start for the first
-Immobilienkaufvertrag moves safely from demo status to the later ATP runtime
-store. It is not a deployment or database migration plan.
+Immobilienkaufvertrag moves safely from demo status to the later M365/SharePoint
+runtime and event journal. It is not a deployment, database or SharePoint apply
+plan.
 
 ## Current Safe Path
 
@@ -25,11 +26,12 @@ The visible demo explains BPMN, XNP/SNP, completion, duration bands and the
 critical path without loading real parties, file contents, register data or
 land-register data.
 
-## Later ATP Path
+## Later M365/Event-Journal Path
 
-ATP becomes the runtime data store for tenants, user bindings, matters, process
-instances, process events and audit metadata. The first product-adjacent wiring
-does not replace the contract; it replaces only the adapter:
+M365/SharePoint lists and a later event journal become the runtime data stores
+for tenants, user bindings, matters, process instances, process events and
+audit metadata. The first product-adjacent wiring does not replace the contract;
+it replaces only the adapter:
 
 - `RuntimeStoreAdapter` remains the functional boundary.
 - `process_events` stay append-only.
@@ -39,39 +41,33 @@ does not replace the contract; it replaces only the adapter:
 - The full workspace remains closed until a separate owner-gated boundary is
   approved functionally and technically.
 
-## ATP Metadata Seam
+## M365/JSON Metadata Seam
 
-The protected first matter status can be prepared for the later ATP source
-through environment switches without triggering a database migration, wallet or
-secret change, or OCI Apply:
+The active metadata seam stays database-free and can later be connected to a
+Graph/SharePoint source for the first matter status. Old ATP values are no
+longer wired; they fail closed as archived. The protected first matter status
+can be checked through environment switches without triggering a database
+migration, wallet or secret change, or cloud apply:
 
-- `NAC_FIRST_MATTER_RUNTIME_SOURCE` activates the ATP metadata seam only for the
-  values `atp`, `atp-json`, `atp_metadata` or `atp-runtime-metadata`.
+- `NAC_FIRST_MATTER_RUNTIME_SOURCE` activates the metadata seam for the values
+  `json`, `metadata-json`, `sharepoint`, `m365` or `m365-sharepoint`.
 - `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` optionally overrides the logical runtime
   object key. Without a value, `DEMO-PROCESS-IMMOBILIENKAUF-01` is used.
 - `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` optionally overrides the JSON payload
   column. Without a value, `payload_json` is used.
-- `NAC_FIRST_MATTER_RUNTIME_TABLE` optionally overrides the allowed ATP anchor
-  table. Without a value, `nac_process_instances` is used.
-- `NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN` optionally overrides the allowed key
-  column. Without a value, `process_instance_id` is used.
-- The ATP row reader uses only allowed table and column names from the runtime
-  anchor list; environment values are not used unchecked as SQL identifiers.
-- The ATP connection uses existing `NAC_ATP_USER`, `NAC_ATP_DSN` and
-  `NAC_ATP_PASSWORD_SECRET_OCID` configuration. Plaintext passwords through
-  environment variables are not allowed; existing wallet references are only
-  reused.
-- If the ATP row reader is not available or is configured invalidly, the route
-  does not serve packaged fallback data and remains fail-closed.
+- The reader later uses Graph REST or an MCP server that wraps Graph REST
+  internally. Direct old SharePoint APIs, SDK-only access and Oracle ATP readers
+  are not part of the active path.
+- If the reader is not available yet or an archived ATP source is selected, the
+  route does not serve packaged fallback data and remains fail-closed.
 
 ## Fail-closed Rules
 
 The status path must fail-closed stay closed if any of these conditions occurs:
 
 - Runtime store unavailable.
-- ATP metadata seam active without an approved row reader.
-- ATP metadata seam configured with a disallowed table or column.
-- ATP metadata seam configured without an existing ATP secret reference.
+- Metadata seam active without an approved reader.
+- Archived ATP source selected.
 - Process instance or events missing.
 - Graph projection cannot be built from events.
 - Status model contains mandate data.
@@ -83,11 +79,11 @@ The status path must fail-closed stay closed if any of these conditions occurs:
 
 These steps still require explicit approval:
 
-- ATP schema migration.
-- ATP wallet, credential or secret changes.
-- OCI Function configuration or Resource Manager Apply.
+- M365/SharePoint list provisioning.
+- Graph permission changes.
+- Serverless Function configuration.
 - Productive XNP/SNP action.
 - Writing real mandate data.
 
 Without those approvals, the path remains a safe demo and contract-first path:
-no mandate data, no OCI Apply, no productive XNP action.
+no mandate data, no productive cloud apply, no productive XNP action.

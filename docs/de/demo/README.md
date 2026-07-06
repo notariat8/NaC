@@ -19,8 +19,8 @@ und Rolle geprüft sind.
    Zugriffspunkte erklären, ohne produktive Einreichungen oder produktiven
    API-Zugriff zu behaupten.
 6. Wechsel zu `https://app.notariat8.de`, Login und fail-closed-Grenze zeigen.
-7. ATP-Healthcheck und Store-Gate nur als technischen Statusnachweis nennen,
-   nicht als Mandatsdatenansicht.
+7. M365-/SharePoint-Plan und Store-Gate nur als technischen Statusnachweis
+   nennen, nicht als Mandatsdatenansicht.
 
 ## Dokumente in empfohlener Reihenfolge
 

@@ -29,8 +29,8 @@ no secrets and no real mandate data. All examples remain synthetic.
 7. Public onboarding can be shown today as a GET/status path: readiness, DNS
    check and request status, but no new request is submitted during the
    meeting.
-8. ATP healthcheck is a store gate: `enabled`, `disabled`, `unavailable` or
-   `not_checked`; secrets, wallets, DSN and OCI writes are not opened.
+8. M365/SharePoint plan is a store gate: `teams_sharepoint_graph_rest` or a
+   missing owner gate; secrets, wallets, DSN and OCI writes are not opened.
 
 ## Time Wording
 
@@ -75,12 +75,12 @@ boundary.
 | 3 | `https://app.notariat8.de/healthz` | Short, non-sensitive status. | Close the tab and show the workspace boundary. |
 | 4 | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` | Public onboarding shows setup status without mandate data. | Show the loaded tab; submit no request. |
 | 5 | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` and CLI DNS check | Expected TXT record and status are visible. | Explain `pending`/`mismatch` as setup status. |
-| 6 | `/onboarding/requests/<request_id>?audience=customer` | Status page for an existing request or `unavailable` as the store gate. | Do not debug ATP. |
+| 6 | `/onboarding/requests/<request_id>?audience=customer` | Status page for an existing request or `unavailable` as the store gate. | Do not debug legacy ATP. |
 | 7 | `https://app.notariat8.de/login` | Login page opens; no real credentials are entered; continue the login flow only when approved. | Do not debug, switch to the process model. |
 | 8 | Login intent as redacted CLI/curl check only, not as a browser tab | The read-only check stays credential-free and exposes no visible JSON surface. | If login intent must be checked, do not present the result; show the login page or workspace boundary. |
 | 9 | `https://app.notariat8.de/workspace` | Without an approved session, the workspace remains closed; metadata status only, no matter file. | Explain fail-closed as security evidence. |
 | 10 | BPMN validation | `/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate` stays green; `bpmn show immobilienkaufvertrag` is readable. | Use the public process-model page. |
-| 11 | ATP healthcheck status | `/healthz` shows runtime status; ATP store gate is only classified as `enabled`, `disabled`, `unavailable` or `not_checked`. | Open no secrets, wallets, DSN or OCI CLI. |
+| 11 | M365/SharePoint plan | `/healthz` shows runtime status; the M365 plan is only classified as `teams_sharepoint_graph_rest` or a missing owner gate. | Open no secrets, wallets, DSN or OCI CLI. |
 | 12 | XNP local | Card path, XNP localhost `12774` through `12784` and role are locally plausible only. | Show no live XNP action; mark Gate as `manual_review` or `blocked`. |
 | 13 | XNotar/XJustiz handoff | Exchange folder and package boundary are checkable synthetically or empty. | Open no package; explain only the handoff boundary. |
 
@@ -106,13 +106,13 @@ curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat
 curl -i "https://app.notariat8.de/workspace"
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
-/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json
+/home/ubuntu/.venvs/nac/bin/python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate
 /home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn show immobilienkaufvertrag --format text
 ```
 
 Do not execute: `POST /onboarding/requests`, `POST /admin/onboarding/review`,
-OCI CLI, Vault/wallet reads, ATP schema changes or real Identity
+OCI CLI, Vault/wallet reads, legacy ATP schema changes or real Identity
 provisioning.
 
 ## Login Triage
@@ -181,7 +181,8 @@ we now show the process path and check the technical cause after the meeting."
 2. 3-9 minutes: show `https://notariat8.de/prozessmodell.html`; name
    Immobilienkaufvertrag, duration logic, parallel work and critical path.
 3. 9-12 minutes: show public onboarding readiness and DNS status. If request
-   status or ATP is unavailable, explain `unavailable` as the store gate.
+   status or the M365/SharePoint plan is unavailable, explain `unavailable`
+   as the store gate.
 4. 12-15 minutes: explain XNP local, card reader, SAK lite, secureFramework,
    role and official activity context as the workstation boundary and Demo
    Gate. Start no productive XNP action.

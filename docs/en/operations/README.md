@@ -17,8 +17,8 @@ model and repository consolidation.
   tool time, approvals and repeated waiting time.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index
   for agent rules, release memory and runbooks without secrets or mandate data.
-- [oci-runtime.md](oci-runtime.md): live runtime contract, App Release Overlay
-  and VM replacement boundary for `app.notariat8.de`.
+- [oci-runtime.md](oci-runtime.md): archived legacy runtime contract for OCI,
+  ATP and OCI release paths; not part of the active M365 MVP.
 - [ponytail-skill-only-smoke.md](ponytail-skill-only-smoke.md): owner-gated
   executed Ponytail skill-only smoke for `notoclaw01` with target-control
   evidence and without installation, hooks or runtime activation.

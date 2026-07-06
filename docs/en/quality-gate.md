@@ -32,8 +32,7 @@ CI:
 - `strict`: `standard` plus governance policy sync, spec traceability,
   technology policy, language parity including skill language markers,
   documentation links, BPMN model validation, cloud runbook parity, Gantt,
-  AI-SBOM, AI-SBOM export mapping, ATP runtime contract, knowledge graph, NaC
-  on-prem agent runtime, notarial on-prem connector boundaries, matter-data
+  AI-SBOM, AI-SBOM export mapping, knowledge graph, Teams/SharePoint Graph data plane, matter-data
   classification/redaction and private operating frame gate, private-payload target design and
   private-payload access policy plus legal source inventory/license TDM,
   Legal Nemotron readiness, legal model-card/AI-SBOM delta, legal model-card
@@ -57,29 +56,24 @@ CI:
 12. `cloud_runbook_parity` only in `strict`
 13. `ai_sbom` only in `strict`
 14. `ai_sbom_export_mapping` only in `strict`
-15. `atp_runtime_contracts` only in `strict`
-16. `knowledge_graph` only in `strict`
-17. `kg_editor` only in `strict`
-18. `codex_parallel_review` only in `strict`
-19. `nac_onprem_agent_runtime` only in `strict`
-20. `agent_runtime_registry` only in `strict`
-21. `agent_control_api` only in `strict`
-22. `notarial_onprem_connector_boundaries` only in `strict`
-23. `matter_data_classification_redaction` only in `strict`
-24. `private_operating_frame_gate` only in `strict`
-25. `private_payload_target_design` only in `strict`
-26. `private_payload_access_policy` only in `strict`
-27. `gnotkg_costs` only in `strict`
-28. `secure_document_links` only in `strict`
-29. `legal_research_connectors` only in `strict`
-30. `legal_source_inventory_license_tdm` only in `strict`
-31. `legal_model_customization_readiness` only in `strict`
-32. `legal_model_card_ai_sbom_delta` only in `strict`
-33. `legal_model_card_proposal` only in `strict`
-34. `legal_ai_sbom_delta_proposal` only in `strict`
-35. `legal_model_evaluation_benchmark` only in `strict`
-36. `legal_graph_contracts` only in `strict`
-37. `oci_tenant_identity` only in `strict`
+15. `knowledge_graph` only in `strict`
+16. `kg_editor` only in `strict`
+17. `codex_parallel_review` only in `strict`
+18. `teams_sharepoint_graph_data_plane` only in `strict`
+19. `matter_data_classification_redaction` only in `strict`
+20. `private_operating_frame_gate` only in `strict`
+21. `private_payload_target_design` only in `strict`
+22. `private_payload_access_policy` only in `strict`
+23. `gnotkg_costs` only in `strict`
+24. `secure_document_links` only in `strict`
+25. `legal_research_connectors` only in `strict`
+26. `legal_source_inventory_license_tdm` only in `strict`
+27. `legal_model_customization_readiness` only in `strict`
+28. `legal_model_card_ai_sbom_delta` only in `strict`
+29. `legal_model_card_proposal` only in `strict`
+30. `legal_ai_sbom_delta_proposal` only in `strict`
+31. `legal_model_evaluation_benchmark` only in `strict`
+32. `legal_graph_contracts` only in `strict`
 
 ## Artifacts
 

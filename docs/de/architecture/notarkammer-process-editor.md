@@ -1,19 +1,20 @@
 # Notarkammer Prozess-Editor
 
-Status: Contract-first, kein OCI-Apply.
+Status: Contract-first, kein produktiver Cloud-Apply.
 
 Der Notarkammer Prozess-Editor beschreibt die sichere Grenze zwischen
-BPMN-Editor, BPMN-Viewer, Git-Templates und ATP Runtime Store. Ziel ist ein
-vorzeigbarer Immobilienkaufvertrag, der die XNP/SNP-Grenzen, XNotar/XJustiz,
-Grundbuch, Kartenleser, Vollzug, Parallelität, Dauerband und kritischer Pfad
-sichtbar macht.
+BPMN-Editor, BPMN-Viewer, Git-Templates und M365/SharePoint-Runtime-
+Metadaten. Ziel ist ein vorzeigbarer Immobilienkaufvertrag, der die
+XNP/SNP-Grenzen, XNotar/XJustiz, Grundbuch, Kartenleser, Vollzug,
+Parallelität, Dauerband und kritischer Pfad sichtbar macht.
 
 ## Daten- und Speichergrenze
 
 - Git bleibt Source of Truth für BPMN-Templates, Verträge, Governance und
   Review-Nachweise.
-- ATP Runtime Store ist die spätere Runtime-Datenebene für Tenant, Vorgang,
-  Prozessinstanz, Prozessereignisse, Audit-Metadaten und Graph-Projektion.
+- M365/SharePoint-Listen, Dokumentbibliotheken und ein späteres Event-Journal
+  sind die Runtime-Datenebene für Tenant, Vorgang, Prozessinstanz,
+  Prozessereignisse, Audit-Metadaten und Graph-Projektion.
 - Keine Mandatsdaten werden im Template oder in der öffentlichen Demo
   gespeichert.
 - Es erfolgt kein produktiver XNP-Zugriff und kein Live-Registerabruf in

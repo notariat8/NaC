@@ -1,14 +1,16 @@
 # Matter Data Classification And Redaction
 
 Status: metadata-only boundary contract
-Last content update: 2026-06-28
+Last content update: 2026-07-06
 
 ## Purpose
 
 This page defines data classification between NaC GitOps, `notoclaw01` target
-control, web-app status, ATP metadata and later private runtime stores. It
-defines when a value is still safe process metadata and when it becomes matter
-data that needs a separate private operating frame.
+control, web-app status, M365/SharePoint metadata, redacted evidence and later
+private runtime stores. It defines when a value is still safe process metadata
+and when it becomes matter data that needs a separate private operating frame.
+Earlier ATP metadata slices are archived legacy references, not active MVP
+storage.
 
 The machine-readable contract lives in
 [workflows/contracts/matter-data-classification-redaction.contract.json](../../../workflows/contracts/matter-data-classification-redaction.contract.json)
@@ -18,9 +20,9 @@ and is checked by
 ## Base Rule
 
 GitHub, the product repository, the public demo, the protected start status,
-the first ATP metadata slice and `/home/ubuntu/nac-target-control` do not store
+M365/SharePoint metadata lists and local target-control smokes do not store
 real matter data. They may only hold process metadata, synthetic examples,
-policy references and redacted evidence.
+policy references, hashes, pointers and redacted evidence.
 
 Real matter content starts as soon as participants, property, registers, land
 registers, payments, family or estate context, documents or identity data are
@@ -63,9 +65,9 @@ The blocked classes include:
 | Surface | Boundary |
 | --- | --- |
 | Product repo and GitHub | Only source artifacts, policies, synthetic examples and redacted evidence. Private payloads are not allowed here. |
-| `notoclaw01` target control | Only manifests, smokes, stubs and non-sensitive evidence. When private payloads are needed, work is handed back to the Project Manager. |
+| Local target-control smokes | Only manifests, smokes, stubs and non-sensitive evidence. When private payloads are needed, work is handed back to the Project Manager. |
 | Web-app start status | Only protected status without matter data. The full workspace stays closed until the private gate. |
-| ATP metadata slice | Only safe runtime metadata, events, bindings and hashes without raw content. Private payloads need a separate schema and apply gate. |
+| M365/SharePoint metadata layer | Only safe runtime metadata, events, bindings, hashes and pointers without raw content. Private payloads need a separate storage, role and apply gate. |
 | Secure document link evidence | Only purpose, expiry, binding, revocation, audit and hash/pointer. Document content stays outside evidence. |
 
 ## Redaction Evidence
@@ -90,18 +92,19 @@ Every redacted evidence record must include at least:
 This evidence does not prove private content. It proves that a boundary was
 checked and that no secrets or matter data were moved to the wrong surface.
 
-## Relation To NemoClaw And ATP
+## Relation To Local Smokes And M365
 
-NemoClaw/OpenClaw may hold agents, connector stubs and local smokes on the
-target system. That does not make it the matter-data store or the source of
-NaC contracts. ATP may initially hold only metadata, events, bindings and
-hashes. Graph or ontology work can build on that layer, but it must exclude
-matter content until the private gate is approved.
+Local sidecars or target-control smokes may hold agents, connector stubs and
+workstation checks. That does not make them the matter-data store or the source
+of NaC contracts. The M365/SharePoint metadata layer may hold only metadata,
+events, bindings, hashes and pointers in the MVP. Graph or ontology work can
+build on that layer, but it must exclude matter content until the private gate
+is approved.
 
 The split stays clear:
 
 - NaC GitOps owns contracts, BPMN, KG, policies, tests and PRs.
-- `notoclaw01` owns target-system smokes and non-sensitive evidence.
+- local sidecars own workstation smokes and non-sensitive evidence.
 - A later private runtime store may hold real matter data only after explicit
   owner, privacy, security and role gates under
   [private-operating-frame-gate.md](private-operating-frame-gate.md).

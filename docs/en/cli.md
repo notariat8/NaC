@@ -97,8 +97,7 @@ nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint runtime-metadata --owner-approved --format json
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
-nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run
-nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run
+nac tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
 nac tenant status --repo ../demo8notariat
 nac import jobs status --repo ../demo8notariat
 nac qms status
@@ -119,13 +118,13 @@ nac time-ledger summary
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
-| Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, OCI tenant identity and legal-research connector candidates. |
+| Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, Teams/SharePoint Graph data plane and legal-research connector candidates. |
 | Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved` and `nac m365 teams-sharepoint runtime-metadata --owner-approved` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0 and verifies runtime-app read access to sites, lists and document libraries without reading list items. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
 | Data repository | `nac tenant status --repo ../demo8notariat` | Checks a separate NaC data repository for demo or later production data. |
-| Tenant identity | `nac tenant domain-check`, `nac tenant provision-admin --dry-run` and `nac tenant apply-request --dry-run` | Checks new-customer domains and creates OCI Identity dry-run and apply-readiness artifacts without productive writes. |
+| Tenant onboarding | `nac tenant domain-check` and `nac tenant customer-plan` | Checks new-customer domains and creates the Entra/M365/SharePoint plan without productive Graph writes. |
 | QMS | `nac qms status` and `nac qms evidence --repo ../demo8notariat` | Shows ISO 9001/QMS artifacts and evidence counts from the data repository. |
 | Codex Time Ledger | `nac time-ledger add`, `nac time-ledger run` and `nac time-ledger summary` | Records agentic work blocks and summarizes tool time, approvals, waiting time, local CPU/I/O and estimated LLM time. |
 
@@ -218,34 +217,31 @@ nac tenant show-akte --repo ../demo8notariat --akten-id UVZ-2026-0001
 nac tenant write-demo immobilienkaufvertrag --repo ../demo8notariat --case-id DEMO-2026-0001
 ```
 
-## Tenant Identity And OCI Dry Run
+## Tenant Identity And M365 Graph Plan
 
-New customers do not start in the OCI Console. NaC first checks whether the
+New customers do not start in a cloud console. NaC first checks whether the
 customer domain and initial admin email match:
 
 ```bash
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
 ```
 
-NaC then creates an admin-provisioning plan for OCI Identity Domains. This
-command does not write to OCI and contains no credentials:
+NaC then creates an M365/SharePoint plan. This command does not write to
+Microsoft Graph and contains no credentials:
 
 ```bash
-nac tenant provision-admin --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dry-run --format json
+nac tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
 ```
 
-Productive identity writes require separate owner review and explicit apply
-approval.
-
-When DNS verification, owner approval, audit event and rollback plan are
-prepared, NaC still creates only a review artifact:
+Productive Graph changes then run through the M365 operating edge and require
+an owner gate:
 
 ```bash
-nac tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id OWNER-APPROVED-32 --audit-event-id AUDIT-32 --rollback-plan-id ROLLBACK-32 --dry-run --format json
+nac m365 teams-sharepoint privileged-plan --format json
+nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 ```
 
-This command is not yet an OCI connector and performs no user, group or
-membership change.
+OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 
 The leading matter model uses small JSON files with stable IDs for matters,
 people, documents, events and indices. PDF, JPG and other binary files live as

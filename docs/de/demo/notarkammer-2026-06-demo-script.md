@@ -52,6 +52,7 @@ https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanz
 https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example
 https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt
 python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
+python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json
 python scripts/nac.py bpmn validate
 ```
@@ -148,14 +149,14 @@ Sagen:
 - "Der DNS-Check ist ein Readiness-Status. `pending`, `mismatch` oder
   `verified` sind Setup-Zustände, keine Live-Fehleranalyse."
 - "Eine vorhandene Anfrage kann als Statusseite gezeigt werden. Wenn der
-  ATP-Store `disabled` oder `unavailable` ist, bleibt das ein Gate und wir
-  debuggen keine Datenbank im Termin."
+  M365-/SharePoint-Plan `unavailable` ist, bleibt das ein Gate und wir
+  debuggen keine Legacy-Datenbank im Termin."
 
 Nicht tun:
 
 - Keine neue Onboarding-Anfrage absenden.
 - Keine Admin-Review-POSTs ausführen.
-- Keine ATP-Wallet, DSN, Berechtigungsreferenz oder Cloud-Konsole öffnen.
+- Keine Legacy-ATP-Wallet, DSN, Berechtigungsreferenz oder Cloud-Konsole öffnen.
 
 Fallback:
 
@@ -200,7 +201,7 @@ Sagen:
   geschlossen."
 - "Der geschützte Startstatus ist metadata-only: Status, Gate und Grund,
   aber keine Akte und keine Dokumentinhalte."
-- "Der ATP-Healthcheck ist nur ein Store-Gate. `https://app.notariat8.de/healthz`
+- "Der M365-/SharePoint-Plan ist nur ein Store-Gate. `https://app.notariat8.de/healthz`
   bleibt bewusst kurz und nicht-sensitiv."
 - "Wir führen den Login nur weiter, wenn das für diese Demo freigegeben ist;
   sonst ist fail-closed das gewollte Ergebnis."

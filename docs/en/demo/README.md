@@ -14,8 +14,8 @@ deliberately closed work area until session and role checks are complete.
 4. Explain XNP, Kartenleser card reader, register and land-register access as
    subject-matter access points, without claiming productive filings.
 5. Move to `https://app.notariat8.de`, login and the fail-closed boundary.
-6. Mention ATP healthcheck and store gate only as technical status evidence,
-   not as a mandate-data view.
+6. Mention the M365/SharePoint plan and store gate only as technical status
+   evidence, not as a mandate-data view.
 
 ## Documents In Recommended Order
 

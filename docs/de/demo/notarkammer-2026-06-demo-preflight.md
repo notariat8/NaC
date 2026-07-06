@@ -21,7 +21,7 @@ Demo-Notiz darf nur UTC nennen.
 | T-02:30 | Lokalen Kartenleser-/SAK-Pfad für XNP als Readiness-Gate prüfen. | Evidence zeigt `ready`, `manual_review` oder Stop-Line. |
 | T-02:00 | XNP-Localhost, XNotar-Austauschordner und XJustiz-Paketgrenze prüfen. | Nur nicht-sensitive Status- und Hash-Nachweise liegen vor. |
 | T-01:45 | notariat8-Login, redigierten Login-Intent-Read-only-Check, geschützten Startstatus und Workspace-Gate prüfen. | Login endet vor dem Workspace, sofern keine Demo-Freigabe vorliegt. |
-| T-01:40 | ATP-Healthcheck-Status als Store-Gate einordnen. | `enabled`, `disabled`, `unavailable` oder `not_checked` ohne Secret-Ausgabe. |
+| T-01:40 | M365-/SharePoint-Plan als Store-Gate einordnen. | `teams_sharepoint_graph_rest` oder fehlendes Owner-Gate ohne Secret-Ausgabe. |
 | T-01:30 | 1h-Demo-Skript mit den sichtbaren Browser- und Arbeitsplatzständen abgleichen. | Keine neue Storyline wird begonnen. |
 | T-01:00 | Stop-Lines laut lesen und Browser-Tabs final sortieren. | Demo kann ohne Live-Debugging starten. |
 | T-00:15 | Nur noch Read-only-Sichtung, keine Änderungen mehr. | Präsentationsfenster bleibt stabil. |
@@ -29,10 +29,11 @@ Demo-Notiz darf nur UTC nennen.
 ## Befehlssicherheit
 
 Alle Befehle in diesem Preflight dürfen nur vorbereiten oder lesen. Beispiele
-mit `curl` sind Sichtprüfungen. Beispiele mit `tenant apply-request` müssen
-`--dry-run` enthalten. POST, OCI-CLI, produktive Apply-Schritte, Vault-,
-Wallet-, ATP- und Identity-Secret-Zugriffe bleiben Stop-Lines und werden im
-Termin nicht ausgeführt.
+mit `curl` sind Sichtprüfungen. M365-Planungsbeispiele schreiben nicht gegen
+Microsoft Graph und brauchen für produktive Änderungen ein Owner-Gate. POST,
+OCI-CLI, produktive Apply-Schritte, Vault-, Wallet-, ATP- und
+Identity-Secret-Zugriffe bleiben Stop-Lines und werden im Termin nicht
+ausgeführt.
 
 ## Browser-Checks
 
@@ -84,12 +85,12 @@ ein Punkt nicht passt, wird die vorbereitete Fallback-Evidence gezeigt.
 | --- | --- | --- | --- |
 | Public Onboarding | `https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` zeigt Domain, Admin-E-Mail, DNS-Hinweis und Einrichtungsstatus ohne Mandatsdaten. | `curl -fsS "https://app.notariat8.de/onboarding/readiness?audience=customer&domain_hint=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example" >/tmp/nac-onboarding-readiness.html` | Bereits geladenen Tab zeigen; keine Anfrage absenden. |
 | DNS-Check | `https://app.notariat8.de/onboarding/dns-check?audience=customer&domain=kanzlei-notariat.example&tenant_slug=kanzlei-notariat&admin_email=admin%40kanzlei-notariat.example` zeigt erwarteten TXT-Record und aktuellen Status. | `python scripts/nac.py tenant dns-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --format json` | Wenn DNS nicht `verified` ist, `pending`/`mismatch` als normaler Setup-Status erklären. |
-| Request-Status | Bestehende Anfrage kann über `/onboarding/requests/<request_id>?audience=customer` nur als Statusseite gezeigt werden. | `curl -fsS "https://app.notariat8.de/onboarding/requests/onr_demo_20260621_100000?audience=customer" >/tmp/nac-request-status.html` | Wenn Store deaktiviert oder ID unbekannt ist, `not found`/`unavailable` als ATP-Gate erklären. |
+| Request-Status | Bestehende Anfrage kann über `/onboarding/requests/<request_id>?audience=customer` nur als Statusseite gezeigt werden. | `curl -fsS "https://app.notariat8.de/onboarding/requests/onr_demo_20260621_100000?audience=customer" >/tmp/nac-request-status.html` | Wenn Store deaktiviert oder ID unbekannt ist, `not found`/`unavailable` als Setup-Gate erklären. |
 | OIDC-Login bis Protected Start | `/login?tenant_hint=notariat-musterstadt` öffnet die notariat8-Anmeldung. Login-Intent bleibt nur ein redigierter CLI-/curl-Read-only-Check, keine Browserfläche. | `curl -fsS "https://app.notariat8.de/api/tenant/login-intent?tenant_hint=notariat-musterstadt" >/tmp/nac-login-intent.json` | Login nicht fortsetzen; geschützten Startstatus oder Workspace-Grenze zeigen. |
 | Workspace Metadata-only Gate | `/workspace` bleibt ohne freigegebene Sitzung geschlossen und zeigt nur Metadatenstatus, keine Akte. | `curl -i "https://app.notariat8.de/workspace"` erwartet `401` oder geschlossene HTML-Sicht mit `Keine Mandatsdaten geladen`. | Fail-closed als Sicherheitsnachweis erklären. |
 | BPMN-Prozessmodell | Immobilienkaufvertrag ist als BPMN-/Prozessmodell sichtbar und validierbar. | `python scripts/nac.py bpmn validate` und `python scripts/nac.py bpmn show immobilienkaufvertrag --format text` | Öffentliche Prozessmodellseite oder Screenshot verwenden. |
-| ATP-Healthcheck-Status | ATP ist nur Store-Gate für Onboarding-Anfragen; Healthcheck darf keine Wallet-, Secret- oder DSN-Werte zeigen. | `python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json` zeigt `shared_atp_with_tenant_id`; `/healthz` zeigt nur Runtime-Status. | Bei `onboarding_request_store_disabled` oder `onboarding_request_store_unavailable` keine Live-ATP-Analyse; Status als Demo-Gate markieren. |
-| Apply-/Provisioning-Status | Es gibt nur Review-Artefakte, keine OCI-Schreiboperation. | `python scripts/nac.py tenant apply-request --tenant-slug kanzlei-notariat --domain kanzlei-notariat.example --admin-email admin@kanzlei-notariat.example --admin-display-name "Admin Notariat" --identity-domain-url ${NAC_OCI_IDENTITY_DOMAIN_URL} --identity-domain-id ${NAC_OCI_IDENTITY_DOMAIN_ID} --dns-verified --owner-approval-id DEMO-OWNER --audit-event-id DEMO-AUDIT --rollback-plan-id DEMO-ROLLBACK --dry-run --format json` | Wenn Gate fehlt, Blocker erklären; kein Apply ausführen. |
+| M365-/SharePoint-Plan | SharePoint ist Start-Datenhaltung; der Plan zeigt Entra-ID-, Teams- und SharePoint-Zuordnung ohne Graph-Schreibaktion. | `python scripts/nac.py tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json` zeigt `teams_sharepoint_graph_rest`. | Bei fehlenden Angaben Domain-/Owner-Gate erklären; keine Graph-Änderung ausführen. |
+| Privileged-Change-Status | Es gibt nur Review-Artefakte für Teams, Site-Permissions und App-Owner; keine produktive Graph-Schreiboperation. | `python scripts/nac.py m365 teams-sharepoint privileged-plan --format json` | Wenn Gate fehlt, Blocker erklären; kein Apply ausführen. |
 
 Alle `curl`-Beispiele sind GET/HEAD-artige Sichtprüfungen. Keine Formulare im
 Termin absenden, keine POST-Requests ausführen, keine OCI-CLI, keine Vault-,
@@ -137,8 +138,8 @@ Mandatsakte.
 | XNotar-Austauschordner oder XJustiz-Struktur nicht sicher abgegrenzt | Kein Paket öffnen; nur synthetische Paketgrenze erklären. |
 | Lokaler Editor ist nicht verfügbar | Öffentliche Prozessmodellseite verwenden, GitHub-PR nur als Governance-Nachweis nennen. |
 | Netzwerk schwankt | Keine neuen Tabs öffnen; nur geladene Demo-Tabs verwenden. |
-| Public-Onboarding-Requeststatus ist nicht verfügbar | Nicht in ATP debuggen; Einrichtungsstatus als `unavailable` zeigen und auf Public-Onboarding/DNS ausweichen. |
-| ATP-Healthcheck ist `disabled` oder `unavailable` | Keine Secrets oder Wallets öffnen; Status als Store-Gate erklären und beim BPMN-/Workspace-Pfad bleiben. |
+| Public-Onboarding-Requeststatus ist nicht verfügbar | Nicht in Legacy-ATP debuggen; Einrichtungsstatus als `unavailable` zeigen und auf Public-Onboarding/DNS ausweichen. |
+| M365-/SharePoint-Plan ist nicht verfügbar | Keine Secrets oder Wallets öffnen; Status als Store-Gate erklären und beim BPMN-/Workspace-Pfad bleiben. |
 | Login-Intent-Read-only-Check liefert nur JSON oder Fehler | Nicht live erklären; `/login?tenant_hint=notariat-musterstadt` oder geschlossenen Workspace zeigen. |
 | Workspace zeigt nur Metadatenstatus | Genau das ist erwartbar: protected start ja, voller Workspace nein. |
 

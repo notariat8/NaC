@@ -1,5 +1,12 @@
 # Authenticated Web-App Operating Model
 
+Status since 2026-07-06: archived OCI interim state. The active MVP decision is
+Entra ID, Microsoft Teams, SharePoint Team Site and Microsoft Graph REST/MCP.
+New work is governed by
+[teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md);
+OCI Identity Domains, OCI Functions, ATP and OCI-bound on-prem agents are
+legacy references and must no longer be read as the current target path.
+
 This target model describes how public static content, real authenticated
 users, local notary workstations and mobile participant access should fit
 together in NaC.

@@ -57,12 +57,14 @@ This lets a notary or reviewer see without web-app access:
 ## Boundary
 
 The current GitHub data repository remains a demo and template target.
-Productive SaaS runtime metadata belongs in ATP according to the ATP target
-architecture: tenant, user, matter, process-instance, event, deadline and audit
-metadata are kept there as transactional anchors, versioned JSON payloads and
-derived graph projections.
+Productive SaaS runtime metadata belongs in Teams, SharePoint team sites and
+Microsoft Graph REST-bound runtime layers according to the M365 MVP decision:
+matter, participant, task, deadline, document-pointer, substitution and audit
+metadata are kept there as SharePoint lists, document libraries, versioned JSON
+payloads, event-journal anchors or derived graph projections.
 
 Git may still contain synthetic demo matters, approved templates and export
 models. Raw mandate data, raw documents, ID, register or land-register content
-belong neither in Git nor in the first ATP graph slice; they need separate data
-protection, retention, role, encryption and apply gates.
+belong neither in Git nor in SharePoint lists without the private-payload gate;
+they need separate data protection, retention, role, encryption and apply
+gates.

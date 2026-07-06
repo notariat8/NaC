@@ -58,13 +58,15 @@ Damit kann ein Notar oder Prüfer auch ohne Webapp sehen:
 ## Grenze
 
 Das aktuelle GitHub-Datenrepo bleibt ein Demo- und Template-Ziel. Produktive
-SaaS-Laufzeitmetadaten gehören nach der ATP-Zielarchitektur in ATP:
-Mandanten-, Benutzer-, Vorgangs-, Prozessinstanz-, Ereignis-, Fristen- und
-Audit-Metadaten werden dort als transaktionale Anker, versionierte
-JSON-Payloads und daraus abgeleitete Graph-Projektionen geführt.
+SaaS-Laufzeitmetadaten gehören nach der M365-MVP-Entscheidung in Teams,
+SharePoint-Team-Sites und Microsoft-Graph-REST-gebundene Runtime-Schichten:
+Akten-, Beteiligten-, Aufgaben-, Fristen-, Dokument-Pointer-, Vertretungs- und
+Audit-Metadaten werden dort als SharePoint-Listen, Dokumentbibliotheken,
+versionierte JSON-Payloads, Event-Journal-Anker oder daraus abgeleitete
+Graph-Projektionen geführt.
 
 Git darf weiter synthetische Demo-Akten, freigegebene Templates und
 Exportmodelle enthalten. Rohmandatsdaten, Rohdokumente, Ausweis-, Register-
-oder Grundbuchinhalte gehören weder in Git noch in den ersten ATP-Graph-Slice;
-sie brauchen separate Datenschutz-, Aufbewahrungs-, Rollen-,
-Verschlüsselungs- und Apply-Gates.
+oder Grundbuchinhalte gehören weder in Git noch in SharePoint-Listen ohne
+Private-Payload-Gate; sie brauchen separate Datenschutz-, Aufbewahrungs-,
+Rollen-, Verschlüsselungs- und Apply-Gates.

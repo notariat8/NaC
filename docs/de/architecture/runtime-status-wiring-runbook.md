@@ -1,11 +1,11 @@
 # Runtime-Status Wiring Runbook
 
-Status: owner-freier Contract-first-Schnitt, kein OCI Apply.
+Status: owner-freier Contract-first-Schnitt, kein produktiver Cloud-Apply.
 
 Dieses Runbook beschreibt, wie der aktuelle notariat8 Portal-Start für den
 ersten Immobilienkaufvertrag sicher vom Demo-Status zur späteren
-ATP-Runtime-Speicherung geführt wird. Es ist kein Deploy- oder
-Datenbank-Migrationsplan.
+M365/SharePoint-Runtime und einem späteren Event-Journal geführt wird. Es ist
+kein Deploy-, Datenbank- oder SharePoint-Apply-Plan.
 
 ## Aktueller sicherer Pfad
 
@@ -28,11 +28,12 @@ Die sichtbare Demo erklärt BPMN, XNP/SNP, Vollzug, Dauerband und kritischen
 Pfad, ohne echte Beteiligte, Akteninhalte, Registerdaten oder Grundbuchdaten zu
 laden.
 
-## Späterer ATP-Pfad
+## Späterer M365-/Event-Journal-Pfad
 
-ATP wird der Runtime-Datenspeicher für Mandanten, Benutzerbindungen,
-Vorgänge, Prozessinstanzen, Prozessereignisse und Audit-Metadaten. Die erste
-produktnahe Anbindung ersetzt nicht den Vertrag, sondern nur den Adapter:
+M365/SharePoint-Listen und ein späteres Event-Journal werden die
+Runtime-Datenspeicher für Mandanten, Benutzerbindungen, Vorgänge,
+Prozessinstanzen, Prozessereignisse und Audit-Metadaten. Die erste produktnahe
+Anbindung ersetzt nicht den Vertrag, sondern nur den Adapter:
 
 - `RuntimeStoreAdapter` bleibt die fachliche Grenze.
 - `process_events` bleiben append-only.
@@ -42,32 +43,28 @@ produktnahe Anbindung ersetzt nicht den Vertrag, sondern nur den Adapter:
 - Der Vollarbeitsbereich bleibt geschlossen, bis ein eigener Owner-Gate-Schnitt
   fachlich und technisch freigegeben ist.
 
-## ATP-Metadata-Seam
+## M365-/JSON-Metadata-Seam
 
-Der geschützte erste Vorgangsstatus kann für die spätere ATP-Quelle per
-Umgebungsschalter vorbereitet werden, ohne eine Datenbankmigration, Wallet- oder
-Secret-Änderung oder ein OCI Apply auszulösen:
+Der aktive Metadata-Seam bleibt datenbankfrei und kann für den ersten
+Vorgangsstatus mit einer späteren Graph-/SharePoint-Quelle verbunden werden.
+Alte ATP-Werte werden nicht mehr angebunden, sondern fail-closed als archiviert
+behandelt. Der geschützte erste Vorgangsstatus kann per Umgebungsschalter
+geprüft werden, ohne eine Datenbankmigration, Wallet- oder Secret-Änderung oder
+ein Cloud-Apply auszulösen:
 
-- `NAC_FIRST_MATTER_RUNTIME_SOURCE` aktiviert den ATP-Metadata-Seam nur für die
-  Werte `atp`, `atp-json`, `atp_metadata` oder `atp-runtime-metadata`.
+- `NAC_FIRST_MATTER_RUNTIME_SOURCE` aktiviert den Metadata-Seam für die Werte
+  `json`, `metadata-json`, `sharepoint`, `m365` oder `m365-sharepoint`.
 - `NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY` überschreibt optional den logischen
   Runtime-Objektschlüssel. Ohne Wert gilt
   `DEMO-PROCESS-IMMOBILIENKAUF-01`.
 - `NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN` überschreibt optional die
   JSON-Payload-Spalte. Ohne Wert gilt `payload_json`.
-- `NAC_FIRST_MATTER_RUNTIME_TABLE` überschreibt optional die erlaubte
-  ATP-Ankertabelle. Ohne Wert gilt `nac_process_instances`.
-- `NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN` überschreibt optional die erlaubte
-  Schlüsselspalte. Ohne Wert gilt `process_instance_id`.
-- Der ATP-Zeilenleser nutzt nur erlaubte Tabellen- und Spaltennamen aus der
-  Runtime-Ankerliste; Env-Werte werden nicht ungeprüft als SQL-Identifier
-  verwendet.
-- Die ATP-Verbindung nutzt bestehende `NAC_ATP_USER`-, `NAC_ATP_DSN`- und
-  `NAC_ATP_PASSWORD_SECRET_OCID`-Konfiguration. Klartext-Passwörter per Env
-  sind nicht erlaubt; vorhandene Wallet-Referenzen werden nur wiederverwendet.
-- Wenn der ATP-Zeilenleser noch nicht bereitsteht oder ungültig konfiguriert
-  ist, liefert die Route keine Packaged-Fallback-Daten, sondern bleibt
-  fail-closed geschlossen.
+- Der Reader nutzt später Graph REST oder einen MCP-Server, der Graph REST
+  intern kapselt. Direkte alte SharePoint APIs, SDK-only-Zugriffe und Oracle
+  ATP-Reader gehören nicht zum aktiven Pfad.
+- Wenn der Reader noch nicht bereitsteht oder eine archivierte ATP-Quelle
+  ausgewählt wird, liefert die Route keine Packaged-Fallback-Daten, sondern
+  bleibt fail-closed geschlossen.
 
 ## Fail-closed-Regeln
 
@@ -75,9 +72,8 @@ Der Statuspfad muss fail-closed geschlossen bleiben, wenn eine dieser
 Bedingungen eintritt:
 
 - Runtime Store nicht erreichbar.
-- ATP-Metadata-Seam aktiviert, aber kein freigegebener Zeilenleser vorhanden.
-- ATP-Metadata-Seam mit nicht erlaubter Tabelle oder Spalte konfiguriert.
-- ATP-Metadata-Seam ohne vorhandene ATP-Secret-Referenz konfiguriert.
+- Metadata-Seam aktiviert, aber kein freigegebener Reader vorhanden.
+- Archivierte ATP-Quelle ausgewählt.
 - Prozessinstanz oder Ereignisse fehlen.
 - Graph-Projektion kann nicht aus Ereignissen gebaut werden.
 - Statusmodell enthält Mandatsdaten.
@@ -89,11 +85,11 @@ Bedingungen eintritt:
 
 Diese Schritte brauchen weiter eine explizite Freigabe:
 
-- ATP-Schema-Migration.
-- ATP-Wallet-, Credential- oder Secret-Änderung.
-- OCI Function Configuration oder Resource Manager Apply.
+- M365-/SharePoint-Listen-Provisioning.
+- Graph-Berechtigungsänderungen.
+- Serverless Function Configuration.
 - Produktive XNP/SNP-Aktion.
 - Schreiben echter Mandatsdaten.
 
 Ohne diese Freigaben bleibt der Pfad ein sicherer Demo- und Contract-First-Pfad:
-no mandate data, no OCI Apply, no productive XNP action.
+no mandate data, no productive cloud apply, no productive XNP action.

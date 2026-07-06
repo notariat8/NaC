@@ -1,15 +1,15 @@
 # Private Operating Frame And Private-Payload Gate
 
 Status: boundary contract without productive apply
-Last content update: 2026-06-28
+Last content update: 2026-07-06
 
 ## Purpose
 
 This page defines what must happen before real matter data may leave the NaC
 metadata-only boundary. It extends the
 [matter-data classification](matter-data-classification-redaction.md) with the
-private operating frame for later ATP private-payload schemas, encrypted
-document storage or local specialist-system/DMS paths.
+private operating frame for later private payload stores, encrypted document
+storage or local specialist-system/DMS paths.
 
 The machine-readable contract lives in
 [workflows/contracts/private-operating-frame-gate.contract.json](../../../workflows/contracts/private-operating-frame-gate.contract.json)
@@ -21,11 +21,13 @@ and is checked by
 This contract does not activate productive processing. It is a gate: until it
 is fulfilled with concrete privacy, security, role, retention and owner
 evidence, real matter data remains excluded from GitHub, `notoclaw01`, the
-public demo, quality-gate artifacts and metadata-only ATP slices.
+public demo, quality-gate artifacts and M365/SharePoint metadata lists without
+the private-payload gate.
 
 After this gate, private runtime designs can be created. That may be a separate
-ATP private-payload schema, encrypted object storage or a local specialist
-system/DMS path. Each of those paths still needs its own apply or live gate.
+private-payload schema, encrypted object storage, Microsoft-365 protected
+document storage or a local specialist-system/DMS path. Each of those paths
+still needs its own apply or live gate.
 
 The first logical target model for those later designs is defined in
 [private-payload-target-design.md](private-payload-target-design.md).
@@ -56,7 +58,7 @@ Without this private operating frame, the blocked actions are:
 - storing deed, document, identity, register or land-register raw data,
 - XNP or XNotar payloads,
 - private secure-document links,
-- ATP private-payload schema apply,
+- private-payload schema apply,
 - object-storage document writes,
 - local DMS or specialist-system writes,
 - graph projections over private payloads.
@@ -65,7 +67,8 @@ Without this private operating frame, the blocked actions are:
 
 | Target | Status | Minimum boundary |
 | --- | --- | --- |
-| ATP private-payload schema | future design | tenant, matter, purpose, role, encryption, retention, audit and owner apply gate |
+| Private-payload metadata store | future design | tenant, matter, purpose, role, encryption, retention, audit and owner apply gate |
+| Microsoft-365 protected document storage | future design | site/library binding, document classification, link expiry, revocation, versioning, retention, audit and human review |
 | Encrypted document storage | future design | document classification, short-lived link, revocation, malware/file-type check, retention, audit and human review |
 | On-prem DMS or specialist system | future design | local operator boundary, credential vault, human review, no remote control by default, redacted evidence back to NaC |
 
@@ -93,11 +96,12 @@ Gate evidence contains metadata only:
 The evidence must not contain the private payload itself. It only records that
 the approval boundary has been met.
 
-## Relation To ATP And NemoClaw
+## Relation To M365 And Local Sidecars
 
-ATP remains metadata-only until a separate schema apply. `notoclaw01` remains
-target control for smokes, stubs and redacted evidence. This contract does not
-automatically turn either surface into a matter-data store.
+M365/SharePoint remains metadata-only for lists, pointers, hashes and redacted
+evidence until the separate private-payload gate. Local sidecars remain
+workstation adapters for smokes, stubs and redacted evidence. This contract
+does not automatically turn either surface into a matter-data store.
 
 Only a later, explicitly approved private operating frame may hold real matter
 data. NaC GitOps still remains the source for contracts, tests, BPMN, KG,

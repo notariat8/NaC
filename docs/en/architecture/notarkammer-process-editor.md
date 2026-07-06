@@ -1,19 +1,20 @@
 # Notarkammer Process Editor
 
-Status: contract-first, no OCI apply.
+Status: contract-first, no productive cloud apply.
 
 The Notarkammer process editor defines the safe boundary between the BPMN
-editor, BPMN viewer, Git templates and the ATP Runtime Store. The demo target
-is an Immobilienkaufvertrag that makes XNP/SNP boundaries, XNotar/XJustiz,
-land-register boundaries, card-reader readiness, completion, parallel work,
-duration band and critical path visible.
+editor, BPMN viewer, Git templates and M365/SharePoint runtime metadata. The
+demo target is an Immobilienkaufvertrag that makes XNP/SNP boundaries,
+XNotar/XJustiz, land-register boundaries, card-reader readiness, completion,
+parallel work, duration band and critical path visible.
 
 ## Data And Storage Boundary
 
 - Git remains the source of truth for BPMN templates, contracts, governance
   and review evidence.
-- ATP Runtime Store is the later runtime data plane for tenant, matter,
-  process instance, process events, audit metadata and graph projection.
+- M365/SharePoint lists, document libraries and a later event journal are the
+  runtime data plane for tenant, matter, process instance, process events,
+  audit metadata and graph projection.
 - No mandate data is stored in templates or in the public demo.
 - This contract performs no productive XNP access and no live register query.
 

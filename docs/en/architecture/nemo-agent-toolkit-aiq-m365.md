@@ -1,7 +1,7 @@
 # NeMo Agent Toolkit, AI-Q And Microsoft 365 MCP Target Architecture
 
 Status: architecture decision and integration boundary
-Last content update: 2026-07-05
+Last content update: 2026-07-06
 
 ## Purpose
 
@@ -74,7 +74,9 @@ flowchart TD
     Agent --> M365Mcp
     Agent --> WorkflowMcp["NaC workflow MCP"]
     Agent --> AuditMcp["NaC audit evidence MCP"]
-    WorkflowMcp --> Store["ATP/event journal/graph projection"]
+    Agent --> OntologyMcp["NaC ontology graph MCP, optional"]
+    WorkflowMcp --> Store["SharePoint/event journal/graph projection"]
+    OntologyMcp --> Store
     AuditMcp --> Evidence["WORM/audit evidence"]
     Local["Local workstation sidecar"] --> Agent
     Local --> Devices["Word bridge, scanner, card workstation, XNP"]
@@ -92,8 +94,8 @@ The target architecture stays as serverless as possible:
 - API Gateway or BFF for browser, Office and Teams calls,
 - functions for metadata-only APIs, webhooks, delta sync, grant checks and
   short tool calls,
-- ATP or an approved runtime store for process instances, leases, role
-  bindings, grant metadata and audit anchors,
+- SharePoint lists, an approved runtime store or a later event journal for
+  process instances, leases, role bindings, grant metadata and audit anchors,
 - object store or private payload layer for documents,
 - queue or streaming for idempotent agent jobs,
 - Vault for secrets, certificates and connector credentials.
@@ -124,6 +126,7 @@ later uses its own federated MCP connectors.
 | --- | --- | --- | --- |
 | `nac-workflow-mcp` | central, serverless or container | BPMN, knowledge graph, process status, next actions, tool gates | metadata-only, no raw matter payloads |
 | `nac-access-grant-mcp` | central | roles, matter binding, purpose, substitution, time-limited grants | grant metadata and audit; every substitution with reason and duration |
+| `nac-ontology-graph-mcp` | optional central | derived graph projection over BPMN, usecase-local KGs, SharePoint metadata and audit events; Omnigraph is only a later backend option | read-only start, no leading data store, no BPMN engine, no raw matter payloads |
 | `m365-mail-calendar-mcp` | central or workstation sidecar | Outlook mail, calendar, free/busy, meeting context through Graph | least privilege, no bulk export; send only after human approval |
 | `m365-teams-mcp` | central | Teams chats, channels, threads, meeting messages through Graph | matter-bound search, no unbounded chat dumps |
 | `m365-files-mcp` | central | OneDrive, SharePoint drives, document libraries, lists, delta/webhooks | pointers/metadata first; content only through private payload gate |
@@ -183,9 +186,12 @@ NaC agents.
 3. Run a first case, such as a real-estate purchase contract, as a NeMo
    workflow against `nac-workflow-mcp`, `nac-access-grant-mcp` and
    `nac-audit-evidence-mcp`.
-4. Test Microsoft 365 access first as read-only, least-privilege and
+4. Evaluate Omnigraph only as an optional projection according to
+   [omnigraph-ontology-projection.md](omnigraph-ontology-projection.md);
+   not as an MVP store and not as a BPMN engine.
+5. Test Microsoft 365 access first as read-only, least-privilege and
    matter-bound access through Graph.
-5. Build the workstation sidecar for Word/track changes, scanner, card and
+6. Build the workstation sidecar for Word/track changes, scanner, card and
    XNP-near functions separately from the central source of truth.
-6. Enable write operations against Microsoft 365 and documents only after
+7. Enable write operations against Microsoft 365 and documents only after
    human-in-the-loop, audit and owner gate.

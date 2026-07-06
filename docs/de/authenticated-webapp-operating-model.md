@@ -1,5 +1,13 @@
 # Authenticated-Webapp-Betriebsmodell
 
+Status seit 2026-07-06: archivierter OCI-Zwischenstand. Die aktive
+MVP-Entscheidung ist Entra ID, Microsoft Teams, SharePoint Team Site und
+Microsoft Graph REST/MCP. Maßgeblich für neue Arbeit ist
+[teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md);
+OCI Identity Domains, OCI Functions, ATP und OCI-gebundene On-Prem-Agenten sind
+Legacy-Referenzen und dürfen nicht mehr als aktueller Zielpfad ausgelegt
+werden.
+
 Dieses Zielbild beschreibt, wie öffentliche statische Inhalte, echte
 angemeldete Benutzer, lokale Notariatsarbeitsplätze und mobile
 Beteiligtenzugänge in NaC zusammenspielen sollen.

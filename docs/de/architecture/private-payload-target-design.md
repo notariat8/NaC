@@ -1,7 +1,7 @@
 # Private-Payload-Zielarchitektur
 
 Status: logisches Design ohne Apply
-Letzte inhaltliche Anpassung: 2026-06-28
+Letzte inhaltliche Anpassung: 2026-07-06
 
 ## Zweck
 
@@ -24,7 +24,8 @@ NaC modelliert private Payloads als Envelope- und Pointer-Architektur:
 - Der Envelope hält nur Bindung, Zweck, Datenklasse, Speicherziel,
   Pointer, Hash, Schlüsselreferenz, Retention, Zugriffspolitik und Audit.
 - Der private Inhalt liegt nicht in Git, nicht in GitHub-Artefakten, nicht in
-  `notoclaw01` Target-Control und nicht im metadata-only ATP-Slice.
+  lokaler Target-Control und nicht in M365/SharePoint-Metadatenlisten ohne
+  Private-Payload-Gate.
 - Zugriffe laufen über zweckgebundene Access Grants mit Ablauf, Widerruf,
   Rollenklasse, Step-up und Human Review.
 - Dokumente werden als verschlüsselte Objekte oder lokale Fachsystemobjekte
@@ -51,7 +52,8 @@ Keine dieser Komponenten enthält Klartext-Payloads.
 
 | Ziel | Status | Aufgabe |
 | --- | --- | --- |
-| ATP Private-Payload-Metadaten | künftiges Schema-Design | Envelopes, Access Grants und redigierte Audit-Events. |
+| Private-Payload-Metadatenstore | künftiges Schema-Design | Envelopes, Access Grants und redigierte Audit-Events. |
+| Microsoft-365-geschützte Dokumentablage | künftiges Storage-Design | Aktengebundene Dokumentbibliotheken, Versionen, Hashes, Kurzzeitlinks und redigierte Zugriffsnachweise. |
 | Verschlüsselte Object-Storage-Payloads | künftiges Storage-Design | Dokumentobjekte, Hashes und kurzlebige Zugriffspfade. |
 | On-Prem Private Store | künftiges Integrationsdesign | lokale DMS-/Fachsystemreferenzen und redigierte Evidence zurück nach NaC. |
 

@@ -1,5 +1,9 @@
 # ATP Runtime Graph Projection
 
+Archive status since 2026-07-06: this projection remains legacy compatibility
+for earlier ATP slices. New graph/ontology work is tracked as M365/SharePoint
+or neutral runtime projection.
+
 Status: owner-free contract-first slice, no OCI apply.
 
 This contract extends the ATP runtime store with a testable graph projection from
