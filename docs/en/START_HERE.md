@@ -162,7 +162,11 @@ states.
 
 Every final status message also contains `Next Step`: the concrete
 continuation and whether owner input is needed. If no owner input is needed,
-that is stated explicitly.
+that is stated explicitly. If the named next step can be executed with the
+available tools without owner input, the work is not finished yet; the agent
+continues with that step instead of ending the run. Only concrete external
+blockers, missing data, owner gates or unavailable tools may remain as a
+waiting next step.
 
 For versioned process packages, the
 [release checklist](operations/release-checklist.md) must additionally be

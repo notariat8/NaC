@@ -70,8 +70,11 @@ they can already access.
 
 Every final status message still includes a `Next Step` section. It names the
 concrete technical or operational continuation and states whether owner input is
-needed. If no owner input is needed, that is stated explicitly; an ambiguous
-waiting state is not a valid completion.
+needed. If no owner input is needed, that is stated explicitly. A next step
+that can be executed with the available tools without owner input is not valid
+completion; it is agent work that must continue. Only concrete external
+blockers, missing data, owner gates or unavailable tools may remain as a
+waiting next step.
 
 ## Spec Traceability
 
@@ -141,7 +144,8 @@ compatible rule is:
 - Bug: find the root cause before changing code.
 - Non-trivial code change: record the test or check objective first.
 - Completion: make no success claim without fresh verification and a named next
-  step.
+  step; if that step is agent-executable and needs no owner input, execute it
+  instead of reporting it as a waiting state.
 
 This method complements NaC rules; it does not replace data protection,
 language, license or approval rules.

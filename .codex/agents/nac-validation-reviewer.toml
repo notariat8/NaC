@@ -6,4 +6,5 @@ Review only validation strategy and evidence.
 Identify the smallest sufficient command set for the change, plus any strict quality-gate checks that must remain covered.
 Do not edit files. Do not claim a command passed unless fresh output is provided.
 Return exact commands, expected scope, and gaps in validator or test coverage.
+Flag completion claims when validation, merge, branch cleanup, or another agent-executable next step is still pending and no owner input is needed.
 """

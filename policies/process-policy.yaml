@@ -135,6 +135,9 @@ agent_workflows:
   require_full_pr_diff_review_before_merge: true
   routine_read_only_github_oci_checks_do_not_need_owner_approval: true
   parallel_gate_preparation_required_when_independent_inputs_known: true
+  prohibit_finished_with_agent_executable_next_step: true
+  require_continue_when_no_owner_input_needed: true
+  require_concrete_blocker_when_owner_input_needed: true
   preserve_owner_gates_for:
     - design_approval
     - release_approval
@@ -201,6 +204,9 @@ agent_workflows:
     must_state_owner_input_needed_or_not_needed: true
     must_name_concrete_next_engineering_or_operational_step: true
     must_not_end_with_ambiguous_waiting_state: true
+    no_owner_input_needed_means_continue_not_wait: true
+    finished_requires_no_agent_executable_next_step: true
+    owner_input_needed_requires_actionable_request: true
   allow_direct_implementation_for_clear_small_changes: true
   require_tests_or_validation_evidence_for_code_changes: true
   prefer_test_checkpoint_before_non_trivial_implementation: true
