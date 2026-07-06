@@ -244,6 +244,7 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
+nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
@@ -262,8 +263,8 @@ Graph-REST-Grenzen aus. `mcp-stdio` ist ebenfalls offline und spricht
 newline-delimited JSON-RPC über stdin/stdout. `tools/call` plant nur
 Microsoft-Graph-v1.0-Requests und führt keine Requests aus.
 `nac batch-approval m365` ist ebenfalls offline. Der Befehl rendert kopierbare
-Owner-Freigabetexte für vorbereitete PR-Batches und synthetische
-Live-Smoke-Batches, führt aber weder GitHub- noch
+Owner-Freigabetexte für vorbereitete PR-Batches, synthetische Live-Smoke-Batches
+und das M365 Runtime Release-Gate, führt aber weder GitHub- noch
 Microsoft-Graph-Schreibaktionen aus.
 
 `mcp-stdio --owner-approved --mcp-live-read` aktiviert zusätzlich Live-Reads
@@ -306,6 +307,13 @@ Der Befehl verweigert Pagination und Nicht-Smoke-Treffer vor jedem Delete.
 Mit `--mcp-leftover-dry-run` liest er owner-gated nur die Trefferanzahl.
 Das redigierte Artefakt liegt unter
 `out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json`.
+
+`batch-approval m365 --batch-mode release-gate` rendert die wiederholbare
+Release-Gate-Sequenz für Runtime-/MCP-Änderungen. Das Paket enthält
+`runtime-smoke`, `runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup` und
+den anschließenden `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` in einer
+festen Reihenfolge. Der Renderer selbst ist offline; die ausgegebenen
+Live-Kommandos bleiben owner-gated.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

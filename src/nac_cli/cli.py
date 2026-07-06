@@ -202,7 +202,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     batch_m365.add_argument(
         "--batch-mode",
-        choices=["merge", "live-smoke", "merge-and-live-smoke"],
+        choices=["merge", "live-smoke", "merge-and-live-smoke", "release-gate"],
         default="merge",
         help="Batch-Freigabetext, der gerendert werden soll.",
     )
@@ -1008,21 +1008,10 @@ def _build_m365_batch_approval_payload(
         }
 
     if mode in {"live-smoke", "merge-and-live-smoke"}:
-        suite_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
-        suite_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint "
-            "mcp-smoke-suite --owner-approved --mcp-suite-cleanup "
-            f"--mcp-smoke-workspace-id {workspace_id} "
-            f"{suite_case_id_arg}"
-            f"--mcp-smoke-correlation-id {correlation_id} "
-            "--format json"
-        )
-        leftover_dry_run_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint "
-            "mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run "
-            f"--mcp-smoke-workspace-id {workspace_id} "
-            f"--mcp-smoke-correlation-id {correlation_id} "
-            "--format json"
+        suite_command, leftover_dry_run_command = _build_m365_mcp_smoke_suite_commands(
+            workspace_id=workspace_id,
+            synthetic_case_id=synthetic_case_id,
+            correlation_id=correlation_id,
         )
         approvals["live_smoke"] = {
             "approval_text": (
@@ -1051,6 +1040,57 @@ def _build_m365_batch_approval_payload(
             ],
         }
 
+    if mode == "release-gate":
+        suite_command, leftover_dry_run_command = _build_m365_mcp_smoke_suite_commands(
+            workspace_id=workspace_id,
+            synthetic_case_id=synthetic_case_id,
+            correlation_id=correlation_id,
+        )
+        runtime_smoke_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json"
+        )
+        runtime_metadata_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json"
+        )
+        approvals["release_gate"] = {
+            "approval_text": (
+                "Freigabe: M365 Runtime Release-Gate im Workspace "
+                f"{workspace_id} ausführen: runtime-smoke, runtime-metadata, "
+                "MCP Smoke Suite mit Cleanup und Leftover-Dry-Run."
+            ),
+            "owner_gate": "m365_runtime_release_gate",
+            "workspace_id": workspace_id,
+            "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
+            "commands": [
+                runtime_smoke_command,
+                runtime_metadata_command,
+                suite_command,
+                leftover_dry_run_command,
+            ],
+            "operator_sequence": [
+                {
+                    "step": "runtime_smoke",
+                    "owner_gate": "m365_tenant_read_only",
+                    "command": runtime_smoke_command,
+                },
+                {
+                    "step": "runtime_metadata",
+                    "owner_gate": "m365_tenant_read_only",
+                    "command": runtime_metadata_command,
+                },
+                {
+                    "step": "mcp_smoke_suite",
+                    "owner_gate": "m365_tenant_write_and_delete",
+                    "command": suite_command,
+                },
+                {
+                    "step": "mcp_smoke_leftover_cleanup_dry_run",
+                    "owner_gate": "m365_tenant_read_only",
+                    "command": leftover_dry_run_command,
+                },
+            ],
+        }
+
     return {
         "status": "PASSED",
         "summary": {
@@ -1061,6 +1101,31 @@ def _build_m365_batch_approval_payload(
         },
         "result": approvals,
     }
+
+
+def _build_m365_mcp_smoke_suite_commands(
+    *,
+    workspace_id: str,
+    synthetic_case_id: str | None,
+    correlation_id: str,
+) -> tuple[str, str]:
+    suite_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
+    suite_command = (
+        "python3 scripts/nac.py m365 teams-sharepoint "
+        "mcp-smoke-suite --owner-approved --mcp-suite-cleanup "
+        f"--mcp-smoke-workspace-id {workspace_id} "
+        f"{suite_case_id_arg}"
+        f"--mcp-smoke-correlation-id {correlation_id} "
+        "--format json"
+    )
+    leftover_dry_run_command = (
+        "python3 scripts/nac.py m365 teams-sharepoint "
+        "mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run "
+        f"--mcp-smoke-workspace-id {workspace_id} "
+        f"--mcp-smoke-correlation-id {correlation_id} "
+        "--format json"
+    )
+    return suite_command, leftover_dry_run_command
 
 
 def _normalize_batch_prs(values: list[str]) -> list[str]:

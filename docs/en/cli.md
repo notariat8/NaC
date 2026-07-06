@@ -241,6 +241,7 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
+nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
@@ -258,8 +259,9 @@ Graph REST boundaries. `mcp-stdio` is also offline and speaks newline-delimited
 JSON-RPC over stdin/stdout. `tools/call` only plans Microsoft Graph v1.0
 requests and does not execute requests.
 `nac batch-approval m365` is offline as well. The command renders copyable
-owner approval texts for prepared PR batches and synthetic live-smoke batches,
-but performs no GitHub or Microsoft Graph write action.
+owner approval texts for prepared PR batches, synthetic live-smoke batches and
+the M365 Runtime Release Gate, but performs no GitHub or Microsoft Graph write
+action.
 
 `mcp-stdio --owner-approved --mcp-live-read` additionally enables live reads for
 `case_get` and `document_list`. Runtime credentials must be set outside the
@@ -299,6 +301,12 @@ whose `NacCaseId` starts with `NAC-SMOKE-WRITE-READ-`. The command refuses
 pagination and non-smoke results before any delete. With `--mcp-leftover-dry-run`
 it only reads the owner-gated match count. The redacted artifact is written to
 `out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json`.
+
+`batch-approval m365 --batch-mode release-gate` renders the repeatable release
+gate sequence for runtime/MCP changes. The packet contains `runtime-smoke`,
+`runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup` and the following
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` in a fixed order. The
+renderer itself is offline; the emitted live commands remain owner-gated.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 
