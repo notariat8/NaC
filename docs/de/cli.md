@@ -247,6 +247,9 @@ nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
+nac m365 teams-sharepoint mcp-positive-write-read-smoke --owner-approved --format json
+nac m365 teams-sharepoint mcp-smoke-cleanup --owner-approved --mcp-smoke-case-id <case-id> --format json
+nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --format json
 nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
 nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --format json
 ```
@@ -279,6 +282,23 @@ das redigierte Artefakt
 `out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json`. Das Artefakt
 enthält keine Graph-Rohantwort, keine Case-ID im Klartext, keinen Graph-Pfad,
 keine Feldwerte und keine Tokens oder Secrets.
+
+`mcp-positive-write-read-smoke` schreibt genau eine synthetische `Akten`-Zeile
+mit `NAC-SMOKE-WRITE-READ-`-Präfix und liest dieselbe Akte zurück. Der
+Standalone-Befehl ist nur sinnvoll, wenn der zugehörige Cleanup-Pfad explizit
+vorbereitet ist. Für den regulären Betriebsnachweis ist
+`mcp-smoke-suite --mcp-suite-cleanup` vorzuziehen, weil Write, Read und Cleanup
+im selben owner-gated Lauf geprüft werden.
+
+`mcp-smoke-cleanup` löscht genau eine per Case-ID benannte synthetische
+Smoke-Akte. Die Case-ID muss mit `NAC-SMOKE-WRITE-READ-` beginnen; andere
+Treffer werden verweigert.
+
+`mcp-smoke-suite` erzeugt eine synthetische Case-ID nur im Prozessspeicher,
+führt Write und Read aus und löscht dieselbe Akte bei
+`--mcp-suite-cleanup` im gleichen Lauf. Sie ist der Standard-Betriebsnachweis
+nach MCP-/Runtime-Änderungen, bleibt aber owner-gated, weil sie im Live-Tenant
+schreibt und löscht.
 
 `mcp-smoke-leftover-cleanup` sucht und löscht nur synthetische
 `Akten`-Listenelemente mit `NacCaseId`-Präfix `NAC-SMOKE-WRITE-READ-`.

@@ -244,6 +244,9 @@ nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
+nac m365 teams-sharepoint mcp-positive-write-read-smoke --owner-approved --format json
+nac m365 teams-sharepoint mcp-smoke-cleanup --owner-approved --mcp-smoke-case-id <case-id> --format json
+nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --format json
 nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
 nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --format json
 ```
@@ -273,6 +276,23 @@ redacted artifact
 `out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json`. The artifact
 contains no raw Graph response, no cleartext case ID, no Graph path, no field
 values and no tokens or secrets.
+
+`mcp-positive-write-read-smoke` writes exactly one synthetic `Akten` row with
+the `NAC-SMOKE-WRITE-READ-` prefix and reads the same matter back. The
+standalone command is useful only when the related cleanup path is explicitly
+prepared. For regular runtime evidence, prefer
+`mcp-smoke-suite --mcp-suite-cleanup` because it verifies write, read and
+cleanup in the same owner-gated run.
+
+`mcp-smoke-cleanup` deletes exactly one synthetic smoke matter named by
+case ID. The case ID must start with `NAC-SMOKE-WRITE-READ-`; other matches are
+refused.
+
+`mcp-smoke-suite` creates a synthetic case ID only in process memory, executes
+write and read, and deletes the same matter in the same run when
+`--mcp-suite-cleanup` is set. It is the standard runtime evidence after
+MCP/runtime changes, but remains owner-gated because it writes and deletes in
+the live tenant.
 
 `mcp-smoke-leftover-cleanup` finds and deletes only synthetic `Akten` list items
 whose `NacCaseId` starts with `NAC-SMOKE-WRITE-READ-`. The command refuses
