@@ -6,11 +6,13 @@ from .mcp_smoke_cleanup import run_mcp_smoke_cleanup
 from .mcp_smoke_leftover_cleanup import run_mcp_smoke_leftover_cleanup
 from .mcp_smoke_suite import run_mcp_smoke_suite
 from .provisioner import PlanOperation, build_plan
+from .release_gate_evidence import build_release_gate_evidence
 from .schema import load_schema, validate_schema
 
 __all__ = [
     "PlanOperation",
     "build_tool_manifest",
+    "build_release_gate_evidence",
     "build_plan",
     "load_mcp_contract",
     "load_schema",
