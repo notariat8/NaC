@@ -231,21 +231,25 @@ def _validate_documentation_boundary(repo_root: Path) -> list[str]:
     german = _read_text(repo_root / "docs" / "de" / "notarsoftware-datenmodell.md", errors, repo_root)
     english = _read_text(repo_root / "docs" / "en" / "notarsoftware-datenmodell.md", errors, repo_root)
     required = {
-        "docs/de/notarsoftware-datenmodell.md": "SaaS-Laufzeitmetadaten gehören nach der ATP-Zielarchitektur in ATP",
-        "docs/en/notarsoftware-datenmodell.md": "SaaS runtime metadata belongs in ATP according to the ATP target",
+        "docs/de/notarsoftware-datenmodell.md": "SaaS-Laufzeitmetadaten gehören nach der M365-MVP-Entscheidung",
+        "docs/en/notarsoftware-datenmodell.md": "Productive SaaS runtime metadata belongs in Teams",
     }
     for rel, term in required.items():
         text = german if rel.startswith("docs/de/") else english
         if term not in text:
-            errors.append(f"{rel} missing ATP runtime metadata boundary")
+            errors.append(f"{rel} missing M365 runtime metadata boundary")
+    archived_atp_phrases = (
+        "SaaS-Laufzeitmetadaten gehören nach der ATP-Zielarchitektur in ATP",
+        "SaaS runtime metadata belongs in ATP according to the ATP target",
+    )
     old_phrases = (
         "Produktive Daten brauchen\neinen geprüften Sovereign-/DSGVO-Git-Anbieter",
         "Production data needs\na reviewed sovereign/GDPR Git provider",
     )
     combined = german + "\n" + english
-    for phrase in old_phrases:
+    for phrase in archived_atp_phrases + old_phrases:
         if phrase in combined:
-            errors.append("notarsoftware data model still frames Git provider as productive runtime target")
+            errors.append("notarsoftware data model still frames an archived runtime target as active")
     return errors
 
 

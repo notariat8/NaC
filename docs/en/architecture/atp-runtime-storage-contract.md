@@ -1,12 +1,17 @@
 # ATP Runtime Storage Contract
 
+Archive status since 2026-07-06: this contract remains as a legacy reference
+but is not an active M365 MVP storage track. Active runtime metadata starts
+through Teams, SharePoint team sites, Microsoft Graph REST/MCP and later event
+journal/graph projections.
+
 This contract extracts the first implementation track from the ATP graph target
 model. It does not activate a productive schema or graph feature. It defines
 which runtime objects NaC may keep in ATP and how those objects can later be
 projected into a graph or ontology view.
 
 The machine-readable contract is
-`workflows/contracts/atp-runtime-storage.contract.json`.
+`archive/legacy-oci-atp/workflows/contracts/atp-runtime-storage.contract.json`.
 
 ## Decision
 
@@ -68,7 +73,7 @@ through the same adapter surface:
 - `sessions` belong to the ATP runtime target model, but are externalized from
   this graph slice: the portal-session path runs through
   `nac_identity.session_store.AtpSessionStore` and
-  [atp-onboarding-request-store.sql](../../../deploy/database/atp-onboarding-request-store.sql).
+  [atp-onboarding-request-store.sql](../../../archive/legacy-oci-atp/deploy/database/atp-onboarding-request-store.sql).
 
 This keeps process graph projection scoped to `process_events` and prevents
 auth/session-revocation logic from being mixed into matter status.
@@ -76,7 +81,7 @@ auth/session-revocation logic from being mixed into matter status.
 ## Schema Artifact
 
 The first technical schema slice is captured as a non-destructive artifact in
-`deploy/database/atp-runtime-anchor-schema.sql`. The artifact is not an apply
+`archive/legacy-oci-atp/deploy/database/atp-runtime-anchor-schema.sql`. The artifact is not an apply
 request. It describes idempotent runtime anchors for:
 
 - `nac_tenants`
