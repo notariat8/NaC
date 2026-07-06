@@ -209,15 +209,31 @@ NaC-Rollen-, Akten- und Zweckgate.
 
 Der erste Skeleton steht als
 [workflows/contracts/teams-sharepoint-data-mcp.contract.json](../../../workflows/contracts/teams-sharepoint-data-mcp.contract.json)
-und Python-Modul `nac_m365_graph.mcp_runtime` bereit. Er führt noch keine
-Graph-Aufrufe aus, speichert keine Tokens oder Secrets und liest keine Dateien.
-Er erzeugt nur prüfbare Graph-REST-Request-Pläne hinter einem offenen Rollen-,
-Akten- und Zweckgate. Die zentrale Bedienkante zeigt das sichere Tool-Manifest
-ohne Microsoft-365-Zugang:
+und Python-Modul `nac_m365_graph.mcp_runtime` bereit. Der lokale
+stdio-Adapter steht in `nac_m365_graph.mcp_stdio`. Er nutzt die
+MCP-Protokollversion `2025-11-25`, spricht newline-delimited JSON-RPC über
+stdin/stdout und führt noch keine Graph-Aufrufe aus. Der Adapter speichert
+keine Tokens oder Secrets und liest keine Dateien. Er erzeugt nur prüfbare
+Graph-REST-Request-Pläne hinter einem offenen Rollen-, Akten- und Zweckgate.
+Die zentrale Bedienkante zeigt das sichere Tool-Manifest ohne
+Microsoft-365-Zugang:
 
 ```bash
 nac m365 teams-sharepoint mcp-manifest --format json
 ```
+
+Der lokale MCP-Adapter wird so gestartet:
+
+```bash
+nac m365 teams-sharepoint mcp-stdio
+```
+
+`mcp-manifest` ist Discovery für Tool-Grenzen. `mcp-stdio` ist die lokale
+Runtime-Bedienkante für MCP-Clients wie AIQ/Codex, bleibt aber im aktuellen
+MVP im Modus `request_planning_only`: `tools/call` liefert
+`structuredContent.requestPlan` mit Methode, Graph-v1.0-Pfad und Payload,
+setzt `executesGraphRequests` auf `false` und gibt Gate-Verstöße als MCP
+Tool-Error zurück.
 
 Erste Tool-Grenzen:
 
@@ -248,4 +264,4 @@ Nicht Teil des MVP:
 3. Entra-App und Admin Consent außerhalb des Repos einrichten.
 4. Einen ersten Smoke gegen `NaC-Notar-01` ausführen.
 5. Application-owned privileged change path für M365 als nächste Iteration bauen.
-6. Danach `teams-sharepoint-data-mcp` von Request-Planung auf owner-gated Live-Ausführung erweitern.
+6. Danach `teams-sharepoint-data-mcp` von lokalem `mcp-stdio` und Request-Planung auf owner-gated Live-Ausführung erweitern.

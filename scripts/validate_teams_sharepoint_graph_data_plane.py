@@ -441,6 +441,12 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     else:
         if mcp.get("server_id") != "teams-sharepoint-data-mcp":
             errors.append("mcp_boundary.server_id must be teams-sharepoint-data-mcp")
+        if mcp.get("current_transport") != "stdio":
+            errors.append("mcp_boundary.current_transport must be stdio")
+        if mcp.get("current_protocol_version") != "2025-11-25":
+            errors.append("mcp_boundary.current_protocol_version must be 2025-11-25")
+        if mcp.get("current_runtime_mode") != "request_planning_only":
+            errors.append("mcp_boundary.current_runtime_mode must be request_planning_only")
         if mcp.get("mcp_must_use_graph_rest_only") is not True:
             errors.append("mcp_boundary.mcp_must_use_graph_rest_only must be true")
         for tool in ("case_get", "case_create", "grant_request", "audit_append", "document_list"):
@@ -807,7 +813,10 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "CLI for Microsoft 365"),
         (DOC_DE, "`teams-sharepoint-data-mcp`"),
         (DOC_DE, "mcp-manifest"),
+        (DOC_DE, "mcp-stdio"),
+        (DOC_DE, "MCP-Protokollversion `2025-11-25`"),
         (DOC_DE, "nac_m365_graph.mcp_runtime"),
+        (DOC_DE, "nac_m365_graph.mcp_stdio"),
         (DOC_EN, "Teams SharePoint Graph Data Plane"),
         (DOC_EN, "Microsoft Teams team per notary team"),
         (DOC_EN, "Graph REST Boundary"),
@@ -819,7 +828,10 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "CLI for Microsoft 365"),
         (DOC_EN, "`teams-sharepoint-data-mcp`"),
         (DOC_EN, "mcp-manifest"),
+        (DOC_EN, "mcp-stdio"),
+        (DOC_EN, "MCP protocol version `2025-11-25`"),
         (DOC_EN, "nac_m365_graph.mcp_runtime"),
+        (DOC_EN, "nac_m365_graph.mcp_stdio"),
         (RUNBOOK_DE, "Microsoft-365-CLI-Admin-Beschleuniger"),
         (RUNBOOK_DE, "Pflicht-Handoff Vor Nutzeraktion"),
         (RUNBOOK_DE, "Bootstrap-Route A: CLI-App durch `m365 setup`"),

@@ -240,6 +240,9 @@
   "mcp_boundary": {
     "server_id": "teams-sharepoint-data-mcp",
     "mcp_server_required_for_runtime": true,
+    "current_transport": "stdio",
+    "current_protocol_version": "2025-11-25",
+    "current_runtime_mode": "request_planning_only",
     "mcp_must_use_graph_rest_only": true,
     "allowed_runtime_tools": [
       "case_get",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,6 +21,10 @@ from nac_m365_graph.mcp_runtime import (  # noqa: E402
     load_mcp_contract,
     plan_tool_request,
     validate_mcp_contract,
+)
+from nac_m365_graph.mcp_stdio import (  # noqa: E402
+    MCP_PROTOCOL_VERSION,
+    TeamsSharePointDataMcpServer,
 )
 
 
@@ -57,6 +62,116 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         for tool in manifest["tools"]:
             self.assertTrue(tool["requiresRoleCasePurposeGate"])
             self.assertFalse(tool["readsFiles"])
+
+    def test_stdio_initialize_declares_tools_capability(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message(
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertEqual(result["protocolVersion"], MCP_PROTOCOL_VERSION)
+        self.assertEqual(result["serverInfo"]["name"], "teams-sharepoint-data-mcp")
+        self.assertIn("tools", result["capabilities"])
+
+    def test_stdio_initialized_notification_has_no_response(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message({"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+        self.assertIsNone(response)
+
+    def test_stdio_tools_list_returns_mcp_tool_schemas(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message(
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
+        )
+
+        self.assertIsNotNone(response)
+        tools = response["result"]["tools"]
+        by_name = {tool["name"]: tool for tool in tools}
+        self.assertEqual(set(by_name), {tool["id"] for tool in load_mcp_contract(DEFAULT_MCP_CONTRACT)["tools"]})
+        case_get = by_name["case_get"]
+        self.assertEqual(case_get["inputSchema"]["required"], ["context", "arguments"])
+        self.assertEqual(case_get["inputSchema"]["properties"]["arguments"]["required"], ["case_id"])
+
+    def test_stdio_tools_call_returns_request_plan_structured_content(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_get",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {"case_id": "case-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertNotIn("isError", result)
+        structured = result["structuredContent"]
+        self.assertFalse(structured["executesGraphRequests"])
+        self.assertEqual(structured["requestPlan"]["method"], "GET")
+        self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", structured["requestPlan"]["path"])
+
+    def test_stdio_tools_call_closed_gate_returns_tool_error(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_get",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1", role_case_gate="closed"),
+                        "arguments": {"case_id": "case-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertTrue(result["isError"])
+        self.assertEqual(result["structuredContent"]["errorType"], "McpGateError")
+        self.assertFalse(result["structuredContent"]["executesGraphRequests"])
+
+    def test_stdio_write_approval_requires_json_boolean_true(self) -> None:
+        server = _mcp_server()
+        context = _mcp_context(case_id="case-1", write_approved=True)
+        context["write_approved"] = "false"
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "case_create",
+                    "arguments": {
+                        "context": context,
+                        "arguments": _case_create_arguments(),
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertTrue(result["isError"])
+        self.assertIn("write tool requires explicit write approval", result["content"][0]["text"])
 
     def test_case_get_plans_graph_rest_request_without_payload(self) -> None:
         plan = plan_tool_request(
@@ -172,6 +287,44 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["tool_count"], 7)
         self.assertFalse(payload["result"]["executesGraphRequests"])
 
+    def test_central_cli_mcp_stdio_process_handles_initialize_and_tools_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            provisioned_state = Path(tmpdir) / "provisioned.json"
+            provisioned_state.write_text(json.dumps(_provisioned_state()), encoding="utf-8")
+            messages = "\n".join(
+                [
+                    json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+                    json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}),
+                    "",
+                ]
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/nac.py",
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "mcp-stdio",
+                    "--provisioned-state",
+                    str(provisioned_state),
+                ],
+                cwd=REPO_ROOT,
+                input=messages,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0]["result"]["protocolVersion"], MCP_PROTOCOL_VERSION)
+        self.assertEqual(len(lines[1]["result"]["tools"]), 7)
+
 
 def _open_context(case_id: str, write_approved: bool = False) -> RuntimeContext:
     return RuntimeContext(
@@ -208,6 +361,23 @@ def _case_create_arguments() -> dict:
         "vertraulichkeitsstufe": "Normal",
         "nac_workflow_version": "workflow-v1",
         "kg_version": "kg-v1",
+    }
+
+
+def _mcp_server() -> TeamsSharePointDataMcpServer:
+    return TeamsSharePointDataMcpServer(load_mcp_contract(DEFAULT_MCP_CONTRACT), _provisioned_state())
+
+
+def _mcp_context(case_id: str, role_case_gate: str = "open", write_approved: bool = False) -> dict:
+    return {
+        "actor_id": "user-1",
+        "actor_role": "notary_clerk",
+        "workspace_id": "notary_team_01",
+        "purpose": "matter_workflow",
+        "correlation_id": "corr-1",
+        "case_id": case_id,
+        "role_case_gate": role_case_gate,
+        "write_approved": write_approved,
     }
 
 

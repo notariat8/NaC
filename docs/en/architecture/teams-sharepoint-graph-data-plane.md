@@ -203,15 +203,30 @@ write action.
 
 The first skeleton lives in
 [workflows/contracts/teams-sharepoint-data-mcp.contract.json](../../../workflows/contracts/teams-sharepoint-data-mcp.contract.json)
-and the Python module `nac_m365_graph.mcp_runtime`. It does not execute Graph
-requests yet, stores no tokens or secrets and reads no files. It only creates
-auditable Graph REST request plans behind an open role, matter and purpose
-gate. The central operating edge exposes the safe tool manifest without
-Microsoft 365 access:
+and the Python module `nac_m365_graph.mcp_runtime`. The local stdio adapter
+lives in `nac_m365_graph.mcp_stdio`. It uses MCP protocol version `2025-11-25`,
+speaks newline-delimited JSON-RPC over stdin/stdout and does not
+execute Graph requests yet. The adapter stores no tokens or secrets and reads
+no files. It only creates auditable Graph REST request plans behind an open
+role, matter and purpose gate. The central operating edge exposes the safe tool
+manifest without Microsoft 365 access:
 
 ```bash
 nac m365 teams-sharepoint mcp-manifest --format json
 ```
+
+The local MCP adapter starts with:
+
+```bash
+nac m365 teams-sharepoint mcp-stdio
+```
+
+`mcp-manifest` is discovery for tool boundaries. `mcp-stdio` is the local
+runtime edge for MCP clients such as AIQ/Codex, but it remains in
+`request_planning_only` mode for the current MVP: `tools/call` returns
+`structuredContent.requestPlan` with method, Graph v1.0 path and payload, sets
+`executesGraphRequests` to `false` and returns gate violations as MCP tool
+errors.
 
 Initial tool boundaries:
 
@@ -242,4 +257,4 @@ Not part of the MVP:
 3. Configure the Entra app and admin consent outside the repository.
 4. Run a first smoke against `NaC-Notar-01`.
 5. Build the application-owned privileged M365 change path as the next iteration.
-6. Then extend `teams-sharepoint-data-mcp` from request planning to owner-gated live execution.
+6. Then extend `teams-sharepoint-data-mcp` from local `mcp-stdio` and request planning to owner-gated live execution.

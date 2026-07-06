@@ -71,6 +71,22 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
         errors.append("teams-sharepoint-data-mcp must not store tokens or secrets")
     if contract.get("runtime_boundary", {}).get("reads_sharepoint_file_content") is not False:
         errors.append("teams-sharepoint-data-mcp must not read SharePoint file content")
+    protocol = contract.get("mcp_protocol")
+    if not isinstance(protocol, dict):
+        errors.append("teams-sharepoint-data-mcp mcp_protocol must be an object")
+    else:
+        if protocol.get("protocol_version") != "2025-11-25":
+            errors.append("teams-sharepoint-data-mcp mcp_protocol.protocol_version must be 2025-11-25")
+        if protocol.get("transport") != "stdio":
+            errors.append("teams-sharepoint-data-mcp mcp_protocol.transport must be stdio")
+        if protocol.get("jsonrpc_version") != "2.0":
+            errors.append("teams-sharepoint-data-mcp mcp_protocol.jsonrpc_version must be 2.0")
+        if protocol.get("tool_calls_execute_graph_requests") is not False:
+            errors.append("teams-sharepoint-data-mcp tool calls must not execute Graph requests")
+        methods = set(protocol.get("supported_methods", []))
+        for method in ("initialize", "notifications/initialized", "tools/list", "tools/call"):
+            if method not in methods:
+                errors.append(f"teams-sharepoint-data-mcp mcp_protocol.supported_methods missing {method}")
 
     tools = _tools_by_id(contract)
     required = {
