@@ -267,6 +267,21 @@ Antwortform und Zähler. Rohantworten aus Graph, Case-ID im Klartext,
 Graph-Pfad, Feldwerte, Tokens, Secrets und Dateiinhalt werden nicht
 gespeichert.
 
+Ein positiver Write-Read-Smoke ist bewusst kein dauerhaft freigeschalteter
+MCP-Live-Write-Modus. Er läuft als einzelner owner-gated Operator-Befehl:
+
+```bash
+nac m365 teams-sharepoint mcp-positive-write-read-smoke --owner-approved
+```
+
+Der Befehl plant `case_create` über den MCP-Vertrag, schreibt genau einen
+synthetischen `Akten`-Eintrag per Microsoft Graph REST v1.0 und liest dieselbe
+synthetische Akte danach mit dem vorhandenen `case_get` Live-Read wieder aus.
+Das redigierte Artefakt liegt standardmäßig unter
+`out/m365/teams-sharepoint/mcp-positive-write-read-smoke.redacted.json`. Es
+speichert keine Roh-Case-ID, keine Rohpayloads, keine Rohantworten, keine
+Tokens und keine Datei-Inhalte.
+
 Erste Tool-Grenzen:
 
 - `case_get`

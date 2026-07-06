@@ -26,6 +26,10 @@ from nac_m365_graph.mcp_live_read_smoke import (  # noqa: E402
     run_mcp_live_read_smoke,
     write_mcp_live_read_smoke_artifact,
 )
+from nac_m365_graph.mcp_positive_write_read_smoke import (  # noqa: E402
+    run_mcp_positive_write_read_smoke,
+    write_mcp_positive_write_read_smoke_artifact,
+)
 from nac_m365_graph.mcp_stdio import (  # noqa: E402
     MCP_PROTOCOL_VERSION,
     TeamsSharePointDataMcpServer,
@@ -321,6 +325,78 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
         self.assertNotIn("case-1", json.dumps(payload))
 
+    def test_mcp_positive_write_read_smoke_creates_case_then_reads_and_redacts(self) -> None:
+        graph_client = _FakeGraphWriteReadClient(
+            post_response={"id": "raw-created-item-id"},
+            get_response={
+                "value": [
+                    {
+                        "id": "raw-created-item-id",
+                        "fields": {
+                            "NacCaseId": "case-1",
+                            "Aktenzeichen": "AZ-1",
+                            "Status": "Entwurf",
+                        },
+                    }
+                ]
+            },
+        )
+
+        result = run_mcp_positive_write_read_smoke(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            case_id="case-1",
+            correlation_id="corr-smoke",
+            timestamp="2026-07-06T00:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["write_status"], "PASSED")
+        self.assertEqual(result["summary"]["read_status"], "PASSED")
+        self.assertEqual(result["summary"]["read_value_count"], 1)
+        self.assertEqual(len(graph_client.posts), 1)
+        self.assertEqual(len(graph_client.gets), 1)
+        self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", graph_client.posts[0][0])
+        self.assertEqual(result["writeRequest"]["payloadFieldNames"], [
+            "Aktenzeichen",
+            "KgVersion",
+            "NacCaseId",
+            "NacWorkflowVersion",
+            "NotarTeam",
+            "Status",
+            "Vertraulichkeitsstufe",
+            "Vorgangstyp",
+        ])
+        serialized = json.dumps(result, ensure_ascii=False)
+        for raw_value in ("case-1", "AZ-1", "raw-created-item-id", "example.sharepoint.com"):
+            self.assertNotIn(raw_value, serialized)
+
+    def test_mcp_positive_write_read_smoke_writes_redacted_artifact(self) -> None:
+        graph_client = _FakeGraphWriteReadClient(
+            post_response={"id": "raw-created-item-id"},
+            get_response={"value": [{"id": "raw-created-item-id", "fields": {"NacCaseId": "case-1"}}]},
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "positive-smoke.json"
+            result = run_mcp_positive_write_read_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                case_id="case-1",
+                timestamp="2026-07-06T00:00:00Z",
+            )
+            write_mcp_positive_write_read_smoke_artifact(result, output)
+
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["privacy"]["storesRawWritePayload"])
+        self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
+        self.assertNotIn("case-1", json.dumps(payload))
+
     def test_stdio_tools_call_closed_gate_returns_tool_error(self) -> None:
         server = _mcp_server()
 
@@ -593,6 +669,28 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertIn("STATUS: BLOCKED", result.stdout)
         self.assertIn("--mcp-smoke-case-id", result.stdout)
 
+    def test_central_cli_mcp_positive_write_read_smoke_requires_owner_approval(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "mcp-positive-write-read-smoke",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("STATUS: BLOCKED", result.stdout)
+        self.assertIn("--owner-approved", result.stdout)
+
 
 def _open_context(case_id: str, write_approved: bool = False) -> RuntimeContext:
     return RuntimeContext(
@@ -640,6 +738,22 @@ class _FakeGraphReadClient:
     def get(self, path: str) -> dict:
         self.paths.append(path)
         return self.response
+
+
+class _FakeGraphWriteReadClient:
+    def __init__(self, post_response: dict, get_response: dict) -> None:
+        self.post_response = post_response
+        self.get_response = get_response
+        self.posts: list[tuple[str, dict]] = []
+        self.gets: list[str] = []
+
+    def post(self, path: str, payload: dict) -> dict:
+        self.posts.append((path, payload))
+        return self.post_response
+
+    def get(self, path: str) -> dict:
+        self.gets.append(path)
+        return self.get_response
 
 
 def _mcp_server(
