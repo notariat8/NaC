@@ -15,6 +15,8 @@ Arbeitsmodell und Repo-Konsolidierung.
 - [agile-cadence.md](agile-cadence.md): Arbeitsmethode und Team-Cadence.
 - [codex-time-ledger.md](codex-time-ledger.md): lokales Zeitprotokoll für Codex-Arbeitsblöcke,
   Toolzeit, Freigaben und wiederkehrende Wartezeiten.
+- [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): Batch-Freigabe für
+  vorbereitete M365-MCP-PRs und getrennt freizugebende Live-Smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optionaler lokaler qmd-Suchindex
   für Agent-Regeln, Release-Memory und Runbooks ohne Secrets oder Mandatsdaten.
 - [oci-runtime.md](oci-runtime.md): archivierter Legacy-Runtime-Vertrag für
