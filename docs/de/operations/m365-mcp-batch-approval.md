@@ -99,6 +99,26 @@ erzeugen oder bereinigen. Evidence wird redigiert abgelegt; Tokens, Secrets,
 Rohdaten echter Akten und vollständige personenbezogene Inhalte werden nicht
 protokolliert.
 
+## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
+
+Die Smoke Suite ist der Standard-Betriebsnachweis nach einem gemergten
+Änderungssatz, wenn dieser eine dieser Flächen berührt:
+
+- `teams-sharepoint-data-mcp`-Vertrag, Tool-Grenzen oder Adapterverhalten,
+- `nac_m365_graph`-Runtime-, Graph-Client-, Smoke- oder Cleanup-Module,
+- zentrale `nac`-CLI-Bedienkante für M365-MCP-Smokes,
+- Runtime-Graph-Konfiguration, Zertifikatspfad oder Sites.Selected-Zugriff,
+- Runbook- oder Operator-Änderungen, die den Live-Write-/Read-/Cleanup-Pfad
+  betreffen.
+
+Der Nachweis darf nicht automatisch ohne Freigabe laufen. Er bleibt ein
+separates Owner-Gate, weil er im Live-Tenant eine synthetische Akte schreibt
+und löscht. Nach der Freigabe muss der Agent den Lauf vollständig abschließen:
+Write, Read, Cleanup, redigiertes Artefakt, Workspace-Clean-State und
+konkretes Ergebnis in der Abschlussmeldung. Bleibt nach dem Lauf ein
+synthetischer Rest zurück, ist unmittelbar der owner-gated
+`mcp-smoke-leftover-cleanup`-Pfad vorzubereiten.
+
 ## Abschlussregel
 
 Nach einem freigegebenen Batch ist der Agent erst fertig, wenn alle
