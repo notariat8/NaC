@@ -52,11 +52,12 @@ class NotarkammerDemoReadonlyCommandTests(unittest.TestCase):
                 for pattern in forbidden_patterns:
                     self.assertIsNone(pattern.search(block), f"{doc} contains executable write command: {pattern.pattern}")
 
-    def test_apply_request_examples_are_dry_run_only(self):
+    def test_legacy_apply_request_examples_are_removed(self):
         for doc in DEMO_DOCS:
-            for line in doc.read_text(encoding="utf-8").splitlines():
-                if "python scripts/nac.py tenant apply-request" in line:
-                    self.assertIn("--dry-run", line, f"{doc} apply-request example must remain dry-run only")
+            self.assertNotIn(
+                "python scripts/nac.py tenant apply-request",
+                doc.read_text(encoding="utf-8"),
+            )
 
     def test_post_mentions_are_warning_text_not_executable_examples(self):
         for doc in DEMO_DOCS:

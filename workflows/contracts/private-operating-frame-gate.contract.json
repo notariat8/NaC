@@ -7,7 +7,7 @@
   "purpose": "Definiert die Mindestfreigaben, Kontrollen und Nachweise, bevor echte Mandatsdaten aus der metadata-only NaC-Grenze in einen privaten Runtime-Speicher oder Fachsystempfad gelangen dürfen.",
   "source_documents": {
     "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json",
-    "atp_metadata_storage": "workflows/contracts/atp-runtime-storage.contract.json",
+    "m365_metadata_storage": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
     "secure_document_link": "workflows/contracts/secure-document-link.contract.json",
     "onprem_connector_boundary": "workflows/contracts/notarial-onprem-connector-boundaries.contract.json",
     "privacy_dpa_de": "docs/de/datenschutz-avv-dpa.md",
@@ -153,7 +153,7 @@
   "validation_commands": [
     "python scripts/validate_private_operating_frame_gate.py",
     "python scripts/validate_matter_data_classification_redaction.py",
-    "python scripts/validate_atp_runtime_contracts.py",
+    "python scripts/validate_teams_sharepoint_graph_data_plane.py",
     "python scripts/validate_language_parity.py",
     "python scripts/validate_doc_links.py",
     "python scripts/quality_gate.py --profile strict"

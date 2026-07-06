@@ -127,14 +127,13 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
             "login-intent",
             "metadata-only",
             "metadata status",
-            "atp-healthcheck",
-            "atp healthcheck",
+            "m365",
+            "sharepoint",
             "store-gate",
             "store gate",
             "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant customer-plan",
             "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant dns-check",
-            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py tenant apply-request",
-            "--dry-run",
+            "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py m365 teams-sharepoint privileged-plan",
             "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn validate",
             "/home/ubuntu/.venvs/nac/bin/python scripts/nac.py bpmn show immobilienkaufvertrag",
             "curl -fsS".lower(),
@@ -144,6 +143,7 @@ class NotarkammerLiveDemoRunbookTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term.lower(), combined_lower)
+        self.assertNotIn("tenant apply-request", combined_lower)
         bare_python_commands = [
             line.strip()
             for line in combined.splitlines()

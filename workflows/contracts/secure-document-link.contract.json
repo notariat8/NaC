@@ -17,14 +17,14 @@
     "external_participant"
   ],
   "identity_sources": [
-    "oracle_oci_identity_domains",
-    "oci_identity_domain_groups",
+    "microsoft_entra_id",
+    "m365_group_membership",
     "german_eid_bridge",
     "nac_role_gate"
   ],
   "storage_targets": [
-    "object_store",
-    "database_blob",
+    "sharepoint_document_library",
+    "sharepoint_list_item_attachment",
     "onedrive"
   ],
   "allowed_actions": [
@@ -66,7 +66,7 @@
       "purpose": "Specific action purpose such as upload_document or read_current_matter.",
       "expires_at": "UTC timestamp after which the issued link must no longer be accepted.",
       "matter_binding": "Tenant, case and optional document binding for the issued link.",
-      "storage_target": "One of object_store, database_blob or onedrive.",
+      "storage_target": "One of sharepoint_document_library, sharepoint_list_item_attachment or onedrive.",
       "revocation": "Revocation handle, status and reason metadata.",
       "audit_event": "Append-only audit event reference for issuance, use, expiry or revocation.",
       "content_hash": "Hash of uploaded content when content exists and can be hashed.",

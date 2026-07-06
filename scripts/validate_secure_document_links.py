@@ -7,7 +7,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "secure-document-link.contract.json"
-REQUIRED_STORAGE_TARGETS = {"object_store", "database_blob", "onedrive"}
+REQUIRED_STORAGE_TARGETS = {"onedrive", "sharepoint_document_library", "sharepoint_list_item_attachment"}
 REQUIRED_EVIDENCE_FIELDS = {
     "purpose",
     "expires_at",

@@ -23,6 +23,7 @@ EVIDENCE_TEMPLATE = REPO_ROOT / "workflows" / "evidence-templates" / "ponytail-s
 RUNTIME_SMOKE_EVIDENCE_TEMPLATE = REPO_ROOT / "workflows" / "evidence-templates" / "nac-runtime-smoke.md"
 QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
+LEGACY_ARCHIVE = REPO_ROOT / "archive" / "legacy-oci-atp" / "README.md"
 
 REQUIRED_TARGET_PATHS = {
     "manifest_path": "blueprints/nac-onprem/agents.yaml",
@@ -196,8 +197,8 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         errors.append("schema_version must be nac.workflow-contract/v0.1")
     if payload.get("contract_id") != "workflow.nac_onprem_agent_runtime":
         errors.append("contract_id must be workflow.nac_onprem_agent_runtime")
-    if payload.get("status") != "target_control_ready_no_productive_connector_apply":
-        errors.append("status must be target_control_ready_no_productive_connector_apply")
+    if payload.get("status") != "archived_legacy_no_productive_connector_apply":
+        errors.append("status must be archived_legacy_no_productive_connector_apply")
 
     errors.extend(_validate_operating_model(payload))
     errors.extend(_validate_agentic_toolkit_decision(payload))
@@ -699,8 +700,7 @@ def _validate_docs(payload: dict[str, Any]) -> list[str]:
         (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "ready_owner_gated_not_executed"),
         (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "Public-Origin-Konfiguration"),
         (RUNTIME_SMOKE_EVIDENCE_TEMPLATE, "Public-Origin-Klasse"),
-        (QUALITY_DE, "nac_onprem_agent_runtime"),
-        (QUALITY_EN, "nac_onprem_agent_runtime"),
+        (LEGACY_ARCHIVE, "workflows/contracts/nac-onprem-agent-runtime.contract.json"),
     ):
         if not path.is_file():
             errors.append(f"missing documentation file: {path.relative_to(REPO_ROOT)}")

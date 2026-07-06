@@ -190,7 +190,7 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     expected = {
         "schema_version": "nac.m365-data-plane/v0.1",
         "contract_id": "m365.teams_sharepoint_graph_data_plane",
-        "status": "planned_mvp_contract_and_skeleton_no_live_apply",
+        "status": "final_m365_mvp_data_plane",
     }
     for key, value in expected.items():
         if payload.get(key) != value:

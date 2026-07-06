@@ -17,7 +17,7 @@ class NotarkammerProcessEditorContractTests(unittest.TestCase):
 
         self.assertEqual(contract["schema_version"], "nac.notarkammer-process-editor/v0.1")
         self.assertEqual(contract["template_source_of_truth"], "git")
-        self.assertEqual(contract["runtime_data_plane"], "atp")
+        self.assertEqual(contract["runtime_data_plane"], "m365_sharepoint_event_journal")
         self.assertEqual(contract["primary_demo_usecase"], "immobilienkaufvertrag")
         self.assertEqual(contract["publication_flow"], ["draft", "review", "protected_pr", "template_catalog"])
 
@@ -53,7 +53,7 @@ class NotarkammerProcessEditorContractTests(unittest.TestCase):
         for term in (
             "BPMN-Editor",
             "BPMN editor",
-            "ATP Runtime Store",
+            "M365/SharePoint",
             "Graph-Projektion",
             "graph projection",
             "XNP/SNP",

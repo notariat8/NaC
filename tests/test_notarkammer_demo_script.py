@@ -64,11 +64,12 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
             "Request-Status",
             "request status",
             "metadata-only",
-            "ATP-Healthcheck",
-            "ATP healthcheck",
+            "M365-/SharePoint-Plan",
+            "M365/SharePoint plan",
             "Store-Gate",
             "store gate",
             "python scripts/nac.py tenant customer-plan",
+            "python scripts/nac.py m365 teams-sharepoint privileged-plan",
             "python scripts/nac.py tenant dns-check",
             "python scripts/nac.py bpmn validate",
             "no forms",
@@ -77,6 +78,8 @@ class NotarkammerDemoScriptTests(unittest.TestCase):
         ]
         for term in required_terms:
             self.assertIn(term.lower(), combined_lower)
+        self.assertNotIn("atp-healthcheck", combined_lower)
+        self.assertNotIn("atp healthcheck", combined_lower)
 
     def test_demo_script_stays_customer_safe(self) -> None:
         combined = "\n".join(path.read_text(encoding="utf-8") for path in DEMO_DOCS.values())

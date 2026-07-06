@@ -2,10 +2,10 @@
   "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.runtime_status_wiring_runbook",
   "status": "owner_free_contract_first",
-  "purpose": "Document the safe path from the current in-memory demo runtime status to a future ATP-backed runtime status for the first Immobilienkaufvertrag route.",
+  "purpose": "Document the safe path from the current in-memory demo runtime status to a future M365/SharePoint-backed runtime status for the first Immobilienkaufvertrag route.",
   "route": "/workspace/immobilienkaufvertrag",
   "current_store": "in_memory_demo_adapter",
-  "runtime_store": "atp_adapter_future_slice",
+  "runtime_store": "m365_sharepoint_adapter_future_slice",
   "current_pipeline": [
     "metadata_fixture",
     "InMemoryRuntimeStore",
@@ -17,45 +17,30 @@
     "protected_workspace_route"
   ],
   "future_owner_gated_pipeline": [
-    "ATP RuntimeStoreAdapter implementation",
-    "ATP schema migration",
-    "stateful Function configuration",
+    "M365 SharePoint RuntimeStoreAdapter implementation",
+    "Graph REST list provisioning",
+    "serverless Function configuration",
     "live route binding"
   ],
-  "atp_metadata_seam_v0": {
+  "runtime_metadata_source_v0": {
     "source_env": "NAC_FIRST_MATTER_RUNTIME_SOURCE",
     "accepted_source_values": [
-      "atp",
-      "atp-json",
-      "atp_metadata",
-      "atp-runtime-metadata"
+      "json",
+      "metadata-json",
+      "sharepoint",
+      "m365",
+      "m365-sharepoint"
     ],
     "object_key_env": "NAC_FIRST_MATTER_RUNTIME_OBJECT_KEY",
     "default_object_key": "DEMO-PROCESS-IMMOBILIENKAUF-01",
     "payload_column_env": "NAC_FIRST_MATTER_RUNTIME_PAYLOAD_COLUMN",
     "default_payload_column": "payload_json",
-    "table_env": "NAC_FIRST_MATTER_RUNTIME_TABLE",
-    "default_table": "nac_process_instances",
-    "key_column_env": "NAC_FIRST_MATTER_RUNTIME_KEY_COLUMN",
-    "default_key_column": "process_instance_id",
-    "allowed_tables": [
-      "nac_tenants",
-      "nac_user_bindings",
-      "nac_matters",
-      "nac_process_templates",
-      "nac_process_instances",
-      "nac_process_events",
-      "nac_audit_events"
-    ],
-    "sql_identifier_policy": "allowlisted_table_key_and_payload_columns_only",
     "missing_row_fetcher_behavior": "fail_closed_runtime_metadata_source_unavailable",
-    "invalid_row_fetcher_config_behavior": "fail_closed_runtime_metadata_source_unavailable",
-    "packaged_fallback_when_atp_enabled": false,
-    "requires_existing_atp_secret_reference": true,
-    "wallet_references_reused_only": true,
-    "plaintext_password_env_allowed": false,
+    "legacy_atp_values_behavior": "fail_closed_legacy_atp_runtime_source_archived",
+    "packaged_fallback_when_explicit_source_enabled": false,
+    "requires_existing_graph_access": true,
     "database_migration_required": false,
-    "oci_apply_required": false,
+    "cloud_apply_required": false,
     "secrets_or_wallet_change_required": false
   },
   "guardrails": {
@@ -70,10 +55,9 @@
     "graph_projection_derived_from_events": true
   },
   "owner_gates_required_for": [
-    "ATP schema migration",
-    "ATP credential or wallet changes",
-    "OCI Function configuration changes",
-    "Resource Manager apply",
+    "M365 SharePoint list provisioning",
+    "Graph permission changes",
+    "serverless Function configuration changes",
     "productive XNP/SNP action",
     "mandate data writes"
   ]

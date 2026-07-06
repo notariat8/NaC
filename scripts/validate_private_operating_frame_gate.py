@@ -14,7 +14,7 @@ QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
 
 REQUIRED_SOURCE_DOCUMENTS = {
     "matter_data_boundary",
-    "atp_metadata_storage",
+    "m365_metadata_storage",
     "secure_document_link",
     "onprem_connector_boundary",
     "privacy_dpa_de",
@@ -219,7 +219,7 @@ def _validate_lists(payload: dict[str, Any]) -> list[str]:
     for command in (
         "python scripts/validate_private_operating_frame_gate.py",
         "python scripts/validate_matter_data_classification_redaction.py",
-        "python scripts/validate_atp_runtime_contracts.py",
+        "python scripts/validate_teams_sharepoint_graph_data_plane.py",
         "python scripts/validate_language_parity.py",
     ):
         if command not in commands:

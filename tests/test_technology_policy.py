@@ -60,6 +60,9 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
                 "      - plantuml",
                 "repository_constraints:",
                 "  enforce_codex_agent_sync: true",
+                "  active_ai_ide: codex",
+                "  cursor_workspace_files_allowed: false",
+                "  github_copilot_workspace_files_allowed: false",
                 "  required_sync_targets:",
                 "    - AGENTS.md",
                 "    - .codex/agents",
@@ -115,6 +118,21 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
         self.assertIn(
             "Pflichtwert fehlt in technology-policy: "
             "repository_constraints.enforce_codex_agent_sync.true",
+            errors,
+        )
+        self.assertIn(
+            "Pflichtwert fehlt in technology-policy: "
+            "repository_constraints.active_ai_ide.codex",
+            errors,
+        )
+        self.assertIn(
+            "Pflichtwert fehlt in technology-policy: "
+            "repository_constraints.cursor_workspace_files_allowed.false",
+            errors,
+        )
+        self.assertIn(
+            "Pflichtwert fehlt in technology-policy: "
+            "repository_constraints.github_copilot_workspace_files_allowed.false",
             errors,
         )
         self.assertIn(
@@ -235,6 +253,26 @@ class TechnologyPolicyValidationTest(unittest.TestCase):
         self.assertIn(
             "BPMN-Quellen muessen BPMN XML bleiben, nicht Mermaid/PlantUML: "
             "bpmn/usecases/flow.mmd",
+            errors,
+        )
+
+    def test_codex_only_workspace_rejects_cursor_and_github_copilot_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_policy(root)
+            self._write_required_sync_targets(root)
+            (root / ".cursor" / "rules").mkdir(parents=True)
+            (root / ".github").mkdir()
+            (root / ".github" / "copilot-instructions.md").write_text(
+                "legacy instructions\n",
+                encoding="utf-8",
+            )
+
+            errors = validate_technology_policy.validate(root)
+
+        self.assertIn("Codex-only Workspace darf kein .cursor enthalten", errors)
+        self.assertIn(
+            "Codex-only Workspace darf kein .github/copilot-instructions.md enthalten",
             errors,
         )
 

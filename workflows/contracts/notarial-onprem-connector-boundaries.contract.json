@@ -2,8 +2,8 @@
   "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.notarial_onprem_connector_boundaries",
   "title": "Notarielle On-Prem-Connector-Grenzen",
-  "status": "boundary_contract_no_live_apply",
-  "last_update": "2026-06-28",
+  "status": "archived_legacy_no_live_apply",
+  "last_update": "2026-07-06",
   "purpose": "Definiert prüfbare Grenzen für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register- und Grundbuchpfade, bevor produktive Fachsystemzugriffe, Credentials oder Mandatsdaten erlaubt sind.",
   "source_documents": {
     "demo_matrix_de": "docs/de/demo/notarkammer-xnp-quellenmatrix.md",

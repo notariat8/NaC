@@ -2,8 +2,8 @@
   "schema_version": "nac.m365-data-plane/v0.1",
   "contract_id": "m365.teams_sharepoint_graph_data_plane",
   "title": "Teams SharePoint Graph Data Plane",
-  "status": "planned_mvp_contract_and_skeleton_no_live_apply",
-  "last_update": "2026-07-05",
+  "status": "final_m365_mvp_data_plane",
+  "last_update": "2026-07-06",
   "purpose": "Defines the MVP data plane in which NaC uses a Microsoft Teams team per notary team, the connected Microsoft 365 group and its SharePoint team site for starter storage, provisioned and accessed only through Microsoft Graph REST or MCP servers that use Microsoft Graph REST internally.",
   "target_decision": {
     "workspace_model": "team_per_notary_team",
@@ -15,7 +15,8 @@
     "graph_rest_only": true,
     "mcp_allowed_only_when_backed_by_graph_rest": true,
     "sharepoint_as_start_data_store": true,
-    "nac_remains_process_logic_and_authorization_gate": true
+    "nac_remains_process_logic_and_authorization_gate": true,
+    "oci_atp_mvp_data_plane_archived": true
   },
   "graph_policy": {
     "base_url": "https://graph.microsoft.com/v1.0",

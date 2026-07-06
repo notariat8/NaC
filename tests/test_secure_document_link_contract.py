@@ -22,7 +22,11 @@ class SecureDocumentLinkContractTests(unittest.TestCase):
         self.assertIn("n8-demonotariat", payload["client_surfaces"])
         self.assertEqual(
             set(payload["storage_targets"]),
-            {"object_store", "database_blob", "onedrive"},
+            {"onedrive", "sharepoint_document_library", "sharepoint_list_item_attachment"},
+        )
+        self.assertEqual(
+            set(payload["identity_sources"]),
+            {"german_eid_bridge", "m365_group_membership", "microsoft_entra_id", "nac_role_gate"},
         )
         self.assertEqual(payload["link_policy"]["secret_link_stored_in_product_repo"], False)
         self.assertEqual(payload["link_policy"]["requires_matter_binding"], True)

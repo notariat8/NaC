@@ -11,6 +11,7 @@ DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "notarial-onprem-connector
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "notarial-onprem-connector-boundaries.md"
 QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
 QUALITY_EN = REPO_ROOT / "docs" / "en" / "quality-gate.md"
+LEGACY_ARCHIVE = REPO_ROOT / "archive" / "legacy-oci-atp" / "README.md"
 
 REQUIRED_CONNECTOR_IDS = {
     "xnp_snp_xnotar",
@@ -110,8 +111,8 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         errors.append("schema_version muss nac.workflow-contract/v0.1 sein")
     if payload.get("contract_id") != "workflow.notarial_onprem_connector_boundaries":
         errors.append("contract_id muss workflow.notarial_onprem_connector_boundaries sein")
-    if payload.get("status") != "boundary_contract_no_live_apply":
-        errors.append("status muss boundary_contract_no_live_apply sein")
+    if payload.get("status") != "archived_legacy_no_live_apply":
+        errors.append("status muss archived_legacy_no_live_apply sein")
 
     errors.extend(_validate_source_documents(payload))
     errors.extend(_validate_runtime_profile(payload))
@@ -262,8 +263,7 @@ def _validate_docs() -> list[str]:
     required_markers = (
         (DOC_DE, "Notarielle On-Prem-Connector-Grenzen"),
         (DOC_EN, "Notarial On-Prem Connector Boundaries"),
-        (QUALITY_DE, "notarial_onprem_connector_boundaries"),
-        (QUALITY_EN, "notarial_onprem_connector_boundaries"),
+        (LEGACY_ARCHIVE, "workflows/contracts/notarial-onprem-connector-boundaries.contract.json"),
     )
     for path, marker in required_markers:
         if not path.is_file():

@@ -39,6 +39,9 @@ approved_stack:
 
 repository_constraints:
   enforce_codex_agent_sync: true
+  active_ai_ide: codex
+  cursor_workspace_files_allowed: false
+  github_copilot_workspace_files_allowed: false
   required_sync_targets:
     - AGENTS.md
     - .codex/agents

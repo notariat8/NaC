@@ -23,6 +23,7 @@ class NaCOnPremAgentRuntimeContractTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
+        self.assertEqual(contract["status"], "archived_legacy_no_productive_connector_apply")
         runtime_smoke = contract["target_control"]["runtime_smoke"]
 
         self.assertEqual(runtime_smoke["status"], "ready_owner_gated_not_executed")

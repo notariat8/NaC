@@ -70,46 +70,36 @@ Jeder Vertrag soll definieren:
   Provider-Matrix für Lizenzbasis, AVV-/DPA-Status, Berufsgeheimnis,
   AI-SBOM, Sicherheitsgrenze, Credential-Betrieb, Evidence-Felder und
   Aktivierungsgates.
-- [workflows/contracts/oci-tenant-identity.contract.json](oci-tenant-identity.contract.json):
-  Vertrag für tenant-aware NaC-SaaS-Onboarding mit Oracle OCI Identity Domains,
-  Domain-Readiness, Admin-Provisioning-Dry-run und Owner-Apply-Gate vor jedem
-  produktiven Identity-Write.
 - [workflows/contracts/customer-tenant-onboarding.contract.json](customer-tenant-onboarding.contract.json):
   Vertrag für die sichtbare Neukundenreise von `www-n8` nach NaC mit
-  Domain-Readiness, DNS-TXT-Challenge, SaaS-Admin-Review, Owner-Apply-Gate,
-  OCI-IAM-Domain-/Compartment-Zielbild und gemeinsamer ATP-Tenant-Mapping-
-  Logik ohne Mandatsdaten oder Credential-Material im Produktrepo.
+  Domain-Readiness, DNS-TXT-Challenge, SaaS-Admin-Review, Teams,
+  SharePoint-Team-Site, Microsoft Graph REST und Owner-Apply-Gate ohne
+  Mandatsdaten oder Credential-Material im Produktrepo.
 - [workflows/contracts/codex-parallel-review.contract.json](codex-parallel-review.contract.json):
   Vertrag für explizite, parallele Codex-Reviews mit read-only Agentprofilen,
   Scope-Mapping, KG-/BPMN-/Policy-/Doku-/Validierungsprüfung, Guardrails und
   frischem Nachweis vor Abnahme.
 - [workflows/contracts/nac-onprem-agent-runtime.contract.json](nac-onprem-agent-runtime.contract.json):
-  Vertrag für die NaC-On-Prem-Agent-Runtime auf `notoclaw01` mit
-  NemoClaw/OpenClaw-Zielsystemgrenze, Target-Control-Pfaden, Connector-Stubs,
-  outbound Connector-Zielbild, ATP-gestützter Agent-/Sandbox-Lease-Bindung,
-  bestandenem Ponytail Skill-Only Smoke, vorbereitetem NaC Runtime-Smoke,
-  Handoff-Regeln, Owner-Gates und Quality-Gate-Validator.
+  archivierter Legacy-Vertrag für die OCI-gebundene NaC-On-Prem-Agent-Runtime;
+  nicht Teil der aktiven M365-MVP-Spur.
 - [workflows/contracts/teams-sharepoint-graph-data-plane.contract.json](teams-sharepoint-graph-data-plane.contract.json):
   Vertrag für die MVP-Datenhaltung über Teams Team, Microsoft-365-Gruppe,
   SharePoint-Team-Site, Microsoft Graph REST only, declaratives Schema,
   Provisioner-Skeleton, MCP-Grenze und Owner-Gates ohne Live-Apply.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
-  Vertrag für die ATP-gestützte Agent-Registry, outbound Connector-Endpunkte,
-  Sandbox-Bindungen, Sandbox-Leases und Session-Lease-Bindungen hinter
-  `agent.notariat8.de`, ohne produktiven Schema-Apply, Secrets oder
-  Mandatsdaten.
+  archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
+  aktive MVP-Datenhaltung.
 - [workflows/contracts/agent-control-api.contract.json](agent-control-api.contract.json):
-  Vertrag für die erlaubte OCI/BFF-API-Grenze von `agent.notariat8.de` zum
-  outbound `notoclaw01` Connector mit Browser-Session- und Connector-Control-
-  Routen, Payload-Policy, Lease-Regeln und Owner-Gates, ohne Route-Apply.
+  archivierter Legacy-Vertrag für die OCI/BFF-API-Grenze von
+  `agent.notariat8.de`; nicht aktiver MVP-Pfad.
 - [workflows/contracts/notarial-onprem-connector-boundaries.contract.json](notarial-onprem-connector-boundaries.contract.json):
   Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
   und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen
   ohne Credentials, Mandatsdaten oder Live-Apply.
 - [workflows/contracts/matter-data-classification-redaction.contract.json](matter-data-classification-redaction.contract.json):
   Vertrag für Mandatsdaten-Klassifikation, Redaktionsnachweise und
-  Speichergrenzen zwischen GitHub, `notoclaw01`, Webapp-Status, ATP-Metadaten
-  und späterem privaten Betriebsrahmen.
+  Speichergrenzen zwischen GitHub, Webapp-Status, M365/SharePoint-Metadaten,
+  redigierter Evidence und späterem privaten Betriebsrahmen.
 - [workflows/contracts/private-operating-frame-gate.contract.json](private-operating-frame-gate.contract.json):
   Gate-Vertrag für den späteren privaten Betriebsrahmen mit Datenschutz-,
   Rollen-, Speicher-, Verschlüsselungs-, Retention-, Audit- und Owner-Gates,
@@ -124,5 +114,6 @@ Jeder Vertrag soll definieren:
   Beispieldaten.
 - [workflows/contracts/runtime-status-wiring-runbook.contract.json](runtime-status-wiring-runbook.contract.json):
   Runtime-Status-Vertrag für die sichere Brücke vom aktuellen
-  `InMemoryRuntimeStore`-Demo-Pfad zur späteren ATP-gestützten
-  Prozessinstanz-Anzeige, ohne Mandatsdaten, Secrets oder OCI-Apply.
+  `InMemoryRuntimeStore`-Demo-Pfad zur späteren M365/SharePoint- und
+  Event-Journal-gestützten Prozessinstanz-Anzeige, ohne Mandatsdaten, Secrets
+  oder produktiven Cloud-Apply.
