@@ -282,6 +282,20 @@ Das redigierte Artefakt liegt standardmäßig unter
 speichert keine Roh-Case-ID, keine Rohpayloads, keine Rohantworten, keine
 Tokens und keine Datei-Inhalte.
 
+Synthetische Smoke-Akten werden über einen separaten owner-gated Cleanup-Befehl
+bereinigt:
+
+```bash
+nac m365 teams-sharepoint mcp-smoke-cleanup --owner-approved --mcp-smoke-case-id <case-id>
+```
+
+Der Cleanup akzeptiert nur exakte Case-IDs mit dem Präfix
+`NAC-SMOKE-WRITE-READ-`, liest vor der Löschung genau einen passenden
+`Akten`-Eintrag, löscht diesen Eintrag per Microsoft Graph REST v1.0 `DELETE`
+und verifiziert danach, dass kein Treffer mehr gelesen wird. Ungebundene
+Listendumps, Prefix-Massenlöschungen, Rohantworten, Tokens und Datei-Inhalte
+bleiben blockiert.
+
 Erste Tool-Grenzen:
 
 - `case_get`
