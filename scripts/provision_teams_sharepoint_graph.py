@@ -61,6 +61,21 @@ from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
 
 
+MCP_SMOKE_CORRELATION_DEFAULTS = {
+    "mcp-live-read-smoke": "mcp-live-read-smoke",
+    "mcp-positive-write-read-smoke": "mcp-positive-write-read-smoke",
+    "mcp-smoke-cleanup": "mcp-smoke-cleanup",
+    "mcp-smoke-leftover-cleanup": "mcp-smoke-leftover-cleanup",
+    "mcp-smoke-suite": "mcp-smoke-suite",
+}
+
+
+def resolve_mcp_smoke_correlation_id(command: str, explicit_correlation_id: str | None) -> str:
+    if explicit_correlation_id:
+        return explicit_correlation_id
+    return MCP_SMOKE_CORRELATION_DEFAULTS.get(command, command)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Teams/SharePoint MVP data-plane provisioner using Microsoft Graph REST only."
@@ -149,8 +164,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mcp-smoke-correlation-id",
-        default="mcp-live-read-smoke",
-        help="Non-secret correlation id for the redacted MCP live-read smoke artifact.",
+        help="Non-secret correlation id for redacted MCP smoke and cleanup artifacts.",
     )
     parser.add_argument(
         "--mcp-smoke-output",
@@ -202,6 +216,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    mcp_smoke_correlation_id = resolve_mcp_smoke_correlation_id(
+        args.command,
+        args.mcp_smoke_correlation_id,
+    )
     if args.command == "mcp-smoke-leftover-cleanup":
         if not args.owner_approved:
             return _emit(
@@ -218,7 +236,7 @@ def main() -> int:
                 client,
                 provisioned_state_path=args.provisioned_state,
                 workspace_id=args.mcp_smoke_workspace_id,
-                correlation_id=args.mcp_smoke_correlation_id,
+                correlation_id=mcp_smoke_correlation_id,
                 delete_after=not args.mcp_leftover_dry_run,
             )
             write_mcp_smoke_leftover_cleanup_artifact(result, args.mcp_leftover_output)
@@ -283,7 +301,7 @@ def main() -> int:
                 provisioned_state_path=args.provisioned_state,
                 workspace_id=args.mcp_smoke_workspace_id,
                 case_id=args.mcp_smoke_case_id,
-                correlation_id=args.mcp_smoke_correlation_id,
+                correlation_id=mcp_smoke_correlation_id,
                 cleanup_after=args.mcp_suite_cleanup,
             )
             write_mcp_smoke_suite_artifact(result, args.mcp_suite_output)
@@ -357,7 +375,7 @@ def main() -> int:
                 provisioned_state_path=args.provisioned_state,
                 workspace_id=args.mcp_smoke_workspace_id,
                 case_id=args.mcp_smoke_case_id,
-                correlation_id=args.mcp_smoke_correlation_id,
+                correlation_id=mcp_smoke_correlation_id,
             )
             write_mcp_smoke_cleanup_artifact(result, args.mcp_cleanup_output)
         except GraphConfigError as exc:
@@ -421,7 +439,7 @@ def main() -> int:
                 provisioned_state_path=args.provisioned_state,
                 workspace_id=args.mcp_smoke_workspace_id,
                 case_id=args.mcp_smoke_case_id,
-                correlation_id=args.mcp_smoke_correlation_id,
+                correlation_id=mcp_smoke_correlation_id,
             )
             write_mcp_positive_write_read_smoke_artifact(result, args.mcp_positive_smoke_output)
         except GraphConfigError as exc:
@@ -495,7 +513,7 @@ def main() -> int:
                 tool_name=args.mcp_smoke_tool,
                 workspace_id=args.mcp_smoke_workspace_id,
                 case_id=args.mcp_smoke_case_id,
-                correlation_id=args.mcp_smoke_correlation_id,
+                correlation_id=mcp_smoke_correlation_id,
             )
             write_mcp_live_read_smoke_artifact(result, args.mcp_smoke_output)
         except GraphConfigError as exc:
