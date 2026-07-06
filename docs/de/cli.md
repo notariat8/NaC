@@ -260,8 +260,12 @@ Microsoft-Graph-v1.0-Requests und führt keine Requests aus.
 für `case_get` und `document_list`. Dafür müssen Runtime-Credentials außerhalb
 des Repos gesetzt sein, zum Beispiel über `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE`
 oder über `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
-`M365_RUNTIME_CLIENT_SECRET`. Schreibende Tools werden in diesem Modus nicht
-ausgeführt.
+`M365_RUNTIME_CLIENT_SECRET`. Für den bevorzugten zertifikatsbasierten
+Runtime-Pfad werden `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID`,
+`M365_RUNTIME_CLIENT_CERTIFICATE_PATH` und `M365_RUNTIME_CLIENT_KEY_PATH`
+gesetzt; bei verschlüsseltem Schlüssel zusätzlich
+`M365_RUNTIME_CLIENT_KEY_PASSWORD`. Schreibende Tools werden in diesem Modus
+nicht ausgeführt.
 
 `mcp-live-read-smoke` führt genau einen owner-gated Live-Read aus und schreibt
 das redigierte Artefakt

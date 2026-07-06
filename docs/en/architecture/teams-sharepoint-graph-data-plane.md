@@ -235,11 +235,15 @@ nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 
 This mode needs the runtime Graph configuration
 `M365_RUNTIME_GRAPH_ACCESS_TOKEN` or `M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE`, or
-`M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and `M365_RUNTIME_CLIENT_SECRET`. It
-executes only Graph REST `GET` for `case_get` and `document_list`. Write tools,
-team or membership mutations, SharePoint schema changes and file content remain
-blocked. Successful live reads return the request plan and the Graph response
-in `structuredContent.graphResponse`.
+`M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` and `M365_RUNTIME_CLIENT_SECRET`.
+The preferred runtime path uses `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID`,
+`M365_RUNTIME_CLIENT_CERTIFICATE_PATH` and `M365_RUNTIME_CLIENT_KEY_PATH`
+instead; for an encrypted key it also uses
+`M365_RUNTIME_CLIENT_KEY_PASSWORD`. It executes only Graph REST `GET` for
+`case_get` and `document_list`. Write tools, team or membership mutations,
+SharePoint schema changes and file content remain blocked. Successful live
+reads return the request plan and the Graph response in
+`structuredContent.graphResponse`.
 
 The owner-gated smoke for this live-read mode does not run through a long-lived
 MCP stdio process. It uses a single CLI invocation:
