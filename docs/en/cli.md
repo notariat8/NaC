@@ -119,7 +119,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, Teams/SharePoint Graph data plane and legal-research connector candidates. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access and starts the local MCP stdio adapter for request planning. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access and starts the local MCP stdio adapter for request planning. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -240,6 +240,7 @@ an owner gate:
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
 nac m365 teams-sharepoint mcp-manifest --format json
+nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
@@ -251,6 +252,9 @@ the discovered lists and document libraries against the declarative MVP schema.
 Graph REST boundaries. `mcp-stdio` is also offline and speaks newline-delimited
 JSON-RPC over stdin/stdout. `tools/call` only plans Microsoft Graph v1.0
 requests and does not execute requests.
+`nac batch-approval m365` is offline as well. The command renders copyable
+owner approval texts for prepared PR batches and synthetic live-smoke batches,
+but performs no GitHub or Microsoft Graph write action.
 
 `mcp-stdio --owner-approved --mcp-live-read` additionally enables live reads for
 `case_get` and `document_list`. Runtime credentials must be set outside the

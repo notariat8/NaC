@@ -194,6 +194,37 @@ def build_parser() -> argparse.ArgumentParser:
     contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge, Secure-Link- und Connector-Grenzen.")
     contracts.set_defaults(func=command_contracts)
 
+    batch_approval = subparsers.add_parser("batch-approval", help="Rendert kopierbare Batch-Freigaben.")
+    batch_approval_sub = batch_approval.add_subparsers(dest="batch_approval_command", required=True)
+    batch_m365 = batch_approval_sub.add_parser(
+        "m365",
+        help="Rendert M365-MCP-Batch-Freigaben ohne GitHub- oder Graph-Schreibaktion.",
+    )
+    batch_m365.add_argument(
+        "--batch-mode",
+        choices=["merge", "live-smoke", "merge-and-live-smoke"],
+        default="merge",
+        help="Batch-Freigabetext, der gerendert werden soll.",
+    )
+    batch_m365.add_argument(
+        "--batch-pr",
+        action="append",
+        default=[],
+        help="Pull-Request-Nummer fuer Batch-Merge-Freigaben. Wiederholbar oder kommasepariert.",
+    )
+    batch_m365.add_argument("--workspace-id", default="notary_team_01", help="Workspace-ID fuer Live-Smoke-Text.")
+    batch_m365.add_argument(
+        "--synthetic-case-id",
+        help="Synthetische Case-ID fuer Live-Smoke- und Cleanup-Freigabetext.",
+    )
+    batch_m365.add_argument(
+        "--correlation-id",
+        default="m365-mcp-batch-approval",
+        help="Nicht-geheime Correlation-ID fuer Live-Smoke-Befehle.",
+    )
+    batch_m365.add_argument("--format", choices=["text", "json"], default="text")
+    batch_approval.set_defaults(func=command_batch_approval)
+
     m365 = subparsers.add_parser("m365", help="Steuert Microsoft-365-Graph-REST-Bedienkanten.")
     m365_sub = m365.add_subparsers(dest="m365_command", required=True)
     teams_sharepoint = m365_sub.add_parser(
@@ -916,6 +947,117 @@ def command_contracts(args: argparse.Namespace) -> int:
         return overall_rc
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
+
+
+def command_batch_approval(args: argparse.Namespace) -> int:
+    if args.batch_approval_command != "m365":
+        raise AssertionError(f"Unknown batch approval command: {args.batch_approval_command}")
+
+    try:
+        payload = _build_m365_batch_approval_payload(
+            mode=args.batch_mode,
+            batch_prs=args.batch_pr,
+            workspace_id=args.workspace_id,
+            synthetic_case_id=args.synthetic_case_id,
+            correlation_id=args.correlation_id,
+        )
+    except ValueError as exc:
+        payload = {"status": "BLOCKED", "errors": [str(exc)]}
+        _print_batch_approval_payload(payload, args.format)
+        return 2
+
+    _print_batch_approval_payload(payload, args.format)
+    return 0
+
+
+def _build_m365_batch_approval_payload(
+    *,
+    mode: str,
+    batch_prs: list[str],
+    workspace_id: str,
+    synthetic_case_id: str | None,
+    correlation_id: str,
+) -> dict:
+    prs = _normalize_batch_prs(batch_prs)
+    if mode in {"merge", "merge-and-live-smoke"} and not prs:
+        raise ValueError("batch-approval m365 merge mode requires at least one --batch-pr")
+
+    approvals: dict[str, dict] = {}
+    if mode in {"merge", "merge-and-live-smoke"}:
+        approvals["merge"] = {
+            "approval_text": f"Freigabe: PRs {', '.join(prs)} mergen und Branches nach Merge aufräumen.",
+            "owner_gate": "merge_to_main_and_branch_cleanup",
+            "prs": prs,
+        }
+
+    if mode in {"live-smoke", "merge-and-live-smoke"}:
+        case_id = synthetic_case_id or "<NAC-SMOKE-WRITE-READ-YYYYMMDDTHHMMSSZ>"
+        approvals["live_smoke"] = {
+            "approval_text": (
+                "Freigabe: M365 MCP positive write-read smoke mit synthetischer Testakte "
+                f"{case_id} im Workspace {workspace_id} ausführen und anschließend exakt "
+                "diese synthetische Testakte per Cleanup löschen."
+            ),
+            "owner_gate": "m365_tenant_write_and_delete",
+            "workspace_id": workspace_id,
+            "synthetic_case_id": case_id,
+            "commands": [
+                (
+                    "python3 scripts/nac.py m365 teams-sharepoint "
+                    "mcp-positive-write-read-smoke --owner-approved "
+                    f"--mcp-smoke-workspace-id {workspace_id} "
+                    f"--mcp-smoke-case-id {case_id} "
+                    f"--mcp-smoke-correlation-id {correlation_id} "
+                    "--format json"
+                ),
+                (
+                    "python3 scripts/nac.py m365 teams-sharepoint "
+                    "mcp-smoke-cleanup --owner-approved "
+                    f"--mcp-smoke-workspace-id {workspace_id} "
+                    f"--mcp-smoke-case-id {case_id} "
+                    f"--mcp-smoke-correlation-id {correlation_id} "
+                    "--format json"
+                ),
+            ],
+        }
+
+    return {
+        "status": "PASSED",
+        "summary": {
+            "batch_mode": mode,
+            "executes_github_writes": False,
+            "executes_graph_requests": False,
+            "owner_gates": [approval["owner_gate"] for approval in approvals.values()],
+        },
+        "result": approvals,
+    }
+
+
+def _normalize_batch_prs(values: list[str]) -> list[str]:
+    prs: list[str] = []
+    for value in values:
+        for part in value.split(","):
+            raw = part.strip()
+            if not raw:
+                continue
+            if raw.startswith("#"):
+                raw = raw[1:]
+            if not raw.isdigit():
+                raise ValueError(f"invalid pull request number for --batch-pr: {part.strip()}")
+            prs.append(f"#{int(raw)}")
+    return prs
+
+
+def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+
+    print(f"STATUS: {payload['status']}")
+    for approval in payload.get("result", {}).values():
+        print(approval["approval_text"])
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}")
 
 
 def command_m365(args: argparse.Namespace) -> int:
