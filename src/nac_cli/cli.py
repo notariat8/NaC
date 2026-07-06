@@ -210,6 +210,7 @@ def build_parser() -> argparse.ArgumentParser:
             "runtime-smoke",
             "runtime-metadata",
             "mcp-manifest",
+            "mcp-stdio",
             "apply",
             "drift",
             "export",
@@ -885,6 +886,13 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.append("--owner-approved")
         if args.format == "json":
             script_args.append("--json")
+        if args.teams_sharepoint_command == "mcp-stdio":
+            result = subprocess.run(
+                [sys.executable, str(repo_root / "scripts" / "provision_teams_sharepoint_graph.py"), *script_args],
+                cwd=repo_root,
+                check=False,
+            )
+            return result.returncode
         result = subprocess.run(
             [sys.executable, str(repo_root / "scripts" / "provision_teams_sharepoint_graph.py"), *script_args],
             cwd=repo_root,

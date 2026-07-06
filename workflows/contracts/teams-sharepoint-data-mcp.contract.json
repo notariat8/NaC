@@ -6,6 +6,18 @@
   "status": "skeleton_no_live_apply",
   "last_update": "2026-07-06",
   "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence and document pointers stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
+  "mcp_protocol": {
+    "protocol_version": "2025-11-25",
+    "transport": "stdio",
+    "jsonrpc_version": "2.0",
+    "supported_methods": [
+      "initialize",
+      "notifications/initialized",
+      "tools/list",
+      "tools/call"
+    ],
+    "tool_calls_execute_graph_requests": false
+  },
   "graph": {
     "base_url": "https://graph.microsoft.com/v1.0",
     "rest_only": true,

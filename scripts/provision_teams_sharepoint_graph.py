@@ -50,13 +50,15 @@ def parse_args() -> argparse.Namespace:
             "runtime-smoke",
             "runtime-metadata",
             "mcp-manifest",
+            "mcp-stdio",
             "apply",
             "drift",
             "export",
         ],
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
-            "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only."
+            "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
+            "mcp-stdio starts the offline local MCP adapter."
         ),
     )
     parser.add_argument(
@@ -98,6 +100,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.command == "mcp-stdio":
+        from nac_m365_graph.mcp_stdio import run_stdio_server
+
+        return run_stdio_server(
+            contract_path=args.mcp_contract,
+            provisioned_state_path=args.provisioned_state,
+        )
+
     if args.command == "mcp-manifest":
         contract = load_mcp_contract(args.mcp_contract)
         errors = validate_mcp_contract(contract)
