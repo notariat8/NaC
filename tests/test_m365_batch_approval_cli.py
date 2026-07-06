@@ -72,9 +72,51 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["owner_gates"], ["m365_tenant_write_and_delete"])
         live_smoke = payload["result"]["live_smoke"]
-        self.assertIn("synthetischer Testakte", live_smoke["approval_text"])
-        self.assertIn("mcp-positive-write-read-smoke", live_smoke["commands"][0])
-        self.assertIn("mcp-smoke-cleanup", live_smoke["commands"][1])
+        self.assertIn("M365 MCP Smoke Suite live", live_smoke["approval_text"])
+        self.assertIn("Cleanup im gleichen Lauf", live_smoke["approval_text"])
+        self.assertEqual(live_smoke["synthetic_case_id"], "NAC-SMOKE-WRITE-READ-20260706T123000Z")
+        self.assertIn("mcp-smoke-suite", live_smoke["commands"][0])
+        self.assertIn("--mcp-suite-cleanup", live_smoke["commands"][0])
+        self.assertIn("--mcp-smoke-case-id NAC-SMOKE-WRITE-READ-20260706T123000Z", live_smoke["commands"][0])
+        self.assertIn("mcp-smoke-leftover-cleanup", live_smoke["commands"][1])
+        self.assertIn("--mcp-leftover-dry-run", live_smoke["commands"][1])
+        self.assertNotIn("mcp-positive-write-read-smoke", " ".join(live_smoke["commands"]))
+        self.assertEqual(
+            [step["step"] for step in live_smoke["operator_sequence"]],
+            ["mcp_smoke_suite", "mcp_smoke_leftover_cleanup_dry_run"],
+        )
+
+    def test_batch_approval_live_smoke_defaults_to_suite_generated_case_id(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "batch-approval",
+                "m365",
+                "--batch-mode",
+                "live-smoke",
+                "--workspace-id",
+                "notary_team_01",
+                "--correlation-id",
+                "batch-corr-2",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        live_smoke = payload["result"]["live_smoke"]
+        self.assertEqual(live_smoke["synthetic_case_id"], "generated_in_process_memory")
+        self.assertIn("mcp-smoke-suite", live_smoke["commands"][0])
+        self.assertNotIn("--mcp-smoke-case-id", live_smoke["commands"][0])
 
     def test_batch_approval_requires_prs_for_merge_mode(self) -> None:
         result = subprocess.run(
