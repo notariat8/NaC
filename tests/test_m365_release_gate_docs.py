@@ -132,6 +132,46 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("mvp_release_readiness=READY", content)
             self.assertIn("release_gate_readiness=READY", content)
 
+    def test_batch_approval_docs_make_readiness_the_default_for_release_gate_modes(self) -> None:
+        documents = (
+            (
+                "docs/de/operations/m365-mcp-batch-approval.md",
+                "MVP-Go/No-Go-Standard standardmäßig",
+                "Der eingebettete `release-gate-run` rendert denselben MVP-Go/No-Go-Standard",
+            ),
+            (
+                "docs/en/operations/m365-mcp-batch-approval.md",
+                "standard by default",
+                "The embedded `release-gate-run` renders the same MVP Go/No-Go standard",
+            ),
+            (
+                "docs/de/runbooks/m365-cli-admin-accelerator.md",
+                "rendert standardmäßig den MVP-Go/No-Go-Lauf",
+                "--release-gate-readiness-require-audit-pack",
+            ),
+            (
+                "docs/en/runbooks/m365-cli-admin-accelerator.md",
+                "renders the MVP Go/No-Go run by default",
+                "--release-gate-readiness-require-audit-pack",
+            ),
+            (
+                "docs/de/cli.md",
+                "diesem Batch-Modus der Standard",
+                "release_gate_readiness",
+            ),
+            (
+                "docs/en/cli.md",
+                "default in this batch mode",
+                "release_gate_readiness",
+            ),
+        )
+
+        for relative_path, release_gate_marker, readiness_marker in documents:
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+            self.assertIn(release_gate_marker, content)
+            self.assertIn(readiness_marker, content)
+
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)

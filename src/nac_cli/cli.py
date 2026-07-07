@@ -295,17 +295,26 @@ def build_parser() -> argparse.ArgumentParser:
     batch_m365.add_argument(
         "--release-gate-write-audit-pack",
         action="store_true",
-        help="Ergaenzt Release-Gate-Freigabetexte um das direkte redigierte Offline-Audit-Pack.",
+        help=(
+            "Ergaenzt Release-Gate-Freigabetexte um das direkte redigierte Offline-Audit-Pack. "
+            "Bei release-gate und runtime-certificate-rotation ist dies als MVP-Standard impliziert."
+        ),
     )
     batch_m365.add_argument(
         "--release-gate-write-readiness",
         action="store_true",
-        help="Ergaenzt Release-Gate-Freigabetexte um den direkten redigierten MVP-Readiness-Status.",
+        help=(
+            "Ergaenzt Release-Gate-Freigabetexte um den direkten redigierten MVP-Readiness-Status. "
+            "Bei release-gate und runtime-certificate-rotation ist dies als MVP-Standard impliziert."
+        ),
     )
     batch_m365.add_argument(
         "--release-gate-readiness-require-audit-pack",
         action="store_true",
-        help="Blockiert den direkten MVP-Readiness-Status, wenn kein passendes Audit-Pack mit PASSED vorliegt.",
+        help=(
+            "Blockiert den direkten MVP-Readiness-Status, wenn kein passendes Audit-Pack mit PASSED vorliegt. "
+            "Bei release-gate und runtime-certificate-rotation ist dies als MVP-Standard impliziert."
+        ),
     )
     batch_m365.add_argument(
         "--release-gate-compare-left",
@@ -1355,6 +1364,16 @@ def _build_m365_batch_approval_payload(
     release_gate_audit_pack_dir: str | None = None,
 ) -> dict:
     prs = _normalize_batch_prs(batch_prs)
+    (
+        release_gate_write_audit_pack,
+        release_gate_write_readiness,
+        release_gate_readiness_require_audit_pack,
+    ) = _apply_m365_release_gate_mvp_defaults(
+        mode=mode,
+        release_gate_write_audit_pack=release_gate_write_audit_pack,
+        release_gate_write_readiness=release_gate_write_readiness,
+        release_gate_readiness_require_audit_pack=release_gate_readiness_require_audit_pack,
+    )
     if mode in {"merge", "merge-and-live-smoke"} and not prs:
         raise ValueError("batch-approval m365 merge mode requires at least one --batch-pr")
     if not release_gate_write_audit_pack and (release_gate_compare_left or release_gate_audit_pack_dir):
@@ -1596,6 +1615,23 @@ def _build_m365_batch_approval_payload(
         },
         "result": approvals,
     }
+
+
+def _apply_m365_release_gate_mvp_defaults(
+    *,
+    mode: str,
+    release_gate_write_audit_pack: bool,
+    release_gate_write_readiness: bool,
+    release_gate_readiness_require_audit_pack: bool,
+) -> tuple[bool, bool, bool]:
+    if mode not in {"release-gate", "runtime-certificate-rotation"}:
+        return (
+            release_gate_write_audit_pack,
+            release_gate_write_readiness,
+            release_gate_readiness_require_audit_pack,
+        )
+
+    return (True, True, True)
 
 
 def _build_m365_release_gate_run_command(
@@ -2321,6 +2357,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "return_code": readiness_return_code,
                 "status": readiness_payload["status"],
                 "command": _m365_release_gate_run_readiness_command(
+                    repo_root,
                     args,
                     correlation_id=correlation_id,
                     release_gate_run_artifact_dir=release_gate_run_artifact_dir,
@@ -2979,6 +3016,7 @@ def _write_m365_release_gate_run_readiness(
 ) -> dict[str, Any]:
     output_path = _m365_release_gate_run_readiness_output_path(repo_root, args, release_gate_run_artifact_dir)
     readiness_args = _m365_release_gate_run_readiness_args(
+        repo_root,
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
@@ -2992,18 +3030,52 @@ def _write_m365_release_gate_run_readiness(
 
 
 def _m365_release_gate_run_readiness_args(
+    repo_root: Path,
     args: argparse.Namespace,
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
     output_path: Path,
 ) -> argparse.Namespace:
+    audit_pack_dir = _m365_release_gate_run_readiness_audit_pack_dir(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
     return _m365_release_gate_audit_pack_args(
         args,
         release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
         release_gate_readiness_correlation_id=correlation_id,
         release_gate_readiness_output=output_path,
+        release_gate_audit_pack_dir=audit_pack_dir,
     )
+
+
+def _m365_release_gate_run_readiness_audit_pack_dir(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+) -> Path | None:
+    if not args.release_gate_write_audit_pack:
+        return args.release_gate_audit_pack_dir
+
+    audit_args = _m365_release_gate_run_audit_pack_args(
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
+    pack_dir = _m365_release_gate_retention_audit_pack_dir(repo_root, audit_args)
+    return _m365_release_gate_path_for_command(repo_root, pack_dir)
+
+
+def _m365_release_gate_path_for_command(repo_root: Path, path: Path) -> Path:
+    try:
+        return path.relative_to(repo_root)
+    except ValueError:
+        return path
 
 
 def _m365_release_gate_run_readiness_output_path(
@@ -3017,11 +3089,18 @@ def _m365_release_gate_run_readiness_output_path(
 
 
 def _m365_release_gate_run_readiness_command(
+    repo_root: Path,
     args: argparse.Namespace,
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
 ) -> str:
+    audit_pack_dir = _m365_release_gate_run_readiness_audit_pack_dir(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
     output_path = args.release_gate_readiness_output or release_gate_run_artifact_dir / "release-readiness.redacted.json"
     retention_root = args.release_gate_retention_root or release_gate_run_artifact_dir.parent
     command = [
@@ -3037,8 +3116,8 @@ def _m365_release_gate_run_readiness_command(
         "--release-gate-readiness-output",
         str(output_path),
     ]
-    if args.release_gate_audit_pack_dir is not None:
-        command.extend(["--release-gate-audit-pack-dir", str(args.release_gate_audit_pack_dir)])
+    if audit_pack_dir is not None:
+        command.extend(["--release-gate-audit-pack-dir", str(audit_pack_dir)])
     if args.release_gate_readiness_require_audit_pack:
         command.append("--release-gate-readiness-require-audit-pack")
     command.extend(["--format", "json"])

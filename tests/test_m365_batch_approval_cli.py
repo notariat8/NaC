@@ -119,7 +119,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertIn("mcp-smoke-suite", live_smoke["commands"][0])
         self.assertNotIn("--mcp-smoke-case-id", live_smoke["commands"][0])
 
-    def test_batch_approval_renders_runtime_release_gate_without_writes(self) -> None:
+    def test_batch_approval_renders_runtime_release_gate_with_mvp_readiness_default(self) -> None:
         result = subprocess.run(
             [
                 sys.executable,
@@ -150,12 +150,20 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertFalse(payload["summary"]["executes_github_writes"])
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertEqual(payload["summary"]["owner_gates"], ["m365_runtime_release_gate"])
+        self.assertTrue(payload["summary"]["release_gate_write_audit_pack"])
+        self.assertTrue(payload["summary"]["release_gate_write_readiness"])
+        self.assertTrue(payload["summary"]["release_gate_readiness_require_audit_pack"])
         release_gate = payload["result"]["release_gate"]
         self.assertIn("M365 Runtime Release-Gate", release_gate["approval_text"])
+        self.assertIn("Release-Gate-Audit-Pack", release_gate["approval_text"])
+        self.assertIn("MVP-Readiness-Status", release_gate["approval_text"])
         self.assertEqual(
             release_gate["commands"],
             [
-                "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
+                "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
+                "--mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr "
+                "--release-gate-write-audit-pack --release-gate-write-readiness "
+                "--release-gate-readiness-require-audit-pack --format json",
             ],
         )
         self.assertEqual(
@@ -173,6 +181,8 @@ class M365BatchApprovalCliTests(unittest.TestCase):
                 "mcp_smoke_suite",
                 "mcp_smoke_leftover_cleanup_dry_run",
                 "release_gate_evidence_export",
+                "release_gate_audit_pack",
+                "release_gate_readiness",
             ],
         )
 
@@ -191,7 +201,6 @@ class M365BatchApprovalCliTests(unittest.TestCase):
                 "notary_team_01",
                 "--correlation-id",
                 "release-gate-corr",
-                "--release-gate-write-audit-pack",
                 "--release-gate-compare-left",
                 "baseline-corr",
                 "--release-gate-audit-pack-dir",
@@ -313,16 +322,22 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertFalse(payload["summary"]["reads_certificate_files"])
         self.assertFalse(payload["summary"]["reads_private_key_files"])
         self.assertFalse(payload["summary"]["reads_secret_values"])
+        self.assertTrue(payload["summary"]["release_gate_write_audit_pack"])
+        self.assertTrue(payload["summary"]["release_gate_write_readiness"])
+        self.assertTrue(payload["summary"]["release_gate_readiness_require_audit_pack"])
         self.assertEqual(payload["summary"]["owner_gates"], ["m365_runtime_certificate_rotation_lifecycle"])
 
         rotation = payload["result"]["runtime_certificate_rotation"]
         self.assertIn("M365 Runtime-Zertifikat rotieren", rotation["approval_text"])
+        self.assertIn("MVP-Readiness-Status", rotation["approval_text"])
         self.assertIn("lokale M365-CLI-Session abmelden", rotation["approval_text"])
         self.assertIn("runtime-certificate-readiness", rotation["commands"][0])
         self.assertEqual(
             rotation["commands"][1],
             "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
-            "--mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id cert-rotation-corr --format json",
+            "--mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id cert-rotation-corr "
+            "--release-gate-write-audit-pack --release-gate-write-readiness "
+            "--release-gate-readiness-require-audit-pack --format json",
         )
         self.assertEqual(
             [step["step"] for step in rotation["operator_sequence"]],
@@ -341,6 +356,8 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertFalse(rotation["operator_sequence"][0]["executes_graph_requests"])
         self.assertFalse(rotation["operator_sequence"][2]["private_key_uploaded"])
         self.assertFalse(rotation["operator_sequence"][5]["stores_secret_material"])
+        self.assertIn("release_gate_audit_pack", rotation["operator_sequence"][4]["covers_steps"])
+        self.assertIn("release_gate_readiness", rotation["operator_sequence"][4]["covers_steps"])
 
     def test_batch_approval_requires_prs_for_merge_mode(self) -> None:
         result = subprocess.run(
@@ -366,7 +383,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("--batch-pr", payload["errors"][0])
 
-    def test_batch_approval_blocks_audit_pack_baseline_without_audit_pack_flag(self) -> None:
+    def test_batch_approval_release_gate_baseline_uses_mvp_audit_pack_default(self) -> None:
         result = subprocess.run(
             [
                 sys.executable,
@@ -389,10 +406,14 @@ class M365BatchApprovalCliTests(unittest.TestCase):
             timeout=5,
         )
 
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "BLOCKED")
-        self.assertIn("--release-gate-write-audit-pack", payload["errors"][0])
+        self.assertEqual(payload["status"], "PASSED")
+        release_gate = payload["result"]["release_gate"]
+        self.assertTrue(release_gate["release_gate_write_audit_pack"])
+        self.assertEqual(release_gate["release_gate_compare_left"], "baseline-corr")
+        self.assertIn("--release-gate-write-audit-pack", shlex.split(release_gate["commands"][0]))
+        self.assertIn("baseline-corr", release_gate["approval_text"])
 
 
 if __name__ == "__main__":

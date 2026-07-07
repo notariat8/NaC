@@ -94,36 +94,41 @@ raw data from real matters and complete personal content are not logged.
 
 ## Runtime Release Gate Approval
 
-After runtime or MCP changes, the agent renders the complete gate offline:
+After runtime or MCP changes, the agent renders the complete gate offline.
+`batch-approval m365 --batch-mode release-gate` renders the MVP Go/No-Go
+standard by default: one-shot runner, redacted audit pack as self-compare,
+redacted MVP readiness status and
+`--release-gate-readiness-require-audit-pack`.
 
 ```bash
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
-When the one-shot runner should write the redacted audit pack and compact MVP
-readiness status in the same approved run, invoke the batch renderer with the
-audit-pack and readiness parameters already set:
+When the audit pack should compare against a baseline instead of the current
+run itself, the optional baseline parameter is enough; audit pack and readiness
+stay implied in the release-gate batch mode:
 
 ```bash
 python3 scripts/nac.py batch-approval m365 \
   --batch-mode release-gate \
   --workspace-id notary_team_01 \
   --correlation-id <correlation-id> \
-  --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
-  --release-gate-write-readiness \
-  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 
 The renderer performs no GitHub or Graph write action. It emits the copyable
-owner approval and exactly one leading live command:
+owner approval and exactly one leading live command in the MVP Go/No-Go
+standard:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --owner-approved \
   --mcp-smoke-workspace-id notary_team_01 \
   --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 
@@ -208,6 +213,9 @@ certificate to Entra, update the local runtime credential boundary, run
 `release-gate-run` live, refresh non-secret runtime evidence through a PR,
 remove the stale Entra credential, delete the local old-certificate archive and
 log out the local delegated M365 CLI session.
+The embedded `release-gate-run` renders the same MVP Go/No-Go standard as
+`batch-approval m365 --batch-mode release-gate`: redacted audit pack, redacted
+MVP readiness status and audit-pack requirement for READY.
 
 ## Standard Runtime Evidence For MCP/Runtime Changes
 

@@ -296,15 +296,17 @@ gerendert werden:
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
-Wenn der freigegebene One-Shot-Lauf direkt das redigierte Audit-Pack schreiben
-soll, rendert der Batch-Befehl denselben Owner-Gate inklusive Audit-Pack-Flags:
+Der Batch-Befehl rendert standardmäßig den MVP-Go/No-Go-Lauf mit redigiertem
+Audit-Pack, redigiertem MVP-Readiness-Status und
+`--release-gate-readiness-require-audit-pack`. Wenn das Audit-Pack gegen eine
+Baseline statt gegen den aktuellen Lauf selbst geschrieben werden soll, wird nur
+die Baseline ergänzt:
 
 ```bash
 python3 scripts/nac.py batch-approval m365 \
   --batch-mode release-gate \
   --workspace-id notary_team_01 \
   --correlation-id <correlation-id> \
-  --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
   --format json
 ```

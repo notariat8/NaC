@@ -289,15 +289,17 @@ gate:
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
-When the approved one-shot run should write the redacted audit pack directly,
-the batch command renders the same owner gate with the audit-pack flags:
+The batch command renders the MVP Go/No-Go run by default with a redacted audit
+pack, redacted MVP readiness status and
+`--release-gate-readiness-require-audit-pack`. When the audit pack should
+compare against a baseline instead of the current run itself, only the baseline
+is added:
 
 ```bash
 python3 scripts/nac.py batch-approval m365 \
   --batch-mode release-gate \
   --workspace-id notary_team_01 \
   --correlation-id <correlation-id> \
-  --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
   --format json
 ```
