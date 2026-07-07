@@ -38,11 +38,11 @@ Rollen, Verträge und `nac`-Validierung begrenzt.
 flowchart TD
     Static["GitHub Pages / Jekyll: statische Inhalte"] --> Public["öffentliche Orientierung"]
     User["angemeldeter Benutzer"] --> AuthApp["authentifizierte Webapp oder mobile App"]
-    AuthApp --> OciIdp["OCI Identity Domains, OIDC/SCIM, Gruppenanker"]
-    OciIdp --> NacRole["NaC-Rollen- und Vorgangs-Gate"]
+    AuthApp --> EntraId["Entra ID, OIDC/SCIM, Microsoft-365-Gruppenanker"]
+    EntraId --> NacRole["NaC-Rollen- und Vorgangs-Gate"]
     NacRole --> Runtime["NaC-Runtime / Backend"]
     Runtime --> DataRepo["getrenntes Datenrepo"]
-    Runtime --> Storage["Object Store, Datenbank-Blob oder OneDrive"]
+    Runtime --> Storage["SharePoint Team Site, OneDrive oder späterer EU-Speicher"]
     Runtime --> Audit["Audit, Hash, Zweck, Ablauf, Widerruf"]
     Workstation --> O365["Office 365 / Microsoft 365 Client-Schicht"]
     O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
@@ -54,14 +54,11 @@ flowchart TD
     Card --> Runtime
 ```
 
-Office 365 ist auf der Client-Seite Pflicht. Für NaC bedeutet das nicht, dass
-die SaaS-Identität oder das aktuelle OCI-Deployment umgestellt werden. Office
-365 bildet die verpflichtende Arbeitsplatz-, Dokumenten-, Kalender-,
-Kommunikations- und Kollaborationsschicht des Notariats; NaC darf deshalb
-OneDrive, SharePoint, Outlook, Teams und künftige Microsoft-365-Features als
-Client-nahe Integrationsziele vorsehen, muss aber jeden Zugriff über
-NaC-Rollen, Aktenbindung, Zweckbindung, Audit und menschliche Freigaben
-begrenzen.
+Microsoft 365 ist im MVP nicht nur Client-Schicht, sondern auch aktive
+Identitäts-, Gruppen-, Team- und SharePoint-Datenebene. Entra ID bildet den
+Login- und Gruppenanker, Teams und SharePoint die erste reproduzierbare
+Arbeits- und Speicherkante. Jeder Zugriff bleibt trotzdem über NaC-Rollen,
+Aktenbindung, Zweckbindung, Audit und menschliche Freigaben begrenzt.
 
 Microsoft Agent 365 Agent Registry wird als Zielarchitektur-Baustein für
 Agent-Governance aufgenommen. Die laut Microsoft Learn als Vorschau geführte
@@ -97,39 +94,37 @@ nächsten Review-Schritt, ohne daraus schon eine Produktintegration zu machen.
 
 ## Identität Und Autorisierung
 
-Oracle OCI Identity Domains ist für diesen SaaS-Pfad die produktive
-Identitätsschicht. Der öffentliche Übergang von `www-n8` in die NaC-App läuft
-tenant-aware: Bestandskunden übergeben einen Tenant-Hinweis, Neukunden werden
-zuerst über eine Domain-Readiness-Prüfung geführt. Danach erzeugt NaC einen
-prüfbaren Admin-Provisioning-Plan für OCI Identity Domains.
+Entra ID ist für den M365-MVP die aktive Identitäts- und
+Gruppenankerschicht. Der öffentliche Übergang von `www-n8` in die NaC-App
+läuft tenant-aware: Bestandskunden übergeben einen Tenant-Hinweis, Neukunden
+werden zuerst über eine Domain-Readiness-Prüfung geführt. Danach erzeugt NaC
+einen prüfbaren Provisioning-Plan für Microsoft-365-Gruppe, Team,
+SharePoint-Site, Listen, Rollenbindung und Audit-Grenzen.
 
 Die Kundensicht heißt dabei `notariat8`. `https://app.notariat8.de/login` ist
-der kanonische Einstieg für Benutzer; direkte OCI-Identity-Domain-URLs,
-OCI-Console-Pfade oder interne Domain-Namen wie `nac-customers` sind
-Betriebsdetails und keine primäre Benutzerführung. Kurzfristig müssen
-kundensichtbare Login-Texte, Supporthinweise und Demo-Runbooks deshalb
-notariat8 als Produktoberfläche beschreiben. OCI Identity Domains bleibt die
-interne Broker- und Trust-Schicht hinter diesem Einstieg.
+der kanonische Einstieg für Benutzer; direkte Entra-Admin-Center-, Azure-Portal-
+oder Graph-Explorer-URLs sowie interne Tenant-, Gruppen- oder App-Namen sind
+Betriebsdetails und keine primäre Benutzerführung. Kundensichtbare
+Login-Texte, Supporthinweise und Demo-Runbooks beschreiben deshalb notariat8
+als Produktoberfläche. Entra ID bleibt die interne Trust-Schicht hinter diesem
+Einstieg.
 
-Office 365 ergänzt diesen Pfad auf der Client- und Arbeitsplatzseite. OCI
-Identity Domains bleibt für den aktuellen SaaS-Pfad die IdP- und
-Tenant-Provisioning-Schicht; Microsoft 365 liefert Arbeitsplatzdienste und
-Agent-Governance, solange eine separate, reviewte IdP-Änderung nichts anderes
-entscheidet.
-
-Endbenutzer arbeiten nicht in der OCI Console. NaC bedient Identity Domains
-über geprüfte API- und CLI-Verträge; produktive Schreiboperationen an
-Benutzern, Gruppen oder Mitgliedschaften brauchen vor dem Apply einen
-separaten Owner-Review und eine ausdrückliche Freigabe.
+Endbenutzer arbeiten nicht im Entra Admin Center, Azure Portal oder Graph
+Explorer. NaC bedient Entra ID, Microsoft-365-Gruppen, Teams und SharePoint
+über geprüfte Microsoft-Graph-REST- oder MCP-Verträge; produktive
+Schreiboperationen an Benutzern, Gruppen, Teams, SharePoint-Schema,
+Site-Permissions oder Mitgliedschaften brauchen vor dem Apply einen separaten
+Owner-Review und eine ausdrückliche Freigabe.
 
 Spätere Kunden-IdP-Föderation ändert diese Kundensicht nicht. Ein Notariat
 kann dann seinen eigenen IdP anbinden, aber der Benutzer startet weiter auf
-`https://app.notariat8.de/login`; OCI Identity Domains vermittelt als Broker
-zwischen notariat8 und dem Kunden-IdP. Föderation, Branding, Gruppenmapping,
-SCIM-Synchronisierung oder App-Client-Änderungen brauchen jeweils separate
-Design-, Sicherheits-, AVV-/DPA-, Rollen- und Owner-Apply-Gates. Diese
-Dokumentation autorisiert keine OCI-Schreibaktion, keinen Secret-Zugriff und
-keine produktive Mandatsdatenverarbeitung.
+`https://app.notariat8.de/login`; Entra ID oder ein explizit reviewter
+Föderationsvertrag vermittelt zwischen notariat8 und dem Kunden-IdP.
+Föderation, Branding, Gruppenmapping, SCIM-Synchronisierung oder
+App-Client-Änderungen brauchen jeweils separate Design-, Sicherheits-,
+AVV-/DPA-, Rollen- und Owner-Apply-Gates. Diese Dokumentation autorisiert
+keine Graph-/Tenant-Schreibaktion, keinen Secret-Zugriff und keine produktive
+Mandatsdatenverarbeitung.
 
 Die IdP-Anmeldung beantwortet nur die Frage, ob eine Person vertrauenswürdig
 angemeldet ist. Die fachliche Berechtigung entsteht danach im
@@ -143,11 +138,11 @@ NaC-Rollen- und Vorgangs-Gate:
 - Vier-Augen-Pflicht für sensible Schritte.
 
 Der erste NaC-App-Einstieg nutzt deshalb einen Login-Intent-Contract statt
-einer impliziten Anmeldung. NaC baut den OIDC-Redirect zu OCI Identity Domains
-über `/.well-known/openid-configuration` und `/oauth2/v1/authorize`, verlangt
-serverseitig erzeugte `state`- und `nonce`-Werte und hält `tenant_hint` nur als
-Kontext. Der Hinweis darf nicht in Rollen, Gruppen, Aktenzugriff oder OCI-Write
-übersetzt werden.
+einer impliziten Anmeldung. NaC baut den OIDC-Redirect zu Entra ID über
+OIDC-Metadaten und den Autorisierungsendpunkt, verlangt serverseitig erzeugte
+`state`- und `nonce`-Werte und hält `tenant_hint` nur als Kontext. Der Hinweis
+darf nicht in Rollen, Gruppen, Aktenzugriff oder Graph-/Tenant-Write übersetzt
+werden.
 
 Der Auth-Callback ist in diesem Modell noch kein erfolgreicher Login. Er ist
 zuerst ein geschlossenes Zwischenereignis mit eigenem
@@ -204,7 +199,7 @@ Die operative Grenze für signierte State-Werte und Callback-Logs steht in
 
 XNP- und digitale-Ausweis-Pfade mit Kartenleser bleiben lokale
 Arbeitsplatz-Gates. Sie können Identitäts- oder Readiness-Nachweise liefern,
-ersetzen aber weder OCI-Login noch NaC-Autorisierung und speichern keine PINs,
+ersetzen aber weder Entra-Login noch NaC-Autorisierung und speichern keine PINs,
 Kartendaten, Ausweisrohdaten oder Zertifikatsgeheimnisse im Repository.
 
 ## Mobile App Und Sichere Links
@@ -270,9 +265,10 @@ Produktidee, sondern ein prüfbarer NaC-Artefaktpfad.
 
 1. Statische GitHub-Pages-Schicht für öffentliche Inhalte und synthetische
    Demos weiter nutzen.
-2. Interne authentifizierte Webapp für Notariatsbenutzer über OCI Identity
-   Domains und NaC-Rollen-Gate entwerfen; Benutzer starten über
-   `https://app.notariat8.de/login`, nicht über direkte OCI-URLs.
+2. Interne authentifizierte Webapp für Notariatsbenutzer über Entra ID,
+   Microsoft-365-Gruppen und NaC-Rollen-Gate entwerfen; Benutzer starten über
+   `https://app.notariat8.de/login`, nicht über direkte Provider-,
+   Admin- oder Graph-URLs.
 3. Office 365 als verpflichtende Client-Schicht und Microsoft Agent 365 Agent
    Registry als Preview-Governance-Anker in Zielarchitektur und Backlog
    führen.

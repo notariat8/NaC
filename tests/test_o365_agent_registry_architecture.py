@@ -23,6 +23,8 @@ class Office365AgentRegistryArchitectureTests(unittest.TestCase):
         required_terms = [
             "Office 365",
             "Microsoft 365",
+            "Entra ID",
+            "Microsoft Graph REST/MCP",
             "Microsoft Agent 365 Agent Registry",
             "Agent Registry Sync",
             "Vorschau",
@@ -36,6 +38,8 @@ class Office365AgentRegistryArchitectureTests(unittest.TestCase):
             "Databricks Genie",
             "OCI Identity Domains",
             "App Release Overlay",
+            "Legacy-Referenzen",
+            "legacy references",
             "kein aktueller Deploy-Schritt",
             "not a current deploy step",
         ]
@@ -43,14 +47,18 @@ class Office365AgentRegistryArchitectureTests(unittest.TestCase):
         for term in required_terms:
             self.assertIn(term, combined)
 
-        self.assertIn("Office 365 ist auf der Client-Seite Pflicht", german_auth)
-        self.assertIn("Office 365 is mandatory on the client side", english_auth)
+        self.assertIn("Microsoft 365 ist im MVP nicht nur Client-Schicht", german_auth)
+        self.assertIn("Microsoft 365 is not only the client layer in the MVP", english_auth)
+        self.assertIn("Entra ID ist für den M365-MVP die aktive Identitäts-", german_auth)
+        self.assertIn("Entra ID is the active identity and group-anchor layer", english_auth)
         self.assertIn("Microsoft Agent 365 Agent Registry", german_arch)
         self.assertIn("Microsoft Agent 365 Agent Registry", english_arch)
 
         forbidden_terms = [
             "Office 365 ersetzt OCI Identity Domains",
             "Office 365 replaces OCI Identity Domains",
+            "OCI Identity Domains bleibt die aktuelle SaaS-IdP-Schicht",
+            "OCI Identity Domains remains the current SaaS IdP layer",
             "Agent Registry ist produktiv verpflichtend",
             "Agent Registry is production mandatory",
         ]

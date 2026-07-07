@@ -116,10 +116,11 @@ Center für zentrale Sichtbarkeit und Governance externer Agent-Umgebungen,
 unter anderem Amazon Bedrock, Google Vertex AI, Salesforce Agentforce und
 Databricks Genie.
 
-Für NaC ist diese Agent-Registry-Aufnahme kein aktueller Deploy-Schritt. Der
-laufende technische Deploy bleibt OCI/App Release Overlay; OCI Identity Domains
-bleibt die aktuelle SaaS-IdP-Schicht. Agent Registry ist ein Zielbild-Kontroll-
-und Review-Anker für künftige NaC-Agenten, MCP-Connectoren und externe
+Für NaC ist diese Agent-Registry-Aufnahme kein aktueller Deploy-Schritt. Die
+aktive MVP-Spur ist Entra ID, Microsoft-365-Gruppen, Teams und SharePoint über
+Microsoft Graph REST/MCP; das frühere OCI/App Release Overlay und OCI Identity
+Domains sind Legacy-Referenzen. Agent Registry ist ein Zielbild-Kontroll- und
+Review-Anker für künftige NaC-Agenten, MCP-Connectoren und externe
 Agent-Plattformen.
 
 Die produktive agentische Runtime ist
