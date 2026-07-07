@@ -257,6 +257,7 @@ python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --fo
 python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json
 python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
+python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 `privileged-plan` ist lesend und erzeugt den Review-Plan. `privileged-apply`
@@ -279,7 +280,10 @@ python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-
 Alle Evidence-Dateien liegen redigiert unter `out/m365/teams-sharepoint/` und
 werden nicht versioniert. Tokens, private Schlüssel, Roh-Graph-Antworten,
 echte Aktenwerte und SharePoint-Dateiinhalte gehören weder in den Chat noch in
-das Repository.
+das Repository. `release-gate-evidence` fasst die vorhandenen redigierten
+Artefakte in
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.md` zusammen und
+führt selbst keine Graph-Anfrage aus.
 
 Die komplette Runtime-/MCP-Sequenz kann als wiederholbares Release-Gate offline
 gerendert werden:
@@ -290,5 +294,6 @@ python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace
 
 Der Renderer führt keine Graph-Anfrage aus. Er erzeugt den kopierbaren
 Freigabetext und die feste Sequenz aus `runtime-smoke`, `runtime-metadata`,
-`mcp-smoke-suite --mcp-suite-cleanup` und
-`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`.
+`mcp-smoke-suite --mcp-suite-cleanup`,
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` und dem offline
+`release-gate-evidence`-Export.

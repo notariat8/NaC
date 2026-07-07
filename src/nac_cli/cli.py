@@ -21,6 +21,11 @@ from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
+from nac_m365_graph.release_gate_evidence import (
+    DEFAULT_EVIDENCE_OUTPUT,
+    build_release_gate_evidence,
+    write_release_gate_evidence_report,
+)
 from nac_observability.time_ledger import (
     CATEGORY_CHOICES,
     append_entry,
@@ -250,6 +255,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-smoke-cleanup",
             "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
+            "release-gate-evidence",
             "apply",
             "drift",
             "export",
@@ -323,6 +329,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-suite-cleanup",
         action="store_true",
         help="Fuehrt Write-Read-Smoke und Cleanup derselben synthetischen Akte in einem owner-gated Lauf aus.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-evidence-output",
+        type=Path,
+        help="Pfad fuer den redigierten M365-Release-Gate-Abschlussbericht.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-suite-artifact",
+        type=Path,
+        help="Optionaler Pfad zum redigierten MCP-Smoke-Suite-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-leftover-artifact",
+        type=Path,
+        help="Optionaler Pfad zum redigierten MCP-Smoke-Leftover-Dry-Run-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-runtime-smoke-artifact",
+        type=Path,
+        help="Optionaler Pfad zu einem redigierten Runtime-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-runtime-metadata-artifact",
+        type=Path,
+        help="Optionaler Pfad zu einem redigierten Runtime-Metadata-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-require-runtime-artifacts",
+        action="store_true",
+        help="Blockiert den Evidence-Export, wenn Runtime-Smoke- oder Runtime-Metadata-Artefakte fehlen.",
     )
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
@@ -1046,6 +1082,12 @@ def _build_m365_batch_approval_payload(
             synthetic_case_id=synthetic_case_id,
             correlation_id=correlation_id,
         )
+        evidence_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence "
+            f"--mcp-smoke-workspace-id {workspace_id} "
+            f"--mcp-smoke-correlation-id {correlation_id} "
+            "--format json"
+        )
         runtime_smoke_command = (
             "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json"
         )
@@ -1066,6 +1108,7 @@ def _build_m365_batch_approval_payload(
                 runtime_metadata_command,
                 suite_command,
                 leftover_dry_run_command,
+                evidence_command,
             ],
             "operator_sequence": [
                 {
@@ -1087,6 +1130,11 @@ def _build_m365_batch_approval_payload(
                     "step": "mcp_smoke_leftover_cleanup_dry_run",
                     "owner_gate": "m365_tenant_read_only",
                     "command": leftover_dry_run_command,
+                },
+                {
+                    "step": "release_gate_evidence_export",
+                    "owner_gate": "none",
+                    "command": evidence_command,
                 },
             ],
         }
@@ -1158,6 +1206,32 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "release-gate-evidence":
+            output_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.release_gate_evidence_output,
+                DEFAULT_EVIDENCE_OUTPUT,
+            )
+            evidence = build_release_gate_evidence(
+                repo_root=repo_root,
+                mcp_suite_artifact=args.release_gate_suite_artifact,
+                mcp_leftover_artifact=args.release_gate_leftover_artifact,
+                runtime_smoke_artifact=args.release_gate_runtime_smoke_artifact,
+                runtime_metadata_artifact=args.release_gate_runtime_metadata_artifact,
+                expected_workspace_id=args.mcp_smoke_workspace_id,
+                expected_correlation_id=args.mcp_smoke_correlation_id,
+                require_runtime_artifacts=args.release_gate_require_runtime_artifacts,
+            )
+            write_release_gate_evidence_report(evidence, output_path)
+            evidence["summary"]["report_path"] = str(output_path)
+            if args.format == "json":
+                print_json(evidence)
+            else:
+                _print_release_gate_evidence(evidence)
+            if evidence["status"] == "PASSED":
+                return 0
+            return 2 if evidence["status"] == "BLOCKED" else 1
+
         script_args = [args.teams_sharepoint_command]
         if args.schema:
             script_args.extend(["--schema", str(args.schema)])
@@ -1216,6 +1290,22 @@ def command_m365(args: argparse.Namespace) -> int:
         return result.returncode
 
     raise AssertionError(f"Unknown Microsoft 365 command: {args.m365_command}")
+
+
+def _resolve_m365_release_gate_path(repo_root: Path, path: Path | None, default: Path) -> Path:
+    raw = path or default
+    return raw if raw.is_absolute() else repo_root / raw
+
+
+def _print_release_gate_evidence(evidence: dict[str, Any]) -> None:
+    summary = evidence.get("summary", {})
+    print(f"STATUS: {evidence['status']}")
+    print(f"Report: {summary.get('report_path')}")
+    print(f"Evidence completeness: {summary.get('evidence_completeness')}")
+    for step in evidence.get("steps", []):
+        print(f"- {step['label']}: {step['status']}")
+    for error in evidence.get("errors", []):
+        print(f"ERROR: {error}")
 
 
 def command_import(args: argparse.Namespace) -> int:

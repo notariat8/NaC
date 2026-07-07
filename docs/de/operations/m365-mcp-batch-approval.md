@@ -114,10 +114,13 @@ kopierbare Owner-Freigabe und die feste Sequenz aus:
 2. `runtime-metadata`
 3. `mcp-smoke-suite --mcp-suite-cleanup`
 4. `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`
+5. `release-gate-evidence`
 
 Die ausgegebenen Live-Kommandos bleiben owner-gated. `runtime-smoke` und
 `runtime-metadata` sind read-only, die MCP Smoke Suite schreibt und löscht eine
 synthetische Akte, der Leftover-Dry-Run liest nur die Trefferanzahl.
+`release-gate-evidence` läuft danach offline und liest nur lokale redigierte
+Artefakte.
 
 ## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
 
@@ -138,6 +141,24 @@ Write, Read, Cleanup, redigiertes Artefakt, Workspace-Clean-State und
 konkretes Ergebnis in der Abschlussmeldung. Bleibt nach dem Lauf ein
 synthetischer Rest zurück, ist unmittelbar der owner-gated
 `mcp-smoke-leftover-cleanup`-Pfad vorzubereiten.
+
+Nach einem erfolgreichen Gate erzeugt der Agent ohne weitere Owner-Freigabe den
+redigierten Abschlussbericht:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --format json
+```
+
+Der Exporter führt keine Graph-Anfrage aus. Er liest die lokalen redigierten
+Artefakte `mcp-smoke-suite.redacted.json` und
+`mcp-smoke-leftover-cleanup.redacted.json` und schreibt
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optionale
+Runtime-Artefakte können über `--release-gate-runtime-smoke-artifact` und
+`--release-gate-runtime-metadata-artifact` ergänzt werden; fehlen sie, werden
+die Runtime-Schritte als `NOT_ATTACHED` dokumentiert.
 
 ## Abschlussregel
 
