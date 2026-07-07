@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -270,6 +271,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--correlation-id",
         default="m365-mcp-batch-approval",
         help="Nicht-geheime Correlation-ID fuer Live-Smoke-Befehle.",
+    )
+    batch_m365.add_argument(
+        "--release-gate-write-audit-pack",
+        action="store_true",
+        help="Ergaenzt Release-Gate-Freigabetexte um das direkte redigierte Offline-Audit-Pack.",
+    )
+    batch_m365.add_argument(
+        "--release-gate-compare-left",
+        help="Optionale Baseline-Correlation-ID fuer das Audit-Pack im Release-Gate-Batch-Approval.",
+    )
+    batch_m365.add_argument(
+        "--release-gate-audit-pack-dir",
+        help="Optionaler Zielordner fuer das Audit-Pack im Release-Gate-Batch-Approval.",
     )
     batch_m365.add_argument("--format", choices=["text", "json"], default="text")
     batch_approval.set_defaults(func=command_batch_approval)
@@ -1256,6 +1270,9 @@ def command_batch_approval(args: argparse.Namespace) -> int:
             workspace_id=args.workspace_id,
             synthetic_case_id=args.synthetic_case_id,
             correlation_id=args.correlation_id,
+            release_gate_write_audit_pack=args.release_gate_write_audit_pack,
+            release_gate_compare_left=args.release_gate_compare_left,
+            release_gate_audit_pack_dir=args.release_gate_audit_pack_dir,
         )
     except ValueError as exc:
         payload = {"status": "BLOCKED", "errors": [str(exc)]}
@@ -1273,10 +1290,18 @@ def _build_m365_batch_approval_payload(
     workspace_id: str,
     synthetic_case_id: str | None,
     correlation_id: str,
+    release_gate_write_audit_pack: bool = False,
+    release_gate_compare_left: str | None = None,
+    release_gate_audit_pack_dir: str | None = None,
 ) -> dict:
     prs = _normalize_batch_prs(batch_prs)
     if mode in {"merge", "merge-and-live-smoke"} and not prs:
         raise ValueError("batch-approval m365 merge mode requires at least one --batch-pr")
+    if not release_gate_write_audit_pack and (release_gate_compare_left or release_gate_audit_pack_dir):
+        raise ValueError(
+            "--release-gate-compare-left and --release-gate-audit-pack-dir "
+            "require --release-gate-write-audit-pack"
+        )
 
     approvals: dict[str, dict] = {}
     if mode in {"merge", "merge-and-live-smoke"}:
@@ -1320,69 +1345,100 @@ def _build_m365_batch_approval_payload(
         }
 
     if mode == "release-gate":
-        release_gate_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
-        release_gate_run_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
-            f"--mcp-smoke-workspace-id {workspace_id} "
-            f"{release_gate_case_id_arg}"
-            f"--mcp-smoke-correlation-id {correlation_id} "
-            "--format json"
+        release_gate_run_command = _build_m365_release_gate_run_command(
+            workspace_id=workspace_id,
+            correlation_id=correlation_id,
+            synthetic_case_id=synthetic_case_id,
+            write_audit_pack=release_gate_write_audit_pack,
+            compare_left=release_gate_compare_left,
+            audit_pack_dir=release_gate_audit_pack_dir,
         )
+        release_gate_covers_steps = [
+            "runtime_certificate_expiry_monitor",
+            "runtime_smoke",
+            "runtime_metadata",
+            "mcp_smoke_suite",
+            "mcp_smoke_leftover_cleanup_dry_run",
+            "release_gate_evidence_export",
+        ]
+        audit_pack_suffix = ""
+        if release_gate_write_audit_pack:
+            release_gate_covers_steps.append("release_gate_audit_pack")
+            audit_pack_suffix = " sowie direktem redigiertem Release-Gate-Audit-Pack"
+            if release_gate_compare_left:
+                audit_pack_suffix += f" gegen Baseline {release_gate_compare_left}"
+            else:
+                audit_pack_suffix += " als Self-Compare des aktuellen Laufs"
         approvals["release_gate"] = {
             "approval_text": (
                 "Freigabe: M365 Runtime Release-Gate live über den One-Shot-Runner "
                 f"im Workspace {workspace_id} ausführen, inklusive "
                 "runtime-certificate-expiry-monitor, runtime-smoke, "
                 "runtime-metadata, MCP Smoke Suite mit Cleanup, Leftover-Dry-Run "
-                "und release-gate-evidence Export."
+                f"und release-gate-evidence Export{audit_pack_suffix}."
             ),
             "owner_gate": "m365_runtime_release_gate",
             "workspace_id": workspace_id,
             "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
+            "release_gate_write_audit_pack": release_gate_write_audit_pack,
+            "release_gate_compare_left": release_gate_compare_left,
+            "release_gate_audit_pack_dir": release_gate_audit_pack_dir,
             "commands": [release_gate_run_command],
             "operator_sequence": [
                 {
                     "step": "release_gate_run",
                     "owner_gate": "m365_runtime_release_gate",
                     "command": release_gate_run_command,
-                    "covers_steps": [
-                        "runtime_certificate_expiry_monitor",
-                        "runtime_smoke",
-                        "runtime_metadata",
-                        "mcp_smoke_suite",
-                        "mcp_smoke_leftover_cleanup_dry_run",
-                        "release_gate_evidence_export",
-                    ],
+                    "covers_steps": release_gate_covers_steps,
                 },
             ],
         }
 
     if mode == "runtime-certificate-rotation":
-        release_gate_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
         readiness_command = (
             "python3 scripts/nac.py m365 teams-sharepoint "
             "runtime-certificate-readiness --format json"
         )
-        release_gate_run_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
-            f"--mcp-smoke-workspace-id {workspace_id} "
-            f"{release_gate_case_id_arg}"
-            f"--mcp-smoke-correlation-id {correlation_id} "
-            "--format json"
+        release_gate_run_command = _build_m365_release_gate_run_command(
+            workspace_id=workspace_id,
+            correlation_id=correlation_id,
+            synthetic_case_id=synthetic_case_id,
+            write_audit_pack=release_gate_write_audit_pack,
+            compare_left=release_gate_compare_left,
+            audit_pack_dir=release_gate_audit_pack_dir,
         )
+        rotation_release_gate_covers_steps = [
+            "runtime_certificate_expiry_monitor",
+            "runtime_smoke",
+            "runtime_metadata",
+            "mcp_smoke_suite",
+            "mcp_smoke_leftover_cleanup_dry_run",
+            "release_gate_evidence_export",
+        ]
+        rotation_audit_pack_suffix = ""
+        if release_gate_write_audit_pack:
+            rotation_release_gate_covers_steps.append("release_gate_audit_pack")
+            rotation_audit_pack_suffix = " mit direktem redigiertem Release-Gate-Audit-Pack"
+            if release_gate_compare_left:
+                rotation_audit_pack_suffix += f" gegen Baseline {release_gate_compare_left}"
+            else:
+                rotation_audit_pack_suffix += " als Self-Compare des aktuellen Laufs"
         approvals["runtime_certificate_rotation"] = {
             "approval_text": (
                 "Freigabe: M365 Runtime-Zertifikat rotieren als gebündelten Owner-gated "
                 "Lifecycle: neues lokales Runtime-Zertifikat erzeugen, Public Certificate "
                 "in Entra für die Runtime-App hochladen, lokale Runtime-Credential-Grenzen "
                 f"aktualisieren, M365 Runtime Release-Gate live im Workspace {workspace_id} "
-                "ausführen, nicht-geheime Runtime-Evidence refreshen, altes Runtime-Zertifikat "
+                f"ausführen{rotation_audit_pack_suffix}, nicht-geheime Runtime-Evidence refreshen, altes Runtime-Zertifikat "
                 "aus Entra entfernen, lokales Archiv des alten Zertifikats löschen und lokale "
                 "M365-CLI-Session abmelden."
             ),
             "owner_gate": "m365_runtime_certificate_rotation_lifecycle",
             "workspace_id": workspace_id,
             "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
+            "release_gate_write_audit_pack": release_gate_write_audit_pack,
+            "release_gate_compare_left": release_gate_compare_left,
+            "release_gate_audit_pack_dir": release_gate_audit_pack_dir,
             "commands": [
                 readiness_command,
                 release_gate_run_command,
@@ -1417,14 +1473,7 @@ def _build_m365_batch_approval_payload(
                     "step": "release_gate_run",
                     "owner_gate": "m365_runtime_release_gate",
                     "command": release_gate_run_command,
-                    "covers_steps": [
-                        "runtime_certificate_expiry_monitor",
-                        "runtime_smoke",
-                        "runtime_metadata",
-                        "mcp_smoke_suite",
-                        "mcp_smoke_leftover_cleanup_dry_run",
-                        "release_gate_evidence_export",
-                    ],
+                    "covers_steps": rotation_release_gate_covers_steps,
                 },
                 {
                     "step": "refresh_non_secret_runtime_evidence_pr",
@@ -1457,10 +1506,43 @@ def _build_m365_batch_approval_payload(
             "reads_certificate_files": False,
             "reads_private_key_files": False,
             "reads_secret_values": False,
+            "release_gate_write_audit_pack": release_gate_write_audit_pack,
             "owner_gates": [approval["owner_gate"] for approval in approvals.values()],
         },
         "result": approvals,
     }
+
+
+def _build_m365_release_gate_run_command(
+    *,
+    workspace_id: str,
+    correlation_id: str,
+    synthetic_case_id: str | None,
+    write_audit_pack: bool,
+    compare_left: str | None,
+    audit_pack_dir: str | None,
+) -> str:
+    command = [
+        "python3",
+        "scripts/nac.py",
+        "m365",
+        "teams-sharepoint",
+        "release-gate-run",
+        "--owner-approved",
+        "--mcp-smoke-workspace-id",
+        workspace_id,
+    ]
+    if synthetic_case_id:
+        command.extend(["--mcp-smoke-case-id", synthetic_case_id])
+    command.extend(["--mcp-smoke-correlation-id", correlation_id])
+    if write_audit_pack:
+        command.append("--release-gate-write-audit-pack")
+        if compare_left:
+            command.extend(["--release-gate-compare-left", compare_left])
+        if audit_pack_dir:
+            command.extend(["--release-gate-audit-pack-dir", audit_pack_dir])
+    command.extend(["--format", "json"])
+    return shlex.join(command)
 
 
 def _build_m365_mcp_smoke_suite_commands(

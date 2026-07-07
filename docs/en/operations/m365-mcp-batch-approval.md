@@ -100,6 +100,20 @@ After runtime or MCP changes, the agent renders the complete gate offline:
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
+When the one-shot runner should write the redacted audit pack in the same
+approved run, invoke the batch renderer with the audit-pack parameters already
+set:
+
+```bash
+python3 scripts/nac.py batch-approval m365 \
+  --batch-mode release-gate \
+  --workspace-id notary_team_01 \
+  --correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-compare-left <baseline-correlation-id> \
+  --format json
+```
+
 The renderer performs no GitHub or Graph write action. It emits the copyable
 owner approval and exactly one leading live command:
 

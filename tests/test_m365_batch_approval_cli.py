@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 import sys
 import unittest
@@ -174,6 +175,66 @@ class M365BatchApprovalCliTests(unittest.TestCase):
             ],
         )
 
+    def test_batch_approval_release_gate_can_render_audit_pack_runner_command(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "batch-approval",
+                "m365",
+                "--batch-mode",
+                "release-gate",
+                "--workspace-id",
+                "notary_team_01",
+                "--correlation-id",
+                "release-gate-corr",
+                "--release-gate-write-audit-pack",
+                "--release-gate-compare-left",
+                "baseline-corr",
+                "--release-gate-audit-pack-dir",
+                "out/m365/teams-sharepoint/release-gate-audit-packs/baseline current",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_github_writes"])
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertTrue(payload["summary"]["release_gate_write_audit_pack"])
+
+        release_gate = payload["result"]["release_gate"]
+        self.assertTrue(release_gate["release_gate_write_audit_pack"])
+        self.assertEqual(release_gate["release_gate_compare_left"], "baseline-corr")
+        self.assertEqual(
+            release_gate["release_gate_audit_pack_dir"],
+            "out/m365/teams-sharepoint/release-gate-audit-packs/baseline current",
+        )
+        self.assertIn("Release-Gate-Audit-Pack", release_gate["approval_text"])
+        self.assertIn("baseline-corr", release_gate["approval_text"])
+
+        command = release_gate["commands"][0]
+        command_args = shlex.split(command)
+        self.assertIn("--release-gate-write-audit-pack", command_args)
+        self.assertEqual(
+            command_args[command_args.index("--release-gate-compare-left") + 1],
+            "baseline-corr",
+        )
+        self.assertEqual(
+            command_args[command_args.index("--release-gate-audit-pack-dir") + 1],
+            "out/m365/teams-sharepoint/release-gate-audit-packs/baseline current",
+        )
+        self.assertIn("release_gate_audit_pack", release_gate["operator_sequence"][0]["covers_steps"])
+
     def test_batch_approval_renders_runtime_certificate_rotation_lifecycle_without_writes(self) -> None:
         result = subprocess.run(
             [
@@ -259,6 +320,34 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("--batch-pr", payload["errors"][0])
+
+    def test_batch_approval_blocks_audit_pack_baseline_without_audit_pack_flag(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "batch-approval",
+                "m365",
+                "--batch-mode",
+                "release-gate",
+                "--release-gate-compare-left",
+                "baseline-corr",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("--release-gate-write-audit-pack", payload["errors"][0])
 
 
 if __name__ == "__main__":

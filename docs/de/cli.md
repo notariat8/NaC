@@ -274,6 +274,7 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
+nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
 nac batch-approval m365 --batch-mode runtime-certificate-rotation --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
@@ -419,6 +420,10 @@ Live-Pfad aus und dokumentiert die intern abgedeckten Schritte:
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` und
 `release-gate-evidence --release-gate-require-runtime-artifacts`. Der Renderer
 selbst ist offline; der ausgegebene Live-Befehl bleibt owner-gated.
+Mit `--release-gate-write-audit-pack` rendert der Batch-Approval-Befehl direkt
+den One-Shot-Runner inklusive Audit-Pack-Schritt; `--release-gate-compare-left`
+setzt die optionale Baseline und `--release-gate-audit-pack-dir` den optionalen
+Zielordner.
 
 `batch-approval m365 --batch-mode runtime-certificate-rotation` rendert eine
 gebündelte Freigabe für den Runtime-Zertifikatslebenszyklus. Der Renderer ist
