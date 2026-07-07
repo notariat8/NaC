@@ -1107,69 +1107,37 @@ def _build_m365_batch_approval_payload(
         }
 
     if mode == "release-gate":
-        suite_command, leftover_dry_run_command = _build_m365_mcp_smoke_suite_commands(
-            workspace_id=workspace_id,
-            synthetic_case_id=synthetic_case_id,
-            correlation_id=correlation_id,
-        )
-        evidence_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence "
+        release_gate_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
+        release_gate_run_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
             f"--mcp-smoke-workspace-id {workspace_id} "
+            f"{release_gate_case_id_arg}"
             f"--mcp-smoke-correlation-id {correlation_id} "
-            "--release-gate-require-runtime-artifacts "
-            "--format json"
-        )
-        runtime_smoke_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved "
-            "--runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json "
-            "--format json"
-        )
-        runtime_metadata_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved "
-            "--runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json "
             "--format json"
         )
         approvals["release_gate"] = {
             "approval_text": (
-                "Freigabe: M365 Runtime Release-Gate im Workspace "
-                f"{workspace_id} ausführen: runtime-smoke, runtime-metadata, "
-                "MCP Smoke Suite mit Cleanup und Leftover-Dry-Run."
+                "Freigabe: M365 Runtime Release-Gate live über den One-Shot-Runner "
+                f"im Workspace {workspace_id} ausführen, inklusive runtime-smoke, "
+                "runtime-metadata, MCP Smoke Suite mit Cleanup, Leftover-Dry-Run "
+                "und release-gate-evidence Export."
             ),
             "owner_gate": "m365_runtime_release_gate",
             "workspace_id": workspace_id,
             "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
-            "commands": [
-                runtime_smoke_command,
-                runtime_metadata_command,
-                suite_command,
-                leftover_dry_run_command,
-                evidence_command,
-            ],
+            "commands": [release_gate_run_command],
             "operator_sequence": [
                 {
-                    "step": "runtime_smoke",
-                    "owner_gate": "m365_tenant_read_only",
-                    "command": runtime_smoke_command,
-                },
-                {
-                    "step": "runtime_metadata",
-                    "owner_gate": "m365_tenant_read_only",
-                    "command": runtime_metadata_command,
-                },
-                {
-                    "step": "mcp_smoke_suite",
-                    "owner_gate": "m365_tenant_write_and_delete",
-                    "command": suite_command,
-                },
-                {
-                    "step": "mcp_smoke_leftover_cleanup_dry_run",
-                    "owner_gate": "m365_tenant_read_only",
-                    "command": leftover_dry_run_command,
-                },
-                {
-                    "step": "release_gate_evidence_export",
-                    "owner_gate": "none",
-                    "command": evidence_command,
+                    "step": "release_gate_run",
+                    "owner_gate": "m365_runtime_release_gate",
+                    "command": release_gate_run_command,
+                    "covers_steps": [
+                        "runtime_smoke",
+                        "runtime_metadata",
+                        "mcp_smoke_suite",
+                        "mcp_smoke_leftover_cleanup_dry_run",
+                        "release_gate_evidence_export",
+                    ],
                 },
             ],
         }

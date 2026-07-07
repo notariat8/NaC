@@ -311,16 +311,20 @@ it only reads the owner-gated match count. The redacted artifact is written to
 `out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json`.
 
 `batch-approval m365 --batch-mode release-gate` renders the repeatable release
-gate sequence for runtime/MCP changes. The packet contains `runtime-smoke`,
-`runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`, the following
-`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and the offline
-`release-gate-evidence` export in a fixed order. The renderer itself is
-offline; the emitted live commands remain owner-gated.
+gate approval for runtime/MCP changes. The packet emits the owner-gated
+one-shot `release-gate-run --owner-approved` command as the leading live path
+and documents the covered internal steps: `runtime-smoke`, `runtime-metadata`,
+`mcp-smoke-suite --mcp-suite-cleanup`,
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
+`release-gate-evidence --release-gate-require-runtime-artifacts`. The renderer
+itself is offline; the emitted live command remains owner-gated.
 
 `release-gate-run` executes the same sequence in one owner-gated run and stops
 at the first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
+The individual commands remain the diagnostic and fallback path when a runner
+step must be reproduced in isolation.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates

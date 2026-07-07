@@ -253,22 +253,19 @@ Die normale Reihenfolge ist:
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
-python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
-python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
-python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
-python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
-python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 `privileged-plan` ist lesend und erzeugt den Review-Plan. `privileged-apply`
 ändert Tenant-Zustand und darf erst nach Review, Drift-Snapshot und
-Owner-Freigabe laufen. `runtime-smoke` und `runtime-metadata` prüfen danach den
-Sites.Selected-Runtime-Zugriff ohne Listenelemente oder Mandatsdaten und
-schreiben redigierte Evidence-Artefakte ohne Site-IDs, URLs,
-Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder Dateiinhalte.
-`mcp-smoke-suite --mcp-suite-cleanup` ist der Standard-Betriebsnachweis nach
-MCP-/Runtime-Änderungen, weil sie synthetischen Write, Read und Cleanup im
-gleichen Lauf prüft.
+Owner-Freigabe laufen. `release-gate-run` ist danach der Standard-
+Betriebsnachweis nach MCP-/Runtime-Änderungen, weil der One-Shot-Runner
+Runtime-Smoke, Runtime-Metadata, synthetischen Write/Read/Cleanup,
+Leftover-Dry-Run und Evidence Export in einem owner-gated Lauf ausführt.
+Die intern abgedeckten Runtime-Schritte prüfen den Sites.Selected-Zugriff ohne
+Listenelemente oder Mandatsdaten und schreiben redigierte Evidence-Artefakte
+ohne Site-IDs, URLs, Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder
+Dateiinhalte.
 
 Der `mcp-smoke-leftover-cleanup`-Dry-Run ist der Nachlauf, wenn die Suite
 fehlgeschlagen ist, ein vorheriger Smoke abgebrochen wurde oder der Operator
@@ -282,10 +279,10 @@ python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-
 Alle Evidence-Dateien liegen redigiert unter `out/m365/teams-sharepoint/` und
 werden nicht versioniert. Tokens, private Schlüssel, Roh-Graph-Antworten,
 echte Aktenwerte und SharePoint-Dateiinhalte gehören weder in den Chat noch in
-das Repository. `release-gate-evidence` fasst die vorhandenen redigierten
-Runtime- und MCP-Artefakte in
+das Repository. `release-gate-run` lässt `release-gate-evidence` am Ende
+laufen und fasst die vorhandenen redigierten Runtime- und MCP-Artefakte in
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md` zusammen und
-führt selbst keine Graph-Anfrage aus.
+führt im Evidence-Schritt selbst keine Graph-Anfrage aus.
 
 Die komplette Runtime-/MCP-Sequenz kann als wiederholbares Release-Gate offline
 gerendert werden:
@@ -295,7 +292,7 @@ python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace
 ```
 
 Der Renderer führt keine Graph-Anfrage aus. Er erzeugt den kopierbaren
-Freigabetext und die feste Sequenz aus `runtime-smoke`, `runtime-metadata`,
-`mcp-smoke-suite --mcp-suite-cleanup`,
-`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` und dem offline
-`release-gate-evidence`-Export.
+Freigabetext für genau den One-Shot-Runner `release-gate-run --owner-approved`
+und dokumentiert die intern abgedeckten Schritte. Einzelbefehle bleiben
+Diagnose-/Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden
+muss.
