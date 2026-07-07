@@ -119,7 +119,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, Teams/SharePoint Graph data plane and legal-research connector candidates. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, creates redacted release-gate completion reports from local evidence artifacts, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access, starts the local MCP stdio adapter for request planning and cleans synthetic smoke leftovers only owner-gated. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-run --owner-approved`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, executes the runtime release gate only owner-gated as a fixed sequence, creates redacted release-gate completion reports from local evidence artifacts, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access, starts the local MCP stdio adapter for request planning and cleans synthetic smoke leftovers only owner-gated. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -243,6 +243,7 @@ nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-o
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
+nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
@@ -315,6 +316,11 @@ gate sequence for runtime/MCP changes. The packet contains `runtime-smoke`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and the offline
 `release-gate-evidence` export in a fixed order. The renderer itself is
 offline; the emitted live commands remain owner-gated.
+
+`release-gate-run` executes the same sequence in one owner-gated run and stops
+at the first failed step. The runner writes only the redacted standard
+artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
+runs the final evidence export with `--release-gate-require-runtime-artifacts`.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates

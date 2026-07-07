@@ -21,6 +21,8 @@ from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
+from nac_m365_graph.mcp_smoke_leftover_cleanup import DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT
+from nac_m365_graph.mcp_smoke_suite import DEFAULT_MCP_SMOKE_SUITE_OUTPUT
 from nac_m365_graph.release_gate_evidence import (
     DEFAULT_ARTIFACT_INDEX_OUTPUT,
     DEFAULT_EVIDENCE_JSON_OUTPUT,
@@ -31,6 +33,8 @@ from nac_m365_graph.release_gate_evidence import (
     write_release_gate_evidence_json,
     write_release_gate_evidence_report,
 )
+from nac_m365_graph.runtime_metadata import DEFAULT_RUNTIME_METADATA_OUTPUT
+from nac_m365_graph.runtime_smoke import DEFAULT_RUNTIME_SMOKE_OUTPUT
 from nac_observability.time_ledger import (
     CATEGORY_CHOICES,
     append_entry,
@@ -261,6 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
             "release-gate-evidence",
+            "release-gate-run",
             "apply",
             "drift",
             "export",
@@ -1236,6 +1241,14 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "release-gate-run":
+            payload, return_code = _run_m365_release_gate(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_run(payload)
+            return return_code
+
         if args.teams_sharepoint_command == "release-gate-evidence":
             output_path = _resolve_m365_release_gate_path(
                 repo_root,
@@ -1341,9 +1354,254 @@ def command_m365(args: argparse.Namespace) -> int:
     raise AssertionError(f"Unknown Microsoft 365 command: {args.m365_command}")
 
 
+def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[dict[str, Any], int]:
+    if not args.owner_approved:
+        return (
+            {
+                "status": "BLOCKED",
+                "errors": ["release-gate-run requires --owner-approved"],
+                "summary": {
+                    "workspace_id": args.mcp_smoke_workspace_id or "notary_team_01",
+                    "correlation_id": args.mcp_smoke_correlation_id,
+                    "owner_gate": "m365_runtime_release_gate",
+                },
+                "steps": [],
+            },
+            2,
+        )
+
+    workspace_id = args.mcp_smoke_workspace_id or "notary_team_01"
+    correlation_id = args.mcp_smoke_correlation_id or "m365-runtime-release-gate"
+    runtime_smoke_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.runtime_smoke_output,
+        DEFAULT_RUNTIME_SMOKE_OUTPUT,
+    )
+    runtime_metadata_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.runtime_metadata_output,
+        DEFAULT_RUNTIME_METADATA_OUTPUT,
+    )
+    mcp_suite_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.mcp_suite_output,
+        DEFAULT_MCP_SMOKE_SUITE_OUTPUT,
+    )
+    mcp_leftover_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.mcp_leftover_output,
+        DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT,
+    )
+    evidence_output = _resolve_m365_release_gate_path(repo_root, args.release_gate_evidence_output, DEFAULT_EVIDENCE_OUTPUT)
+    evidence_json_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_evidence_json_output,
+        DEFAULT_EVIDENCE_JSON_OUTPUT,
+    )
+    artifact_index_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_artifact_index_output,
+        DEFAULT_ARTIFACT_INDEX_OUTPUT,
+    )
+
+    steps = [
+        (
+            "runtime_smoke",
+            [
+                "m365",
+                "teams-sharepoint",
+                "runtime-smoke",
+                "--owner-approved",
+                "--runtime-smoke-output",
+                str(runtime_smoke_output),
+                "--format",
+                "json",
+            ],
+        ),
+        (
+            "runtime_metadata",
+            [
+                "m365",
+                "teams-sharepoint",
+                "runtime-metadata",
+                "--owner-approved",
+                "--runtime-metadata-output",
+                str(runtime_metadata_output),
+                "--format",
+                "json",
+            ],
+        ),
+        (
+            "mcp_smoke_suite",
+            [
+                "m365",
+                "teams-sharepoint",
+                "mcp-smoke-suite",
+                "--owner-approved",
+                "--mcp-suite-cleanup",
+                "--mcp-smoke-workspace-id",
+                workspace_id,
+                "--mcp-smoke-correlation-id",
+                correlation_id,
+                "--mcp-suite-output",
+                str(mcp_suite_output),
+                "--format",
+                "json",
+            ],
+        ),
+        (
+            "mcp_leftover_dry_run",
+            [
+                "m365",
+                "teams-sharepoint",
+                "mcp-smoke-leftover-cleanup",
+                "--owner-approved",
+                "--mcp-leftover-dry-run",
+                "--mcp-smoke-workspace-id",
+                workspace_id,
+                "--mcp-smoke-correlation-id",
+                correlation_id,
+                "--mcp-leftover-output",
+                str(mcp_leftover_output),
+                "--format",
+                "json",
+            ],
+        ),
+        (
+            "release_gate_evidence",
+            [
+                "m365",
+                "teams-sharepoint",
+                "release-gate-evidence",
+                "--mcp-smoke-workspace-id",
+                workspace_id,
+                "--mcp-smoke-correlation-id",
+                correlation_id,
+                "--release-gate-require-runtime-artifacts",
+                "--release-gate-runtime-smoke-artifact",
+                str(runtime_smoke_output),
+                "--release-gate-runtime-metadata-artifact",
+                str(runtime_metadata_output),
+                "--release-gate-suite-artifact",
+                str(mcp_suite_output),
+                "--release-gate-leftover-artifact",
+                str(mcp_leftover_output),
+                "--release-gate-evidence-output",
+                str(evidence_output),
+                "--release-gate-evidence-json-output",
+                str(evidence_json_output),
+                "--release-gate-artifact-index-output",
+                str(artifact_index_output),
+                "--format",
+                "json",
+            ],
+        ),
+    ]
+    if args.schema:
+        for step_id, command in steps[:2]:
+            command[3:3] = ["--schema", str(args.schema)]
+    if args.provisioned_state:
+        for step_id, command in steps[:4]:
+            command[3:3] = ["--provisioned-state", str(args.provisioned_state)]
+    if args.mcp_contract:
+        for step_id, command in steps[2:4]:
+            command[3:3] = ["--mcp-contract", str(args.mcp_contract)]
+    if args.mcp_smoke_case_id:
+        steps[2][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
+
+    step_results: list[dict[str, Any]] = []
+    for step_id, command in steps:
+        result = _run_nac_json_step(repo_root, command)
+        step_results.append(
+            {
+                "step": step_id,
+                "return_code": result.returncode,
+                "status": _payload_status(result.stdout),
+                "command": "python3 scripts/nac.py " + " ".join(command),
+            }
+        )
+        if result.returncode != 0:
+            return (
+                {
+                    "status": "FAILED",
+                    "summary": {
+                        "workspace_id": workspace_id,
+                        "correlation_id": correlation_id,
+                        "failed_step": step_id,
+                        "steps_completed": len(step_results) - 1,
+                    },
+                    "steps": step_results,
+                    "errors": [_step_error_message(result)],
+                },
+                result.returncode,
+            )
+
+    return (
+        {
+            "status": "PASSED",
+            "summary": {
+                "workspace_id": workspace_id,
+                "correlation_id": correlation_id,
+                "steps_completed": len(step_results),
+                "evidence_output": str(evidence_output),
+                "evidence_json_output": str(evidence_json_output),
+                "artifact_index_output": str(artifact_index_output),
+            },
+            "steps": step_results,
+            "errors": [],
+        },
+        0,
+    )
+
+
+def _run_nac_json_step(repo_root: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(repo_root / "scripts" / "nac.py"), "--repo-root", str(repo_root), *command],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _payload_status(stdout: str) -> str | None:
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return None
+    status = payload.get("status") if isinstance(payload, dict) else None
+    return status if isinstance(status, str) else None
+
+
+def _step_error_message(result: subprocess.CompletedProcess[str]) -> str:
+    if result.stdout:
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
+            errors = payload.get("errors")
+            if isinstance(errors, list) and errors:
+                return str(errors[0])
+    if result.stderr:
+        return result.stderr.strip()
+    return f"release-gate step failed with return code {result.returncode}"
+
+
 def _resolve_m365_release_gate_path(repo_root: Path, path: Path | None, default: Path) -> Path:
     raw = path or default
     return raw if raw.is_absolute() else repo_root / raw
+
+
+def _print_m365_release_gate_run(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload['status']}")
+    print(f"Workspace: {summary.get('workspace_id')}")
+    print(f"Correlation: {summary.get('correlation_id')}")
+    for step in payload.get("steps", []):
+        print(f"- {step['step']}: {step.get('status')} ({step.get('return_code')})")
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}")
 
 
 def _print_release_gate_evidence(evidence: dict[str, Any]) -> None:
