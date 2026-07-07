@@ -108,6 +108,7 @@ def _build_markdown(payload: dict, kg_readiness: dict | None = None) -> str:
     timestamp = payload.get("timestamp_utc", "unknown")
     checks = payload.get("checks", [])
     kg_readiness = kg_readiness or _build_kg_readiness(REPO_ROOT)
+    m365_readiness = _build_m365_release_readiness_summary(payload)
     passed_checks = sum(1 for check in checks if check.get("passed") is True)
 
     lines: list[str] = [marker, "## NaC Developer CI", ""]
@@ -119,6 +120,8 @@ def _build_markdown(payload: dict, kg_readiness: dict | None = None) -> str:
 
     if payload.get("error"):
         lines.append(f"- Fehler: `{payload['error']}`")
+        lines.append("")
+        lines.extend(_m365_release_readiness_markdown(m365_readiness))
         lines.append("")
         lines.extend(_kg_readiness_markdown(kg_readiness))
         lines.append("")
@@ -136,10 +139,51 @@ def _build_markdown(payload: dict, kg_readiness: dict | None = None) -> str:
         lines.append(f"| `{title}` | {_status_icon(passed)} | `{duration_ms} ms` |")
 
     lines.append("")
+    lines.extend(_m365_release_readiness_markdown(m365_readiness))
+    lines.append("")
     lines.extend(_kg_readiness_markdown(kg_readiness))
     lines.append("")
     lines.append("Artefakte: `out/quality/status.json`, `out/quality/report.md`, `out/quality/comment.md`")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _build_m365_release_readiness_summary(payload: dict) -> dict:
+    checks = payload.get("checks", [])
+    readiness_check = next(
+        (
+            check
+            for check in checks
+            if isinstance(check, dict) and check.get("id") == "m365_release_readiness_gate"
+        ),
+        None,
+    )
+    if readiness_check is None:
+        return {
+            "ci_enforcement": "NOT_EVALUATED",
+            "check_status": "NOT_ATTACHED",
+            "check_title": "M365 Release Readiness Gate",
+            "duration_ms": 0,
+        }
+    passed = readiness_check.get("passed") is True
+    return {
+        "ci_enforcement": "ENFORCED" if passed else "NOT_ENFORCED",
+        "check_status": "PASSED" if passed else "FAILED",
+        "check_title": readiness_check.get("title", "M365 Release Readiness Gate"),
+        "duration_ms": int(readiness_check.get("duration_ms", 0)),
+    }
+
+
+def _m365_release_readiness_markdown(readiness: dict) -> list[str]:
+    return [
+        "### M365 MVP Readiness",
+        "",
+        "- Go/No-Go: `mvp_release_readiness=READY`",
+        "- Runner summary: `release_gate_readiness=READY`",
+        f"- CI enforcement: **{readiness.get('ci_enforcement', 'UNKNOWN')}**",
+        f"- Gate check: `{readiness.get('check_status', 'UNKNOWN')}`",
+        f"- Check duration: `{readiness.get('duration_ms', 0)} ms`",
+        "- Live evidence: owner-gated `release-gate-run --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack`",
+    ]
 
 
 def _kg_readiness_markdown(kg_readiness: dict) -> list[str]:

@@ -60,20 +60,23 @@ CI:
 16. `kg_editor` only in `strict`
 17. `codex_parallel_review` only in `strict`
 18. `teams_sharepoint_graph_data_plane` only in `strict`
-19. `matter_data_classification_redaction` only in `strict`
-20. `private_operating_frame_gate` only in `strict`
-21. `private_payload_target_design` only in `strict`
-22. `private_payload_access_policy` only in `strict`
-23. `gnotkg_costs` only in `strict`
-24. `secure_document_links` only in `strict`
-25. `legal_research_connectors` only in `strict`
-26. `legal_source_inventory_license_tdm` only in `strict`
-27. `legal_model_customization_readiness` only in `strict`
-28. `legal_model_card_ai_sbom_delta` only in `strict`
-29. `legal_model_card_proposal` only in `strict`
-30. `legal_ai_sbom_delta_proposal` only in `strict`
-31. `legal_model_evaluation_benchmark` only in `strict`
-32. `legal_graph_contracts` only in `strict`
+19. `m365_release_readiness_gate` only in `strict`
+20. `m365_sharepoint_bpmn_viewer_adapter` only in `strict`
+21. `notarial_application_interface_inventory` only in `strict`
+22. `matter_data_classification_redaction` only in `strict`
+23. `private_operating_frame_gate` only in `strict`
+24. `private_payload_target_design` only in `strict`
+25. `private_payload_access_policy` only in `strict`
+26. `gnotkg_costs` only in `strict`
+27. `secure_document_links` only in `strict`
+28. `legal_research_connectors` only in `strict`
+29. `legal_source_inventory_license_tdm` only in `strict`
+30. `legal_model_customization_readiness` only in `strict`
+31. `legal_model_card_ai_sbom_delta` only in `strict`
+32. `legal_model_card_proposal` only in `strict`
+33. `legal_ai_sbom_delta_proposal` only in `strict`
+34. `legal_model_evaluation_benchmark` only in `strict`
+35. `legal_graph_contracts` only in `strict`
 
 ## Artifacts
 
@@ -84,6 +87,10 @@ Default output:
 - PR comment: [out/quality/comment.md](../../out/quality/comment.md) for pull
   request upsert with build status, check summary and KG readiness from the
   usecase-local knowledge graphs
+- Markdown report and PR comment also show the M365 MVP readiness status: CI
+  enforcement for the `m365_release_readiness_gate`, Go/No-Go target
+  `mvp_release_readiness=READY` and runner summary
+  `release_gate_readiness=READY`
 
 These artifacts are uploaded during CI runs.
 
