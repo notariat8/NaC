@@ -46,6 +46,8 @@ DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-da
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 RUNBOOK_DE = REPO_ROOT / "docs" / "de" / "runbooks" / "m365-cli-admin-accelerator.md"
 RUNBOOK_EN = REPO_ROOT / "docs" / "en" / "runbooks" / "m365-cli-admin-accelerator.md"
+BATCH_APPROVAL_DE = REPO_ROOT / "docs" / "de" / "operations" / "m365-mcp-batch-approval.md"
+BATCH_APPROVAL_EN = REPO_ROOT / "docs" / "en" / "operations" / "m365-mcp-batch-approval.md"
 PROVISIONER_SCRIPT = REPO_ROOT / "scripts" / "provision_teams_sharepoint_graph.py"
 PACKAGE_ROOT = REPO_ROOT / "src" / "nac_m365_graph"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
@@ -1044,14 +1046,56 @@ def _validate_docs() -> list[str]:
         (RUNBOOK_EN, "runtime-metadata --owner-approved"),
     )
     for path, marker in required_markers:
-        if not path.is_file():
-            errors.append(f"missing doc: {path.relative_to(REPO_ROOT)}")
-            continue
-        text = path.read_text(encoding="utf-8")
-        _reject_secret_markers(path, text, errors)
-        if marker not in text:
-            errors.append(f"{path.relative_to(REPO_ROOT)} missing marker {marker}")
+        _validate_doc_required_marker(path, marker, errors)
+    _validate_product_edge_docs(errors)
     return errors
+
+
+def _validate_product_edge_docs(errors: list[str]) -> None:
+    for path, marker in _product_edge_required_doc_markers():
+        _validate_doc_required_marker(path, marker, errors)
+    for path, marker in _product_edge_prohibited_doc_markers():
+        _validate_doc_prohibited_marker(path, marker, errors)
+
+
+def _product_edge_required_doc_markers() -> tuple[tuple[Path, str], ...]:
+    return (
+        (DOC_DE, "scripts/nac.py m365 teams-sharepoint privileged-plan"),
+        (DOC_EN, "scripts/nac.py m365 teams-sharepoint privileged-plan"),
+        (BATCH_APPROVAL_DE, "`release-gate-run` ist der Standard-Betriebsnachweis"),
+        (BATCH_APPROVAL_EN, "`release-gate-run` is the standard runtime evidence"),
+        (BATCH_APPROVAL_DE, "Diagnose-/Komponentenpfad"),
+        (BATCH_APPROVAL_EN, "diagnostic/component path"),
+    )
+
+
+def _product_edge_prohibited_doc_markers() -> tuple[tuple[Path, str], ...]:
+    return (
+        (DOC_DE, "python3 scripts/provision_teams_sharepoint_graph.py"),
+        (DOC_EN, "python3 scripts/provision_teams_sharepoint_graph.py"),
+        (BATCH_APPROVAL_DE, "Die Smoke Suite ist der Standard-Betriebsnachweis"),
+        (BATCH_APPROVAL_EN, "The smoke suite is the standard runtime evidence"),
+    )
+
+
+def _validate_doc_required_marker(path: Path, marker: str, errors: list[str]) -> None:
+    if not path.is_file():
+        errors.append(f"missing doc: {_display_path(path)}")
+        return
+    text = path.read_text(encoding="utf-8")
+    _reject_secret_markers(path, text, errors)
+    if marker not in text:
+        errors.append(f"{_display_path(path)} missing marker {marker}")
+
+
+def _validate_doc_prohibited_marker(path: Path, marker: str, errors: list[str]) -> None:
+    if not path.is_file():
+        errors.append(f"missing doc: {_display_path(path)}")
+        return
+    text = path.read_text(encoding="utf-8")
+    _reject_secret_markers(path, text, errors)
+    if marker in text:
+        errors.append(f"{_display_path(path)} contains prohibited product-edge marker {marker}")
 
 
 def _validate_code_boundary() -> list[str]:
@@ -1081,7 +1125,14 @@ def _reject_secret_markers(path: Path, text: str, errors: list[str]) -> None:
     lowered = text.lower()
     for marker in PROHIBITED_SECRET_MARKERS:
         if marker.lower() in lowered:
-            errors.append(f"{path.relative_to(REPO_ROOT)} contains prohibited marker: {marker}")
+            errors.append(f"{_display_path(path)} contains prohibited marker: {marker}")
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _strings(value: object) -> list[str]:
