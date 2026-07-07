@@ -89,6 +89,9 @@ DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/rel
 DEFAULT_RELEASE_GATE_COMPARE_INDEX_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparison-indexes")
 DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT = Path("out/m365/teams-sharepoint/release-gate-audit-packs")
 DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT = Path("out/m365/teams-sharepoint/release-gate-post-run-reports")
+DEFAULT_RELEASE_GATE_POST_RUN_REPORT_INDEX_ROOT = Path(
+    "out/m365/teams-sharepoint/release-gate-post-run-report-indexes"
+)
 DEFAULT_RELEASE_GATE_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
 DEFAULT_RELEASE_READINESS_OUTPUT = Path("out/m365/teams-sharepoint/release-readiness.redacted.json")
 M365_RELEASE_READINESS_REQUIRED_ARTIFACTS = (
@@ -366,6 +369,8 @@ def build_parser() -> argparse.ArgumentParser:
             "release-gate-retention-compare-index-artifact",
             "release-gate-retention-list",
             "release-gate-post-run-report",
+            "release-gate-post-run-report-index",
+            "release-gate-post-run-report-index-artifact",
             "release-readiness",
             "release-gate-run",
             "apply",
@@ -642,6 +647,43 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-github-comment-output",
         type=Path,
         help="Optionaler Markdown-Pfad fuer den redigierten GitHub-Nachweiskommentarentwurf.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-root",
+        type=Path,
+        help=(
+            "Optionaler Root-Ordner fuer release-gate-post-run-report-index; "
+            "standardmaessig out/m365/teams-sharepoint/release-gate-post-run-reports/."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-correlation-id",
+        help="Optionaler Correlation-ID-Filter fuer release-gate-post-run-report-index.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-baseline",
+        help="Optionaler Baseline-Correlation-ID-Filter fuer release-gate-post-run-report-index.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-status",
+        help="Optionaler Statusfilter fuer release-gate-post-run-report-index.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-query",
+        help=(
+            "Optionaler Suchtext fuer release-gate-post-run-report-index; sucht in Correlation-ID, "
+            "Baseline, Status, Workspace, Readiness, Report-, JSON- und Kommentar-Pfad."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-index-output",
+        type=Path,
+        help="Optionaler Markdown-Pfad fuer das redigierte Post-Gate-Report-Index-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-index-json-output",
+        type=Path,
+        help="Optionaler JSON-Pfad fuer das redigierte Post-Gate-Report-Index-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-write-audit-pack",
@@ -1837,6 +1879,22 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 _print_m365_release_gate_post_run_report(payload)
             return _m365_release_gate_post_run_report_return_code(payload)
+
+        if args.teams_sharepoint_command == "release-gate-post-run-report-index":
+            payload = _list_m365_release_gate_post_run_reports(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_post_run_report_index(payload)
+            return 0 if payload["status"] == "PASSED" else 1
+
+        if args.teams_sharepoint_command == "release-gate-post-run-report-index-artifact":
+            payload = _write_m365_release_gate_post_run_report_index_artifact(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_post_run_report_index_artifact(payload)
+            return 0 if payload["status"] == "PASSED" else 2
 
         if args.teams_sharepoint_command == "release-gate-retention-audit-pack":
             payload = _write_m365_release_gate_retention_audit_pack(repo_root, args)
@@ -3449,6 +3507,267 @@ def _print_m365_release_gate_post_run_report(payload: dict[str, Any]) -> None:
     print(f"MVP readiness: {summary.get('mvp_release_readiness')}")
     print(f"Report: {summary.get('report_path')}")
     print(f"GitHub comment draft: {summary.get('github_comment_path')}")
+
+
+def _list_m365_release_gate_post_run_reports(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    report_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_post_run_report_root,
+        DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT,
+    )
+    rows: list[dict[str, Any]] = []
+    errors: list[str] = []
+    if report_root.exists():
+        for json_path in sorted(report_root.glob("*/release-gate-post-run-report.redacted.json")):
+            try:
+                payload = _load_json_object(json_path, "release gate post-run report")
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                errors.append(f"invalid post-gate report artifact {json_path}: {exc}")
+                continue
+            row = _m365_release_gate_post_run_report_index_row(json_path, payload)
+            if _m365_release_gate_post_run_report_index_matches(row, args):
+                rows.append(row)
+    rows.sort(
+        key=lambda row: (
+            str(row.get("generated_at") or ""),
+            str(row.get("correlation_id") or ""),
+        ),
+        reverse=True,
+    )
+    return {
+        "schema_version": "nac.m365-release-gate-post-run-report-index/v0.1",
+        "status": "FAILED" if errors else "PASSED",
+        "summary": {
+            "post_run_report_root": str(report_root),
+            "post_run_report_count": len(rows),
+            "invalid_artifact_count": len(errors),
+            "correlation_id": args.release_gate_post_run_report_correlation_id,
+            "baseline_correlation_id": args.release_gate_post_run_report_baseline,
+            "status_filter": args.release_gate_post_run_report_status,
+            "query": args.release_gate_post_run_report_query,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "github_writes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "post_run_reports": rows,
+        "errors": errors,
+    }
+
+
+def _write_m365_release_gate_post_run_report_index_artifact(
+    repo_root: Path,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    payload = _list_m365_release_gate_post_run_reports(repo_root, args)
+    if payload["status"] != "PASSED":
+        return {
+            **payload,
+            "schema_version": "nac.m365-release-gate-post-run-report-index-artifact/v0.1",
+        }
+    report_path, json_path = _m365_release_gate_post_run_report_index_artifact_paths(repo_root, args, payload)
+    payload = {
+        **payload,
+        "schema_version": "nac.m365-release-gate-post-run-report-index-artifact/v0.1",
+        "generated_at": _now_utc(),
+    }
+    payload["summary"] = {
+        **payload["summary"],
+        "artifact_directory": str(report_path.parent),
+        "report_path": str(report_path),
+        "json_path": str(json_path),
+        "source_artifacts_must_be_redacted": True,
+    }
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    report_path.write_text(_render_m365_release_gate_post_run_report_index_report(payload), encoding="utf-8")
+    return payload
+
+
+def _m365_release_gate_post_run_report_index_row(json_path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    report_path = summary.get("report_path") or str(json_path.parent / "release-gate-post-run-report.redacted.md")
+    json_output_path = summary.get("json_path") or str(json_path)
+    github_comment_path = summary.get("github_comment_path") or str(json_path.parent / "github-evidence-comment.redacted.md")
+    row = {
+        "status": payload.get("status"),
+        "generated_at": payload.get("generated_at"),
+        "correlation_id": summary.get("correlation_id"),
+        "baseline_correlation_id": summary.get("baseline_correlation_id"),
+        "baseline_selection": summary.get("baseline_selection"),
+        "workspace_id": summary.get("workspace_id"),
+        "mvp_release_readiness": summary.get("mvp_release_readiness"),
+        "release_readiness_status": summary.get("release_readiness_status"),
+        "release_gate_status": summary.get("release_gate_status"),
+        "audit_pack_status": summary.get("audit_pack_status"),
+        "retention_compare_status": summary.get("retention_compare_status"),
+        "difference_count": summary.get("difference_count"),
+        "artifact_directory": summary.get("artifact_directory") or str(json_path.parent),
+        "report_path": report_path,
+        "json_path": json_output_path,
+        "github_comment_path": github_comment_path,
+        "source_json_path": str(json_path),
+        "search_fields": {
+            "correlation_id": summary.get("correlation_id"),
+            "baseline_correlation_id": summary.get("baseline_correlation_id"),
+            "baseline_selection": summary.get("baseline_selection"),
+            "workspace_id": summary.get("workspace_id"),
+            "mvp_release_readiness": summary.get("mvp_release_readiness"),
+            "release_readiness_status": summary.get("release_readiness_status"),
+            "status": payload.get("status"),
+            "generated_at": payload.get("generated_at"),
+            "report_path": report_path,
+            "json_path": json_output_path,
+            "github_comment_path": github_comment_path,
+        },
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "github_writes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+    return row
+
+
+def _m365_release_gate_post_run_report_index_matches(row: dict[str, Any], args: argparse.Namespace) -> bool:
+    if (
+        args.release_gate_post_run_report_correlation_id
+        and row.get("correlation_id") != args.release_gate_post_run_report_correlation_id
+    ):
+        return False
+    if (
+        args.release_gate_post_run_report_baseline
+        and row.get("baseline_correlation_id") != args.release_gate_post_run_report_baseline
+    ):
+        return False
+    if args.release_gate_post_run_report_status and row.get("status") != args.release_gate_post_run_report_status:
+        return False
+    query = args.release_gate_post_run_report_query
+    if query:
+        haystack = " ".join(str(value or "") for value in row.get("search_fields", {}).values()).lower()
+        return query.lower() in haystack
+    return True
+
+
+def _m365_release_gate_post_run_report_index_artifact_paths(
+    repo_root: Path,
+    args: argparse.Namespace,
+    payload: dict[str, Any],
+) -> tuple[Path, Path]:
+    summary = payload.get("summary", {})
+    slug = _m365_release_gate_post_run_report_index_artifact_slug(summary)
+    default_dir = DEFAULT_RELEASE_GATE_POST_RUN_REPORT_INDEX_ROOT / slug
+    default_report = default_dir / "release-gate-post-run-report-index.redacted.md"
+    default_json = default_dir / "release-gate-post-run-report-index.redacted.json"
+    report_path = _resolve_m365_release_gate_path(repo_root, args.release_gate_post_run_report_index_output, default_report)
+    json_path = _resolve_m365_release_gate_path(repo_root, args.release_gate_post_run_report_index_json_output, default_json)
+    return report_path, json_path
+
+
+def _m365_release_gate_post_run_report_index_artifact_slug(summary: dict[str, Any]) -> str:
+    parts: list[str] = []
+    filters = [
+        ("correlation", summary.get("correlation_id")),
+        ("baseline", summary.get("baseline_correlation_id")),
+        ("status", summary.get("status_filter")),
+        ("query", summary.get("query")),
+    ]
+    for label, value in filters:
+        if value:
+            parts.append(f"{label}-{_safe_release_gate_slug(str(value), 72)}")
+    return "__".join(parts) if parts else "all"
+
+
+def _render_m365_release_gate_post_run_report_index_report(payload: dict[str, Any]) -> str:
+    summary = payload.get("summary", {})
+    lines = [
+        "# M365 Release Gate Post-Run Report Index",
+        "",
+        f"Status: {payload.get('status')}",
+        f"Generated at: {payload.get('generated_at')}",
+        f"Post-run report root: {summary.get('post_run_report_root')}",
+        f"Post-run report count: {summary.get('post_run_report_count')}",
+        f"Invalid artifact count: {summary.get('invalid_artifact_count')}",
+        "",
+        "## Filters",
+        "",
+        f"- Correlation ID: {_md_cell(summary.get('correlation_id')) or 'none'}",
+        f"- Baseline correlation ID: {_md_cell(summary.get('baseline_correlation_id')) or 'none'}",
+        f"- Status: {_md_cell(summary.get('status_filter')) or 'none'}",
+        f"- Query: {_md_cell(summary.get('query')) or 'none'}",
+        "",
+        "## Privacy",
+        "",
+        "- Graph requests executed: false",
+        "- Tenant writes executed: false",
+        "- Tenant deletes executed: false",
+        "- GitHub writes executed: false",
+        "- Stores tokens or secrets: false",
+        "- Reads SharePoint file content: false",
+        "",
+        "## Post-Run Reports",
+        "",
+    ]
+    reports = payload.get("post_run_reports", [])
+    if reports:
+        lines.extend(
+            [
+                "| Generated at | Correlation ID | Baseline | Status | MVP readiness | Report | JSON | Comment |",
+                "| --- | --- | --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        lines.extend(_m365_release_gate_post_run_report_index_markdown_row(row) for row in reports)
+    else:
+        lines.append("No post-gate report artifacts matched the selected filters.")
+    errors = payload.get("errors", [])
+    if errors:
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {_md_cell(error)}" for error in errors)
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _m365_release_gate_post_run_report_index_markdown_row(row: dict[str, Any]) -> str:
+    return (
+        f"| {_md_cell(row.get('generated_at'))} | {_md_cell(row.get('correlation_id'))} | "
+        f"{_md_cell(row.get('baseline_correlation_id')) or 'none'} | {_md_cell(row.get('status'))} | "
+        f"{_md_cell(row.get('mvp_release_readiness'))} | `{_md_cell(row.get('report_path'))}` | "
+        f"`{_md_cell(row.get('json_path'))}` | `{_md_cell(row.get('github_comment_path'))}` |"
+    )
+
+
+def _print_m365_release_gate_post_run_report_index(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload.get('status')}")
+    print(f"Post-run report root: {summary.get('post_run_report_root')}")
+    print(f"Post-run report count: {summary.get('post_run_report_count')}")
+    print(f"Invalid artifact count: {summary.get('invalid_artifact_count')}")
+    for row in payload.get("post_run_reports", []):
+        print(
+            f"- {row.get('generated_at')}: {row.get('correlation_id')} "
+            f"baseline={row.get('baseline_correlation_id') or 'none'} status={row.get('status')} "
+            f"readiness={row.get('mvp_release_readiness')} report={row.get('report_path')}"
+        )
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}", file=sys.stderr)
+
+
+def _print_m365_release_gate_post_run_report_index_artifact(payload: dict[str, Any]) -> None:
+    _print_m365_release_gate_post_run_report_index(payload)
+    summary = payload.get("summary", {})
+    if summary.get("report_path"):
+        print(f"Index report: {summary.get('report_path')}")
+    if summary.get("json_path"):
+        print(f"Index JSON: {summary.get('json_path')}")
 
 
 def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:

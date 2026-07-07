@@ -104,6 +104,9 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("release-gate-write-readiness", content)
             self.assertIn("release_gate_readiness=READY", content)
             self.assertIn("release-gate-post-run-report", content)
+            self.assertIn("release-gate-post-run-report-index", content)
+            self.assertIn("release-gate-post-run-report-index-artifact", content)
+            self.assertIn("release-gate-post-run-report-index-json-output", content)
             self.assertIn("release-gate-write-post-run-report", content)
             self.assertIn("release-gate-github-comment-output", content)
 

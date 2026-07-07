@@ -188,6 +188,21 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-post-run-report \
 Der Kommentarentwurf wird nur lokal als Markdown-Artefakt geschrieben; der
 Befehl postet nichts auf GitHub und führt keine Graph-Anfrage, keinen
 Tenant-Write, keine Löschung und keinen SharePoint-Content-Read aus.
+Vorhandene Post-Gate-Reports können danach offline indiziert werden:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-post-run-report-index \
+  --release-gate-post-run-report-query <search-text> \
+  --format json
+```
+
+Der Index liest nur lokale
+`release-gate-post-run-report.redacted.json`-Dateien und filtert nach
+Correlation-ID, Baseline, Status oder Suchtext. Mit
+`release-gate-post-run-report-index-artifact` kann dieselbe Ansicht als
+redigiertes JSON-/Markdown-Artefakt archiviert werden;
+`--release-gate-post-run-report-index-output` und
+`--release-gate-post-run-report-index-json-output` setzen die Zielpfade.
 
 ## MVP-Go/No-Go-Abnahmekriterium
 
@@ -305,6 +320,9 @@ Nachweiskommentarentwurf. Der Schalter impliziert Audit-Pack, Readiness und
 Audit-Pack-Pflicht für Readiness; ohne `--release-gate-compare-left` verwendet
 er den vorherigen vollständigen `PASSED`-Lauf derselben Workspace-ID als
 Baseline.
+`release-gate-post-run-report-index` listet diese archivierten Reports danach
+offline nach Correlation-ID, Baseline, Status und lokalen Pfaden; der
+Artefaktmodus schreibt eine redigierte Indexkopie für Audit-Pakete.
 
 Der lokale Audit-Überblick läuft offline über:
 
