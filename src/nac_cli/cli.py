@@ -79,6 +79,9 @@ from .tenant import (
 
 
 DEFAULT_PORT = 8765
+DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT = Path(
+    "out/m365/teams-sharepoint/mcp-inventory-smoke.not-attached.redacted.json"
+)
 
 PLUGIN_CLI_ROLES = {
     "cli_role": "kanonische Bedienkante der NaC-CLI für Prüfung, Automatisierung und Dokumentation.",
@@ -1640,6 +1643,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         args.mcp_leftover_output,
         DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT,
     )
+    release_gate_inventory_artifact = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_inventory_artifact,
+        DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT,
+    )
     evidence_output = _resolve_m365_release_gate_path(repo_root, args.release_gate_evidence_output, DEFAULT_EVIDENCE_OUTPUT)
     evidence_json_output = _resolve_m365_release_gate_path(
         repo_root,
@@ -1742,6 +1750,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "--mcp-smoke-correlation-id",
                 correlation_id,
                 "--release-gate-require-runtime-artifacts",
+                "--release-gate-inventory-artifact",
+                str(release_gate_inventory_artifact),
                 "--release-gate-runtime-certificate-expiry-artifact",
                 str(runtime_certificate_expiry_output),
                 "--release-gate-runtime-env-bootstrap-artifact",
@@ -1780,8 +1790,6 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             command[3:3] = ["--mcp-contract", str(args.mcp_contract)]
     if args.mcp_smoke_case_id:
         steps[3][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
-    if args.release_gate_inventory_artifact:
-        steps[5][1][3:3] = ["--release-gate-inventory-artifact", str(args.release_gate_inventory_artifact)]
 
     runtime_env_overlay, runtime_env_summary = _m365_runtime_env_overlay(
         repo_root,
