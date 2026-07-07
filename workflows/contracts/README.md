@@ -86,6 +86,11 @@ Jeder Vertrag soll definieren:
   Vertrag für die MVP-Datenhaltung über Teams Team, Microsoft-365-Gruppe,
   SharePoint-Team-Site, Microsoft Graph REST only, declaratives Schema,
   Provisioner-Skeleton, MCP-Grenze und Owner-Gates ohne Live-Apply.
+- [workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json](m365-sharepoint-bpmn-viewer-adapter.contract.json):
+  Vertrag für einen späteren read-only SPFx-BPMN-Viewer in SharePoint mit
+  `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder
+  Pointern, Prozessregister-Metadaten und ohne Modeler, Workflow-Ausführung,
+  Mandatsdaten, alte SharePoint-APIs oder SDKs.
 - [workflows/contracts/teams-sharepoint-data-mcp.contract.json](teams-sharepoint-data-mcp.contract.json):
   Vertrag für den ersten `teams-sharepoint-data-mcp`-Runtime-Skeleton mit
   Tool-Manifest, MCP-stdio-Adapter, Rollen-/Akten-/Zweckgate,

@@ -151,6 +151,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
                 ),
                 (
+                    "m365_sharepoint_bpmn_viewer_adapter",
+                    "M365 SharePoint BPMN Viewer Adapter",
+                    [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],
+                ),
+                (
                     "matter_data_classification_redaction",
                     "Matter Data Classification And Redaction",
                     [sys.executable, "scripts/validate_matter_data_classification_redaction.py"],

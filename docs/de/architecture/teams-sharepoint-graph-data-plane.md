@@ -87,6 +87,20 @@ Wichtig: `AuditJournalLite` ist kein revisionssicheres Endjournal. Es ist ein
 Startnachweis. Für echte Unveränderbarkeit bleibt ein späteres append-only
 Journal oder ein WORM-fähiger Speicher erforderlich.
 
+## BPMN-Viewer-Projektion
+
+Ein späterer
+[M365 SharePoint BPMN Viewer Adapter](m365-sharepoint-bpmn-viewer-adapter.md)
+darf diese Datenebene als read-only Anzeigeprojektion nutzen. Ziel ist ein
+SPFx-Webpart mit `bpmn-js` im viewer-only-Modus, das freigegebene
+BPMN-XML-Modelle und geprüfte Prozessregister- oder Aufgaben-Metadaten
+anzeigt.
+
+Der Adapter ändert die Datenebenenentscheidung nicht: Microsoft Graph REST
+bleibt Pflicht, alte SharePoint-APIs, CSOM, PnP und SDKs bleiben gesperrt.
+Der Adapter darf keine BPMN-Modelle schreiben, keine Workflows ausführen und
+keine Akten-Dokumentinhalte oder Mandats-Payloads lesen.
+
 ## Graph-REST-Grenze
 
 Erlaubt sind nur rohe HTTPS-Aufrufe gegen `https://graph.microsoft.com/v1.0`.

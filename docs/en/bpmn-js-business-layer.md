@@ -47,6 +47,10 @@ approval.
   [scripts/generate_usecase_bpmn.py](../../scripts/generate_usecase_bpmn.py).
 - The workflow contract lives in
   [workflows/contracts/bpmn-js-editor.contract.json](../../workflows/contracts/bpmn-js-editor.contract.json).
+- The
+  [M365 SharePoint BPMN Viewer Adapter](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
+  is only a read-only display projection for approved BPMN models in
+  SharePoint, not the editing, storage or execution boundary.
 - The local browser surface for graphical outputs is documented in
   [docs/en/lokaler-webserver.md](lokaler-webserver.md).
 

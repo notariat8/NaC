@@ -47,6 +47,10 @@ Review und menschlicher Freigabe.
   [scripts/generate_usecase_bpmn.py](../../scripts/generate_usecase_bpmn.py).
 - Der Workflow-Vertrag liegt in
   [workflows/contracts/bpmn-js-editor.contract.json](../../workflows/contracts/bpmn-js-editor.contract.json).
+- Der
+  [M365 SharePoint BPMN Viewer Adapter](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
+  ist nur eine read-only Anzeigeprojektion für freigegebene BPMN-Modelle in
+  SharePoint, nicht die Bearbeitungs-, Speicher- oder Ausführungsgrenze.
 - Die lokale Browserfläche für grafische Ausgaben liegt in
   [docs/de/lokaler-webserver.md](lokaler-webserver.md).
 
