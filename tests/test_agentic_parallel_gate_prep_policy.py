@@ -57,6 +57,41 @@ class AgenticParallelGatePrepPolicyTests(unittest.TestCase):
                 self.assertIn("unabhängige Gate-Vorbereitungen parallel", content)
                 self.assertIn("Design/Release/Apply/Secret/destruktiv", content)
 
+    def test_no_wait_batch_rule_is_visible_in_runbooks_and_agent_profiles(self) -> None:
+        normalized_expectations = {
+            "docs/de/operations/m365-mcp-batch-approval.md": (
+                "mehrere unabhängige PRs",
+                "statt nach jedem kleinen Schritt auf Owner-Input zu warten",
+                "Der Agent darf mehrere PRs parallel vorbereiten",
+                "Wenn noch ein agentisch ausführbarer Schritt offen ist, arbeitet der Agent weiter",
+            ),
+            "docs/en/operations/m365-mcp-batch-approval.md": (
+                "several independent PRs",
+                "instead of waiting for owner input after each small step",
+                "The agent may prepare several PRs in parallel",
+                "If another agent-executable step is still open, the agent keeps working",
+            ),
+            ".codex/agents/nac-scope-mapper.toml": (
+                "if it does not and tools are available, treat it as work to continue",
+                "not as a final waiting state",
+            ),
+            ".codex/agents/nac-policy-reviewer.toml": (
+                "no owner input is needed while an agent-executable next technical step remains open",
+            ),
+            ".codex/agents/nac-validation-reviewer.toml": (
+                "another agent-executable next step is still pending and no owner input is needed",
+            ),
+            ".codex/agents/nac-docs-parity-reviewer.toml": (
+                "agents must continue agent-executable next steps when no owner input is needed",
+            ),
+        }
+
+        for path, expected_fragments in normalized_expectations.items():
+            with self.subTest(path=path):
+                content = " ".join(read_repo_text(path).split())
+                for fragment in expected_fragments:
+                    self.assertIn(fragment, content)
+
 
 if __name__ == "__main__":
     unittest.main()
