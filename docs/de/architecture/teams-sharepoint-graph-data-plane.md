@@ -297,6 +297,7 @@ Aktion; `matter-access-smoke` erzeugt dazu den redigierten Offline-Nachweis:
 
 ```bash
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
+nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
 Der Smoke schreibt standardmäßig
@@ -306,6 +307,14 @@ schreibende Vertretungspläne, die request-plan-only MCP-Toolverträge und die
 Privacy-Grenze ohne Graph-Ausführung. `release-gate-run` führt ihn vor den
 Live-Schritten automatisch aus und hängt das Artefakt als optionalen Evidence-
 Step an `release-gate-evidence` und den Artifact-Index an.
+
+`matter-access-apply-readiness` schreibt zusätzlich
+`out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json` und
+prüft offline, ob die künftige Apply-Kante für `grant_request` und
+`audit_append` owner-gated, write-approved, befristet, begründet und
+auditierbar ist. Auch dieses Artefakt wird im `release-gate-run` automatisch
+vor den Live-Schritten erzeugt und optional an Evidence und Artifact-Index
+angehängt.
 
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 

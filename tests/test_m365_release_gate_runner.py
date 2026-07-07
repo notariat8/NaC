@@ -85,6 +85,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             [
                 "mcp_inventory_smoke",
                 "matter_access_delegation_smoke",
+                "matter_access_apply_readiness",
                 "runtime_certificate_expiry",
                 "runtime_smoke",
                 "runtime_metadata",
@@ -99,6 +100,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             [
                 "mcp-inventory-smoke",
                 "matter-access-smoke",
+                "matter-access-apply-readiness",
                 "runtime-certificate-expiry-monitor",
                 "runtime-smoke",
                 "runtime-metadata",
@@ -109,20 +111,24 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         )
         self.assertIn("--mcp-inventory-smoke-output", calls[0])
         self.assertIn("--matter-access-smoke-output", calls[1])
-        self.assertIn("--runtime-certificate-expiry-output", calls[2])
-        self.assertIn("--mcp-suite-cleanup", calls[5])
-        self.assertIn("--mcp-leftover-dry-run", calls[6])
-        self.assertIn("--release-gate-require-runtime-artifacts", calls[7])
-        self.assertIn("--release-gate-inventory-artifact", calls[7])
-        inventory_arg_index = calls[7].index("--release-gate-inventory-artifact") + 1
-        self.assertTrue(calls[7][inventory_arg_index].endswith("mcp-inventory-smoke.redacted.json"))
-        self.assertIn("--release-gate-matter-access-artifact", calls[7])
-        matter_arg_index = calls[7].index("--release-gate-matter-access-artifact") + 1
-        self.assertTrue(calls[7][matter_arg_index].endswith("matter-access-delegation-smoke.redacted.json"))
-        self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[7])
-        self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[7])
-        bootstrap_arg_index = calls[7].index("--release-gate-runtime-env-bootstrap-artifact") + 1
-        self.assertEqual(calls[7][bootstrap_arg_index], str(runtime_env_bootstrap_output))
+        self.assertIn("--matter-access-apply-readiness-output", calls[2])
+        self.assertIn("--runtime-certificate-expiry-output", calls[3])
+        self.assertIn("--mcp-suite-cleanup", calls[6])
+        self.assertIn("--mcp-leftover-dry-run", calls[7])
+        self.assertIn("--release-gate-require-runtime-artifacts", calls[8])
+        self.assertIn("--release-gate-inventory-artifact", calls[8])
+        inventory_arg_index = calls[8].index("--release-gate-inventory-artifact") + 1
+        self.assertTrue(calls[8][inventory_arg_index].endswith("mcp-inventory-smoke.redacted.json"))
+        self.assertIn("--release-gate-matter-access-artifact", calls[8])
+        matter_arg_index = calls[8].index("--release-gate-matter-access-artifact") + 1
+        self.assertTrue(calls[8][matter_arg_index].endswith("matter-access-delegation-smoke.redacted.json"))
+        self.assertIn("--release-gate-matter-access-apply-readiness-artifact", calls[8])
+        apply_arg_index = calls[8].index("--release-gate-matter-access-apply-readiness-artifact") + 1
+        self.assertTrue(calls[8][apply_arg_index].endswith("matter-access-apply-readiness.redacted.json"))
+        self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[8])
+        self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[8])
+        bootstrap_arg_index = calls[8].index("--release-gate-runtime-env-bootstrap-artifact") + 1
+        self.assertEqual(calls[8][bootstrap_arg_index], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["release_gate_run_artifact_dir"], str(retention_dir))
@@ -179,13 +185,21 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         matter_output_index = matter_access_call.index("--matter-access-smoke-output") + 1
         self.assertTrue(matter_access_call[matter_output_index].endswith("matter-access-delegation-smoke.redacted.json"))
 
-        evidence_call = calls[7]
+        apply_readiness_call = calls[2]
+        self.assertIn("--matter-access-apply-readiness-output", apply_readiness_call)
+        apply_output_index = apply_readiness_call.index("--matter-access-apply-readiness-output") + 1
+        self.assertTrue(apply_readiness_call[apply_output_index].endswith("matter-access-apply-readiness.redacted.json"))
+
+        evidence_call = calls[8]
         self.assertIn("--release-gate-inventory-artifact", evidence_call)
         inventory_arg_index = evidence_call.index("--release-gate-inventory-artifact") + 1
         self.assertEqual(evidence_call[inventory_arg_index], inventory_call[inventory_output_index])
         self.assertIn("--release-gate-matter-access-artifact", evidence_call)
         matter_arg_index = evidence_call.index("--release-gate-matter-access-artifact") + 1
         self.assertEqual(evidence_call[matter_arg_index], matter_access_call[matter_output_index])
+        self.assertIn("--release-gate-matter-access-apply-readiness-artifact", evidence_call)
+        apply_arg_index = evidence_call.index("--release-gate-matter-access-apply-readiness-artifact") + 1
+        self.assertEqual(evidence_call[apply_arg_index], apply_readiness_call[apply_output_index])
 
     def test_release_gate_run_writes_retention_index_with_run_artifact_copies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -199,6 +213,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             runtime_metadata_output = tmp_path / "runtime-metadata.redacted.json"
             mcp_inventory_output = tmp_path / "mcp-inventory-smoke.redacted.json"
             matter_access_output = tmp_path / "matter-access-delegation-smoke.redacted.json"
+            matter_access_apply_readiness_output = tmp_path / "matter-access-apply-readiness.redacted.json"
             mcp_suite_output = tmp_path / "mcp-smoke-suite.redacted.json"
             mcp_leftover_output = tmp_path / "mcp-smoke-leftover-cleanup.redacted.json"
             evidence_output = tmp_path / "release-gate-evidence.redacted.md"
@@ -216,6 +231,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 _write_output_arg(command, "--runtime-metadata-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--mcp-inventory-smoke-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--matter-access-smoke-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--matter-access-apply-readiness-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--mcp-suite-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--mcp-leftover-output", {"status": "PASSED", "step": step})
                 if "--release-gate-evidence-output" in command:
@@ -253,6 +269,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(mcp_inventory_output),
                         "--release-gate-matter-access-artifact",
                         str(matter_access_output),
+                        "--release-gate-matter-access-apply-readiness-artifact",
+                        str(matter_access_apply_readiness_output),
                         "--mcp-suite-output",
                         str(mcp_suite_output),
                         "--mcp-leftover-output",
@@ -288,7 +306,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             retained_evidence_json["summary"]["release_gate_retention_index_path"],
             str(retention_dir / "release-gate-retention-index.redacted.json"),
         )
-        self.assertEqual(retained_evidence_json["summary"]["retained_artifact_count"], 11)
+        self.assertEqual(retained_evidence_json["summary"]["retained_artifact_count"], 12)
         self.assertTrue(retained_evidence_json["summary"]["retention_index_attached"])
         self.assertEqual(
             retained_artifact_index["retention"]["retention_index_path"],
@@ -304,6 +322,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(len(artifacts["mcp_inventory_smoke"]["artifact_sha256"]), 64)
         self.assertEqual(artifacts["matter_access_delegation_smoke"]["status"], "COPIED")
         self.assertEqual(len(artifacts["matter_access_delegation_smoke"]["artifact_sha256"]), 64)
+        self.assertEqual(artifacts["matter_access_apply_readiness"]["status"], "COPIED")
+        self.assertEqual(len(artifacts["matter_access_apply_readiness"]["artifact_sha256"]), 64)
         self.assertTrue(retained_bootstrap_exists)
         self.assertTrue(retained_evidence_json_exists)
 
@@ -945,6 +965,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         env_by_step = dict(calls)
         self.assertIsNone(env_by_step["mcp-inventory-smoke"])
         self.assertIsNone(env_by_step["matter-access-smoke"])
+        self.assertIsNone(env_by_step["matter-access-apply-readiness"])
         self.assertIsNone(env_by_step["runtime-certificate-expiry-monitor"])
         self.assertIsNone(env_by_step["release-gate-evidence"])
         for step in (
@@ -1043,9 +1064,9 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         self.assertEqual(payload["status"], "FAILED")
         self.assertEqual(payload["summary"]["failed_step"], "runtime_metadata")
-        self.assertEqual(payload["summary"]["steps_completed"], 4)
+        self.assertEqual(payload["summary"]["steps_completed"], 5)
         self.assertEqual(payload["errors"], ["metadata failed"])
-        self.assertEqual(len(calls), 5)
+        self.assertEqual(len(calls), 6)
 
     def test_release_gate_retention_list_reads_local_run_indexes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2433,6 +2454,68 @@ def _write_release_gate_output_args(command: list[str]) -> None:
             ),
             encoding="utf-8",
         )
+    if "--matter-access-apply-readiness-output" in command:
+        output_path = Path(command[command.index("--matter-access-apply-readiness-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "nac.m365-matter-access-apply-readiness/v0.1",
+                    "status": "PASSED",
+                    "summary": {
+                        "workspace_id": "notary_team_01",
+                        "correlation_id": "runner-corr",
+                        "contract_id": "m365.matter_access_delegation",
+                        "future_apply_mode": "owner_gated_graph_rest_item_writes",
+                        "workspace_operation_count": 6,
+                        "planned_apply_operation_count": 2,
+                        "grant_request_ready": True,
+                        "audit_append_ready": True,
+                        "required_write_approval": True,
+                        "owner_gate_required": True,
+                        "role_case_purpose_gate_required": True,
+                        "reason_required": True,
+                        "valid_from_required": True,
+                        "valid_until_required": True,
+                        "valid_until_after_valid_from_required": True,
+                        "approver_required": True,
+                        "audit_correlation_required": True,
+                        "automation_may_approve_grant": False,
+                        "graph_rest_only": True,
+                        "legacy_sharepoint_api_allowed": False,
+                        "executes_graph_requests": False,
+                        "executes_graph_writes": False,
+                        "tenant_mutation_allowed": False,
+                        "team_membership_mutation_allowed": False,
+                        "sharepoint_item_permission_mutation_allowed": False,
+                        "reads_sharepoint_file_content": False,
+                        "raw_graph_path_stored": False,
+                        "raw_graph_response_stored": False,
+                        "stores_tokens_or_secrets": False,
+                        "stores_matter_payloads": False,
+                    },
+                    "privacy": {
+                        "metadataOnly": True,
+                        "storesSourceFullText": False,
+                        "storesRawXsd": False,
+                        "storesCredentials": False,
+                        "storesTokensOrSecrets": False,
+                        "storesMatterData": False,
+                        "storesMatterPayloads": False,
+                        "storesMessagePayloads": False,
+                        "storesRawGraphPath": False,
+                        "storesRawGraphResponse": False,
+                        "readsSharePointFileContent": False,
+                        "executesGraphRequests": False,
+                        "executesGraphWrites": False,
+                        "tenantWritesExecuted": False,
+                        "teamMembershipMutationAllowed": False,
+                        "sharePointItemPermissionMutationAllowed": False,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
     if "--release-gate-evidence-output" in command:
         output_path = Path(command[command.index("--release-gate-evidence-output") + 1])
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2467,6 +2550,7 @@ def _write_complete_release_gate_output_args(command: list[str], *, correlation_
         "--runtime-metadata-output",
         "--mcp-inventory-smoke-output",
         "--matter-access-smoke-output",
+        "--matter-access-apply-readiness-output",
         "--mcp-suite-output",
         "--mcp-leftover-output",
     ):
@@ -2510,6 +2594,7 @@ def _write_complete_release_gate_output_args(command: list[str], *, correlation_
             "runtime_metadata": "--release-gate-runtime-metadata-artifact",
             "mcp_inventory_smoke": "--release-gate-inventory-artifact",
             "matter_access_delegation_smoke": "--release-gate-matter-access-artifact",
+            "matter_access_apply_readiness": "--release-gate-matter-access-apply-readiness-artifact",
             "mcp_smoke_suite": "--release-gate-suite-artifact",
             "mcp_leftover_dry_run": "--release-gate-leftover-artifact",
         }
