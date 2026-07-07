@@ -274,6 +274,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     teams_sharepoint.add_argument("--mcp-contract", type=Path, help="Optionaler Teams/SharePoint-Data-MCP-Vertrag.")
     teams_sharepoint.add_argument(
+        "--runtime-smoke-output",
+        type=Path,
+        help="Pfad fuer das redigierte Runtime-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-metadata-output",
+        type=Path,
+        help="Pfad fuer das redigierte Runtime-Metadata-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
         "--mcp-live-read",
         action="store_true",
         help="Aktiviert owner-gated Live-Reads fuer case_get und document_list im MCP-stdio-Adapter.",
@@ -1089,10 +1099,14 @@ def _build_m365_batch_approval_payload(
             "--format json"
         )
         runtime_smoke_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json"
+            "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved "
+            "--runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json "
+            "--format json"
         )
         runtime_metadata_command = (
-            "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json"
+            "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved "
+            "--runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json "
+            "--format json"
         )
         approvals["release_gate"] = {
             "approval_text": (
@@ -1241,6 +1255,10 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--provisioned-state", str(args.provisioned_state)])
         if args.mcp_contract:
             script_args.extend(["--mcp-contract", str(args.mcp_contract)])
+        if args.runtime_smoke_output:
+            script_args.extend(["--runtime-smoke-output", str(args.runtime_smoke_output)])
+        if args.runtime_metadata_output:
+            script_args.extend(["--runtime-metadata-output", str(args.runtime_metadata_output)])
         if args.mcp_live_read:
             script_args.append("--mcp-live-read")
         if args.mcp_smoke_tool:

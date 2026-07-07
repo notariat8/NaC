@@ -7,6 +7,8 @@ from .mcp_smoke_leftover_cleanup import run_mcp_smoke_leftover_cleanup
 from .mcp_smoke_suite import run_mcp_smoke_suite
 from .provisioner import PlanOperation, build_plan
 from .release_gate_evidence import build_release_gate_evidence
+from .runtime_metadata import redact_runtime_metadata_snapshot, write_runtime_metadata_artifact
+from .runtime_smoke import redact_runtime_site_smoke_result, write_runtime_site_smoke_artifact
 from .schema import load_schema, validate_schema
 
 __all__ = [
@@ -21,6 +23,10 @@ __all__ = [
     "run_mcp_smoke_cleanup",
     "run_mcp_smoke_leftover_cleanup",
     "run_mcp_smoke_suite",
+    "redact_runtime_metadata_snapshot",
+    "redact_runtime_site_smoke_result",
     "validate_mcp_contract",
     "validate_schema",
+    "write_runtime_metadata_artifact",
+    "write_runtime_site_smoke_artifact",
 ]

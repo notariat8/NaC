@@ -154,8 +154,8 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertEqual(
             release_gate["commands"],
             [
-                "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json",
-                "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json",
+                "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json",
+                "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json",
                 "python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
                 "python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
                 "python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",

@@ -68,8 +68,8 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
-python scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json
-python scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json
+python scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+python scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
@@ -94,8 +94,8 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac m365 teams-sharepoint privileged-plan --format json
-nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
-nac m365 teams-sharepoint runtime-metadata --owner-approved --format json
+nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 nac tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
@@ -241,7 +241,8 @@ brauchen ein Owner-Gate:
 
 ```bash
 nac m365 teams-sharepoint privileged-plan --format json
-nac m365 teams-sharepoint runtime-smoke --owner-approved --format json
+nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
@@ -258,7 +259,11 @@ nac m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --format j
 
 `runtime-smoke` und `runtime-metadata` lesen dabei nur Graph-REST-Metadaten und
 prüfen die gefundenen Listen und Dokumentbibliotheken gegen das deklarative
-MVP-Schema.
+MVP-Schema. Beide Befehle schreiben zusätzlich redigierte Artefakte unter
+`out/m365/teams-sharepoint/runtime-smoke.redacted.json` beziehungsweise
+`out/m365/teams-sharepoint/runtime-metadata.redacted.json`. Diese Artefakte
+enthalten Zähler, Status und Privacy-Flags, aber keine Site-IDs, URLs,
+Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder Dateiinhalte.
 `mcp-manifest` ist offline und gibt nur die geplanten Runtime-Tools, Gates und
 Graph-REST-Grenzen aus. `mcp-stdio` ist ebenfalls offline und spricht
 newline-delimited JSON-RPC über stdin/stdout. `tools/call` plant nur
@@ -320,10 +325,11 @@ owner-gated.
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Der Exporter
-führt keine Graph-Anfrage aus und schreibt oder löscht nichts im Tenant. Fehlen
-optionale Runtime-Artefakte, markiert der Bericht die Runtime-Schritte als
-`NOT_ATTACHED`; mit `--release-gate-require-runtime-artifacts` blockiert der
-Export in diesem Fall.
+führt keine Graph-Anfrage aus und schreibt oder löscht nichts im Tenant. Wenn
+die Runtime- und MCP-Artefakte vorhanden sind, meldet er
+`complete_release_gate_artifacts`; fehlen optionale Runtime-Artefakte, markiert
+der Bericht die Runtime-Schritte als `NOT_ATTACHED`. Mit
+`--release-gate-require-runtime-artifacts` blockiert der Export in diesem Fall.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

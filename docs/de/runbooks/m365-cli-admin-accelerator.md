@@ -229,8 +229,8 @@ produktnahe Read-Smoke die vorhandenen SharePoint-Listen mit der Runtime-App
 prüfen:
 
 ```bash
-M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --json
-M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-metadata --owner-approved --json
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --json
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --json
 ```
 
 Alternativ nutzt der Smoke `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
@@ -253,8 +253,8 @@ Die normale Reihenfolge ist:
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
-python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --format json
-python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --format json
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
@@ -263,7 +263,9 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-w
 `privileged-plan` ist lesend und erzeugt den Review-Plan. `privileged-apply`
 ändert Tenant-Zustand und darf erst nach Review, Drift-Snapshot und
 Owner-Freigabe laufen. `runtime-smoke` und `runtime-metadata` prüfen danach den
-Sites.Selected-Runtime-Zugriff ohne Listenelemente oder Mandatsdaten.
+Sites.Selected-Runtime-Zugriff ohne Listenelemente oder Mandatsdaten und
+schreiben redigierte Evidence-Artefakte ohne Site-IDs, URLs,
+Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder Dateiinhalte.
 `mcp-smoke-suite --mcp-suite-cleanup` ist der Standard-Betriebsnachweis nach
 MCP-/Runtime-Änderungen, weil sie synthetischen Write, Read und Cleanup im
 gleichen Lauf prüft.
@@ -281,7 +283,7 @@ Alle Evidence-Dateien liegen redigiert unter `out/m365/teams-sharepoint/` und
 werden nicht versioniert. Tokens, private Schlüssel, Roh-Graph-Antworten,
 echte Aktenwerte und SharePoint-Dateiinhalte gehören weder in den Chat noch in
 das Repository. `release-gate-evidence` fasst die vorhandenen redigierten
-Artefakte in
+Runtime- und MCP-Artefakte in
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md` zusammen und
 führt selbst keine Graph-Anfrage aus.
 

@@ -113,7 +113,9 @@ The emitted live commands remain owner-gated. `runtime-smoke` and
 `runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
 synthetic matter, and the leftover dry-run only reads the match count.
 `release-gate-evidence` runs offline afterwards and reads only local redacted
-artifacts.
+artifacts. `runtime-smoke` and `runtime-metadata` write their own redacted
+runtime artifacts so the completion report can return
+`complete_release_gate_artifacts`.
 
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
@@ -144,6 +146,7 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
 ```
 
 The exporter performs no Graph request. It reads the local redacted artifacts
+`runtime-smoke.redacted.json`, `runtime-metadata.redacted.json`,
 `mcp-smoke-suite.redacted.json` and
 `mcp-smoke-leftover-cleanup.redacted.json` and writes
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optional
