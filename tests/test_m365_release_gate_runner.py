@@ -578,6 +578,66 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("left release gate reference is required", payload["errors"][0])
 
+    def test_release_gate_retention_compare_artifact_writes_redacted_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            report_path = tmp_path / "compare" / "compare.redacted.md"
+            json_path = tmp_path / "compare" / "compare.redacted.json"
+            _write_retention_run(
+                retention_root / "corr-left",
+                correlation_id="corr-left",
+                generated_at="2026-07-07T12:00:00Z",
+                copied_artifact_count=1,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "aaa"},
+                    {"id": "mcp_inventory_smoke", "status": "NOT_ATTACHED", "artifact_sha256": None},
+                ],
+            )
+            _write_retention_run(
+                retention_root / "corr-right",
+                correlation_id="corr-right",
+                generated_at="2026-07-07T12:30:00Z",
+                copied_artifact_count=2,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "changed"},
+                    {"id": "mcp_inventory_smoke", "status": "COPIED", "artifact_sha256": "inventory"},
+                ],
+            )
+
+            payload, return_code = _invoke_retention_compare_artifact(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-compare-left",
+                    "corr-left",
+                    "--release-gate-compare-right",
+                    "corr-right",
+                    "--release-gate-compare-output",
+                    str(report_path),
+                    "--release-gate-compare-json-output",
+                    str(json_path),
+                    "--format",
+                    "json",
+                ]
+            )
+            report = report_path.read_text(encoding="utf-8")
+            json_payload = json.loads(json_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-retention-compare-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["report_path"], str(report_path))
+        self.assertEqual(payload["summary"]["json_path"], str(json_path))
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertFalse(payload["summary"]["reads_sharepoint_file_content"])
+        self.assertTrue(report.startswith("# M365 Release Gate Retention Compare"))
+        self.assertIn("Left correlation ID: corr-left", report)
+        self.assertIn("Resolved in right: mcp_inventory_smoke", report)
+        self.assertEqual(json_payload["summary"]["left_correlation_id"], "corr-left")
+        self.assertEqual(json_payload["summary"]["right_correlation_id"], "corr-right")
+        self.assertFalse(json_payload["comparison"]["privacy"]["storesTokensOrSecrets"])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -624,6 +684,24 @@ def _invoke_retention_compare(extra_args: list[str]) -> tuple[dict, int]:
             "m365",
             "teams-sharepoint",
             "release-gate-retention-compare",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_retention_compare_artifact(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-compare-artifact",
             *extra_args,
         ]
     )

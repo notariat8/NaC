@@ -223,6 +223,23 @@ Status-, Timestamp-, Artefakt-, fehlende-Anhänge- und Evidence-Pfad-
 Unterschiede, liest aber keine SharePoint-Dateiinhalte und führt keine
 Graph-Anfrage, keinen Tenant-Write und keine Löschung aus.
 
+Ein versionierbarer Vergleichsnachweis wird offline mit demselben Input
+geschrieben:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare-artifact \
+  --release-gate-compare-left <left-correlation-id> \
+  --release-gate-compare-right <right-correlation-id> \
+  --format json
+```
+
+Ohne explizite Pfade schreibt der Befehl
+`release-gate-retention-compare.redacted.md` und
+`release-gate-retention-compare.redacted.json` unter
+`out/m365/teams-sharepoint/release-gate-comparisons/<left>__<right>/`.
+`--release-gate-compare-output` und `--release-gate-compare-json-output`
+setzen eigene Zielpfade. Der Export bleibt redigiert und offline.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
