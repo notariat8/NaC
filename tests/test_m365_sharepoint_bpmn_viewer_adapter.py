@@ -20,6 +20,12 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
         self.assertEqual(spfx["library"], "bpmn-js")
         self.assertEqual(spfx["bpmn_js_mode"], "viewer_only")
+        self.assertTrue(spfx["included_in_nac_repo_now"])
+        self.assertEqual(spfx["package_root"], "spfx/nac-bpmn-viewer")
+        self.assertEqual(spfx["status"], "offline_source_only")
+        self.assertFalse(spfx["app_catalog_deploy_allowed_now"])
+        self.assertFalse(spfx["tenant_apply_allowed_now"])
+        self.assertFalse(spfx["executes_graph_requests_now"])
         self.assertFalse(spfx["modeler_enabled"])
         self.assertFalse(spfx["workflow_execution_allowed"])
         self.assertFalse(spfx["requires_custom_script"])
@@ -68,6 +74,23 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertTrue(optional_plan["owner_gate_required_before_future_apply"])
         self.assertEqual(optional_plan["planned_document_libraries"], ["BPMN Models"])
         self.assertEqual(optional_plan["planned_lists"], ["Prozessregister"])
+
+    def test_contract_links_offline_spfx_skeleton_without_deploy(self) -> None:
+        skeleton = self.contract["offline_spfx_skeleton"]
+
+        self.assertEqual(
+            skeleton["artifact"],
+            "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
+        )
+        self.assertEqual(skeleton["package_root"], "spfx/nac-bpmn-viewer")
+        self.assertEqual(skeleton["command"], "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json")
+        self.assertEqual(skeleton["status"], "offline_skeleton_no_package_deploy")
+        self.assertTrue(skeleton["source_skeleton_included_now"])
+        self.assertFalse(skeleton["actual_spfx_package_included_now"])
+        self.assertFalse(skeleton["package_solution_enabled_now"])
+        self.assertFalse(skeleton["app_catalog_deploy_allowed_now"])
+        self.assertFalse(skeleton["tenant_apply_allowed_now"])
+        self.assertFalse(skeleton["executes_graph_requests_now"])
 
     def test_contract_keeps_bpmn_mcp_tools_planning_only(self) -> None:
         mcp = self.contract["mcp_boundary"]

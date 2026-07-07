@@ -55,6 +55,14 @@ bpmn-viewer-plan --format json` rendert die geplante Bibliothek, Liste und
 Spalten, führt aber keinen Live-Apply gegen Microsoft 365 aus und erweitert
 nicht das verpflichtende MVP-SharePoint-Schema.
 
+Der erste SPFx-Schnitt liegt source-only unter `spfx/nac-bpmn-viewer`. Der
+Befehl `nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json`
+rendert das Skeleton, die synthetische Render-Fixture und die
+MCP-Request-Plans für `bpmn_model_get`, `process_register_list` und
+`bpmn_viewer_overlay_get`. Dieser Schnitt baut kein SPFx-Paket, legt kein
+`package-lock.json` an, nutzt keinen App Catalog und führt keinen Graph- oder
+Tenant-Apply aus.
+
 ## Graph-REST-Grenze
 
 Alle Zugriffe laufen über Microsoft Graph REST v1.0 oder einen MCP-Server, der
@@ -123,6 +131,7 @@ Der Vertrag wird durch diese Checks abgesichert:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
 python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter
 python3 scripts/quality_gate.py --profile strict

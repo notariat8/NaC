@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "nac-bpmn-viewer-spfx-skeleton",
+    "id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
+    "version": "0.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": false,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "notariat8",
+      "websiteUrl": "https://github.com/notariat8/NaC",
+      "privacyUrl": "https://github.com/notariat8/NaC",
+      "termsOfUseUrl": "https://github.com/notariat8/NaC",
+      "mpnId": "Unset"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Offline source skeleton for the read-only NaC BPMN Viewer."
+      },
+      "longDescription": {
+        "default": "This skeleton is not packaged or deployed in the MVP slice. It documents the future SPFx web part boundary for rendering approved BPMN XML with bpmn-js Viewer."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": []
+  },
+  "paths": {
+    "zippedPackage": "solution/nac-bpmn-viewer-spfx-skeleton.sppkg"
+  },
+  "nacGuardrails": {
+    "packageSolutionEnabledNow": false,
+    "appCatalogDeployAllowedNow": false,
+    "tenantApplyAllowedNow": false
+  }
+}

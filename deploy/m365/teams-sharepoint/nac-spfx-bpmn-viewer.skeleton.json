@@ -1,0 +1,118 @@
+{
+  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.1",
+  "name": "nac-spfx-bpmn-viewer-skeleton",
+  "status": "offline_skeleton_no_package_deploy",
+  "last_update": "2026-07-07",
+  "purpose": "Offline skeleton for a future SharePoint Framework client-side web part that renders approved BPMN XML through bpmn-js Viewer without making SharePoint the BPMN source, editor, workflow engine or deployment target in this slice.",
+  "spfx": {
+    "framework": "SharePoint Framework",
+    "component_type": "clientSideWebPart",
+    "component_name": "NaC BPMN Viewer",
+    "library": "bpmn-js",
+    "bpmn_js_import": "bpmn-js/lib/Viewer",
+    "bpmn_js_mode": "viewer_only",
+    "source_skeleton_included_now": true,
+    "package_root": "spfx/nac-bpmn-viewer",
+    "modeler_enabled": false,
+    "workflow_execution_allowed": false,
+    "requires_custom_script": false,
+    "loose_html_embedding_allowed": false,
+    "actual_spfx_package_included_now": false,
+    "package_solution_enabled_now": false,
+    "app_catalog_deploy_allowed_now": false,
+    "tenant_wide_deploy_allowed_now": false,
+    "npm_install_required_now": false,
+    "package_repo_recommended": "separate_spfx_repo_or_future_app_package"
+  },
+  "render_contract": {
+    "container_id": "nac-bpmn-viewer-container",
+    "component_props": [
+      {
+        "name": "workspaceId",
+        "required": true,
+        "source": "page configuration or future Teams-connected SharePoint context"
+      },
+      {
+        "name": "processId",
+        "required": false,
+        "source": "Prozessregister metadata"
+      },
+      {
+        "name": "bpmnModelId",
+        "required": true,
+        "source": "BPMN Models metadata"
+      },
+      {
+        "name": "caseId",
+        "required": false,
+        "source": "viewer overlay context"
+      }
+    ],
+    "allowed_inputs_now": [
+      "approved_bpmn_xml_fixture",
+      "bpmn_model_metadata_request_plan",
+      "process_register_metadata_request_plan",
+      "viewer_overlay_metadata_request_plan"
+    ],
+    "future_inputs_after_owner_gate": [
+      "approved_bpmn_xml_graph_content_read"
+    ],
+    "outputs": [
+      "bpmn_js_viewer_dom",
+      "fit_viewport_canvas_state",
+      "redacted_metadata_overlay"
+    ],
+    "forbidden_outputs": [
+      "raw_matter_document_content",
+      "mandate_payload_values",
+      "tokens_or_secrets",
+      "bpmn_model_write_payload"
+    ]
+  },
+  "mcp_request_plan_binding": {
+    "server_id": "teams-sharepoint-data-mcp",
+    "executes_graph_requests_now": false,
+    "tools_request_plan_only_now": true,
+    "tools": [
+      "bpmn_model_get",
+      "process_register_list",
+      "bpmn_viewer_overlay_get"
+    ],
+    "owner_gated_live_read_tools_enabled_now": [
+      "case_get",
+      "document_list"
+    ]
+  },
+  "graph_content_read_boundary": {
+    "future_endpoint": "GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content",
+    "live_content_read_enabled_now": false,
+    "fixture_content_allowed_now": true,
+    "required_metadata_gates": [
+      "ApprovalStatus=Approved",
+      "ViewerEnabled=true",
+      "ContainsMatterData=false",
+      "BpmnXmlSha256 matches downloaded XML"
+    ]
+  },
+  "test_fixtures": {
+    "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json"
+  },
+    "blocked_operations": [
+    "app_catalog_deploy",
+    "tenant_wide_deploy",
+    "npm_install",
+    "live_tenant_apply",
+    "write_bpmn_xml",
+    "save_bpmn_model",
+    "execute_workflow",
+    "start_process_instance",
+    "read_matter_document_content",
+    "read_matter_payload",
+    "store_tokens_or_secrets",
+    "legacy_sharepoint_rest",
+    "sharepoint_csom",
+    "pnp",
+    "microsoft_graph_sdk",
+    "graph_beta"
+  ]
+}

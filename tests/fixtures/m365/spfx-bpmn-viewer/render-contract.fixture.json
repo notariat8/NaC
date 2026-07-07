@@ -1,0 +1,34 @@
+{
+  "schema_version": "nac.m365-spfx-bpmn-viewer-render-fixture/v0.1",
+  "status": "synthetic_metadata_only",
+  "workspace_id": "notary_team_01",
+  "component_props": {
+    "workspaceId": "notary_team_01",
+    "processId": "process-immobilienkaufvertrag",
+    "bpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
+    "caseId": "NAC-FIXTURE-CASE-0001"
+  },
+  "approved_bpmn_model": {
+    "nacBpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
+    "processKey": "immobilienkaufvertrag",
+    "nacBpmnVersion": "fixture-v1",
+    "bpmnGitPath": "bpmn/immobilienkaufvertrag.bpmn",
+    "bpmnGitCommitSha": "fixture",
+    "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+    "approvalStatus": "Approved",
+    "viewerEnabled": true,
+    "containsMatterData": false
+  },
+  "expected_request_plan_tools": [
+    "bpmn_model_get",
+    "process_register_list",
+    "bpmn_viewer_overlay_get"
+  ],
+  "expected_render_state": {
+    "bpmnJsMode": "viewer_only",
+    "contentSource": "approved_bpmn_xml_fixture",
+    "metadataOverlay": "redacted_metadata_only",
+    "liveTenantAccess": false,
+    "appCatalogDeploy": false
+  }
+}

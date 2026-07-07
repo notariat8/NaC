@@ -55,6 +55,13 @@ bpmn-viewer-plan --format json` renders the planned library, list and columns,
 but does not run a live apply against Microsoft 365 and does not extend the
 required MVP SharePoint schema.
 
+The first SPFx slice is source-only under `spfx/nac-bpmn-viewer`. The command
+`nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json` renders the
+skeleton, the synthetic render fixture and the MCP request plans for
+`bpmn_model_get`, `process_register_list` and `bpmn_viewer_overlay_get`. This
+slice does not build an SPFx package, does not create `package-lock.json`, does
+not use the App Catalog and does not run a Graph or tenant apply.
+
 ## Graph REST Boundary
 
 All access runs through Microsoft Graph REST v1.0 or an MCP server that also
@@ -120,6 +127,7 @@ The contract is enforced by these checks:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
 python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter
 python3 scripts/quality_gate.py --profile strict
