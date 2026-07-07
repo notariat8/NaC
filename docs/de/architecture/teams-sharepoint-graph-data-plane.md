@@ -87,6 +87,13 @@ Wichtig: `AuditJournalLite` ist kein revisionssicheres Endjournal. Es ist ein
 Startnachweis. Für echte Unveränderbarkeit bleibt ein späteres append-only
 Journal oder ein WORM-fähiger Speicher erforderlich.
 
+Die konkrete Rollen-, Akten- und Vertretungsgrenze ist in
+[M365-Mandatszugriffsdelegation](m365-matter-access-delegation.md)
+beschrieben. Der Offline-Befehl
+`nac m365 teams-sharepoint matter-access-plan --format json` rendert die
+Graph-REST-Requestpläne für Primärzuständigkeit, aktive Vertretung,
+Vertretungsfreigabe, Widerruf und Audit, ohne Live-Tenant-Aktion.
+
 ## BPMN-Viewer-Projektion
 
 Ein späterer

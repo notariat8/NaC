@@ -103,6 +103,12 @@ Jeder Vertrag soll definieren:
   metadata-only Werkzeugen für das notarielle Schnittstelleninventar,
   redigierten `mcp-inventory-smoke` und `mcp-live-read-smoke` sowie ohne
   Live-Writes, Secrets, Dateiinhalt oder Mandatsdaten im Produktrepo.
+- [workflows/contracts/m365-matter-access-delegation.contract.json](m365-matter-access-delegation.contract.json):
+  Vertrag für M365-Aktensichtbarkeit und zeitlich begrenzte
+  Vertretungsfreigaben über `Akten`, `Vertretungsfreigaben`,
+  `AuditJournalLite` und `teams-sharepoint-data-mcp`; `matter-access-plan`
+  rendert nur Graph-REST-Requestpläne ohne Live-Tenant-Aktion,
+  Dateiinhalt, Secrets oder Mandats-Rohdaten.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

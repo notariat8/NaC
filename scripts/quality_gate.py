@@ -161,6 +161,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],
                 ),
                 (
+                    "m365_matter_access_delegation",
+                    "M365 Matter Access Delegation",
+                    [sys.executable, "scripts/validate_m365_matter_access_delegation.py"],
+                ),
+                (
                     "notarial_application_interface_inventory",
                     "Notarial Application Interface Inventory",
                     [sys.executable, "scripts/validate_notarial_application_interface_inventory.py"],
