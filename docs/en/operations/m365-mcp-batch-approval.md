@@ -183,6 +183,25 @@ the retention path and copies those refreshed artifacts into the run folder
 again. The following offline exporter remains only for diagnostics or
 re-exporting existing artifacts:
 
+Optionally, the same runner can write a redacted offline audit pack directly:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-compare-left <baseline-correlation-id> \
+  --format json
+```
+
+The right comparison side defaults to the just archived run. When
+`--release-gate-compare-left` is omitted, the runner packages the current run
+against itself. `--release-gate-audit-pack-dir` can set the target directory.
+The audit-pack step runs only after successful retention and stays offline;
+Graph requests, tenant writes, deletes and SharePoint content reads are
+excluded.
+
 The local audit overview runs offline through:
 
 ```bash

@@ -195,6 +195,26 @@ Retention-Pfad und kopiert diese aktualisierten Artefakte erneut in den
 Laufordner. Der folgende Offline-Exporter bleibt nur für Diagnose oder erneuten
 Export vorhandener Artefakte:
 
+Optional kann derselbe Runner direkt ein redigiertes Offline-Audit-Paket
+erzeugen:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-compare-left <baseline-correlation-id> \
+  --format json
+```
+
+Dabei ist der rechte Vergleich standardmäßig der gerade archivierte Lauf. Wird
+`--release-gate-compare-left` nicht gesetzt, paketiert der Runner den aktuellen
+Lauf gegen sich selbst. `--release-gate-audit-pack-dir` kann den Zielordner
+setzen. Der Audit-Pack-Schritt läuft erst nach erfolgreicher Retention und bleibt
+offline; Graph-Anfragen, Tenant-Writes, Löschungen und SharePoint-Content-Reads
+sind ausgeschlossen.
+
 Der lokale Audit-Überblick läuft offline über:
 
 ```bash
