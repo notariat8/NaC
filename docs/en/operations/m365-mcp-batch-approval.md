@@ -245,6 +245,23 @@ paths. `--release-gate-compare-left`, `--release-gate-compare-right`,
 index. It performs no Graph request, tenant write or delete and reads no
 SharePoint file content.
 
+A versionable index evidence artifact is written offline with the same
+filters:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare-index-artifact \
+  --release-gate-compare-query <search-text> \
+  --format json
+```
+
+Without explicit paths, the command writes
+`release-gate-retention-compare-index.redacted.md` and
+`release-gate-retention-compare-index.redacted.json` under
+`out/m365/teams-sharepoint/release-gate-comparison-indexes/<filter>/`.
+`--release-gate-compare-index-output` and
+`--release-gate-compare-index-json-output` set custom targets. The export
+remains redacted and offline.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \

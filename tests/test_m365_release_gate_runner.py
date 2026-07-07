@@ -722,6 +722,87 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["comparison_count"], 0)
         self.assertEqual(payload["comparisons"], [])
 
+    def test_release_gate_retention_compare_index_artifact_writes_redacted_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            compare_root = tmp_path / "comparisons"
+            report_path = tmp_path / "index" / "compare-index.redacted.md"
+            json_path = tmp_path / "index" / "compare-index.redacted.json"
+            _write_compare_artifact(
+                compare_root / "left-a__right-a",
+                left_correlation_id="left-a",
+                right_correlation_id="right-a",
+                status="PASSED",
+                generated_at="2026-07-07T12:00:00Z",
+                difference_count=3,
+            )
+            _write_compare_artifact(
+                compare_root / "left-b__right-b",
+                left_correlation_id="left-b",
+                right_correlation_id="right-b",
+                status="FAILED",
+                generated_at="2026-07-07T13:00:00Z",
+                difference_count=7,
+            )
+
+            payload, return_code = _invoke_retention_compare_index_artifact(
+                [
+                    "--release-gate-compare-index-root",
+                    str(compare_root),
+                    "--release-gate-compare-query",
+                    "left-b__right-b",
+                    "--release-gate-compare-status",
+                    "FAILED",
+                    "--release-gate-compare-index-output",
+                    str(report_path),
+                    "--release-gate-compare-index-json-output",
+                    str(json_path),
+                    "--format",
+                    "json",
+                ]
+            )
+            report = report_path.read_text(encoding="utf-8")
+            json_payload = json.loads(json_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-retention-compare-index-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["comparison_count"], 1)
+        self.assertEqual(payload["summary"]["status_filter"], "FAILED")
+        self.assertEqual(payload["summary"]["report_path"], str(report_path))
+        self.assertEqual(payload["summary"]["json_path"], str(json_path))
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertFalse(payload["summary"]["reads_sharepoint_file_content"])
+        self.assertTrue(report.startswith("# M365 Release Gate Retention Compare Index"))
+        self.assertIn("Comparison count: 1", report)
+        self.assertIn("| 2026-07-07T13:00:00Z | left-b | right-b | FAILED | 7 |", report)
+        self.assertEqual(json_payload["summary"]["query"], "left-b__right-b")
+        self.assertEqual(json_payload["comparisons"][0]["left_correlation_id"], "left-b")
+        self.assertFalse(json_payload["comparisons"][0]["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_retention_compare_index_artifact_blocks_invalid_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            compare_root = Path(tmp) / "comparisons"
+            invalid_dir = compare_root / "broken"
+            invalid_dir.mkdir(parents=True)
+            (invalid_dir / "release-gate-retention-compare.redacted.json").write_text("{", encoding="utf-8")
+
+            payload, return_code = _invoke_retention_compare_index_artifact(
+                [
+                    "--release-gate-compare-index-root",
+                    str(compare_root),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-retention-compare-index-artifact/v0.1")
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertEqual(payload["summary"]["invalid_artifact_count"], 1)
+        self.assertEqual(payload["comparisons"], [])
+        self.assertTrue(payload["errors"])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -804,6 +885,24 @@ def _invoke_retention_compare_index(extra_args: list[str]) -> tuple[dict, int]:
             "m365",
             "teams-sharepoint",
             "release-gate-retention-compare-index",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_retention_compare_index_artifact(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-compare-index-artifact",
             *extra_args,
         ]
     )
