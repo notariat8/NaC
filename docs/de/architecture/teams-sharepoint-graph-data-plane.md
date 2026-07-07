@@ -277,7 +277,9 @@ Inventory-Liste, Boundary-Check für eine metadata-only Operation, Boundary-
 Check für eine owner-gated Operation sowie ein geschlossenes Rollen-, Akten-
 und Zweckgate. Das Artefakt speichert keine BNotK-HTML-Inhalte, keine XSD-
 Rohdaten, keine Credentials, keine Tokens, keine Nachrichten-Payloads und
-keine Mandatsdaten.
+keine Mandatsdaten. `release-gate-evidence` kann dieses redigierte Artefakt
+optional mit `--release-gate-inventory-artifact` referenzieren; der
+owner-gated `release-gate-run` führt den Offline-Smoke nicht automatisch aus.
 
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 

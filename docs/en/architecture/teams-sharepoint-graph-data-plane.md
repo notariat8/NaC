@@ -267,7 +267,10 @@ By default, it writes
 inventory list, a boundary check for a metadata-only operation, a boundary
 check for an owner-gated operation and a closed role, matter and purpose gate.
 The artifact stores no BNotK HTML content, raw XSD data, credentials, tokens,
-message payloads or matter data.
+message payloads or matter data. `release-gate-evidence` can optionally
+reference this redacted artifact with `--release-gate-inventory-artifact`; the
+owner-gated `release-gate-run` does not execute the offline smoke
+automatically.
 
 The first owner-gated live-read mode starts explicitly:
 

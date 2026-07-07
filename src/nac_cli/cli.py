@@ -446,6 +446,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optionaler Pfad zum redigierten MCP-Smoke-Leftover-Dry-Run-Artefakt.",
     )
     teams_sharepoint.add_argument(
+        "--release-gate-inventory-artifact",
+        type=Path,
+        help="Optionaler Pfad zum redigierten MCP-Inventory-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
         "--release-gate-runtime-smoke-artifact",
         type=Path,
         help="Optionaler Pfad zu einem redigierten Runtime-Smoke-Artefakt.",
@@ -1406,6 +1411,7 @@ def command_m365(args: argparse.Namespace) -> int:
             )
             evidence = build_release_gate_evidence(
                 repo_root=repo_root,
+                mcp_inventory_artifact=args.release_gate_inventory_artifact,
                 mcp_suite_artifact=args.release_gate_suite_artifact,
                 mcp_leftover_artifact=args.release_gate_leftover_artifact,
                 runtime_smoke_artifact=args.release_gate_runtime_smoke_artifact,
@@ -1693,6 +1699,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             command[3:3] = ["--mcp-contract", str(args.mcp_contract)]
     if args.mcp_smoke_case_id:
         steps[3][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
+    if args.release_gate_inventory_artifact:
+        steps[5][1][3:3] = ["--release-gate-inventory-artifact", str(args.release_gate_inventory_artifact)]
 
     step_results: list[dict[str, Any]] = []
     for step_id, command in steps:

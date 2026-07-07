@@ -122,7 +122,10 @@ synthetic matter, and the leftover dry-run only reads the match count.
 `release-gate-evidence` runs offline at the end and reads only local redacted
 artifacts. The expiry monitor, `runtime-smoke` and `runtime-metadata` write
 their own redacted runtime artifacts so the completion report can return
-`complete_release_gate_artifacts`. The individual commands remain a diagnostic
+`complete_release_gate_artifacts`. The offline `mcp-inventory-smoke` remains a
+separate diagnostic and evidence command and can be optionally attached to the
+completion report with `--release-gate-inventory-artifact`; the one-shot runner
+does not execute it automatically. The individual commands remain a diagnostic
 and fallback path when a runner step must be reproduced in isolation.
 
 ## Runtime Certificate Rotation Approval

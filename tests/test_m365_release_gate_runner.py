@@ -52,6 +52,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                     "notary_team_01",
                     "--mcp-smoke-correlation-id",
                     "runner-corr",
+                    "--release-gate-inventory-artifact",
+                    "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json",
                     "--format",
                     "json",
                 ]
@@ -86,6 +88,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertIn("--mcp-suite-cleanup", calls[3])
         self.assertIn("--mcp-leftover-dry-run", calls[4])
         self.assertIn("--release-gate-require-runtime-artifacts", calls[5])
+        self.assertIn("--release-gate-inventory-artifact", calls[5])
         self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[5])
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
 
