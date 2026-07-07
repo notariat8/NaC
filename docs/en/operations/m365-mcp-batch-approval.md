@@ -262,6 +262,25 @@ Without explicit paths, the command writes
 `--release-gate-compare-index-json-output` set custom targets. The export
 remains redacted and offline.
 
+The full offline audit pack bundles the retention list, comparison, comparison
+index and manifest into one target directory:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-audit-pack \
+  --release-gate-compare-left <left-correlation-id> \
+  --release-gate-compare-right <right-correlation-id> \
+  --format json
+```
+
+Without an explicit target directory, the command writes under
+`out/m365/teams-sharepoint/release-gate-audit-packs/<filter>/`.
+`--release-gate-audit-pack-dir` sets a custom target directory. The package
+contains `release-gate-retention-audit-pack.redacted.md/json`,
+`release-gate-retention-list.redacted.md/json`, the comparison under
+`comparisons/<left>__<right>/` and the filtered comparison index. It reads only
+local redacted retention and evidence artifacts and performs no Graph request,
+tenant write, delete or SharePoint content read.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
