@@ -167,26 +167,28 @@ Roadmap item for the next iteration:
 
 ## Provisioning
 
-The provisioner lives at
-[scripts/provision_teams_sharepoint_graph.py](../../../scripts/provision_teams_sharepoint_graph.py).
+The product operating edge runs through the central `nac` CLI. The internal
+compatibility provisioner still lives at
+[scripts/provision_teams_sharepoint_graph.py](../../../scripts/provision_teams_sharepoint_graph.py),
+but product documentation does not present it as the operator edge.
 
-It supports this workflow:
+The CLI supports this workflow:
 
 ```bash
-python3 scripts/provision_teams_sharepoint_graph.py plan
-python3 scripts/provision_teams_sharepoint_graph.py privileged-plan
-python3 scripts/provision_teams_sharepoint_graph.py apply --owner-approved
-python3 scripts/provision_teams_sharepoint_graph.py drift
-python3 scripts/provision_teams_sharepoint_graph.py export
+python3 scripts/nac.py m365 teams-sharepoint plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint drift --format json
+python3 scripts/nac.py m365 teams-sharepoint export --format json
 ```
 
 `plan` and `privileged-plan` must work without Microsoft access.
 `privileged-plan` uses
 [deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json](../../../deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json)
 and the non-secret provisioned state to expose the next iteration as a Graph
-REST operation list before any live apply. `apply`, `drift` and `export` need
-environment variables for tenant, app and credential. The provisioner does not
-store tokens, secret values or raw data in the repository.
+REST operation list before any live apply. `privileged-apply`, `drift` and
+`export` need environment variables for tenant, app and credential. The M365
+layer does not store tokens, secret values or raw data in the repository.
 
 `runtime-smoke` and `runtime-metadata` use the declarative MVP schema as the
 expectation source. The smoke reads only site, list and library metadata with

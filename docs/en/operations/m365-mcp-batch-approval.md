@@ -125,7 +125,7 @@ and fallback path when a runner step must be reproduced in isolation.
 
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
-The smoke suite is the standard runtime evidence after a merged change set
+`release-gate-run` is the standard runtime evidence after a merged change set
 when that change touches one of these surfaces:
 
 - `teams-sharepoint-data-mcp` contract, tool boundaries or adapter behavior,
@@ -135,11 +135,15 @@ when that change touches one of these surfaces:
 - runbook or operator changes that affect the live write/read/cleanup path.
 
 The evidence run must not start automatically without approval. It remains a
-separate owner gate because it writes and deletes a synthetic matter in the live
-tenant. After approval, the agent must complete the run end to end: write,
-read, cleanup, redacted artifact, workspace clean state and concrete result in
-the final status. If a synthetic leftover remains after the run, the agent must
-immediately prepare the owner-gated `mcp-smoke-leftover-cleanup` path.
+separate owner gate because the internally covered
+`mcp-smoke-suite --mcp-suite-cleanup` step writes and deletes a synthetic matter
+in the live tenant. After approval, the agent must complete the run end to end:
+runtime smoke, runtime metadata, write, read, cleanup, leftover dry-run,
+evidence export, workspace clean state and concrete result in the final
+status. The MCP Smoke Suite remains the diagnostic/component path when only
+that step must be reproduced in isolation. If a synthetic leftover remains
+after the run, the agent must immediately prepare the owner-gated
+`mcp-smoke-leftover-cleanup` path.
 
 When `release-gate-run` is used, the runner creates the redacted completion
 report in the same owner-gated run. The following offline exporter remains only

@@ -172,27 +172,29 @@ Roadmap-Item für die nächste Iteration:
 
 ## Provisioning
 
-Der Provisioner steht unter
-[scripts/provision_teams_sharepoint_graph.py](../../../scripts/provision_teams_sharepoint_graph.py).
+Die Produktbedienkante läuft über die zentrale `nac`-CLI. Der interne
+Kompatibilitäts-Provisioner steht weiterhin unter
+[scripts/provision_teams_sharepoint_graph.py](../../../scripts/provision_teams_sharepoint_graph.py),
+wird in Produktdokumentation aber nicht als Operator-Kante geführt.
 
-Er unterstützt diese Arbeitsweise:
+Die CLI unterstützt diese Arbeitsweise:
 
 ```bash
-python3 scripts/provision_teams_sharepoint_graph.py plan
-python3 scripts/provision_teams_sharepoint_graph.py privileged-plan
-python3 scripts/provision_teams_sharepoint_graph.py apply --owner-approved
-python3 scripts/provision_teams_sharepoint_graph.py drift
-python3 scripts/provision_teams_sharepoint_graph.py export
+python3 scripts/nac.py m365 teams-sharepoint plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint drift --format json
+python3 scripts/nac.py m365 teams-sharepoint export --format json
 ```
 
 `plan` und `privileged-plan` müssen ohne Microsoft-Zugang funktionieren.
 `privileged-plan` nutzt
 [deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json](../../../deploy/m365/teams-sharepoint/nac-mvp.privileged-change-path.json)
 und den nicht-geheimen Provisionierungsstand, um die nächste Iteration vor
-jedem Live-Apply als Graph-REST-Operationsliste sichtbar zu machen. `apply`,
-`drift` und `export` brauchen Umgebungsvariablen für Tenant, App und
-Credential. Der Provisioner speichert keine Tokens, Secrets oder Rohdaten im
-Repo.
+jedem Live-Apply als Graph-REST-Operationsliste sichtbar zu machen.
+`privileged-apply`, `drift` und `export` brauchen Umgebungsvariablen für
+Tenant, App und Credential. Die M365-Schicht speichert keine Tokens, Secrets
+oder Rohdaten im Repo.
 
 `runtime-smoke` und `runtime-metadata` verwenden das deklarative MVP-Schema als
 Erwartungsquelle. Der Smoke liest mit der Runtime-App nur Site-, Listen- und

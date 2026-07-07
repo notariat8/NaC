@@ -44,6 +44,28 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
 
             self.assertIn("release-gate-run", content)
             self.assertIn("mcp-smoke-suite --owner-approved --mcp-suite-cleanup", content)
+            self.assertIn("scripts/nac.py m365 teams-sharepoint privileged-plan", content)
+            self.assertNotIn("python3 scripts/provision_teams_sharepoint_graph.py", content)
+
+    def test_batch_approval_docs_make_release_gate_run_the_standard(self) -> None:
+        documents = (
+            (
+                "docs/de/operations/m365-mcp-batch-approval.md",
+                "`release-gate-run` ist der Standard-Betriebsnachweis",
+                "Die Smoke Suite ist der Standard-Betriebsnachweis",
+            ),
+            (
+                "docs/en/operations/m365-mcp-batch-approval.md",
+                "`release-gate-run` is the standard runtime evidence",
+                "The smoke suite is the standard runtime evidence",
+            ),
+        )
+
+        for relative_path, expected_marker, rejected_marker in documents:
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+            self.assertIn(expected_marker, content)
+            self.assertNotIn(rejected_marker, content)
 
 
 if __name__ == "__main__":
