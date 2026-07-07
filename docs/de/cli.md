@@ -398,9 +398,10 @@ Schritte laufen. Der Runner stoppt beim ersten fehlgeschlagenen Schritt und
 schreibt nur die
 redigierten Standardartefakte unter `out/m365/teams-sharepoint/`, verlangt
 `--owner-approved` und lässt den abschließenden Evidence-Export mit
-`--release-gate-require-runtime-artifacts` laufen. Die Einzelbefehle bleiben
-Diagnose- und Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert
-werden muss.
+`--release-gate-require-runtime-artifacts` laufen. Der offline
+`mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl; der
+Runner führt ihn nicht automatisch aus. Die Einzelbefehle bleiben Diagnose- und
+Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden muss.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
@@ -418,6 +419,10 @@ Runtime- und MCP-Artefakte vorhanden sind, meldet er
 `complete_release_gate_artifacts`; fehlen optionale Runtime-Artefakte, markiert
 der Bericht die Runtime-Schritte als `NOT_ATTACHED`. Mit
 `--release-gate-require-runtime-artifacts` blockiert der Export in diesem Fall.
+Ein vorhandenes `mcp-inventory-smoke.redacted.json` kann zusätzlich mit
+`--release-gate-inventory-artifact` angehängt werden; fehlt es, bleibt dieser
+Evidence-Schritt `NOT_ATTACHED`, ohne das Release-Gate zu blockieren. Ist es
+vorhanden, aber ungültig, schlägt der Export fehl.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

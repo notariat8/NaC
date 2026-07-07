@@ -389,8 +389,10 @@ with the offline `runtime-certificate-expiry-monitor` before live steps run. It
 stops at the first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
-The individual commands remain the diagnostic and fallback path when a runner
-step must be reproduced in isolation.
+The offline `mcp-inventory-smoke` remains a separate diagnostic and evidence
+command; the runner does not execute it automatically. The individual commands
+remain the diagnostic and fallback path when a runner step must be reproduced in
+isolation.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
@@ -407,6 +409,10 @@ artifacts are present, it reports
 `complete_release_gate_artifacts`; if optional runtime artifacts are missing,
 the report marks the runtime steps as `NOT_ATTACHED`. With
 `--release-gate-require-runtime-artifacts`, export blocks in that case.
+An existing `mcp-inventory-smoke.redacted.json` can additionally be attached
+with `--release-gate-inventory-artifact`; when it is missing, this evidence step
+remains `NOT_ATTACHED` without blocking the release gate. If it is present but
+invalid, the export fails.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 

@@ -10,6 +10,7 @@ from typing import Any
 DEFAULT_EVIDENCE_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.md")
 DEFAULT_EVIDENCE_JSON_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.json")
 DEFAULT_ARTIFACT_INDEX_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json")
+DEFAULT_MCP_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
 DEFAULT_MCP_SMOKE_SUITE_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-suite.redacted.json")
 DEFAULT_MCP_LEFTOVER_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json")
 DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT = Path(
@@ -22,6 +23,7 @@ DEFAULT_RUNTIME_METADATA_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-meta
 def build_release_gate_evidence(
     *,
     repo_root: Path,
+    mcp_inventory_artifact: Path | None = None,
     mcp_suite_artifact: Path | None = None,
     mcp_leftover_artifact: Path | None = None,
     runtime_certificate_expiry_artifact: Path | None = None,
@@ -41,6 +43,7 @@ def build_release_gate_evidence(
         ),
         "runtime_smoke": _resolve(repo_root, runtime_smoke_artifact, DEFAULT_RUNTIME_SMOKE_ARTIFACT),
         "runtime_metadata": _resolve(repo_root, runtime_metadata_artifact, DEFAULT_RUNTIME_METADATA_ARTIFACT),
+        "mcp_inventory_smoke": _resolve(repo_root, mcp_inventory_artifact, DEFAULT_MCP_INVENTORY_ARTIFACT),
         "mcp_smoke_suite": _resolve(repo_root, mcp_suite_artifact, DEFAULT_MCP_SMOKE_SUITE_ARTIFACT),
         "mcp_leftover_dry_run": _resolve(repo_root, mcp_leftover_artifact, DEFAULT_MCP_LEFTOVER_ARTIFACT),
     }
@@ -49,6 +52,7 @@ def build_release_gate_evidence(
         _runtime_certificate_expiry_step(paths["runtime_certificate_expiry"], required=require_runtime_artifacts),
         _runtime_smoke_step(paths["runtime_smoke"], required=require_runtime_artifacts),
         _runtime_metadata_step(paths["runtime_metadata"], required=require_runtime_artifacts),
+        _mcp_inventory_step(paths["mcp_inventory_smoke"]),
         _mcp_suite_step(paths["mcp_smoke_suite"]),
         _mcp_leftover_step(paths["mcp_leftover_dry_run"]),
     ]
@@ -79,8 +83,9 @@ def build_release_gate_evidence(
         "runtime_certificate_expiry_status": steps[0]["status"],
         "runtime_smoke_status": steps[1]["status"],
         "runtime_metadata_status": steps[2]["status"],
-        "mcp_smoke_suite_status": steps[3]["status"],
-        "mcp_leftover_dry_run_status": steps[4]["status"],
+        "mcp_inventory_smoke_status": steps[3]["status"],
+        "mcp_smoke_suite_status": steps[4]["status"],
+        "mcp_leftover_dry_run_status": steps[5]["status"],
         "graph_rest_only": _all_privacy_flag(steps, "graph_rest_only", default=True),
         "stores_tokens_or_secrets": _any_privacy_flag(steps, "stores_tokens_or_secrets"),
         "stores_raw_graph_response": _any_privacy_flag(steps, "raw_graph_response_stored"),
@@ -387,6 +392,49 @@ def _mcp_suite_step(path: Path) -> dict[str, Any]:
     return step
 
 
+def _mcp_inventory_step(path: Path) -> dict[str, Any]:
+    artifact, error = _load_optional_json(path)
+    step = _base_step(
+        step_id="mcp_inventory_smoke",
+        label="mcp-inventory-smoke",
+        artifact_path=path,
+        required=False,
+        artifact=artifact,
+        load_error=error,
+    )
+    if artifact is None:
+        return step
+    summary = _dict(artifact.get("summary"))
+    privacy = _dict(artifact.get("privacy"))
+    step["summary"] = {
+        "workspace_id": summary.get("workspace_id"),
+        "correlation_id": summary.get("correlation_id"),
+        "tool_call_count": summary.get("tool_call_count"),
+        "inventory_tool_count": summary.get("inventory_tool_count"),
+        "interface_count": summary.get("interface_count"),
+        "metadata_boundary_status": summary.get("metadata_boundary_status"),
+        "owner_gated_boundary_status": summary.get("owner_gated_boundary_status"),
+        "closed_gate_blocks": summary.get("closed_gate_blocks"),
+        "graph_requests_executed": summary.get("graph_requests_executed"),
+        "external_bnotk_calls_executed": summary.get("external_bnotk_calls_executed"),
+        "raw_source_content_stored": summary.get("raw_source_content_stored"),
+        "stores_tokens_or_secrets": privacy.get("storesTokensOrSecrets"),
+        "reads_sharepoint_file_content": False,
+    }
+    _expect_status_passed(step, artifact)
+    _expect_summary_value(step, summary, "tool_call_count", 4)
+    _expect_summary_value(step, summary, "inventory_tool_count", 2)
+    _expect_summary_minimum(step, summary, "interface_count", 1)
+    _expect_summary_value(step, summary, "metadata_boundary_status", "allowed_metadata_only")
+    _expect_summary_value(step, summary, "owner_gated_boundary_status", "owner_gate_required")
+    _expect_summary_value(step, summary, "closed_gate_blocks", True)
+    _expect_summary_value(step, summary, "graph_requests_executed", False)
+    _expect_summary_value(step, summary, "external_bnotk_calls_executed", False)
+    _expect_summary_value(step, summary, "raw_source_content_stored", False)
+    _expect_inventory_privacy_flags(step, privacy)
+    return step
+
+
 def _mcp_leftover_step(path: Path) -> dict[str, Any]:
     artifact, error = _load_optional_json(path)
     step = _base_step(
@@ -477,6 +525,12 @@ def _expect_summary_value(step: dict[str, Any], summary: dict[str, Any], key: st
         _fail(step, f"{step['label']} summary.{key} expected {expected!r}, got {summary.get(key)!r}")
 
 
+def _expect_summary_minimum(step: dict[str, Any], summary: dict[str, Any], key: str, minimum: int) -> None:
+    value = summary.get(key)
+    if not isinstance(value, int) or value < minimum:
+        _fail(step, f"{step['label']} summary.{key} expected at least {minimum}, got {value!r}")
+
+
 def _expect_privacy_flags(step: dict[str, Any], summary: dict[str, Any]) -> None:
     true_flags = ["graph_rest_only"]
     false_flags = [
@@ -500,6 +554,23 @@ def _expect_privacy_flags(step: dict[str, Any], summary: dict[str, Any]) -> None
             _fail(step, f"{step['label']} privacy flag {flag} must be false")
 
 
+def _expect_inventory_privacy_flags(step: dict[str, Any], privacy: dict[str, Any]) -> None:
+    if privacy.get("metadataOnly") is not True:
+        _fail(step, f"{step['label']} privacy flag metadataOnly must be true")
+    for flag in (
+        "storesSourceFullText",
+        "storesRawXsd",
+        "storesCredentials",
+        "storesTokensOrSecrets",
+        "storesMatterData",
+        "storesMessagePayloads",
+        "executesGraphRequests",
+        "callsExternalBnotkSystems",
+    ):
+        if privacy.get(flag) is not False:
+            _fail(step, f"{step['label']} privacy flag {flag} must be false")
+
+
 def _fail(step: dict[str, Any], message: str) -> None:
     step["status"] = "FAILED"
     step["errors"].append(message)
@@ -514,9 +585,14 @@ def _overall_status(steps: list[dict[str, Any]], errors: list[str]) -> str:
 
 
 def _evidence_completeness(steps: list[dict[str, Any]]) -> str:
-    if all(step["status"] == "PASSED" for step in steps):
+    if any(step["status"] in {"BLOCKED", "FAILED"} for step in steps):
+        return "incomplete"
+    required_for_completeness = [
+        step for step in steps if step.get("id") != "mcp_inventory_smoke"
+    ]
+    if all(step["status"] == "PASSED" for step in required_for_completeness):
         return "complete_release_gate_artifacts"
-    if all(step["status"] == "PASSED" for step in steps if step["required"]):
+    if all(step["status"] == "PASSED" for step in required_for_completeness if step["required"]):
         return "mcp_artifacts_only"
     return "incomplete"
 
@@ -572,6 +648,10 @@ def _step_summary_text(step: dict[str, Any]) -> str:
         "correlation_id",
         "certificate_expiry_level",
         "certificate_days_until_expiry",
+        "interface_count",
+        "metadata_boundary_status",
+        "owner_gated_boundary_status",
+        "closed_gate_blocks",
         "positive_write_read_status",
         "cleanup_status",
         "read_after_value_count",

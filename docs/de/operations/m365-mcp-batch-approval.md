@@ -129,9 +129,12 @@ synthetische Akte, der Leftover-Dry-Run liest nur die Trefferanzahl.
 `release-gate-evidence` läuft am Ende offline und liest nur lokale redigierte
 Artefakte. Der Expiry-Monitor, `runtime-smoke` und `runtime-metadata` schreiben
 dabei eigene redigierte Runtime-Artefakte, damit der Abschlussbericht
-`complete_release_gate_artifacts` melden kann. Die Einzelbefehle bleiben ein
-Diagnose-/Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden
-muss.
+`complete_release_gate_artifacts` melden kann. Der offline
+`mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl und
+kann mit `--release-gate-inventory-artifact` optional an den Abschlussbericht
+gehängt werden; der One-Shot-Runner führt ihn nicht automatisch aus. Die
+Einzelbefehle bleiben ein Diagnose-/Fallback-Pfad, wenn ein Runner-Schritt
+isoliert reproduziert werden muss.
 
 ## Runtime-Zertifikatsrotation-Freigabe
 
