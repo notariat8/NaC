@@ -93,6 +93,11 @@ from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     build_spfx_bpmn_viewer_skeleton_result,
     load_spfx_bpmn_viewer_skeleton,
 )
+from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
+    DEFAULT_BPMN_VIEWER_RUNTIME_READINESS,
+    build_bpmn_viewer_runtime_readiness_result,
+    load_bpmn_viewer_runtime_readiness,
+)
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
@@ -121,6 +126,7 @@ def parse_args() -> argparse.Namespace:
             "plan",
             "application-owner-readiness",
             "bpmn-viewer-plan",
+            "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
             "privileged-apply",
@@ -143,6 +149,7 @@ def parse_args() -> argparse.Namespace:
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
+            "bpmn-viewer-runtime-readiness validates offline package/App Catalog/Graph content-read gates; "
             "spfx-bpmn-viewer-skeleton renders the offline SPFx/bpmn-js viewer source skeleton and request plans; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
@@ -167,6 +174,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
         help="Path to the offline SPFx BPMN viewer skeleton artifact.",
+    )
+    parser.add_argument(
+        "--bpmn-viewer-runtime-readiness",
+        type=Path,
+        default=DEFAULT_BPMN_VIEWER_RUNTIME_READINESS,
+        help="Path to the offline BPMN viewer runtime-readiness artifact.",
     )
     parser.add_argument(
         "--owner-approved",
@@ -943,6 +956,23 @@ def main() -> int:
             skeleton,
             mcp_contract=mcp_contract,
             provisioned_state=provisioned_state,
+        )
+        return _emit(
+            result,
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "bpmn-viewer-runtime-readiness":
+        readiness = load_bpmn_viewer_runtime_readiness(args.bpmn_viewer_runtime_readiness)
+        skeleton = load_spfx_bpmn_viewer_skeleton(args.spfx_bpmn_viewer_skeleton)
+        provisioning = load_bpmn_viewer_provisioning_config(args.bpmn_viewer_config)
+        mcp_contract = load_mcp_contract(args.mcp_contract)
+        result = build_bpmn_viewer_runtime_readiness_result(
+            readiness,
+            skeleton=skeleton,
+            provisioning=provisioning,
+            mcp_contract=mcp_contract,
         )
         return _emit(
             result,

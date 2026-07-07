@@ -39,14 +39,28 @@ class M365BpmnViewerProvisioningTests(unittest.TestCase):
         self.assertFalse(config["live_apply"]["implemented"])
         self.assertFalse(config["live_apply"]["mutates_tenant_now"])
         self.assertTrue(config["live_apply"]["owner_gate_required_before_future_apply"])
+        library_columns = {
+            column["name"]
+            for library in config["sharepoint"]["document_libraries"]
+            for column in library["columns"]
+        }
+        self.assertIn("BpmnDriveItemId", library_columns)
+        self.assertIn("BpmnContentMode", library_columns)
+        self.assertIn("BpmnXmlMimeType", library_columns)
+        list_columns = {
+            column["name"]
+            for list_def in config["sharepoint"]["lists"]
+            for column in list_def["columns"]
+        }
+        self.assertIn("BpmnContentMode", list_columns)
 
     def test_plan_is_owner_gated_optional_sharepoint_surface_only(self) -> None:
         config = load_bpmn_viewer_provisioning_config(DEFAULT_BPMN_VIEWER_PROVISIONING)
         operations = build_bpmn_viewer_provisioning_plan(config)
         summary = summarize_bpmn_viewer_provisioning_plan(operations)
 
-        self.assertEqual(summary["operation_count"], 60)
-        self.assertEqual(summary["owner_gated_operations"], 60)
+        self.assertEqual(summary["operation_count"], 68)
+        self.assertEqual(summary["owner_gated_operations"], 68)
         self.assertFalse(summary["mutates_tenant_now"])
         self.assertFalse(summary["live_apply_implemented"])
         self.assertEqual(
@@ -84,7 +98,7 @@ class M365BpmnViewerProvisioningTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["operation_count"], 60)
+        self.assertEqual(payload["summary"]["operation_count"], 68)
         self.assertFalse(payload["guardrails"]["mutates_tenant_now"])
         self.assertFalse(payload["guardrails"]["live_apply_implemented"])
         self.assertTrue(payload["guardrails"]["owner_gate_required_before_future_apply"])

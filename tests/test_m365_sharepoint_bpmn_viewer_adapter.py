@@ -54,6 +54,12 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             "read_matter_document_content",
             "read_matter_payload",
             "store_mandate_data",
+            "spfx_bundle",
+            "spfx_package_solution",
+            "create_sppkg",
+            "app_catalog_upload",
+            "site_app_install",
+            "live_bpmn_content_read",
         }:
             self.assertIn(operation, blocked)
         self.assertTrue(self.contract["sharepoint_surface"]["approved_bpmn_xml_content_read_allowed"])
@@ -91,6 +97,27 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertFalse(skeleton["app_catalog_deploy_allowed_now"])
         self.assertFalse(skeleton["tenant_apply_allowed_now"])
         self.assertFalse(skeleton["executes_graph_requests_now"])
+
+    def test_contract_links_runtime_readiness_without_deploy_or_live_read(self) -> None:
+        readiness = self.contract["runtime_readiness"]
+
+        self.assertEqual(
+            readiness["artifact"],
+            "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
+        )
+        self.assertEqual(
+            readiness["command"],
+            "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
+        )
+        self.assertEqual(readiness["status"], "offline_runtime_readiness_no_live_deploy")
+        self.assertFalse(readiness["spfx_package_allowed_now"])
+        self.assertFalse(readiness["app_catalog_upload_allowed_now"])
+        self.assertFalse(readiness["tenant_apply_allowed_now"])
+        self.assertFalse(readiness["live_bpmn_content_read_enabled_now"])
+        self.assertFalse(readiness["executes_graph_requests_now"])
+        self.assertIn("NacDataClass in Template,Demo,Reference", readiness["metadata_gates"])
+        for value in readiness["privacy_guards"].values():
+            self.assertFalse(value)
 
     def test_contract_keeps_bpmn_mcp_tools_planning_only(self) -> None:
         mcp = self.contract["mcp_boundary"]

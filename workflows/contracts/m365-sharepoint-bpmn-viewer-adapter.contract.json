@@ -92,6 +92,31 @@
     "tenant_apply_allowed_now": false,
     "executes_graph_requests_now": false
   },
+  "runtime_readiness": {
+    "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
+    "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
+    "status": "offline_runtime_readiness_no_live_deploy",
+    "redacted_artifact_kind": "redacted_offline_readiness_json",
+    "spfx_package_allowed_now": false,
+    "app_catalog_upload_allowed_now": false,
+    "tenant_apply_allowed_now": false,
+    "live_bpmn_content_read_enabled_now": false,
+    "executes_graph_requests_now": false,
+    "metadata_gates": [
+      "ApprovalStatus=Approved",
+      "ViewerEnabled=true",
+      "ContainsMatterData=false",
+      "BpmnXmlSha256 matches downloaded XML",
+      "NacDataClass in Template,Demo,Reference"
+    ],
+    "privacy_guards": {
+      "stores_raw_graph_response": false,
+      "stores_raw_graph_path": false,
+      "stores_raw_drive_item_id": false,
+      "stores_tokens_or_secrets": false,
+      "stores_raw_matter_values": false
+    }
+  },
   "graph_policy": {
     "base_url": "https://graph.microsoft.com/v1.0",
     "graph_rest_only": true,
@@ -129,8 +154,14 @@
     "pnp",
     "microsoft_graph_sdk",
     "custom_script_page_embedding",
+    "spfx_bundle",
+    "spfx_package_solution",
+    "create_sppkg",
+    "app_catalog_upload",
+    "site_app_install",
     "app_catalog_deploy",
     "tenant_wide_deploy",
+    "live_bpmn_content_read",
     "store_secrets",
     "store_mandate_data"
   ],
@@ -163,6 +194,7 @@
   },
   "validation_commands": [
     "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
+    "python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness",
     "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton",
     "python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter",
     "python3 scripts/quality_gate.py --profile strict"

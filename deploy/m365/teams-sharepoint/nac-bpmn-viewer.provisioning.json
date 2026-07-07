@@ -30,6 +30,8 @@
         "indexed_columns": [
           "NacBpmnModelId",
           "ProcessKey",
+          "BpmnDriveItemId",
+          "BpmnContentMode",
           "BpmnXmlSha256",
           "ViewerEnabled"
         ],
@@ -51,6 +53,20 @@
             "required": true
           },
           {
+            "name": "BpmnDriveItemId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnContentMode",
+            "type": "choice",
+            "choices": [
+              "ApprovedCopy",
+              "PointerOnly"
+            ],
+            "required": true
+          },
+          {
             "name": "BpmnGitPath",
             "type": "text",
             "required": true
@@ -63,6 +79,15 @@
           {
             "name": "BpmnXmlSha256",
             "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnXmlMimeType",
+            "type": "choice",
+            "choices": [
+              "application/xml",
+              "text/xml"
+            ],
             "required": true
           },
           {
@@ -123,6 +148,7 @@
           "ProcessKey",
           "ProcessStatus",
           "NacBpmnModelId",
+          "BpmnContentMode",
           "ViewerEnabled"
         ],
         "columns": [
@@ -186,6 +212,15 @@
           {
             "name": "NacBpmnVersion",
             "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnContentMode",
+            "type": "choice",
+            "choices": [
+              "ApprovedCopy",
+              "PointerOnly"
+            ],
             "required": true
           },
           {

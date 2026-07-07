@@ -63,6 +63,15 @@ MCP-Request-Plans für `bpmn_model_get`, `process_register_list` und
 `package-lock.json` an, nutzt keinen App Catalog und führt keinen Graph- oder
 Tenant-Apply aus.
 
+Der Runtime-Readiness-Schnitt bleibt ebenfalls offline:
+`nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`
+prüft die Grenzen für SPFx-Paketierung, App-Catalog-Deploy und den späteren
+Graph-Content-Read freigegebener `.bpmn`-Dateien. Ein `PASSED` bedeutet hier
+nur, dass die Guardrails intakt sind. Es bedeutet nicht, dass Paketierung,
+App-Catalog-Upload, Tenant-Apply oder Live-BPMN-Content-Read freigegeben sind.
+Diese Schritte bleiben Owner-Gates mit separatem PR, Rollback-Plan und
+redigiertem Nachweis.
+
 ## Graph-REST-Grenze
 
 Alle Zugriffe laufen über Microsoft Graph REST v1.0 oder einen MCP-Server, der
@@ -78,6 +87,9 @@ Erlaubte Endpunktfamilien für den Viewer-Vertrag:
 
 Der Content-Read ist auf freigegebene BPMN-XML-Modelle begrenzt. Er ist keine
 Freigabe zum Lesen von Akten-Dokumentinhalten oder Mandats-Payloads.
+Vor einem späteren Live-Read müssen mindestens `ApprovalStatus=Approved`,
+`ViewerEnabled=true`, `ContainsMatterData=false`, eine erlaubte `NacDataClass`
+und der Abgleich von `BpmnXmlSha256` gegen das geladene XML erfüllt sein.
 
 ## Warum SPFx
 
@@ -131,6 +143,7 @@ Der Vertrag wird durch diese Checks abgesichert:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness
 python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
 python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter

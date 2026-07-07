@@ -62,6 +62,14 @@ skeleton, the synthetic render fixture and the MCP request plans for
 slice does not build an SPFx package, does not create `package-lock.json`, does
 not use the App Catalog and does not run a Graph or tenant apply.
 
+The runtime-readiness slice also remains offline:
+`nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`
+checks the boundaries for SPFx packaging, App Catalog deployment and the later
+Graph content read of approved `.bpmn` files. `PASSED` means only that the
+guardrails are intact. It does not approve packaging, App Catalog upload,
+tenant apply or live BPMN content reads. Those steps remain owner gates with a
+separate PR, rollback plan and redacted evidence.
+
 ## Graph REST Boundary
 
 All access runs through Microsoft Graph REST v1.0 or an MCP server that also
@@ -77,6 +85,9 @@ Allowed endpoint families for the viewer contract:
 
 The content read is limited to approved BPMN XML models. It is not permission
 to read matter document contents or mandate payloads.
+Before a later live read, at least `ApprovalStatus=Approved`,
+`ViewerEnabled=true`, `ContainsMatterData=false`, an allowed `NacDataClass` and
+the `BpmnXmlSha256` check against the loaded XML must pass.
 
 ## Why SPFx
 
@@ -127,6 +138,7 @@ The contract is enforced by these checks:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness
 python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
 python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter

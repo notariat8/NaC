@@ -44,6 +44,12 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertFalse(skeleton["spfx"]["app_catalog_deploy_allowed_now"])
         self.assertFalse(skeleton["spfx"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(skeleton["graph_content_read_boundary"]["live_content_read_enabled_now"])
+        self.assertIn(
+            "NacDataClass in Template,Demo,Reference",
+            skeleton["graph_content_read_boundary"]["required_metadata_gates"],
+        )
+        self.assertEqual(fixture["approved_bpmn_model"]["bpmnContentMode"], "ApprovedCopy")
+        self.assertEqual(fixture["approved_bpmn_model"]["bpmnXmlMimeType"], "application/xml")
 
     def test_spfx_source_contains_viewer_only_skeleton_without_build_artifacts(self) -> None:
         self.assertTrue((SPFX_ROOT / "package.json").is_file())

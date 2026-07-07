@@ -61,6 +61,22 @@
         "stores_raw_matter_values": false,
         "stores_tokens_or_secrets": false
       }
+    },
+    "bpmn_viewer_runtime_readiness": {
+      "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
+      "available_now": true,
+      "executes_graph_requests": false,
+      "reads_sharepoint_file_content": false,
+      "owner_gate_required_before_live_bpmn_content_read": true,
+      "request_plan_tools_remain_planning_only": [
+        "bpmn_model_get",
+        "process_register_list",
+        "bpmn_viewer_overlay_get"
+      ],
+      "live_read_tools_enabled_now": [
+        "case_get",
+        "document_list"
+      ]
     }
   },
   "required_context": [

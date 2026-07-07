@@ -266,6 +266,7 @@ def build_parser() -> argparse.ArgumentParser:
             "plan",
             "application-owner-readiness",
             "bpmn-viewer-plan",
+            "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
             "privileged-apply",
@@ -292,6 +293,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--bpmn-viewer-config",
         type=Path,
         help="Optionaler BPMN-Viewer-Provisioning-Plan ohne Live-Apply.",
+    )
+    teams_sharepoint.add_argument(
+        "--bpmn-viewer-runtime-readiness",
+        type=Path,
+        help="Optionales BPMN-Viewer-Runtime-Readiness-Artefakt ohne Paketierung, App-Catalog-Deploy oder Live-Content-Read.",
     )
     teams_sharepoint.add_argument(
         "--spfx-bpmn-viewer-skeleton",
@@ -1423,6 +1429,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--schema", str(args.schema)])
         if args.bpmn_viewer_config:
             script_args.extend(["--bpmn-viewer-config", str(args.bpmn_viewer_config)])
+        if args.bpmn_viewer_runtime_readiness:
+            script_args.extend(["--bpmn-viewer-runtime-readiness", str(args.bpmn_viewer_runtime_readiness)])
         if args.spfx_bpmn_viewer_skeleton:
             script_args.extend(["--spfx-bpmn-viewer-skeleton", str(args.spfx_bpmn_viewer_skeleton)])
         if args.privileged_config:
