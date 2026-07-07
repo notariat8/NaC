@@ -38,6 +38,15 @@ from nac_m365_graph.runtime_certificate_readiness import (
     DEFAULT_CERTIFICATE_EXPIRY_CRITICAL_DAYS,
     DEFAULT_CERTIFICATE_EXPIRY_WARNING_DAYS,
     DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
+    DEFAULT_RUNTIME_SMOKE_STATE,
+)
+from nac_m365_graph.runtime_env_bootstrap import (
+    DEFAULT_RUNTIME_CERTIFICATE_PATH,
+    DEFAULT_RUNTIME_ENV_BOOTSTRAP_OUTPUT,
+    DEFAULT_RUNTIME_PRIVATE_KEY_PATH,
+    build_runtime_env_bootstrap,
+    load_runtime_env_state,
+    write_runtime_env_bootstrap_artifact,
 )
 from nac_m365_graph.runtime_smoke import DEFAULT_RUNTIME_SMOKE_OUTPUT
 from nac_observability.time_ledger import (
@@ -272,6 +281,7 @@ def build_parser() -> argparse.ArgumentParser:
             "privileged-apply",
             "runtime-certificate-expiry-monitor",
             "runtime-certificate-readiness",
+            "runtime-env-bootstrap",
             "runtime-smoke",
             "runtime-metadata",
             "mcp-manifest",
@@ -345,6 +355,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--runtime-certificate-expiry-output",
         type=Path,
         help="Pfad fuer das redigierte Runtime-Certificate-Expiry-Monitor-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-env-bootstrap-output",
+        type=Path,
+        help="Pfad fuer das redigierte Runtime-Env-Bootstrap-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-certificate-path",
+        type=Path,
+        help="Lokaler Runtime-Certificate-Pfad fuer das nicht-geheime Env-Bootstrap.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-private-key-path",
+        type=Path,
+        help="Lokaler Runtime-Private-Key-Pfad fuer das nicht-geheime Env-Bootstrap; Inhalt wird nicht gelesen.",
     )
     teams_sharepoint.add_argument(
         "--runtime-certificate-warning-days",
@@ -1385,6 +1410,48 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "runtime-env-bootstrap":
+            runtime_state_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.runtime_smoke_state,
+                DEFAULT_RUNTIME_SMOKE_STATE,
+            )
+            output_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.runtime_env_bootstrap_output,
+                DEFAULT_RUNTIME_ENV_BOOTSTRAP_OUTPUT,
+            )
+            certificate_path = args.runtime_certificate_path or DEFAULT_RUNTIME_CERTIFICATE_PATH
+            private_key_path = args.runtime_private_key_path or DEFAULT_RUNTIME_PRIVATE_KEY_PATH
+            try:
+                runtime_state = load_runtime_env_state(runtime_state_path)
+                bootstrap = build_runtime_env_bootstrap(
+                    runtime_state,
+                    certificate_path=certificate_path,
+                    private_key_path=private_key_path,
+                )
+                write_runtime_env_bootstrap_artifact(bootstrap.readiness, output_path)
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                payload = {
+                    "status": "BLOCKED",
+                    "summary": {
+                        "runtime_state_path": str(runtime_state_path),
+                        "artifact_path": str(output_path),
+                        "executes_graph_requests": False,
+                        "executes_graph_writes": False,
+                    },
+                    "errors": [str(exc)],
+                }
+                print_json(payload) if args.format == "json" else print(f"STATUS: {payload['status']}")
+                return 2
+            bootstrap.readiness["summary"]["artifact_path"] = str(output_path)
+            if args.format == "json":
+                print_json(bootstrap.readiness)
+            else:
+                print(f"STATUS: {bootstrap.readiness['status']}")
+                print(f"Artifact: {output_path}")
+            return 0 if bootstrap.readiness["status"] == "PASSED" else 2
+
         if args.teams_sharepoint_command == "release-gate-run":
             payload, return_code = _run_m365_release_gate(repo_root, args)
             if args.format == "json":
@@ -1702,9 +1769,28 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     if args.release_gate_inventory_artifact:
         steps[5][1][3:3] = ["--release-gate-inventory-artifact", str(args.release_gate_inventory_artifact)]
 
+    runtime_env_overlay, runtime_env_summary = _m365_runtime_env_overlay(repo_root, args)
+    if runtime_env_summary["status"] != "PASSED":
+        return (
+            {
+                "status": "FAILED",
+                "summary": {
+                    "workspace_id": workspace_id,
+                    "correlation_id": correlation_id,
+                    "failed_step": "runtime_env_bootstrap",
+                    "steps_completed": 0,
+                    "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                    "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
+                },
+                "steps": [],
+                "errors": runtime_env_summary["errors"],
+            },
+            2,
+        )
     step_results: list[dict[str, Any]] = []
     for step_id, command in steps:
-        result = _run_nac_json_step(repo_root, command)
+        env_overlay = runtime_env_overlay if step_id in _M365_RELEASE_GATE_RUNTIME_ENV_STEPS else None
+        result = _run_nac_json_step(repo_root, command, env_overlay=env_overlay)
         step_results.append(
             {
                 "step": step_id,
@@ -1722,6 +1808,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                         "correlation_id": correlation_id,
                         "failed_step": step_id,
                         "steps_completed": len(step_results) - 1,
+                        "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                        "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
                     },
                     "steps": step_results,
                     "errors": [_step_error_message(result)],
@@ -1736,6 +1824,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "workspace_id": workspace_id,
                 "correlation_id": correlation_id,
                 "steps_completed": len(step_results),
+                "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
                 "evidence_output": str(evidence_output),
                 "evidence_json_output": str(evidence_json_output),
                 "artifact_index_output": str(artifact_index_output),
@@ -1747,12 +1837,65 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     )
 
 
-def _run_nac_json_step(repo_root: Path, command: list[str]) -> subprocess.CompletedProcess[str]:
+_M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
+    "runtime_smoke",
+    "runtime_metadata",
+    "mcp_smoke_suite",
+    "mcp_leftover_dry_run",
+}
+
+
+def _m365_runtime_env_overlay(repo_root: Path, args: argparse.Namespace) -> tuple[dict[str, str], dict[str, Any]]:
+    runtime_state_path = _resolve_m365_release_gate_path(repo_root, args.runtime_smoke_state, DEFAULT_RUNTIME_SMOKE_STATE)
+    certificate_path = args.runtime_certificate_path or DEFAULT_RUNTIME_CERTIFICATE_PATH
+    private_key_path = args.runtime_private_key_path or DEFAULT_RUNTIME_PRIVATE_KEY_PATH
+    try:
+        runtime_state = load_runtime_env_state(runtime_state_path)
+        bootstrap = build_runtime_env_bootstrap(
+            runtime_state,
+            certificate_path=certificate_path,
+            private_key_path=private_key_path,
+        )
+        return bootstrap.env_overlay, {
+            "status": bootstrap.readiness["status"],
+            "env_overlay_variable_names": bootstrap.readiness["summary"]["env_overlay_variable_names"],
+            "errors": _runtime_env_bootstrap_messages(bootstrap.readiness),
+        }
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {}, {
+            "status": "BLOCKED",
+            "env_overlay_variable_names": [],
+            "errors": [str(exc)],
+        }
+
+
+def _runtime_env_bootstrap_messages(readiness: dict[str, Any]) -> list[str]:
+    errors = readiness.get("errors")
+    if isinstance(errors, list) and errors:
+        return [str(error) for error in errors]
+    messages: list[str] = []
+    for check in readiness.get("checks", []):
+        if isinstance(check, dict) and check.get("status") == "REVIEW_REQUIRED":
+            messages.append(str(check.get("message", "runtime env bootstrap requires review")))
+    return messages or ["runtime env bootstrap did not pass"]
+
+
+def _run_nac_json_step(
+    repo_root: Path,
+    command: list[str],
+    *,
+    env_overlay: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = None
+    if env_overlay:
+        env = dict(os.environ)
+        env.update(env_overlay)
     return subprocess.run(
         [sys.executable, str(repo_root / "scripts" / "nac.py"), "--repo-root", str(repo_root), *command],
         cwd=repo_root,
         text=True,
         capture_output=True,
+        env=env,
         check=False,
     )
 
