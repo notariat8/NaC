@@ -253,6 +253,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[
             "validate",
             "plan",
+            "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
             "runtime-smoke",
@@ -281,6 +282,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--provisioned-state",
         type=Path,
         help="Optionaler nicht-geheimer provisionierter Teams/SharePoint-State.",
+    )
+    teams_sharepoint.add_argument(
+        "--privileged-applied-state",
+        type=Path,
+        help="Optionaler nicht-geheimer angewendeter Privileged-Change-State.",
     )
     teams_sharepoint.add_argument("--mcp-contract", type=Path, help="Optionaler Teams/SharePoint-Data-MCP-Vertrag.")
     teams_sharepoint.add_argument(
@@ -1265,6 +1271,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--privileged-config", str(args.privileged_config)])
         if args.provisioned_state:
             script_args.extend(["--provisioned-state", str(args.provisioned_state)])
+        if args.privileged_applied_state:
+            script_args.extend(["--privileged-applied-state", str(args.privileged_applied_state)])
         if args.mcp_contract:
             script_args.extend(["--mcp-contract", str(args.mcp_contract)])
         if args.runtime_smoke_output:

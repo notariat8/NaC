@@ -16,9 +16,12 @@ from nac_m365_graph.auth import GraphConfig, GraphConfigError, runtime_token_pro
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
+    DEFAULT_PRIVILEGED_APPLIED_STATE,
     DEFAULT_PRIVILEGED_CHANGE_CONFIG,
     DEFAULT_PROVISIONED_STATE,
+    build_application_owner_readiness,
     build_privileged_change_plan,
+    load_privileged_applied_state,
     load_privileged_change_config,
     load_provisioned_state,
     summarize_privileged_change_plan,
@@ -93,6 +96,7 @@ def parse_args() -> argparse.Namespace:
         choices=[
             "validate",
             "plan",
+            "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
             "runtime-smoke",
@@ -110,6 +114,7 @@ def parse_args() -> argparse.Namespace:
         ],
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
+            "application-owner-readiness is offline evidence for the technical-owner path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
             "mcp-stdio starts the local MCP adapter."
         ),
@@ -136,6 +141,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_PROVISIONED_STATE,
         help="Path to the non-secret provisioned Teams/SharePoint state export.",
+    )
+    parser.add_argument(
+        "--privileged-applied-state",
+        type=Path,
+        default=DEFAULT_PRIVILEGED_APPLIED_STATE,
+        help="Path to the non-secret privileged-change applied-state evidence export.",
     )
     parser.add_argument(
         "--mcp-contract",
@@ -670,6 +681,20 @@ def main() -> int:
                 "result": redacted_result,
             },
             args.json,
+        )
+
+    if args.command == "application-owner-readiness":
+        config = load_privileged_change_config(args.privileged_config)
+        applied_state = (
+            load_privileged_applied_state(args.privileged_applied_state)
+            if args.privileged_applied_state.exists()
+            else None
+        )
+        readiness = build_application_owner_readiness(config, applied_state)
+        return _emit(
+            readiness,
+            args.json,
+            return_code=0 if readiness["status"] == "PASSED" else 1,
         )
 
     if args.command in {"privileged-plan", "privileged-apply"}:

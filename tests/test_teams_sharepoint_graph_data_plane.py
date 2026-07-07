@@ -17,7 +17,9 @@ if str(SRC_ROOT) not in sys.path:
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_CHANGE_CONFIG,
     DEFAULT_PROVISIONED_STATE,
+    build_application_owner_readiness,
     build_privileged_change_plan,
+    load_privileged_applied_state,
     load_privileged_change_config,
     load_provisioned_state,
     summarize_privileged_change_plan,
@@ -342,6 +344,37 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(summary["by_action"]["assign_direct_application_owner"], 2)
         self.assertEqual(summary["by_action"]["verify_human_team_owner"], 2)
         self.assertEqual(summary["by_action"]["grant_runtime_sites_selected_site_permission"], 2)
+
+    def test_application_owner_readiness_is_offline_and_redacted(self) -> None:
+        config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
+        applied_state = load_privileged_applied_state(APPLIED_STATE)
+
+        readiness = build_application_owner_readiness(config, applied_state)
+        serialized = json.dumps(readiness)
+        checks = {check["id"]: check for check in readiness["checks"]}
+
+        self.assertEqual(readiness["status"], "PASSED")
+        self.assertFalse(readiness["summary"]["executes_graph_requests"])
+        self.assertFalse(readiness["summary"]["executes_graph_writes"])
+        self.assertFalse(readiness["summary"]["mandate_data_allowed"])
+        self.assertTrue(readiness["summary"]["graph_rest_only"])
+        self.assertFalse(readiness["summary"]["sdk_allowed"])
+        self.assertFalse(readiness["summary"]["legacy_sharepoint_api_allowed"])
+        self.assertFalse(readiness["summary"]["direct_application_owner_group_supported"])
+        self.assertEqual(readiness["summary"]["direct_application_owner_kind"], "user_or_service_principal")
+        self.assertEqual(readiness["summary"]["technical_owner_user"], "funktion8@funktion8.de")
+        self.assertTrue(readiness["summary"]["technical_owner_must_not_hold_m365_admin_roles"])
+        self.assertTrue(readiness["summary"]["technical_owner_license_terms_review_required"])
+        self.assertEqual(readiness["summary"]["provisioning_app_count"], 1)
+        self.assertEqual(readiness["summary"]["runtime_app_count"], 1)
+        self.assertTrue(readiness["summary"]["runtime_sites_selected_required"])
+        self.assertEqual(readiness["summary"]["runtime_site_permissions_recorded"], 2)
+        self.assertFalse(readiness["summary"]["secret_material_stored"])
+        self.assertEqual(checks["technical_owner_license_terms_review"]["status"], "REVIEW_REQUIRED")
+        self.assertEqual(checks["secret_material_not_stored"]["status"], "PASSED")
+        self.assertNotIn("870c862b-56f7-4c9b-b0d9-f1f7d32c835c", serialized)
+        self.assertNotIn("6845f6c3-896c-4e44-a50f-2a5086a13fac", serialized)
+        self.assertNotIn("funktion8.sharepoint.com,31324d31", serialized)
 
     def test_privileged_apply_is_idempotent_with_graph_rest_client_boundary(self) -> None:
         config = load_privileged_change_config(DEFAULT_PRIVILEGED_CHANGE_CONFIG)
@@ -672,6 +705,22 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             2,
         )
 
+    def test_cli_application_owner_readiness_runs_without_credentials(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "application-owner-readiness", "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertEqual(payload["summary"]["governance_group"], "nac_platform_admins")
+        self.assertEqual(payload["summary"]["technical_owner_user"], "funktion8@funktion8.de")
+
     def test_cli_privileged_apply_requires_owner_approval_before_credentials(self) -> None:
         result = subprocess.run(
             [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "privileged-apply", "--json"],
@@ -737,6 +786,31 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["by_action"]["ensure_application"], 2)
+
+    def test_nac_cli_exposes_application_owner_readiness(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "application-owner-readiness",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertTrue(payload["summary"]["owner_gate_required_for_live_apply"])
 
     def test_nac_cli_exposes_m365_teams_sharepoint_runtime_smoke_gate(self) -> None:
         result = subprocess.run(
