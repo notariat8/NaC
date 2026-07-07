@@ -133,7 +133,7 @@ muss.
 
 ## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
 
-Die Smoke Suite ist der Standard-Betriebsnachweis nach einem gemergten
+`release-gate-run` ist der Standard-Betriebsnachweis nach einem gemergten
 Änderungssatz, wenn dieser eine dieser Flächen berührt:
 
 - `teams-sharepoint-data-mcp`-Vertrag, Tool-Grenzen oder Adapterverhalten,
@@ -144,12 +144,15 @@ Die Smoke Suite ist der Standard-Betriebsnachweis nach einem gemergten
   betreffen.
 
 Der Nachweis darf nicht automatisch ohne Freigabe laufen. Er bleibt ein
-separates Owner-Gate, weil er im Live-Tenant eine synthetische Akte schreibt
-und löscht. Nach der Freigabe muss der Agent den Lauf vollständig abschließen:
-Write, Read, Cleanup, redigiertes Artefakt, Workspace-Clean-State und
-konkretes Ergebnis in der Abschlussmeldung. Bleibt nach dem Lauf ein
-synthetischer Rest zurück, ist unmittelbar der owner-gated
-`mcp-smoke-leftover-cleanup`-Pfad vorzubereiten.
+separates Owner-Gate, weil der intern abgedeckte
+`mcp-smoke-suite --mcp-suite-cleanup`-Schritt im Live-Tenant eine synthetische
+Akte schreibt und löscht. Nach der Freigabe muss der Agent den Lauf
+vollständig abschließen: Runtime-Smoke, Runtime-Metadata, Write, Read,
+Cleanup, Leftover-Dry-Run, Evidence Export, Workspace-Clean-State und
+konkretes Ergebnis in der Abschlussmeldung. Die MCP Smoke Suite bleibt
+Diagnose-/Komponentenpfad, wenn nur dieser Schritt isoliert reproduziert werden
+muss. Bleibt nach dem Lauf ein synthetischer Rest zurück, ist unmittelbar der
+owner-gated `mcp-smoke-leftover-cleanup`-Pfad vorzubereiten.
 
 Bei Nutzung von `release-gate-run` erzeugt der Runner den redigierten
 Abschlussbericht bereits im gleichen owner-gated Lauf. Der folgende Offline-
