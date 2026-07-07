@@ -1,6 +1,6 @@
 {
   "state_version": "nac.m365-runtime-metadata/v0.1",
-  "captured_at_utc": "2026-07-06T05:03:10Z",
+  "captured_at_utc": "2026-07-07T07:27:36Z",
   "source_provisioned_state": "deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json",
   "source_runtime_smoke_state": "deploy/m365/teams-sharepoint/nac-mvp.runtime-smoke.f8.json",
   "tenant": {
@@ -11,7 +11,7 @@
   "runtime_application": {
     "display_name": "NaC M365 Runtime",
     "client_id": "0d98b5a5-479b-452d-9b43-c3fbbcab9d24",
-    "certificate_thumbprint_sha1": "316556FE00B228235DC066C82CF615AF08B738D1",
+    "certificate_thumbprint_sha1": "563B190496ABCBD1B89AC0CFC955A510CF30C3D0",
     "authentication_mode": "client_credentials_with_certificate",
     "application_permissions": [
       "Sites.Selected"
