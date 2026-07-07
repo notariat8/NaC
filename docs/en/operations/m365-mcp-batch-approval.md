@@ -177,8 +177,11 @@ report in the same owner-gated run and also copies the existing redacted
 artifacts to `out/m365/teams-sharepoint/release-gates/<correlation-id>/`. That
 folder also contains `release-gate-retention-index.redacted.json`, so multiple
 gate runs remain auditable side by side while `out/m365/teams-sharepoint/`
-continues to hold the latest overwritten state. The following offline exporter
-remains only for diagnostics or re-exporting existing artifacts:
+continues to hold the latest overwritten state. After the retention step, the
+runner refreshes the completion report, evidence JSON and artifact index with
+the retention path and copies those refreshed artifacts into the run folder
+again. The following offline exporter remains only for diagnostics or
+re-exporting existing artifacts:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \

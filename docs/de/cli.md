@@ -420,6 +420,13 @@ kopiert der Runner die vorhandenen redigierten Artefakte zusätzlich in
 `release-gate-retention-index.redacted.json`. Diese Retention-Kopie verhindert,
 dass Audits nur den zuletzt überschriebenen `latest`-Stand vergleichen können;
 der Laufordner kann mit `--release-gate-run-artifact-dir` überschrieben werden.
+Nach dem Kopieren aktualisiert der Runner
+`release-gate-evidence.redacted.md`,
+`release-gate-evidence.redacted.json` und
+`release-gate-artifact-index.redacted.json` mit dem Retention-Pfad und kopiert
+diese aktualisierten Artefakte erneut in den Laufordner. Damit zeigt auch die
+archivierte Abschlussbericht-Kopie auf ihren
+`release-gate-retention-index.redacted.json`.
 Der offline
 `mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl; der
 Runner führt ihn nicht automatisch aus und hängt ohne explizites

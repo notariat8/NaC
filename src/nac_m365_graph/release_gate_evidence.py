@@ -156,6 +156,25 @@ def attach_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, An
     return evidence
 
 
+def attach_release_gate_retention_reference(
+    evidence: dict[str, Any],
+    *,
+    artifact_dir: str,
+    retention_index_path: str,
+    copied_artifact_count: int,
+) -> dict[str, Any]:
+    summary = evidence.setdefault("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+        evidence["summary"] = summary
+    summary["release_gate_run_artifact_dir"] = artifact_dir
+    summary["release_gate_retention_index_path"] = retention_index_path
+    summary["retained_artifact_count"] = copied_artifact_count
+    summary["retention_index_attached"] = True
+    attach_release_gate_artifact_index(evidence)
+    return evidence
+
+
 def build_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, Any]:
     summary = _dict(evidence.get("summary"))
     artifacts = []
@@ -187,6 +206,7 @@ def build_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, Any
         "report_path": summary.get("report_path"),
         "json_path": summary.get("json_path"),
         "artifact_index_path": summary.get("artifact_index_path"),
+        "retention": _retention_summary(summary),
         "artifacts": artifacts,
         "privacy": {
             "source_artifacts_must_be_redacted": True,
@@ -222,11 +242,27 @@ def render_release_gate_evidence_markdown(evidence: dict[str, Any]) -> str:
         f"- Graph requests executed by exporter: `{str(False).lower()}`",
         f"- Tenant writes/deletes executed by exporter: `{str(False).lower()}`",
         "",
-        "## Steps",
-        "",
-        "| Step | Status | Artifact | Summary |",
-        "| --- | --- | --- | --- |",
     ]
+    retention = _retention_summary(summary)
+    if retention["attached"]:
+        lines.extend(
+            [
+                "## Artifact Retention",
+                "",
+                f"- Run artifact directory: `{retention['artifact_dir']}`",
+                f"- Retention index: `{retention['retention_index_path']}`",
+                f"- Retained artifacts: `{retention['copied_artifact_count']}`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Steps",
+            "",
+            "| Step | Status | Artifact | Summary |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
     for step in evidence.get("steps", []):
         if not isinstance(step, dict):
             continue
@@ -734,6 +770,15 @@ def _all_privacy_flag(steps: list[dict[str, Any]], key: str, *, default: bool) -
 
 def _any_privacy_flag(steps: list[dict[str, Any]], key: str) -> bool:
     return any(_dict(step.get("summary")).get(key) is True for step in steps)
+
+
+def _retention_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "attached": summary.get("retention_index_attached") is True,
+        "artifact_dir": summary.get("release_gate_run_artifact_dir"),
+        "retention_index_path": summary.get("release_gate_retention_index_path"),
+        "copied_artifact_count": summary.get("retained_artifact_count"),
+    }
 
 
 def _step_summary_text(step: dict[str, Any]) -> str:

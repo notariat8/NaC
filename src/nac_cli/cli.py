@@ -30,6 +30,7 @@ from nac_m365_graph.release_gate_evidence import (
     DEFAULT_EVIDENCE_JSON_OUTPUT,
     DEFAULT_EVIDENCE_OUTPUT,
     attach_release_gate_artifact_index,
+    attach_release_gate_retention_reference,
     build_release_gate_evidence,
     DEFAULT_RUNTIME_ENV_BOOTSTRAP_ARTIFACT,
     write_release_gate_artifact_index,
@@ -1879,6 +1880,30 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             "release_gate_artifact_index": artifact_index_output,
         },
     )
+    _refresh_m365_release_gate_evidence_with_retention(
+        evidence_output=evidence_output,
+        evidence_json_output=evidence_json_output,
+        artifact_index_output=artifact_index_output,
+        retention_index=retention_index,
+    )
+    retention_index = _retain_m365_release_gate_artifacts(
+        artifact_dir=release_gate_run_artifact_dir,
+        workspace_id=workspace_id,
+        correlation_id=correlation_id,
+        status="PASSED",
+        artifacts={
+            "runtime_certificate_expiry": runtime_certificate_expiry_output,
+            "runtime_env_bootstrap": runtime_env_bootstrap_output,
+            "runtime_smoke": runtime_smoke_output,
+            "runtime_metadata": runtime_metadata_output,
+            "mcp_inventory_smoke": release_gate_inventory_artifact,
+            "mcp_smoke_suite": mcp_suite_output,
+            "mcp_leftover_dry_run": mcp_leftover_output,
+            "release_gate_evidence_report": evidence_output,
+            "release_gate_evidence_json": evidence_json_output,
+            "release_gate_artifact_index": artifact_index_output,
+        },
+    )
 
     return (
         {
@@ -1910,6 +1935,27 @@ _M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
     "mcp_smoke_suite",
     "mcp_leftover_dry_run",
 }
+
+
+def _refresh_m365_release_gate_evidence_with_retention(
+    *,
+    evidence_output: Path,
+    evidence_json_output: Path,
+    artifact_index_output: Path,
+    retention_index: dict[str, Any],
+) -> None:
+    evidence = json.loads(evidence_json_output.read_text(encoding="utf-8"))
+    if not isinstance(evidence, dict):
+        raise ValueError(f"invalid release gate evidence JSON: {evidence_json_output}")
+    attach_release_gate_retention_reference(
+        evidence,
+        artifact_dir=str(retention_index["artifact_dir"]),
+        retention_index_path=str(retention_index["index_path"]),
+        copied_artifact_count=int(retention_index["copied_artifact_count"]),
+    )
+    write_release_gate_evidence_report(evidence, evidence_output)
+    write_release_gate_evidence_json(evidence, evidence_json_output)
+    write_release_gate_artifact_index(evidence["artifact_index"], artifact_index_output)
 
 
 def _resolve_m365_release_gate_run_artifact_dir(
