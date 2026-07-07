@@ -416,7 +416,10 @@ redigierten Standardartefakte unter `out/m365/teams-sharepoint/`, verlangt
 `--owner-approved` und lässt den abschließenden Evidence-Export mit
 `--release-gate-require-runtime-artifacts` laufen. Der offline
 `mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl; der
-Runner führt ihn nicht automatisch aus. Die Einzelbefehle bleiben Diagnose- und
+Runner führt ihn nicht automatisch aus und hängt ohne explizites
+`--release-gate-inventory-artifact` absichtlich einen fehlenden
+`NOT_ATTACHED`-Pfad an, damit lokale Altartefakte mit alter Correlation-ID den
+One-Shot nicht blockieren. Die Einzelbefehle bleiben Diagnose- und
 Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden muss.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter

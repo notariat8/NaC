@@ -103,12 +103,56 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertIn("--mcp-leftover-dry-run", calls[4])
         self.assertIn("--release-gate-require-runtime-artifacts", calls[5])
         self.assertIn("--release-gate-inventory-artifact", calls[5])
+        inventory_arg_index = calls[5].index("--release-gate-inventory-artifact") + 1
+        self.assertTrue(calls[5][inventory_arg_index].endswith("mcp-inventory-smoke.redacted.json"))
         self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[5])
         self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[5])
         bootstrap_arg_index = calls[5].index("--release-gate-runtime-env-bootstrap-artifact") + 1
         self.assertEqual(calls[5][bootstrap_arg_index], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
+
+    def test_release_gate_run_pins_missing_inventory_artifact_when_not_explicitly_attached(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            calls.append(command)
+            step = command[command.index("teams-sharepoint") + 1]
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=json.dumps({"status": "PASSED", "step": step}),
+                stderr="",
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            certificate_path.touch()
+            private_key_path.touch()
+            with patch.object(cli.subprocess, "run", side_effect=fake_run):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--owner-approved",
+                        "--runtime-certificate-path",
+                        str(certificate_path),
+                        "--runtime-private-key-path",
+                        str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
+                        "--format",
+                        "json",
+                    ]
+                )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        evidence_call = calls[5]
+        self.assertIn("--release-gate-inventory-artifact", evidence_call)
+        inventory_arg_index = evidence_call.index("--release-gate-inventory-artifact") + 1
+        self.assertTrue(evidence_call[inventory_arg_index].endswith("mcp-inventory-smoke.not-attached.redacted.json"))
 
     def test_release_gate_run_bootstraps_runtime_env_for_live_steps(self) -> None:
         calls: list[tuple[str, dict[str, str] | None]] = []

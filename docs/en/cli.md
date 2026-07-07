@@ -407,9 +407,11 @@ first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
 The offline `mcp-inventory-smoke` remains a separate diagnostic and evidence
-command; the runner does not execute it automatically. The individual commands
-remain the diagnostic and fallback path when a runner step must be reproduced in
-isolation.
+command; the runner does not execute it automatically and, without an explicit
+`--release-gate-inventory-artifact`, intentionally attaches a missing
+`NOT_ATTACHED` path so stale local artifacts with an old correlation ID cannot
+block the one-shot run. The individual commands remain the diagnostic and
+fallback path when a runner step must be reproduced in isolation.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
