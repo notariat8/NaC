@@ -151,6 +151,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
                 ),
                 (
+                    "m365_release_readiness_gate",
+                    "M365 Release Readiness Gate",
+                    [sys.executable, "scripts/validate_m365_release_readiness_gate.py"],
+                ),
+                (
                     "m365_sharepoint_bpmn_viewer_adapter",
                     "M365 SharePoint BPMN Viewer Adapter",
                     [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],

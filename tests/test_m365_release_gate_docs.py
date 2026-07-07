@@ -104,6 +104,34 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("release-gate-write-readiness", content)
             self.assertIn("release_gate_readiness=READY", content)
 
+    def test_docs_define_release_readiness_as_mvp_go_no_go_standard(self) -> None:
+        documents = (
+            (
+                "docs/de/operations/m365-mcp-batch-approval.md",
+                "## MVP-Go/No-Go-Abnahmekriterium",
+                "`release-readiness` ist das verbindliche MVP-Go/No-Go-Abnahmekriterium",
+                "Keine MVP-Freigabe erfolgt nur auf Basis",
+            ),
+            (
+                "docs/en/operations/m365-mcp-batch-approval.md",
+                "## MVP Go/No-Go Acceptance Criterion",
+                "`release-readiness` is the binding MVP Go/No-Go acceptance criterion",
+                "No MVP approval is based only on",
+            ),
+        )
+
+        for relative_path, heading, rule_marker, rejection_marker in documents:
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+            self.assertIn(heading, content)
+            self.assertIn(rule_marker, content)
+            self.assertIn(rejection_marker, content)
+            self.assertIn("--release-gate-write-audit-pack", content)
+            self.assertIn("--release-gate-write-readiness", content)
+            self.assertIn("--release-gate-readiness-require-audit-pack", content)
+            self.assertIn("mvp_release_readiness=READY", content)
+            self.assertIn("release_gate_readiness=READY", content)
+
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)

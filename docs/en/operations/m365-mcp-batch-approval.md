@@ -162,6 +162,32 @@ With `--release-gate-write-readiness`, the one-shot runner can write this
 status directly for the current correlation ID; the standalone command remains
 the diagnostic and re-run path for existing retention runs.
 
+## MVP Go/No-Go Acceptance Criterion
+
+`release-readiness` is the binding MVP Go/No-Go acceptance criterion for the
+M365 runtime path. An M365 MVP runtime approval is only `READY` when the
+one-shot runner writes the audit pack and readiness status in the same
+owner-gated execution and the output contains `mvp_release_readiness=READY` and
+`release_gate_readiness=READY`.
+
+The standard approval run therefore always uses these flags:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
+  --format json
+```
+
+No MVP approval is based only on `mcp-smoke-suite`, `runtime-smoke` or console
+output. These individual commands remain diagnostic and reproduction paths; the
+approval decision is bound to the redacted retention index,
+`release-gate-evidence`, audit pack and `release-readiness`.
+
 ## Runtime Certificate Rotation Approval
 
 After a `runtime-certificate-readiness` warning, the agent renders the complete

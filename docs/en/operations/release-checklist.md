@@ -41,6 +41,8 @@ Before tag and release, the affected checks must be freshly documented:
 - `python scripts/nac.py doctor --profile strict`
 - affected BPMN, KG, plugin or QMS checks when the scope changes those areas,
 - GitHub checks for privacy, secrets and quality gate,
+- For M365 MVP runtime approvals: `release-readiness` as Go/No-Go evidence
+  with `mvp_release_readiness=READY` and `release_gate_readiness=READY`,
 - review decision according to the selected delivery mode.
 
 If a check does not apply, document why. A missing tool is not a silent
@@ -82,6 +84,8 @@ A release may be treated as approved only when:
 - the approved commit is unambiguous,
 - the tag points to exactly that commit,
 - all mandatory checks and reviews are documented,
+- M365 MVP runtime changes reference redacted `release-readiness` evidence with
+  `mvp_release_readiness=READY`,
 - the rollout mode is known,
 - a fallback state is known,
 - release notes, artifacts and GitHub comments contain no secrets or real

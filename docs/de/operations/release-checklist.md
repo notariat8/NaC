@@ -43,6 +43,8 @@ Vor Tag und Release müssen die betroffenen Prüfungen frisch dokumentiert sein:
 - betroffene BPMN-, KG-, Plugin- oder QMS-Prüfungen, wenn der Scope diese
   Flächen ändert,
 - GitHub-Checks für Privacy, Secrets und Quality Gate,
+- Für M365-MVP-Laufzeitfreigaben: `release-readiness` als Go/No-Go-Nachweis
+  mit `mvp_release_readiness=READY` und `release_gate_readiness=READY`,
 - Review-Entscheidung nach dem gewählten Delivery Mode.
 
 Wenn eine Prüfung nicht anwendbar ist, wird der Grund dokumentiert. Ein
@@ -85,6 +87,8 @@ Ein Release darf nur als freigegeben gelten, wenn:
 - der freigegebene Commit eindeutig ist,
 - der Tag auf genau diesem Commit liegt,
 - alle Pflichtprüfungen und Reviews dokumentiert sind,
+- M365-MVP-Laufzeitänderungen einen redigierten `release-readiness`-Nachweis
+  mit `mvp_release_readiness=READY` referenzieren,
 - der Rollout-Modus feststeht,
 - ein Rückfallstand bekannt ist,
 - keine Secrets oder echten Mandatsdaten in Release Notes, Artefakten oder
