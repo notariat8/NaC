@@ -131,6 +131,28 @@ dabei eigene redigierte Runtime-Artefakte, damit der Abschlussbericht
 Diagnose-/Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden
 muss.
 
+## Runtime-Zertifikatsrotation-Freigabe
+
+Nach einer `runtime-certificate-readiness`-Warnung rendert der Agent das
+komplette Zertifikatsrotationspaket offline:
+
+```bash
+python3 scripts/nac.py batch-approval m365 \
+  --batch-mode runtime-certificate-rotation \
+  --workspace-id notary_team_01 \
+  --correlation-id <correlation-id> \
+  --format json
+```
+
+Der Renderer führt keine GitHub- oder Graph-Schreibaktion aus und liest keine
+Zertifikats-, Private-Key- oder Secret-Dateien. Er bündelt die nötigen
+Owner-Gates in einem kopierbaren Freigabetext: lokales Runtime-Zertifikat
+erzeugen, Public Certificate in Entra hochladen, lokale Runtime-Credential-
+Grenze aktualisieren, `release-gate-run` live ausführen, nicht-geheime
+Runtime-Evidence per PR refreshen, altes Entra-Credential entfernen, lokales
+altes Zertifikatsarchiv löschen und die lokale delegated M365-CLI-Session
+abmelden.
+
 ## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
 
 `release-gate-run` ist der Standard-Betriebsnachweis nach einem gemergten

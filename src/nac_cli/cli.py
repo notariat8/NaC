@@ -216,7 +216,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     batch_m365.add_argument(
         "--batch-mode",
-        choices=["merge", "live-smoke", "merge-and-live-smoke", "release-gate"],
+        choices=[
+            "merge",
+            "live-smoke",
+            "merge-and-live-smoke",
+            "release-gate",
+            "runtime-certificate-rotation",
+        ],
         default="merge",
         help="Batch-Freigabetext, der gerendert werden soll.",
     )
@@ -1159,12 +1165,105 @@ def _build_m365_batch_approval_payload(
             ],
         }
 
+    if mode == "runtime-certificate-rotation":
+        release_gate_case_id_arg = f"--mcp-smoke-case-id {synthetic_case_id} " if synthetic_case_id else ""
+        readiness_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint "
+            "runtime-certificate-readiness --format json"
+        )
+        release_gate_run_command = (
+            "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
+            f"--mcp-smoke-workspace-id {workspace_id} "
+            f"{release_gate_case_id_arg}"
+            f"--mcp-smoke-correlation-id {correlation_id} "
+            "--format json"
+        )
+        approvals["runtime_certificate_rotation"] = {
+            "approval_text": (
+                "Freigabe: M365 Runtime-Zertifikat rotieren als gebündelten Owner-gated "
+                "Lifecycle: neues lokales Runtime-Zertifikat erzeugen, Public Certificate "
+                "in Entra für die Runtime-App hochladen, lokale Runtime-Credential-Grenzen "
+                f"aktualisieren, M365 Runtime Release-Gate live im Workspace {workspace_id} "
+                "ausführen, nicht-geheime Runtime-Evidence refreshen, altes Runtime-Zertifikat "
+                "aus Entra entfernen, lokales Archiv des alten Zertifikats löschen und lokale "
+                "M365-CLI-Session abmelden."
+            ),
+            "owner_gate": "m365_runtime_certificate_rotation_lifecycle",
+            "workspace_id": workspace_id,
+            "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
+            "commands": [
+                readiness_command,
+                release_gate_run_command,
+            ],
+            "operator_sequence": [
+                {
+                    "step": "runtime_certificate_readiness",
+                    "owner_gate": "none",
+                    "command": readiness_command,
+                    "executes_graph_requests": False,
+                    "reads_certificate_files": False,
+                    "reads_private_key_files": False,
+                },
+                {
+                    "step": "generate_local_runtime_certificate",
+                    "owner_gate": "local_certificate_material",
+                    "stores_in_repo": False,
+                    "expected_location": "/tmp or approved local secret storage",
+                },
+                {
+                    "step": "upload_public_certificate_to_entra_runtime_app",
+                    "owner_gate": "entra_app_credential_change",
+                    "graph_boundary": "Microsoft Graph REST v1.0 only",
+                    "private_key_uploaded": False,
+                },
+                {
+                    "step": "update_local_runtime_credential_boundary",
+                    "owner_gate": "local_secret_boundary_change",
+                    "stores_in_repo": False,
+                },
+                {
+                    "step": "release_gate_run",
+                    "owner_gate": "m365_runtime_release_gate",
+                    "command": release_gate_run_command,
+                    "covers_steps": [
+                        "runtime_smoke",
+                        "runtime_metadata",
+                        "mcp_smoke_suite",
+                        "mcp_smoke_leftover_cleanup_dry_run",
+                        "release_gate_evidence_export",
+                    ],
+                },
+                {
+                    "step": "refresh_non_secret_runtime_evidence_pr",
+                    "owner_gate": "merge_to_main_and_branch_cleanup",
+                    "stores_secret_material": False,
+                },
+                {
+                    "step": "remove_stale_entra_runtime_certificate",
+                    "owner_gate": "entra_app_credential_delete",
+                    "requires_successful_new_certificate_gate": True,
+                },
+                {
+                    "step": "delete_local_old_certificate_archive",
+                    "owner_gate": "local_destructive_secret_cleanup",
+                    "requires_stale_entra_credential_removed": True,
+                },
+                {
+                    "step": "logout_local_delegated_m365_cli_session",
+                    "owner_gate": "local_session_cleanup",
+                },
+            ],
+        }
+
     return {
         "status": "PASSED",
         "summary": {
             "batch_mode": mode,
             "executes_github_writes": False,
             "executes_graph_requests": False,
+            "reads_certificate_files": False,
+            "reads_private_key_files": False,
+            "reads_secret_values": False,
             "owner_gates": [approval["owner_gate"] for approval in approvals.values()],
         },
         "result": approvals,
