@@ -236,6 +236,50 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         )
         self.assertIn("release_gate_audit_pack", release_gate["operator_sequence"][0]["covers_steps"])
 
+    def test_batch_approval_release_gate_can_render_readiness_runner_command(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "batch-approval",
+                "m365",
+                "--batch-mode",
+                "release-gate",
+                "--workspace-id",
+                "notary_team_01",
+                "--correlation-id",
+                "release-gate-corr",
+                "--release-gate-write-audit-pack",
+                "--release-gate-write-readiness",
+                "--release-gate-readiness-require-audit-pack",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["summary"]["release_gate_write_audit_pack"])
+        self.assertTrue(payload["summary"]["release_gate_write_readiness"])
+        self.assertTrue(payload["summary"]["release_gate_readiness_require_audit_pack"])
+
+        release_gate = payload["result"]["release_gate"]
+        self.assertTrue(release_gate["release_gate_write_readiness"])
+        self.assertTrue(release_gate["release_gate_readiness_require_audit_pack"])
+        self.assertIn("MVP-Readiness-Status", release_gate["approval_text"])
+        command_args = shlex.split(release_gate["commands"][0])
+        self.assertIn("--release-gate-write-audit-pack", command_args)
+        self.assertIn("--release-gate-write-readiness", command_args)
+        self.assertIn("--release-gate-readiness-require-audit-pack", command_args)
+        self.assertIn("release_gate_readiness", release_gate["operator_sequence"][0]["covers_steps"])
+
     def test_batch_approval_renders_runtime_certificate_rotation_lifecycle_without_writes(self) -> None:
         result = subprocess.run(
             [

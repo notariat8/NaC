@@ -298,6 +298,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ergaenzt Release-Gate-Freigabetexte um das direkte redigierte Offline-Audit-Pack.",
     )
     batch_m365.add_argument(
+        "--release-gate-write-readiness",
+        action="store_true",
+        help="Ergaenzt Release-Gate-Freigabetexte um den direkten redigierten MVP-Readiness-Status.",
+    )
+    batch_m365.add_argument(
+        "--release-gate-readiness-require-audit-pack",
+        action="store_true",
+        help="Blockiert den direkten MVP-Readiness-Status, wenn kein passendes Audit-Pack mit PASSED vorliegt.",
+    )
+    batch_m365.add_argument(
         "--release-gate-compare-left",
         help="Optionale Baseline-Correlation-ID fuer das Audit-Pack im Release-Gate-Batch-Approval.",
     )
@@ -613,6 +623,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Schreibt nach erfolgreichem release-gate-run direkt ein redigiertes Offline-Audit-Pack; "
             "rechts ist standardmaessig die aktuelle Correlation-ID."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-write-readiness",
+        action="store_true",
+        help=(
+            "Schreibt nach erfolgreichem release-gate-run direkt den redigierten MVP-Readiness-Status "
+            "des aktuellen Laufs und blockiert bei NOT_READY."
         ),
     )
     teams_sharepoint.add_argument(
@@ -1309,6 +1327,8 @@ def command_batch_approval(args: argparse.Namespace) -> int:
             synthetic_case_id=args.synthetic_case_id,
             correlation_id=args.correlation_id,
             release_gate_write_audit_pack=args.release_gate_write_audit_pack,
+            release_gate_write_readiness=args.release_gate_write_readiness,
+            release_gate_readiness_require_audit_pack=args.release_gate_readiness_require_audit_pack,
             release_gate_compare_left=args.release_gate_compare_left,
             release_gate_audit_pack_dir=args.release_gate_audit_pack_dir,
         )
@@ -1329,6 +1349,8 @@ def _build_m365_batch_approval_payload(
     synthetic_case_id: str | None,
     correlation_id: str,
     release_gate_write_audit_pack: bool = False,
+    release_gate_write_readiness: bool = False,
+    release_gate_readiness_require_audit_pack: bool = False,
     release_gate_compare_left: str | None = None,
     release_gate_audit_pack_dir: str | None = None,
 ) -> dict:
@@ -1388,6 +1410,8 @@ def _build_m365_batch_approval_payload(
             correlation_id=correlation_id,
             synthetic_case_id=synthetic_case_id,
             write_audit_pack=release_gate_write_audit_pack,
+            write_readiness=release_gate_write_readiness,
+            readiness_require_audit_pack=release_gate_readiness_require_audit_pack,
             compare_left=release_gate_compare_left,
             audit_pack_dir=release_gate_audit_pack_dir,
         )
@@ -1400,26 +1424,33 @@ def _build_m365_batch_approval_payload(
             "mcp_smoke_leftover_cleanup_dry_run",
             "release_gate_evidence_export",
         ]
-        audit_pack_suffix = ""
+        post_step_suffixes: list[str] = []
         if release_gate_write_audit_pack:
             release_gate_covers_steps.append("release_gate_audit_pack")
-            audit_pack_suffix = " sowie direktem redigiertem Release-Gate-Audit-Pack"
+            audit_pack_suffix = "direktem redigiertem Release-Gate-Audit-Pack"
             if release_gate_compare_left:
                 audit_pack_suffix += f" gegen Baseline {release_gate_compare_left}"
             else:
                 audit_pack_suffix += " als Self-Compare des aktuellen Laufs"
+            post_step_suffixes.append(audit_pack_suffix)
+        if release_gate_write_readiness:
+            release_gate_covers_steps.append("release_gate_readiness")
+            post_step_suffixes.append("direktem redigiertem MVP-Readiness-Status")
+        post_step_suffix = f" sowie {' und '.join(post_step_suffixes)}" if post_step_suffixes else ""
         approvals["release_gate"] = {
             "approval_text": (
                 "Freigabe: M365 Runtime Release-Gate live über den One-Shot-Runner "
                 f"im Workspace {workspace_id} ausführen, inklusive "
                 "runtime-certificate-expiry-monitor, runtime-smoke, "
                 "runtime-metadata, MCP Smoke Suite mit Cleanup, Leftover-Dry-Run "
-                f"und release-gate-evidence Export{audit_pack_suffix}."
+                f"und release-gate-evidence Export{post_step_suffix}."
             ),
             "owner_gate": "m365_runtime_release_gate",
             "workspace_id": workspace_id,
             "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
             "release_gate_write_audit_pack": release_gate_write_audit_pack,
+            "release_gate_write_readiness": release_gate_write_readiness,
+            "release_gate_readiness_require_audit_pack": release_gate_readiness_require_audit_pack,
             "release_gate_compare_left": release_gate_compare_left,
             "release_gate_audit_pack_dir": release_gate_audit_pack_dir,
             "commands": [release_gate_run_command],
@@ -1443,6 +1474,8 @@ def _build_m365_batch_approval_payload(
             correlation_id=correlation_id,
             synthetic_case_id=synthetic_case_id,
             write_audit_pack=release_gate_write_audit_pack,
+            write_readiness=release_gate_write_readiness,
+            readiness_require_audit_pack=release_gate_readiness_require_audit_pack,
             compare_left=release_gate_compare_left,
             audit_pack_dir=release_gate_audit_pack_dir,
         )
@@ -1455,21 +1488,29 @@ def _build_m365_batch_approval_payload(
             "mcp_smoke_leftover_cleanup_dry_run",
             "release_gate_evidence_export",
         ]
-        rotation_audit_pack_suffix = ""
+        rotation_post_step_suffixes: list[str] = []
         if release_gate_write_audit_pack:
             rotation_release_gate_covers_steps.append("release_gate_audit_pack")
-            rotation_audit_pack_suffix = " mit direktem redigiertem Release-Gate-Audit-Pack"
+            rotation_audit_pack_suffix = "direktem redigiertem Release-Gate-Audit-Pack"
             if release_gate_compare_left:
                 rotation_audit_pack_suffix += f" gegen Baseline {release_gate_compare_left}"
             else:
                 rotation_audit_pack_suffix += " als Self-Compare des aktuellen Laufs"
+            rotation_post_step_suffixes.append(rotation_audit_pack_suffix)
+        if release_gate_write_readiness:
+            rotation_release_gate_covers_steps.append("release_gate_readiness")
+            rotation_post_step_suffixes.append("direktem redigiertem MVP-Readiness-Status")
+        rotation_post_step_suffix = (
+            f" mit {' und '.join(rotation_post_step_suffixes)}" if rotation_post_step_suffixes else ""
+        )
         approvals["runtime_certificate_rotation"] = {
             "approval_text": (
                 "Freigabe: M365 Runtime-Zertifikat rotieren als gebündelten Owner-gated "
                 "Lifecycle: neues lokales Runtime-Zertifikat erzeugen, Public Certificate "
                 "in Entra für die Runtime-App hochladen, lokale Runtime-Credential-Grenzen "
                 f"aktualisieren, M365 Runtime Release-Gate live im Workspace {workspace_id} "
-                f"ausführen{rotation_audit_pack_suffix}, nicht-geheime Runtime-Evidence refreshen, altes Runtime-Zertifikat "
+                f"ausführen{rotation_post_step_suffix}, "
+                "nicht-geheime Runtime-Evidence refreshen, altes Runtime-Zertifikat "
                 "aus Entra entfernen, lokales Archiv des alten Zertifikats löschen und lokale "
                 "M365-CLI-Session abmelden."
             ),
@@ -1477,6 +1518,8 @@ def _build_m365_batch_approval_payload(
             "workspace_id": workspace_id,
             "synthetic_case_id": synthetic_case_id or "generated_in_process_memory",
             "release_gate_write_audit_pack": release_gate_write_audit_pack,
+            "release_gate_write_readiness": release_gate_write_readiness,
+            "release_gate_readiness_require_audit_pack": release_gate_readiness_require_audit_pack,
             "release_gate_compare_left": release_gate_compare_left,
             "release_gate_audit_pack_dir": release_gate_audit_pack_dir,
             "commands": [
@@ -1547,6 +1590,8 @@ def _build_m365_batch_approval_payload(
             "reads_private_key_files": False,
             "reads_secret_values": False,
             "release_gate_write_audit_pack": release_gate_write_audit_pack,
+            "release_gate_write_readiness": release_gate_write_readiness,
+            "release_gate_readiness_require_audit_pack": release_gate_readiness_require_audit_pack,
             "owner_gates": [approval["owner_gate"] for approval in approvals.values()],
         },
         "result": approvals,
@@ -1559,6 +1604,8 @@ def _build_m365_release_gate_run_command(
     correlation_id: str,
     synthetic_case_id: str | None,
     write_audit_pack: bool,
+    write_readiness: bool,
+    readiness_require_audit_pack: bool,
     compare_left: str | None,
     audit_pack_dir: str | None,
 ) -> str:
@@ -1581,6 +1628,10 @@ def _build_m365_release_gate_run_command(
             command.extend(["--release-gate-compare-left", compare_left])
         if audit_pack_dir:
             command.extend(["--release-gate-audit-pack-dir", audit_pack_dir])
+    if write_readiness:
+        command.append("--release-gate-write-readiness")
+        if readiness_require_audit_pack:
+            command.append("--release-gate-readiness-require-audit-pack")
     command.extend(["--format", "json"])
     return shlex.join(command)
 
@@ -2255,6 +2306,61 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 2,
             )
 
+    readiness_payload: dict[str, Any] | None = None
+    if args.release_gate_write_readiness:
+        readiness_payload = _write_m365_release_gate_run_readiness(
+            repo_root,
+            args,
+            correlation_id=correlation_id,
+            release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        )
+        readiness_return_code = _m365_release_readiness_return_code(readiness_payload)
+        step_results.append(
+            {
+                "step": "release_gate_readiness",
+                "return_code": readiness_return_code,
+                "status": readiness_payload["status"],
+                "command": _m365_release_gate_run_readiness_command(
+                    args,
+                    correlation_id=correlation_id,
+                    release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+                ),
+            }
+        )
+        if readiness_payload["status"] != "PASSED":
+            readiness_summary = readiness_payload.get("summary", {})
+            return (
+                {
+                    "status": "BLOCKED" if readiness_payload["status"] == "BLOCKED" else "FAILED",
+                    "summary": {
+                        "workspace_id": workspace_id,
+                        "correlation_id": correlation_id,
+                        "failed_step": "release_gate_readiness",
+                        "steps_completed": len(step_results) - 1,
+                        "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                        "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
+                        "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
+                        "release_gate_run_artifact_dir": str(release_gate_run_artifact_dir),
+                        "release_gate_retention_index": retention_index["index_path"],
+                        "release_gate_audit_pack_status": audit_pack_payload["status"] if audit_pack_payload else None,
+                        "release_gate_audit_pack_dir": (
+                            audit_pack_payload.get("summary", {}).get("pack_dir") if audit_pack_payload else None
+                        ),
+                        "release_gate_audit_pack_manifest": (
+                            audit_pack_payload.get("summary", {}).get("json_path") if audit_pack_payload else None
+                        ),
+                        "release_gate_readiness_status": readiness_payload["status"],
+                        "release_gate_readiness": readiness_summary.get("mvp_release_readiness"),
+                        "release_gate_readiness_artifact": readiness_summary.get("json_path"),
+                        "release_gate_readiness_require_audit_pack": args.release_gate_readiness_require_audit_pack,
+                    },
+                    "steps": step_results,
+                    "errors": readiness_payload.get("errors", []),
+                },
+                readiness_return_code,
+            )
+
+    readiness_summary = readiness_payload.get("summary", {}) if readiness_payload else {}
     return (
         {
             "status": "PASSED",
@@ -2277,6 +2383,12 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 ),
                 "release_gate_audit_pack_manifest": (
                     audit_pack_payload.get("summary", {}).get("json_path") if audit_pack_payload else None
+                ),
+                "release_gate_readiness_status": readiness_payload["status"] if readiness_payload else None,
+                "release_gate_readiness": readiness_summary.get("mvp_release_readiness"),
+                "release_gate_readiness_artifact": readiness_summary.get("json_path"),
+                "release_gate_readiness_require_audit_pack": (
+                    args.release_gate_readiness_require_audit_pack if readiness_payload else False
                 ),
             },
             "steps": step_results,
@@ -2856,6 +2968,87 @@ def _m365_release_gate_run_audit_pack_command(
         command.extend(["--release-gate-compare-query", str(audit_args.release_gate_compare_query)])
     command.extend(["--format", "json"])
     return " ".join(command)
+
+
+def _write_m365_release_gate_run_readiness(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+) -> dict[str, Any]:
+    output_path = _m365_release_gate_run_readiness_output_path(repo_root, args, release_gate_run_artifact_dir)
+    readiness_args = _m365_release_gate_run_readiness_args(
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        output_path=output_path,
+    )
+    payload = _build_m365_release_readiness(repo_root, readiness_args)
+    payload["summary"]["json_path"] = str(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return payload
+
+
+def _m365_release_gate_run_readiness_args(
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+    output_path: Path,
+) -> argparse.Namespace:
+    return _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
+        release_gate_readiness_correlation_id=correlation_id,
+        release_gate_readiness_output=output_path,
+    )
+
+
+def _m365_release_gate_run_readiness_output_path(
+    repo_root: Path,
+    args: argparse.Namespace,
+    release_gate_run_artifact_dir: Path,
+) -> Path:
+    if args.release_gate_readiness_output:
+        return _resolve_m365_release_gate_path(repo_root, args.release_gate_readiness_output, DEFAULT_RELEASE_READINESS_OUTPUT)
+    return release_gate_run_artifact_dir / "release-readiness.redacted.json"
+
+
+def _m365_release_gate_run_readiness_command(
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+) -> str:
+    output_path = args.release_gate_readiness_output or release_gate_run_artifact_dir / "release-readiness.redacted.json"
+    retention_root = args.release_gate_retention_root or release_gate_run_artifact_dir.parent
+    command = [
+        "python3",
+        "scripts/nac.py",
+        "m365",
+        "teams-sharepoint",
+        "release-readiness",
+        "--release-gate-retention-root",
+        str(retention_root),
+        "--release-gate-readiness-correlation-id",
+        correlation_id,
+        "--release-gate-readiness-output",
+        str(output_path),
+    ]
+    if args.release_gate_audit_pack_dir is not None:
+        command.extend(["--release-gate-audit-pack-dir", str(args.release_gate_audit_pack_dir)])
+    if args.release_gate_readiness_require_audit_pack:
+        command.append("--release-gate-readiness-require-audit-pack")
+    command.extend(["--format", "json"])
+    return shlex.join(command)
+
+
+def _m365_release_readiness_return_code(payload: dict[str, Any]) -> int:
+    if payload["status"] == "PASSED":
+        return 0
+    return 2 if payload["status"] == "BLOCKED" else 1
 
 
 def _m365_release_gate_audit_pack_args(args: argparse.Namespace, **overrides: Any) -> argparse.Namespace:
