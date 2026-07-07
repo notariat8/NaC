@@ -29,6 +29,7 @@ from nac_m365_graph.release_gate_evidence import (
     DEFAULT_EVIDENCE_OUTPUT,
     attach_release_gate_artifact_index,
     build_release_gate_evidence,
+    DEFAULT_RUNTIME_ENV_BOOTSTRAP_ARTIFACT,
     write_release_gate_artifact_index,
     write_release_gate_evidence_json,
     write_release_gate_evidence_report,
@@ -484,6 +485,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-runtime-certificate-expiry-artifact",
         type=Path,
         help="Optionaler Pfad zu einem redigierten Runtime-Certificate-Expiry-Monitor-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-runtime-env-bootstrap-artifact",
+        type=Path,
+        help="Optionaler Pfad zu einem redigierten Runtime-Env-Bootstrap-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-runtime-metadata-artifact",
@@ -1430,6 +1436,7 @@ def command_m365(args: argparse.Namespace) -> int:
                     certificate_path=certificate_path,
                     private_key_path=private_key_path,
                 )
+                bootstrap.readiness["summary"]["artifact_path"] = str(output_path)
                 write_runtime_env_bootstrap_artifact(bootstrap.readiness, output_path)
             except (OSError, json.JSONDecodeError, ValueError) as exc:
                 payload = {
@@ -1444,7 +1451,6 @@ def command_m365(args: argparse.Namespace) -> int:
                 }
                 print_json(payload) if args.format == "json" else print(f"STATUS: {payload['status']}")
                 return 2
-            bootstrap.readiness["summary"]["artifact_path"] = str(output_path)
             if args.format == "json":
                 print_json(bootstrap.readiness)
             else:
@@ -1483,6 +1489,7 @@ def command_m365(args: argparse.Namespace) -> int:
                 mcp_leftover_artifact=args.release_gate_leftover_artifact,
                 runtime_smoke_artifact=args.release_gate_runtime_smoke_artifact,
                 runtime_certificate_expiry_artifact=args.release_gate_runtime_certificate_expiry_artifact,
+                runtime_env_bootstrap_artifact=args.release_gate_runtime_env_bootstrap_artifact,
                 runtime_metadata_artifact=args.release_gate_runtime_metadata_artifact,
                 expected_workspace_id=args.mcp_smoke_workspace_id,
                 expected_correlation_id=args.mcp_smoke_correlation_id,
@@ -1613,6 +1620,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         args.runtime_certificate_expiry_output,
         DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
     )
+    runtime_env_bootstrap_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.runtime_env_bootstrap_output,
+        DEFAULT_RUNTIME_ENV_BOOTSTRAP_ARTIFACT,
+    )
     runtime_metadata_output = _resolve_m365_release_gate_path(
         repo_root,
         args.runtime_metadata_output,
@@ -1732,6 +1744,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "--release-gate-require-runtime-artifacts",
                 "--release-gate-runtime-certificate-expiry-artifact",
                 str(runtime_certificate_expiry_output),
+                "--release-gate-runtime-env-bootstrap-artifact",
+                str(runtime_env_bootstrap_output),
                 "--release-gate-runtime-smoke-artifact",
                 str(runtime_smoke_output),
                 "--release-gate-runtime-metadata-artifact",
@@ -1769,7 +1783,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     if args.release_gate_inventory_artifact:
         steps[5][1][3:3] = ["--release-gate-inventory-artifact", str(args.release_gate_inventory_artifact)]
 
-    runtime_env_overlay, runtime_env_summary = _m365_runtime_env_overlay(repo_root, args)
+    runtime_env_overlay, runtime_env_summary = _m365_runtime_env_overlay(
+        repo_root,
+        args,
+        output_path=runtime_env_bootstrap_output,
+    )
     if runtime_env_summary["status"] != "PASSED":
         return (
             {
@@ -1780,6 +1798,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                     "failed_step": "runtime_env_bootstrap",
                     "steps_completed": 0,
                     "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                    "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
                     "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
                 },
                 "steps": [],
@@ -1809,6 +1828,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                         "failed_step": step_id,
                         "steps_completed": len(step_results) - 1,
                         "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                        "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
                         "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
                     },
                     "steps": step_results,
@@ -1825,6 +1845,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "correlation_id": correlation_id,
                 "steps_completed": len(step_results),
                 "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
                 "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
                 "evidence_output": str(evidence_output),
                 "evidence_json_output": str(evidence_json_output),
@@ -1845,7 +1866,12 @@ _M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
 }
 
 
-def _m365_runtime_env_overlay(repo_root: Path, args: argparse.Namespace) -> tuple[dict[str, str], dict[str, Any]]:
+def _m365_runtime_env_overlay(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    output_path: Path,
+) -> tuple[dict[str, str], dict[str, Any]]:
     runtime_state_path = _resolve_m365_release_gate_path(repo_root, args.runtime_smoke_state, DEFAULT_RUNTIME_SMOKE_STATE)
     certificate_path = args.runtime_certificate_path or DEFAULT_RUNTIME_CERTIFICATE_PATH
     private_key_path = args.runtime_private_key_path or DEFAULT_RUNTIME_PRIVATE_KEY_PATH
@@ -1856,14 +1882,18 @@ def _m365_runtime_env_overlay(repo_root: Path, args: argparse.Namespace) -> tupl
             certificate_path=certificate_path,
             private_key_path=private_key_path,
         )
+        bootstrap.readiness["summary"]["artifact_path"] = str(output_path)
+        write_runtime_env_bootstrap_artifact(bootstrap.readiness, output_path)
         return bootstrap.env_overlay, {
             "status": bootstrap.readiness["status"],
+            "artifact_path": str(output_path),
             "env_overlay_variable_names": bootstrap.readiness["summary"]["env_overlay_variable_names"],
             "errors": _runtime_env_bootstrap_messages(bootstrap.readiness),
         }
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return {}, {
             "status": "BLOCKED",
+            "artifact_path": str(output_path),
             "env_overlay_variable_names": [],
             "errors": [str(exc)],
         }

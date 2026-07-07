@@ -175,7 +175,8 @@ separates Owner-Gate, weil der intern abgedeckte
 `mcp-smoke-suite --mcp-suite-cleanup`-Schritt im Live-Tenant eine synthetische
 Akte schreibt und löscht. Nach der Freigabe muss der Agent den Lauf
 vollständig abschließen: Runtime-Smoke, Runtime-Metadata, Write, Read,
-Cleanup, Leftover-Dry-Run, Zertifikatsablauf-Monitor, Evidence Export,
+Cleanup, Leftover-Dry-Run, Zertifikatsablauf-Monitor, Runtime-Env-Bootstrap,
+Evidence Export,
 Workspace-Clean-State und
 konkretes Ergebnis in der Abschlussmeldung. Die MCP Smoke Suite bleibt
 Diagnose-/Komponentenpfad, wenn nur dieser Schritt isoliert reproduziert werden
@@ -196,12 +197,14 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
 
 Der Exporter führt keine Graph-Anfrage aus. Er liest die lokalen redigierten
 Artefakte `runtime-certificate-expiry-monitor.redacted.json`,
+`runtime-env-bootstrap.redacted.json`,
 `runtime-smoke.redacted.json`,
 `runtime-metadata.redacted.json`, `mcp-smoke-suite.redacted.json` und
 `mcp-smoke-leftover-cleanup.redacted.json` und schreibt
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optionale
 Runtime-Artefakte können über
 `--release-gate-runtime-certificate-expiry-artifact`,
+`--release-gate-runtime-env-bootstrap-artifact`,
 `--release-gate-runtime-smoke-artifact` und
 `--release-gate-runtime-metadata-artifact` ergänzt werden; fehlen sie, werden
 die Runtime-Schritte außerhalb des Release-Gate-Batchs als `NOT_ATTACHED`
@@ -212,10 +215,11 @@ Vor den Live-Schritten nutzt `release-gate-run` intern den Offline-
 `runtime-env-bootstrap`: aus dem nicht-geheimen Runtime-Smoke-State werden
 Tenant- und Runtime-Client-ID nur als Subprozess-Environment aufgelöst; lokale
 Zertifikats- und Private-Key-Pfade werden nur an die Live-Subprozesse
-übergeben. Das optionale Artefakt
-`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json` enthält keine
-Tenant-ID, Client-ID, Zertifikatsthumbprints, Zertifikatskörper, Private-Key-
-Daten, Tokens oder Secret-Werte.
+übergeben. Der Runner schreibt
+`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json` und hängt es an
+`release-gate-evidence` sowie den Artifact-Index an. Das Artefakt enthält
+keine Tenant-ID, Client-ID, Zertifikatsthumbprints, Zertifikatskörper,
+Private-Key-Daten, Tokens oder Secret-Werte.
 
 ## Abschlussregel
 

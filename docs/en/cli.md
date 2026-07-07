@@ -313,8 +313,10 @@ contains variable names, status and privacy flags, but no tenant ID, client ID,
 certificate thumbprint, certificate body, private-key data, token or secret
 values. `release-gate-run` uses the same bootstrap logic internally so
 `runtime-smoke`, `runtime-metadata` and the MCP smoke steps receive the needed
-runtime env values as a child-process overlay. The live run remains owner-gated
-and does not execute without `--owner-approved`.
+runtime env values as a child-process overlay. The runner also writes this
+bootstrap evidence as a redacted artifact and attaches it to
+`release-gate-evidence` and the artifact index. The live run remains
+owner-gated and does not execute without `--owner-approved`.
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
 the discovered lists and document libraries against the declarative MVP schema.
@@ -399,9 +401,9 @@ public certificate to Entra, update the local runtime credential boundary, run
 the stale Entra credential, delete the local old-certificate archive and log
 out the local delegated M365 CLI session.
 
-`release-gate-run` executes the same sequence in one owner-gated run and starts
-with the offline `runtime-certificate-expiry-monitor` before live steps run. It
-stops at the first failed step. The runner writes only the redacted standard
+`release-gate-run` executes the same sequence in one owner-gated run and
+prepares the runtime environment offline before live steps run. It stops at the
+first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
 The offline `mcp-inventory-smoke` remains a separate diagnostic and evidence
@@ -424,6 +426,10 @@ artifacts are present, it reports
 `complete_release_gate_artifacts`; if optional runtime artifacts are missing,
 the report marks the runtime steps as `NOT_ATTACHED`. With
 `--release-gate-require-runtime-artifacts`, export blocks in that case.
+An existing `runtime-env-bootstrap.redacted.json` can additionally be attached
+with `--release-gate-runtime-env-bootstrap-artifact`; when it is missing, this
+evidence step remains `NOT_ATTACHED` without degrading the completeness
+assessment. If it is present but invalid or not redacted, the export fails.
 An existing `mcp-inventory-smoke.redacted.json` can additionally be attached
 with `--release-gate-inventory-artifact`; when it is missing, this evidence step
 remains `NOT_ATTACHED` without blocking the release gate. If it is present but
