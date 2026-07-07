@@ -252,6 +252,23 @@ runtime edge for MCP clients such as AIQ/Codex. The default remains
 with method, Graph v1.0 path and payload, sets `executesGraphRequests` to
 `false` and returns gate violations as MCP tool errors.
 
+The metadata tools `notarial_interface_inventory_list` and
+`notarial_interface_boundary_check` also remain offline. They only read the
+local NaC contract for the notarial interface inventory and call neither
+Microsoft Graph nor BNotK systems. The repeatable offline smoke for this
+boundary is:
+
+```bash
+nac m365 teams-sharepoint mcp-inventory-smoke --format json
+```
+
+By default, it writes
+`out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json` and checks the
+inventory list, a boundary check for a metadata-only operation, a boundary
+check for an owner-gated operation and a closed role, matter and purpose gate.
+The artifact stores no BNotK HTML content, raw XSD data, credentials, tokens,
+message payloads or matter data.
+
 The first owner-gated live-read mode starts explicitly:
 
 ```bash

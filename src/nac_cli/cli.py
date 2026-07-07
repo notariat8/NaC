@@ -276,6 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
             "runtime-metadata",
             "mcp-manifest",
             "mcp-stdio",
+            "mcp-inventory-smoke",
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
             "mcp-smoke-cleanup",
@@ -383,6 +384,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-smoke-output",
         type=Path,
         help="Pfad fuer das redigierte MCP-Live-Read-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--mcp-inventory-smoke-output",
+        type=Path,
+        help="Pfad fuer das redigierte MCP-Inventory-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--mcp-positive-smoke-output",
@@ -1465,6 +1471,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-smoke-correlation-id", args.mcp_smoke_correlation_id])
         if args.mcp_smoke_output:
             script_args.extend(["--mcp-smoke-output", str(args.mcp_smoke_output)])
+        if args.mcp_inventory_smoke_output:
+            script_args.extend(["--mcp-inventory-smoke-output", str(args.mcp_inventory_smoke_output)])
         if args.mcp_positive_smoke_output:
             script_args.extend(["--mcp-positive-smoke-output", str(args.mcp_positive_smoke_output)])
         if args.mcp_cleanup_output:

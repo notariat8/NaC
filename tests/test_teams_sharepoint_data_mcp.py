@@ -37,12 +37,17 @@ from nac_m365_graph.mcp_runtime import (  # noqa: E402
     RuntimeContext,
     build_tool_manifest,
     load_mcp_contract,
+    load_notarial_interface_inventory_contract,
     plan_tool_request,
     validate_mcp_contract,
 )
 from nac_m365_graph.mcp_live_read_smoke import (  # noqa: E402
     run_mcp_live_read_smoke,
     write_mcp_live_read_smoke_artifact,
+)
+from nac_m365_graph.mcp_inventory_smoke import (  # noqa: E402
+    run_mcp_inventory_smoke,
+    write_mcp_inventory_smoke_artifact,
 )
 from nac_m365_graph.mcp_positive_write_read_smoke import (  # noqa: E402
     run_mcp_positive_write_read_smoke,
@@ -71,6 +76,10 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(
             provision_cli.resolve_mcp_smoke_correlation_id("mcp-live-read-smoke", None),
             "mcp-live-read-smoke",
+        )
+        self.assertEqual(
+            provision_cli.resolve_mcp_smoke_correlation_id("mcp-inventory-smoke", None),
+            "mcp-inventory-smoke",
         )
         self.assertEqual(
             provision_cli.resolve_mcp_smoke_correlation_id("mcp-positive-write-read-smoke", None),
@@ -274,6 +283,49 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertTrue(gated_check["ownerGateRequired"])
         self.assertTrue(gated_check["privateOperatingFrameRequired"])
         self.assertEqual(gated_check["area"], "besonderes elektronisches Notarpostfach")
+
+    def test_mcp_inventory_smoke_runs_metadata_tools_and_gate_checks_offline(self) -> None:
+        result = run_mcp_inventory_smoke(
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            _interface_inventory_contract(),
+            workspace_id="notary_team_01",
+            correlation_id="inventory-corr",
+            timestamp="2026-07-07T10:00:00Z",
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["summary"]["interface_count"], 10)
+        self.assertEqual(result["summary"]["metadata_boundary_status"], "allowed_metadata_only")
+        self.assertEqual(result["summary"]["owner_gated_boundary_status"], "owner_gate_required")
+        self.assertTrue(result["summary"]["closed_gate_blocks"])
+        self.assertFalse(result["summary"]["graph_requests_executed"])
+        self.assertFalse(result["privacy"]["storesSourceFullText"])
+        self.assertFalse(result["privacy"]["storesRawXsd"])
+        self.assertFalse(result["privacy"]["storesCredentials"])
+        self.assertFalse(result["privacy"]["storesMatterData"])
+        self.assertFalse(result["privacy"]["callsExternalBnotkSystems"])
+        serialized = json.dumps(result, ensure_ascii=False)
+        for forbidden in ("<html", "<xsd:schema", "IdentityToken=", "BEGIN CERTIFICATE"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_mcp_inventory_smoke_writes_redacted_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "mcp-inventory-smoke.redacted.json"
+            result = run_mcp_inventory_smoke(
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                _interface_inventory_contract(),
+                workspace_id="notary_team_01",
+                correlation_id="inventory-corr",
+                timestamp="2026-07-07T10:00:00Z",
+            )
+            write_mcp_inventory_smoke_artifact(result, output)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["tool_call_count"], 4)
+        self.assertFalse(payload["privacy"]["executesGraphRequests"])
 
     def test_stdio_tools_call_returns_request_plan_structured_content(self) -> None:
         server = _mcp_server()
@@ -1116,6 +1168,42 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["tool_count"], 12)
         self.assertFalse(payload["result"]["executesGraphRequests"])
 
+    def test_central_cli_mcp_inventory_smoke_runs_without_owner_or_credentials(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "mcp-inventory-smoke.redacted.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/nac.py",
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "mcp-inventory-smoke",
+                    "--mcp-inventory-smoke-output",
+                    str(output),
+                    "--mcp-smoke-correlation-id",
+                    "inventory-corr",
+                    "--format",
+                    "json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=5,
+            )
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["artifact_path"], str(output))
+        self.assertEqual(payload["summary"]["correlation_id"], "inventory-corr")
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertEqual(artifact["status"], "PASSED")
+        self.assertFalse(artifact["privacy"]["storesMatterData"])
+
     def test_central_cli_mcp_stdio_process_handles_initialize_and_tools_list(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             provisioned_state = Path(tmpdir) / "provisioned.json"
@@ -1492,6 +1580,10 @@ def _provisioned_state() -> dict:
             }
         ]
     }
+
+
+def _interface_inventory_contract() -> dict:
+    return load_notarial_interface_inventory_contract()
 
 
 if __name__ == "__main__":

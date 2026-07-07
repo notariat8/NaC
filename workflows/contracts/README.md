@@ -101,8 +101,8 @@ Jeder Vertrag soll definieren:
   Graph-REST-Request-Planung, owner-gated Live-Reads für `case_get` und
   `document_list`, optionalen BPMN-Viewer-Request-Plan-Tools,
   metadata-only Werkzeugen für das notarielle Schnittstelleninventar,
-  redigierten `mcp-live-read-smoke` sowie ohne Live-Writes, Secrets,
-  Dateiinhalt oder Mandatsdaten im Produktrepo.
+  redigierten `mcp-inventory-smoke` und `mcp-live-read-smoke` sowie ohne
+  Live-Writes, Secrets, Dateiinhalt oder Mandatsdaten im Produktrepo.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

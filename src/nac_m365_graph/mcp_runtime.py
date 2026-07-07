@@ -196,6 +196,29 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
         ):
             if inventory_boundary.get(flag) is not False:
                 errors.append(f"teams-sharepoint-data-mcp inventory {flag} must be false")
+        offline_smoke = inventory_boundary.get("offline_smoke")
+        if not isinstance(offline_smoke, dict):
+            errors.append("teams-sharepoint-data-mcp inventory offline_smoke must be an object")
+        else:
+            if offline_smoke.get("command") != "nac m365 teams-sharepoint mcp-inventory-smoke --format json":
+                errors.append("teams-sharepoint-data-mcp inventory offline_smoke command is invalid")
+            if (
+                offline_smoke.get("redacted_artifact_path")
+                != "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json"
+            ):
+                errors.append("teams-sharepoint-data-mcp inventory offline_smoke artifact path is invalid")
+            if offline_smoke.get("requires_owner_approved_cli_flag") is not False:
+                errors.append("teams-sharepoint-data-mcp inventory offline_smoke must not require owner approval")
+            for flag in (
+                "executes_graph_requests",
+                "calls_external_bnotk_systems",
+                "stores_source_fulltext",
+                "stores_raw_xsd",
+                "stores_credentials",
+                "stores_matter_data",
+            ):
+                if offline_smoke.get(flag) is not False:
+                    errors.append(f"teams-sharepoint-data-mcp inventory offline_smoke {flag} must be false")
 
     tools = _tools_by_id(contract)
     required = {

@@ -494,6 +494,13 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
         ):
             if mcp.get(flag) is not False:
                 errors.append(f"mcp_boundary.{flag} must be false")
+        if mcp.get("metadata_inventory_smoke_command") != "nac m365 teams-sharepoint mcp-inventory-smoke --format json":
+            errors.append("mcp_boundary.metadata_inventory_smoke_command is invalid")
+        if (
+            mcp.get("metadata_inventory_smoke_redacted_artifact")
+            != "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json"
+        ):
+            errors.append("mcp_boundary.metadata_inventory_smoke_redacted_artifact is invalid")
         if mcp.get("runtime_writes_executed_by_mcp") is not False:
             errors.append("mcp_boundary.runtime_writes_executed_by_mcp must be false")
         for tool in (
@@ -1074,6 +1081,8 @@ def _validate_docs() -> list[str]:
         (DOC_DE, "`teams-sharepoint-data-mcp`"),
         (DOC_DE, "mcp-manifest"),
         (DOC_DE, "mcp-stdio"),
+        (DOC_DE, "mcp-inventory-smoke"),
+        (DOC_DE, "mcp-inventory-smoke.redacted.json"),
         (DOC_DE, "mcp-live-read"),
         (DOC_DE, "mcp-live-read-smoke"),
         (DOC_DE, "mcp-live-read-smoke.redacted.json"),
@@ -1093,6 +1102,8 @@ def _validate_docs() -> list[str]:
         (DOC_EN, "`teams-sharepoint-data-mcp`"),
         (DOC_EN, "mcp-manifest"),
         (DOC_EN, "mcp-stdio"),
+        (DOC_EN, "mcp-inventory-smoke"),
+        (DOC_EN, "mcp-inventory-smoke.redacted.json"),
         (DOC_EN, "mcp-live-read"),
         (DOC_EN, "mcp-live-read-smoke"),
         (DOC_EN, "mcp-live-read-smoke.redacted.json"),

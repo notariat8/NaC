@@ -261,6 +261,24 @@ Runtime-Bedienkante für MCP-Clients wie AIQ/Codex. Der Default bleibt
 setzt `executesGraphRequests` auf `false` und gibt Gate-Verstöße als MCP
 Tool-Error zurück.
 
+Die Metadaten-Tools `notarial_interface_inventory_list` und
+`notarial_interface_boundary_check` bleiben ebenfalls offline. Sie lesen nur
+den lokalen NaC-Vertrag zum notariellen Schnittstelleninventar und rufen weder
+Microsoft Graph noch BNotK-Systeme auf. Der reproduzierbare Offline-Smoke für
+diese Grenze ist:
+
+```bash
+nac m365 teams-sharepoint mcp-inventory-smoke --format json
+```
+
+Er schreibt standardmäßig
+`out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json` und prüft
+Inventory-Liste, Boundary-Check für eine metadata-only Operation, Boundary-
+Check für eine owner-gated Operation sowie ein geschlossenes Rollen-, Akten-
+und Zweckgate. Das Artefakt speichert keine BNotK-HTML-Inhalte, keine XSD-
+Rohdaten, keine Credentials, keine Tokens, keine Nachrichten-Payloads und
+keine Mandatsdaten.
+
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 
 ```bash
