@@ -142,6 +142,21 @@ inventory artifact and attaches it to the completion report automatically. The
 individual command remains a diagnostic and fallback path when that runner step
 must be reproduced in isolation.
 
+After a successful live gate, the offline `release-readiness` command
+summarizes the latest or selected retention run into a compact MVP acceptance
+status:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-readiness \
+  --release-gate-readiness-correlation-id <correlation-id> \
+  --release-gate-readiness-require-audit-pack \
+  --format json
+```
+
+The status reads only redacted local retention, evidence and audit-pack
+artifacts. It performs no Graph request, tenant write, delete or SharePoint
+content read.
+
 ## Runtime Certificate Rotation Approval
 
 After a `runtime-certificate-readiness` warning, the agent renders the complete

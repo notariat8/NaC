@@ -89,6 +89,28 @@ DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/rel
 DEFAULT_RELEASE_GATE_COMPARE_INDEX_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparison-indexes")
 DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT = Path("out/m365/teams-sharepoint/release-gate-audit-packs")
 DEFAULT_RELEASE_GATE_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
+DEFAULT_RELEASE_READINESS_OUTPUT = Path("out/m365/teams-sharepoint/release-readiness.redacted.json")
+M365_RELEASE_READINESS_REQUIRED_ARTIFACTS = (
+    "runtime_certificate_expiry",
+    "runtime_env_bootstrap",
+    "runtime_smoke",
+    "runtime_metadata",
+    "mcp_inventory_smoke",
+    "mcp_smoke_suite",
+    "mcp_leftover_dry_run",
+    "release_gate_evidence_report",
+    "release_gate_evidence_json",
+    "release_gate_artifact_index",
+)
+M365_RELEASE_READINESS_REQUIRED_EVIDENCE_STEPS = (
+    "runtime_certificate_expiry",
+    "runtime_env_bootstrap",
+    "runtime_smoke",
+    "runtime_metadata",
+    "mcp_inventory_smoke",
+    "mcp_smoke_suite",
+    "mcp_leftover_dry_run",
+)
 
 PLUGIN_CLI_ROLES = {
     "cli_role": "kanonische Bedienkante der NaC-CLI für Prüfung, Automatisierung und Dokumentation.",
@@ -323,6 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
             "release-gate-retention-compare-index",
             "release-gate-retention-compare-index-artifact",
             "release-gate-retention-list",
+            "release-readiness",
             "release-gate-run",
             "apply",
             "drift",
@@ -566,6 +589,23 @@ def build_parser() -> argparse.ArgumentParser:
             "Optionaler Zielordner fuer release-gate-retention-audit-pack; "
             "standardmaessig out/m365/teams-sharepoint/release-gate-audit-packs/<filter>/."
         ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-readiness-correlation-id",
+        help=(
+            "Optionaler Release-Gate-Lauf fuer release-readiness; ohne Wert wird der neueste "
+            "lokale Retention-Lauf verwendet."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-readiness-output",
+        type=Path,
+        help="Optionaler JSON-Pfad fuer den redigierten release-readiness-Status.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-readiness-require-audit-pack",
+        action="store_true",
+        help="Blockiert release-readiness, wenn kein passendes redigiertes Audit-Pack mit Status PASSED vorliegt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-write-audit-pack",
@@ -1658,6 +1698,25 @@ def command_m365(args: argparse.Namespace) -> int:
                 _print_m365_release_gate_retention_list(payload)
             return 0 if payload["status"] == "PASSED" else 1
 
+        if args.teams_sharepoint_command == "release-readiness":
+            payload = _build_m365_release_readiness(repo_root, args)
+            if args.release_gate_readiness_output:
+                output_path = _resolve_m365_release_gate_path(
+                    repo_root,
+                    args.release_gate_readiness_output,
+                    DEFAULT_RELEASE_READINESS_OUTPUT,
+                )
+                payload["summary"]["json_path"] = str(output_path)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_readiness(payload)
+            if payload["status"] == "PASSED":
+                return 0
+            return 2 if payload["status"] == "BLOCKED" else 1
+
         if args.teams_sharepoint_command == "release-gate-retention-audit-pack":
             payload = _write_m365_release_gate_retention_audit_pack(repo_root, args)
             if args.format == "json":
@@ -2309,6 +2368,334 @@ def _write_m365_release_gate_retention_list_artifact(
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     report_path.write_text(_render_m365_release_gate_retention_list_report(payload), encoding="utf-8")
     return payload
+
+
+def _build_m365_release_readiness(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    retention_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_retention_root,
+        DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT,
+    )
+    errors: list[str] = []
+    selected_by = "correlation_id" if args.release_gate_readiness_correlation_id else "latest_retention_run"
+    try:
+        index_path = _select_m365_release_readiness_index(repo_root, retention_root, args)
+        retention_index = _load_json_object(index_path, "release gate retention index")
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        errors.append(str(exc))
+        return _m365_release_readiness_payload(
+            status="BLOCKED",
+            retention_root=retention_root,
+            selected_by=selected_by,
+            run=None,
+            evidence=None,
+            audit_pack=None,
+            checks=[_m365_release_readiness_check("retention_index", "BLOCKED", str(exc))],
+            errors=errors,
+        )
+
+    run = _m365_release_gate_retention_row(index_path, retention_index)
+    evidence_path = Path(str(run.get("evidence_json_path") or index_path.parent / "release-gate-evidence.redacted.json"))
+    evidence: dict[str, Any] | None = None
+    try:
+        evidence = _load_json_object(evidence_path, "release gate evidence")
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        errors.append(str(exc))
+
+    audit_pack = _load_m365_release_readiness_audit_pack(repo_root, args, run)
+    checks = _m365_release_readiness_checks(
+        retention_index=retention_index,
+        run=run,
+        evidence=evidence,
+        evidence_path=evidence_path,
+        audit_pack=audit_pack,
+        require_audit_pack=args.release_gate_readiness_require_audit_pack,
+        load_errors=errors,
+    )
+    status = _m365_release_readiness_status(checks)
+    readiness_errors = [check["message"] for check in checks if check["status"] != "PASSED" and check.get("required")]
+    return _m365_release_readiness_payload(
+        status=status,
+        retention_root=retention_root,
+        selected_by=selected_by,
+        run=run,
+        evidence=evidence,
+        audit_pack=audit_pack,
+        checks=checks,
+        errors=readiness_errors,
+    )
+
+
+def _select_m365_release_readiness_index(repo_root: Path, retention_root: Path, args: argparse.Namespace) -> Path:
+    if args.release_gate_readiness_correlation_id:
+        return _resolve_m365_release_gate_retention_reference(
+            repo_root,
+            retention_root,
+            args.release_gate_readiness_correlation_id,
+        )
+    retention_payload = _list_m365_release_gate_retention(repo_root, args)
+    if retention_payload["status"] != "PASSED":
+        raise ValueError("; ".join(retention_payload.get("errors") or ["release gate retention list failed"]))
+    runs = retention_payload.get("runs") if isinstance(retention_payload.get("runs"), list) else []
+    if not runs:
+        raise FileNotFoundError(f"no release gate retention runs found under {retention_root}")
+    return Path(str(runs[0]["retention_index_path"]))
+
+
+def _load_json_object(path: Path, label: str) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object: {path}")
+    return payload
+
+
+def _load_m365_release_readiness_audit_pack(
+    repo_root: Path,
+    args: argparse.Namespace,
+    run: dict[str, Any],
+) -> dict[str, Any] | None:
+    correlation_id = str(run.get("correlation_id") or "")
+    candidates: list[Path] = []
+    if args.release_gate_audit_pack_dir:
+        explicit = _resolve_m365_release_gate_path(repo_root, args.release_gate_audit_pack_dir, DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT)
+        candidates.append(explicit / "release-gate-retention-audit-pack.redacted.json" if explicit.is_dir() else explicit)
+    if correlation_id:
+        slug = (
+            f"left-{_safe_release_gate_slug(correlation_id, 72)}__"
+            f"right-{_safe_release_gate_slug(correlation_id, 72)}"
+        )
+        candidates.append(repo_root / DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT / slug / "release-gate-retention-audit-pack.redacted.json")
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
+        try:
+            payload = _load_json_object(candidate, "release gate audit pack")
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            return {
+                "status": "FAILED",
+                "path": str(candidate),
+                "errors": [str(exc)],
+            }
+        payload["path"] = str(candidate)
+        return payload
+    return None
+
+
+def _m365_release_readiness_checks(
+    *,
+    retention_index: dict[str, Any],
+    run: dict[str, Any],
+    evidence: dict[str, Any] | None,
+    evidence_path: Path,
+    audit_pack: dict[str, Any] | None,
+    require_audit_pack: bool,
+    load_errors: list[str],
+) -> list[dict[str, Any]]:
+    artifacts = _m365_release_gate_retention_artifacts_by_id(retention_index)
+    checks = [
+        _m365_release_readiness_check(
+            "retention_status",
+            "PASSED" if retention_index.get("status") == "PASSED" else "FAILED",
+            f"retention status is {retention_index.get('status')}",
+        ),
+        _m365_release_readiness_check(
+            "retention_artifacts",
+            "PASSED" if _m365_release_readiness_missing_artifacts(artifacts) == [] else "BLOCKED",
+            _m365_release_readiness_artifact_message(artifacts),
+        ),
+        _m365_release_readiness_check(
+            "retention_copied_count",
+            "PASSED" if run.get("copied_artifact_count") == len(M365_RELEASE_READINESS_REQUIRED_ARTIFACTS) else "BLOCKED",
+            f"retained copied artifact count is {run.get('copied_artifact_count')}",
+        ),
+        _m365_release_readiness_check(
+            "evidence_present",
+            "PASSED" if evidence is not None else "BLOCKED",
+            f"release gate evidence JSON is readable at {evidence_path}",
+        ),
+    ]
+    if evidence is not None:
+        summary = evidence.get("summary") if isinstance(evidence.get("summary"), dict) else {}
+        checks.extend(
+            [
+                _m365_release_readiness_check(
+                    "evidence_status",
+                    "PASSED" if evidence.get("status") == "PASSED" else "FAILED",
+                    f"release gate evidence status is {evidence.get('status')}",
+                ),
+                _m365_release_readiness_check(
+                    "evidence_completeness",
+                    "PASSED" if summary.get("evidence_completeness") == "complete_release_gate_artifacts" else "BLOCKED",
+                    f"evidence completeness is {summary.get('evidence_completeness')}",
+                ),
+                _m365_release_readiness_check(
+                    "evidence_retention_reference",
+                    "PASSED" if summary.get("retention_index_attached") is True else "BLOCKED",
+                    "release gate evidence references its retention index",
+                ),
+                _m365_release_readiness_check(
+                    "evidence_step_statuses",
+                    "PASSED" if _m365_release_readiness_bad_step_statuses(evidence) == [] else "FAILED",
+                    _m365_release_readiness_step_message(evidence),
+                ),
+                _m365_release_readiness_check(
+                    "evidence_privacy",
+                    "PASSED" if _m365_release_readiness_privacy_ok(summary) else "FAILED",
+                    "evidence privacy flags confirm no tokens, raw Graph responses, raw case IDs or SharePoint content reads",
+                ),
+            ]
+        )
+    if load_errors:
+        checks.append(_m365_release_readiness_check("local_artifact_load", "BLOCKED", "; ".join(load_errors)))
+    if require_audit_pack:
+        checks.append(
+            _m365_release_readiness_check(
+                "audit_pack",
+                "PASSED" if isinstance(audit_pack, dict) and audit_pack.get("status") == "PASSED" else "BLOCKED",
+                _m365_release_readiness_audit_message(audit_pack),
+            )
+        )
+    elif isinstance(audit_pack, dict):
+        checks.append(
+            _m365_release_readiness_check(
+                "audit_pack",
+                "PASSED" if audit_pack.get("status") == "PASSED" else "FAILED",
+                _m365_release_readiness_audit_message(audit_pack),
+                required=False,
+            )
+        )
+    return checks
+
+
+def _m365_release_readiness_missing_artifacts(artifacts: dict[str, dict[str, Any]]) -> list[str]:
+    missing = []
+    for artifact_id in M365_RELEASE_READINESS_REQUIRED_ARTIFACTS:
+        artifact = artifacts.get(artifact_id)
+        if artifact is None or artifact.get("status") != "COPIED" or not artifact.get("artifact_sha256"):
+            missing.append(artifact_id)
+    return missing
+
+
+def _m365_release_readiness_artifact_message(artifacts: dict[str, dict[str, Any]]) -> str:
+    missing = _m365_release_readiness_missing_artifacts(artifacts)
+    if not missing:
+        return "all required release gate artifacts are copied and hashed"
+    return "missing or not copied required artifacts: " + ", ".join(missing)
+
+
+def _m365_release_readiness_bad_step_statuses(evidence: dict[str, Any]) -> list[str]:
+    by_id = {
+        step.get("id"): step
+        for step in evidence.get("steps", [])
+        if isinstance(step, dict) and isinstance(step.get("id"), str)
+    }
+    bad = []
+    for step_id in M365_RELEASE_READINESS_REQUIRED_EVIDENCE_STEPS:
+        step = by_id.get(step_id)
+        if step is None or step.get("status") != "PASSED":
+            bad.append(step_id)
+    return bad
+
+
+def _m365_release_readiness_step_message(evidence: dict[str, Any]) -> str:
+    bad = _m365_release_readiness_bad_step_statuses(evidence)
+    if not bad:
+        return "all required release gate evidence steps passed"
+    return "required release gate evidence steps did not pass: " + ", ".join(bad)
+
+
+def _m365_release_readiness_privacy_ok(summary: dict[str, Any]) -> bool:
+    return (
+        summary.get("stores_tokens_or_secrets") is False
+        and summary.get("stores_raw_graph_response") is False
+        and summary.get("stores_raw_case_id") is False
+        and summary.get("reads_sharepoint_file_content") is False
+    )
+
+
+def _m365_release_readiness_audit_message(audit_pack: dict[str, Any] | None) -> str:
+    if audit_pack is None:
+        return "release gate audit pack is not attached"
+    return f"release gate audit pack status is {audit_pack.get('status')} at {audit_pack.get('path')}"
+
+
+def _m365_release_readiness_check(
+    check_id: str,
+    status: str,
+    message: str,
+    *,
+    required: bool = True,
+) -> dict[str, Any]:
+    return {
+        "id": check_id,
+        "status": status,
+        "required": required,
+        "message": message,
+    }
+
+
+def _m365_release_readiness_status(checks: list[dict[str, Any]]) -> str:
+    required_statuses = [check.get("status") for check in checks if check.get("required")]
+    if "FAILED" in required_statuses:
+        return "FAILED"
+    if "BLOCKED" in required_statuses:
+        return "BLOCKED"
+    return "PASSED"
+
+
+def _m365_release_readiness_payload(
+    *,
+    status: str,
+    retention_root: Path,
+    selected_by: str,
+    run: dict[str, Any] | None,
+    evidence: dict[str, Any] | None,
+    audit_pack: dict[str, Any] | None,
+    checks: list[dict[str, Any]],
+    errors: list[str],
+) -> dict[str, Any]:
+    summary = evidence.get("summary") if isinstance(evidence, dict) and isinstance(evidence.get("summary"), dict) else {}
+    run = run or {}
+    return {
+        "schema_version": "nac.m365-release-readiness/v0.1",
+        "status": status,
+        "generated_at": _now_utc(),
+        "summary": {
+            "mvp_release_readiness": "READY" if status == "PASSED" else "NOT_READY",
+            "selected_by": selected_by,
+            "retention_root": str(retention_root),
+            "workspace_id": run.get("workspace_id") or summary.get("workspace_id"),
+            "correlation_id": run.get("correlation_id") or summary.get("correlation_id"),
+            "release_gate_status": run.get("status"),
+            "evidence_status": evidence.get("status") if isinstance(evidence, dict) else None,
+            "evidence_completeness": summary.get("evidence_completeness"),
+            "retained_artifact_count": run.get("copied_artifact_count") or summary.get("retained_artifact_count"),
+            "required_artifact_count": len(M365_RELEASE_READINESS_REQUIRED_ARTIFACTS),
+            "retention_index_path": run.get("retention_index_path"),
+            "evidence_json_path": run.get("evidence_json_path"),
+            "report_path": run.get("report_path"),
+            "artifact_index_path": run.get("artifact_index_path"),
+            "audit_pack_status": audit_pack.get("status") if isinstance(audit_pack, dict) else None,
+            "audit_pack_path": audit_pack.get("path") if isinstance(audit_pack, dict) else None,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "checks": checks,
+        "errors": errors,
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
 
 
 def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
@@ -3371,6 +3758,25 @@ def _print_m365_release_gate_retention_list(payload: dict[str, Any]) -> None:
             f"retained={run.get('copied_artifact_count')} "
             f"index={run.get('retention_index_path')}"
         )
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}")
+
+
+def _print_m365_release_readiness(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload['status']}")
+    print(f"MVP release readiness: {summary.get('mvp_release_readiness')}")
+    print(f"Correlation: {summary.get('correlation_id')}")
+    print(f"Workspace: {summary.get('workspace_id')}")
+    print(f"Retained artifacts: {summary.get('retained_artifact_count')}/{summary.get('required_artifact_count')}")
+    print(f"Evidence completeness: {summary.get('evidence_completeness')}")
+    print(f"Retention index: {summary.get('retention_index_path')}")
+    print(f"Evidence JSON: {summary.get('evidence_json_path')}")
+    if summary.get("audit_pack_path"):
+        print(f"Audit pack: {summary.get('audit_pack_status')} {summary.get('audit_pack_path')}")
+    for check in payload.get("checks", []):
+        if check.get("status") != "PASSED":
+            print(f"- {check.get('id')}: {check.get('status')} {check.get('message')}")
     for error in payload.get("errors", []):
         print(f"ERROR: {error}")
 
