@@ -1,0 +1,118 @@
+{
+  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.1",
+  "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
+  "status": "contract_first",
+  "last_update": "2026-07-07",
+  "purpose": "Defines the read-only SharePoint/SPFx BPMN viewer adapter boundary for publishing approved NaC BPMN models into the Microsoft 365 work surface without making SharePoint the BPMN source of truth, workflow engine or modeler.",
+  "source_of_truth": {
+    "approved_bpmn_templates": [
+      "bpmn/*.bpmn",
+      "bpmn/usecases/*.bpmn"
+    ],
+    "git_remains_template_source_of_truth": true,
+    "sharepoint_stores_viewable_copies_or_pointers": true,
+    "python_validation_required_before_publish": true,
+    "pull_request_required_before_publish": true
+  },
+  "sharepoint_surface": {
+    "site_model": "team_connected_sharepoint_site",
+    "document_libraries": [
+      {
+        "name": "BPMN Models",
+        "purpose": "Approved BPMN XML copies or pointers for read-only visualization."
+      }
+    ],
+    "lists": [
+      {
+        "name": "Prozessregister",
+        "purpose": "Process catalog metadata such as owner, status, version, review date and BPMN model pointer."
+      }
+    ],
+    "metadata_lists_allowed": [
+      "Akten",
+      "AufgabenFristen",
+      "AuditJournalLite",
+      "DokumentRegister",
+      "Prozessregister"
+    ],
+    "approved_bpmn_xml_content_read_allowed": true,
+    "matter_document_content_reads_allowed": false,
+    "matter_payload_storage_allowed": false
+  },
+  "spfx_surface": {
+    "delivery": "SharePoint Framework Web Part",
+    "recommended_component": "NaC BPMN Viewer",
+    "included_in_nac_repo_now": false,
+    "package_repo_recommended": "separate_spfx_repo_or_future_app_package",
+    "library": "bpmn-js",
+    "bpmn_js_mode": "viewer_only",
+    "modeler_enabled": false,
+    "workflow_execution_allowed": false,
+    "custom_script_dependency_allowed": false,
+    "requires_custom_script": false,
+    "modern_page_loose_html_embedding_allowed": false
+  },
+  "graph_policy": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "graph_rest_only": true,
+    "raw_http_required": true,
+    "mcp_allowed_only_when_backed_by_graph_rest": true,
+    "legacy_sharepoint_api_allowed": false,
+    "csom_allowed": false,
+    "pnp_allowed": false,
+    "graph_sdk_allowed": false,
+    "allowed_endpoint_patterns": [
+      "GET /sites/{site-id}/drives",
+      "GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content",
+      "GET /sites/{site-id}/lists/{list-id}/items",
+      "GET /sites/{site-id}/lists/{list-id}/items/{item-id}"
+    ]
+  },
+  "allowed_reads": [
+    "approved_bpmn_xml",
+    "process_register_metadata",
+    "task_status_metadata",
+    "audit_status_metadata",
+    "document_register_metadata"
+  ],
+  "blocked_operations": [
+    "write_bpmn_xml",
+    "save_bpmn_model",
+    "execute_workflow",
+    "start_process_instance",
+    "mutate_sharepoint_schema",
+    "mutate_team_or_site_membership",
+    "read_matter_document_content",
+    "read_matter_payload",
+    "legacy_sharepoint_rest",
+    "sharepoint_csom",
+    "pnp",
+    "microsoft_graph_sdk",
+    "custom_script_page_embedding",
+    "store_secrets",
+    "store_mandate_data"
+  ],
+  "mcp_boundary": {
+    "server_id": "teams-sharepoint-data-mcp",
+    "new_mcp_server_required_now": false,
+    "future_tools": [
+      "bpmn_model_get",
+      "process_register_list",
+      "bpmn_viewer_overlay_get"
+    ],
+    "tools_read_only": true,
+    "tools_must_return_redacted_metadata": true,
+    "tools_must_not_return_matter_document_content": true
+  },
+  "relationship_to_bpmn_js_editor": {
+    "local_bpmn_js_editor_contract": "workflows/contracts/bpmn-js-editor.contract.json",
+    "sharepoint_adapter_is_viewer_only": true,
+    "sharepoint_adapter_must_not_replace_pr_review": true,
+    "sharepoint_adapter_must_not_write_template_models": true
+  },
+  "validation_commands": [
+    "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
+    "python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter",
+    "python3 scripts/quality_gate.py --profile strict"
+  ]
+}

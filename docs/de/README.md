@@ -154,6 +154,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   MVP-Datenhaltung über Teams, Microsoft-365-Gruppe, SharePoint-Team-Site und
   Microsoft Graph REST ohne alte SharePoint-APIs oder SDKs.
+- [docs/de/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md):
+  Contract-first-Grenze für einen späteren read-only SPFx-BPMN-Viewer in
+  SharePoint mit `bpmn-js`, Microsoft Graph REST und ohne Modeler oder
+  Workflow-Ausführung.
 - [docs/de/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md):
   Owner-gated Admin-Runbook für CLI for Microsoft 365 als Graph-only Setup- und
   Smoke-Test-Hülle.

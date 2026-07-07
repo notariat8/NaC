@@ -85,6 +85,19 @@ Important: `AuditJournalLite` is not a final tamper-proof journal. It is starter
 evidence. Real immutability still requires a later append-only journal or
 WORM-capable storage.
 
+## BPMN Viewer Projection
+
+A later
+[M365 SharePoint BPMN Viewer Adapter](m365-sharepoint-bpmn-viewer-adapter.md)
+may use this data plane as a read-only display projection. The target is an
+SPFx web part with `bpmn-js` in viewer-only mode that shows approved BPMN XML
+models and reviewed process-register or task metadata.
+
+The adapter does not change the data-plane decision: Microsoft Graph REST
+remains mandatory, and legacy SharePoint APIs, CSOM, PnP and SDKs remain
+blocked. The adapter must not write BPMN models, execute workflows or read
+matter document contents or mandate payloads.
+
 ## Graph REST Boundary
 
 Only raw HTTPS calls against `https://graph.microsoft.com/v1.0` are allowed.

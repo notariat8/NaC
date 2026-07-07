@@ -138,6 +138,10 @@ MVP storage is defined in the
 [Teams SharePoint Graph Data Plane](architecture/teams-sharepoint-graph-data-plane.md):
 one Teams team per notary team, connected Microsoft 365 group, SharePoint team
 site as storage and Microsoft Graph REST only.
+The
+[M365 SharePoint BPMN Viewer Adapter](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
+is only a later read-only SPFx display projection for approved BPMN models,
+not a modeler and not a workflow engine.
 
 ### `monthly-close.yml`
 

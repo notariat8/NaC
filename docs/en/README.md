@@ -120,6 +120,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
   defines MVP storage through Teams, Microsoft 365 group, SharePoint team site
   and Microsoft Graph REST without legacy SharePoint APIs or SDKs.
+- [docs/en/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
+  defines the contract-first boundary for a later read-only SPFx BPMN viewer
+  in SharePoint with `bpmn-js`, Microsoft Graph REST and no modeler or workflow
+  execution.
 - [docs/en/architecture/omnigraph-ontology-projection.md](architecture/omnigraph-ontology-projection.md)
   records the decision note for Omnigraph as a later optional ontology
   projection, not as MVP storage and not as a BPMN engine.

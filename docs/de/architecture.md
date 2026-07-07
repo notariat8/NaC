@@ -133,6 +133,10 @@ Die MVP-Datenhaltung ist in der
 [Teams-SharePoint-Graph-Datenebene](architecture/teams-sharepoint-graph-data-plane.md)
 festgelegt: Teams Team pro Notar-Team, verbundene Microsoft-365-Gruppe,
 SharePoint-Team-Site als Speicher und ausschließlich Microsoft Graph REST.
+Der
+[M365 SharePoint BPMN Viewer Adapter](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
+ist dazu nur eine spätere read-only SPFx-Anzeigeprojektion für freigegebene
+BPMN-Modelle, kein Modeler und keine Workflow-Engine.
 
 ### `monthly-close.yml`
 
