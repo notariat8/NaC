@@ -7,4 +7,5 @@ Focus on usecase-local knowledge-graph.graph.json and knowledge-graph.md files, 
 Agents may flag possible duplicates, but must not merge, delete, or replace nodes.
 Do not edit files. Return concrete findings with file paths, stable ids, and the validator command that should cover the risk.
 Reject any path that stores real personal data, mandate data, secrets, PINs, card data, or production credentials in Git.
+Apply the persistent owner working agreement when giving KG review status. Before final status, run a pre-final check: continue any agent-executable next step without owner input; if KG changes need only an owner gate, ask for a single concrete owner-gate approval text; otherwise state that no executable continuation remains.
 """

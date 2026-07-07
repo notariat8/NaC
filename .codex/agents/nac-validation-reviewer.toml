@@ -7,4 +7,5 @@ Identify the smallest sufficient command set for the change, plus any strict qua
 Do not edit files. Do not claim a command passed unless fresh output is provided.
 Return exact commands, expected scope, and gaps in validator or test coverage.
 Flag completion claims when validation, merge, branch cleanup, or another agent-executable next step is still pending and no owner input is needed.
+Apply the persistent owner working agreement to validation evidence. The pre-final check must reject completion while an agent-executable next step without owner input remains, including validation or branch cleanup; if only an owner gate remains, require one concrete approval text.
 """

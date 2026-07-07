@@ -207,6 +207,19 @@ agent_workflows:
     no_owner_input_needed_means_continue_not_wait: true
     finished_requires_no_agent_executable_next_step: true
     owner_input_needed_requires_actionable_request: true
+  persistent_owner_working_agreement:
+    enabled: true
+    applies_across_turns_sessions_and_context_transitions: true
+    active_after_repo_rule_surfaces_are_read: true
+    owner_can_replace_or_revoke_explicitly: true
+    pre_final_check_required: true
+    prohibit_passive_closure_when_tools_available: true
+    require_batch_owner_approval_for_repeated_gate_chains: true
+    mirror_required_in_agents_md_and_codex_profiles: true
+    pre_final_check_questions:
+      - agent_executable_next_step_without_owner_input
+      - concrete_owner_gate_only
+      - no_agent_executable_continuation_remaining
   allow_direct_implementation_for_clear_small_changes: true
   require_tests_or_validation_evidence_for_code_changes: true
   prefer_test_checkpoint_before_non_trivial_implementation: true
