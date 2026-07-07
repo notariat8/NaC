@@ -68,6 +68,32 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(evidence["steps"][0]["status"], "BLOCKED")
         self.assertEqual(evidence["steps"][1]["status"], "BLOCKED")
 
+    def test_reports_complete_when_runtime_and_mcp_artifacts_are_present(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            suite_artifact = tmp_path / "suite.redacted.json"
+            leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_smoke_artifact = tmp_path / "runtime-smoke.redacted.json"
+            runtime_metadata_artifact = tmp_path / "runtime-metadata.redacted.json"
+            suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
+            leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            runtime_smoke_artifact.write_text(json.dumps(_runtime_smoke_payload()), encoding="utf-8")
+            runtime_metadata_artifact.write_text(json.dumps(_runtime_metadata_payload()), encoding="utf-8")
+
+            evidence = build_release_gate_evidence(
+                repo_root=REPO_ROOT,
+                mcp_suite_artifact=suite_artifact,
+                mcp_leftover_artifact=leftover_artifact,
+                runtime_smoke_artifact=runtime_smoke_artifact,
+                runtime_metadata_artifact=runtime_metadata_artifact,
+                require_runtime_artifacts=True,
+            )
+
+        self.assertEqual(evidence["status"], "PASSED")
+        self.assertEqual(evidence["summary"]["evidence_completeness"], "complete_release_gate_artifacts")
+        self.assertEqual(evidence["summary"]["runtime_smoke_status"], "PASSED")
+        self.assertEqual(evidence["summary"]["runtime_metadata_status"], "PASSED")
+
     def test_fails_when_attached_runtime_artifact_is_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -184,6 +210,49 @@ def _leftover_payload() -> dict:
             "raw_case_id_stored": False,
             "raw_item_id_stored": False,
             "raw_graph_path_stored": False,
+            "raw_graph_response_stored": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+    }
+
+
+def _runtime_smoke_payload() -> dict:
+    return {
+        "status": "PASSED",
+        "generated_at": "2026-07-07T04:30:00Z",
+        "summary": {
+            "workspaces": 2,
+            "sites_read": 2,
+            "missing_lists": 0,
+            "graph_rest_only": True,
+            "raw_site_id_stored": False,
+            "raw_site_url_stored": False,
+            "raw_graph_response_stored": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+            "list_items_read": 0,
+        },
+    }
+
+
+def _runtime_metadata_payload() -> dict:
+    return {
+        "status": "PASSED",
+        "generated_at": "2026-07-07T04:30:00Z",
+        "summary": {
+            "workspaces": 2,
+            "sites_read": 2,
+            "expected_lists": 12,
+            "expected_document_libraries": 4,
+            "missing_lists": 0,
+            "missing_document_libraries": 0,
+            "list_items_read": 0,
+            "graph_rest_only": True,
+            "raw_site_id_stored": False,
+            "raw_site_url_stored": False,
+            "raw_list_id_stored": False,
+            "raw_drive_id_stored": False,
             "raw_graph_response_stored": False,
             "stores_tokens_or_secrets": False,
             "reads_sharepoint_file_content": False,

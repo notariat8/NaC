@@ -56,8 +56,16 @@ from nac_m365_graph.mcp_smoke_suite import (  # noqa: E402
     run_mcp_smoke_suite_from_paths,
     write_mcp_smoke_suite_artifact,
 )
-from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
-from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
+from nac_m365_graph.runtime_metadata import (  # noqa: E402
+    DEFAULT_RUNTIME_METADATA_OUTPUT,
+    build_runtime_metadata_snapshot,
+    write_runtime_metadata_artifact,
+)
+from nac_m365_graph.runtime_smoke import (  # noqa: E402
+    DEFAULT_RUNTIME_SMOKE_OUTPUT,
+    run_runtime_site_smoke,
+    write_runtime_site_smoke_artifact,
+)
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
 
 
@@ -134,6 +142,18 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_MCP_CONTRACT,
         help="Path to the teams-sharepoint-data-mcp contract.",
+    )
+    parser.add_argument(
+        "--runtime-smoke-output",
+        type=Path,
+        default=DEFAULT_RUNTIME_SMOKE_OUTPUT,
+        help="Path for the redacted runtime-smoke artifact under out/.",
+    )
+    parser.add_argument(
+        "--runtime-metadata-output",
+        type=Path,
+        default=DEFAULT_RUNTIME_METADATA_OUTPUT,
+        help="Path for the redacted runtime-metadata artifact under out/.",
     )
     parser.add_argument(
         "--mcp-live-read",
@@ -617,8 +637,12 @@ def main() -> int:
             client = GraphRestClient(runtime_token_provider_from_env())
             if args.command == "runtime-smoke":
                 result = run_runtime_site_smoke(client, state, schema)
+                redacted_result = write_runtime_site_smoke_artifact(result, args.runtime_smoke_output)
+                artifact_path = args.runtime_smoke_output
             else:
                 result = build_runtime_metadata_snapshot(client, state, schema)
+                redacted_result = write_runtime_metadata_artifact(result, args.runtime_metadata_output)
+                artifact_path = args.runtime_metadata_output
         except GraphConfigError as exc:
             return _emit(
                 {
@@ -637,11 +661,13 @@ def main() -> int:
                 args.json,
                 return_code=1,
             )
+        summary = dict(redacted_result["summary"])
+        summary["artifact_path"] = str(artifact_path)
         return _emit(
             {
-                "status": result["status"],
-                "summary": result["summary"],
-                "result": result,
+                "status": redacted_result["status"],
+                "summary": summary,
+                "result": redacted_result,
             },
             args.json,
         )

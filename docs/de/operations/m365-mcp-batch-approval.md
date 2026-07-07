@@ -120,7 +120,9 @@ Die ausgegebenen Live-Kommandos bleiben owner-gated. `runtime-smoke` und
 `runtime-metadata` sind read-only, die MCP Smoke Suite schreibt und löscht eine
 synthetische Akte, der Leftover-Dry-Run liest nur die Trefferanzahl.
 `release-gate-evidence` läuft danach offline und liest nur lokale redigierte
-Artefakte.
+Artefakte. `runtime-smoke` und `runtime-metadata` schreiben dabei eigene
+redigierte Runtime-Artefakte, damit der Abschlussbericht
+`complete_release_gate_artifacts` melden kann.
 
 ## Standard-Betriebsnachweis für MCP-/Runtime-Änderungen
 
@@ -153,7 +155,8 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
 ```
 
 Der Exporter führt keine Graph-Anfrage aus. Er liest die lokalen redigierten
-Artefakte `mcp-smoke-suite.redacted.json` und
+Artefakte `runtime-smoke.redacted.json`,
+`runtime-metadata.redacted.json`, `mcp-smoke-suite.redacted.json` und
 `mcp-smoke-leftover-cleanup.redacted.json` und schreibt
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optionale
 Runtime-Artefakte können über `--release-gate-runtime-smoke-artifact` und

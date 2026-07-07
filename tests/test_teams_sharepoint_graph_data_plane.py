@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
 import urllib.parse
 import unittest
 from pathlib import Path
@@ -24,8 +25,16 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
 )
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
-from nac_m365_graph.runtime_metadata import build_runtime_metadata_snapshot  # noqa: E402
-from nac_m365_graph.runtime_smoke import run_runtime_site_smoke  # noqa: E402
+from nac_m365_graph.runtime_metadata import (  # noqa: E402
+    build_runtime_metadata_snapshot,
+    redact_runtime_metadata_snapshot,
+    write_runtime_metadata_artifact,
+)
+from nac_m365_graph.runtime_smoke import (  # noqa: E402
+    redact_runtime_site_smoke_result,
+    run_runtime_site_smoke,
+    write_runtime_site_smoke_artifact,
+)
 from nac_m365_graph.schema import (  # noqa: E402
     DEFAULT_SCHEMA,
     column_create_payload,
@@ -405,6 +414,40 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(result["workspaces"][0]["expectedListCount"], 2)
         self.assertEqual(result["workspaces"][0]["observedListCount"], 2)
 
+    def test_runtime_site_smoke_redacted_artifact_excludes_raw_site_metadata(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        result = run_runtime_site_smoke(client, state)
+        artifact = redact_runtime_site_smoke_result(result, timestamp="2026-07-07T04:30:00Z")
+        serialized = json.dumps(artifact)
+
+        self.assertEqual(artifact["status"], "PASSED")
+        self.assertTrue(artifact["summary"]["graph_rest_only"])
+        self.assertFalse(artifact["summary"]["raw_site_id_stored"])
+        self.assertFalse(artifact["summary"]["raw_site_url_stored"])
+        self.assertEqual(artifact["summary"]["list_items_read"], 0)
+        self.assertNotIn("example.sharepoint.com,site-01,web-01", serialized)
+        self.assertNotIn("https://example.sharepoint.com/sites/NaC-Notar-01", serialized)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "runtime-smoke.redacted.json"
+            written = write_runtime_site_smoke_artifact(result, output)
+            self.assertTrue(output.exists())
+            self.assertEqual(written["status"], "PASSED")
+
     def test_runtime_site_smoke_uses_schema_expectations_to_detect_list_drift(self) -> None:
         state = {
             "workspaces": [
@@ -461,6 +504,44 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             [item["name"] for item in result["workspaces"][0]["documentLibraries"]],
             ["AktenDokumente", "Vorlagen"],
         )
+
+    def test_runtime_metadata_redacted_artifact_excludes_raw_list_and_drive_metadata(self) -> None:
+        state = {
+            "workspaces": [
+                {
+                    "id": "notary_team_01",
+                    "team_display_name": "NaC-Notar-01",
+                    "team_id": "team-01",
+                    "site_id": "example.sharepoint.com,site-01,web-01",
+                    "site_url": "https://example.sharepoint.com/sites/NaC-Notar-01",
+                    "lists": {
+                        "Akten": {"id": "list-akten", "web_url": "https://example.test/akten"},
+                    },
+                    "document_libraries": {
+                        "AktenDokumente": {"id": "drive-akten", "web_url": "https://example.test/akten-docs"},
+                    },
+                }
+            ]
+        }
+        client = FakeGraphWriteClient(state)
+
+        result = build_runtime_metadata_snapshot(client, state)
+        artifact = redact_runtime_metadata_snapshot(result, timestamp="2026-07-07T04:30:00Z")
+        serialized = json.dumps(artifact)
+
+        self.assertEqual(artifact["status"], "PASSED")
+        self.assertTrue(artifact["summary"]["graph_rest_only"])
+        self.assertFalse(artifact["summary"]["raw_list_id_stored"])
+        self.assertFalse(artifact["summary"]["raw_drive_id_stored"])
+        self.assertEqual(artifact["summary"]["list_items_read"], 0)
+        self.assertNotIn("list-akten", serialized)
+        self.assertNotIn("drive-akten", serialized)
+        self.assertNotIn("https://example.test/akten", serialized)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "runtime-metadata.redacted.json"
+            written = write_runtime_metadata_artifact(result, output)
+            self.assertTrue(output.exists())
+            self.assertEqual(written["status"], "PASSED")
 
     def test_runtime_metadata_uses_schema_expectations_to_detect_library_drift(self) -> None:
         state = {

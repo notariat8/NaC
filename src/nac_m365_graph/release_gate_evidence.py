@@ -167,9 +167,18 @@ def _runtime_smoke_step(path: Path, *, required: bool) -> dict[str, Any]:
         "workspaces": summary.get("workspaces"),
         "sites_read": summary.get("sites_read"),
         "missing_lists": summary.get("missing_lists"),
+        "graph_rest_only": summary.get("graph_rest_only"),
+        "raw_site_id_stored": summary.get("raw_site_id_stored"),
+        "raw_site_url_stored": summary.get("raw_site_url_stored"),
+        "raw_graph_response_stored": summary.get("raw_graph_response_stored"),
+        "stores_tokens_or_secrets": summary.get("stores_tokens_or_secrets"),
+        "reads_sharepoint_file_content": summary.get("reads_sharepoint_file_content"),
+        "list_items_read": summary.get("list_items_read"),
     }
     _expect_status_passed(step, artifact)
     _expect_summary_value(step, summary, "missing_lists", 0)
+    _expect_summary_value(step, summary, "list_items_read", 0)
+    _expect_privacy_flags(step, summary)
     return step
 
 
@@ -194,11 +203,20 @@ def _runtime_metadata_step(path: Path, *, required: bool) -> dict[str, Any]:
         "missing_lists": summary.get("missing_lists"),
         "missing_document_libraries": summary.get("missing_document_libraries"),
         "list_items_read": summary.get("list_items_read"),
+        "graph_rest_only": summary.get("graph_rest_only"),
+        "raw_site_id_stored": summary.get("raw_site_id_stored"),
+        "raw_site_url_stored": summary.get("raw_site_url_stored"),
+        "raw_list_id_stored": summary.get("raw_list_id_stored"),
+        "raw_drive_id_stored": summary.get("raw_drive_id_stored"),
+        "raw_graph_response_stored": summary.get("raw_graph_response_stored"),
+        "stores_tokens_or_secrets": summary.get("stores_tokens_or_secrets"),
+        "reads_sharepoint_file_content": summary.get("reads_sharepoint_file_content"),
     }
     _expect_status_passed(step, artifact)
     _expect_summary_value(step, summary, "missing_lists", 0)
     _expect_summary_value(step, summary, "missing_document_libraries", 0)
     _expect_summary_value(step, summary, "list_items_read", 0)
+    _expect_privacy_flags(step, summary)
     return step
 
 
@@ -338,6 +356,10 @@ def _expect_privacy_flags(step: dict[str, Any], summary: dict[str, Any]) -> None
     false_flags = [
         "raw_case_id_stored",
         "raw_write_payload_stored",
+        "raw_site_id_stored",
+        "raw_site_url_stored",
+        "raw_list_id_stored",
+        "raw_drive_id_stored",
         "raw_item_id_stored",
         "raw_graph_path_stored",
         "raw_graph_response_stored",

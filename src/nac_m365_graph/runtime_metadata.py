@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
 import urllib.parse
 from typing import Any, Protocol
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+DEFAULT_RUNTIME_METADATA_OUTPUT = (
+    REPO_ROOT / "out" / "m365" / "teams-sharepoint" / "runtime-metadata.redacted.json"
+)
 
 
 class GraphReadClient(Protocol):
@@ -81,6 +89,48 @@ def build_runtime_metadata_snapshot(
     }
 
 
+def redact_runtime_metadata_snapshot(result: dict[str, Any], *, timestamp: str | None = None) -> dict[str, Any]:
+    summary = dict(result.get("summary") if isinstance(result.get("summary"), dict) else {})
+    summary.update(
+        {
+            "graph_rest_only": True,
+            "raw_site_id_stored": False,
+            "raw_site_url_stored": False,
+            "raw_list_id_stored": False,
+            "raw_drive_id_stored": False,
+            "raw_graph_response_stored": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        }
+    )
+    return {
+        "status": result.get("status"),
+        "generated_at": timestamp or _now(),
+        "summary": summary,
+        "workspaces": [
+            _redacted_workspace(workspace)
+            for workspace in result.get("workspaces", [])
+            if isinstance(workspace, dict)
+        ],
+        "privacy": {
+            "storesRawGraphResponse": False,
+            "storesRawSiteId": False,
+            "storesRawSiteUrl": False,
+            "storesRawListId": False,
+            "storesRawDriveId": False,
+            "storesTokensOrSecrets": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def write_runtime_metadata_artifact(result: dict[str, Any], output_path: Path) -> dict[str, Any]:
+    artifact = redact_runtime_metadata_snapshot(result)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(artifact, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return artifact
+
+
 def _expected_list_names(workspace: dict[str, Any], expected_schema: dict[str, Any] | None) -> list[str]:
     if expected_schema is None:
         return _mapping_keys(workspace.get("lists"))
@@ -146,3 +196,30 @@ def _mapping_keys(value: object) -> list[str]:
     if not isinstance(value, dict):
         return []
     return [key for key in value if isinstance(key, str)]
+
+
+def _redacted_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
+    team_display_name = workspace.get("teamDisplayName")
+    site_display_name = workspace.get("siteDisplayName")
+    return {
+        "workspaceId": workspace.get("workspaceId"),
+        "teamDisplayNameSha256": _sha256(team_display_name) if isinstance(team_display_name, str) else None,
+        "siteDisplayNameSha256": _sha256(site_display_name) if isinstance(site_display_name, str) else None,
+        "expectationSource": workspace.get("expectationSource"),
+        "listCount": len(workspace.get("lists", [])) if isinstance(workspace.get("lists"), list) else 0,
+        "documentLibraryCount": (
+            len(workspace.get("documentLibraries", []))
+            if isinstance(workspace.get("documentLibraries"), list)
+            else 0
+        ),
+        "missingLists": workspace.get("missingLists", []),
+        "missingDocumentLibraries": workspace.get("missingDocumentLibraries", []),
+    }
+
+
+def _sha256(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _now() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
