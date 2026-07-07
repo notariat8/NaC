@@ -258,6 +258,23 @@ Report- und JSON-Pfade aus. `--release-gate-compare-left`,
 Graph-Anfrage, keinen Tenant-Write und keine Löschung aus und liest keine
 SharePoint-Dateiinhalte.
 
+Ein versionierbarer Indexnachweis wird offline mit denselben Filtern
+geschrieben:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare-index-artifact \
+  --release-gate-compare-query <search-text> \
+  --format json
+```
+
+Ohne explizite Pfade schreibt der Befehl
+`release-gate-retention-compare-index.redacted.md` und
+`release-gate-retention-compare-index.redacted.json` unter
+`out/m365/teams-sharepoint/release-gate-comparison-indexes/<filter>/`.
+`--release-gate-compare-index-output` und
+`--release-gate-compare-index-json-output` setzen eigene Zielpfade. Der Export
+bleibt redigiert und offline.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
