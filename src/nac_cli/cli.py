@@ -305,6 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
             "release-gate-evidence",
             "release-gate-retention-compare",
             "release-gate-retention-compare-artifact",
+            "release-gate-retention-compare-index",
             "release-gate-retention-list",
             "release-gate-run",
             "apply",
@@ -492,14 +493,14 @@ def build_parser() -> argparse.ArgumentParser:
     teams_sharepoint.add_argument(
         "--release-gate-compare-left",
         help=(
-            "Linker Release-Gate-Lauf fuer release-gate-retention-compare; "
+            "Linker Release-Gate-Lauf fuer release-gate-retention-compare oder Filter fuer compare-index; "
             "akzeptiert Correlation-ID, Laufordner oder Retention-Index-Pfad."
         ),
     )
     teams_sharepoint.add_argument(
         "--release-gate-compare-right",
         help=(
-            "Rechter Release-Gate-Lauf fuer release-gate-retention-compare; "
+            "Rechter Release-Gate-Lauf fuer release-gate-retention-compare oder Filter fuer compare-index; "
             "akzeptiert Correlation-ID, Laufordner oder Retention-Index-Pfad."
         ),
     )
@@ -512,6 +513,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-compare-json-output",
         type=Path,
         help="Optionaler JSON-Pfad fuer das redigierte Release-Gate-Retention-Compare-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-compare-index-root",
+        type=Path,
+        help=(
+            "Optionaler Root-Ordner fuer release-gate-retention-compare-index; "
+            "standardmaessig out/m365/teams-sharepoint/release-gate-comparisons/."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-compare-query",
+        help=(
+            "Optionaler Suchtext fuer release-gate-retention-compare-index; "
+            "sucht in Left/Right-Correlation-ID, Status, Timestamp, Report- und JSON-Pfad."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-compare-status",
+        help="Optionaler Statusfilter fuer release-gate-retention-compare-index.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
@@ -1542,6 +1562,14 @@ def command_m365(args: argparse.Namespace) -> int:
                 _print_m365_release_gate_retention_compare_artifact(payload)
             return 0 if payload["status"] == "PASSED" else 2
 
+        if args.teams_sharepoint_command == "release-gate-retention-compare-index":
+            payload = _list_m365_release_gate_retention_compare_artifacts(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_retention_compare_index(payload)
+            return 0 if payload["status"] == "PASSED" else 1
+
         if args.teams_sharepoint_command == "release-gate-evidence":
             output_path = _resolve_m365_release_gate_path(
                 repo_root,
@@ -2178,6 +2206,109 @@ def _write_m365_release_gate_retention_compare_artifact(repo_root: Path, args: a
     return payload
 
 
+def _list_m365_release_gate_retention_compare_artifacts(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    compare_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_compare_index_root,
+        DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT,
+    )
+    rows: list[dict[str, Any]] = []
+    errors: list[str] = []
+    if compare_root.exists():
+        for json_path in sorted(compare_root.glob("*/release-gate-retention-compare.redacted.json")):
+            try:
+                payload = json.loads(json_path.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("compare artifact root must be an object")
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                errors.append(f"invalid compare artifact {json_path}: {exc}")
+                continue
+            row = _m365_release_gate_retention_compare_index_row(json_path, payload)
+            if _m365_release_gate_retention_compare_index_matches(row, args):
+                rows.append(row)
+    rows.sort(
+        key=lambda row: (
+            str(row.get("generated_at") or ""),
+            str(row.get("left_correlation_id") or ""),
+            str(row.get("right_correlation_id") or ""),
+        ),
+        reverse=True,
+    )
+    return {
+        "schema_version": "nac.m365-release-gate-retention-compare-index/v0.1",
+        "status": "FAILED" if errors else "PASSED",
+        "summary": {
+            "compare_root": str(compare_root),
+            "comparison_count": len(rows),
+            "invalid_artifact_count": len(errors),
+            "left_correlation_id": args.release_gate_compare_left,
+            "right_correlation_id": args.release_gate_compare_right,
+            "status_filter": args.release_gate_compare_status,
+            "query": args.release_gate_compare_query,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "comparisons": rows,
+        "errors": errors,
+    }
+
+
+def _m365_release_gate_retention_compare_index_row(json_path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    report_path = summary.get("report_path") or str(json_path.parent / "release-gate-retention-compare.redacted.md")
+    json_output_path = summary.get("json_path") or str(json_path)
+    row = {
+        "status": payload.get("status"),
+        "generated_at": payload.get("generated_at"),
+        "left_correlation_id": summary.get("left_correlation_id"),
+        "right_correlation_id": summary.get("right_correlation_id"),
+        "differences_found": summary.get("differences_found"),
+        "difference_count": summary.get("difference_count"),
+        "artifact_difference_count": summary.get("artifact_difference_count"),
+        "missing_attachment_difference_count": summary.get("missing_attachment_difference_count"),
+        "artifact_directory": summary.get("artifact_directory") or str(json_path.parent),
+        "report_path": report_path,
+        "json_path": json_output_path,
+        "source_json_path": str(json_path),
+        "search_fields": {
+            "left_correlation_id": summary.get("left_correlation_id"),
+            "right_correlation_id": summary.get("right_correlation_id"),
+            "generated_at": payload.get("generated_at"),
+            "status": payload.get("status"),
+            "report_path": report_path,
+            "json_path": json_output_path,
+        },
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+    return row
+
+
+def _m365_release_gate_retention_compare_index_matches(row: dict[str, Any], args: argparse.Namespace) -> bool:
+    if args.release_gate_compare_left and row.get("left_correlation_id") != args.release_gate_compare_left:
+        return False
+    if args.release_gate_compare_right and row.get("right_correlation_id") != args.release_gate_compare_right:
+        return False
+    if args.release_gate_compare_status and row.get("status") != args.release_gate_compare_status:
+        return False
+    query = args.release_gate_compare_query
+    if query:
+        haystack = " ".join(str(value or "") for value in row.get("search_fields", {}).values()).lower()
+        return query.lower() in haystack
+    return True
+
+
 def _m365_release_gate_retention_compare_artifact_paths(
     repo_root: Path,
     args: argparse.Namespace,
@@ -2476,6 +2607,25 @@ def _print_m365_release_gate_retention_compare_artifact(payload: dict[str, Any])
     if payload["status"] == "PASSED":
         print(f"Report: {summary.get('report_path')}")
         print(f"JSON: {summary.get('json_path')}")
+
+
+def _print_m365_release_gate_retention_compare_index(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload['status']}")
+    print(f"Compare root: {summary.get('compare_root')}")
+    print(f"Comparisons: {summary.get('comparison_count')}")
+    for row in payload.get("comparisons", []):
+        print(
+            "- "
+            f"{row.get('generated_at') or 'unknown'} "
+            f"{row.get('left_correlation_id') or 'unknown'} -> "
+            f"{row.get('right_correlation_id') or 'unknown'} "
+            f"status={row.get('status') or 'UNKNOWN'} "
+            f"diffs={row.get('difference_count')} "
+            f"report={row.get('report_path')}"
+        )
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}")
 
 
 def _mtime_utc(path: Path) -> str | None:

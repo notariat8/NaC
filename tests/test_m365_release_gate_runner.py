@@ -638,6 +638,90 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(json_payload["summary"]["right_correlation_id"], "corr-right")
         self.assertFalse(json_payload["comparison"]["privacy"]["storesTokensOrSecrets"])
 
+    def test_release_gate_retention_compare_index_lists_and_filters_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            compare_root = Path(tmp) / "comparisons"
+            _write_compare_artifact(
+                compare_root / "left-a__right-a",
+                left_correlation_id="left-a",
+                right_correlation_id="right-a",
+                status="PASSED",
+                generated_at="2026-07-07T12:00:00Z",
+                difference_count=3,
+            )
+            _write_compare_artifact(
+                compare_root / "left-b__right-b",
+                left_correlation_id="left-b",
+                right_correlation_id="right-b",
+                status="FAILED",
+                generated_at="2026-07-07T13:00:00Z",
+                difference_count=7,
+            )
+
+            payload, return_code = _invoke_retention_compare_index(
+                [
+                    "--release-gate-compare-index-root",
+                    str(compare_root),
+                    "--format",
+                    "json",
+                ]
+            )
+            left_filtered, left_return_code = _invoke_retention_compare_index(
+                [
+                    "--release-gate-compare-index-root",
+                    str(compare_root),
+                    "--release-gate-compare-left",
+                    "left-a",
+                    "--format",
+                    "json",
+                ]
+            )
+            query_filtered, query_return_code = _invoke_retention_compare_index(
+                [
+                    "--release-gate-compare-index-root",
+                    str(compare_root),
+                    "--release-gate-compare-query",
+                    "left-b__right-b",
+                    "--release-gate-compare-status",
+                    "FAILED",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["comparison_count"], 2)
+        self.assertEqual(payload["summary"]["invalid_artifact_count"], 0)
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertEqual(payload["comparisons"][0]["left_correlation_id"], "left-b")
+        self.assertEqual(payload["comparisons"][0]["status"], "FAILED")
+        self.assertEqual(payload["comparisons"][0]["difference_count"], 7)
+        self.assertTrue(payload["comparisons"][0]["report_path"].endswith("release-gate-retention-compare.redacted.md"))
+        self.assertFalse(payload["comparisons"][0]["privacy"]["storesTokensOrSecrets"])
+        self.assertEqual(left_return_code, 0)
+        self.assertEqual(left_filtered["summary"]["comparison_count"], 1)
+        self.assertEqual(left_filtered["comparisons"][0]["right_correlation_id"], "right-a")
+        self.assertEqual(query_return_code, 0)
+        self.assertEqual(query_filtered["summary"]["comparison_count"], 1)
+        self.assertEqual(query_filtered["comparisons"][0]["left_correlation_id"], "left-b")
+
+    def test_release_gate_retention_compare_index_allows_empty_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload, return_code = _invoke_retention_compare_index(
+                [
+                    "--release-gate-compare-index-root",
+                    str(Path(tmp) / "missing-comparisons"),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["comparison_count"], 0)
+        self.assertEqual(payload["comparisons"], [])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -711,6 +795,24 @@ def _invoke_retention_compare_artifact(extra_args: list[str]) -> tuple[dict, int
     return json.loads(output.getvalue()), return_code
 
 
+def _invoke_retention_compare_index(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-compare-index",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
 def _write_retention_run(
     run_dir: Path,
     *,
@@ -741,6 +843,50 @@ def _write_retention_run(
                 "schema_version": "nac.m365-release-gate-evidence/v0.1",
                 "status": "PASSED",
                 "generated_at": generated_at,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_compare_artifact(
+    artifact_dir: Path,
+    *,
+    left_correlation_id: str,
+    right_correlation_id: str,
+    status: str,
+    generated_at: str,
+    difference_count: int,
+) -> None:
+    artifact_dir.mkdir(parents=True)
+    report_path = artifact_dir / "release-gate-retention-compare.redacted.md"
+    json_path = artifact_dir / "release-gate-retention-compare.redacted.json"
+    report_path.write_text("# M365 Release Gate Retention Compare\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-retention-compare-artifact/v0.1",
+                "status": status,
+                "generated_at": generated_at,
+                "summary": {
+                    "left_correlation_id": left_correlation_id,
+                    "right_correlation_id": right_correlation_id,
+                    "differences_found": difference_count > 0,
+                    "difference_count": difference_count,
+                    "artifact_difference_count": difference_count,
+                    "missing_attachment_difference_count": 0,
+                    "artifact_directory": str(artifact_dir),
+                    "report_path": str(report_path),
+                    "json_path": str(json_path),
+                    "graph_requests_executed": False,
+                    "tenant_writes_executed": False,
+                    "tenant_deletes_executed": False,
+                    "stores_tokens_or_secrets": False,
+                    "reads_sharepoint_file_content": False,
+                },
+                "comparison": {
+                    "privacy": {"storesTokensOrSecrets": False},
+                },
             }
         ),
         encoding="utf-8",
