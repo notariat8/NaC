@@ -496,6 +496,121 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(readiness["summary"]["audit_pack_status"], "PASSED")
         self.assertFalse(readiness["privacy"]["tenant_writes_executed"])
 
+    def test_release_gate_run_can_write_optional_post_run_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            runtime_state = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            runtime_certificate_expiry_output = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
+            runtime_smoke_output = tmp_path / "runtime-smoke.redacted.json"
+            runtime_metadata_output = tmp_path / "runtime-metadata.redacted.json"
+            mcp_inventory_output = tmp_path / "mcp-inventory-smoke.redacted.json"
+            mcp_suite_output = tmp_path / "mcp-smoke-suite.redacted.json"
+            mcp_leftover_output = tmp_path / "mcp-smoke-leftover-cleanup.redacted.json"
+            evidence_output = tmp_path / "release-gate-evidence.redacted.md"
+            evidence_json_output = tmp_path / "release-gate-evidence.redacted.json"
+            artifact_index_output = tmp_path / "release-gate-artifact-index.redacted.json"
+            retention_root = tmp_path / "release-gates"
+            retention_dir = retention_root / "runner-corr"
+            audit_pack_dir = tmp_path / "audit-pack"
+            post_report_path = tmp_path / "post-run" / "report.md"
+            post_report_json_path = tmp_path / "post-run" / "report.json"
+            github_comment_path = tmp_path / "post-run" / "comment.md"
+            runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+            _write_readiness_run(
+                retention_root / "baseline-corr",
+                correlation_id="baseline-corr",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                step = command[command.index("teams-sharepoint") + 1]
+                _write_complete_release_gate_output_args(command, correlation_id="runner-corr")
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=json.dumps({"status": "PASSED", "step": step}),
+                    stderr="",
+                )
+
+            with patch.object(cli.subprocess, "run", side_effect=fake_run), patch.dict(cli.os.environ, {}, clear=True):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--owner-approved",
+                        "--mcp-smoke-correlation-id",
+                        "runner-corr",
+                        "--runtime-smoke-state",
+                        str(runtime_state),
+                        "--runtime-certificate-path",
+                        str(certificate_path),
+                        "--runtime-private-key-path",
+                        str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
+                        "--runtime-certificate-expiry-output",
+                        str(runtime_certificate_expiry_output),
+                        "--runtime-smoke-output",
+                        str(runtime_smoke_output),
+                        "--runtime-metadata-output",
+                        str(runtime_metadata_output),
+                        "--release-gate-inventory-artifact",
+                        str(mcp_inventory_output),
+                        "--mcp-suite-output",
+                        str(mcp_suite_output),
+                        "--mcp-leftover-output",
+                        str(mcp_leftover_output),
+                        "--release-gate-evidence-output",
+                        str(evidence_output),
+                        "--release-gate-evidence-json-output",
+                        str(evidence_json_output),
+                        "--release-gate-artifact-index-output",
+                        str(artifact_index_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
+                        "--release-gate-audit-pack-dir",
+                        str(audit_pack_dir),
+                        "--release-gate-post-run-report-output",
+                        str(post_report_path),
+                        "--release-gate-post-run-report-json-output",
+                        str(post_report_json_path),
+                        "--release-gate-github-comment-output",
+                        str(github_comment_path),
+                        "--release-gate-write-post-run-report",
+                        "--format",
+                        "json",
+                    ]
+                )
+            readiness = json.loads((retention_dir / "release-readiness.redacted.json").read_text(encoding="utf-8"))
+            post_report = json.loads(post_report_json_path.read_text(encoding="utf-8"))
+            audit_manifest = json.loads((audit_pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text())
+            comment = github_comment_path.read_text(encoding="utf-8")
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(
+            [step["step"] for step in payload["steps"][-3:]],
+            ["release_gate_audit_pack", "release_gate_readiness", "release_gate_post_run_report"],
+        )
+        self.assertEqual(payload["summary"]["release_gate_readiness"], "READY")
+        self.assertTrue(payload["summary"]["release_gate_readiness_require_audit_pack"])
+        self.assertEqual(payload["summary"]["release_gate_post_run_report_status"], "PASSED")
+        self.assertEqual(payload["summary"]["release_gate_post_run_report"], str(post_report_path))
+        self.assertEqual(payload["summary"]["release_gate_post_run_report_json"], str(post_report_json_path))
+        self.assertEqual(payload["summary"]["release_gate_github_comment_draft"], str(github_comment_path))
+        self.assertIn("release-gate-post-run-report", payload["steps"][-1]["command"])
+        self.assertNotIn("--release-gate-compare-left", payload["steps"][-1]["command"])
+        self.assertEqual(audit_manifest["summary"]["left_correlation_id"], "baseline-corr")
+        self.assertEqual(audit_manifest["summary"]["right_correlation_id"], "runner-corr")
+        self.assertEqual(readiness["summary"]["mvp_release_readiness"], "READY")
+        self.assertEqual(post_report["summary"]["baseline_selection"], "previous_retained_run")
+        self.assertEqual(post_report["summary"]["baseline_correlation_id"], "baseline-corr")
+        self.assertIn("Draft only", comment)
+        self.assertFalse(post_report["privacy"]["github_comment_posted"])
+
     def test_release_gate_run_readiness_uses_baseline_audit_pack_default_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
