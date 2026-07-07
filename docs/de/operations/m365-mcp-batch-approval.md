@@ -189,8 +189,11 @@ vorhandenen redigierten Artefakte zusätzlich in
 `out/m365/teams-sharepoint/release-gates/<correlation-id>/`. Dort liegt auch
 `release-gate-retention-index.redacted.json`, damit mehrere Gate-Läufe
 auditierbar nebeneinander bleiben, während `out/m365/teams-sharepoint/` weiter
-den letzten `latest`-Stand enthält. Der folgende Offline-Exporter bleibt nur
-für Diagnose oder erneuten Export vorhandener Artefakte:
+den letzten `latest`-Stand enthält. Nach dem Retention-Schritt aktualisiert der
+Runner den Abschlussbericht, das Evidence-JSON und den Artifact-Index mit dem
+Retention-Pfad und kopiert diese aktualisierten Artefakte erneut in den
+Laufordner. Der folgende Offline-Exporter bleibt nur für Diagnose oder erneuten
+Export vorhandener Artefakte:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \

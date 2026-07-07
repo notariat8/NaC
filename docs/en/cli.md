@@ -410,7 +410,13 @@ After a successful run, the runner also copies the existing redacted artifacts
 to `out/m365/teams-sharepoint/release-gates/<correlation-id>/` and writes
 `release-gate-retention-index.redacted.json` there. This retention copy keeps
 audits from comparing only the overwritten `latest` state; the run folder can
-be overridden with `--release-gate-run-artifact-dir`. The offline
+be overridden with `--release-gate-run-artifact-dir`. After copying, the runner
+refreshes `release-gate-evidence.redacted.md`,
+`release-gate-evidence.redacted.json` and
+`release-gate-artifact-index.redacted.json` with the retention path and copies
+the refreshed artifacts into the run folder again. The archived completion
+report copy therefore points to its own
+`release-gate-retention-index.redacted.json`. The offline
 `mcp-inventory-smoke` remains a separate diagnostic and evidence
 command; the runner does not execute it automatically and, without an explicit
 `--release-gate-inventory-artifact`, intentionally attaches a missing

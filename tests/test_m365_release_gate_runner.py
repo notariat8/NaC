@@ -38,6 +38,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
             calls.append(command)
             step = command[command.index("teams-sharepoint") + 1]
+            _write_release_gate_output_args(command)
             return subprocess.CompletedProcess(
                 command,
                 0,
@@ -123,6 +124,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
             calls.append(command)
             step = command[command.index("teams-sharepoint") + 1]
+            _write_release_gate_output_args(command)
             return subprocess.CompletedProcess(
                 command,
                 0,
@@ -238,6 +240,9 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 )
 
             retention_index = json.loads((retention_dir / "release-gate-retention-index.redacted.json").read_text())
+            retained_evidence_json = json.loads((retention_dir / "release-gate-evidence.redacted.json").read_text())
+            retained_artifact_index = json.loads((retention_dir / "release-gate-artifact-index.redacted.json").read_text())
+            retained_report = (retention_dir / "release-gate-evidence.redacted.md").read_text()
             retained_bootstrap_exists = (retention_dir / "runtime-env-bootstrap.redacted.json").exists()
             retained_evidence_json_exists = (retention_dir / "release-gate-evidence.redacted.json").exists()
 
@@ -248,6 +253,19 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(retention_index["schema_version"], "nac.m365-release-gate-retention-index/v0.1")
         self.assertEqual(retention_index["correlation_id"], "retention-corr")
         self.assertFalse(retention_index["privacy"]["storesTokensOrSecrets"])
+        self.assertEqual(
+            retained_evidence_json["summary"]["release_gate_retention_index_path"],
+            str(retention_dir / "release-gate-retention-index.redacted.json"),
+        )
+        self.assertEqual(retained_evidence_json["summary"]["retained_artifact_count"], 9)
+        self.assertTrue(retained_evidence_json["summary"]["retention_index_attached"])
+        self.assertEqual(
+            retained_artifact_index["retention"]["retention_index_path"],
+            str(retention_dir / "release-gate-retention-index.redacted.json"),
+        )
+        self.assertTrue(retained_artifact_index["retention"]["attached"])
+        self.assertIn("## Artifact Retention", retained_report)
+        self.assertIn("release-gate-retention-index.redacted.json", retained_report)
         artifacts = {artifact["id"]: artifact for artifact in retention_index["artifacts"]}
         self.assertEqual(artifacts["runtime_env_bootstrap"]["status"], "COPIED")
         self.assertEqual(len(artifacts["runtime_env_bootstrap"]["artifact_sha256"]), 64)
@@ -272,6 +290,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
                 step = command[command.index("teams-sharepoint") + 1]
                 calls.append((step, kwargs.get("env")))  # type: ignore[arg-type]
+                _write_release_gate_output_args(command)
                 return subprocess.CompletedProcess(
                     command,
                     0,
@@ -444,6 +463,34 @@ def _write_output_arg(command: list[str], option: str, payload: dict) -> None:
         return
     output_path = Path(command[command.index(option) + 1])
     output_path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_release_gate_output_args(command: list[str]) -> None:
+    if "--release-gate-evidence-output" in command:
+        output_path = Path(command[command.index("--release-gate-evidence-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("# redacted evidence\n", encoding="utf-8")
+    if "--release-gate-evidence-json-output" in command:
+        output_path = Path(command[command.index("--release-gate-evidence-json-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "nac.m365-release-gate-evidence/v0.1",
+                    "status": "PASSED",
+                    "generated_at": "2026-07-07T11:48:00Z",
+                    "summary": {},
+                    "steps": [],
+                    "errors": [],
+                    "privacy": {"storesTokensOrSecrets": False},
+                }
+            ),
+            encoding="utf-8",
+        )
+    if "--release-gate-artifact-index-output" in command:
+        output_path = Path(command[command.index("--release-gate-artifact-index-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps({"status": "PASSED"}), encoding="utf-8")
 
 
 def _runtime_state() -> dict:
