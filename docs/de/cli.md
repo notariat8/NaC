@@ -324,9 +324,17 @@ owner-gated.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
-`out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Der Exporter
-führt keine Graph-Anfrage aus und schreibt oder löscht nichts im Tenant. Wenn
-die Runtime- und MCP-Artefakte vorhanden sind, meldet er
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.md`,
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.json` und
+`out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json`. Der
+Artifact-Index enthält Step-Status, Required-/Attached-Flags, lokale Pfade und
+SHA-256-Hashes der redigierten lokalen Artefakte, aber keine Tokens,
+Roh-Graph-Antworten, Raw Case IDs oder SharePoint-Dateiinhalte. Die Pfade
+können mit `--release-gate-evidence-output`,
+`--release-gate-evidence-json-output` und
+`--release-gate-artifact-index-output` überschrieben werden. Der Exporter führt
+keine Graph-Anfrage aus und schreibt oder löscht nichts im Tenant. Wenn die
+Runtime- und MCP-Artefakte vorhanden sind, meldet er
 `complete_release_gate_artifacts`; fehlen optionale Runtime-Artefakte, markiert
 der Bericht die Runtime-Schritte als `NOT_ATTACHED`. Mit
 `--release-gate-require-runtime-artifacts` blockiert der Export in diesem Fall.

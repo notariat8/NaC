@@ -22,8 +22,13 @@ from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
 from nac_m365_graph.release_gate_evidence import (
+    DEFAULT_ARTIFACT_INDEX_OUTPUT,
+    DEFAULT_EVIDENCE_JSON_OUTPUT,
     DEFAULT_EVIDENCE_OUTPUT,
+    attach_release_gate_artifact_index,
     build_release_gate_evidence,
+    write_release_gate_artifact_index,
+    write_release_gate_evidence_json,
     write_release_gate_evidence_report,
 )
 from nac_observability.time_ledger import (
@@ -344,6 +349,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-evidence-output",
         type=Path,
         help="Pfad fuer den redigierten M365-Release-Gate-Abschlussbericht.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-evidence-json-output",
+        type=Path,
+        help="Pfad fuer das redigierte maschinenlesbare M365-Release-Gate-Evidence-JSON.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-artifact-index-output",
+        type=Path,
+        help="Pfad fuer den redigierten M365-Release-Gate-Artefaktindex.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
@@ -1226,6 +1241,16 @@ def command_m365(args: argparse.Namespace) -> int:
                 args.release_gate_evidence_output,
                 DEFAULT_EVIDENCE_OUTPUT,
             )
+            json_output_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.release_gate_evidence_json_output,
+                DEFAULT_EVIDENCE_JSON_OUTPUT,
+            )
+            artifact_index_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.release_gate_artifact_index_output,
+                DEFAULT_ARTIFACT_INDEX_OUTPUT,
+            )
             evidence = build_release_gate_evidence(
                 repo_root=repo_root,
                 mcp_suite_artifact=args.release_gate_suite_artifact,
@@ -1236,8 +1261,13 @@ def command_m365(args: argparse.Namespace) -> int:
                 expected_correlation_id=args.mcp_smoke_correlation_id,
                 require_runtime_artifacts=args.release_gate_require_runtime_artifacts,
             )
-            write_release_gate_evidence_report(evidence, output_path)
             evidence["summary"]["report_path"] = str(output_path)
+            evidence["summary"]["json_path"] = str(json_output_path)
+            evidence["summary"]["artifact_index_path"] = str(artifact_index_path)
+            attach_release_gate_artifact_index(evidence)
+            write_release_gate_evidence_report(evidence, output_path)
+            write_release_gate_evidence_json(evidence, json_output_path)
+            write_release_gate_artifact_index(evidence["artifact_index"], artifact_index_path)
             if args.format == "json":
                 print_json(evidence)
             else:
@@ -1319,6 +1349,8 @@ def _print_release_gate_evidence(evidence: dict[str, Any]) -> None:
     summary = evidence.get("summary", {})
     print(f"STATUS: {evidence['status']}")
     print(f"Report: {summary.get('report_path')}")
+    print(f"JSON: {summary.get('json_path')}")
+    print(f"Artifact index: {summary.get('artifact_index_path')}")
     print(f"Evidence completeness: {summary.get('evidence_completeness')}")
     for step in evidence.get("steps", []):
         print(f"- {step['label']}: {step['status']}")

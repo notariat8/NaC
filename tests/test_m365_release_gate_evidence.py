@@ -48,6 +48,13 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertFalse(evidence["summary"]["stores_raw_graph_response"])
         self.assertFalse(evidence["summary"]["reads_sharepoint_file_content"])
         self.assertEqual(evidence["steps"][0]["status"], "NOT_ATTACHED")
+        index = evidence["artifact_index"]
+        self.assertEqual(index["schema_version"], "nac.m365-release-gate-evidence-index/v0.1")
+        self.assertEqual(index["artifacts"][0]["attached"], False)
+        self.assertEqual(index["artifacts"][2]["id"], "mcp_smoke_suite")
+        self.assertEqual(index["artifacts"][2]["attached"], True)
+        self.assertEqual(len(index["artifacts"][2]["artifact_sha256"]), 64)
+        self.assertFalse(index["privacy"]["storesTokensOrSecrets"])
         report = render_release_gate_evidence_markdown(evidence)
         self.assertIn("mcp-smoke-suite --mcp-suite-cleanup", report)
         self.assertNotIn("raw-secret-value", json.dumps(evidence))
@@ -128,6 +135,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
             report_path = tmp_path / "release-gate-evidence.redacted.md"
+            json_path = tmp_path / "release-gate-evidence.redacted.json"
+            index_path = tmp_path / "release-gate-artifact-index.redacted.json"
             runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
             runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
@@ -152,6 +161,10 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                     str(runtime_metadata_artifact),
                     "--release-gate-evidence-output",
                     str(report_path),
+                    "--release-gate-evidence-json-output",
+                    str(json_path),
+                    "--release-gate-artifact-index-output",
+                    str(index_path),
                     "--mcp-smoke-workspace-id",
                     "notary_team_01",
                     "--mcp-smoke-correlation-id",
@@ -170,11 +183,22 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             payload = json.loads(result.stdout)
             self.assertEqual(payload["status"], "PASSED")
             self.assertEqual(payload["summary"]["report_path"], str(report_path))
+            self.assertEqual(payload["summary"]["json_path"], str(json_path))
+            self.assertEqual(payload["summary"]["artifact_index_path"], str(index_path))
             self.assertTrue(report_path.exists())
+            self.assertTrue(json_path.exists())
+            self.assertTrue(index_path.exists())
             report = report_path.read_text(encoding="utf-8")
+            json_payload = json.loads(json_path.read_text(encoding="utf-8"))
+            index_payload = json.loads(index_path.read_text(encoding="utf-8"))
 
         self.assertIn("M365 Runtime Release Gate Evidence", report)
         self.assertIn("Graph requests executed by exporter: `false`", report)
+        self.assertEqual(json_payload["artifact_index"]["schema_version"], "nac.m365-release-gate-evidence-index/v0.1")
+        self.assertEqual(index_payload["status"], "PASSED")
+        self.assertEqual(index_payload["json_path"], str(json_path))
+        self.assertEqual(index_payload["artifacts"][2]["id"], "mcp_smoke_suite")
+        self.assertEqual(len(index_payload["artifacts"][2]["artifact_sha256"]), 64)
 
 
 def _suite_payload() -> dict:
