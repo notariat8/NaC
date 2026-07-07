@@ -64,6 +64,12 @@ from nac_m365_graph.runtime_metadata import (  # noqa: E402
     build_runtime_metadata_snapshot,
     write_runtime_metadata_artifact,
 )
+from nac_m365_graph.runtime_certificate_readiness import (  # noqa: E402
+    DEFAULT_RUNTIME_METADATA_STATE,
+    DEFAULT_RUNTIME_SMOKE_STATE,
+    build_runtime_certificate_readiness,
+    load_runtime_certificate_state,
+)
 from nac_m365_graph.runtime_smoke import (  # noqa: E402
     DEFAULT_RUNTIME_SMOKE_OUTPUT,
     run_runtime_site_smoke,
@@ -99,6 +105,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
+            "runtime-certificate-readiness",
             "runtime-smoke",
             "runtime-metadata",
             "mcp-manifest",
@@ -115,6 +122,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
+            "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
             "mcp-stdio starts the local MCP adapter."
         ),
@@ -161,10 +169,22 @@ def parse_args() -> argparse.Namespace:
         help="Path for the redacted runtime-smoke artifact under out/.",
     )
     parser.add_argument(
+        "--runtime-smoke-state",
+        type=Path,
+        default=DEFAULT_RUNTIME_SMOKE_STATE,
+        help="Path to the non-secret runtime-smoke evidence state.",
+    )
+    parser.add_argument(
         "--runtime-metadata-output",
         type=Path,
         default=DEFAULT_RUNTIME_METADATA_OUTPUT,
         help="Path for the redacted runtime-metadata artifact under out/.",
+    )
+    parser.add_argument(
+        "--runtime-metadata-state",
+        type=Path,
+        default=DEFAULT_RUNTIME_METADATA_STATE,
+        help="Path to the non-secret runtime-metadata evidence state.",
     )
     parser.add_argument(
         "--mcp-live-read",
@@ -691,6 +711,24 @@ def main() -> int:
             else None
         )
         readiness = build_application_owner_readiness(config, applied_state)
+        return _emit(
+            readiness,
+            args.json,
+            return_code=0 if readiness["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "runtime-certificate-readiness":
+        runtime_smoke_state = (
+            load_runtime_certificate_state(args.runtime_smoke_state)
+            if args.runtime_smoke_state.exists()
+            else None
+        )
+        runtime_metadata_state = (
+            load_runtime_certificate_state(args.runtime_metadata_state)
+            if args.runtime_metadata_state.exists()
+            else None
+        )
+        readiness = build_runtime_certificate_readiness(runtime_smoke_state, runtime_metadata_state)
         return _emit(
             readiness,
             args.json,
