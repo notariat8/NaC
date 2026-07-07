@@ -501,12 +501,11 @@ writes `release-gate-retention-audit-pack.redacted.md/json`,
 It reads only local redacted retention and evidence artifacts and performs no
 Graph request, tenant write, delete or SharePoint content read.
 The offline
-`mcp-inventory-smoke` remains a separate diagnostic and evidence
-command; the runner does not execute it automatically and, without an explicit
-`--release-gate-inventory-artifact`, intentionally attaches a missing
-`NOT_ATTACHED` path so stale local artifacts with an old correlation ID cannot
-block the one-shot run. The individual commands remain the diagnostic and
-fallback path when a runner step must be reproduced in isolation.
+`mcp-inventory-smoke` is part of the one-shot runner, runs offline before the
+owner-gated live steps without the runtime credential overlay and automatically
+attaches its redacted inventory artifact to `release-gate-evidence`. The
+individual command remains the diagnostic and fallback path when that runner
+step must be reproduced in isolation.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
@@ -527,10 +526,11 @@ An existing `runtime-env-bootstrap.redacted.json` can additionally be attached
 with `--release-gate-runtime-env-bootstrap-artifact`; when it is missing, this
 evidence step remains `NOT_ATTACHED` without degrading the completeness
 assessment. If it is present but invalid or not redacted, the export fails.
-An existing `mcp-inventory-smoke.redacted.json` can additionally be attached
-with `--release-gate-inventory-artifact`; when it is missing, this evidence step
-remains `NOT_ATTACHED` without blocking the release gate. If it is present but
-invalid, the export fails.
+An existing `mcp-inventory-smoke.redacted.json` can still be attached to a
+manual `release-gate-evidence` export with `--release-gate-inventory-artifact`;
+when it is missing outside the one-shot runner, this evidence step remains
+`NOT_ATTACHED` without blocking manual release-gate evidence. If it is present
+but invalid, the export fails.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 

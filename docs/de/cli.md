@@ -514,12 +514,11 @@ liest nur lokale redigierte Retention- und Evidence-Artefakte und führt keine
 Graph-Anfrage, keinen Tenant-Write, keine Löschung und keinen
 SharePoint-Content-Read aus.
 Der offline
-`mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl; der
-Runner führt ihn nicht automatisch aus und hängt ohne explizites
-`--release-gate-inventory-artifact` absichtlich einen fehlenden
-`NOT_ATTACHED`-Pfad an, damit lokale Altartefakte mit alter Correlation-ID den
-One-Shot nicht blockieren. Die Einzelbefehle bleiben Diagnose- und
-Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert werden muss.
+`mcp-inventory-smoke` ist Teil des One-Shot-Runners, läuft vor den
+owner-gated Live-Schritten offline ohne Runtime-Credential-Overlay und hängt
+sein redigiertes Inventar-Artefakt automatisch an `release-gate-evidence` an.
+Der Einzelbefehl bleibt Diagnose- und Fallback-Pfad, wenn dieser
+Runner-Schritt isoliert reproduziert werden muss.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
@@ -542,10 +541,12 @@ Ein vorhandenes `runtime-env-bootstrap.redacted.json` kann zusätzlich mit
 bleibt dieser Evidence-Schritt `NOT_ATTACHED`, ohne die
 Vollständigkeitsbewertung zu verschlechtern. Ist es vorhanden, aber ungültig
 oder nicht redigiert, schlägt der Export fehl.
-Ein vorhandenes `mcp-inventory-smoke.redacted.json` kann zusätzlich mit
-`--release-gate-inventory-artifact` angehängt werden; fehlt es, bleibt dieser
-Evidence-Schritt `NOT_ATTACHED`, ohne das Release-Gate zu blockieren. Ist es
-vorhanden, aber ungültig, schlägt der Export fehl.
+Ein vorhandenes `mcp-inventory-smoke.redacted.json` kann bei einem manuellen
+`release-gate-evidence`-Export weiterhin mit
+`--release-gate-inventory-artifact` angehängt werden; fehlt es außerhalb des
+One-Shot-Runners, bleibt dieser Evidence-Schritt `NOT_ATTACHED`, ohne das
+manuelle Release-Gate-Evidence zu blockieren. Ist es vorhanden, aber ungültig,
+schlägt der Export fehl.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

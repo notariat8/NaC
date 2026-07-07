@@ -166,6 +166,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertEqual(
             release_gate["operator_sequence"][0]["covers_steps"],
             [
+                "mcp_inventory_smoke",
                 "runtime_certificate_expiry_monitor",
                 "runtime_smoke",
                 "runtime_metadata",
