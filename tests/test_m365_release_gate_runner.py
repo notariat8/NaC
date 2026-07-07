@@ -439,6 +439,78 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["errors"], ["metadata failed"])
         self.assertEqual(len(calls), 3)
 
+    def test_release_gate_retention_list_reads_local_run_indexes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            run_dir = retention_root / "corr-b"
+            run_dir.mkdir(parents=True)
+            (run_dir / "release-gate-retention-index.redacted.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "nac.m365-release-gate-retention-index/v0.1",
+                        "status": "PASSED",
+                        "workspace_id": "notary_team_01",
+                        "correlation_id": "corr-b",
+                        "artifact_dir": str(run_dir),
+                        "copied_artifact_count": 2,
+                        "artifacts": [
+                            {"id": "runtime_smoke", "status": "COPIED"},
+                            {"id": "mcp_inventory_smoke", "status": "NOT_ATTACHED"},
+                        ],
+                        "privacy": {"storesTokensOrSecrets": False},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "release-gate-evidence.redacted.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "nac.m365-release-gate-evidence/v0.1",
+                        "status": "PASSED",
+                        "generated_at": "2026-07-07T12:07:57Z",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            payload, return_code = _invoke_retention_list(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["run_count"], 1)
+        self.assertEqual(payload["summary"]["invalid_run_count"], 0)
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertEqual(payload["runs"][0]["correlation_id"], "corr-b")
+        self.assertEqual(payload["runs"][0]["timestamp"], "2026-07-07T12:07:57Z")
+        self.assertEqual(payload["runs"][0]["copied_artifact_count"], 2)
+        self.assertEqual(payload["runs"][0]["not_attached_artifact_count"], 1)
+        self.assertTrue(payload["runs"][0]["retention_index_path"].endswith("release-gate-retention-index.redacted.json"))
+        self.assertFalse(payload["runs"][0]["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_retention_list_allows_empty_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload, return_code = _invoke_retention_list(
+                [
+                    "--release-gate-retention-root",
+                    str(Path(tmp) / "missing-release-gates"),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["run_count"], 0)
+        self.assertEqual(payload["runs"], [])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -449,6 +521,24 @@ def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
             "m365",
             "teams-sharepoint",
             "release-gate-run",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_retention_list(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-list",
             *extra_args,
         ]
     )

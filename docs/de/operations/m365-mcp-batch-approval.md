@@ -195,6 +195,18 @@ Retention-Pfad und kopiert diese aktualisierten Artefakte erneut in den
 Laufordner. Der folgende Offline-Exporter bleibt nur für Diagnose oder erneuten
 Export vorhandener Artefakte:
 
+Der lokale Audit-Überblick läuft offline über:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-list \
+  --format json
+```
+
+Der Befehl liest nur lokale Retention-Index- und Evidence-JSON-Dateien unter
+`out/m365/teams-sharepoint/release-gates/` und gibt Correlation-ID, Status,
+Timestamp, Workspace, Artefaktzähler und lokale Evidence-Pfade aus. Er führt
+keine Graph-Anfrage, keinen Tenant-Write und keine Löschung aus.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \

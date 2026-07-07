@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -301,6 +302,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
             "release-gate-evidence",
+            "release-gate-retention-list",
             "release-gate-run",
             "apply",
             "drift",
@@ -474,6 +476,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Optionaler Laufordner fuer redigierte Release-Gate-Artefaktkopien; "
             "standardmaessig out/m365/teams-sharepoint/release-gates/<correlation-id>/."
+        ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-retention-root",
+        type=Path,
+        help=(
+            "Optionaler Root-Ordner fuer release-gate-retention-list; "
+            "standardmaessig out/m365/teams-sharepoint/release-gates/."
         ),
     )
     teams_sharepoint.add_argument(
@@ -1481,6 +1491,14 @@ def command_m365(args: argparse.Namespace) -> int:
                 _print_m365_release_gate_run(payload)
             return return_code
 
+        if args.teams_sharepoint_command == "release-gate-retention-list":
+            payload = _list_m365_release_gate_retention(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_retention_list(payload)
+            return 0 if payload["status"] == "PASSED" else 1
+
         if args.teams_sharepoint_command == "release-gate-evidence":
             output_path = _resolve_m365_release_gate_path(
                 repo_root,
@@ -1935,6 +1953,120 @@ _M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
     "mcp_smoke_suite",
     "mcp_leftover_dry_run",
 }
+
+
+def _list_m365_release_gate_retention(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    retention_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_retention_root,
+        DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT,
+    )
+    runs: list[dict[str, Any]] = []
+    errors: list[str] = []
+    if retention_root.exists():
+        for index_path in sorted(retention_root.glob("*/release-gate-retention-index.redacted.json")):
+            try:
+                payload = json.loads(index_path.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("retention index root must be an object")
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                errors.append(f"invalid retention index {index_path}: {exc}")
+                continue
+            runs.append(_m365_release_gate_retention_row(index_path, payload))
+    runs.sort(key=lambda run: (str(run.get("timestamp") or ""), str(run.get("correlation_id") or "")), reverse=True)
+    return {
+        "schema_version": "nac.m365-release-gate-retention-list/v0.1",
+        "status": "FAILED" if errors else "PASSED",
+        "summary": {
+            "retention_root": str(retention_root),
+            "run_count": len(runs),
+            "invalid_run_count": len(errors),
+            "latest_timestamp": runs[0]["timestamp"] if runs else None,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "runs": runs,
+        "errors": errors,
+    }
+
+
+def _m365_release_gate_retention_row(index_path: Path, retention_index: dict[str, Any]) -> dict[str, Any]:
+    run_dir = index_path.parent
+    evidence_path = run_dir / "release-gate-evidence.redacted.json"
+    evidence_generated_at = _m365_release_gate_evidence_generated_at(evidence_path)
+    artifacts = retention_index.get("artifacts") if isinstance(retention_index.get("artifacts"), list) else []
+    copied_artifact_count = retention_index.get("copied_artifact_count")
+    if not isinstance(copied_artifact_count, int):
+        copied_artifact_count = sum(1 for artifact in artifacts if isinstance(artifact, dict) and artifact.get("status") == "COPIED")
+    not_attached_artifact_count = sum(
+        1 for artifact in artifacts if isinstance(artifact, dict) and artifact.get("status") == "NOT_ATTACHED"
+    )
+    return {
+        "status": retention_index.get("status"),
+        "workspace_id": retention_index.get("workspace_id"),
+        "correlation_id": retention_index.get("correlation_id") or run_dir.name,
+        "timestamp": evidence_generated_at or _mtime_utc(index_path),
+        "evidence_generated_at": evidence_generated_at,
+        "artifact_dir": retention_index.get("artifact_dir") or str(run_dir),
+        "retention_index_path": str(index_path),
+        "copied_artifact_count": copied_artifact_count,
+        "not_attached_artifact_count": not_attached_artifact_count,
+        "artifact_count": len(artifacts),
+        "report_path": str(run_dir / "release-gate-evidence.redacted.md"),
+        "evidence_json_path": str(evidence_path),
+        "artifact_index_path": str(run_dir / "release-gate-artifact-index.redacted.json"),
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def _m365_release_gate_evidence_generated_at(evidence_path: Path) -> str | None:
+    if not evidence_path.exists():
+        return None
+    try:
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(evidence, dict):
+        return None
+    generated_at = evidence.get("generated_at")
+    return generated_at if isinstance(generated_at, str) else None
+
+
+def _mtime_utc(path: Path) -> str | None:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    except OSError:
+        return None
+
+
+def _print_m365_release_gate_retention_list(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload['status']}")
+    print(f"Retention root: {summary.get('retention_root')}")
+    print(f"Runs: {summary.get('run_count')}")
+    for run in payload.get("runs", []):
+        print(
+            "- "
+            f"{run.get('timestamp') or 'unknown'} "
+            f"{run.get('correlation_id') or 'unknown'} "
+            f"status={run.get('status') or 'UNKNOWN'} "
+            f"retained={run.get('copied_artifact_count')} "
+            f"index={run.get('retention_index_path')}"
+        )
+    for error in payload.get("errors", []):
+        print(f"ERROR: {error}")
 
 
 def _refresh_m365_release_gate_evidence_with_retention(
