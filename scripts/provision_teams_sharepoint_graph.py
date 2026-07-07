@@ -65,10 +65,15 @@ from nac_m365_graph.runtime_metadata import (  # noqa: E402
     write_runtime_metadata_artifact,
 )
 from nac_m365_graph.runtime_certificate_readiness import (  # noqa: E402
+    DEFAULT_CERTIFICATE_EXPIRY_CRITICAL_DAYS,
+    DEFAULT_CERTIFICATE_EXPIRY_WARNING_DAYS,
+    DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
     DEFAULT_RUNTIME_METADATA_STATE,
     DEFAULT_RUNTIME_SMOKE_STATE,
+    build_runtime_certificate_expiry_monitor,
     build_runtime_certificate_readiness,
     load_runtime_certificate_state,
+    write_runtime_certificate_expiry_monitor_artifact,
 )
 from nac_m365_graph.runtime_smoke import (  # noqa: E402
     DEFAULT_RUNTIME_SMOKE_OUTPUT,
@@ -105,6 +110,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
+            "runtime-certificate-expiry-monitor",
             "runtime-certificate-readiness",
             "runtime-smoke",
             "runtime-metadata",
@@ -122,6 +128,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
+            "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
             "mcp-stdio starts the local MCP adapter."
@@ -185,6 +192,24 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_RUNTIME_METADATA_STATE,
         help="Path to the non-secret runtime-metadata evidence state.",
+    )
+    parser.add_argument(
+        "--runtime-certificate-expiry-output",
+        type=Path,
+        default=DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
+        help="Path for the redacted runtime certificate expiry monitor artifact under out/.",
+    )
+    parser.add_argument(
+        "--runtime-certificate-warning-days",
+        type=int,
+        default=DEFAULT_CERTIFICATE_EXPIRY_WARNING_DAYS,
+        help="Warning threshold in days for runtime certificate expiry.",
+    )
+    parser.add_argument(
+        "--runtime-certificate-critical-days",
+        type=int,
+        default=DEFAULT_CERTIFICATE_EXPIRY_CRITICAL_DAYS,
+        help="Critical threshold in days for runtime certificate expiry.",
     )
     parser.add_argument(
         "--mcp-live-read",
@@ -733,6 +758,30 @@ def main() -> int:
             readiness,
             args.json,
             return_code=0 if readiness["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "runtime-certificate-expiry-monitor":
+        runtime_smoke_state = (
+            load_runtime_certificate_state(args.runtime_smoke_state)
+            if args.runtime_smoke_state.exists()
+            else None
+        )
+        runtime_metadata_state = (
+            load_runtime_certificate_state(args.runtime_metadata_state)
+            if args.runtime_metadata_state.exists()
+            else None
+        )
+        monitor = build_runtime_certificate_expiry_monitor(
+            runtime_smoke_state,
+            runtime_metadata_state,
+            warning_days=args.runtime_certificate_warning_days,
+            critical_days=args.runtime_certificate_critical_days,
+        )
+        write_runtime_certificate_expiry_monitor_artifact(monitor, args.runtime_certificate_expiry_output)
+        return _emit(
+            monitor,
+            args.json,
+            return_code=0 if monitor["status"] == "PASSED" else 1,
         )
 
     if args.command in {"privileged-plan", "privileged-apply"}:

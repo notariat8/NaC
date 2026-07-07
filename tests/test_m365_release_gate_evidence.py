@@ -25,6 +25,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
             runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
@@ -34,6 +35,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_certificate_expiry_artifact=runtime_certificate_expiry_artifact,
                 runtime_smoke_artifact=runtime_smoke_artifact,
                 runtime_metadata_artifact=runtime_metadata_artifact,
                 expected_workspace_id="notary_team_01",
@@ -51,9 +53,9 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         index = evidence["artifact_index"]
         self.assertEqual(index["schema_version"], "nac.m365-release-gate-evidence-index/v0.1")
         self.assertEqual(index["artifacts"][0]["attached"], False)
-        self.assertEqual(index["artifacts"][2]["id"], "mcp_smoke_suite")
-        self.assertEqual(index["artifacts"][2]["attached"], True)
-        self.assertEqual(len(index["artifacts"][2]["artifact_sha256"]), 64)
+        self.assertEqual(index["artifacts"][3]["id"], "mcp_smoke_suite")
+        self.assertEqual(index["artifacts"][3]["attached"], True)
+        self.assertEqual(len(index["artifacts"][3]["artifact_sha256"]), 64)
         self.assertFalse(index["privacy"]["storesTokensOrSecrets"])
         report = render_release_gate_evidence_markdown(evidence)
         self.assertIn("mcp-smoke-suite --mcp-suite-cleanup", report)
@@ -65,6 +67,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
             runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
@@ -74,6 +77,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_certificate_expiry_artifact=runtime_certificate_expiry_artifact,
                 runtime_smoke_artifact=runtime_smoke_artifact,
                 runtime_metadata_artifact=runtime_metadata_artifact,
                 require_runtime_artifacts=True,
@@ -82,16 +86,22 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(evidence["status"], "BLOCKED")
         self.assertEqual(evidence["steps"][0]["status"], "BLOCKED")
         self.assertEqual(evidence["steps"][1]["status"], "BLOCKED")
+        self.assertEqual(evidence["steps"][2]["status"], "BLOCKED")
 
     def test_reports_complete_when_runtime_and_mcp_artifacts_are_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_certificate_expiry_artifact = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
             runtime_smoke_artifact = tmp_path / "runtime-smoke.redacted.json"
             runtime_metadata_artifact = tmp_path / "runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            runtime_certificate_expiry_artifact.write_text(
+                json.dumps(_runtime_certificate_expiry_payload()),
+                encoding="utf-8",
+            )
             runtime_smoke_artifact.write_text(json.dumps(_runtime_smoke_payload()), encoding="utf-8")
             runtime_metadata_artifact.write_text(json.dumps(_runtime_metadata_payload()), encoding="utf-8")
 
@@ -99,6 +109,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_certificate_expiry_artifact=runtime_certificate_expiry_artifact,
                 runtime_smoke_artifact=runtime_smoke_artifact,
                 runtime_metadata_artifact=runtime_metadata_artifact,
                 require_runtime_artifacts=True,
@@ -106,6 +117,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
 
         self.assertEqual(evidence["status"], "PASSED")
         self.assertEqual(evidence["summary"]["evidence_completeness"], "complete_release_gate_artifacts")
+        self.assertEqual(evidence["summary"]["runtime_certificate_expiry_status"], "PASSED")
         self.assertEqual(evidence["summary"]["runtime_smoke_status"], "PASSED")
         self.assertEqual(evidence["summary"]["runtime_metadata_status"], "PASSED")
 
@@ -114,6 +126,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             runtime_artifact = tmp_path / "runtime-smoke.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
@@ -123,17 +136,19 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_certificate_expiry_artifact=runtime_certificate_expiry_artifact,
                 runtime_smoke_artifact=runtime_artifact,
             )
 
         self.assertEqual(evidence["status"], "FAILED")
-        self.assertEqual(evidence["steps"][0]["status"], "FAILED")
+        self.assertEqual(evidence["steps"][1]["status"], "FAILED")
 
     def test_cli_writes_report_and_prints_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             report_path = tmp_path / "release-gate-evidence.redacted.md"
             json_path = tmp_path / "release-gate-evidence.redacted.json"
             index_path = tmp_path / "release-gate-artifact-index.redacted.json"
@@ -155,6 +170,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                     str(suite_artifact),
                     "--release-gate-leftover-artifact",
                     str(leftover_artifact),
+                    "--release-gate-runtime-certificate-expiry-artifact",
+                    str(runtime_certificate_expiry_artifact),
                     "--release-gate-runtime-smoke-artifact",
                     str(runtime_smoke_artifact),
                     "--release-gate-runtime-metadata-artifact",
@@ -197,8 +214,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(json_payload["artifact_index"]["schema_version"], "nac.m365-release-gate-evidence-index/v0.1")
         self.assertEqual(index_payload["status"], "PASSED")
         self.assertEqual(index_payload["json_path"], str(json_path))
-        self.assertEqual(index_payload["artifacts"][2]["id"], "mcp_smoke_suite")
-        self.assertEqual(len(index_payload["artifacts"][2]["artifact_sha256"]), 64)
+        self.assertEqual(index_payload["artifacts"][3]["id"], "mcp_smoke_suite")
+        self.assertEqual(len(index_payload["artifacts"][3]["artifact_sha256"]), 64)
 
 
 def _suite_payload() -> dict:
@@ -270,6 +287,31 @@ def _runtime_smoke_payload() -> dict:
             "stores_tokens_or_secrets": False,
             "reads_sharepoint_file_content": False,
             "list_items_read": 0,
+        },
+    }
+
+
+def _runtime_certificate_expiry_payload() -> dict:
+    return {
+        "status": "PASSED",
+        "schema_version": "nac.m365-runtime-certificate-expiry-monitor/v0.1",
+        "summary": {
+            "certificate_expires_at_utc": "2027-07-07T07:22:21Z",
+            "certificate_days_until_expiry": 365,
+            "certificate_expiry_level": "OK",
+            "certificate_expiry_warning_days": 90,
+            "certificate_expiry_critical_days": 30,
+            "certificate_rotation_required": False,
+            "certificate_thumbprint_emitted": False,
+            "runtime_metadata_thumbprint_matches_smoke": True,
+            "graph_rest_only": True,
+            "raw_site_id_stored": False,
+            "raw_site_url_stored": False,
+            "raw_graph_response_stored": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+            "credential_files_read": False,
+            "executes_graph_requests": False,
         },
     }
 

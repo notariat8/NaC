@@ -33,6 +33,7 @@ from nac_m365_graph.runtime_metadata import (  # noqa: E402
     write_runtime_metadata_artifact,
 )
 from nac_m365_graph.runtime_certificate_readiness import (  # noqa: E402
+    build_runtime_certificate_expiry_monitor,
     build_runtime_certificate_readiness,
 )
 from nac_m365_graph.runtime_smoke import (  # noqa: E402
@@ -675,6 +676,54 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertNotIn("563B190496ABCBD1B89AC0CFC955A510CF30C3D0", serialized)
         self.assertNotIn("funktion8.sharepoint.com", serialized)
 
+    def test_runtime_certificate_expiry_monitor_is_offline_redacted_and_passes_outside_warning_window(self) -> None:
+        smoke_state = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
+        metadata_state = json.loads(RUNTIME_METADATA_STATE.read_text(encoding="utf-8"))
+
+        monitor = build_runtime_certificate_expiry_monitor(
+            smoke_state,
+            metadata_state,
+            now_utc="2026-07-07T00:00:00Z",
+            warning_days=90,
+            critical_days=30,
+        )
+        serialized = json.dumps(monitor)
+
+        self.assertEqual(monitor["schema_version"], "nac.m365-runtime-certificate-expiry-monitor/v0.1")
+        self.assertEqual(monitor["status"], "PASSED")
+        self.assertEqual(monitor["summary"]["certificate_expiry_level"], "OK")
+        self.assertEqual(monitor["summary"]["certificate_expiry_warning_days"], 90)
+        self.assertEqual(monitor["summary"]["certificate_expiry_critical_days"], 30)
+        self.assertGreaterEqual(monitor["summary"]["certificate_days_until_expiry"], 360)
+        self.assertFalse(monitor["summary"]["certificate_rotation_required"])
+        self.assertFalse(monitor["summary"]["certificate_thumbprint_emitted"])
+        self.assertTrue(monitor["summary"]["runtime_metadata_thumbprint_matches_smoke"])
+        self.assertFalse(monitor["summary"]["credential_files_read"])
+        self.assertFalse(monitor["summary"]["executes_graph_requests"])
+        self.assertFalse(monitor["summary"]["stores_tokens_or_secrets"])
+        self.assertFalse(monitor["summary"]["reads_sharepoint_file_content"])
+        self.assertNotIn("870c862b-56f7-4c9b-b0d9-f1f7d32c835c", serialized)
+        self.assertNotIn("0d98b5a5-479b-452d-9b43-c3fbbcab9d24", serialized)
+        self.assertNotIn("563B190496ABCBD1B89AC0CFC955A510CF30C3D0", serialized)
+        self.assertNotIn("funktion8.sharepoint.com", serialized)
+
+    def test_runtime_certificate_expiry_monitor_warns_with_custom_threshold(self) -> None:
+        smoke_state = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
+        metadata_state = json.loads(RUNTIME_METADATA_STATE.read_text(encoding="utf-8"))
+
+        monitor = build_runtime_certificate_expiry_monitor(
+            smoke_state,
+            metadata_state,
+            now_utc="2026-07-07T00:00:00Z",
+            warning_days=400,
+            critical_days=30,
+        )
+
+        self.assertEqual(monitor["status"], "REVIEW_REQUIRED")
+        self.assertEqual(monitor["summary"]["certificate_expiry_level"], "WARNING")
+        self.assertTrue(monitor["summary"]["certificate_rotation_required"])
+        self.assertEqual(monitor["summary"]["recommended_owner_gate"], "m365_runtime_certificate_rotation_lifecycle")
+
     def test_column_mapping_uses_graph_column_payloads(self) -> None:
         payload = column_create_payload(
             {
@@ -776,6 +825,33 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertFalse(payload["summary"]["credential_files_read"])
         self.assertTrue(payload["summary"]["certificate_generation_owner_gate_required"])
+
+    def test_cli_runtime_certificate_expiry_monitor_runs_without_credentials(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "runtime-certificate-expiry-monitor.redacted.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/provision_teams_sharepoint_graph.py",
+                    "runtime-certificate-expiry-monitor",
+                    "--runtime-certificate-expiry-output",
+                    str(output),
+                    "--json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(artifact["schema_version"], "nac.m365-runtime-certificate-expiry-monitor/v0.1")
+        self.assertEqual(payload["summary"]["certificate_expiry_level"], "OK")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["credential_files_read"])
 
     def test_cli_privileged_apply_requires_owner_approval_before_credentials(self) -> None:
         result = subprocess.run(
@@ -892,6 +968,35 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertFalse(payload["summary"]["secret_env_values_read"])
+
+    def test_nac_cli_exposes_runtime_certificate_expiry_monitor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "runtime-certificate-expiry-monitor.redacted.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/nac.py",
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "runtime-certificate-expiry-monitor",
+                    "--runtime-certificate-expiry-output",
+                    str(output),
+                    "--format",
+                    "json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["certificate_expiry_level"], "OK")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
 
     def test_nac_cli_exposes_m365_teams_sharepoint_runtime_smoke_gate(self) -> None:
         result = subprocess.run(

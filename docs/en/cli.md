@@ -67,6 +67,7 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format json
+python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
@@ -94,6 +95,7 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
@@ -121,7 +123,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` and `nac bpmn validate` | Lists and validates subject-matter BPMN process models. |
 | Processes | `nac process validate-all` | Validates deterministic process requests. |
 | Workflow contracts | `nac contracts validate` | Validates workflow contracts, spec traceability, secure-link boundaries, Teams/SharePoint Graph data plane and legal-research connector candidates. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint application-owner-readiness`, `nac m365 teams-sharepoint runtime-certificate-readiness`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-run --owner-approved`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, checks the Application Owner/Technical Owner path and the runtime certificate path offline with redacted evidence, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, executes the runtime release gate only owner-gated as a fixed sequence, creates redacted release-gate completion reports from local evidence artifacts, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access, starts the local MCP stdio adapter for request planning and cleans synthetic smoke leftovers only owner-gated. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint application-owner-readiness`, `nac m365 teams-sharepoint runtime-certificate-expiry-monitor`, `nac m365 teams-sharepoint runtime-certificate-readiness`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-run --owner-approved`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint mcp-manifest` and `nac m365 teams-sharepoint mcp-stdio` | Plans the Teams/SharePoint data plane, checks the Application Owner/Technical Owner path and the runtime certificate path offline with redacted evidence, monitors runtime certificate expiry without live access, runs the privileged app/Sites.Selected bootstrap only owner-gated through Microsoft Graph REST v1.0, verifies runtime-app read access to sites, lists and document libraries without reading list items, renders batch approval text without live access, executes the runtime release gate only owner-gated as a fixed sequence, creates redacted release-gate completion reports from local evidence artifacts, shows the safe `teams-sharepoint-data-mcp` tool manifest without live access, starts the local MCP stdio adapter for request planning and cleans synthetic smoke leftovers only owner-gated. |
 | Import jobs | `nac import jobs status --repo ../demo8notariat` | Controls bounded Codex/OCR jobs for import proposals in the separate data repository. |
 | Plugins | `nac plugins actions` and `nac plugins install --mode dry-run` | Lists subject-matter plugin commands and checks local plugin mirroring. |
 | Configuration | `nac config list` and `nac config validate` | Shows and validates policies, contracts and runtime configuration. |
@@ -240,6 +242,7 @@ an owner gate:
 
 ```bash
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
@@ -278,6 +281,18 @@ public-certificate upload and Entra app credential changes remain separate
 owner gates. The output contains no tenant ID, client ID, site ID, certificate
 thumbprint, certificate body, private-key data, tokens, secrets, raw Graph
 responses or mandate data.
+
+`runtime-certificate-expiry-monitor` is the early expiry signal for the runtime
+certificate. The command reads the same non-secret runtime-smoke and
+runtime-metadata evidence as `runtime-certificate-readiness`, writes the
+redacted artifact
+`out/m365/teams-sharepoint/runtime-certificate-expiry-monitor.redacted.json`
+and evaluates `--runtime-certificate-warning-days` and
+`--runtime-certificate-critical-days`. Outside the warning window it reports
+`PASSED`; inside the warning or critical window it reports `REVIEW_REQUIRED`
+and points to the bundled `runtime-certificate-rotation` approval path. It
+reads no certificate, private-key or secret files and emits no thumbprint,
+tenant ID, client ID, site ID, raw Graph response or mandate data.
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
 the discovered lists and document libraries against the declarative MVP schema.
@@ -338,7 +353,8 @@ it only reads the owner-gated match count. The redacted artifact is written to
 `batch-approval m365 --batch-mode release-gate` renders the repeatable release
 gate approval for runtime/MCP changes. The packet emits the owner-gated
 one-shot `release-gate-run --owner-approved` command as the leading live path
-and documents the covered internal steps: `runtime-smoke`, `runtime-metadata`,
+and documents the covered internal steps:
+`runtime-certificate-expiry-monitor`, `runtime-smoke`, `runtime-metadata`,
 `mcp-smoke-suite --mcp-suite-cleanup`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
 `release-gate-evidence --release-gate-require-runtime-artifacts`. The renderer
@@ -354,8 +370,9 @@ public certificate to Entra, update the local runtime credential boundary, run
 the stale Entra credential, delete the local old-certificate archive and log
 out the local delegated M365 CLI session.
 
-`release-gate-run` executes the same sequence in one owner-gated run and stops
-at the first failed step. The runner writes only the redacted standard
+`release-gate-run` executes the same sequence in one owner-gated run and starts
+with the offline `runtime-certificate-expiry-monitor` before live steps run. It
+stops at the first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
 The individual commands remain the diagnostic and fallback path when a runner

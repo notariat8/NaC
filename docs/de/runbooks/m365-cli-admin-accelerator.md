@@ -264,11 +264,12 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved -
 ändert Tenant-Zustand und darf erst nach Review, Drift-Snapshot und
 Owner-Freigabe laufen. `release-gate-run` ist danach der Standard-
 Betriebsnachweis nach MCP-/Runtime-Änderungen, weil der One-Shot-Runner
-Runtime-Smoke, Runtime-Metadata, synthetischen Write/Read/Cleanup,
-Leftover-Dry-Run und Evidence Export in einem owner-gated Lauf ausführt.
-Die intern abgedeckten Runtime-Schritte prüfen den Sites.Selected-Zugriff ohne
-Listenelemente oder Mandatsdaten und schreiben redigierte Evidence-Artefakte
-ohne Site-IDs, URLs, Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder
+den offline Zertifikatsablauf-Monitor, Runtime-Smoke, Runtime-Metadata,
+synthetischen Write/Read/Cleanup, Leftover-Dry-Run und Evidence Export in einem
+owner-gated Lauf ausführt. Die intern abgedeckten Runtime-Schritte prüfen den
+Zertifikatsablauf und den Sites.Selected-Zugriff ohne Listenelemente oder
+Mandatsdaten und schreiben redigierte Evidence-Artefakte ohne Thumbprint,
+Site-IDs, URLs, Listen-/Drive-IDs, Graph-Rohantworten, Tokens, Secrets oder
 Dateiinhalte.
 
 Der `mcp-smoke-leftover-cleanup`-Dry-Run ist der Nachlauf, wenn die Suite

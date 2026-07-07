@@ -12,6 +12,9 @@ DEFAULT_EVIDENCE_JSON_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evid
 DEFAULT_ARTIFACT_INDEX_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json")
 DEFAULT_MCP_SMOKE_SUITE_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-suite.redacted.json")
 DEFAULT_MCP_LEFTOVER_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json")
+DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT = Path(
+    "out/m365/teams-sharepoint/runtime-certificate-expiry-monitor.redacted.json"
+)
 DEFAULT_RUNTIME_SMOKE_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-smoke.redacted.json")
 DEFAULT_RUNTIME_METADATA_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-metadata.redacted.json")
 
@@ -21,6 +24,7 @@ def build_release_gate_evidence(
     repo_root: Path,
     mcp_suite_artifact: Path | None = None,
     mcp_leftover_artifact: Path | None = None,
+    runtime_certificate_expiry_artifact: Path | None = None,
     runtime_smoke_artifact: Path | None = None,
     runtime_metadata_artifact: Path | None = None,
     expected_workspace_id: str | None = None,
@@ -30,6 +34,11 @@ def build_release_gate_evidence(
 ) -> dict[str, Any]:
     generated_at = generated_at or _now()
     paths = {
+        "runtime_certificate_expiry": _resolve(
+            repo_root,
+            runtime_certificate_expiry_artifact,
+            DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT,
+        ),
         "runtime_smoke": _resolve(repo_root, runtime_smoke_artifact, DEFAULT_RUNTIME_SMOKE_ARTIFACT),
         "runtime_metadata": _resolve(repo_root, runtime_metadata_artifact, DEFAULT_RUNTIME_METADATA_ARTIFACT),
         "mcp_smoke_suite": _resolve(repo_root, mcp_suite_artifact, DEFAULT_MCP_SMOKE_SUITE_ARTIFACT),
@@ -37,6 +46,7 @@ def build_release_gate_evidence(
     }
 
     steps = [
+        _runtime_certificate_expiry_step(paths["runtime_certificate_expiry"], required=require_runtime_artifacts),
         _runtime_smoke_step(paths["runtime_smoke"], required=require_runtime_artifacts),
         _runtime_metadata_step(paths["runtime_metadata"], required=require_runtime_artifacts),
         _mcp_suite_step(paths["mcp_smoke_suite"]),
@@ -66,10 +76,11 @@ def build_release_gate_evidence(
         "correlation_id": _first_summary_value(steps, "correlation_id"),
         "evidence_completeness": completeness,
         "runtime_artifacts_required": require_runtime_artifacts,
-        "runtime_smoke_status": steps[0]["status"],
-        "runtime_metadata_status": steps[1]["status"],
-        "mcp_smoke_suite_status": steps[2]["status"],
-        "mcp_leftover_dry_run_status": steps[3]["status"],
+        "runtime_certificate_expiry_status": steps[0]["status"],
+        "runtime_smoke_status": steps[1]["status"],
+        "runtime_metadata_status": steps[2]["status"],
+        "mcp_smoke_suite_status": steps[3]["status"],
+        "mcp_leftover_dry_run_status": steps[4]["status"],
         "graph_rest_only": _all_privacy_flag(steps, "graph_rest_only", default=True),
         "stores_tokens_or_secrets": _any_privacy_flag(steps, "stores_tokens_or_secrets"),
         "stores_raw_graph_response": _any_privacy_flag(steps, "raw_graph_response_stored"),
@@ -251,6 +262,48 @@ def _runtime_smoke_step(path: Path, *, required: bool) -> dict[str, Any]:
     _expect_status_passed(step, artifact)
     _expect_summary_value(step, summary, "missing_lists", 0)
     _expect_summary_value(step, summary, "list_items_read", 0)
+    _expect_privacy_flags(step, summary)
+    return step
+
+
+def _runtime_certificate_expiry_step(path: Path, *, required: bool) -> dict[str, Any]:
+    artifact, error = _load_optional_json(path)
+    step = _base_step(
+        step_id="runtime_certificate_expiry",
+        label="runtime-certificate-expiry-monitor",
+        artifact_path=path,
+        required=required,
+        artifact=artifact,
+        load_error=error,
+    )
+    if artifact is None:
+        return step
+    summary = _dict(artifact.get("summary"))
+    step["summary"] = {
+        "certificate_expires_at_utc": summary.get("certificate_expires_at_utc"),
+        "certificate_days_until_expiry": summary.get("certificate_days_until_expiry"),
+        "certificate_expiry_level": summary.get("certificate_expiry_level"),
+        "certificate_expiry_warning_days": summary.get("certificate_expiry_warning_days"),
+        "certificate_expiry_critical_days": summary.get("certificate_expiry_critical_days"),
+        "certificate_rotation_required": summary.get("certificate_rotation_required"),
+        "certificate_thumbprint_emitted": summary.get("certificate_thumbprint_emitted"),
+        "runtime_metadata_thumbprint_matches_smoke": summary.get("runtime_metadata_thumbprint_matches_smoke"),
+        "graph_rest_only": summary.get("graph_rest_only"),
+        "raw_site_id_stored": summary.get("raw_site_id_stored"),
+        "raw_site_url_stored": summary.get("raw_site_url_stored"),
+        "raw_graph_response_stored": summary.get("raw_graph_response_stored"),
+        "stores_tokens_or_secrets": summary.get("stores_tokens_or_secrets"),
+        "reads_sharepoint_file_content": summary.get("reads_sharepoint_file_content"),
+        "credential_files_read": summary.get("credential_files_read"),
+        "executes_graph_requests": summary.get("executes_graph_requests"),
+    }
+    _expect_status_passed(step, artifact)
+    _expect_summary_value(step, summary, "certificate_expiry_level", "OK")
+    _expect_summary_value(step, summary, "certificate_rotation_required", False)
+    _expect_summary_value(step, summary, "certificate_thumbprint_emitted", False)
+    _expect_summary_value(step, summary, "runtime_metadata_thumbprint_matches_smoke", True)
+    _expect_summary_value(step, summary, "credential_files_read", False)
+    _expect_summary_value(step, summary, "executes_graph_requests", False)
     _expect_privacy_flags(step, summary)
     return step
 
@@ -517,6 +570,8 @@ def _step_summary_text(step: dict[str, Any]) -> str:
         "sites_read",
         "workspace_id",
         "correlation_id",
+        "certificate_expiry_level",
+        "certificate_days_until_expiry",
         "positive_write_read_status",
         "cleanup_status",
         "read_after_value_count",

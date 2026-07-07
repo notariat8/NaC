@@ -34,6 +34,11 @@ from nac_m365_graph.release_gate_evidence import (
     write_release_gate_evidence_report,
 )
 from nac_m365_graph.runtime_metadata import DEFAULT_RUNTIME_METADATA_OUTPUT
+from nac_m365_graph.runtime_certificate_readiness import (
+    DEFAULT_CERTIFICATE_EXPIRY_CRITICAL_DAYS,
+    DEFAULT_CERTIFICATE_EXPIRY_WARNING_DAYS,
+    DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
+)
 from nac_m365_graph.runtime_smoke import DEFAULT_RUNTIME_SMOKE_OUTPUT
 from nac_observability.time_ledger import (
     CATEGORY_CHOICES,
@@ -262,6 +267,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
+            "runtime-certificate-expiry-monitor",
             "runtime-certificate-readiness",
             "runtime-smoke",
             "runtime-metadata",
@@ -315,6 +321,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--runtime-metadata-state",
         type=Path,
         help="Optionaler nicht-geheimer Runtime-Metadata-Evidence-State.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-certificate-expiry-output",
+        type=Path,
+        help="Pfad fuer das redigierte Runtime-Certificate-Expiry-Monitor-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-certificate-warning-days",
+        type=int,
+        default=DEFAULT_CERTIFICATE_EXPIRY_WARNING_DAYS,
+        help="Warnschwelle in Tagen fuer den Runtime-Zertifikatsablauf.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-certificate-critical-days",
+        type=int,
+        default=DEFAULT_CERTIFICATE_EXPIRY_CRITICAL_DAYS,
+        help="Kritische Schwelle in Tagen fuer den Runtime-Zertifikatsablauf.",
     )
     teams_sharepoint.add_argument(
         "--mcp-live-read",
@@ -402,6 +425,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-runtime-smoke-artifact",
         type=Path,
         help="Optionaler Pfad zu einem redigierten Runtime-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-runtime-certificate-expiry-artifact",
+        type=Path,
+        help="Optionaler Pfad zu einem redigierten Runtime-Certificate-Expiry-Monitor-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-runtime-metadata-artifact",
@@ -1141,7 +1169,8 @@ def _build_m365_batch_approval_payload(
         approvals["release_gate"] = {
             "approval_text": (
                 "Freigabe: M365 Runtime Release-Gate live über den One-Shot-Runner "
-                f"im Workspace {workspace_id} ausführen, inklusive runtime-smoke, "
+                f"im Workspace {workspace_id} ausführen, inklusive "
+                "runtime-certificate-expiry-monitor, runtime-smoke, "
                 "runtime-metadata, MCP Smoke Suite mit Cleanup, Leftover-Dry-Run "
                 "und release-gate-evidence Export."
             ),
@@ -1155,6 +1184,7 @@ def _build_m365_batch_approval_payload(
                     "owner_gate": "m365_runtime_release_gate",
                     "command": release_gate_run_command,
                     "covers_steps": [
+                        "runtime_certificate_expiry_monitor",
                         "runtime_smoke",
                         "runtime_metadata",
                         "mcp_smoke_suite",
@@ -1226,6 +1256,7 @@ def _build_m365_batch_approval_payload(
                     "owner_gate": "m365_runtime_release_gate",
                     "command": release_gate_run_command,
                     "covers_steps": [
+                        "runtime_certificate_expiry_monitor",
                         "runtime_smoke",
                         "runtime_metadata",
                         "mcp_smoke_suite",
@@ -1354,6 +1385,7 @@ def command_m365(args: argparse.Namespace) -> int:
                 mcp_suite_artifact=args.release_gate_suite_artifact,
                 mcp_leftover_artifact=args.release_gate_leftover_artifact,
                 runtime_smoke_artifact=args.release_gate_runtime_smoke_artifact,
+                runtime_certificate_expiry_artifact=args.release_gate_runtime_certificate_expiry_artifact,
                 runtime_metadata_artifact=args.release_gate_runtime_metadata_artifact,
                 expected_workspace_id=args.mcp_smoke_workspace_id,
                 expected_correlation_id=args.mcp_smoke_correlation_id,
@@ -1393,6 +1425,10 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--runtime-metadata-output", str(args.runtime_metadata_output)])
         if args.runtime_metadata_state:
             script_args.extend(["--runtime-metadata-state", str(args.runtime_metadata_state)])
+        if args.runtime_certificate_expiry_output:
+            script_args.extend(["--runtime-certificate-expiry-output", str(args.runtime_certificate_expiry_output)])
+        script_args.extend(["--runtime-certificate-warning-days", str(args.runtime_certificate_warning_days)])
+        script_args.extend(["--runtime-certificate-critical-days", str(args.runtime_certificate_critical_days)])
         if args.mcp_live_read:
             script_args.append("--mcp-live-read")
         if args.mcp_smoke_tool:
@@ -1467,6 +1503,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         args.runtime_smoke_output,
         DEFAULT_RUNTIME_SMOKE_OUTPUT,
     )
+    runtime_certificate_expiry_output = _resolve_m365_release_gate_path(
+        repo_root,
+        args.runtime_certificate_expiry_output,
+        DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_MONITOR_OUTPUT,
+    )
     runtime_metadata_output = _resolve_m365_release_gate_path(
         repo_root,
         args.runtime_metadata_output,
@@ -1495,6 +1536,22 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     )
 
     steps = [
+        (
+            "runtime_certificate_expiry",
+            [
+                "m365",
+                "teams-sharepoint",
+                "runtime-certificate-expiry-monitor",
+                "--runtime-certificate-expiry-output",
+                str(runtime_certificate_expiry_output),
+                "--runtime-certificate-warning-days",
+                str(args.runtime_certificate_warning_days),
+                "--runtime-certificate-critical-days",
+                str(args.runtime_certificate_critical_days),
+                "--format",
+                "json",
+            ],
+        ),
         (
             "runtime_smoke",
             [
@@ -1568,6 +1625,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "--mcp-smoke-correlation-id",
                 correlation_id,
                 "--release-gate-require-runtime-artifacts",
+                "--release-gate-runtime-certificate-expiry-artifact",
+                str(runtime_certificate_expiry_output),
                 "--release-gate-runtime-smoke-artifact",
                 str(runtime_smoke_output),
                 "--release-gate-runtime-metadata-artifact",
@@ -1588,16 +1647,20 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         ),
     ]
     if args.schema:
-        for step_id, command in steps[:2]:
+        for step_id, command in steps[1:3]:
             command[3:3] = ["--schema", str(args.schema)]
+    if args.runtime_smoke_state:
+        steps[0][1][3:3] = ["--runtime-smoke-state", str(args.runtime_smoke_state)]
+    if args.runtime_metadata_state:
+        steps[0][1][3:3] = ["--runtime-metadata-state", str(args.runtime_metadata_state)]
     if args.provisioned_state:
-        for step_id, command in steps[:4]:
+        for step_id, command in steps[1:5]:
             command[3:3] = ["--provisioned-state", str(args.provisioned_state)]
     if args.mcp_contract:
-        for step_id, command in steps[2:4]:
+        for step_id, command in steps[3:5]:
             command[3:3] = ["--mcp-contract", str(args.mcp_contract)]
     if args.mcp_smoke_case_id:
-        steps[2][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
+        steps[3][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
 
     step_results: list[dict[str, Any]] = []
     for step_id, command in steps:

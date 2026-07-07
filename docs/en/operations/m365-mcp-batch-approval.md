@@ -111,15 +111,17 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --format json
 ```
 
-The one-shot runner remains owner-gated and internally covers `runtime-smoke`,
-`runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`,
+The one-shot runner remains owner-gated and internally covers
+`runtime-certificate-expiry-monitor`, `runtime-smoke`, `runtime-metadata`,
+`mcp-smoke-suite --mcp-suite-cleanup`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
 `release-gate-evidence --release-gate-require-runtime-artifacts`.
-`runtime-smoke` and `runtime-metadata` are read-only, the MCP Smoke Suite writes
-and deletes one synthetic matter, and the leftover dry-run only reads the match
-count. `release-gate-evidence` runs offline at the end and reads only local
-redacted artifacts. `runtime-smoke` and `runtime-metadata` write their own
-redacted runtime artifacts so the completion report can return
+`runtime-certificate-expiry-monitor` is offline, `runtime-smoke` and
+`runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
+synthetic matter, and the leftover dry-run only reads the match count.
+`release-gate-evidence` runs offline at the end and reads only local redacted
+artifacts. The expiry monitor, `runtime-smoke` and `runtime-metadata` write
+their own redacted runtime artifacts so the completion report can return
 `complete_release_gate_artifacts`. The individual commands remain a diagnostic
 and fallback path when a runner step must be reproduced in isolation.
 
@@ -160,7 +162,7 @@ separate owner gate because the internally covered
 `mcp-smoke-suite --mcp-suite-cleanup` step writes and deletes a synthetic matter
 in the live tenant. After approval, the agent must complete the run end to end:
 runtime smoke, runtime metadata, write, read, cleanup, leftover dry-run,
-evidence export, workspace clean state and concrete result in the final
+certificate expiry monitor, evidence export, workspace clean state and concrete result in the final
 status. The MCP Smoke Suite remains the diagnostic/component path when only
 that step must be reproduced in isolation. If a synthetic leftover remains
 after the run, the agent must immediately prepare the owner-gated
@@ -179,14 +181,17 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
 ```
 
 The exporter performs no Graph request. It reads the local redacted artifacts
+`runtime-certificate-expiry-monitor.redacted.json`,
 `runtime-smoke.redacted.json`, `runtime-metadata.redacted.json`,
 `mcp-smoke-suite.redacted.json` and
 `mcp-smoke-leftover-cleanup.redacted.json` and writes
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optional
-runtime artifacts can be attached with `--release-gate-runtime-smoke-artifact`
-and `--release-gate-runtime-metadata-artifact`; when they are missing, the
-runtime steps outside the release-gate batch are documented as `NOT_ATTACHED`.
-In the release-gate batch, export blocks when runtime artifacts are missing.
+runtime artifacts can be attached with
+`--release-gate-runtime-certificate-expiry-artifact`,
+`--release-gate-runtime-smoke-artifact` and
+`--release-gate-runtime-metadata-artifact`; when they are missing, the runtime
+steps outside the release-gate batch are documented as `NOT_ATTACHED`. In the
+release-gate batch, export blocks when runtime artifacts are missing.
 
 ## Completion Rule
 

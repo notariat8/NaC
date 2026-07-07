@@ -258,10 +258,11 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved -
 `privileged-apply` changes tenant state and may run only after review, drift
 snapshot and owner approval. `release-gate-run` is then the standard runtime
 evidence after MCP/runtime changes because the one-shot runner performs runtime
-smoke, runtime metadata, synthetic write/read/cleanup, leftover dry-run and
-evidence export in one owner-gated run. The covered runtime steps verify
-Sites.Selected runtime access without list items or matter data and write
-redacted evidence artifacts without site IDs, URLs, list or drive IDs, raw Graph
+certificate expiry monitoring, runtime smoke, runtime metadata, synthetic
+write/read/cleanup, leftover dry-run and evidence export in one owner-gated
+run. The covered runtime steps verify certificate expiry and Sites.Selected
+runtime access without list items or matter data and write redacted evidence
+artifacts without thumbprint, site IDs, URLs, list or drive IDs, raw Graph
 responses, tokens, secrets or file content.
 
 The `mcp-smoke-leftover-cleanup` dry-run is the follow-up when the suite failed,

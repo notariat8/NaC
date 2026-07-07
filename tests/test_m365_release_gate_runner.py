@@ -62,6 +62,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(
             [step["step"] for step in payload["steps"]],
             [
+                "runtime_certificate_expiry",
                 "runtime_smoke",
                 "runtime_metadata",
                 "mcp_smoke_suite",
@@ -73,6 +74,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(
             invoked_steps,
             [
+                "runtime-certificate-expiry-monitor",
                 "runtime-smoke",
                 "runtime-metadata",
                 "mcp-smoke-suite",
@@ -80,9 +82,11 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 "release-gate-evidence",
             ],
         )
-        self.assertIn("--mcp-suite-cleanup", calls[2])
-        self.assertIn("--mcp-leftover-dry-run", calls[3])
-        self.assertIn("--release-gate-require-runtime-artifacts", calls[4])
+        self.assertIn("--runtime-certificate-expiry-output", calls[0])
+        self.assertIn("--mcp-suite-cleanup", calls[3])
+        self.assertIn("--mcp-leftover-dry-run", calls[4])
+        self.assertIn("--release-gate-require-runtime-artifacts", calls[5])
+        self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[5])
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
 
     def test_release_gate_run_stops_on_failed_step(self) -> None:
@@ -114,9 +118,9 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         self.assertEqual(payload["status"], "FAILED")
         self.assertEqual(payload["summary"]["failed_step"], "runtime_metadata")
-        self.assertEqual(payload["summary"]["steps_completed"], 1)
+        self.assertEqual(payload["summary"]["steps_completed"], 2)
         self.assertEqual(payload["errors"], ["metadata failed"])
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
 
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
