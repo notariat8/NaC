@@ -1683,6 +1683,172 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertTrue(comment_exists)
         self.assertIn("no previous retained PASSED", "\n".join(payload["errors"]))
 
+    def test_release_gate_post_run_report_index_lists_and_filters_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            report_root = Path(tmp) / "post-run-reports"
+            _write_post_run_report(
+                report_root / "current-a",
+                correlation_id="current-a",
+                baseline_correlation_id="baseline-a",
+                status="PASSED",
+                generated_at="2026-07-07T12:00:00Z",
+                mvp_release_readiness="READY",
+            )
+            _write_post_run_report(
+                report_root / "current-b",
+                correlation_id="current-b",
+                baseline_correlation_id="baseline-b",
+                status="BLOCKED",
+                generated_at="2026-07-07T13:00:00Z",
+                mvp_release_readiness="NOT_READY",
+            )
+
+            payload, return_code = _invoke_post_run_report_index(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(report_root),
+                    "--format",
+                    "json",
+                ]
+            )
+            baseline_filtered, baseline_return_code = _invoke_post_run_report_index(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(report_root),
+                    "--release-gate-post-run-report-baseline",
+                    "baseline-a",
+                    "--format",
+                    "json",
+                ]
+            )
+            query_filtered, query_return_code = _invoke_post_run_report_index(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(report_root),
+                    "--release-gate-post-run-report-query",
+                    "current-b",
+                    "--release-gate-post-run-report-status",
+                    "BLOCKED",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["post_run_report_count"], 2)
+        self.assertEqual(payload["summary"]["invalid_artifact_count"], 0)
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertEqual(payload["post_run_reports"][0]["correlation_id"], "current-b")
+        self.assertEqual(payload["post_run_reports"][0]["baseline_correlation_id"], "baseline-b")
+        self.assertEqual(payload["post_run_reports"][0]["status"], "BLOCKED")
+        self.assertEqual(payload["post_run_reports"][0]["mvp_release_readiness"], "NOT_READY")
+        self.assertTrue(payload["post_run_reports"][0]["report_path"].endswith("release-gate-post-run-report.redacted.md"))
+        self.assertFalse(payload["post_run_reports"][0]["privacy"]["storesTokensOrSecrets"])
+        self.assertEqual(baseline_return_code, 0)
+        self.assertEqual(baseline_filtered["summary"]["post_run_report_count"], 1)
+        self.assertEqual(baseline_filtered["post_run_reports"][0]["correlation_id"], "current-a")
+        self.assertEqual(query_return_code, 0)
+        self.assertEqual(query_filtered["summary"]["post_run_report_count"], 1)
+        self.assertEqual(query_filtered["post_run_reports"][0]["baseline_correlation_id"], "baseline-b")
+
+    def test_release_gate_post_run_report_index_allows_empty_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload, return_code = _invoke_post_run_report_index(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(Path(tmp) / "missing-post-run-reports"),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["post_run_report_count"], 0)
+        self.assertEqual(payload["post_run_reports"], [])
+
+    def test_release_gate_post_run_report_index_artifact_writes_redacted_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report_root = tmp_path / "post-run-reports"
+            report_path = tmp_path / "index" / "post-run-index.redacted.md"
+            json_path = tmp_path / "index" / "post-run-index.redacted.json"
+            _write_post_run_report(
+                report_root / "current-a",
+                correlation_id="current-a",
+                baseline_correlation_id="baseline-a",
+                status="PASSED",
+                generated_at="2026-07-07T12:00:00Z",
+                mvp_release_readiness="READY",
+            )
+            _write_post_run_report(
+                report_root / "current-b",
+                correlation_id="current-b",
+                baseline_correlation_id="baseline-b",
+                status="BLOCKED",
+                generated_at="2026-07-07T13:00:00Z",
+                mvp_release_readiness="NOT_READY",
+            )
+
+            payload, return_code = _invoke_post_run_report_index_artifact(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(report_root),
+                    "--release-gate-post-run-report-query",
+                    "current-b",
+                    "--release-gate-post-run-report-status",
+                    "BLOCKED",
+                    "--release-gate-post-run-report-index-output",
+                    str(report_path),
+                    "--release-gate-post-run-report-index-json-output",
+                    str(json_path),
+                    "--format",
+                    "json",
+                ]
+            )
+            report = report_path.read_text(encoding="utf-8")
+            json_payload = json.loads(json_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-post-run-report-index-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["post_run_report_count"], 1)
+        self.assertEqual(payload["summary"]["status_filter"], "BLOCKED")
+        self.assertEqual(payload["summary"]["report_path"], str(report_path))
+        self.assertEqual(payload["summary"]["json_path"], str(json_path))
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertFalse(payload["summary"]["reads_sharepoint_file_content"])
+        self.assertTrue(report.startswith("# M365 Release Gate Post-Run Report Index"))
+        self.assertIn("Post-run report count: 1", report)
+        self.assertIn("| 2026-07-07T13:00:00Z | current-b | baseline-b | BLOCKED | NOT_READY |", report)
+        self.assertEqual(json_payload["summary"]["query"], "current-b")
+        self.assertEqual(json_payload["post_run_reports"][0]["correlation_id"], "current-b")
+        self.assertFalse(json_payload["post_run_reports"][0]["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_post_run_report_index_artifact_blocks_invalid_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            report_root = Path(tmp) / "post-run-reports"
+            invalid_dir = report_root / "broken"
+            invalid_dir.mkdir(parents=True)
+            (invalid_dir / "release-gate-post-run-report.redacted.json").write_text("{", encoding="utf-8")
+
+            payload, return_code = _invoke_post_run_report_index_artifact(
+                [
+                    "--release-gate-post-run-report-root",
+                    str(report_root),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-post-run-report-index-artifact/v0.1")
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertEqual(payload["summary"]["invalid_artifact_count"], 1)
+        self.assertEqual(payload["post_run_reports"], [])
+        self.assertTrue(payload["errors"])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -1837,6 +2003,42 @@ def _invoke_post_run_report(extra_args: list[str]) -> tuple[dict, int]:
             "m365",
             "teams-sharepoint",
             "release-gate-post-run-report",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_post_run_report_index(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-post-run-report-index",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_post_run_report_index_artifact(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-post-run-report-index-artifact",
             *extra_args,
         ]
     )
@@ -2008,6 +2210,55 @@ def _write_compare_artifact(
                 "comparison": {
                     "privacy": {"storesTokensOrSecrets": False},
                 },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_post_run_report(
+    artifact_dir: Path,
+    *,
+    correlation_id: str,
+    baseline_correlation_id: str,
+    status: str,
+    generated_at: str,
+    mvp_release_readiness: str,
+) -> None:
+    artifact_dir.mkdir(parents=True)
+    report_path = artifact_dir / "release-gate-post-run-report.redacted.md"
+    json_path = artifact_dir / "release-gate-post-run-report.redacted.json"
+    comment_path = artifact_dir / "github-evidence-comment.redacted.md"
+    report_path.write_text("# M365 Release Gate Post-Run Report\n", encoding="utf-8")
+    comment_path.write_text("## M365 Release-Gate Evidence\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-post-run-report/v0.1",
+                "status": status,
+                "generated_at": generated_at,
+                "summary": {
+                    "correlation_id": correlation_id,
+                    "baseline_correlation_id": baseline_correlation_id,
+                    "baseline_selection": "explicit",
+                    "workspace_id": "notary_team_01",
+                    "mvp_release_readiness": mvp_release_readiness,
+                    "release_readiness_status": "PASSED" if mvp_release_readiness == "READY" else "BLOCKED",
+                    "release_gate_status": "PASSED",
+                    "audit_pack_status": "PASSED",
+                    "retention_compare_status": "PASSED",
+                    "difference_count": 0,
+                    "artifact_directory": str(artifact_dir),
+                    "report_path": str(report_path),
+                    "json_path": str(json_path),
+                    "github_comment_path": str(comment_path),
+                    "graph_requests_executed": False,
+                    "tenant_writes_executed": False,
+                    "tenant_deletes_executed": False,
+                    "stores_tokens_or_secrets": False,
+                    "reads_sharepoint_file_content": False,
+                },
+                "privacy": {"storesTokensOrSecrets": False},
             }
         ),
         encoding="utf-8",

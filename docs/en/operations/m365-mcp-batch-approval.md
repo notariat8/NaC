@@ -181,6 +181,20 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-post-run-report \
 The comment draft is written only as a local Markdown artifact; the command
 posts nothing to GitHub and performs no Graph request, tenant write, delete or
 SharePoint content read.
+Existing post-gate reports can then be indexed offline:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-post-run-report-index \
+  --release-gate-post-run-report-query <search-text> \
+  --format json
+```
+
+The index reads only local `release-gate-post-run-report.redacted.json` files
+and filters by correlation ID, baseline, status or free-text query. With
+`release-gate-post-run-report-index-artifact`, the same view can be archived as
+redacted JSON and Markdown evidence;
+`--release-gate-post-run-report-index-output` and
+`--release-gate-post-run-report-index-json-output` set the target paths.
 
 ## MVP Go/No-Go Acceptance Criterion
 
@@ -293,6 +307,9 @@ redacted offline post-gate report and local GitHub evidence comment draft
 directly. The switch implies the audit pack, readiness and audit-pack
 requirement for readiness; without `--release-gate-compare-left`, it uses the
 previous complete `PASSED` run for the same workspace ID as the baseline.
+`release-gate-post-run-report-index` then lists those archived reports offline
+by correlation ID, baseline, status and local paths; the artifact mode writes a
+redacted index copy for audit packages.
 
 The local audit overview runs offline through:
 
