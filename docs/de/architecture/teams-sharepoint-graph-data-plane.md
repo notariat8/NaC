@@ -296,7 +296,9 @@ und verifiziert danach, dass kein Treffer mehr gelesen wird. Ungebundene
 Listendumps, Prefix-Massenlöschungen, Rohantworten, Tokens und Datei-Inhalte
 bleiben blockiert.
 
-Für einen kompakten Operator-Lauf gibt es zusätzlich die Suite:
+Für vollständige Runtime-/MCP-Release-Gates ist `release-gate-run` der
+führende One-Shot-Bedienpfad. Für einen isolierten MCP-Komponenten- oder
+Diagnoselauf gibt es zusätzlich die Suite:
 
 ```bash
 nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup

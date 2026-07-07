@@ -201,11 +201,11 @@ Nach erfolgreichem Login ist der kleinste sinnvolle Test:
 m365 request --url "@graph/organization" --method get --output json
 ```
 
-Danach kann der Python-Provisioner weiter genutzt werden:
+Danach läuft der Produktpfad über die zentrale NaC-CLI:
 
 ```bash
-python3 scripts/provision_teams_sharepoint_graph.py plan
-python3 scripts/provision_teams_sharepoint_graph.py privileged-plan --json
+python3 scripts/nac.py m365 teams-sharepoint plan --format json
+python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 ```
 
 Der wiederholbare privilegierte Apply-Pfad nutzt ebenfalls nur Microsoft Graph
@@ -213,7 +213,7 @@ REST v1.0. Er ist kein Standardnutzerpfad und benötigt eine explizite
 Owner-Freigabe:
 
 ```bash
-M365_GRAPH_ACCESS_TOKEN_FILE="<lokale-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py privileged-apply --owner-approved --json
+M365_GRAPH_ACCESS_TOKEN_FILE="<lokale-token-datei>" python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
 ```
 
 Alternativ kann später eine app-only Konfiguration mit `M365_TENANT_ID`,
@@ -229,8 +229,8 @@ produktnahe Read-Smoke die vorhandenen SharePoint-Listen mit der Runtime-App
 prüfen:
 
 ```bash
-M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --json
-M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/provision_teams_sharepoint_graph.py runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --json
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE="<lokale-runtime-token-datei>" python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 ```
 
 Alternativ nutzt der Smoke `M365_TENANT_ID`, `M365_RUNTIME_CLIENT_ID` und
@@ -240,6 +240,10 @@ und Dokumentbibliotheken mit dem deklarativen MVP-Schema.
 `runtime-metadata` liest ausdrücklich keine Listenelemente und keine
 Mandatsdaten. Er setzt keine Teams, Gruppen, App-Rollen, Site-Permissions oder
 SharePoint-Listenelemente.
+
+Diese Einzelbefehle sind der Read-only-Diagnosepfad. Für den vollständigen
+Runtime-/MCP-Betriebsnachweis nach Änderungen ist unten `release-gate-run` der
+Standard.
 
 ## Kanonische M365-MVP-Betriebssequenz
 
