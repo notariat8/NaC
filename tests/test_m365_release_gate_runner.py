@@ -274,6 +274,181 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertTrue(retained_bootstrap_exists)
         self.assertTrue(retained_evidence_json_exists)
 
+    def test_release_gate_run_can_write_optional_audit_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            runtime_state = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            runtime_certificate_expiry_output = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
+            runtime_smoke_output = tmp_path / "runtime-smoke.redacted.json"
+            runtime_metadata_output = tmp_path / "runtime-metadata.redacted.json"
+            mcp_suite_output = tmp_path / "mcp-smoke-suite.redacted.json"
+            mcp_leftover_output = tmp_path / "mcp-smoke-leftover-cleanup.redacted.json"
+            evidence_output = tmp_path / "release-gate-evidence.redacted.md"
+            evidence_json_output = tmp_path / "release-gate-evidence.redacted.json"
+            artifact_index_output = tmp_path / "release-gate-artifact-index.redacted.json"
+            retention_root = tmp_path / "release-gates"
+            retention_dir = retention_root / "runner-corr"
+            audit_pack_dir = tmp_path / "audit-pack"
+            runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+            _write_retention_run(
+                retention_root / "baseline-corr",
+                correlation_id="baseline-corr",
+                generated_at="2026-07-07T11:30:00Z",
+                copied_artifact_count=1,
+                artifacts=[{"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "baseline"}],
+            )
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                step = command[command.index("teams-sharepoint") + 1]
+                _write_output_arg(command, "--runtime-certificate-expiry-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--runtime-smoke-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--runtime-metadata-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--mcp-suite-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--mcp-leftover-output", {"status": "PASSED", "step": step})
+                _write_release_gate_output_args(command)
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=json.dumps({"status": "PASSED", "step": step}),
+                    stderr="",
+                )
+
+            with patch.object(cli.subprocess, "run", side_effect=fake_run), patch.dict(cli.os.environ, {}, clear=True):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--owner-approved",
+                        "--mcp-smoke-correlation-id",
+                        "runner-corr",
+                        "--runtime-smoke-state",
+                        str(runtime_state),
+                        "--runtime-certificate-path",
+                        str(certificate_path),
+                        "--runtime-private-key-path",
+                        str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
+                        "--runtime-certificate-expiry-output",
+                        str(runtime_certificate_expiry_output),
+                        "--runtime-smoke-output",
+                        str(runtime_smoke_output),
+                        "--runtime-metadata-output",
+                        str(runtime_metadata_output),
+                        "--mcp-suite-output",
+                        str(mcp_suite_output),
+                        "--mcp-leftover-output",
+                        str(mcp_leftover_output),
+                        "--release-gate-evidence-output",
+                        str(evidence_output),
+                        "--release-gate-evidence-json-output",
+                        str(evidence_json_output),
+                        "--release-gate-artifact-index-output",
+                        str(artifact_index_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
+                        "--release-gate-write-audit-pack",
+                        "--release-gate-compare-left",
+                        "baseline-corr",
+                        "--release-gate-audit-pack-dir",
+                        str(audit_pack_dir),
+                        "--format",
+                        "json",
+                    ]
+                )
+            manifest = json.loads((audit_pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text())
+            compare = json.loads(
+                (
+                    audit_pack_dir
+                    / "comparisons"
+                    / "baseline-corr__runner-corr"
+                    / "release-gate-retention-compare.redacted.json"
+                ).read_text()
+            )
+            retention_list = json.loads((audit_pack_dir / "release-gate-retention-list.redacted.json").read_text())
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["steps"][-1]["step"], "release_gate_audit_pack")
+        self.assertEqual(payload["steps"][-1]["status"], "PASSED")
+        self.assertIn("release-gate-retention-audit-pack", payload["steps"][-1]["command"])
+        self.assertEqual(payload["summary"]["release_gate_audit_pack_status"], "PASSED")
+        self.assertEqual(payload["summary"]["release_gate_audit_pack_dir"], str(audit_pack_dir))
+        self.assertEqual(
+            payload["summary"]["release_gate_audit_pack_manifest"],
+            str(audit_pack_dir / "release-gate-retention-audit-pack.redacted.json"),
+        )
+        self.assertEqual(manifest["summary"]["left_correlation_id"], "baseline-corr")
+        self.assertEqual(manifest["summary"]["right_correlation_id"], "runner-corr")
+        self.assertEqual(compare["summary"]["left_correlation_id"], "baseline-corr")
+        self.assertEqual(compare["summary"]["right_correlation_id"], "runner-corr")
+        self.assertEqual(retention_list["summary"]["run_count"], 2)
+        self.assertFalse(manifest["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_run_fails_requested_audit_pack_when_baseline_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            runtime_state = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            retention_root = tmp_path / "release-gates"
+            retention_dir = retention_root / "runner-corr"
+            audit_pack_dir = tmp_path / "audit-pack"
+            runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                step = command[command.index("teams-sharepoint") + 1]
+                _write_release_gate_output_args(command)
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=json.dumps({"status": "PASSED", "step": step}),
+                    stderr="",
+                )
+
+            with patch.object(cli.subprocess, "run", side_effect=fake_run), patch.dict(cli.os.environ, {}, clear=True):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--owner-approved",
+                        "--mcp-smoke-correlation-id",
+                        "runner-corr",
+                        "--runtime-smoke-state",
+                        str(runtime_state),
+                        "--runtime-certificate-path",
+                        str(certificate_path),
+                        "--runtime-private-key-path",
+                        str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
+                        "--release-gate-write-audit-pack",
+                        "--release-gate-compare-left",
+                        "missing-baseline",
+                        "--release-gate-audit-pack-dir",
+                        str(audit_pack_dir),
+                        "--format",
+                        "json",
+                    ]
+                )
+            manifest = json.loads((audit_pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text())
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertEqual(payload["summary"]["failed_step"], "release_gate_audit_pack")
+        self.assertEqual(payload["summary"]["release_gate_audit_pack_status"], "BLOCKED")
+        self.assertEqual(payload["steps"][-1]["step"], "release_gate_audit_pack")
+        self.assertEqual(payload["steps"][-1]["status"], "BLOCKED")
+        self.assertIn("missing-baseline", payload["errors"][0])
+        self.assertEqual(manifest["status"], "BLOCKED")
+        self.assertFalse(manifest["privacy"]["storesTokensOrSecrets"])
+
     def test_release_gate_run_bootstraps_runtime_env_for_live_steps(self) -> None:
         calls: list[tuple[str, dict[str, str] | None]] = []
         with tempfile.TemporaryDirectory() as tmp:
