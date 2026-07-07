@@ -286,6 +286,7 @@ The matter visibility and deputy-access boundary is defined in the separate
 
 ```bash
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
+nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
 By default, the smoke writes
@@ -295,6 +296,13 @@ deputy plans, the request-plan-only MCP tool contracts and the privacy boundary
 without Graph execution. `release-gate-run` executes it automatically before
 the live steps and attaches the artifact as optional evidence to
 `release-gate-evidence` and the artifact index.
+
+`matter-access-apply-readiness` also writes
+`out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json` and
+checks offline whether the future apply edge for `grant_request` and
+`audit_append` is owner-gated, write-approved, timeboxed, reasoned and
+auditable. `release-gate-run` also creates this artifact automatically before
+live steps and attaches it optionally to evidence and the artifact index.
 
 The first owner-gated live-read mode starts explicitly:
 

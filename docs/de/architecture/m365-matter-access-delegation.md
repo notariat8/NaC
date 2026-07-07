@@ -42,6 +42,13 @@ Der redigierte Offline-Nachweis für diesen Plan läuft über:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
+Die spätere Apply-Grenze für zeitbegrenzte Vertretungsfreigaben wird separat
+ohne Live-Apply geprüft:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
+```
+
 `matter-access-smoke` schreibt standardmäßig
 `out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`.
 Das Artefakt enthält nur Counts, Aktionsnamen, Correlation-ID und
@@ -50,6 +57,14 @@ keine SharePoint-Dateiinhalte und keine konkreten Graph-Pfade. Im
 `release-gate-run` wird der Smoke vor den Live-Runtime-Schritten ausgeführt und
 als optionaler Evidence-Step an `release-gate-evidence` und den Artifact-Index
 angehängt.
+
+`matter-access-apply-readiness` schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json`. Das
+Artefakt prüft, ob `grant_request` und `audit_append` als künftige
+owner-gated Graph-REST-Schreibkante bereit sind: explizite Write-Approval,
+Rollen-/Akten-/Zweckgate, Grund, Gültigkeitsfenster, Approver,
+Audit-Correlation und Privacy-Grenze. Es führt keine Graph Requests aus,
+schreibt keine SharePoint-Items und speichert keine konkreten Graph-Pfade.
 
 ## MCP-Grenze
 
