@@ -1111,6 +1111,7 @@ def _build_m365_batch_approval_payload(
             "python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence "
             f"--mcp-smoke-workspace-id {workspace_id} "
             f"--mcp-smoke-correlation-id {correlation_id} "
+            "--release-gate-require-runtime-artifacts "
             "--format json"
         )
         runtime_smoke_command = (

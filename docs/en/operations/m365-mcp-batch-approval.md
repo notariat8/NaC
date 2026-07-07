@@ -107,7 +107,7 @@ owner approval and the fixed sequence:
 2. `runtime-metadata`
 3. `mcp-smoke-suite --mcp-suite-cleanup`
 4. `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`
-5. `release-gate-evidence`
+5. `release-gate-evidence --release-gate-require-runtime-artifacts`
 
 The emitted live commands remain owner-gated. `runtime-smoke` and
 `runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
@@ -115,7 +115,11 @@ synthetic matter, and the leftover dry-run only reads the match count.
 `release-gate-evidence` runs offline afterwards and reads only local redacted
 artifacts. `runtime-smoke` and `runtime-metadata` write their own redacted
 runtime artifacts so the completion report can return
-`complete_release_gate_artifacts`.
+`complete_release_gate_artifacts`. In the release-gate batch,
+`--release-gate-require-runtime-artifacts` is mandatory; when
+`runtime-smoke.redacted.json` or `runtime-metadata.redacted.json` is missing,
+the final evidence step blocks instead of falling back to
+`mcp_artifacts_only`.
 
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
@@ -142,6 +146,7 @@ without another owner approval:
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
   --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-require-runtime-artifacts \
   --format json
 ```
 
@@ -152,7 +157,8 @@ The exporter performs no Graph request. It reads the local redacted artifacts
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optional
 runtime artifacts can be attached with `--release-gate-runtime-smoke-artifact`
 and `--release-gate-runtime-metadata-artifact`; when they are missing, the
-runtime steps are documented as `NOT_ATTACHED`.
+runtime steps outside the release-gate batch are documented as `NOT_ATTACHED`.
+In the release-gate batch, export blocks when runtime artifacts are missing.
 
 ## Completion Rule
 
