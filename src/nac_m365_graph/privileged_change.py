@@ -13,6 +13,13 @@ DEFAULT_PRIVILEGED_CHANGE_CONFIG = (
 DEFAULT_PROVISIONED_STATE = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.provisioned.f8.json"
 )
+DEFAULT_PRIVILEGED_APPLIED_STATE = (
+    REPO_ROOT
+    / "deploy"
+    / "m365"
+    / "teams-sharepoint"
+    / "nac-mvp.privileged-change-path.applied.f8.json"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +41,10 @@ def load_privileged_change_config(path: Path = DEFAULT_PRIVILEGED_CHANGE_CONFIG)
 
 
 def load_provisioned_state(path: Path = DEFAULT_PROVISIONED_STATE) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_privileged_applied_state(path: Path = DEFAULT_PRIVILEGED_APPLIED_STATE) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -299,8 +310,268 @@ def summarize_privileged_change_plan(operations: list[PrivilegedChangeOperation]
     }
 
 
+def build_application_owner_readiness(
+    config: dict[str, Any],
+    applied_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build an offline, redacted readiness view for the M365 application-owner path."""
+
+    errors = validate_privileged_change_config(config)
+    if errors:
+        return {
+            "schema_version": "nac.m365-application-owner-readiness/v0.1",
+            "status": "FAILED",
+            "errors": errors,
+            "summary": {
+                "executes_graph_requests": False,
+                "executes_graph_writes": False,
+                "mandate_data_allowed": False,
+            },
+        }
+
+    graph = config["graph"]
+    governance = config["governance"]
+    governance_group = config["governance_group"]
+    technical_owner = config["technical_owner_user"]
+    team_owner_policy = config["team_owner_policy"]
+    applications = config["applications"]
+    applied_applications = _applied_applications(applied_state)
+    applied_site_permissions = _applied_site_permissions(applied_state)
+    applied_team_owner_checks = _applied_team_owner_checks(applied_state)
+    secret_material_stored = _contains_sensitive_keys(applied_state or {})
+    applied_app_ids = set(applied_applications)
+    configured_app_ids = {application["id"] for application in applications}
+    runtime_apps = [application for application in applications if application.get("runtime_allowed") is True]
+    provisioning_apps = [application for application in applications if application.get("runtime_allowed") is False]
+    runtime_app = runtime_apps[0] if runtime_apps else {}
+    technical_owner_license_count = _technical_owner_license_count(applied_state)
+    technical_owner_license_review_required = technical_owner_license_count in (None, 0)
+
+    checks = [
+        _readiness_check(
+            "graph_rest_only",
+            "PASSED",
+            "Privileged changes use Microsoft Graph REST v1.0 only.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "standard_users_least_privilege",
+            "PASSED",
+            "Standard users must not hold Microsoft 365 admin permissions.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "governance_group_not_direct_application_owner",
+            "PASSED",
+            "nac_platform_admins remains governance/four-eyes control, not a direct app owner.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "technical_owner_direct_application_owner",
+            "PASSED",
+            "The direct application owner is the configured technical owner user.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "provisioning_and_runtime_apps_separated",
+            "PASSED",
+            "Provisioning permissions and runtime Sites.Selected access are separated.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "human_team_owner_required",
+            "PASSED",
+            "The technical owner may not be the sole team owner.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "live_apply_owner_gated",
+            "PASSED",
+            "Live tenant mutation remains disabled by default and requires owner approval.",
+            owner_gate_required=True,
+        ),
+        _readiness_check(
+            "applied_state_attached",
+            "PASSED" if applied_state else "REVIEW_REQUIRED",
+            "Applied-state evidence is attached." if applied_state else "No applied-state evidence was attached.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "applied_applications_recorded",
+            "PASSED" if applied_state and configured_app_ids <= applied_app_ids else "REVIEW_REQUIRED",
+            "Applied-state evidence records the configured applications.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "runtime_sites_selected_grants_recorded",
+            "PASSED" if applied_site_permissions else "REVIEW_REQUIRED",
+            "Applied-state evidence records runtime Sites.Selected site grants.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "secret_material_not_stored",
+            "PASSED" if not secret_material_stored else "FAILED",
+            "No token, client secret, private key or password key is stored in the evidence.",
+            owner_gate_required=False,
+        ),
+        _readiness_check(
+            "technical_owner_license_terms_review",
+            "REVIEW_REQUIRED" if technical_owner_license_review_required else "PASSED",
+            "Technical-owner license evidence is missing and needs terms/license review."
+            if technical_owner_license_count is None
+            else (
+                "The technical owner is unlicensed in evidence and needs terms/license review."
+                if technical_owner_license_count == 0
+                else "The technical owner has assigned license evidence."
+            ),
+            owner_gate_required=True,
+        ),
+    ]
+    failed_checks = [check for check in checks if check["status"] == "FAILED"]
+    review_checks = [check for check in checks if check["status"] == "REVIEW_REQUIRED"]
+
+    return {
+        "schema_version": "nac.m365-application-owner-readiness/v0.1",
+        "status": "FAILED" if failed_checks else "PASSED",
+        "summary": {
+            "graph_base_url": graph["base_url"],
+            "graph_rest_only": graph["rest_only"],
+            "sdk_allowed": graph["sdk_allowed"],
+            "legacy_sharepoint_api_allowed": graph["legacy_sharepoint_api_allowed"],
+            "executes_graph_requests": False,
+            "executes_graph_writes": False,
+            "mandate_data_allowed": False,
+            "standard_users_admin_permissions_allowed": not governance[
+                "standard_users_must_not_hold_m365_admin_permissions"
+            ],
+            "privileged_changes_must_run_through_app_or_api": governance[
+                "privileged_changes_must_run_through_app_or_api"
+            ],
+            "owner_gate_required_for_live_apply": config["live_apply"]["requires_owner_approval"],
+            "governance_group": governance_group["display_name"],
+            "direct_application_owner_group_supported": governance_group["direct_application_owner_supported"],
+            "direct_application_owner_kind": "user_or_service_principal",
+            "technical_owner_user": technical_owner["user_principal_name"],
+            "technical_owner_must_not_hold_m365_admin_roles": technical_owner[
+                "must_not_hold_m365_admin_roles"
+            ],
+            "technical_owner_license_terms_review_required": technical_owner[
+                "license_terms_review_required"
+            ],
+            "technical_owner_must_not_be_sole_team_owner": team_owner_policy[
+                "technical_owner_user_must_not_be_sole_owner"
+            ],
+            "licensed_human_team_owner_required": team_owner_policy[
+                "licensed_human_team_owner_required"
+            ],
+            "provisioning_app_count": len(provisioning_apps),
+            "runtime_app_count": len(runtime_apps),
+            "runtime_sites_selected_required": "Sites.Selected"
+            in runtime_app.get("bootstrap_application_permissions", []),
+            "applied_state_attached": applied_state is not None,
+            "applied_applications_recorded": len(applied_applications),
+            "team_owner_checks_recorded": len(applied_team_owner_checks),
+            "runtime_site_permissions_recorded": len(applied_site_permissions),
+            "secret_material_stored": secret_material_stored,
+            "raw_tenant_id_stored": False,
+            "raw_application_ids_stored": False,
+            "raw_site_ids_stored": False,
+            "review_required_checks": len(review_checks),
+        },
+        "applications": [
+            {
+                "id": application["id"],
+                "display_name": application["display_name"],
+                "direct_owner": application["direct_owner"],
+                "governance_group": application["governance_group"],
+                "bootstrap_application_permissions": list(application["bootstrap_application_permissions"]),
+                "runtime_allowed": application["runtime_allowed"],
+                "sites_selected_grants": application["sites_selected_grants"],
+                "applied_state_recorded": application["id"] in applied_app_ids,
+            }
+            for application in applications
+        ],
+        "checks": checks,
+        "warnings": [check["message"] for check in review_checks],
+    }
+
+
 def _workspaces(provisioned_state: dict[str, Any]) -> list[dict[str, Any]]:
     workspaces = provisioned_state.get("workspaces")
     if not isinstance(workspaces, list):
         return []
     return [workspace for workspace in workspaces if isinstance(workspace, dict)]
+
+
+def _readiness_check(
+    check_id: str,
+    status: str,
+    message: str,
+    *,
+    owner_gate_required: bool,
+) -> dict[str, Any]:
+    return {
+        "id": check_id,
+        "status": status,
+        "message": message,
+        "owner_gate_required": owner_gate_required,
+    }
+
+
+def _applied_applications(applied_state: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(applied_state, dict):
+        return {}
+    applications = applied_state.get("applications")
+    if not isinstance(applications, dict):
+        return {}
+    return {key: value for key, value in applications.items() if isinstance(value, dict)}
+
+
+def _applied_site_permissions(applied_state: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(applied_state, dict):
+        return []
+    permissions = applied_state.get("runtime_site_permissions")
+    if not isinstance(permissions, list):
+        return []
+    return [permission for permission in permissions if isinstance(permission, dict)]
+
+
+def _applied_team_owner_checks(applied_state: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(applied_state, dict):
+        return []
+    owner_checks = applied_state.get("team_owner_checks")
+    if not isinstance(owner_checks, list):
+        return []
+    return [owner_check for owner_check in owner_checks if isinstance(owner_check, dict)]
+
+
+def _technical_owner_license_count(applied_state: dict[str, Any] | None) -> int | None:
+    if not isinstance(applied_state, dict):
+        return None
+    technical_owner = applied_state.get("technical_owner_user")
+    if not isinstance(technical_owner, dict):
+        return None
+    license_count = technical_owner.get("assigned_license_count")
+    return license_count if isinstance(license_count, int) else None
+
+
+def _contains_sensitive_keys(payload: Any) -> bool:
+    sensitive_keys = {
+        "access_token",
+        "client_secret",
+        "password",
+        "private_key",
+        "refresh_token",
+        "secret",
+        "token",
+    }
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            key_text = str(key).lower()
+            if key_text in sensitive_keys or key_text.endswith("_secret") or key_text.endswith("_token"):
+                return True
+            if _contains_sensitive_keys(value):
+                return True
+    if isinstance(payload, list):
+        return any(_contains_sensitive_keys(item) for item in payload)
+    return False
