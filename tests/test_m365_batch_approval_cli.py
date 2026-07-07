@@ -173,6 +173,68 @@ class M365BatchApprovalCliTests(unittest.TestCase):
             ],
         )
 
+    def test_batch_approval_renders_runtime_certificate_rotation_lifecycle_without_writes(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "batch-approval",
+                "m365",
+                "--batch-mode",
+                "runtime-certificate-rotation",
+                "--workspace-id",
+                "notary_team_01",
+                "--correlation-id",
+                "cert-rotation-corr",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_github_writes"])
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["reads_certificate_files"])
+        self.assertFalse(payload["summary"]["reads_private_key_files"])
+        self.assertFalse(payload["summary"]["reads_secret_values"])
+        self.assertEqual(payload["summary"]["owner_gates"], ["m365_runtime_certificate_rotation_lifecycle"])
+
+        rotation = payload["result"]["runtime_certificate_rotation"]
+        self.assertIn("M365 Runtime-Zertifikat rotieren", rotation["approval_text"])
+        self.assertIn("lokale M365-CLI-Session abmelden", rotation["approval_text"])
+        self.assertIn("runtime-certificate-readiness", rotation["commands"][0])
+        self.assertEqual(
+            rotation["commands"][1],
+            "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved "
+            "--mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id cert-rotation-corr --format json",
+        )
+        self.assertEqual(
+            [step["step"] for step in rotation["operator_sequence"]],
+            [
+                "runtime_certificate_readiness",
+                "generate_local_runtime_certificate",
+                "upload_public_certificate_to_entra_runtime_app",
+                "update_local_runtime_credential_boundary",
+                "release_gate_run",
+                "refresh_non_secret_runtime_evidence_pr",
+                "remove_stale_entra_runtime_certificate",
+                "delete_local_old_certificate_archive",
+                "logout_local_delegated_m365_cli_session",
+            ],
+        )
+        self.assertFalse(rotation["operator_sequence"][0]["executes_graph_requests"])
+        self.assertFalse(rotation["operator_sequence"][2]["private_key_uploaded"])
+        self.assertFalse(rotation["operator_sequence"][5]["stores_secret_material"])
+
     def test_batch_approval_requires_prs_for_merge_mode(self) -> None:
         result = subprocess.run(
             [

@@ -123,6 +123,27 @@ redacted runtime artifacts so the completion report can return
 `complete_release_gate_artifacts`. The individual commands remain a diagnostic
 and fallback path when a runner step must be reproduced in isolation.
 
+## Runtime Certificate Rotation Approval
+
+After a `runtime-certificate-readiness` warning, the agent renders the complete
+certificate rotation package offline:
+
+```bash
+python3 scripts/nac.py batch-approval m365 \
+  --batch-mode runtime-certificate-rotation \
+  --workspace-id notary_team_01 \
+  --correlation-id <correlation-id> \
+  --format json
+```
+
+The renderer performs no GitHub or Graph write action and reads no certificate,
+private-key or secret files. It bundles the required owner gates in one
+copyable approval text: generate a local runtime certificate, upload the public
+certificate to Entra, update the local runtime credential boundary, run
+`release-gate-run` live, refresh non-secret runtime evidence through a PR,
+remove the stale Entra credential, delete the local old-certificate archive and
+log out the local delegated M365 CLI session.
+
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
 `release-gate-run` is the standard runtime evidence after a merged change set

@@ -245,6 +245,7 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
+nac batch-approval m365 --batch-mode runtime-certificate-rotation --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
@@ -291,8 +292,8 @@ JSON-RPC over stdin/stdout. `tools/call` only plans Microsoft Graph v1.0
 requests and does not execute requests.
 `nac batch-approval m365` is offline as well. The command renders copyable
 owner approval texts for prepared PR batches, synthetic live-smoke batches and
-the M365 Runtime Release Gate, but performs no GitHub or Microsoft Graph write
-action.
+the M365 Runtime Release Gate and M365 runtime certificate lifecycle, but
+performs no GitHub or Microsoft Graph write action.
 
 `mcp-stdio --owner-approved --mcp-live-read` additionally enables live reads for
 `case_get` and `document_list`. Runtime credentials must be set outside the
@@ -342,6 +343,16 @@ and documents the covered internal steps: `runtime-smoke`, `runtime-metadata`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
 `release-gate-evidence --release-gate-require-runtime-artifacts`. The renderer
 itself is offline; the emitted live command remains owner-gated.
+
+`batch-approval m365 --batch-mode runtime-certificate-rotation` renders a
+bundled approval for the runtime certificate lifecycle. The renderer is
+offline, reads no certificate or private-key files, reads no secret values and
+performs no Graph request. The packet describes the owner-gated sequence:
+`runtime-certificate-readiness`, generate a local certificate, upload the
+public certificate to Entra, update the local runtime credential boundary, run
+`release-gate-run`, refresh non-secret runtime evidence through a PR, remove
+the stale Entra credential, delete the local old-certificate archive and log
+out the local delegated M365 CLI session.
 
 `release-gate-run` executes the same sequence in one owner-gated run and stops
 at the first failed step. The runner writes only the redacted standard
