@@ -711,6 +711,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     teams_sharepoint.add_argument(
+        "--release-gate-write-post-run-report-index",
+        action="store_true",
+        help=(
+            "Schreibt nach erfolgreichem release-gate-run direkt ein redigiertes Offline-Index-Artefakt "
+            "der Post-Gate-Reports; impliziert --release-gate-write-post-run-report."
+        ),
+    )
+    teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
         type=Path,
         help="Optionaler Pfad zum redigierten MCP-Smoke-Suite-Artefakt.",
@@ -2563,8 +2571,76 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 post_run_report_return_code,
             )
 
+    post_run_report_index_payload: dict[str, Any] | None = None
+    if args.release_gate_write_post_run_report_index:
+        post_run_report_index_payload = _write_m365_release_gate_run_post_run_report_index(
+            repo_root,
+            args,
+            release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        )
+        post_run_report_index_return_code = 0 if post_run_report_index_payload["status"] == "PASSED" else 2
+        step_results.append(
+            {
+                "step": "release_gate_post_run_report_index",
+                "return_code": post_run_report_index_return_code,
+                "status": post_run_report_index_payload["status"],
+                "command": _m365_release_gate_run_post_run_report_index_command(
+                    repo_root,
+                    args,
+                    release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+                ),
+            }
+        )
+        if post_run_report_index_payload["status"] != "PASSED":
+            post_run_report_index_summary = post_run_report_index_payload.get("summary", {})
+            post_run_report_summary = post_run_report_payload.get("summary", {}) if post_run_report_payload else {}
+            return (
+                {
+                    "status": "FAILED",
+                    "summary": {
+                        "workspace_id": workspace_id,
+                        "correlation_id": correlation_id,
+                        "failed_step": "release_gate_post_run_report_index",
+                        "steps_completed": len(step_results) - 1,
+                        "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                        "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
+                        "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
+                        "release_gate_run_artifact_dir": str(release_gate_run_artifact_dir),
+                        "release_gate_retention_index": retention_index["index_path"],
+                        "release_gate_audit_pack_status": audit_pack_payload["status"] if audit_pack_payload else None,
+                        "release_gate_audit_pack_dir": (
+                            audit_pack_payload.get("summary", {}).get("pack_dir") if audit_pack_payload else None
+                        ),
+                        "release_gate_audit_pack_manifest": (
+                            audit_pack_payload.get("summary", {}).get("json_path") if audit_pack_payload else None
+                        ),
+                        "release_gate_readiness_status": readiness_payload["status"] if readiness_payload else None,
+                        "release_gate_readiness": (
+                            readiness_payload.get("summary", {}).get("mvp_release_readiness")
+                            if readiness_payload
+                            else None
+                        ),
+                        "release_gate_post_run_report_status": (
+                            post_run_report_payload["status"] if post_run_report_payload else None
+                        ),
+                        "release_gate_post_run_report": post_run_report_summary.get("report_path"),
+                        "release_gate_post_run_report_json": post_run_report_summary.get("json_path"),
+                        "release_gate_github_comment_draft": post_run_report_summary.get("github_comment_path"),
+                        "release_gate_post_run_report_index_status": post_run_report_index_payload["status"],
+                        "release_gate_post_run_report_index": post_run_report_index_summary.get("report_path"),
+                        "release_gate_post_run_report_index_json": post_run_report_index_summary.get("json_path"),
+                    },
+                    "steps": step_results,
+                    "errors": post_run_report_index_payload.get("errors", []),
+                },
+                post_run_report_index_return_code,
+            )
+
     readiness_summary = readiness_payload.get("summary", {}) if readiness_payload else {}
     post_run_report_summary = post_run_report_payload.get("summary", {}) if post_run_report_payload else {}
+    post_run_report_index_summary = (
+        post_run_report_index_payload.get("summary", {}) if post_run_report_index_payload else {}
+    )
     return (
         {
             "status": "PASSED",
@@ -2600,6 +2676,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "release_gate_post_run_report": post_run_report_summary.get("report_path"),
                 "release_gate_post_run_report_json": post_run_report_summary.get("json_path"),
                 "release_gate_github_comment_draft": post_run_report_summary.get("github_comment_path"),
+                "release_gate_post_run_report_index_status": (
+                    post_run_report_index_payload["status"] if post_run_report_index_payload else None
+                ),
+                "release_gate_post_run_report_index": post_run_report_index_summary.get("report_path"),
+                "release_gate_post_run_report_index_json": post_run_report_index_summary.get("json_path"),
             },
             "steps": step_results,
             "errors": [],
@@ -2609,13 +2690,15 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
 
 
 def _m365_release_gate_run_effective_args(args: argparse.Namespace) -> argparse.Namespace:
-    if not args.release_gate_write_post_run_report:
+    if not args.release_gate_write_post_run_report and not args.release_gate_write_post_run_report_index:
         return args
     return _m365_release_gate_audit_pack_args(
         args,
         release_gate_write_audit_pack=True,
         release_gate_write_readiness=True,
         release_gate_readiness_require_audit_pack=True,
+        release_gate_write_post_run_report=args.release_gate_write_post_run_report
+        or args.release_gate_write_post_run_report_index,
     )
 
 
@@ -4190,6 +4273,79 @@ def _m365_release_gate_run_post_run_report_command(
         )
     if post_run_args.release_gate_github_comment_output is not None:
         command.extend(["--release-gate-github-comment-output", str(post_run_args.release_gate_github_comment_output)])
+    command.extend(["--format", "json"])
+    return shlex.join(command)
+
+
+def _write_m365_release_gate_run_post_run_report_index(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    release_gate_run_artifact_dir: Path,
+) -> dict[str, Any]:
+    index_args = _m365_release_gate_run_post_run_report_index_args(
+        args,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
+    return _write_m365_release_gate_post_run_report_index_artifact(repo_root, index_args)
+
+
+def _m365_release_gate_run_post_run_report_index_args(
+    args: argparse.Namespace,
+    *,
+    release_gate_run_artifact_dir: Path,
+) -> argparse.Namespace:
+    return _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_post_run_report_root=args.release_gate_post_run_report_root
+        or DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT,
+        release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
+    )
+
+
+def _m365_release_gate_run_post_run_report_index_command(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    release_gate_run_artifact_dir: Path,
+) -> str:
+    index_args = _m365_release_gate_run_post_run_report_index_args(
+        args,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
+    command = [
+        "python3",
+        "scripts/nac.py",
+        "m365",
+        "teams-sharepoint",
+        "release-gate-post-run-report-index-artifact",
+        "--release-gate-post-run-report-root",
+        str(_resolve_m365_release_gate_path(repo_root, index_args.release_gate_post_run_report_root, DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT)),
+    ]
+    if index_args.release_gate_post_run_report_correlation_id:
+        command.extend(
+            [
+                "--release-gate-post-run-report-correlation-id",
+                str(index_args.release_gate_post_run_report_correlation_id),
+            ]
+        )
+    if index_args.release_gate_post_run_report_baseline:
+        command.extend(["--release-gate-post-run-report-baseline", str(index_args.release_gate_post_run_report_baseline)])
+    if index_args.release_gate_post_run_report_status:
+        command.extend(["--release-gate-post-run-report-status", str(index_args.release_gate_post_run_report_status)])
+    if index_args.release_gate_post_run_report_query:
+        command.extend(["--release-gate-post-run-report-query", str(index_args.release_gate_post_run_report_query)])
+    if index_args.release_gate_post_run_report_index_output is not None:
+        command.extend(
+            ["--release-gate-post-run-report-index-output", str(index_args.release_gate_post_run_report_index_output)]
+        )
+    if index_args.release_gate_post_run_report_index_json_output is not None:
+        command.extend(
+            [
+                "--release-gate-post-run-report-index-json-output",
+                str(index_args.release_gate_post_run_report_index_json_output),
+            ]
+        )
     command.extend(["--format", "json"])
     return shlex.join(command)
 
