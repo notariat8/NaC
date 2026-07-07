@@ -40,6 +40,12 @@ class RenderQualityGateCommentTests(unittest.TestCase):
                 "checks": [
                     {"id": "unit_tests", "title": "Unit Tests", "passed": True, "duration_ms": 12},
                     {"id": "knowledge_graph", "title": "Knowledge Graph Baseline", "passed": False, "duration_ms": 34},
+                    {
+                        "id": "m365_release_readiness_gate",
+                        "title": "M365 Release Readiness Gate",
+                        "passed": True,
+                        "duration_ms": 56,
+                    },
                 ],
             }
 
@@ -48,7 +54,12 @@ class RenderQualityGateCommentTests(unittest.TestCase):
         self.assertIn("<!-- nac-quality-gate-comment -->", comment)
         self.assertIn("## NaC Developer CI", comment)
         self.assertIn("- Build Status: **PASSED**", comment)
-        self.assertIn("- Checks: `1/2` bestanden", comment)
+        self.assertIn("- Checks: `2/3` bestanden", comment)
+        self.assertIn("### M365 MVP Readiness", comment)
+        self.assertIn("- Go/No-Go: `mvp_release_readiness=READY`", comment)
+        self.assertIn("- Runner summary: `release_gate_readiness=READY`", comment)
+        self.assertIn("- CI enforcement: **ENFORCED**", comment)
+        self.assertIn("release-gate-write-readiness", comment)
         self.assertIn("### KG Readiness", comment)
         self.assertIn("- Status: **READY**", comment)
         self.assertIn("| `online-gmbh-gruendung` | `1` | `nac-bnotk-xnp` |", comment)
@@ -62,6 +73,8 @@ class RenderQualityGateCommentTests(unittest.TestCase):
             comment = renderer._build_markdown(status, renderer._build_kg_readiness(repo_root))
 
         self.assertIn("Statusdatei fehlt", comment)
+        self.assertIn("### M365 MVP Readiness", comment)
+        self.assertIn("- CI enforcement: **NOT_EVALUATED**", comment)
         self.assertIn("### KG Readiness", comment)
 
     def test_kg_readiness_reports_blocking_value_fields(self) -> None:

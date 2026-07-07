@@ -60,20 +60,23 @@ CI:
 16. `kg_editor` (nur `strict`)
 17. `codex_parallel_review` (nur `strict`)
 18. `teams_sharepoint_graph_data_plane` (nur `strict`)
-19. `matter_data_classification_redaction` (nur `strict`)
-20. `private_operating_frame_gate` (nur `strict`)
-21. `private_payload_target_design` (nur `strict`)
-22. `private_payload_access_policy` (nur `strict`)
-23. `gnotkg_costs` (nur `strict`)
-24. `secure_document_links` (nur `strict`)
-25. `legal_research_connectors` (nur `strict`)
-26. `legal_source_inventory_license_tdm` (nur `strict`)
-27. `legal_model_customization_readiness` (nur `strict`)
-28. `legal_model_card_ai_sbom_delta` (nur `strict`)
-29. `legal_model_card_proposal` (nur `strict`)
-30. `legal_ai_sbom_delta_proposal` (nur `strict`)
-31. `legal_model_evaluation_benchmark` (nur `strict`)
-32. `legal_graph_contracts` (nur `strict`)
+19. `m365_release_readiness_gate` (nur `strict`)
+20. `m365_sharepoint_bpmn_viewer_adapter` (nur `strict`)
+21. `notarial_application_interface_inventory` (nur `strict`)
+22. `matter_data_classification_redaction` (nur `strict`)
+23. `private_operating_frame_gate` (nur `strict`)
+24. `private_payload_target_design` (nur `strict`)
+25. `private_payload_access_policy` (nur `strict`)
+26. `gnotkg_costs` (nur `strict`)
+27. `secure_document_links` (nur `strict`)
+28. `legal_research_connectors` (nur `strict`)
+29. `legal_source_inventory_license_tdm` (nur `strict`)
+30. `legal_model_customization_readiness` (nur `strict`)
+31. `legal_model_card_ai_sbom_delta` (nur `strict`)
+32. `legal_model_card_proposal` (nur `strict`)
+33. `legal_ai_sbom_delta_proposal` (nur `strict`)
+34. `legal_model_evaluation_benchmark` (nur `strict`)
+35. `legal_graph_contracts` (nur `strict`)
 
 ## Artefakte
 
@@ -84,6 +87,10 @@ Standardausgabe:
 - PR-Kommentar: `out/quality/comment.md` (für Upsert in Pull Requests)
   mit Build-Status, Check-Zusammenfassung und KG-Readiness aus den
   usecase-lokalen Knowledge Graphs
+- Markdown-Report und PR-Kommentar zeigen zusätzlich den
+  M365-MVP-Readiness-Status: CI-Enforcement für den
+  `m365_release_readiness_gate`, Go/No-Go-Ziel `mvp_release_readiness=READY`
+  und Runner-Zusammenfassung `release_gate_readiness=READY`
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

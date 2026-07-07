@@ -57,7 +57,31 @@ REQUIRED_QUALITY_GATE_MARKERS = (
     "m365_release_readiness_gate",
     "M365 Release Readiness Gate",
     "scripts/validate_m365_release_readiness_gate.py",
+    "m365_release_readiness_report_lines",
+    "mvp_release_readiness=READY",
+    "release_gate_readiness=READY",
 )
+
+REQUIRED_REPORT_SURFACE_MARKERS: dict[str, tuple[str, ...]] = {
+    "scripts/render_quality_gate_comment.py": (
+        "### M365 MVP Readiness",
+        "mvp_release_readiness=READY",
+        "release_gate_readiness=READY",
+        "release-gate-write-audit-pack",
+        "release-gate-write-readiness",
+        "release-gate-readiness-require-audit-pack",
+    ),
+    "docs/de/quality-gate.md": (
+        "M365-MVP-Readiness-Status",
+        "`mvp_release_readiness=READY`",
+        "`release_gate_readiness=READY`",
+    ),
+    "docs/en/quality-gate.md": (
+        "M365 MVP readiness status",
+        "`mvp_release_readiness=READY`",
+        "`release_gate_readiness=READY`",
+    ),
+}
 
 PROHIBITED_MARKERS = (
     "BEGIN PRIVATE KEY",
@@ -71,6 +95,8 @@ def validate(repo_root: Path = REPO_ROOT) -> list[str]:
     for relative_path, markers in REQUIRED_DOC_MARKERS.items():
         _validate_required_markers(repo_root / relative_path, markers, errors)
     _validate_required_markers(repo_root / "scripts" / "quality_gate.py", REQUIRED_QUALITY_GATE_MARKERS, errors)
+    for relative_path, markers in REQUIRED_REPORT_SURFACE_MARKERS.items():
+        _validate_required_markers(repo_root / relative_path, markers, errors)
     return errors
 
 

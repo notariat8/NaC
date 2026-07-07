@@ -290,6 +290,8 @@ def write_markdown(path: Path, payload: dict) -> None:
     lines.append(f"- Profile: `{payload['profile']}`")
     lines.append(f"- Overall status: `{payload['overall_status']}`")
     lines.append("")
+    lines.extend(m365_release_readiness_report_lines(payload))
+    lines.append("")
     lines.append("## Checks")
     lines.append("")
 
@@ -309,6 +311,43 @@ def write_markdown(path: Path, payload: dict) -> None:
         lines.append("")
 
     absolute.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
+def m365_release_readiness_report_lines(payload: dict) -> list[str]:
+    summary = m365_release_readiness_report_summary(payload)
+    return [
+        "## M365 MVP Readiness",
+        "",
+        "- Go/No-Go: `mvp_release_readiness=READY`",
+        "- Runner summary: `release_gate_readiness=READY`",
+        f"- CI enforcement: `{summary['ci_enforcement']}`",
+        f"- Gate check: `{summary['check_status']}`",
+        f"- Check duration: `{summary['duration_ms']} ms`",
+        "- Live evidence: owner-gated `release-gate-run --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack`",
+    ]
+
+
+def m365_release_readiness_report_summary(payload: dict) -> dict:
+    readiness_check = next(
+        (
+            check
+            for check in payload.get("checks", [])
+            if isinstance(check, dict) and check.get("id") == "m365_release_readiness_gate"
+        ),
+        None,
+    )
+    if readiness_check is None:
+        return {
+            "ci_enforcement": "NOT_EVALUATED",
+            "check_status": "NOT_ATTACHED",
+            "duration_ms": 0,
+        }
+    passed = readiness_check.get("passed") is True
+    return {
+        "ci_enforcement": "ENFORCED" if passed else "NOT_ENFORCED",
+        "check_status": "PASSED" if passed else "FAILED",
+        "duration_ms": int(readiness_check.get("duration_ms", 0)),
+    }
 
 
 def main() -> int:
