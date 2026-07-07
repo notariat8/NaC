@@ -25,6 +25,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
+            runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
 
@@ -32,6 +34,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_smoke_artifact=runtime_smoke_artifact,
+                runtime_metadata_artifact=runtime_metadata_artifact,
                 expected_workspace_id="notary_team_01",
                 expected_correlation_id="corr-1",
                 generated_at="2026-07-06T20:30:00Z",
@@ -54,6 +58,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             tmp_path = Path(tmp)
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
+            runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
+            runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
 
@@ -61,6 +67,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 repo_root=REPO_ROOT,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
+                runtime_smoke_artifact=runtime_smoke_artifact,
+                runtime_metadata_artifact=runtime_metadata_artifact,
                 require_runtime_artifacts=True,
             )
 
@@ -120,6 +128,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             suite_artifact = tmp_path / "suite.redacted.json"
             leftover_artifact = tmp_path / "leftover.redacted.json"
             report_path = tmp_path / "release-gate-evidence.redacted.md"
+            runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
+            runtime_metadata_artifact = tmp_path / "missing-runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
 
@@ -136,6 +146,10 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                     str(suite_artifact),
                     "--release-gate-leftover-artifact",
                     str(leftover_artifact),
+                    "--release-gate-runtime-smoke-artifact",
+                    str(runtime_smoke_artifact),
+                    "--release-gate-runtime-metadata-artifact",
+                    str(runtime_metadata_artifact),
                     "--release-gate-evidence-output",
                     str(report_path),
                     "--mcp-smoke-workspace-id",
