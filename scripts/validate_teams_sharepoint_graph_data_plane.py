@@ -17,7 +17,12 @@ from nac_m365_graph.privileged_change import (  # noqa: E402
     validate_privileged_change_config,
 )
 from nac_m365_graph.provisioner import build_plan, summarize_plan  # noqa: E402
-from nac_m365_graph.mcp_runtime import build_tool_manifest, validate_mcp_contract  # noqa: E402
+from nac_m365_graph.mcp_runtime import (  # noqa: E402
+    RuntimeContext,
+    build_tool_manifest,
+    plan_tool_request,
+    validate_mcp_contract,
+)
 from nac_m365_graph.schema import validate_schema  # noqa: E402
 
 
@@ -120,7 +125,7 @@ def validate() -> list[str]:
     if contract:
         errors.extend(_validate_contract(contract))
     if mcp_contract:
-        errors.extend(_validate_mcp_runtime_contract(mcp_contract, contract))
+        errors.extend(_validate_mcp_runtime_contract(mcp_contract, contract, schema))
     if schema:
         errors.extend(validate_schema(schema))
         errors.extend(_validate_schema_against_contract(schema, contract))
@@ -484,7 +489,11 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _validate_mcp_runtime_contract(payload: dict[str, Any], data_plane_contract: dict[str, Any]) -> list[str]:
+def _validate_mcp_runtime_contract(
+    payload: dict[str, Any],
+    data_plane_contract: dict[str, Any],
+    schema: dict[str, Any] | None = None,
+) -> list[str]:
     errors = validate_mcp_contract(payload)
     if errors:
         return errors
@@ -517,7 +526,159 @@ def _validate_mcp_runtime_contract(payload: dict[str, Any], data_plane_contract:
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} must not read files")
         if tool.get("writes_items") is True and tool.get("graph_method") == "GET":
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} write tool cannot use GET")
+    if schema:
+        errors.extend(_validate_mcp_schema_binding(payload, schema))
     return errors
+
+
+def _validate_mcp_schema_binding(payload: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    schema_lists = _schema_lists_by_name(schema)
+    provisioned_state = _dummy_provisioned_state(schema_lists)
+    context = RuntimeContext(
+        actor_id="validator",
+        actor_role="runtime_service",
+        workspace_id="notary_team_01",
+        purpose="schema_binding_validation",
+        correlation_id="schema-binding-validation",
+        case_id="case-1",
+        role_case_gate="open",
+        write_approved=True,
+    )
+    for tool in payload.get("tools", []):
+        if not isinstance(tool, dict):
+            continue
+        tool_id = str(tool.get("id", ""))
+        list_name = tool.get("list_name")
+        if not isinstance(list_name, str) or list_name not in schema_lists:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} list_name must exist in SharePoint schema")
+            continue
+        list_schema = schema_lists[list_name]
+        indexed_columns = set(_strings(list_schema.get("indexed_columns")))
+        if tool_id in {"case_get", "document_list"} and "NacCaseId" not in indexed_columns:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} must filter on indexed NacCaseId")
+        sample_args = _sample_mcp_arguments(tool_id)
+        if sample_args is None:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} missing schema-binding sample arguments")
+            continue
+        try:
+            plan = plan_tool_request(payload, provisioned_state, context, tool_id, sample_args)
+        except Exception as exc:  # noqa: BLE001 - validator reports contract errors, it does not raise them.
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} cannot be planned for schema binding: {exc}")
+            continue
+        if plan.list_name != list_name:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} plan list_name must match contract")
+        if plan.payload is not None:
+            errors.extend(_validate_mcp_payload_fields(tool_id, list_schema, plan.payload))
+    return errors
+
+
+def _validate_mcp_payload_fields(tool_id: str, list_schema: dict[str, Any], payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    fields = payload.get("fields")
+    if not isinstance(fields, dict):
+        fields = payload
+    if not isinstance(fields, dict):
+        errors.append(f"teams-sharepoint-data-mcp {tool_id} write payload must use SharePoint fields")
+        return errors
+    columns = _schema_columns_by_name(list_schema)
+    for field_name, field_value in fields.items():
+        column = columns.get(field_name)
+        if column is None:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} writes unknown schema field {field_name}")
+            continue
+        if column.get("type") == "choice" and field_value not in set(_strings(column.get("choices"))):
+            errors.append(
+                f"teams-sharepoint-data-mcp {tool_id} writes invalid choice value {field_value!r} for {field_name}"
+            )
+    if tool_id.endswith("_create") or tool_id in {"grant_request", "audit_append"}:
+        required_columns = {
+            name
+            for name, column in columns.items()
+            if column.get("required") is True
+        }
+        missing = sorted(required_columns - set(fields))
+        if missing:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} write payload missing required fields: {', '.join(missing)}")
+    return errors
+
+
+def _schema_lists_by_name(schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(item["display_name"]): item
+        for item in schema.get("sharepoint", {}).get("lists", [])
+        if isinstance(item, dict) and isinstance(item.get("display_name"), str)
+    }
+
+
+def _schema_columns_by_name(list_schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(column["name"]): column
+        for column in list_schema.get("columns", [])
+        if isinstance(column, dict) and isinstance(column.get("name"), str)
+    }
+
+
+def _dummy_provisioned_state(schema_lists: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "workspaces": [
+            {
+                "id": "notary_team_01",
+                "site_id": "example.sharepoint.com,site-id,web-id",
+                "lists": {
+                    list_name: {"id": f"list-{index}"}
+                    for index, list_name in enumerate(sorted(schema_lists), start=1)
+                },
+            }
+        ]
+    }
+
+
+def _sample_mcp_arguments(tool_id: str) -> dict[str, Any] | None:
+    samples: dict[str, dict[str, Any]] = {
+        "case_get": {"case_id": "case-1"},
+        "case_create": {
+            "case_id": "case-1",
+            "aktenzeichen": "SMOKE-1",
+            "vorgangstyp": "immobilienkaufvertrag",
+            "status": "Entwurf",
+            "notar_team": "NaC-Notar-01",
+            "vertraulichkeitsstufe": "Normal",
+            "nac_workflow_version": "m365-mcp-smoke-v0.1",
+            "kg_version": "kg-smoke-v0.1",
+        },
+        "case_update_status": {"item_id": "item-1", "status": "Vollzug"},
+        "task_create": {
+            "task_id": "task-1",
+            "case_id": "case-1",
+            "bpmn_step_code": "draft_review",
+            "status": "Offen",
+            "requires_notary_approval": True,
+        },
+        "grant_request": {
+            "grant_id": "grant-1",
+            "case_id": "case-1",
+            "from_user": "from-user",
+            "to_user": "to-user",
+            "granted_role": "NurLesen",
+            "reason": "synthetic validation",
+            "valid_from": "2026-07-07T00:00:00Z",
+            "valid_until": "2026-07-08T00:00:00Z",
+            "approved_by": "validator",
+            "status": "Aktiv",
+        },
+        "audit_append": {
+            "event_id": "event-1",
+            "case_id": "case-1",
+            "timestamp": "2026-07-07T00:00:00Z",
+            "action": "CaseCreated",
+            "object_type": "Case",
+            "object_id": "case-1",
+        },
+        "document_list": {"case_id": "case-1"},
+    }
+    sample = samples.get(tool_id)
+    return dict(sample) if sample is not None else None
 
 
 def _validate_schema_against_contract(schema: dict[str, Any], contract: dict[str, Any]) -> list[str]:
