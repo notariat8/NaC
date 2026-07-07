@@ -101,6 +101,8 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("release-readiness --format json", content)
             self.assertIn("mvp_release_readiness", content)
             self.assertIn("release-gate-readiness-correlation-id", content)
+            self.assertIn("release-gate-write-readiness", content)
+            self.assertIn("release_gate_readiness=READY", content)
 
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

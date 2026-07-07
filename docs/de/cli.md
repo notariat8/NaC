@@ -77,6 +77,7 @@ python scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format j
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 python scripts/nac.py m365 teams-sharepoint release-readiness --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-retention-list --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-retention-compare --release-gate-compare-left <left-correlation-id> --release-gate-compare-right <right-correlation-id> --format json
@@ -117,6 +118,7 @@ nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 nac m365 teams-sharepoint release-readiness --format json
 nac m365 teams-sharepoint release-gate-retention-list --format json
 nac m365 teams-sharepoint release-gate-retention-compare --release-gate-compare-left <left-correlation-id> --release-gate-compare-right <right-correlation-id> --format json
@@ -462,6 +464,12 @@ Correlation-ID, und `--release-gate-audit-pack-dir` kann den Zielordner setzen.
 Fehlt eine ausdrücklich angeforderte Baseline, schlägt nur dieser
 Post-Retention-Schritt fehl; Graph-Anfragen, Tenant-Schreiboperationen,
 Löschungen und SharePoint-Content-Reads bleiben ausgeschlossen.
+Mit `--release-gate-write-readiness` schreibt der Runner danach direkt den
+redigierten `release-readiness`-Status für die aktuelle Correlation-ID,
+speichert das JSON standardmäßig im Laufordner und meldet in der Runner-Summary
+`release_gate_readiness=READY` oder `NOT_READY`. Mit
+`--release-gate-readiness-require-audit-pack` wird der Status nur `READY`, wenn
+ein passendes redigiertes Audit-Pack mit `PASSED` vorliegt.
 `release-readiness` verdichtet den neuesten oder mit
 `--release-gate-readiness-correlation-id` ausgewählten lokalen Release-Gate-
 Lauf zu einem kompakten MVP-Status. Der Befehl liest nur redigierte

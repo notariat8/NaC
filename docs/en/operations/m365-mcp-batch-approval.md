@@ -100,9 +100,9 @@ After runtime or MCP changes, the agent renders the complete gate offline:
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
-When the one-shot runner should write the redacted audit pack in the same
-approved run, invoke the batch renderer with the audit-pack parameters already
-set:
+When the one-shot runner should write the redacted audit pack and compact MVP
+readiness status in the same approved run, invoke the batch renderer with the
+audit-pack and readiness parameters already set:
 
 ```bash
 python3 scripts/nac.py batch-approval m365 \
@@ -111,6 +111,8 @@ python3 scripts/nac.py batch-approval m365 \
   --correlation-id <correlation-id> \
   --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 
@@ -156,6 +158,9 @@ python3 scripts/nac.py m365 teams-sharepoint release-readiness \
 The status reads only redacted local retention, evidence and audit-pack
 artifacts. It performs no Graph request, tenant write, delete or SharePoint
 content read.
+With `--release-gate-write-readiness`, the one-shot runner can write this
+status directly for the current correlation ID; the standalone command remains
+the diagnostic and re-run path for existing retention runs.
 
 ## Runtime Certificate Rotation Approval
 
@@ -212,7 +217,8 @@ the retention path and copies those refreshed artifacts into the run folder
 again. The following offline exporter remains only for diagnostics or
 re-exporting existing artifacts:
 
-Optionally, the same runner can write a redacted offline audit pack directly:
+Optionally, the same runner can write a redacted offline audit pack and then
+the redacted MVP readiness status directly:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
@@ -221,6 +227,8 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --mcp-smoke-correlation-id <correlation-id> \
   --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 

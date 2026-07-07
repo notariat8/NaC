@@ -108,8 +108,8 @@ python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace
 ```
 
 Soll der One-Shot-Runner im selben freigegebenen Lauf direkt das redigierte
-Audit-Pack schreiben, wird bereits der Batch-Renderer mit den Audit-Pack-
-Parametern aufgerufen:
+Audit-Pack und den kompakten MVP-Readiness-Status schreiben, wird bereits der
+Batch-Renderer mit den Audit-Pack- und Readiness-Parametern aufgerufen:
 
 ```bash
 python3 scripts/nac.py batch-approval m365 \
@@ -118,6 +118,8 @@ python3 scripts/nac.py batch-approval m365 \
   --correlation-id <correlation-id> \
   --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 
@@ -163,6 +165,9 @@ python3 scripts/nac.py m365 teams-sharepoint release-readiness \
 Der Status liest nur redigierte lokale Retention-, Evidence- und Audit-Pack-
 Artefakte. Er führt keine Graph-Anfrage, keinen Tenant-Write, keine Löschung
 und keinen SharePoint-Content-Read aus.
+Mit `--release-gate-write-readiness` kann der One-Shot-Runner diesen Status
+direkt für die aktuelle Correlation-ID schreiben; der Einzelbefehl bleibt der
+Diagnose- und Re-Run-Pfad für vorhandene Retention-Läufe.
 
 ## Runtime-Zertifikatsrotation-Freigabe
 
@@ -224,7 +229,7 @@ Laufordner. Der folgende Offline-Exporter bleibt nur für Diagnose oder erneuten
 Export vorhandener Artefakte:
 
 Optional kann derselbe Runner direkt ein redigiertes Offline-Audit-Paket
-erzeugen:
+und anschließend den redigierten MVP-Readiness-Status erzeugen:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
@@ -233,6 +238,8 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --mcp-smoke-correlation-id <correlation-id> \
   --release-gate-write-audit-pack \
   --release-gate-compare-left <baseline-correlation-id> \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
   --format json
 ```
 
