@@ -51,15 +51,36 @@ class M365ReleaseReadinessGateValidatorTests(unittest.TestCase):
         self.assertIn("docs/de/operations/m365-mcp-batch-approval.md", "\n".join(errors))
         self.assertIn("MVP-Go/No-Go-Abnahmekriterium", "\n".join(errors))
 
+    def test_validator_reports_missing_batch_approval_default_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_minimal_valid_tree(root)
+            cli_file = root / "src" / "nac_cli" / "cli.py"
+            cli_file.write_text("release-gate without MVP defaults\n", encoding="utf-8")
+
+            errors = validator.validate(root)
+
+        error_text = "\n".join(errors)
+        self.assertIn("src/nac_cli/cli.py", error_text)
+        self.assertIn("_apply_m365_release_gate_mvp_defaults", error_text)
+
 
 def _write_minimal_valid_tree(root: Path) -> None:
     for relative_path, markers in validator.REQUIRED_DOC_MARKERS.items():
         path = root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(markers) + "\n", encoding="utf-8")
+    for relative_path, markers in validator.REQUIRED_BATCH_APPROVAL_MARKERS.items():
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(markers) + "\n", encoding="utf-8")
     quality_gate = root / "scripts" / "quality_gate.py"
     quality_gate.parent.mkdir(parents=True, exist_ok=True)
     quality_gate.write_text("\n".join(validator.REQUIRED_QUALITY_GATE_MARKERS) + "\n", encoding="utf-8")
+    for relative_path, markers in validator.REQUIRED_REPORT_SURFACE_MARKERS.items():
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(markers) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

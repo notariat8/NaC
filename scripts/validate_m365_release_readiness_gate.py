@@ -9,6 +9,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/de/operations/m365-mcp-batch-approval.md": (
         "## MVP-Go/No-Go-Abnahmekriterium",
+        "`batch-approval m365 --batch-mode release-gate` rendert den",
+        "MVP-Go/No-Go-Standard standardmäßig",
+        "Der eingebettete `release-gate-run` rendert denselben MVP-Go/No-Go-Standard",
         "`release-readiness` ist das verbindliche MVP-Go/No-Go-Abnahmekriterium",
         "`mvp_release_readiness=READY`",
         "`release_gate_readiness=READY`",
@@ -19,6 +22,9 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
     ),
     "docs/en/operations/m365-mcp-batch-approval.md": (
         "## MVP Go/No-Go Acceptance Criterion",
+        "`batch-approval m365 --batch-mode release-gate` renders the MVP Go/No-Go",
+        "standard by default",
+        "The embedded `release-gate-run` renders the same MVP Go/No-Go standard",
         "`release-readiness` is the binding MVP Go/No-Go acceptance criterion",
         "`mvp_release_readiness=READY`",
         "`release_gate_readiness=READY`",
@@ -50,6 +56,31 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "release-gate-write-readiness",
         "release-gate-readiness-require-audit-pack",
         "release_gate_readiness=READY",
+    ),
+    "docs/de/runbooks/m365-cli-admin-accelerator.md": (
+        "rendert standardmäßig den MVP-Go/No-Go-Lauf",
+        "--release-gate-readiness-require-audit-pack",
+        "--release-gate-compare-left <baseline-correlation-id>",
+    ),
+    "docs/en/runbooks/m365-cli-admin-accelerator.md": (
+        "renders the MVP Go/No-Go run by default",
+        "--release-gate-readiness-require-audit-pack",
+        "--release-gate-compare-left <baseline-correlation-id>",
+    ),
+}
+
+REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
+    "src/nac_cli/cli.py": (
+        "_apply_m365_release_gate_mvp_defaults",
+        "_m365_release_gate_run_readiness_audit_pack_dir",
+        '"release-gate", "runtime-certificate-rotation"',
+        "return (True, True, True)",
+        "MVP-Standard impliziert",
+    ),
+    "tests/test_m365_batch_approval_cli.py": (
+        "test_batch_approval_renders_runtime_release_gate_with_mvp_readiness_default",
+        "test_batch_approval_release_gate_baseline_uses_mvp_audit_pack_default",
+        "release_gate_readiness_require_audit_pack",
     ),
 }
 
@@ -93,6 +124,8 @@ PROHIBITED_MARKERS = (
 def validate(repo_root: Path = REPO_ROOT) -> list[str]:
     errors: list[str] = []
     for relative_path, markers in REQUIRED_DOC_MARKERS.items():
+        _validate_required_markers(repo_root / relative_path, markers, errors)
+    for relative_path, markers in REQUIRED_BATCH_APPROVAL_MARKERS.items():
         _validate_required_markers(repo_root / relative_path, markers, errors)
     _validate_required_markers(repo_root / "scripts" / "quality_gate.py", REQUIRED_QUALITY_GATE_MARKERS, errors)
     for relative_path, markers in REQUIRED_REPORT_SURFACE_MARKERS.items():

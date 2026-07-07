@@ -75,7 +75,7 @@ python scripts/nac.py m365 teams-sharepoint bpmn-viewer-runtime-readiness --form
 python scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
-python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 python scripts/nac.py m365 teams-sharepoint release-readiness --format json
 python scripts/nac.py m365 teams-sharepoint release-gate-retention-list --format json
@@ -116,7 +116,7 @@ nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json
 nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
-nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 nac m365 teams-sharepoint release-readiness --format json
 nac m365 teams-sharepoint release-gate-retention-list --format json
@@ -275,10 +275,10 @@ nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
-nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --release-gate-compare-left <baseline-correlation-id> --format json
 nac batch-approval m365 --batch-mode runtime-certificate-rotation --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
-nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --format json
+nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --release-gate-write-audit-pack --release-gate-compare-left <baseline-correlation-id> --release-gate-write-readiness --release-gate-readiness-require-audit-pack --format json
 nac m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-retention-list --format json
 nac m365 teams-sharepoint release-gate-retention-compare --release-gate-compare-left <left-correlation-id> --release-gate-compare-right <right-correlation-id> --format json
@@ -414,12 +414,13 @@ and documents the covered internal steps:
 `mcp-inventory-smoke`, `runtime-certificate-expiry-monitor`, `runtime-smoke`,
 `runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
-`release-gate-evidence --release-gate-require-runtime-artifacts`. The renderer
-itself is offline; the emitted live command remains owner-gated.
-With `--release-gate-write-audit-pack`, the batch-approval command renders the
-one-shot runner including the audit-pack step; `--release-gate-compare-left`
-sets the optional baseline and `--release-gate-audit-pack-dir` sets the
-optional target directory.
+`release-gate-evidence --release-gate-require-runtime-artifacts`,
+`release_gate_audit_pack` and `release_gate_readiness`. The renderer itself is
+offline; the emitted live command remains owner-gated. Audit pack, MVP
+readiness status and `--release-gate-readiness-require-audit-pack` are the
+default in this batch mode; `--release-gate-compare-left` only sets the
+optional baseline and `--release-gate-audit-pack-dir` sets the optional target
+directory.
 
 `batch-approval m365 --batch-mode runtime-certificate-rotation` renders a
 bundled approval for the runtime certificate lifecycle. The renderer is
