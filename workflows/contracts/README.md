@@ -112,6 +112,10 @@ Jeder Vertrag soll definieren:
   Vertrag für XNP/SNP, XNotar, cyberJack/Kartenarbeitsplatz sowie Register-
   und Grundbuchpfade als lokale Readiness- und redigierte Evidence-Grenzen
   ohne Credentials, Mandatsdaten oder Live-Apply.
+- [workflows/contracts/notarial-application-interface-inventory.contract.json](notarial-application-interface-inventory.contract.json):
+  Metadaten-Inventar für owner-provided BNotK-Anwendungsschnittstellen, beN
+  und XJustiz 3.3.1 mit read-only MCP-Zielgrenze, ohne Volltext-Ingestion,
+  XSD-Rohkopie, Credentials, Mandatsdaten oder Live-Apply.
 - [workflows/contracts/matter-data-classification-redaction.contract.json](matter-data-classification-redaction.contract.json):
   Vertrag für Mandatsdaten-Klassifikation, Redaktionsnachweise und
   Speichergrenzen zwischen GitHub, Webapp-Status, M365/SharePoint-Metadaten,

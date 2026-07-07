@@ -1,0 +1,205 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.notarial_application_interface_inventory",
+  "status": "offline_inventory_no_live_apply",
+  "purpose": "Metadata-only inventory for owner-provided BNotK application interface, beN and XJustiz 3.3.1 sources. It defines NaC integration boundaries without storing source full text, credentials, payloads or schema copies in the product repository.",
+  "source_documents": {
+    "architecture_de": "docs/de/architecture/notarial-application-interface-inventory.md",
+    "architecture_en": "docs/en/architecture/notarial-application-interface-inventory.md",
+    "bnotk_application_interfaces": {
+      "label": "BNotK Onlinehilfe Anwendungsschnittstellen",
+      "url": "https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/anwendungsschnittstellen.html",
+      "page_state": "2026-06-01",
+      "evidence_origin": "owner_provided_offline_archive_2026-07-07",
+      "repository_storage": "metadata_only"
+    },
+    "bnotk_ben": {
+      "label": "BNotK Onlinehilfe beN",
+      "url": "https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/ben.html",
+      "evidence_origin": "owner_provided_offline_archive_2026-07-07",
+      "repository_storage": "metadata_only"
+    },
+    "xjustiz_331_xsd": {
+      "label": "XJustiz 3.3.1 XSD package",
+      "package_name": "xjustiz_3_3_1_xsd.zip",
+      "package_version": "3.3.1",
+      "xsd_file_count": 66,
+      "package_file_timestamp": "2021-11-04",
+      "repository_storage": "metadata_only"
+    }
+  },
+  "global_policy": {
+    "source_fulltext_ingestion_allowed": false,
+    "external_assets_in_repo_allowed": false,
+    "raw_xsd_copy_in_repo_allowed_without_license_gate": false,
+    "credentials_in_repo_allowed": false,
+    "client_certificates_in_repo_allowed": false,
+    "tokens_in_repo_allowed": false,
+    "matter_data_in_repo_allowed": false,
+    "message_payloads_in_repo_allowed": false,
+    "live_connector_apply_allowed": false,
+    "productive_specialist_system_write_allowed": false,
+    "m365_mvp_data_plane_changed": false,
+    "read_only_mcp_contract_required_before_runtime": true,
+    "private_operating_frame_required_before_live": true,
+    "privacy_review_required_before_personal_data": true,
+    "owner_apply_gate_required_before_live": true
+  },
+  "interfaces": [
+    {
+      "id": "mandantenportal",
+      "area": "Mandantenportal",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "json_export",
+        "openapi"
+      ],
+      "mvp_boundary": "external_source_point_metadata_only"
+    },
+    {
+      "id": "uvz",
+      "area": "Urkundenverzeichnis",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "nsw_import",
+        "read_access_from_uvz",
+        "write_access_to_uvz"
+      ],
+      "mvp_boundary": "bpmn_gate_no_productive_write"
+    },
+    {
+      "id": "vvz",
+      "area": "Verwahrungsverzeichnis",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "import_export",
+        "data_query"
+      ],
+      "mvp_boundary": "bpmn_gate_private_payload_review_required"
+    },
+    {
+      "id": "xnotar_handelsregister",
+      "area": "Handelsregister via XNotar",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "nsw_to_xnotar_matter_document_handoff"
+      ],
+      "mvp_boundary": "external_handoff_redacted_evidence_only"
+    },
+    {
+      "id": "xnotar_grundbuch",
+      "area": "Grundbuch via XNotar",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "nsw_to_xnotar_matter_document_handoff"
+      ],
+      "mvp_boundary": "external_handoff_wait_gate_no_land_register_raw_data"
+    },
+    {
+      "id": "xnotar_sonstige_antraege",
+      "area": "Sonstige Antraege via XNotar",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "nsw_to_xnotar_matter_document_handoff"
+      ],
+      "mvp_boundary": "external_specialist_system_boundary"
+    },
+    {
+      "id": "enova",
+      "area": "XNotar-eNoVA",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "openapi",
+        "sds_xjab_handoff"
+      ],
+      "mvp_boundary": "test_access_gate_required_no_live_apply"
+    },
+    {
+      "id": "zvr",
+      "area": "Zentrales Vorsorgeregister",
+      "source": "bnotk_application_interfaces",
+      "families": [
+        "rest_api_function_call"
+      ],
+      "mvp_boundary": "separate_approval_certificate_owner_gate_required"
+    },
+    {
+      "id": "ben",
+      "area": "besonderes elektronisches Notarpostfach",
+      "source": "bnotk_ben",
+      "families": [
+        "xta_ws",
+        "egvp_osci_container",
+        "tls_client_certificate",
+        "identity_token",
+        "mailbox_polling",
+        "transport_status"
+      ],
+      "mvp_boundary": "local_companion_redacted_evidence_no_message_content"
+    },
+    {
+      "id": "xjustiz_331",
+      "area": "XJustiz 3.3.1",
+      "source": "xjustiz_331_xsd",
+      "families": [
+        "xsd_schema_package",
+        "base_dataset",
+        "messages",
+        "register",
+        "vorsorgeregister",
+        "eeb",
+        "ztr"
+      ],
+      "mvp_boundary": "schema_reference_metadata_only"
+    }
+  ],
+  "planned_read_only_mcp_tools": [
+    {
+      "name": "notarial_interface_inventory_list",
+      "allowed_output": "interface ids, areas, source labels, family identifiers and MVP boundary labels",
+      "blocked_output": "source full text, credentials, message payloads, BNotK HTML, raw XSD content, personal data, external BNotK calls"
+    },
+    {
+      "name": "notarial_interface_boundary_check",
+      "allowed_output": "whether a requested integration remains metadata-only, requires private operating frame, or requires owner apply gate",
+      "blocked_output": "external BNotK calls, live tenant writes, specialist-system writes, secret display"
+    }
+  ],
+  "owner_gates": [
+    "bnotk_credential_use",
+    "client_certificate_introduction",
+    "identity_token_handling",
+    "external_bnotk_network_call",
+    "message_payload_processing",
+    "xsd_raw_copy_or_distribution",
+    "matter_payload_mapping",
+    "productive_uvz_or_vvz_write",
+    "productive_zvr_call",
+    "productive_ben_send_or_fetch",
+    "productive_xnotar_handoff"
+  ],
+  "evidence_shape": {
+    "allowed_fields": [
+      "interface_id",
+      "boundary_status",
+      "source_label",
+      "source_state",
+      "checked_at",
+      "checked_by_role",
+      "redaction_class",
+      "no_secret_attestation",
+      "no_matter_data_attestation",
+      "owner_gate_required"
+    ],
+    "blocked_fields": [
+      "html_body",
+      "xsd_body",
+      "message_payload",
+      "identity_token",
+      "client_certificate",
+      "private_key",
+      "pin",
+      "matter_content"
+    ]
+  }
+}
