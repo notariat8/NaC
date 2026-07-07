@@ -103,6 +103,8 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("release-gate-readiness-correlation-id", content)
             self.assertIn("release-gate-write-readiness", content)
             self.assertIn("release_gate_readiness=READY", content)
+            self.assertIn("release-gate-post-run-report", content)
+            self.assertIn("release-gate-github-comment-output", content)
 
     def test_docs_define_release_readiness_as_mvp_go_no_go_standard(self) -> None:
         documents = (

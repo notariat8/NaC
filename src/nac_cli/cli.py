@@ -88,6 +88,7 @@ DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release
 DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparisons")
 DEFAULT_RELEASE_GATE_COMPARE_INDEX_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparison-indexes")
 DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT = Path("out/m365/teams-sharepoint/release-gate-audit-packs")
+DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT = Path("out/m365/teams-sharepoint/release-gate-post-run-reports")
 DEFAULT_RELEASE_GATE_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
 DEFAULT_RELEASE_READINESS_OUTPUT = Path("out/m365/teams-sharepoint/release-readiness.redacted.json")
 M365_RELEASE_READINESS_REQUIRED_ARTIFACTS = (
@@ -364,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
             "release-gate-retention-compare-index",
             "release-gate-retention-compare-index-artifact",
             "release-gate-retention-list",
+            "release-gate-post-run-report",
             "release-readiness",
             "release-gate-run",
             "apply",
@@ -625,6 +627,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-readiness-require-audit-pack",
         action="store_true",
         help="Blockiert release-readiness, wenn kein passendes redigiertes Audit-Pack mit Status PASSED vorliegt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-output",
+        type=Path,
+        help="Optionaler Markdown-Pfad fuer den redigierten Offline-Post-Gate-Report.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-post-run-report-json-output",
+        type=Path,
+        help="Optionaler JSON-Pfad fuer den redigierten Offline-Post-Gate-Report.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-github-comment-output",
+        type=Path,
+        help="Optionaler Markdown-Pfad fuer den redigierten GitHub-Nachweiskommentarentwurf.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-write-audit-pack",
@@ -1804,6 +1821,14 @@ def command_m365(args: argparse.Namespace) -> int:
                 return 0
             return 2 if payload["status"] == "BLOCKED" else 1
 
+        if args.teams_sharepoint_command == "release-gate-post-run-report":
+            payload = _write_m365_release_gate_post_run_report(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_post_run_report(payload)
+            return _m365_release_gate_post_run_report_return_code(payload)
+
         if args.teams_sharepoint_command == "release-gate-retention-audit-pack":
             payload = _write_m365_release_gate_retention_audit_pack(repo_root, args)
             if args.format == "json":
@@ -2845,6 +2870,484 @@ def _m365_release_readiness_payload(
             "readsSharePointFileContent": False,
         },
     }
+
+
+def _write_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    payload = _build_m365_release_gate_post_run_report(repo_root, args)
+    report_path, json_path, comment_path = _m365_release_gate_post_run_report_paths(repo_root, args, payload)
+    payload["summary"] = {
+        **payload["summary"],
+        "artifact_directory": str(report_path.parent),
+        "report_path": str(report_path),
+        "json_path": str(json_path),
+        "github_comment_path": str(comment_path),
+    }
+    payload["artifacts"] = [
+        _m365_release_gate_post_run_artifact("post_run_report", payload.get("status"), report_path, json_path),
+        _m365_release_gate_post_run_artifact("github_comment_draft", payload.get("status"), comment_path, None),
+    ]
+    payload["github_comment_draft"] = _render_m365_release_gate_github_comment(payload)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    comment_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    report_path.write_text(_render_m365_release_gate_post_run_report(payload), encoding="utf-8")
+    comment_path.write_text(payload["github_comment_draft"], encoding="utf-8")
+    return payload
+
+
+def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    retention_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_retention_root,
+        DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT,
+    )
+    target_reference = _m365_release_gate_post_run_target_reference(args)
+    if not target_reference:
+        return _m365_release_gate_post_run_payload(
+            status="BLOCKED",
+            retention_root=retention_root,
+            target_reference=None,
+            target_run=None,
+            baseline_reference=None,
+            baseline_selection="not_requested",
+            readiness_payload=None,
+            compare_payload=None,
+            checks=[
+                _m365_release_gate_post_run_check(
+                    "target_correlation_id",
+                    "BLOCKED",
+                    "requires --release-gate-readiness-correlation-id or --release-gate-compare-right",
+                )
+            ],
+            errors=["requires --release-gate-readiness-correlation-id or --release-gate-compare-right"],
+        )
+
+    errors: list[str] = []
+    try:
+        target_index_path = _resolve_m365_release_gate_retention_reference(repo_root, retention_root, target_reference)
+        target_index = _load_json_object(target_index_path, "release gate retention index")
+        target_run = _m365_release_gate_retention_row(target_index_path, target_index)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        errors.append(str(exc))
+        return _m365_release_gate_post_run_payload(
+            status="BLOCKED",
+            retention_root=retention_root,
+            target_reference=target_reference,
+            target_run=None,
+            baseline_reference=args.release_gate_compare_left,
+            baseline_selection="explicit" if args.release_gate_compare_left else "not_available",
+            readiness_payload=None,
+            compare_payload=None,
+            checks=[
+                _m365_release_gate_post_run_check("target_retention_index", "BLOCKED", str(exc)),
+            ],
+            errors=errors,
+        )
+
+    retention_payload = _list_m365_release_gate_retention(repo_root, args)
+    errors.extend(retention_payload.get("errors", []))
+    baseline_reference = args.release_gate_compare_left
+    baseline_selection = "explicit" if baseline_reference else "previous_retained_run"
+    baseline_run: dict[str, Any] | None = None
+    if not baseline_reference:
+        baseline_run = _m365_release_gate_post_run_previous_baseline(retention_payload.get("runs", []), target_run)
+        if baseline_run is None:
+            baseline_selection = "not_available"
+            errors.append("no previous retained PASSED release-gate run found for the target workspace")
+        else:
+            baseline_reference = str(baseline_run.get("correlation_id"))
+
+    target_correlation_id = str(target_run.get("correlation_id") or target_reference)
+    compare_payload: dict[str, Any] | None = None
+    if baseline_reference:
+        compare_args = _m365_release_gate_audit_pack_args(
+            args,
+            release_gate_compare_left=baseline_reference,
+            release_gate_compare_right=target_reference,
+        )
+        compare_payload = _compare_m365_release_gate_retention(repo_root, compare_args)
+        errors.extend(compare_payload.get("errors", []))
+        if compare_payload.get("status") == "PASSED":
+            summary = compare_payload.get("summary", {})
+            baseline_reference = summary.get("left_correlation_id") or baseline_reference
+    else:
+        compare_payload = _m365_release_gate_post_run_blocked_compare(retention_root, target_correlation_id)
+        errors.extend(compare_payload.get("errors", []))
+
+    audit_pack_dir = _m365_release_gate_post_run_readiness_audit_pack_dir(
+        repo_root,
+        args,
+        baseline_reference=baseline_reference,
+        target_correlation_id=target_correlation_id,
+    )
+    readiness_args = _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_readiness_correlation_id=target_reference,
+        release_gate_readiness_output=None,
+        release_gate_audit_pack_dir=audit_pack_dir,
+        release_gate_readiness_require_audit_pack=True,
+    )
+    readiness_payload = _build_m365_release_readiness(repo_root, readiness_args)
+    errors.extend(readiness_payload.get("errors", []))
+
+    checks = [
+        _m365_release_gate_post_run_check(
+            "target_retention_index",
+            "PASSED",
+            f"target retention index is readable for {target_correlation_id}",
+        ),
+        _m365_release_gate_post_run_check(
+            "baseline_selection",
+            "PASSED" if baseline_reference else "BLOCKED",
+            _m365_release_gate_post_run_baseline_message(baseline_selection, baseline_reference),
+        ),
+        _m365_release_gate_post_run_check(
+            "release_readiness",
+            str(readiness_payload.get("status") or "BLOCKED"),
+            f"release-readiness status is {readiness_payload.get('status')}",
+        ),
+        _m365_release_gate_post_run_check(
+            "retention_compare",
+            str(compare_payload.get("status") or "BLOCKED"),
+            f"release-gate-retention-compare status is {compare_payload.get('status')}",
+        ),
+        _m365_release_gate_post_run_check(
+            "offline_only",
+            "PASSED",
+            "post-gate reporter writes local redacted artifacts and performs no Graph or GitHub writes",
+        ),
+    ]
+    status = _m365_release_gate_post_run_status(checks)
+    return _m365_release_gate_post_run_payload(
+        status=status,
+        retention_root=retention_root,
+        target_reference=target_reference,
+        target_run=target_run,
+        baseline_reference=baseline_reference,
+        baseline_selection=baseline_selection,
+        readiness_payload=readiness_payload,
+        compare_payload=compare_payload,
+        checks=checks,
+        errors=errors,
+    )
+
+
+def _m365_release_gate_post_run_target_reference(args: argparse.Namespace) -> str | None:
+    return args.release_gate_readiness_correlation_id or args.release_gate_compare_right
+
+
+def _m365_release_gate_post_run_previous_baseline(
+    runs: list[dict[str, Any]],
+    target_run: dict[str, Any],
+) -> dict[str, Any] | None:
+    target_correlation_id = str(target_run.get("correlation_id") or "")
+    target_timestamp = str(target_run.get("timestamp") or "")
+    target_workspace_id = target_run.get("workspace_id")
+    candidates: list[dict[str, Any]] = []
+    for run in runs:
+        if str(run.get("correlation_id") or "") == target_correlation_id:
+            continue
+        if target_workspace_id and run.get("workspace_id") != target_workspace_id:
+            continue
+        if run.get("status") != "PASSED":
+            continue
+        if run.get("copied_artifact_count") != len(M365_RELEASE_READINESS_REQUIRED_ARTIFACTS):
+            continue
+        run_timestamp = str(run.get("timestamp") or "")
+        if target_timestamp and run_timestamp and run_timestamp >= target_timestamp:
+            continue
+        candidates.append(run)
+    if not candidates:
+        return None
+    candidates.sort(key=lambda run: (str(run.get("timestamp") or ""), str(run.get("correlation_id") or "")), reverse=True)
+    return candidates[0]
+
+
+def _m365_release_gate_post_run_readiness_audit_pack_dir(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    baseline_reference: str | None,
+    target_correlation_id: str,
+) -> Path | None:
+    if args.release_gate_audit_pack_dir is not None:
+        return args.release_gate_audit_pack_dir
+    if not baseline_reference:
+        return None
+    audit_args = _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_compare_left=baseline_reference,
+        release_gate_compare_right=target_correlation_id,
+    )
+    pack_dir = _m365_release_gate_retention_audit_pack_dir(repo_root, audit_args)
+    return _m365_release_gate_path_for_command(repo_root, pack_dir)
+
+
+def _m365_release_gate_post_run_blocked_compare(retention_root: Path, target_correlation_id: str) -> dict[str, Any]:
+    return {
+        "schema_version": "nac.m365-release-gate-retention-compare/v0.1",
+        "status": "BLOCKED",
+        "summary": {
+            "retention_root": str(retention_root),
+            "right_correlation_id": target_correlation_id,
+            "baseline_selection": "not_available",
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "left": None,
+        "right": None,
+        "comparison": {},
+        "errors": ["no previous retained PASSED release-gate run found for the target workspace"],
+    }
+
+
+def _m365_release_gate_post_run_baseline_message(
+    baseline_selection: str,
+    baseline_reference: str | None,
+) -> str:
+    if baseline_reference:
+        return f"baseline selected by {baseline_selection}: {baseline_reference}"
+    return "no previous retained PASSED release-gate baseline is available"
+
+
+def _m365_release_gate_post_run_payload(
+    *,
+    status: str,
+    retention_root: Path,
+    target_reference: str | None,
+    target_run: dict[str, Any] | None,
+    baseline_reference: str | None,
+    baseline_selection: str,
+    readiness_payload: dict[str, Any] | None,
+    compare_payload: dict[str, Any] | None,
+    checks: list[dict[str, Any]],
+    errors: list[str],
+) -> dict[str, Any]:
+    target_run = target_run or {}
+    readiness_summary = readiness_payload.get("summary", {}) if isinstance(readiness_payload, dict) else {}
+    compare_summary = compare_payload.get("summary", {}) if isinstance(compare_payload, dict) else {}
+    return {
+        "schema_version": "nac.m365-release-gate-post-run-report/v0.1",
+        "status": status,
+        "generated_at": _now_utc(),
+        "summary": {
+            "correlation_id": target_run.get("correlation_id") or readiness_summary.get("correlation_id") or target_reference,
+            "target_reference": target_reference,
+            "baseline_correlation_id": compare_summary.get("left_correlation_id") or baseline_reference,
+            "baseline_selection": baseline_selection,
+            "retention_root": str(retention_root),
+            "workspace_id": target_run.get("workspace_id") or readiness_summary.get("workspace_id"),
+            "mvp_release_readiness": readiness_summary.get("mvp_release_readiness"),
+            "release_readiness_status": readiness_payload.get("status") if isinstance(readiness_payload, dict) else None,
+            "release_gate_status": readiness_summary.get("release_gate_status") or target_run.get("status"),
+            "audit_pack_status": readiness_summary.get("audit_pack_status"),
+            "audit_pack_path": readiness_summary.get("audit_pack_path"),
+            "retention_compare_status": compare_payload.get("status") if isinstance(compare_payload, dict) else None,
+            "difference_count": compare_summary.get("difference_count"),
+            "artifact_difference_count": compare_summary.get("artifact_difference_count"),
+            "missing_attachment_difference_count": compare_summary.get("missing_attachment_difference_count"),
+            "github_comment_draft_only": True,
+            "github_comment_posted": False,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "stores_raw_graph_response": False,
+            "stores_raw_case_id": False,
+            "reads_sharepoint_file_content": False,
+            "source_artifacts_must_be_redacted": True,
+        },
+        "checks": checks,
+        "readiness": readiness_payload,
+        "retention_compare": compare_payload,
+        "errors": errors,
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "github_comment_posted": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def _m365_release_gate_post_run_report_paths(
+    repo_root: Path,
+    args: argparse.Namespace,
+    payload: dict[str, Any],
+) -> tuple[Path, Path, Path]:
+    summary = payload.get("summary", {})
+    slug = _safe_release_gate_slug(str(summary.get("correlation_id") or "missing-correlation-id"), 96)
+    default_dir = DEFAULT_RELEASE_GATE_POST_RUN_REPORT_ROOT / slug
+    report_path = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_post_run_report_output,
+        default_dir / "release-gate-post-run-report.redacted.md",
+    )
+    json_path = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_post_run_report_json_output,
+        default_dir / "release-gate-post-run-report.redacted.json",
+    )
+    comment_path = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_github_comment_output,
+        default_dir / "github-evidence-comment.redacted.md",
+    )
+    return report_path, json_path, comment_path
+
+
+def _m365_release_gate_post_run_artifact(
+    artifact_id: str,
+    status: str | None,
+    report_path: Path,
+    json_path: Path | None,
+) -> dict[str, Any]:
+    return {
+        "id": artifact_id,
+        "status": status,
+        "report_path": str(report_path),
+        "json_path": str(json_path) if json_path is not None else None,
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "github_comment_posted": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def _m365_release_gate_post_run_check(check_id: str, status: str, message: str) -> dict[str, Any]:
+    return {
+        "id": check_id,
+        "status": status,
+        "required": True,
+        "message": message,
+    }
+
+
+def _m365_release_gate_post_run_status(checks: list[dict[str, Any]]) -> str:
+    statuses = [check.get("status") for check in checks if check.get("required")]
+    if "FAILED" in statuses:
+        return "FAILED"
+    if "BLOCKED" in statuses:
+        return "BLOCKED"
+    return "PASSED"
+
+
+def _m365_release_gate_post_run_report_return_code(payload: dict[str, Any]) -> int:
+    if payload["status"] == "PASSED":
+        return 0
+    return 2 if payload["status"] == "BLOCKED" else 1
+
+
+def _render_m365_release_gate_post_run_report(payload: dict[str, Any]) -> str:
+    summary = payload.get("summary", {})
+    lines = [
+        "# M365 Release Gate Post-Run Report",
+        "",
+        f"Status: {payload.get('status')}",
+        f"Generated at: {payload.get('generated_at')}",
+        f"Correlation ID: {summary.get('correlation_id')}",
+        f"Baseline correlation ID: {summary.get('baseline_correlation_id') or 'none'}",
+        f"Baseline selection: {summary.get('baseline_selection')}",
+        f"Workspace ID: {summary.get('workspace_id')}",
+        f"MVP release readiness: {summary.get('mvp_release_readiness')}",
+        f"Release readiness status: {summary.get('release_readiness_status')}",
+        f"Retention compare status: {summary.get('retention_compare_status')}",
+        f"Difference count: {summary.get('difference_count')}",
+        f"Audit pack status: {summary.get('audit_pack_status')}",
+        f"Audit pack path: {summary.get('audit_pack_path')}",
+        "",
+        "## Local Artifacts",
+        "",
+        f"- Report: `{_md_cell(summary.get('report_path'))}`",
+        f"- JSON: `{_md_cell(summary.get('json_path'))}`",
+        f"- GitHub comment draft: `{_md_cell(summary.get('github_comment_path'))}`",
+        "",
+        "## Checks",
+        "",
+        "| Check | Status | Message |",
+        "| --- | --- | --- |",
+    ]
+    for check in payload.get("checks", []):
+        lines.append(
+            f"| {_md_cell(check.get('id'))} | {_md_cell(check.get('status'))} | {_md_cell(check.get('message'))} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Privacy",
+            "",
+            "- Graph requests executed: false",
+            "- Tenant writes executed: false",
+            "- Tenant deletes executed: false",
+            "- GitHub comment posted: false",
+            "- Stores tokens or secrets: false",
+            "- Stores raw Graph response: false",
+            "- Stores raw case ID: false",
+            "- Reads SharePoint file content: false",
+        ]
+    )
+    errors = payload.get("errors", [])
+    if errors:
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {_md_cell(error)}" for error in errors)
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_m365_release_gate_github_comment(payload: dict[str, Any]) -> str:
+    summary = payload.get("summary", {})
+    lines = [
+        "## M365 Release-Gate Evidence",
+        "",
+        "Draft only. This command writes local redacted evidence and does not post to GitHub.",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Correlation ID: `{_md_cell(summary.get('correlation_id'))}`",
+        f"- Baseline: `{_md_cell(summary.get('baseline_correlation_id')) or 'none'}`",
+        f"- Baseline selection: `{_md_cell(summary.get('baseline_selection'))}`",
+        f"- MVP readiness: `{_md_cell(summary.get('mvp_release_readiness'))}`",
+        f"- Release readiness: `{_md_cell(summary.get('release_readiness_status'))}`",
+        f"- Audit pack: `{_md_cell(summary.get('audit_pack_status'))}`",
+        f"- Retention compare: `{_md_cell(summary.get('retention_compare_status'))}`",
+        f"- Difference count: `{_md_cell(summary.get('difference_count'))}`",
+        f"- Missing attachment differences: `{_md_cell(summary.get('missing_attachment_difference_count'))}`",
+        f"- Report: `{_md_cell(summary.get('report_path'))}`",
+        f"- JSON: `{_md_cell(summary.get('json_path'))}`",
+        "",
+        "Privacy: no Graph requests, no tenant writes/deletes, no GitHub write, no tokens/secrets, no raw Graph response, no raw case ID, no SharePoint file content reads.",
+    ]
+    errors = payload.get("errors", [])
+    if errors:
+        lines.extend(["", "Blocking notes:"])
+        lines.extend(f"- {_md_cell(error)}" for error in errors)
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _print_m365_release_gate_post_run_report(payload: dict[str, Any]) -> None:
+    summary = payload.get("summary", {})
+    print(f"STATUS: {payload.get('status')}")
+    print(f"Correlation ID: {summary.get('correlation_id')}")
+    print(f"Baseline: {summary.get('baseline_correlation_id') or 'none'}")
+    print(f"MVP readiness: {summary.get('mvp_release_readiness')}")
+    print(f"Report: {summary.get('report_path')}")
+    print(f"GitHub comment draft: {summary.get('github_comment_path')}")
 
 
 def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
