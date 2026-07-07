@@ -289,6 +289,7 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --release-gate-compare-left <baseline-correlation-id> \
   --release-gate-write-readiness \
   --release-gate-readiness-require-audit-pack \
+  --release-gate-write-post-run-report \
   --format json
 ```
 
@@ -298,6 +299,12 @@ Lauf gegen sich selbst. `--release-gate-audit-pack-dir` kann den Zielordner
 setzen. Der Audit-Pack-Schritt läuft erst nach erfolgreicher Retention und bleibt
 offline; Graph-Anfragen, Tenant-Writes, Löschungen und SharePoint-Content-Reads
 sind ausgeschlossen.
+Mit `--release-gate-write-post-run-report` schreibt der Runner danach direkt den
+redigierten Offline-Post-Gate-Report und den lokalen GitHub-
+Nachweiskommentarentwurf. Der Schalter impliziert Audit-Pack, Readiness und
+Audit-Pack-Pflicht für Readiness; ohne `--release-gate-compare-left` verwendet
+er den vorherigen vollständigen `PASSED`-Lauf derselben Workspace-ID als
+Baseline.
 
 Der lokale Audit-Überblick läuft offline über:
 

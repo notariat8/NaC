@@ -660,6 +660,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     teams_sharepoint.add_argument(
+        "--release-gate-write-post-run-report",
+        action="store_true",
+        help=(
+            "Schreibt nach erfolgreichem release-gate-run direkt den redigierten Offline-Post-Gate-Report "
+            "und einen lokalen GitHub-Nachweiskommentarentwurf; impliziert Audit-Pack, Readiness und "
+            "Audit-Pack-Pflicht fuer Readiness."
+        ),
+    )
+    teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
         type=Path,
         help="Optionaler Pfad zum redigierten MCP-Smoke-Suite-Artefakt.",
@@ -2011,6 +2020,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             2,
         )
 
+    args = _m365_release_gate_run_effective_args(args)
     workspace_id = args.mcp_smoke_workspace_id or "notary_team_01"
     correlation_id = args.mcp_smoke_correlation_id or "m365-runtime-release-gate"
     runtime_smoke_output = _resolve_m365_release_gate_path(
@@ -2323,6 +2333,12 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             "release_gate_artifact_index": artifact_index_output,
         },
     )
+    post_run_baseline_reference = _m365_release_gate_run_post_run_baseline_reference(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+    )
     audit_pack_payload: dict[str, Any] | None = None
     if args.release_gate_write_audit_pack:
         audit_pack_payload = _write_m365_release_gate_run_audit_pack(
@@ -2330,6 +2346,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             args,
             correlation_id=correlation_id,
             release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+            baseline_reference=post_run_baseline_reference,
         )
         step_results.append(
             {
@@ -2340,6 +2357,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                     args,
                     correlation_id=correlation_id,
                     release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+                    baseline_reference=post_run_baseline_reference,
                 ),
             }
         )
@@ -2374,6 +2392,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             args,
             correlation_id=correlation_id,
             release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+            baseline_reference=post_run_baseline_reference,
         )
         readiness_return_code = _m365_release_readiness_return_code(readiness_payload)
         step_results.append(
@@ -2386,6 +2405,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                     args,
                     correlation_id=correlation_id,
                     release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+                    baseline_reference=post_run_baseline_reference,
                 ),
             }
         )
@@ -2422,7 +2442,71 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 readiness_return_code,
             )
 
+    post_run_report_payload: dict[str, Any] | None = None
+    if args.release_gate_write_post_run_report:
+        post_run_report_payload = _write_m365_release_gate_run_post_run_report(
+            repo_root,
+            args,
+            correlation_id=correlation_id,
+            release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+            baseline_reference=post_run_baseline_reference,
+        )
+        post_run_report_return_code = _m365_release_gate_post_run_report_return_code(post_run_report_payload)
+        step_results.append(
+            {
+                "step": "release_gate_post_run_report",
+                "return_code": post_run_report_return_code,
+                "status": post_run_report_payload["status"],
+                "command": _m365_release_gate_run_post_run_report_command(
+                    repo_root,
+                    args,
+                    correlation_id=correlation_id,
+                    release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+                    baseline_reference=post_run_baseline_reference,
+                ),
+            }
+        )
+        if post_run_report_payload["status"] != "PASSED":
+            post_run_report_summary = post_run_report_payload.get("summary", {})
+            return (
+                {
+                    "status": "BLOCKED" if post_run_report_payload["status"] == "BLOCKED" else "FAILED",
+                    "summary": {
+                        "workspace_id": workspace_id,
+                        "correlation_id": correlation_id,
+                        "failed_step": "release_gate_post_run_report",
+                        "steps_completed": len(step_results) - 1,
+                        "runtime_env_bootstrap_status": runtime_env_summary["status"],
+                        "runtime_env_bootstrap_artifact": runtime_env_summary["artifact_path"],
+                        "runtime_env_overlay_variable_names": runtime_env_summary["env_overlay_variable_names"],
+                        "release_gate_run_artifact_dir": str(release_gate_run_artifact_dir),
+                        "release_gate_retention_index": retention_index["index_path"],
+                        "release_gate_audit_pack_status": audit_pack_payload["status"] if audit_pack_payload else None,
+                        "release_gate_audit_pack_dir": (
+                            audit_pack_payload.get("summary", {}).get("pack_dir") if audit_pack_payload else None
+                        ),
+                        "release_gate_audit_pack_manifest": (
+                            audit_pack_payload.get("summary", {}).get("json_path") if audit_pack_payload else None
+                        ),
+                        "release_gate_readiness_status": readiness_payload["status"] if readiness_payload else None,
+                        "release_gate_readiness": (
+                            readiness_payload.get("summary", {}).get("mvp_release_readiness")
+                            if readiness_payload
+                            else None
+                        ),
+                        "release_gate_post_run_report_status": post_run_report_payload["status"],
+                        "release_gate_post_run_report": post_run_report_summary.get("report_path"),
+                        "release_gate_post_run_report_json": post_run_report_summary.get("json_path"),
+                        "release_gate_github_comment_draft": post_run_report_summary.get("github_comment_path"),
+                    },
+                    "steps": step_results,
+                    "errors": post_run_report_payload.get("errors", []),
+                },
+                post_run_report_return_code,
+            )
+
     readiness_summary = readiness_payload.get("summary", {}) if readiness_payload else {}
+    post_run_report_summary = post_run_report_payload.get("summary", {}) if post_run_report_payload else {}
     return (
         {
             "status": "PASSED",
@@ -2452,11 +2536,28 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "release_gate_readiness_require_audit_pack": (
                     args.release_gate_readiness_require_audit_pack if readiness_payload else False
                 ),
+                "release_gate_post_run_report_status": (
+                    post_run_report_payload["status"] if post_run_report_payload else None
+                ),
+                "release_gate_post_run_report": post_run_report_summary.get("report_path"),
+                "release_gate_post_run_report_json": post_run_report_summary.get("json_path"),
+                "release_gate_github_comment_draft": post_run_report_summary.get("github_comment_path"),
             },
             "steps": step_results,
             "errors": [],
         },
         0,
+    )
+
+
+def _m365_release_gate_run_effective_args(args: argparse.Namespace) -> argparse.Namespace:
+    if not args.release_gate_write_post_run_report:
+        return args
+    return _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_write_audit_pack=True,
+        release_gate_write_readiness=True,
+        release_gate_readiness_require_audit_pack=True,
     )
 
 
@@ -3453,11 +3554,13 @@ def _write_m365_release_gate_run_audit_pack(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> dict[str, Any]:
     audit_args = _m365_release_gate_run_audit_pack_args(
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
     )
     return _write_m365_release_gate_retention_audit_pack(repo_root, audit_args)
 
@@ -3467,11 +3570,12 @@ def _m365_release_gate_run_audit_pack_args(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> argparse.Namespace:
     return _m365_release_gate_audit_pack_args(
         args,
         release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
-        release_gate_compare_left=args.release_gate_compare_left or correlation_id,
+        release_gate_compare_left=args.release_gate_compare_left or baseline_reference or correlation_id,
         release_gate_compare_right=args.release_gate_compare_right or correlation_id,
     )
 
@@ -3481,11 +3585,13 @@ def _m365_release_gate_run_audit_pack_command(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> str:
     audit_args = _m365_release_gate_run_audit_pack_args(
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
     )
     command = [
         "python3",
@@ -3516,6 +3622,7 @@ def _write_m365_release_gate_run_readiness(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> dict[str, Any]:
     output_path = _m365_release_gate_run_readiness_output_path(repo_root, args, release_gate_run_artifact_dir)
     readiness_args = _m365_release_gate_run_readiness_args(
@@ -3524,6 +3631,7 @@ def _write_m365_release_gate_run_readiness(
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
         output_path=output_path,
+        baseline_reference=baseline_reference,
     )
     payload = _build_m365_release_readiness(repo_root, readiness_args)
     payload["summary"]["json_path"] = str(output_path)
@@ -3539,12 +3647,14 @@ def _m365_release_gate_run_readiness_args(
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
     output_path: Path,
+    baseline_reference: str | None = None,
 ) -> argparse.Namespace:
     audit_pack_dir = _m365_release_gate_run_readiness_audit_pack_dir(
         repo_root,
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
     )
     return _m365_release_gate_audit_pack_args(
         args,
@@ -3561,6 +3671,7 @@ def _m365_release_gate_run_readiness_audit_pack_dir(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> Path | None:
     if not args.release_gate_write_audit_pack:
         return args.release_gate_audit_pack_dir
@@ -3569,6 +3680,7 @@ def _m365_release_gate_run_readiness_audit_pack_dir(
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
     )
     pack_dir = _m365_release_gate_retention_audit_pack_dir(repo_root, audit_args)
     return _m365_release_gate_path_for_command(repo_root, pack_dir)
@@ -3597,12 +3709,14 @@ def _m365_release_gate_run_readiness_command(
     *,
     correlation_id: str,
     release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None = None,
 ) -> str:
     audit_pack_dir = _m365_release_gate_run_readiness_audit_pack_dir(
         repo_root,
         args,
         correlation_id=correlation_id,
         release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
     )
     output_path = args.release_gate_readiness_output or release_gate_run_artifact_dir / "release-readiness.redacted.json"
     retention_root = args.release_gate_retention_root or release_gate_run_artifact_dir.parent
@@ -3623,6 +3737,140 @@ def _m365_release_gate_run_readiness_command(
         command.extend(["--release-gate-audit-pack-dir", str(audit_pack_dir)])
     if args.release_gate_readiness_require_audit_pack:
         command.append("--release-gate-readiness-require-audit-pack")
+    command.extend(["--format", "json"])
+    return shlex.join(command)
+
+
+def _m365_release_gate_run_post_run_baseline_reference(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+) -> str | None:
+    if args.release_gate_compare_left:
+        return args.release_gate_compare_left
+    if not args.release_gate_write_post_run_report:
+        return None
+    retention_args = _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
+    )
+    retention_payload = _list_m365_release_gate_retention(repo_root, retention_args)
+    runs = retention_payload.get("runs") if isinstance(retention_payload.get("runs"), list) else []
+    target_run = next((run for run in runs if run.get("correlation_id") == correlation_id), None)
+    if target_run is None:
+        return None
+    baseline_run = _m365_release_gate_post_run_previous_baseline(runs, target_run)
+    if baseline_run is None:
+        return None
+    baseline_correlation_id = baseline_run.get("correlation_id")
+    return str(baseline_correlation_id) if baseline_correlation_id else None
+
+
+def _write_m365_release_gate_run_post_run_report(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None,
+) -> dict[str, Any]:
+    post_run_args = _m365_release_gate_run_post_run_report_args(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
+    )
+    return _write_m365_release_gate_post_run_report(repo_root, post_run_args)
+
+
+def _m365_release_gate_run_post_run_report_args(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None,
+) -> argparse.Namespace:
+    audit_pack_dir = _m365_release_gate_run_post_run_report_audit_pack_dir(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
+    )
+    return _m365_release_gate_audit_pack_args(
+        args,
+        release_gate_retention_root=args.release_gate_retention_root or release_gate_run_artifact_dir.parent,
+        release_gate_readiness_correlation_id=correlation_id,
+        release_gate_compare_left=args.release_gate_compare_left,
+        release_gate_compare_right=correlation_id,
+        release_gate_audit_pack_dir=audit_pack_dir,
+    )
+
+
+def _m365_release_gate_run_post_run_report_audit_pack_dir(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None,
+) -> Path | None:
+    if args.release_gate_audit_pack_dir is not None:
+        return args.release_gate_audit_pack_dir
+    if not baseline_reference:
+        return None
+    audit_args = _m365_release_gate_run_audit_pack_args(
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
+    )
+    pack_dir = _m365_release_gate_retention_audit_pack_dir(repo_root, audit_args)
+    return _m365_release_gate_path_for_command(repo_root, pack_dir)
+
+
+def _m365_release_gate_run_post_run_report_command(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    correlation_id: str,
+    release_gate_run_artifact_dir: Path,
+    baseline_reference: str | None,
+) -> str:
+    post_run_args = _m365_release_gate_run_post_run_report_args(
+        repo_root,
+        args,
+        correlation_id=correlation_id,
+        release_gate_run_artifact_dir=release_gate_run_artifact_dir,
+        baseline_reference=baseline_reference,
+    )
+    command = [
+        "python3",
+        "scripts/nac.py",
+        "m365",
+        "teams-sharepoint",
+        "release-gate-post-run-report",
+        "--release-gate-retention-root",
+        str(post_run_args.release_gate_retention_root),
+        "--release-gate-readiness-correlation-id",
+        correlation_id,
+    ]
+    if args.release_gate_compare_left:
+        command.extend(["--release-gate-compare-left", str(post_run_args.release_gate_compare_left)])
+    if post_run_args.release_gate_audit_pack_dir is not None:
+        command.extend(["--release-gate-audit-pack-dir", str(post_run_args.release_gate_audit_pack_dir)])
+    if post_run_args.release_gate_post_run_report_output is not None:
+        command.extend(["--release-gate-post-run-report-output", str(post_run_args.release_gate_post_run_report_output)])
+    if post_run_args.release_gate_post_run_report_json_output is not None:
+        command.extend(
+            ["--release-gate-post-run-report-json-output", str(post_run_args.release_gate_post_run_report_json_output)]
+        )
+    if post_run_args.release_gate_github_comment_output is not None:
+        command.extend(["--release-gate-github-comment-output", str(post_run_args.release_gate_github_comment_output)])
     command.extend(["--format", "json"])
     return shlex.join(command)
 
