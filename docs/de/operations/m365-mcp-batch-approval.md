@@ -174,6 +174,21 @@ Mit `--release-gate-write-readiness` kann der One-Shot-Runner diesen Status
 direkt für die aktuelle Correlation-ID schreiben; der Einzelbefehl bleibt der
 Diagnose- und Re-Run-Pfad für vorhandene Retention-Läufe.
 
+Für den Nachweis nach einem Gate bündelt der Offline-Befehl
+`release-gate-post-run-report` diesen Readiness-Status, den Vergleich zur
+expliziten oder automatisch vorherigen vollständigen `PASSED`-Baseline
+derselben Workspace-ID und einen redigierten GitHub-Kommentarentwurf:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-post-run-report \
+  --release-gate-readiness-correlation-id <correlation-id> \
+  --format json
+```
+
+Der Kommentarentwurf wird nur lokal als Markdown-Artefakt geschrieben; der
+Befehl postet nichts auf GitHub und führt keine Graph-Anfrage, keinen
+Tenant-Write, keine Löschung und keinen SharePoint-Content-Read aus.
+
 ## MVP-Go/No-Go-Abnahmekriterium
 
 `release-readiness` ist das verbindliche MVP-Go/No-Go-Abnahmekriterium für den

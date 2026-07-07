@@ -1416,6 +1416,158 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["mvp_release_readiness"], "NOT_READY")
         self.assertIn("mcp_inventory_smoke", "\n".join(payload["errors"]))
 
+    def test_release_gate_post_run_report_auto_selects_previous_baseline_and_writes_comment_draft(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            report_path = tmp_path / "post-run" / "report.md"
+            json_path = tmp_path / "post-run" / "report.json"
+            comment_path = tmp_path / "post-run" / "comment.md"
+            audit_pack_dir = tmp_path / "audit-pack"
+            _write_readiness_run(
+                retention_root / "baseline-run",
+                correlation_id="baseline-run",
+                generated_at="2026-07-07T13:00:00Z",
+            )
+            _write_readiness_run(
+                retention_root / "current-run",
+                correlation_id="current-run",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+            _write_audit_pack(audit_pack_dir)
+
+            payload, return_code = _invoke_post_run_report(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "current-run",
+                    "--release-gate-audit-pack-dir",
+                    str(audit_pack_dir),
+                    "--release-gate-post-run-report-output",
+                    str(report_path),
+                    "--release-gate-post-run-report-json-output",
+                    str(json_path),
+                    "--release-gate-github-comment-output",
+                    str(comment_path),
+                    "--format",
+                    "json",
+                ]
+            )
+            report_exists = report_path.exists()
+            json_exists = json_path.exists()
+            comment_exists = comment_path.exists()
+            comment = comment_path.read_text(encoding="utf-8")
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-post-run-report/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["correlation_id"], "current-run")
+        self.assertEqual(payload["summary"]["baseline_correlation_id"], "baseline-run")
+        self.assertEqual(payload["summary"]["baseline_selection"], "previous_retained_run")
+        self.assertEqual(payload["summary"]["mvp_release_readiness"], "READY")
+        self.assertEqual(payload["summary"]["retention_compare_status"], "PASSED")
+        self.assertFalse(payload["summary"]["github_comment_posted"])
+        self.assertTrue(report_exists)
+        self.assertTrue(json_exists)
+        self.assertTrue(comment_exists)
+        self.assertIn("Draft only", comment)
+        self.assertIn("current-run", comment)
+        self.assertIn("baseline-run", comment)
+        self.assertIn("no Graph requests", comment)
+        self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_post_run_report_uses_explicit_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            audit_pack_dir = tmp_path / "audit-pack"
+            _write_readiness_run(
+                retention_root / "explicit-baseline",
+                correlation_id="explicit-baseline",
+                generated_at="2026-07-07T12:00:00Z",
+            )
+            _write_readiness_run(
+                retention_root / "newer-baseline",
+                correlation_id="newer-baseline",
+                generated_at="2026-07-07T13:30:00Z",
+            )
+            _write_readiness_run(
+                retention_root / "current-run",
+                correlation_id="current-run",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+            _write_audit_pack(audit_pack_dir)
+
+            payload, return_code = _invoke_post_run_report(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "current-run",
+                    "--release-gate-compare-left",
+                    "explicit-baseline",
+                    "--release-gate-audit-pack-dir",
+                    str(audit_pack_dir),
+                    "--release-gate-post-run-report-output",
+                    str(tmp_path / "report.md"),
+                    "--release-gate-post-run-report-json-output",
+                    str(tmp_path / "report.json"),
+                    "--release-gate-github-comment-output",
+                    str(tmp_path / "comment.md"),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["baseline_selection"], "explicit")
+        self.assertEqual(payload["summary"]["baseline_correlation_id"], "explicit-baseline")
+        self.assertEqual(payload["retention_compare"]["summary"]["left_correlation_id"], "explicit-baseline")
+
+    def test_release_gate_post_run_report_blocks_without_previous_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            report_path = tmp_path / "report.md"
+            json_path = tmp_path / "report.json"
+            comment_path = tmp_path / "comment.md"
+            _write_readiness_run(
+                retention_root / "current-run",
+                correlation_id="current-run",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+
+            payload, return_code = _invoke_post_run_report(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "current-run",
+                    "--release-gate-post-run-report-output",
+                    str(report_path),
+                    "--release-gate-post-run-report-json-output",
+                    str(json_path),
+                    "--release-gate-github-comment-output",
+                    str(comment_path),
+                    "--format",
+                    "json",
+                ]
+            )
+            report_exists = report_path.exists()
+            json_exists = json_path.exists()
+            comment_exists = comment_path.exists()
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["baseline_selection"], "not_available")
+        self.assertEqual(payload["summary"]["retention_compare_status"], "BLOCKED")
+        self.assertTrue(report_exists)
+        self.assertTrue(json_exists)
+        self.assertTrue(comment_exists)
+        self.assertIn("no previous retained PASSED", "\n".join(payload["errors"]))
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -1561,6 +1713,24 @@ def _invoke_release_readiness(extra_args: list[str]) -> tuple[dict, int]:
     return json.loads(output.getvalue()), return_code
 
 
+def _invoke_post_run_report(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-post-run-report",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
 def _write_retention_run(
     run_dir: Path,
     *,
@@ -1601,6 +1771,7 @@ def _write_readiness_run(
     run_dir: Path,
     *,
     correlation_id: str,
+    generated_at: str = "2026-07-07T14:00:00Z",
     artifact_overrides: dict[str, dict] | None = None,
 ) -> None:
     artifact_overrides = artifact_overrides or {}
@@ -1638,7 +1809,7 @@ def _write_readiness_run(
             {
                 "schema_version": "nac.m365-release-gate-evidence/v0.1",
                 "status": "PASSED",
-                "generated_at": "2026-07-07T14:00:00Z",
+                "generated_at": generated_at,
                 "summary": {
                     "workspace_id": "notary_team_01",
                     "correlation_id": correlation_id,

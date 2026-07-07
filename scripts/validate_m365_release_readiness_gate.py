@@ -15,6 +15,8 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "`release-readiness` ist das verbindliche MVP-Go/No-Go-Abnahmekriterium",
         "`mvp_release_readiness=READY`",
         "`release_gate_readiness=READY`",
+        "release-gate-post-run-report",
+        "GitHub-Kommentarentwurf",
         "--release-gate-write-audit-pack",
         "--release-gate-write-readiness",
         "--release-gate-readiness-require-audit-pack",
@@ -28,6 +30,8 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "`release-readiness` is the binding MVP Go/No-Go acceptance criterion",
         "`mvp_release_readiness=READY`",
         "`release_gate_readiness=READY`",
+        "release-gate-post-run-report",
+        "GitHub comment draft",
         "--release-gate-write-audit-pack",
         "--release-gate-write-readiness",
         "--release-gate-readiness-require-audit-pack",
@@ -49,12 +53,16 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "release-readiness --format json",
         "release-gate-write-readiness",
         "release-gate-readiness-require-audit-pack",
+        "release-gate-post-run-report",
+        "release-gate-github-comment-output",
         "release_gate_readiness=READY",
     ),
     "docs/en/cli.md": (
         "release-readiness --format json",
         "release-gate-write-readiness",
         "release-gate-readiness-require-audit-pack",
+        "release-gate-post-run-report",
+        "release-gate-github-comment-output",
         "release_gate_readiness=READY",
     ),
     "docs/de/runbooks/m365-cli-admin-accelerator.md": (
@@ -73,6 +81,8 @@ REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
     "src/nac_cli/cli.py": (
         "_apply_m365_release_gate_mvp_defaults",
         "_m365_release_gate_run_readiness_audit_pack_dir",
+        "_write_m365_release_gate_post_run_report",
+        "_render_m365_release_gate_github_comment",
         '"release-gate", "runtime-certificate-rotation"',
         "return (True, True, True)",
         "MVP-Standard impliziert",
@@ -81,6 +91,11 @@ REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
         "test_batch_approval_renders_runtime_release_gate_with_mvp_readiness_default",
         "test_batch_approval_release_gate_baseline_uses_mvp_audit_pack_default",
         "release_gate_readiness_require_audit_pack",
+    ),
+    "tests/test_m365_release_gate_runner.py": (
+        "test_release_gate_post_run_report_auto_selects_previous_baseline_and_writes_comment_draft",
+        "test_release_gate_post_run_report_blocks_without_previous_baseline",
+        "release-gate-post-run-report",
     ),
 }
 
