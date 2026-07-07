@@ -17,6 +17,7 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
     summarize_matter_access_plan,
     validate_matter_access_delegation_contract,
 )
+from nac_m365_graph.matter_access_delegation_smoke import run_matter_access_delegation_smoke  # noqa: E402
 from nac_m365_graph.mcp_runtime import DEFAULT_MCP_CONTRACT, load_mcp_contract, validate_mcp_contract  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema  # noqa: E402
 
@@ -42,6 +43,7 @@ REQUIRED_DOC_MARKERS = {
         "M365-Mandatszugriffsdelegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-smoke",
         "Microsoft Graph REST",
         "keine Live-Tenant-Aktion",
     ],
@@ -49,13 +51,14 @@ REQUIRED_DOC_MARKERS = {
         "M365 Matter Access Delegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-smoke",
         "Microsoft Graph REST",
         "no live tenant action",
     ],
-    DATA_PLANE_DE: ["m365-matter-access-delegation.md", "matter-access-plan"],
-    DATA_PLANE_EN: ["m365-matter-access-delegation.md", "matter-access-plan"],
-    CLI_DE: ["matter-access-plan"],
-    CLI_EN: ["matter-access-plan"],
+    DATA_PLANE_DE: ["m365-matter-access-delegation.md", "matter-access-plan", "matter-access-smoke"],
+    DATA_PLANE_EN: ["m365-matter-access-delegation.md", "matter-access-plan", "matter-access-smoke"],
+    CLI_DE: ["matter-access-plan", "matter-access-smoke"],
+    CLI_EN: ["matter-access-plan", "matter-access-smoke"],
     CONTRACTS_README: ["m365-matter-access-delegation.contract.json"],
     QUALITY_DE: ["m365_matter_access_delegation"],
     QUALITY_EN: ["m365_matter_access_delegation"],
@@ -109,6 +112,22 @@ def validate() -> list[str]:
                 errors.append("matter-access-plan operations must not read SharePoint file content")
             if any(not operation.graph_path.startswith("/sites/{site-id}/") for operation in operations):
                 errors.append("matter-access-plan operations must stay within /sites/{site-id}")
+            smoke = run_matter_access_delegation_smoke(
+                contract,
+                schema,
+                workspace_id=schema["workspaces"][0]["id"],
+                correlation_id="validator-smoke",
+                timestamp="2026-07-07T00:00:00Z",
+            )
+            if smoke["status"] != "PASSED":
+                errors.append("matter-access-smoke must pass for the first workspace")
+            smoke_summary = smoke["summary"]
+            if smoke_summary["workspace_operation_count"] != 6:
+                errors.append("matter-access-smoke must report six operations for the target workspace")
+            if smoke_summary["owner_gated_workspace_operations"] != 3:
+                errors.append("matter-access-smoke must report three owner-gated write plans")
+            if smoke_summary["executes_graph_requests"] is not False:
+                errors.append("matter-access-smoke must not execute Graph requests")
 
     if mcp_contract:
         errors.extend(validate_mcp_contract(mcp_contract))
@@ -182,6 +201,8 @@ def _validate_docs_and_wiring() -> list[str]:
             errors.append("quality_gate.py missing m365_matter_access_delegation")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-plan" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-plan'")
+        if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-smoke" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-smoke'")
     return errors
 
 

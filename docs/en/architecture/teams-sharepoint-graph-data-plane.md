@@ -279,6 +279,23 @@ manual exports. The owner-gated `release-gate-run` executes this offline smoke
 automatically before live steps and references the redacted artifact in
 `release-gate-evidence`.
 
+The matter visibility and deputy-access boundary is defined in the separate
+[M365 Matter Access Delegation](m365-matter-access-delegation.md) contract.
+`matter-access-plan` renders the request plan without live tenant action;
+`matter-access-smoke` creates the matching redacted offline evidence:
+
+```bash
+nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
+```
+
+By default, the smoke writes
+`out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`. It
+checks six request-plan operations per workspace, three owner-gated write-side
+deputy plans, the request-plan-only MCP tool contracts and the privacy boundary
+without Graph execution. `release-gate-run` executes it automatically before
+the live steps and attaches the artifact as optional evidence to
+`release-gate-evidence` and the artifact index.
+
 The first owner-gated live-read mode starts explicitly:
 
 ```bash

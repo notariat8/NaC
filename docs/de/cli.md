@@ -72,6 +72,8 @@ python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor -
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
 python scripts/nac.py m365 teams-sharepoint bpmn-viewer-plan --format json
+python scripts/nac.py m365 teams-sharepoint matter-access-plan --format json
+python scripts/nac.py m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 python scripts/nac.py m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json
 python scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
@@ -116,6 +118,8 @@ nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
 nac m365 teams-sharepoint bpmn-viewer-plan --format json
+nac m365 teams-sharepoint matter-access-plan --format json
+nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json
 nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json
 nac m365 teams-sharepoint privileged-plan --format json
@@ -156,7 +160,7 @@ nac time-ledger summary
 | BPMN | `nac bpmn list` und `nac bpmn validate` | Listet und prüft fachliche BPMN-Prozessmodelle. |
 | Prozesse | `nac process validate-all` | Prüft deterministische Prozessanträge. |
 | Workflow-Verträge | `nac contracts validate` | Prüft Workflow-Verträge, Spec-Traceability, Secure-Link-Grenzen, Teams-/SharePoint-Graph-Datenebene und Legal-Research-Connector-Kandidaten. |
-| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint application-owner-readiness`, `nac m365 teams-sharepoint runtime-certificate-expiry-monitor`, `nac m365 teams-sharepoint runtime-certificate-readiness`, `nac m365 teams-sharepoint runtime-env-bootstrap`, `nac m365 teams-sharepoint bpmn-viewer-plan`, `nac m365 teams-sharepoint matter-access-plan`, `nac m365 teams-sharepoint bpmn-viewer-runtime-readiness`, `nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-run --owner-approved`, `nac m365 teams-sharepoint release-readiness`, `nac m365 teams-sharepoint release-gate-post-run-report`, `nac m365 teams-sharepoint release-gate-post-run-report-index`, `nac m365 teams-sharepoint release-gate-post-run-report-index-artifact`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint release-gate-retention-list`, `nac m365 teams-sharepoint release-gate-retention-compare`, `nac m365 teams-sharepoint release-gate-retention-compare-artifact`, `nac m365 teams-sharepoint release-gate-retention-compare-index`, `nac m365 teams-sharepoint release-gate-retention-compare-index-artifact`, `nac m365 teams-sharepoint release-gate-retention-audit-pack`, `nac m365 teams-sharepoint mcp-manifest`, `nac m365 teams-sharepoint mcp-inventory-smoke` und `nac m365 teams-sharepoint mcp-stdio` | Plant die Teams/SharePoint-Datenebene, prüft den Application-Owner-/Technical-Owner-Pfad und den Runtime-Zertifikatspfad offline und redigiert, überwacht den Runtime-Zertifikatsablauf ohne Live-Zugriff, bereitet die zertifikatsbasierte Runtime-Umgebung aus nicht-geheimer Evidence und lokalen Pfaden ohne Graph-Zugriff vor, erzeugt den optionalen BPMN-Viewer-Provisioning-Plan ohne Live-Apply, rendert den M365-Akten-/Vertretungszugriffsplan offline ohne Live-Tenant-Aktion, prüft die BPMN-Viewer-Runtime-Readiness für SPFx-Paketierung, App Catalog und späteren `.bpmn`-Graph-Content-Read ohne Live-Zugriff, rendert das source-only SPFx/bpmn-js-Viewer-Skeleton ohne App-Catalog-Deploy, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus, prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente, rendert Batch-Freigabetexte ohne Live-Zugriff, führt das Runtime-Release-Gate nur owner-gated als feste Sequenz aus und kann danach direkt ein redigiertes Audit-Pack schreiben, verdichtet die lokale Release-Gate-Evidence zu einem kompakten MVP-Readiness-Status, erzeugt einen redigierten Offline-Post-Gate-Report mit automatischer vorheriger Baseline und GitHub-Nachweiskommentarentwurf, listet und indiziert diese Post-Gate-Reports offline, erzeugt redigierte Release-Gate-Abschlussberichte aus lokalen Evidence-Artefakten, listet und vergleicht lokale Release-Gate-Retention-Laufordner offline, schreibt redigierte Vergleichsnachweise, listet/durchsucht diese Vergleichsnachweise offline, schreibt daraus redigierte Indexartefakte und bündelt Retention-Liste, Vergleich, Vergleichsindex und Manifest als redigiertes Offline-Audit-Paket, zeigt das sichere Tool-Manifest von `teams-sharepoint-data-mcp` ohne Live-Zugriff, prüft das metadata-only Schnittstelleninventar offline, startet den lokalen MCP-stdio-Adapter für Request-Planung und bereinigt synthetische Smoke-Reste nur owner-gated. |
+| Microsoft 365 | `nac m365 teams-sharepoint plan`, `nac m365 teams-sharepoint application-owner-readiness`, `nac m365 teams-sharepoint runtime-certificate-expiry-monitor`, `nac m365 teams-sharepoint runtime-certificate-readiness`, `nac m365 teams-sharepoint runtime-env-bootstrap`, `nac m365 teams-sharepoint bpmn-viewer-plan`, `nac m365 teams-sharepoint matter-access-plan`, `nac m365 teams-sharepoint matter-access-smoke`, `nac m365 teams-sharepoint bpmn-viewer-runtime-readiness`, `nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton`, `nac m365 teams-sharepoint privileged-plan`, `nac m365 teams-sharepoint privileged-apply --owner-approved`, `nac m365 teams-sharepoint runtime-smoke --owner-approved`, `nac m365 teams-sharepoint runtime-metadata --owner-approved`, `nac batch-approval m365`, `nac m365 teams-sharepoint release-gate-run --owner-approved`, `nac m365 teams-sharepoint release-readiness`, `nac m365 teams-sharepoint release-gate-post-run-report`, `nac m365 teams-sharepoint release-gate-post-run-report-index`, `nac m365 teams-sharepoint release-gate-post-run-report-index-artifact`, `nac m365 teams-sharepoint release-gate-evidence`, `nac m365 teams-sharepoint release-gate-retention-list`, `nac m365 teams-sharepoint release-gate-retention-compare`, `nac m365 teams-sharepoint release-gate-retention-compare-artifact`, `nac m365 teams-sharepoint release-gate-retention-compare-index`, `nac m365 teams-sharepoint release-gate-retention-compare-index-artifact`, `nac m365 teams-sharepoint release-gate-retention-audit-pack`, `nac m365 teams-sharepoint mcp-manifest`, `nac m365 teams-sharepoint mcp-inventory-smoke` und `nac m365 teams-sharepoint mcp-stdio` | Plant die Teams/SharePoint-Datenebene, prüft den Application-Owner-/Technical-Owner-Pfad und den Runtime-Zertifikatspfad offline und redigiert, überwacht den Runtime-Zertifikatsablauf ohne Live-Zugriff, bereitet die zertifikatsbasierte Runtime-Umgebung aus nicht-geheimer Evidence und lokalen Pfaden ohne Graph-Zugriff vor, erzeugt den optionalen BPMN-Viewer-Provisioning-Plan ohne Live-Apply, rendert den M365-Akten-/Vertretungszugriffsplan offline ohne Live-Tenant-Aktion, schreibt den redigierten Offline-Smoke für die Akten-/Vertretungszugriffsgrenze, prüft die BPMN-Viewer-Runtime-Readiness für SPFx-Paketierung, App Catalog und späteren `.bpmn`-Graph-Content-Read ohne Live-Zugriff, rendert das source-only SPFx/bpmn-js-Viewer-Skeleton ohne App-Catalog-Deploy, führt den privilegierten App-/Sites.Selected-Bootstrap nur owner-gated über Microsoft Graph REST v1.0 aus, prüft den Runtime-App-Lesezugriff auf Sites, Listen und Dokumentbibliotheken ohne Listenelemente, rendert Batch-Freigabetexte ohne Live-Zugriff, führt das Runtime-Release-Gate nur owner-gated als feste Sequenz aus und kann danach direkt ein redigiertes Audit-Pack schreiben, verdichtet die lokale Release-Gate-Evidence zu einem kompakten MVP-Readiness-Status, erzeugt einen redigierten Offline-Post-Gate-Report mit automatischer vorheriger Baseline und GitHub-Nachweiskommentarentwurf, listet und indiziert diese Post-Gate-Reports offline, erzeugt redigierte Release-Gate-Abschlussberichte aus lokalen Evidence-Artefakten, listet und vergleicht lokale Release-Gate-Retention-Laufordner offline, schreibt redigierte Vergleichsnachweise, listet/durchsucht diese Vergleichsnachweise offline, schreibt daraus redigierte Indexartefakte und bündelt Retention-Liste, Vergleich, Vergleichsindex und Manifest als redigiertes Offline-Audit-Paket, zeigt das sichere Tool-Manifest von `teams-sharepoint-data-mcp` ohne Live-Zugriff, prüft das metadata-only Schnittstelleninventar offline, startet den lokalen MCP-stdio-Adapter für Request-Planung und bereinigt synthetische Smoke-Reste nur owner-gated. |
 | Import-Jobs | `nac import jobs status --repo ../demo8notariat` | Steuert begrenzte Codex-/OCR-Aufträge für Importvorschläge im getrennten Datenrepo. |
 | Plugins | `nac plugins actions` und `nac plugins install --mode dry-run` | Listet fachliche Plugin-Befehle und prüft die lokale Plugin-Spiegelung. |
 | Konfiguration | `nac config list` und `nac config validate` | Zeigt und prüft steuernde Policies, Verträge und Runtime-Konfiguration. |
@@ -375,6 +379,14 @@ Credentials und schreibt standardmäßig
 enthält nur Gate-Status, Zähler und Privacy-Flags; BNotK-HTML, XSD-Rohdaten,
 Credentials, Tokens, Nachrichten-Payloads und Mandatsdaten werden nicht
 gespeichert.
+`matter-access-smoke` ist ebenfalls offline und prüft den
+M365-Akten-/Vertretungszugriffsplan aus `matter-access-plan` als redigiertes
+Evidence-Artefakt. Der Befehl braucht kein `--owner-approved`, keine
+Credentials und schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`. Das
+Artefakt enthält nur Workspace-/Correlation-Metadaten, Zähler, geplante
+Aktionsnamen und Privacy-Flags; konkrete Graph-Pfade, SharePoint-Dateiinhalte,
+Mandats-Rohdaten, Tokens und Secrets werden nicht gespeichert.
 `nac batch-approval m365` ist ebenfalls offline. Der Befehl rendert kopierbare
 Owner-Freigabetexte für vorbereitete PR-Batches, synthetische Live-Smoke-Batches
 das M365 Runtime Release-Gate und den M365 Runtime-Zertifikatslebenszyklus,
@@ -589,6 +601,9 @@ Der offline
 `mcp-inventory-smoke` ist Teil des One-Shot-Runners, läuft vor den
 owner-gated Live-Schritten offline ohne Runtime-Credential-Overlay und hängt
 sein redigiertes Inventar-Artefakt automatisch an `release-gate-evidence` an.
+`matter-access-smoke` läuft direkt danach ebenfalls offline und hängt sein
+redigiertes Akten-/Vertretungszugriffsartefakt als optionalen Evidence-Step an
+`release-gate-evidence` und den Artifact-Index an.
 Der Einzelbefehl bleibt Diagnose- und Fallback-Pfad, wenn dieser
 Runner-Schritt isoliert reproduziert werden muss.
 
@@ -619,6 +634,10 @@ Ein vorhandenes `mcp-inventory-smoke.redacted.json` kann bei einem manuellen
 One-Shot-Runners, bleibt dieser Evidence-Schritt `NOT_ATTACHED`, ohne das
 manuelle Release-Gate-Evidence zu blockieren. Ist es vorhanden, aber ungültig,
 schlägt der Export fehl.
+Ein vorhandenes `matter-access-delegation-smoke.redacted.json` kann analog mit
+`--release-gate-matter-access-artifact` angehängt werden. Fehlt es außerhalb
+des One-Shot-Runners, bleibt dieser Evidence-Schritt `NOT_ATTACHED`; ist es
+vorhanden, aber nicht redigiert oder inkonsistent, schlägt der Export fehl.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

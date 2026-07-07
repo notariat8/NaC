@@ -175,6 +175,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
             release_gate["operator_sequence"][0]["covers_steps"],
             [
                 "mcp_inventory_smoke",
+                "matter_access_delegation_smoke",
                 "runtime_certificate_expiry_monitor",
                 "runtime_smoke",
                 "runtime_metadata",

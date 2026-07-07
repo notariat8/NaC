@@ -28,6 +28,11 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
     summarize_matter_access_plan,
     validate_matter_access_delegation_contract,
 )
+from nac_m365_graph.matter_access_delegation_smoke import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_DELEGATION_SMOKE_OUTPUT,
+    run_matter_access_delegation_smoke_from_paths,
+    write_matter_access_delegation_smoke_artifact,
+)
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_APPLIED_STATE,
@@ -113,6 +118,7 @@ from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
+    "matter-access-smoke": "matter-access-delegation-smoke",
     "mcp-inventory-smoke": "mcp-inventory-smoke",
     "mcp-live-read-smoke": "mcp-live-read-smoke",
     "mcp-positive-write-read-smoke": "mcp-positive-write-read-smoke",
@@ -140,6 +146,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-smoke",
             "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
@@ -165,6 +172,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
             "matter-access-plan renders the offline matter visibility and deputy delegation request plan; "
+            "matter-access-smoke writes redacted offline evidence for that request-plan boundary; "
             "bpmn-viewer-runtime-readiness validates offline package/App Catalog/Graph content-read gates; "
             "spfx-bpmn-viewer-skeleton renders the offline SPFx/bpmn-js viewer source skeleton and request plans; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
@@ -318,6 +326,12 @@ def parse_args() -> argparse.Namespace:
         help="Path for the redacted MCP inventory smoke artifact under out/.",
     )
     parser.add_argument(
+        "--matter-access-smoke-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_DELEGATION_SMOKE_OUTPUT,
+        help="Path for the redacted matter access delegation smoke artifact under out/.",
+    )
+    parser.add_argument(
         "--mcp-positive-smoke-output",
         type=Path,
         default=DEFAULT_MCP_POSITIVE_WRITE_READ_SMOKE_OUTPUT,
@@ -448,6 +462,36 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.mcp_inventory_smoke_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "matter-access-smoke":
+        try:
+            result = run_matter_access_delegation_smoke_from_paths(
+                contract_path=args.matter_access_contract,
+                schema_path=args.schema,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=mcp_smoke_correlation_id,
+            )
+            write_matter_access_delegation_smoke_artifact(result, args.matter_access_smoke_output)
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.matter_access_smoke_output)
         return _emit(
             {
                 "status": result["status"],
