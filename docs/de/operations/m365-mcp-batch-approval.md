@@ -184,8 +184,13 @@ muss. Bleibt nach dem Lauf ein synthetischer Rest zurück, ist unmittelbar der
 owner-gated `mcp-smoke-leftover-cleanup`-Pfad vorzubereiten.
 
 Bei Nutzung von `release-gate-run` erzeugt der Runner den redigierten
-Abschlussbericht bereits im gleichen owner-gated Lauf. Der folgende Offline-
-Exporter bleibt nur für Diagnose oder erneuten Export vorhandener Artefakte:
+Abschlussbericht bereits im gleichen owner-gated Lauf und kopiert die
+vorhandenen redigierten Artefakte zusätzlich in
+`out/m365/teams-sharepoint/release-gates/<correlation-id>/`. Dort liegt auch
+`release-gate-retention-index.redacted.json`, damit mehrere Gate-Läufe
+auditierbar nebeneinander bleiben, während `out/m365/teams-sharepoint/` weiter
+den letzten `latest`-Stand enthält. Der folgende Offline-Exporter bleibt nur
+für Diagnose oder erneuten Export vorhandener Artefakte:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \

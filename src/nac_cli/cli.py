@@ -4,10 +4,12 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +81,7 @@ from .tenant import (
 
 
 DEFAULT_PORT = 8765
+DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gates")
 DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT = Path(
     "out/m365/teams-sharepoint/mcp-inventory-smoke.not-attached.redacted.json"
 )
@@ -463,6 +466,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-artifact-index-output",
         type=Path,
         help="Pfad fuer den redigierten M365-Release-Gate-Artefaktindex.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-run-artifact-dir",
+        type=Path,
+        help=(
+            "Optionaler Laufordner fuer redigierte Release-Gate-Artefaktkopien; "
+            "standardmaessig out/m365/teams-sharepoint/release-gates/<correlation-id>/."
+        ),
     )
     teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
@@ -1659,6 +1670,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         args.release_gate_artifact_index_output,
         DEFAULT_ARTIFACT_INDEX_OUTPUT,
     )
+    release_gate_run_artifact_dir = _resolve_m365_release_gate_run_artifact_dir(
+        repo_root,
+        args.release_gate_run_artifact_dir,
+        correlation_id,
+    )
 
     steps = [
         (
@@ -1845,6 +1861,25 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 result.returncode,
             )
 
+    retention_index = _retain_m365_release_gate_artifacts(
+        artifact_dir=release_gate_run_artifact_dir,
+        workspace_id=workspace_id,
+        correlation_id=correlation_id,
+        status="PASSED",
+        artifacts={
+            "runtime_certificate_expiry": runtime_certificate_expiry_output,
+            "runtime_env_bootstrap": runtime_env_bootstrap_output,
+            "runtime_smoke": runtime_smoke_output,
+            "runtime_metadata": runtime_metadata_output,
+            "mcp_inventory_smoke": release_gate_inventory_artifact,
+            "mcp_smoke_suite": mcp_suite_output,
+            "mcp_leftover_dry_run": mcp_leftover_output,
+            "release_gate_evidence_report": evidence_output,
+            "release_gate_evidence_json": evidence_json_output,
+            "release_gate_artifact_index": artifact_index_output,
+        },
+    )
+
     return (
         {
             "status": "PASSED",
@@ -1858,6 +1893,9 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 "evidence_output": str(evidence_output),
                 "evidence_json_output": str(evidence_json_output),
                 "artifact_index_output": str(artifact_index_output),
+                "release_gate_run_artifact_dir": str(release_gate_run_artifact_dir),
+                "release_gate_retention_index": retention_index["index_path"],
+                "retained_artifact_count": retention_index["copied_artifact_count"],
             },
             "steps": step_results,
             "errors": [],
@@ -1872,6 +1910,92 @@ _M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
     "mcp_smoke_suite",
     "mcp_leftover_dry_run",
 }
+
+
+def _resolve_m365_release_gate_run_artifact_dir(
+    repo_root: Path,
+    artifact_dir: Path | None,
+    correlation_id: str,
+) -> Path:
+    if artifact_dir is not None:
+        return artifact_dir if artifact_dir.is_absolute() else repo_root / artifact_dir
+    return repo_root / DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT / _safe_release_gate_correlation_id(correlation_id)
+
+
+def _safe_release_gate_correlation_id(correlation_id: str) -> str:
+    cleaned = "".join(char if char.isalnum() or char in {"-", "_", "."} else "-" for char in correlation_id)
+    cleaned = cleaned.strip("-_.")
+    return cleaned or "m365-runtime-release-gate"
+
+
+def _retain_m365_release_gate_artifacts(
+    *,
+    artifact_dir: Path,
+    workspace_id: str,
+    correlation_id: str,
+    status: str,
+    artifacts: dict[str, Path],
+) -> dict[str, Any]:
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    retained_artifacts: list[dict[str, Any]] = []
+    for artifact_id, source_path in artifacts.items():
+        retained_path = artifact_dir / source_path.name
+        if source_path.exists():
+            shutil.copy2(source_path, retained_path)
+            retained_artifacts.append(
+                {
+                    "id": artifact_id,
+                    "status": "COPIED",
+                    "source_path": str(source_path),
+                    "retained_path": str(retained_path),
+                    "artifact_sha256": _sha256_file(retained_path),
+                }
+            )
+        else:
+            retained_artifacts.append(
+                {
+                    "id": artifact_id,
+                    "status": "NOT_ATTACHED",
+                    "source_path": str(source_path),
+                    "retained_path": str(retained_path),
+                    "artifact_sha256": None,
+                }
+            )
+    copied_artifact_count = sum(1 for artifact in retained_artifacts if artifact["status"] == "COPIED")
+    index = {
+        "schema_version": "nac.m365-release-gate-retention-index/v0.1",
+        "status": status,
+        "workspace_id": workspace_id,
+        "correlation_id": correlation_id,
+        "artifact_dir": str(artifact_dir),
+        "copied_artifact_count": copied_artifact_count,
+        "artifacts": retained_artifacts,
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+    index_path = artifact_dir / "release-gate-retention-index.redacted.json"
+    index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {
+        "index_path": str(index_path),
+        "artifact_dir": str(artifact_dir),
+        "copied_artifact_count": copied_artifact_count,
+    }
+
+
+def _sha256_file(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _m365_runtime_env_overlay(
