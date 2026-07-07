@@ -195,6 +195,22 @@ The command reads only local retention-index and evidence JSON files under
 timestamp, workspace, artifact counts and local evidence paths. It performs no
 Graph request, tenant write or delete.
 
+The local comparison of two archived runs is also offline:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare \
+  --release-gate-compare-left <left-correlation-id> \
+  --release-gate-compare-right <right-correlation-id> \
+  --format json
+```
+
+`--release-gate-compare-left` and `--release-gate-compare-right` accept
+correlation IDs, run folders or direct
+`release-gate-retention-index.redacted.json` paths. The comparison reports
+status, timestamp, artifact, missing-attachment and evidence-path differences,
+but reads no SharePoint file content and performs no Graph request, tenant
+write or delete.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \

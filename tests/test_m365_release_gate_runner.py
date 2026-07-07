@@ -511,6 +511,73 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["run_count"], 0)
         self.assertEqual(payload["runs"], [])
 
+    def test_release_gate_retention_compare_reports_differences(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            retention_root = Path(tmp) / "release-gates"
+            _write_retention_run(
+                retention_root / "corr-left",
+                correlation_id="corr-left",
+                generated_at="2026-07-07T12:00:00Z",
+                copied_artifact_count=1,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "aaa"},
+                    {"id": "mcp_inventory_smoke", "status": "NOT_ATTACHED", "artifact_sha256": None},
+                    {"id": "runtime_metadata", "status": "COPIED", "artifact_sha256": "bbb"},
+                ],
+            )
+            _write_retention_run(
+                retention_root / "corr-right",
+                correlation_id="corr-right",
+                generated_at="2026-07-07T12:30:00Z",
+                copied_artifact_count=3,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "changed"},
+                    {"id": "mcp_inventory_smoke", "status": "COPIED", "artifact_sha256": "inventory"},
+                    {"id": "mcp_smoke_suite", "status": "COPIED", "artifact_sha256": "suite"},
+                ],
+            )
+
+            payload, return_code = _invoke_retention_compare(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-compare-left",
+                    "corr-left",
+                    "--release-gate-compare-right",
+                    "corr-right",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(payload["summary"]["differences_found"])
+        self.assertEqual(payload["summary"]["left_correlation_id"], "corr-left")
+        self.assertEqual(payload["summary"]["right_correlation_id"], "corr-right")
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertGreater(payload["summary"]["difference_count"], 0)
+        self.assertIn(
+            {"field": "copied_artifact_count", "left": 1, "right": 3},
+            payload["comparison"]["fields"],
+        )
+        self.assertEqual(payload["comparison"]["artifacts"]["added_in_right"], ["mcp_smoke_suite"])
+        self.assertEqual(payload["comparison"]["artifacts"]["removed_in_right"], ["runtime_metadata"])
+        self.assertEqual(
+            {artifact["id"] for artifact in payload["comparison"]["artifacts"]["changed"]},
+            {"mcp_inventory_smoke", "runtime_smoke"},
+        )
+        self.assertEqual(payload["comparison"]["missing_attachments"]["resolved_in_right"], ["mcp_inventory_smoke"])
+        self.assertEqual(payload["comparison"]["missing_attachments"]["newly_missing_in_right"], [])
+        self.assertFalse(payload["comparison"]["privacy"]["storesTokensOrSecrets"])
+
+    def test_release_gate_retention_compare_blocks_without_references(self) -> None:
+        payload, return_code = _invoke_retention_compare(["--format", "json"])
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("left release gate reference is required", payload["errors"][0])
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -546,6 +613,60 @@ def _invoke_retention_list(extra_args: list[str]) -> tuple[dict, int]:
     with redirect_stdout(output):
         return_code = args.func(args)
     return json.loads(output.getvalue()), return_code
+
+
+def _invoke_retention_compare(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-compare",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _write_retention_run(
+    run_dir: Path,
+    *,
+    correlation_id: str,
+    generated_at: str,
+    copied_artifact_count: int,
+    artifacts: list[dict],
+) -> None:
+    run_dir.mkdir(parents=True)
+    (run_dir / "release-gate-retention-index.redacted.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-retention-index/v0.1",
+                "status": "PASSED",
+                "workspace_id": "notary_team_01",
+                "correlation_id": correlation_id,
+                "artifact_dir": str(run_dir),
+                "copied_artifact_count": copied_artifact_count,
+                "artifacts": artifacts,
+                "privacy": {"storesTokensOrSecrets": False},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "release-gate-evidence.redacted.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-evidence/v0.1",
+                "status": "PASSED",
+                "generated_at": generated_at,
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _write_output_arg(command: list[str], option: str, payload: dict) -> None:
