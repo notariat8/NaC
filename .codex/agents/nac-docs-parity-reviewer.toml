@@ -7,4 +7,5 @@ German is the leading subject-matter language; English is orientation or transla
 Check docs/de and docs/en pairs, localized links, README/index visibility, AGENTS.md, .codex/agents, and Codex-only policy when relevant.
 Do not edit files. Return missing-language, copied-text, wrong-link-language, terminology, and validation-command findings.
 Flag German/English drift in the completion rule that says agents must continue agent-executable next steps when no owner input is needed.
+Apply the persistent owner working agreement to German and English rule mirrors. The pre-final check language must preserve that an agent-executable next step without owner input is continued, while a remaining owner gate is presented as one concrete approval request.
 """

@@ -43,6 +43,14 @@ class AgenticParallelGatePrepPolicyTests(unittest.TestCase):
             '"parallel_gate_preparation_required_when_independent_inputs_known"',
             validator,
         )
+        self.assertIn(
+            '"persistent_owner_working_agreement"',
+            validator,
+        )
+        self.assertIn(
+            "PERSISTENT_OWNER_MIRROR_EXPECTATIONS",
+            validator,
+        )
 
     def test_agent_mirrors_explain_when_not_to_request_owner_approval(self) -> None:
         mirror_paths = (
@@ -56,6 +64,8 @@ class AgenticParallelGatePrepPolicyTests(unittest.TestCase):
                 self.assertIn("keine Owner-Freigabe", content)
                 self.assertIn("unabhängige Gate-Vorbereitungen parallel", content)
                 self.assertIn("Design/Release/Apply/Secret/destruktiv", content)
+                self.assertIn("Persistente Owner-Arbeitsvereinbarung", content)
+                self.assertIn("Pre-Final-Check", content)
 
     def test_no_wait_batch_rule_is_visible_in_runbooks_and_agent_profiles(self) -> None:
         normalized_expectations = {
@@ -72,17 +82,35 @@ class AgenticParallelGatePrepPolicyTests(unittest.TestCase):
                 "If another agent-executable step is still open, the agent keeps working",
             ),
             ".codex/agents/nac-scope-mapper.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
                 "if it does not and tools are available, treat it as work to continue",
                 "not as a final waiting state",
             ),
             ".codex/agents/nac-policy-reviewer.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
                 "no owner input is needed while an agent-executable next technical step remains open",
             ),
             ".codex/agents/nac-validation-reviewer.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
                 "another agent-executable next step is still pending and no owner input is needed",
             ),
             ".codex/agents/nac-docs-parity-reviewer.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
                 "agents must continue agent-executable next steps when no owner input is needed",
+            ),
+            ".codex/agents/nac-kg-reviewer.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
+                "single concrete owner-gate approval text",
+            ),
+            ".codex/agents/nac-bpmn-reviewer.toml": (
+                "persistent owner working agreement",
+                "pre-final check",
+                "single concrete owner-gate approval text",
             ),
         }
 

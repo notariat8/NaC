@@ -27,7 +27,7 @@ MIRROR_FILES = {
     "AGENTS.md",
 }
 
-MIRROR_PREFIXES = ()
+MIRROR_PREFIXES = (".codex/agents/",)
 
 MANDATORY_ACCESS_POLICY_KEYS = (
     "source_of_truth:",
@@ -138,6 +138,71 @@ EXPECTED_FINAL_RESPONSE_NEXT_STEP_TRUE_KEYS = (
     "finished_requires_no_agent_executable_next_step",
     "owner_input_needed_requires_actionable_request",
 )
+
+EXPECTED_PERSISTENT_OWNER_WORKING_AGREEMENT_TRUE_KEYS = (
+    "enabled",
+    "applies_across_turns_sessions_and_context_transitions",
+    "active_after_repo_rule_surfaces_are_read",
+    "owner_can_replace_or_revoke_explicitly",
+    "pre_final_check_required",
+    "prohibit_passive_closure_when_tools_available",
+    "require_batch_owner_approval_for_repeated_gate_chains",
+    "mirror_required_in_agents_md_and_codex_profiles",
+)
+
+EXPECTED_PRE_FINAL_CHECK_QUESTIONS = (
+    "agent_executable_next_step_without_owner_input",
+    "concrete_owner_gate_only",
+    "no_agent_executable_continuation_remaining",
+)
+
+PERSISTENT_OWNER_MIRROR_EXPECTATIONS = {
+    "AGENTS.md": (
+        "Persistente Owner-Arbeitsvereinbarung",
+        "turn-, session- und kontextwechselübergreifend",
+        "Pre-Final-Check",
+        "agentisch ausführbaren Schritt ohne Owner-Input",
+        "genau ein konkreter kopierbarer Freigabetext",
+        "Batch-/One-Shot-Freigabe",
+    ),
+    ".codex/agents/nac-scope-mapper.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "agent-executable next step without owner input",
+        "continue the work",
+        "single concrete owner-gate approval text",
+    ),
+    ".codex/agents/nac-policy-reviewer.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "agent-executable next step without owner input",
+        "single concrete owner-gate approval text",
+    ),
+    ".codex/agents/nac-validation-reviewer.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "agent-executable next step without owner input",
+        "validation or branch cleanup",
+    ),
+    ".codex/agents/nac-docs-parity-reviewer.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "German and English",
+        "agent-executable next step without owner input",
+    ),
+    ".codex/agents/nac-kg-reviewer.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "agent-executable next step without owner input",
+        "single concrete owner-gate approval text",
+    ),
+    ".codex/agents/nac-bpmn-reviewer.toml": (
+        "persistent owner working agreement",
+        "pre-final check",
+        "agent-executable next step without owner input",
+        "single concrete owner-gate approval text",
+    ),
+}
 
 EXPECTED_GITHUB_SURFACES = (
     "issues",
@@ -449,10 +514,50 @@ def validate_process_policy_file() -> list[str]:
                         "Pflichtwert fehlt in process-policy: "
                         f"agent_workflows.final_response_next_step.{key}.true"
                     )
+        persistent_owner_working_agreement = agent_workflows.get(
+            "persistent_owner_working_agreement"
+        )
+        if not isinstance(persistent_owner_working_agreement, dict):
+            errors.append(
+                "Pflichtabschnitt fehlt in process-policy: "
+                "agent_workflows.persistent_owner_working_agreement"
+            )
+        else:
+            for key in EXPECTED_PERSISTENT_OWNER_WORKING_AGREEMENT_TRUE_KEYS:
+                if persistent_owner_working_agreement.get(key) is not True:
+                    errors.append(
+                        "Pflichtwert fehlt in process-policy: "
+                        f"agent_workflows.persistent_owner_working_agreement.{key}.true"
+                    )
+            validate_required_list(
+                errors=errors,
+                policy_name="process-policy",
+                section_name="agent_workflows.persistent_owner_working_agreement",
+                key="pre_final_check_questions",
+                actual=persistent_owner_working_agreement.get("pre_final_check_questions"),
+                expected_values=EXPECTED_PRE_FINAL_CHECK_QUESTIONS,
+            )
 
     for rel_path in ("docs/de/regelarchitektur.md", "docs/en/regelarchitektur.md"):
         if not (REPO_ROOT / rel_path).exists():
             errors.append(f"Pflichtdokument zur Regelarchitektur fehlt: {rel_path}")
+    return errors
+
+
+def validate_persistent_owner_working_agreement_mirrors() -> list[str]:
+    errors: list[str] = []
+    for rel_path, expected_fragments in PERSISTENT_OWNER_MIRROR_EXPECTATIONS.items():
+        path = REPO_ROOT / rel_path
+        if not path.exists():
+            errors.append(f"Pflichtspiegel fehlt: {rel_path}")
+            continue
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        for fragment in expected_fragments:
+            if fragment not in text:
+                errors.append(
+                    "Pflichtspiegel fehlt in "
+                    f"{rel_path}: persistent_owner_working_agreement.{fragment}"
+                )
     return errors
 
 
@@ -501,6 +606,7 @@ def main() -> int:
     errors.extend(validate_language_policy_file())
     errors.extend(validate_process_policy_file())
     errors.extend(validate_data_protection_policy_file())
+    errors.extend(validate_persistent_owner_working_agreement_mirrors())
 
     if mirror_changed and not policy_changed:
         errors.append(
@@ -511,7 +617,7 @@ def main() -> int:
     if policy_changed and not mirror_changed:
         errors.append(
             "Policy-Änderung ohne Spiegel-Aktualisierung erkannt. "
-            "Bitte AGENTS.md als Codex-Agentenspiegel synchronisieren."
+            "Bitte AGENTS.md und .codex/agents als Codex-Agentenspiegel synchronisieren."
         )
 
     if errors:

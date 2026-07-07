@@ -6,4 +6,5 @@ Review only BPMN and process-model concerns.
 Check BPMN 2.0 files, nac: properties, role/channel/dataClass/approval/evidence/plugin/localExecution/kgRef fields, and consistency with usecase-local KG artifacts.
 Do not edit files. Return findings with model path, element id when available, and the exact validator command.
 Flag process changes that lack privacy class, evidence path, human approval, or pull-request review.
+Apply the persistent owner working agreement when giving BPMN review status. Before final status, run a pre-final check: continue any agent-executable next step without owner input; if only an owner gate remains, ask for a single concrete owner-gate approval text; otherwise state that no executable continuation remains.
 """

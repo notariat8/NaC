@@ -130,6 +130,19 @@ class GovernanceSyncValidationTest(unittest.TestCase):
                 "    no_owner_input_needed_means_continue_not_wait: true",
                 "    finished_requires_no_agent_executable_next_step: true",
                 "    owner_input_needed_requires_actionable_request: true",
+                "  persistent_owner_working_agreement:",
+                "    enabled: true",
+                "    applies_across_turns_sessions_and_context_transitions: true",
+                "    active_after_repo_rule_surfaces_are_read: true",
+                "    owner_can_replace_or_revoke_explicitly: true",
+                "    pre_final_check_required: true",
+                "    prohibit_passive_closure_when_tools_available: true",
+                "    require_batch_owner_approval_for_repeated_gate_chains: true",
+                "    mirror_required_in_agents_md_and_codex_profiles: true",
+                "    pre_final_check_questions:",
+                "      - agent_executable_next_step_without_owner_input",
+                "      - concrete_owner_gate_only",
+                "      - no_agent_executable_continuation_remaining",
                 "rule_architecture:",
                 "  human_explanation_de: docs/de/regelarchitektur.md",
                 "  human_explanation_en: docs/en/regelarchitektur.md",
@@ -365,6 +378,59 @@ class GovernanceSyncValidationTest(unittest.TestCase):
         self.assertIn(
             "Pflichtwert fehlt in process-policy: "
             "agent_workflows.final_response_next_step.no_owner_input_needed_means_continue_not_wait.true",
+            errors,
+        )
+
+    def test_process_policy_reports_missing_persistent_owner_working_agreement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = self._minimal_valid_process_policy().replace(
+                "\n".join(
+                    (
+                        "  persistent_owner_working_agreement:",
+                        "    enabled: true",
+                        "    applies_across_turns_sessions_and_context_transitions: true",
+                        "    active_after_repo_rule_surfaces_are_read: true",
+                        "    owner_can_replace_or_revoke_explicitly: true",
+                        "    pre_final_check_required: true",
+                        "    prohibit_passive_closure_when_tools_available: true",
+                        "    require_batch_owner_approval_for_repeated_gate_chains: true",
+                        "    mirror_required_in_agents_md_and_codex_profiles: true",
+                        "    pre_final_check_questions:",
+                        "      - agent_executable_next_step_without_owner_input",
+                        "      - concrete_owner_gate_only",
+                        "      - no_agent_executable_continuation_remaining",
+                    )
+                ),
+                "",
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtabschnitt fehlt in process-policy: "
+            "agent_workflows.persistent_owner_working_agreement",
+            errors,
+        )
+
+    def test_process_policy_reports_missing_pre_final_check_question(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_text = self._minimal_valid_process_policy().replace(
+                "      - concrete_owner_gate_only\n",
+                "",
+            )
+            self._write_minimal_repo(root, policy_text)
+            validate_governance_sync.REPO_ROOT = root
+
+            errors = validate_governance_sync.validate_process_policy_file()
+
+        self.assertIn(
+            "Pflichtwert fehlt in process-policy: "
+            "agent_workflows.persistent_owner_working_agreement."
+            "pre_final_check_questions.concrete_owner_gate_only",
             errors,
         )
 
