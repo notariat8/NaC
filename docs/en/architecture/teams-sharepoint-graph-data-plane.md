@@ -285,7 +285,9 @@ through Microsoft Graph REST v1.0 `DELETE` and verifies afterwards that no
 match is returned. Unbounded list dumps, prefix mass deletion, raw responses,
 tokens and file content remain blocked.
 
-For a compact operator run, the suite is available as well:
+For full runtime/MCP release gates, `release-gate-run` is the leading one-shot
+operating path. For an isolated MCP component or diagnostic run, the suite is
+available as well:
 
 ```bash
 nac m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup

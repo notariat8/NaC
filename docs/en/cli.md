@@ -67,8 +67,7 @@ python scripts/nac.py gnotkg quote --business-value 500000 --table A --fee-rate 
 python scripts/nac.py bpmn validate
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint privileged-plan --format json
-python scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
-python scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
+python scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 python scripts/nac.py plugins actions
 python scripts/nac.py tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 python scripts/nac.py import jobs status --repo ../demo8notariat
@@ -93,8 +92,7 @@ nac gnotkg quote --business-value 500000 --table A --fee-rate 1.0 --kv-number 21
 nac bpmn validate
 nac config list
 nac m365 teams-sharepoint privileged-plan --format json
-nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
-nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
+nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac plugins actions
 nac tenant domain-check --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example
 nac tenant customer-plan --domain kanzlei-notariat.example --tenant-slug kanzlei-notariat --admin-email admin@kanzlei-notariat.example --saas-admin-email saas-owner@example.com --format json
@@ -238,13 +236,13 @@ an owner gate:
 
 ```bash
 nac m365 teams-sharepoint privileged-plan --format json
-nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
-nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
 nac batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 nac m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+nac m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json
+nac m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json
 nac m365 teams-sharepoint mcp-stdio
 nac m365 teams-sharepoint mcp-stdio --owner-approved --mcp-live-read
 nac m365 teams-sharepoint mcp-live-read-smoke --owner-approved --mcp-smoke-tool case_get --mcp-smoke-case-id <case-id> --format json
@@ -300,9 +298,10 @@ refused.
 
 `mcp-smoke-suite` creates a synthetic case ID only in process memory, executes
 write and read, and deletes the same matter in the same run when
-`--mcp-suite-cleanup` is set. It is the standard runtime evidence after
-MCP/runtime changes, but remains owner-gated because it writes and deletes in
-the live tenant.
+`--mcp-suite-cleanup` is set. It remains the isolated MCP component evidence
+and diagnostic path; for full runtime/MCP operating evidence, `release-gate-run`
+is the standard path. The suite remains owner-gated because it writes and
+deletes in the live tenant.
 
 `mcp-smoke-leftover-cleanup` finds and deletes only synthetic `Akten` list items
 whose `NacCaseId` starts with `NAC-SMOKE-WRITE-READ-`. The command refuses
