@@ -2871,17 +2871,7 @@ def _load_m365_release_readiness_audit_pack(
     run: dict[str, Any],
 ) -> dict[str, Any] | None:
     correlation_id = str(run.get("correlation_id") or "")
-    candidates: list[Path] = []
-    if args.release_gate_audit_pack_dir:
-        explicit = _resolve_m365_release_gate_path(repo_root, args.release_gate_audit_pack_dir, DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT)
-        candidates.append(explicit / "release-gate-retention-audit-pack.redacted.json" if explicit.is_dir() else explicit)
-    if correlation_id:
-        slug = (
-            f"left-{_safe_release_gate_slug(correlation_id, 72)}__"
-            f"right-{_safe_release_gate_slug(correlation_id, 72)}"
-        )
-        candidates.append(repo_root / DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT / slug / "release-gate-retention-audit-pack.redacted.json")
-    for candidate in candidates:
+    for candidate in _m365_release_readiness_audit_pack_candidates(repo_root, args, correlation_id):
         if not candidate.exists():
             continue
         try:
@@ -2895,6 +2885,47 @@ def _load_m365_release_readiness_audit_pack(
         payload["path"] = str(candidate)
         return payload
     return None
+
+
+def _m365_release_readiness_audit_pack_candidates(
+    repo_root: Path,
+    args: argparse.Namespace,
+    correlation_id: str,
+) -> list[Path]:
+    candidates: list[Path] = []
+    if args.release_gate_audit_pack_dir:
+        explicit = _resolve_m365_release_gate_path(
+            repo_root,
+            args.release_gate_audit_pack_dir,
+            DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT,
+        )
+        candidates.append(explicit / "release-gate-retention-audit-pack.redacted.json" if explicit.is_dir() else explicit)
+    if not correlation_id:
+        return candidates
+
+    audit_pack_root = repo_root / DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT
+    right_slug = f"right-{_safe_release_gate_slug(correlation_id, 72)}"
+    if audit_pack_root.exists():
+        candidates.extend(
+            path
+            for path in sorted(audit_pack_root.glob("*/release-gate-retention-audit-pack.redacted.json"), reverse=True)
+            if right_slug in path.parent.name
+        )
+    self_slug = (
+        f"left-{_safe_release_gate_slug(correlation_id, 72)}__"
+        f"right-{_safe_release_gate_slug(correlation_id, 72)}"
+    )
+    candidates.append(audit_pack_root / self_slug / "release-gate-retention-audit-pack.redacted.json")
+
+    unique_candidates: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve() if candidate.exists() else candidate
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique_candidates.append(candidate)
+    return unique_candidates
 
 
 def _m365_release_readiness_checks(

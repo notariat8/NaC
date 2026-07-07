@@ -1526,6 +1526,44 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["audit_pack_status"], "PASSED")
         self.assertTrue(all(check["status"] == "PASSED" for check in payload["checks"]))
 
+    def test_release_readiness_auto_discovers_audit_pack_by_right_correlation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            repo_root = tmp_path / "repo"
+            retention_root = tmp_path / "release-gates"
+            run_dir = retention_root / "ready-run"
+            audit_pack_dir = (
+                repo_root
+                / "out/m365/teams-sharepoint/release-gate-audit-packs"
+                / "left-baseline-run__right-ready-run"
+            )
+            repo_root.mkdir(parents=True)
+            (repo_root / "pyproject.toml").touch()
+            _write_readiness_run(run_dir, correlation_id="ready-run")
+            _write_audit_pack(audit_pack_dir)
+
+            payload, return_code = _invoke_release_readiness_with_repo_root(
+                repo_root,
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "ready-run",
+                    "--release-gate-readiness-require-audit-pack",
+                    "--format",
+                    "json",
+                ],
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["mvp_release_readiness"], "READY")
+        self.assertEqual(payload["summary"]["audit_pack_status"], "PASSED")
+        self.assertEqual(
+            payload["summary"]["audit_pack_path"],
+            str(audit_pack_dir / "release-gate-retention-audit-pack.redacted.json"),
+        )
+
     def test_release_readiness_blocks_when_required_artifact_is_not_attached(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1999,11 +2037,15 @@ def _invoke_retention_audit_pack(extra_args: list[str]) -> tuple[dict, int]:
 
 
 def _invoke_release_readiness(extra_args: list[str]) -> tuple[dict, int]:
+    return _invoke_release_readiness_with_repo_root(REPO_ROOT, extra_args)
+
+
+def _invoke_release_readiness_with_repo_root(repo_root: Path, extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
     args = parser.parse_args(
         [
             "--repo-root",
-            str(REPO_ROOT),
+            str(repo_root),
             "m365",
             "teams-sharepoint",
             "release-readiness",
