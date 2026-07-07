@@ -207,6 +207,22 @@ Der Befehl liest nur lokale Retention-Index- und Evidence-JSON-Dateien unter
 Timestamp, Workspace, Artefaktzähler und lokale Evidence-Pfade aus. Er führt
 keine Graph-Anfrage, keinen Tenant-Write und keine Löschung aus.
 
+Der lokale Vergleich zweier archivierter Läufe läuft ebenfalls offline:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare \
+  --release-gate-compare-left <left-correlation-id> \
+  --release-gate-compare-right <right-correlation-id> \
+  --format json
+```
+
+`--release-gate-compare-left` und `--release-gate-compare-right` akzeptieren
+Correlation-IDs, Laufordner oder direkte
+`release-gate-retention-index.redacted.json`-Pfade. Der Vergleich meldet
+Status-, Timestamp-, Artefakt-, fehlende-Anhänge- und Evidence-Pfad-
+Unterschiede, liest aber keine SharePoint-Dateiinhalte und führt keine
+Graph-Anfrage, keinen Tenant-Write und keine Löschung aus.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
