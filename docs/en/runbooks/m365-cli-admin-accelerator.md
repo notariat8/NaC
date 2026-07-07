@@ -289,6 +289,19 @@ gate:
 python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace-id notary_team_01 --correlation-id <correlation-id> --format json
 ```
 
+When the approved one-shot run should write the redacted audit pack directly,
+the batch command renders the same owner gate with the audit-pack flags:
+
+```bash
+python3 scripts/nac.py batch-approval m365 \
+  --batch-mode release-gate \
+  --workspace-id notary_team_01 \
+  --correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-compare-left <baseline-correlation-id> \
+  --format json
+```
+
 The renderer performs no Graph request. It creates the copyable approval text
 for exactly the one-shot `release-gate-run --owner-approved` command and
 documents the covered internal steps. Individual commands remain the diagnostic
