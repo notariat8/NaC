@@ -120,6 +120,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
   defines MVP storage through Teams, Microsoft 365 group, SharePoint team site
   and Microsoft Graph REST without legacy SharePoint APIs or SDKs.
+- [docs/en/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md)
+  defines M365 Matter Access Delegation for matter assignment, deputy grants,
+  audit and `matter-access-plan` without live tenant action.
 - [docs/en/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
   defines the contract-first boundary for a later read-only SPFx BPMN viewer
   in SharePoint with `bpmn-js`, Microsoft Graph REST and no modeler or workflow

@@ -344,6 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
             "plan",
             "application-owner-readiness",
             "bpmn-viewer-plan",
+            "matter-access-plan",
             "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
@@ -383,6 +384,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--bpmn-viewer-config",
         type=Path,
         help="Optionaler BPMN-Viewer-Provisioning-Plan ohne Live-Apply.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-contract",
+        type=Path,
+        help="Optionaler M365-Mandatszugriffsdelegationsvertrag ohne Live-Apply.",
     )
     teams_sharepoint.add_argument(
         "--bpmn-viewer-runtime-readiness",
@@ -1377,6 +1383,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Legal Research Connectors", "validate_legal_research_connectors.py"),
             ("Legal Graph Contracts", "validate_legal_graph_contracts.py"),
             ("Teams SharePoint Graph Data Plane", "validate_teams_sharepoint_graph_data_plane.py"),
+            ("M365 Matter Access Delegation", "validate_m365_matter_access_delegation.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
         ]
         overall_rc = 0
@@ -1993,6 +2000,8 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--schema", str(args.schema)])
         if args.bpmn_viewer_config:
             script_args.extend(["--bpmn-viewer-config", str(args.bpmn_viewer_config)])
+        if args.matter_access_contract:
+            script_args.extend(["--matter-access-contract", str(args.matter_access_contract)])
         if args.bpmn_viewer_runtime_readiness:
             script_args.extend(["--bpmn-viewer-runtime-readiness", str(args.bpmn_viewer_runtime_readiness)])
         if args.spfx_bpmn_viewer_skeleton:

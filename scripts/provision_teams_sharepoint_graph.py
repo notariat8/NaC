@@ -21,6 +21,13 @@ from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
     validate_bpmn_viewer_provisioning_config,
 )
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
+from nac_m365_graph.matter_access_delegation import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_DELEGATION_CONTRACT,
+    build_matter_access_plan,
+    load_matter_access_delegation_contract,
+    summarize_matter_access_plan,
+    validate_matter_access_delegation_contract,
+)
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_APPLIED_STATE,
@@ -132,6 +139,7 @@ def parse_args() -> argparse.Namespace:
             "plan",
             "application-owner-readiness",
             "bpmn-viewer-plan",
+            "matter-access-plan",
             "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
@@ -156,6 +164,7 @@ def parse_args() -> argparse.Namespace:
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
+            "matter-access-plan renders the offline matter visibility and deputy delegation request plan; "
             "bpmn-viewer-runtime-readiness validates offline package/App Catalog/Graph content-read gates; "
             "spfx-bpmn-viewer-skeleton renders the offline SPFx/bpmn-js viewer source skeleton and request plans; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
@@ -175,6 +184,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_BPMN_VIEWER_PROVISIONING,
         help="Path to the optional BPMN viewer SharePoint provisioning plan.",
+    )
+    parser.add_argument(
+        "--matter-access-contract",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_DELEGATION_CONTRACT,
+        help="Path to the offline M365 matter access delegation contract.",
     )
     parser.add_argument(
         "--spfx-bpmn-viewer-skeleton",
@@ -986,6 +1001,50 @@ def main() -> int:
                     "graph_rest_only": True,
                     "legacy_sharepoint_api_allowed": False,
                     "mcp_tools_request_plan_only": True,
+                },
+            },
+            args.json,
+        )
+
+    if args.command == "matter-access-plan":
+        contract = load_matter_access_delegation_contract(args.matter_access_contract)
+        errors = validate_matter_access_delegation_contract(contract, schema)
+        if errors:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": errors,
+                },
+                args.json,
+                return_code=1,
+            )
+        try:
+            operations = build_matter_access_plan(contract, schema)
+        except ValueError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        return _emit(
+            {
+                "status": "PASSED",
+                "summary": summarize_matter_access_plan(operations, contract),
+                "operations": [operation.to_dict() for operation in operations],
+                "guardrails": {
+                    "offline_plan_only": True,
+                    "executes_graph_requests_now": False,
+                    "tenant_mutation_allowed_now": False,
+                    "team_membership_mutation_allowed_now": False,
+                    "reads_sharepoint_file_content": False,
+                    "stores_tokens_or_secrets": False,
+                    "stores_matter_payloads": False,
+                    "owner_gate_required_before_future_apply": True,
+                    "graph_rest_only": True,
+                    "legacy_sharepoint_api_allowed": False,
                 },
             },
             args.json,

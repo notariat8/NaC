@@ -85,6 +85,12 @@ Important: `AuditJournalLite` is not a final tamper-proof journal. It is starter
 evidence. Real immutability still requires a later append-only journal or
 WORM-capable storage.
 
+The concrete role, matter and deputy boundary is defined in
+[M365 Matter Access Delegation](m365-matter-access-delegation.md). The offline
+command `nac m365 teams-sharepoint matter-access-plan --format json` renders
+Graph REST request plans for primary assignment, active deputy access, grant,
+revocation and audit without live tenant action.
+
 ## BPMN Viewer Projection
 
 A later

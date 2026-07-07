@@ -1,0 +1,352 @@
+{
+  "schema_version": "nac.m365-matter-access-delegation/v0.1",
+  "contract_id": "m365.matter_access_delegation",
+  "title": "M365 matter visibility and deputy delegation boundary",
+  "status": "offline_contract_no_live_apply",
+  "last_update": "2026-07-07",
+  "purpose": "Bind notarial matter visibility to the assigned notary team and define timeboxed deputy access with reason, approver, revocation and audit evidence. The contract is evaluated offline first and uses Microsoft Graph REST request plans only.",
+  "source_documents": {
+    "teams_sharepoint_schema": "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json",
+    "teams_sharepoint_data_mcp": "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+    "graph_data_plane": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
+    "private_payload_access_policy": "workflows/contracts/private-payload-access-policy.contract.json",
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json"
+  },
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "raw_http_required": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "graph_beta_allowed": false
+  },
+  "scope": {
+    "offline_plan_only": true,
+    "executes_graph_requests_now": false,
+    "tenant_mutation_allowed_now": false,
+    "team_membership_mutation_allowed_now": false,
+    "sharepoint_item_permission_mutation_allowed_now": false,
+    "sharepoint_file_content_read_allowed_now": false,
+    "matter_payload_storage_allowed_now": false,
+    "stores_tokens_or_secrets": false,
+    "owner_gate_required_before_future_apply": true
+  },
+  "workspace_model": {
+    "team_strategy": "team_per_notary_team",
+    "default_visibility": "private",
+    "one_team_for_all_notary_users_allowed": false,
+    "team_per_case_default_allowed": false,
+    "primary_assignment_is_one_to_one": true,
+    "default_membership": [
+      "lead_notary",
+      "assigned_notary_clerk"
+    ],
+    "deputy_membership_is_timeboxed_exception": true
+  },
+  "sharepoint_lists": [
+    {
+      "display_name": "Akten",
+      "purpose": "Matter metadata and primary assignment source.",
+      "required_columns": [
+        "NacCaseId",
+        "NotarTeam",
+        "FederfuehrenderNotar",
+        "Sachbearbeitung",
+        "Status",
+        "Vertraulichkeitsstufe"
+      ],
+      "access_use": "read_primary_assignment"
+    },
+    {
+      "display_name": "Vertretungsfreigaben",
+      "purpose": "Timeboxed deputy grants with reason, approver, validity window, status and correlation.",
+      "required_columns": [
+        "GrantId",
+        "NacCaseId",
+        "FromUser",
+        "ToUser",
+        "GrantedRole",
+        "Reason",
+        "ValidFrom",
+        "ValidUntil",
+        "ApprovedBy",
+        "Status",
+        "AuditCorrelationId"
+      ],
+      "access_use": "grant_lifecycle"
+    },
+    {
+      "display_name": "AuditJournalLite",
+      "purpose": "Starter audit events for grant requests, approvals, revocations and access decisions.",
+      "required_columns": [
+        "EventId",
+        "Timestamp",
+        "Actor",
+        "NacCaseId",
+        "Action",
+        "ObjectType",
+        "ObjectId",
+        "Reason",
+        "CorrelationId"
+      ],
+      "access_use": "append_redacted_audit"
+    }
+  ],
+  "roles": [
+    {
+      "id": "lead_notary",
+      "may_read_assigned_matter": true,
+      "may_approve_deputy_grant": true,
+      "may_request_deputy_grant_for_self": false
+    },
+    {
+      "id": "assigned_notary_clerk",
+      "may_read_assigned_matter": true,
+      "may_approve_deputy_grant": false,
+      "may_prepare_deputy_grant_request": true
+    },
+    {
+      "id": "deputy_notary",
+      "may_read_assigned_matter": false,
+      "may_read_delegated_matter_when_active": true,
+      "allowed_granted_roles": [
+        "NotarVertretung",
+        "NurLesen"
+      ]
+    },
+    {
+      "id": "deputy_notary_clerk",
+      "may_read_assigned_matter": false,
+      "may_read_delegated_matter_when_active": true,
+      "allowed_granted_roles": [
+        "SachbearbeitungVertretung",
+        "NurLesen"
+      ]
+    },
+    {
+      "id": "runtime_service",
+      "may_read_matter_payload": false,
+      "may_plan_graph_requests": true,
+      "may_approve_deputy_grant": false
+    }
+  ],
+  "access_decision": {
+    "required_context": [
+      "actor_id",
+      "actor_role",
+      "workspace_id",
+      "case_id",
+      "purpose",
+      "correlation_id",
+      "role_case_gate"
+    ],
+    "primary_assignment_fields": [
+      "Akten.FederfuehrenderNotar",
+      "Akten.Sachbearbeitung",
+      "Akten.NotarTeam"
+    ],
+    "deputy_grant_fields": [
+      "Vertretungsfreigaben.ToUser",
+      "Vertretungsfreigaben.GrantedRole",
+      "Vertretungsfreigaben.Reason",
+      "Vertretungsfreigaben.ValidFrom",
+      "Vertretungsfreigaben.ValidUntil",
+      "Vertretungsfreigaben.ApprovedBy",
+      "Vertretungsfreigaben.Status",
+      "Vertretungsfreigaben.AuditCorrelationId"
+    ],
+    "grant_must_be_active": true,
+    "grant_must_match_case": true,
+    "grant_must_match_actor": true,
+    "grant_must_include_reason": true,
+    "grant_must_include_valid_from": true,
+    "grant_must_include_valid_until": true,
+    "grant_must_include_approver": true,
+    "grant_must_include_audit_correlation_id": true,
+    "automation_may_approve_grant": false,
+    "unbounded_team_access_allowed": false
+  },
+  "mcp_tool_contracts": [
+    {
+      "id": "matter_visibility_get",
+      "server": "teams-sharepoint-data-mcp",
+      "mode": "request_plan_only",
+      "description": "Plan bounded metadata reads from Akten and Vertretungsfreigaben to decide whether the actor may see a matter.",
+      "graph_methods": [
+        "GET"
+      ],
+      "lists": [
+        "Akten",
+        "Vertretungsfreigaben"
+      ],
+      "required_inputs": [
+        "context",
+        "case_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_owner_approval": false
+    },
+    {
+      "id": "matter_delegation_plan",
+      "server": "teams-sharepoint-data-mcp",
+      "mode": "request_plan_only",
+      "description": "Plan the future write path for a deputy grant and its audit event without executing Graph requests.",
+      "graph_methods": [
+        "POST"
+      ],
+      "lists": [
+        "Vertretungsfreigaben",
+        "AuditJournalLite"
+      ],
+      "required_inputs": [
+        "context",
+        "case_id",
+        "from_user",
+        "to_user",
+        "granted_role",
+        "reason",
+        "valid_from",
+        "valid_until",
+        "approved_by"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_owner_approval": true
+    },
+    {
+      "id": "matter_delegation_revoke_plan",
+      "server": "teams-sharepoint-data-mcp",
+      "mode": "request_plan_only",
+      "description": "Plan revocation of an active deputy grant and matching audit event.",
+      "graph_methods": [
+        "PATCH",
+        "POST"
+      ],
+      "lists": [
+        "Vertretungsfreigaben",
+        "AuditJournalLite"
+      ],
+      "required_inputs": [
+        "context",
+        "grant_id",
+        "case_id",
+        "reason",
+        "revoked_by"
+      ],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": true,
+      "requires_role_case_purpose_gate": true,
+      "requires_owner_approval": true
+    },
+    {
+      "id": "matter_delegation_audit_list",
+      "server": "teams-sharepoint-data-mcp",
+      "mode": "request_plan_only",
+      "description": "Plan a bounded redacted audit metadata read for grant lifecycle events.",
+      "graph_methods": [
+        "GET"
+      ],
+      "lists": [
+        "AuditJournalLite"
+      ],
+      "required_inputs": [
+        "context",
+        "case_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_owner_approval": false
+    }
+  ],
+  "planned_graph_request_templates": [
+    {
+      "id": "read_primary_matter_assignment",
+      "method": "GET",
+      "path": "/sites/{site-id}/lists/{akten-list-id}/items?$expand=fields&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27",
+      "list": "Akten",
+      "executes_now": false
+    },
+    {
+      "id": "read_active_deputy_grants",
+      "method": "GET",
+      "path": "/sites/{site-id}/lists/{vertretungsfreigaben-list-id}/items?$expand=fields&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27%20and%20fields/ToUser%20eq%20%27{actor-id-filter}%27%20and%20fields/Status%20eq%20%27Aktiv%27",
+      "list": "Vertretungsfreigaben",
+      "executes_now": false
+    },
+    {
+      "id": "write_deputy_grant_request",
+      "method": "POST",
+      "path": "/sites/{site-id}/lists/{vertretungsfreigaben-list-id}/items",
+      "list": "Vertretungsfreigaben",
+      "executes_now": false
+    },
+    {
+      "id": "revoke_deputy_grant",
+      "method": "PATCH",
+      "path": "/sites/{site-id}/lists/{vertretungsfreigaben-list-id}/items/{grant-item-id}/fields",
+      "list": "Vertretungsfreigaben",
+      "executes_now": false
+    },
+    {
+      "id": "append_access_audit_event",
+      "method": "POST",
+      "path": "/sites/{site-id}/lists/{audit-list-id}/items",
+      "list": "AuditJournalLite",
+      "executes_now": false
+    },
+    {
+      "id": "read_delegation_audit_events",
+      "method": "GET",
+      "path": "/sites/{site-id}/lists/{audit-list-id}/items?$expand=fields&$top=50&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27",
+      "list": "AuditJournalLite",
+      "executes_now": false
+    }
+  ],
+  "required_evidence_fields": [
+    "correlation_id",
+    "case_id_hash_or_redacted_id",
+    "actor_id_hash_or_directory_ref",
+    "subject_user_hash_or_directory_ref",
+    "requested_role",
+    "reason",
+    "valid_from",
+    "valid_until",
+    "approved_by_hash_or_directory_ref",
+    "decision_status",
+    "grant_status",
+    "audit_event_ref",
+    "no_file_content_read_attestation",
+    "no_matter_payload_storage_attestation"
+  ],
+  "blocked_operations": [
+    "unbounded_tenant_access",
+    "one_team_for_all_notary_users",
+    "default_all_staff_matter_visibility",
+    "permanent_deputy_grant_without_valid_until",
+    "deputy_grant_without_reason",
+    "automation_approves_deputy_grant",
+    "m365_group_membership_mutation_without_owner_gate",
+    "sharepoint_item_permission_mutation_now",
+    "sharepoint_file_content_read",
+    "raw_matter_payload_storage",
+    "legacy_sharepoint_rest",
+    "sharepoint_csom",
+    "pnp",
+    "microsoft_graph_sdk",
+    "graph_beta",
+    "secret_or_token_storage"
+  ],
+  "validation_commands": [
+    "python3 -m unittest tests.test_m365_matter_access_delegation",
+    "python3 scripts/validate_m365_matter_access_delegation.py",
+    "python3 scripts/quality_gate.py --profile strict"
+  ]
+}

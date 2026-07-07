@@ -154,6 +154,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   MVP-Datenhaltung über Teams, Microsoft-365-Gruppe, SharePoint-Team-Site und
   Microsoft Graph REST ohne alte SharePoint-APIs oder SDKs.
+- [docs/de/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md):
+  M365-Mandatszugriffsdelegation für Aktenzuständigkeit,
+  Vertretungsfreigaben, Audit und `matter-access-plan` ohne Live-Tenant-Aktion.
 - [docs/de/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md):
   Contract-first-Grenze für einen späteren read-only SPFx-BPMN-Viewer in
   SharePoint mit `bpmn-js`, Microsoft Graph REST und ohne Modeler oder
