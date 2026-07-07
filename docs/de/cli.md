@@ -414,7 +414,13 @@ bereitet vor den Live-Schritten offline das Runtime-Environment vor. Der Runner
 stoppt beim ersten fehlgeschlagenen Schritt und schreibt nur die
 redigierten Standardartefakte unter `out/m365/teams-sharepoint/`, verlangt
 `--owner-approved` und lässt den abschließenden Evidence-Export mit
-`--release-gate-require-runtime-artifacts` laufen. Der offline
+`--release-gate-require-runtime-artifacts` laufen. Nach erfolgreichem Lauf
+kopiert der Runner die vorhandenen redigierten Artefakte zusätzlich in
+`out/m365/teams-sharepoint/release-gates/<correlation-id>/` und schreibt dort
+`release-gate-retention-index.redacted.json`. Diese Retention-Kopie verhindert,
+dass Audits nur den zuletzt überschriebenen `latest`-Stand vergleichen können;
+der Laufordner kann mit `--release-gate-run-artifact-dir` überschrieben werden.
+Der offline
 `mcp-inventory-smoke` bleibt ein separater Diagnose- und Evidence-Befehl; der
 Runner führt ihn nicht automatisch aus und hängt ohne explizites
 `--release-gate-inventory-artifact` absichtlich einen fehlenden

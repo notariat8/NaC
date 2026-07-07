@@ -173,8 +173,12 @@ after the run, the agent must immediately prepare the owner-gated
 `mcp-smoke-leftover-cleanup` path.
 
 When `release-gate-run` is used, the runner creates the redacted completion
-report in the same owner-gated run. The following offline exporter remains only
-for diagnostics or re-exporting existing artifacts:
+report in the same owner-gated run and also copies the existing redacted
+artifacts to `out/m365/teams-sharepoint/release-gates/<correlation-id>/`. That
+folder also contains `release-gate-retention-index.redacted.json`, so multiple
+gate runs remain auditable side by side while `out/m365/teams-sharepoint/`
+continues to hold the latest overwritten state. The following offline exporter
+remains only for diagnostics or re-exporting existing artifacts:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \

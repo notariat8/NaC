@@ -406,7 +406,12 @@ prepares the runtime environment offline before live steps run. It stops at the
 first failed step. The runner writes only the redacted standard
 artifacts under `out/m365/teams-sharepoint/`, requires `--owner-approved` and
 runs the final evidence export with `--release-gate-require-runtime-artifacts`.
-The offline `mcp-inventory-smoke` remains a separate diagnostic and evidence
+After a successful run, the runner also copies the existing redacted artifacts
+to `out/m365/teams-sharepoint/release-gates/<correlation-id>/` and writes
+`release-gate-retention-index.redacted.json` there. This retention copy keeps
+audits from comparing only the overwritten `latest` state; the run folder can
+be overridden with `--release-gate-run-artifact-dir`. The offline
+`mcp-inventory-smoke` remains a separate diagnostic and evidence
 command; the runner does not execute it automatically and, without an explicit
 `--release-gate-inventory-artifact`, intentionally attaches a missing
 `NOT_ATTACHED` path so stale local artifacts with an old correlation ID cannot

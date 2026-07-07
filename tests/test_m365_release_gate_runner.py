@@ -50,6 +50,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
             runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            retention_dir = tmp_path / "release-gate-run"
             certificate_path.touch()
             private_key_path.touch()
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
@@ -68,6 +69,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(private_key_path),
                         "--runtime-env-bootstrap-output",
                         str(runtime_env_bootstrap_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
                         "--format",
                         "json",
                     ]
@@ -111,6 +114,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(calls[5][bootstrap_arg_index], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
+        self.assertEqual(payload["summary"]["release_gate_run_artifact_dir"], str(retention_dir))
+        self.assertTrue(payload["summary"]["release_gate_retention_index"].endswith("release-gate-retention-index.redacted.json"))
 
     def test_release_gate_run_pins_missing_inventory_artifact_when_not_explicitly_attached(self) -> None:
         calls: list[list[str]] = []
@@ -130,6 +135,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
             runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            retention_dir = tmp_path / "release-gate-run"
             certificate_path.touch()
             private_key_path.touch()
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
@@ -142,6 +148,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(private_key_path),
                         "--runtime-env-bootstrap-output",
                         str(runtime_env_bootstrap_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
                         "--format",
                         "json",
                     ]
@@ -154,6 +162,100 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         inventory_arg_index = evidence_call.index("--release-gate-inventory-artifact") + 1
         self.assertTrue(evidence_call[inventory_arg_index].endswith("mcp-inventory-smoke.not-attached.redacted.json"))
 
+    def test_release_gate_run_writes_retention_index_with_run_artifact_copies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            runtime_state = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            runtime_certificate_expiry_output = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
+            runtime_smoke_output = tmp_path / "runtime-smoke.redacted.json"
+            runtime_metadata_output = tmp_path / "runtime-metadata.redacted.json"
+            mcp_suite_output = tmp_path / "mcp-smoke-suite.redacted.json"
+            mcp_leftover_output = tmp_path / "mcp-smoke-leftover-cleanup.redacted.json"
+            evidence_output = tmp_path / "release-gate-evidence.redacted.md"
+            evidence_json_output = tmp_path / "release-gate-evidence.redacted.json"
+            artifact_index_output = tmp_path / "release-gate-artifact-index.redacted.json"
+            retention_dir = tmp_path / "retained"
+            runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                step = command[command.index("teams-sharepoint") + 1]
+                _write_output_arg(command, "--runtime-certificate-expiry-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--runtime-smoke-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--runtime-metadata-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--mcp-suite-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--mcp-leftover-output", {"status": "PASSED", "step": step})
+                if "--release-gate-evidence-output" in command:
+                    evidence_output.write_text("# redacted evidence\n", encoding="utf-8")
+                    evidence_json_output.write_text(json.dumps({"status": "PASSED"}), encoding="utf-8")
+                    artifact_index_output.write_text(json.dumps({"status": "PASSED"}), encoding="utf-8")
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=json.dumps({"status": "PASSED", "step": step}),
+                    stderr="",
+                )
+
+            with patch.object(cli.subprocess, "run", side_effect=fake_run), patch.dict(cli.os.environ, {}, clear=True):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--owner-approved",
+                        "--mcp-smoke-correlation-id",
+                        "retention-corr",
+                        "--runtime-smoke-state",
+                        str(runtime_state),
+                        "--runtime-certificate-path",
+                        str(certificate_path),
+                        "--runtime-private-key-path",
+                        str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
+                        "--runtime-certificate-expiry-output",
+                        str(runtime_certificate_expiry_output),
+                        "--runtime-smoke-output",
+                        str(runtime_smoke_output),
+                        "--runtime-metadata-output",
+                        str(runtime_metadata_output),
+                        "--mcp-suite-output",
+                        str(mcp_suite_output),
+                        "--mcp-leftover-output",
+                        str(mcp_leftover_output),
+                        "--release-gate-evidence-output",
+                        str(evidence_output),
+                        "--release-gate-evidence-json-output",
+                        str(evidence_json_output),
+                        "--release-gate-artifact-index-output",
+                        str(artifact_index_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
+                        "--format",
+                        "json",
+                    ]
+                )
+
+            retention_index = json.loads((retention_dir / "release-gate-retention-index.redacted.json").read_text())
+            retained_bootstrap_exists = (retention_dir / "runtime-env-bootstrap.redacted.json").exists()
+            retained_evidence_json_exists = (retention_dir / "release-gate-evidence.redacted.json").exists()
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["release_gate_run_artifact_dir"], str(retention_dir))
+        self.assertEqual(payload["summary"]["release_gate_retention_index"], str(retention_dir / "release-gate-retention-index.redacted.json"))
+        self.assertEqual(retention_index["schema_version"], "nac.m365-release-gate-retention-index/v0.1")
+        self.assertEqual(retention_index["correlation_id"], "retention-corr")
+        self.assertFalse(retention_index["privacy"]["storesTokensOrSecrets"])
+        artifacts = {artifact["id"]: artifact for artifact in retention_index["artifacts"]}
+        self.assertEqual(artifacts["runtime_env_bootstrap"]["status"], "COPIED")
+        self.assertEqual(len(artifacts["runtime_env_bootstrap"]["artifact_sha256"]), 64)
+        self.assertEqual(artifacts["mcp_inventory_smoke"]["status"], "NOT_ATTACHED")
+        self.assertEqual(artifacts["mcp_inventory_smoke"]["artifact_sha256"], None)
+        self.assertTrue(retained_bootstrap_exists)
+        self.assertTrue(retained_evidence_json_exists)
+
     def test_release_gate_run_bootstraps_runtime_env_for_live_steps(self) -> None:
         calls: list[tuple[str, dict[str, str] | None]] = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -162,6 +264,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
             runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            retention_dir = tmp_path / "release-gate-run"
             runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
             certificate_path.touch()
             private_key_path.touch()
@@ -188,6 +291,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(private_key_path),
                         "--runtime-env-bootstrap-output",
                         str(runtime_env_bootstrap_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
                         "--format",
                         "json",
                     ]
@@ -286,6 +391,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
             runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
+            retention_dir = tmp_path / "release-gate-run"
             certificate_path.touch()
             private_key_path.touch()
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
@@ -300,6 +406,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(private_key_path),
                         "--runtime-env-bootstrap-output",
                         str(runtime_env_bootstrap_output),
+                        "--release-gate-run-artifact-dir",
+                        str(retention_dir),
                         "--format",
                         "json",
                     ]
@@ -329,6 +437,13 @@ def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     with redirect_stdout(output):
         return_code = args.func(args)
     return json.loads(output.getvalue()), return_code
+
+
+def _write_output_arg(command: list[str], option: str, payload: dict) -> None:
+    if option not in command:
+        return
+    output_path = Path(command[command.index(option) + 1])
+    output_path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _runtime_state() -> dict:
