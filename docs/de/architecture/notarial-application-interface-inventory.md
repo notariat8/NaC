@@ -1,6 +1,6 @@
 # Notarielles Anwendungsschnittstellen-Inventar
 
-Status: Offline-Inventar ohne Live-Apply
+Status: Offline-Inventar mit read-only MCP-Werkzeugen ohne Live-Apply
 Letzte inhaltliche Anpassung: 2026-07-07
 
 ## Zweck
@@ -67,8 +67,8 @@ Die erste zulässige NaC-Umsetzung ist:
 
 ## Nächste technische Ableitung
 
-Der nächste sinnvolle technische Schritt ist ein read-only MCP-Tool-Vertrag für
+Die erste MCP-Umsetzung liegt im `teams-sharepoint-data-mcp`-Server:
 `notarial_interface_inventory_list` und `notarial_interface_boundary_check`.
-Diese Tools dürfen nur die hier gepflegten Metadaten und Gate-Entscheidungen
-ausgeben; sie dürfen keine externen BNotK-Systeme aufrufen und keine
-Quellartefakte ingestieren.
+Diese Tools geben nur die hier gepflegten Metadaten und Gate-Entscheidungen
+aus; sie rufen keine externen BNotK-Systeme, kein SharePoint und kein Microsoft
+Graph auf und ingestieren keine Quellartefakte.

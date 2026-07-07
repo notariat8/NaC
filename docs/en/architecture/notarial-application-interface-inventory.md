@@ -1,6 +1,6 @@
 # Notarial Application Interface Inventory
 
-Status: offline inventory without live apply
+Status: offline inventory with read-only MCP tools without live apply
 Last content update: 2026-07-07
 
 ## Purpose
@@ -65,7 +65,8 @@ The first allowed NaC implementation is:
 
 ## Next Technical Derivation
 
-The next useful technical step is a read-only MCP tool contract for
-`notarial_interface_inventory_list` and `notarial_interface_boundary_check`.
-These tools may only expose the metadata and gate decisions maintained here;
-they must not call external BNotK systems and must not ingest source artifacts.
+The first MCP implementation is part of the `teams-sharepoint-data-mcp`
+server: `notarial_interface_inventory_list` and
+`notarial_interface_boundary_check`. These tools expose only the metadata and
+gate decisions maintained here; they call no external BNotK system, no
+SharePoint and no Microsoft Graph, and they do not ingest source artifacts.

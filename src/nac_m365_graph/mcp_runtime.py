@@ -9,6 +9,9 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
+DEFAULT_NOTARIAL_INTERFACE_INVENTORY_CONTRACT = (
+    REPO_ROOT / "workflows" / "contracts" / "notarial-application-interface-inventory.contract.json"
+)
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 WRITE_TOOLS = {"case_create", "case_update_status", "task_create", "grant_request", "audit_append"}
 READ_ONLY_TOOLS_WITHOUT_PAYLOAD = {
@@ -17,6 +20,14 @@ READ_ONLY_TOOLS_WITHOUT_PAYLOAD = {
     "bpmn_model_get",
     "process_register_list",
     "bpmn_viewer_overlay_get",
+}
+METADATA_ONLY_INVENTORY_TOOL_TYPE = "metadata_only_inventory"
+METADATA_ONLY_SAFE_OPERATIONS = {
+    "metadata_inventory",
+    "read_only_mcp_plan",
+    "boundary_check",
+    "bpmn_gate_modeling",
+    "redacted_evidence_planning",
 }
 
 
@@ -58,7 +69,29 @@ class GraphRequestPlan:
         return asdict(self)
 
 
+@dataclass(frozen=True, slots=True)
+class InventoryToolResult:
+    tool: str
+    runtime_mode: str
+    executes_graph_requests: bool
+    source_contract: str
+    source_contract_path: str
+    interfaces: list[dict[str, Any]] | None = None
+    boundary_check: dict[str, Any] | None = None
+    privacy: dict[str, bool] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        return {key: value for key, value in payload.items() if value is not None}
+
+
 def load_mcp_contract(path: Path = DEFAULT_MCP_CONTRACT) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_notarial_interface_inventory_contract(
+    path: Path = DEFAULT_NOTARIAL_INTERFACE_INVENTORY_CONTRACT,
+) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -136,6 +169,34 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
                 if smoke.get(flag) is not False:
                     errors.append(f"teams-sharepoint-data-mcp live-read smoke {flag} must be false")
 
+    inventory_boundary = contract.get("runtime_boundary", {}).get("notarial_interface_inventory")
+    if not isinstance(inventory_boundary, dict):
+        errors.append("teams-sharepoint-data-mcp runtime_boundary.notarial_interface_inventory must be an object")
+    else:
+        if inventory_boundary.get("source_contract") != "workflow.notarial_application_interface_inventory":
+            errors.append("teams-sharepoint-data-mcp inventory source_contract is invalid")
+        if (
+            inventory_boundary.get("source_contract_path")
+            != "workflows/contracts/notarial-application-interface-inventory.contract.json"
+        ):
+            errors.append("teams-sharepoint-data-mcp inventory source_contract_path is invalid")
+        if set(inventory_boundary.get("tools", [])) != {
+            "notarial_interface_inventory_list",
+            "notarial_interface_boundary_check",
+        }:
+            errors.append("teams-sharepoint-data-mcp inventory tools must match the notarial inventory tools")
+        for flag in ("available_now", "requires_role_case_purpose_gate"):
+            if inventory_boundary.get(flag) is not True:
+                errors.append(f"teams-sharepoint-data-mcp inventory {flag} must be true")
+        for flag in (
+            "executes_graph_requests",
+            "reads_sharepoint_items",
+            "reads_sharepoint_file_content",
+            "stores_tokens_or_secrets",
+        ):
+            if inventory_boundary.get(flag) is not False:
+                errors.append(f"teams-sharepoint-data-mcp inventory {flag} must be false")
+
     tools = _tools_by_id(contract)
     required = {
         "case_get",
@@ -148,11 +209,28 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
         "bpmn_model_get",
         "process_register_list",
         "bpmn_viewer_overlay_get",
+        "notarial_interface_inventory_list",
+        "notarial_interface_boundary_check",
     }
     missing = sorted(required - set(tools))
     for tool_id in missing:
         errors.append(f"teams-sharepoint-data-mcp missing tool {tool_id}")
     for tool_id, tool in sorted(tools.items()):
+        if _is_metadata_only_tool_definition(tool):
+            if tool.get("source_contract") != "workflow.notarial_application_interface_inventory":
+                errors.append(f"teams-sharepoint-data-mcp {tool_id} must bind to notarial interface inventory")
+            if tool.get("graph_method") != "NONE":
+                errors.append(f"teams-sharepoint-data-mcp {tool_id} graph_method must be NONE")
+            if tool.get("graph_path_template") is not None:
+                errors.append(f"teams-sharepoint-data-mcp {tool_id} must not define a Graph path")
+            if tool.get("list_name") is not None:
+                errors.append(f"teams-sharepoint-data-mcp {tool_id} must not bind to a SharePoint list")
+            for flag in ("reads_items", "reads_files", "writes_items", "requires_write_approval"):
+                if tool.get(flag) is not False:
+                    errors.append(f"teams-sharepoint-data-mcp {tool_id} {flag} must be false")
+            if tool.get("requires_role_case_purpose_gate") is not True:
+                errors.append(f"teams-sharepoint-data-mcp {tool_id} must require role/case/purpose gate")
+            continue
         path_template = tool.get("graph_path_template", "")
         if not isinstance(path_template, str) or not path_template.startswith("/sites/{site-id}/"):
             errors.append(f"teams-sharepoint-data-mcp {tool_id} graph_path_template must target /sites/{{site-id}}")
@@ -180,6 +258,8 @@ def build_tool_manifest(contract: dict[str, Any] | None = None) -> dict[str, Any
                 "description": tool["description"],
                 "listName": tool["list_name"],
                 "method": tool["graph_method"],
+                "metadataOnly": _is_metadata_only_tool_definition(tool),
+                "sourceContract": tool.get("source_contract"),
                 "readsItems": tool["reads_items"],
                 "readsFiles": tool["reads_files"],
                 "writesItems": tool["writes_items"],
@@ -203,6 +283,8 @@ def plan_tool_request(
     tool = tools.get(tool_name)
     if tool is None:
         raise McpRuntimeError(f"unknown teams-sharepoint-data-mcp tool: {tool_name}")
+    if _is_metadata_only_tool_definition(tool):
+        raise McpRuntimeError(f"{tool_name} is metadata-only and does not produce a Graph request plan")
     _validate_context(context, bool(tool.get("writes_items")))
     _validate_required_inputs(tool, arguments)
 
@@ -228,12 +310,189 @@ def plan_tool_request(
     )
 
 
+def is_metadata_inventory_tool(contract: dict[str, Any], tool_name: str) -> bool:
+    tool = _tools_by_id(contract).get(tool_name)
+    return bool(tool and _is_metadata_only_tool_definition(tool))
+
+
+def run_metadata_inventory_tool(
+    contract: dict[str, Any],
+    inventory_contract: dict[str, Any],
+    context: RuntimeContext,
+    tool_name: str,
+    arguments: dict[str, Any],
+) -> InventoryToolResult:
+    tool = _tools_by_id(contract).get(tool_name)
+    if tool is None:
+        raise McpRuntimeError(f"unknown teams-sharepoint-data-mcp tool: {tool_name}")
+    if not _is_metadata_only_tool_definition(tool):
+        raise McpRuntimeError(f"{tool_name} is not a metadata-only inventory tool")
+    _validate_context(context, False)
+    _validate_required_inputs(tool, arguments)
+
+    source_contract = str(tool["source_contract"])
+    source_contract_path = str(
+        contract.get("runtime_boundary", {})
+        .get("notarial_interface_inventory", {})
+        .get(
+            "source_contract_path",
+            "workflows/contracts/notarial-application-interface-inventory.contract.json",
+        )
+    )
+    if tool_name == "notarial_interface_inventory_list":
+        return InventoryToolResult(
+            tool=tool_name,
+            runtime_mode="metadata_inventory_only",
+            executes_graph_requests=False,
+            source_contract=source_contract,
+            source_contract_path=source_contract_path,
+            interfaces=_inventory_rows(inventory_contract),
+            privacy=_metadata_inventory_privacy(),
+        )
+    if tool_name == "notarial_interface_boundary_check":
+        interface_id = str(arguments["interface_id"])
+        requested_operation = str(arguments["requested_operation"])
+        return InventoryToolResult(
+            tool=tool_name,
+            runtime_mode="metadata_inventory_only",
+            executes_graph_requests=False,
+            source_contract=source_contract,
+            source_contract_path=source_contract_path,
+            boundary_check=_boundary_check(inventory_contract, interface_id, requested_operation),
+            privacy=_metadata_inventory_privacy(),
+        )
+    raise McpRuntimeError(f"metadata inventory mapping missing for tool: {tool_name}")
+
+
 def _tools_by_id(contract: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
         tool["id"]: tool
         for tool in contract.get("tools", [])
         if isinstance(tool, dict) and isinstance(tool.get("id"), str)
     }
+
+
+def _is_metadata_only_tool_definition(tool: dict[str, Any]) -> bool:
+    return tool.get("tool_type") == METADATA_ONLY_INVENTORY_TOOL_TYPE
+
+
+def _inventory_rows(inventory_contract: dict[str, Any]) -> list[dict[str, Any]]:
+    source_documents = inventory_contract.get("source_documents", {})
+    rows: list[dict[str, Any]] = []
+    for item in inventory_contract.get("interfaces", []):
+        if not isinstance(item, dict):
+            continue
+        source_id = str(item.get("source", ""))
+        source = source_documents.get(source_id, {})
+        source_label = source.get("label") if isinstance(source, dict) else source_id
+        source_state = _source_state(source)
+        rows.append(
+            {
+                "interfaceId": item.get("id"),
+                "area": item.get("area"),
+                "source": source_id,
+                "sourceLabel": source_label,
+                "sourceState": source_state,
+                "families": list(item.get("families", [])),
+                "mvpBoundary": item.get("mvp_boundary"),
+            }
+        )
+    return rows
+
+
+def _boundary_check(
+    inventory_contract: dict[str, Any],
+    interface_id: str,
+    requested_operation: str,
+) -> dict[str, Any]:
+    interfaces = {
+        item.get("id"): item
+        for item in inventory_contract.get("interfaces", [])
+        if isinstance(item, dict)
+    }
+    interface = interfaces.get(interface_id)
+    if interface is None:
+        raise McpRuntimeError(f"unknown notarial interface_id: {interface_id}")
+
+    owner_gates = {
+        gate
+        for gate in inventory_contract.get("owner_gates", [])
+        if isinstance(gate, str)
+    }
+    normalized_operation = requested_operation.strip().lower()
+    if normalized_operation in METADATA_ONLY_SAFE_OPERATIONS:
+        status = "allowed_metadata_only"
+        allowed_now = True
+        owner_gate_required = False
+        private_operating_frame_required = False
+    elif requested_operation in owner_gates or _operation_requires_owner_gate(normalized_operation):
+        status = "owner_gate_required"
+        allowed_now = False
+        owner_gate_required = True
+        private_operating_frame_required = True
+    else:
+        status = "review_required"
+        allowed_now = False
+        owner_gate_required = True
+        private_operating_frame_required = True
+
+    return {
+        "interfaceId": interface_id,
+        "area": interface.get("area"),
+        "requestedOperation": requested_operation,
+        "boundaryStatus": status,
+        "allowedNow": allowed_now,
+        "ownerGateRequired": owner_gate_required,
+        "privateOperatingFrameRequired": private_operating_frame_required,
+        "executesGraphRequests": False,
+        "externalBnotkCallAllowed": False,
+        "liveConnectorApplyAllowed": False,
+        "mvpBoundary": interface.get("mvp_boundary"),
+        "families": list(interface.get("families", [])),
+    }
+
+
+def _operation_requires_owner_gate(normalized_operation: str) -> bool:
+    owner_gate_markers = (
+        "credential",
+        "certificate",
+        "token",
+        "identity",
+        "payload",
+        "message",
+        "external",
+        "bnotk",
+        "productive",
+        "live",
+        "write",
+        "send",
+        "fetch",
+        "call",
+        "xsd_raw",
+    )
+    return any(marker in normalized_operation for marker in owner_gate_markers)
+
+
+def _metadata_inventory_privacy() -> dict[str, bool]:
+    return {
+        "metadataOnly": True,
+        "storesSourceFullText": False,
+        "storesRawXsd": False,
+        "storesCredentials": False,
+        "storesMatterData": False,
+        "executesGraphRequests": False,
+        "callsExternalBnotkSystems": False,
+    }
+
+
+def _source_state(source: Any) -> str | None:
+    if not isinstance(source, dict):
+        return None
+    for key in ("page_state", "package_version", "evidence_origin"):
+        value = source.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
 
 
 def _validate_context(context: RuntimeContext, writes_items: bool) -> None:

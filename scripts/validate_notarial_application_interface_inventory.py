@@ -54,9 +54,9 @@ REQUIRED_FALSE_POLICY = {
     "live_connector_apply_allowed",
     "productive_specialist_system_write_allowed",
     "m365_mvp_data_plane_changed",
+    "read_only_mcp_contract_required_before_runtime",
 }
 REQUIRED_TRUE_POLICY = {
-    "read_only_mcp_contract_required_before_runtime",
     "private_operating_frame_required_before_live",
     "privacy_review_required_before_personal_data",
     "owner_apply_gate_required_before_live",
@@ -93,12 +93,13 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         errors.append("schema_version muss nac.workflow-contract/v0.1 sein")
     if payload.get("contract_id") != "workflow.notarial_application_interface_inventory":
         errors.append("contract_id muss workflow.notarial_application_interface_inventory sein")
-    if payload.get("status") != "offline_inventory_no_live_apply":
-        errors.append("status muss offline_inventory_no_live_apply sein")
+    if payload.get("status") != "offline_inventory_with_read_only_mcp_tools":
+        errors.append("status muss offline_inventory_with_read_only_mcp_tools sein")
 
     errors.extend(_validate_source_documents(payload))
     errors.extend(_validate_global_policy(payload))
     errors.extend(_validate_interfaces(payload))
+    errors.extend(_validate_runtime_binding(payload))
     errors.extend(_validate_mcp_tools(payload))
     errors.extend(_validate_owner_gates(payload))
     errors.extend(_validate_evidence_shape(payload))
@@ -153,6 +154,30 @@ def _validate_global_policy(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_runtime_binding(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    binding = payload.get("runtime_binding")
+    if not isinstance(binding, dict):
+        return ["runtime_binding muss ein Objekt sein"]
+    expected = {
+        "server_id": "teams-sharepoint-data-mcp",
+        "implemented_in_contract": "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+        "runtime_mode": "metadata_inventory_only",
+    }
+    for key, value in expected.items():
+        if binding.get(key) != value:
+            errors.append(f"runtime_binding.{key} muss {value} sein")
+    for key in ("implemented_now", "requires_role_case_purpose_gate"):
+        if binding.get(key) is not True:
+            errors.append(f"runtime_binding.{key} muss true sein")
+    if binding.get("executes_graph_requests") is not False:
+        errors.append("runtime_binding.executes_graph_requests muss false sein")
+    bound_contract = REPO_ROOT / str(binding.get("implemented_in_contract", ""))
+    if not bound_contract.is_file():
+        errors.append("runtime_binding.implemented_in_contract zeigt auf fehlende Datei")
+    return errors
+
+
 def _validate_interfaces(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     interfaces = payload.get("interfaces")
@@ -176,15 +201,15 @@ def _validate_interfaces(payload: dict[str, Any]) -> list[str]:
 
 
 def _validate_mcp_tools(payload: dict[str, Any]) -> list[str]:
-    tools = payload.get("planned_read_only_mcp_tools")
+    tools = payload.get("read_only_mcp_tools")
     if not isinstance(tools, list):
-        return ["planned_read_only_mcp_tools muss eine Liste sein"]
+        return ["read_only_mcp_tools muss eine Liste sein"]
     names = {tool.get("name") for tool in tools if isinstance(tool, dict)}
     required = {"notarial_interface_inventory_list", "notarial_interface_boundary_check"}
-    errors = [f"planned_read_only_mcp_tools fehlt: {name}" for name in sorted(required - names)]
+    errors = [f"read_only_mcp_tools fehlt: {name}" for name in sorted(required - names)]
     for tool in tools:
         if not isinstance(tool, dict):
-            errors.append("planned_read_only_mcp_tools enthaelt einen Nicht-Objekt-Eintrag")
+            errors.append("read_only_mcp_tools enthaelt einen Nicht-Objekt-Eintrag")
             continue
         if "external BNotK calls" not in str(tool.get("blocked_output", "")):
             errors.append(f"{tool.get('name', '<unknown>')} muss externe BNotK-Aufrufe blockieren")

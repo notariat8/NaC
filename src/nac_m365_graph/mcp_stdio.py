@@ -9,11 +9,15 @@ from typing import Any, Protocol, TextIO
 from .graph_client import GraphHttpError
 from .mcp_runtime import (
     DEFAULT_MCP_CONTRACT,
+    DEFAULT_NOTARIAL_INTERFACE_INVENTORY_CONTRACT,
     McpGateError,
     McpRuntimeError,
     RuntimeContext,
+    is_metadata_inventory_tool,
     load_mcp_contract,
+    load_notarial_interface_inventory_contract,
     plan_tool_request,
+    run_metadata_inventory_tool,
     validate_mcp_contract,
 )
 from .privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state
@@ -44,6 +48,7 @@ class TeamsSharePointDataMcpServer:
         contract: dict[str, Any],
         provisioned_state: dict[str, Any],
         *,
+        interface_inventory_contract: dict[str, Any] | None = None,
         live_read_enabled: bool = False,
         graph_client: GraphReadClient | None = None,
     ) -> None:
@@ -52,6 +57,7 @@ class TeamsSharePointDataMcpServer:
             raise McpRuntimeError("; ".join(errors))
         self.contract = contract
         self.provisioned_state = provisioned_state
+        self.interface_inventory_contract = interface_inventory_contract or load_notarial_interface_inventory_contract()
         self.live_read_enabled = live_read_enabled
         self.graph_client = graph_client
 
@@ -91,7 +97,8 @@ class TeamsSharePointDataMcpServer:
             "instructions": (
                 "Plans Microsoft Graph REST v1.0 requests for Teams-connected "
                 "SharePoint list metadata, including optional BPMN viewer metadata "
-                "request plans. Live reads for case_get and document_list are "
+                "request plans, and serves metadata-only notarial interface "
+                "inventory checks. Live reads for case_get and document_list are "
                 "available only when the server is started in owner-gated live-read "
                 "mode. The adapter never executes write tools or stores tokens."
             ),
@@ -110,6 +117,29 @@ class TeamsSharePointDataMcpServer:
         try:
             context = runtime_context_from_call_arguments(arguments)
             tool_arguments = tool_arguments_from_call_arguments(arguments)
+            if is_metadata_inventory_tool(self.contract, tool_name):
+                inventory_result = run_metadata_inventory_tool(
+                    self.contract,
+                    self.interface_inventory_contract,
+                    context,
+                    tool_name,
+                    tool_arguments,
+                )
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"{tool_name} returned metadata-only inventory data. "
+                                "No Microsoft Graph or external BNotK request was executed."
+                            ),
+                        }
+                    ],
+                    "structuredContent": {
+                        "serverId": SERVER_NAME,
+                        **inventory_result.to_dict(),
+                    },
+                }
             plan = plan_tool_request(
                 self.contract,
                 self.provisioned_state,
@@ -289,6 +319,7 @@ def tool_arguments_from_call_arguments(arguments: dict[str, Any]) -> dict[str, A
 
 def run_stdio_server(
     contract_path: Path = DEFAULT_MCP_CONTRACT,
+    interface_inventory_contract_path: Path = DEFAULT_NOTARIAL_INTERFACE_INVENTORY_CONTRACT,
     provisioned_state_path: Path = DEFAULT_PROVISIONED_STATE,
     input_stream: TextIO | None = None,
     output_stream: TextIO | None = None,
@@ -301,6 +332,7 @@ def run_stdio_server(
     server = TeamsSharePointDataMcpServer(
         load_mcp_contract(contract_path),
         load_provisioned_state(provisioned_state_path),
+        interface_inventory_contract=load_notarial_interface_inventory_contract(interface_inventory_contract_path),
         live_read_enabled=live_read_enabled,
         graph_client=graph_client,
     )
@@ -328,6 +360,7 @@ def _handle_raw_line(server: TeamsSharePointDataMcpServer, line: str) -> dict[st
 
 
 def _tool_definition(tool: dict[str, Any]) -> dict[str, Any]:
+    required_inputs = tool.get("required_inputs", [])
     return {
         "name": tool["id"],
         "title": tool["id"].replace("_", " ").title(),
@@ -361,10 +394,10 @@ def _tool_definition(tool: dict[str, Any]) -> dict[str, Any]:
                 "arguments": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": tool.get("required_inputs", []),
+                    "required": required_inputs,
                     "properties": {
                         name: _json_schema_for_argument(name)
-                        for name in tool.get("required_inputs", [])
+                        for name in required_inputs
                     },
                 },
             },

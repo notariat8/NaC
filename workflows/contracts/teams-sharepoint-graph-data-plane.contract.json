@@ -242,7 +242,7 @@
     "mcp_server_required_for_runtime": true,
     "current_transport": "stdio",
     "current_protocol_version": "2025-11-25",
-    "current_runtime_mode": "request_planning_with_owner_gated_live_read",
+    "current_runtime_mode": "request_planning_with_owner_gated_live_read_and_metadata_inventory",
     "mcp_must_use_graph_rest_only": true,
     "owner_gated_live_read_allowed": true,
     "owner_gated_live_read_allowed_tools": [
@@ -264,7 +264,9 @@
       "document_list",
       "bpmn_model_get",
       "process_register_list",
-      "bpmn_viewer_overlay_get"
+      "bpmn_viewer_overlay_get",
+      "notarial_interface_inventory_list",
+      "notarial_interface_boundary_check"
     ],
     "runtime_writes_require_role_case_gate": true
   },
