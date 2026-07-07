@@ -293,6 +293,7 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
   --release-gate-write-readiness \
   --release-gate-readiness-require-audit-pack \
   --release-gate-write-post-run-report \
+  --release-gate-write-post-run-report-index \
   --format json
 ```
 
@@ -310,6 +311,10 @@ previous complete `PASSED` run for the same workspace ID as the baseline.
 `release-gate-post-run-report-index` then lists those archived reports offline
 by correlation ID, baseline, status and local paths; the artifact mode writes a
 redacted index copy for audit packages.
+With `--release-gate-write-post-run-report-index`, the one-shot runner creates
+that index copy directly in the same run. The switch implies
+`--release-gate-write-post-run-report` and remains a local offline artifact
+step without Graph, GitHub or tenant write access.
 
 The local audit overview runs offline through:
 

@@ -515,9 +515,13 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             retention_root = tmp_path / "release-gates"
             retention_dir = retention_root / "runner-corr"
             audit_pack_dir = tmp_path / "audit-pack"
-            post_report_path = tmp_path / "post-run" / "report.md"
-            post_report_json_path = tmp_path / "post-run" / "report.json"
-            github_comment_path = tmp_path / "post-run" / "comment.md"
+            post_report_root = tmp_path / "post-run-reports"
+            post_report_dir = post_report_root / "runner-corr"
+            post_report_path = post_report_dir / "release-gate-post-run-report.redacted.md"
+            post_report_json_path = post_report_dir / "release-gate-post-run-report.redacted.json"
+            github_comment_path = post_report_dir / "github-evidence-comment.redacted.md"
+            post_report_index_path = tmp_path / "post-run-index" / "index.md"
+            post_report_index_json_path = tmp_path / "post-run-index" / "index.json"
             runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
             certificate_path.touch()
             private_key_path.touch()
@@ -573,27 +577,39 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(retention_dir),
                         "--release-gate-audit-pack-dir",
                         str(audit_pack_dir),
+                        "--release-gate-post-run-report-root",
+                        str(post_report_root),
                         "--release-gate-post-run-report-output",
                         str(post_report_path),
                         "--release-gate-post-run-report-json-output",
                         str(post_report_json_path),
                         "--release-gate-github-comment-output",
                         str(github_comment_path),
-                        "--release-gate-write-post-run-report",
+                        "--release-gate-post-run-report-index-output",
+                        str(post_report_index_path),
+                        "--release-gate-post-run-report-index-json-output",
+                        str(post_report_index_json_path),
+                        "--release-gate-write-post-run-report-index",
                         "--format",
                         "json",
                     ]
                 )
             readiness = json.loads((retention_dir / "release-readiness.redacted.json").read_text(encoding="utf-8"))
             post_report = json.loads(post_report_json_path.read_text(encoding="utf-8"))
+            post_report_index = json.loads(post_report_index_json_path.read_text(encoding="utf-8"))
             audit_manifest = json.loads((audit_pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text())
             comment = github_comment_path.read_text(encoding="utf-8")
 
         self.assertEqual(return_code, 0)
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(
-            [step["step"] for step in payload["steps"][-3:]],
-            ["release_gate_audit_pack", "release_gate_readiness", "release_gate_post_run_report"],
+            [step["step"] for step in payload["steps"][-4:]],
+            [
+                "release_gate_audit_pack",
+                "release_gate_readiness",
+                "release_gate_post_run_report",
+                "release_gate_post_run_report_index",
+            ],
         )
         self.assertEqual(payload["summary"]["release_gate_readiness"], "READY")
         self.assertTrue(payload["summary"]["release_gate_readiness_require_audit_pack"])
@@ -601,13 +617,19 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["release_gate_post_run_report"], str(post_report_path))
         self.assertEqual(payload["summary"]["release_gate_post_run_report_json"], str(post_report_json_path))
         self.assertEqual(payload["summary"]["release_gate_github_comment_draft"], str(github_comment_path))
-        self.assertIn("release-gate-post-run-report", payload["steps"][-1]["command"])
-        self.assertNotIn("--release-gate-compare-left", payload["steps"][-1]["command"])
+        self.assertEqual(payload["summary"]["release_gate_post_run_report_index_status"], "PASSED")
+        self.assertEqual(payload["summary"]["release_gate_post_run_report_index"], str(post_report_index_path))
+        self.assertEqual(payload["summary"]["release_gate_post_run_report_index_json"], str(post_report_index_json_path))
+        self.assertIn("release-gate-post-run-report", payload["steps"][-2]["command"])
+        self.assertNotIn("--release-gate-compare-left", payload["steps"][-2]["command"])
+        self.assertIn("release-gate-post-run-report-index-artifact", payload["steps"][-1]["command"])
         self.assertEqual(audit_manifest["summary"]["left_correlation_id"], "baseline-corr")
         self.assertEqual(audit_manifest["summary"]["right_correlation_id"], "runner-corr")
         self.assertEqual(readiness["summary"]["mvp_release_readiness"], "READY")
         self.assertEqual(post_report["summary"]["baseline_selection"], "previous_retained_run")
         self.assertEqual(post_report["summary"]["baseline_correlation_id"], "baseline-corr")
+        self.assertEqual(post_report_index["summary"]["post_run_report_count"], 1)
+        self.assertEqual(post_report_index["post_run_reports"][0]["correlation_id"], "runner-corr")
         self.assertIn("Draft only", comment)
         self.assertFalse(post_report["privacy"]["github_comment_posted"])
 
