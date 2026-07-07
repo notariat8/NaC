@@ -11,6 +11,11 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
+    build_bpmn_viewer_provisioning_plan,
+    summarize_bpmn_viewer_provisioning_plan,
+    validate_bpmn_viewer_provisioning_config,
+)
 from nac_m365_graph.privileged_change import (  # noqa: E402
     build_privileged_change_plan,
     summarize_privileged_change_plan,
@@ -29,6 +34,7 @@ from nac_m365_graph.schema import validate_schema  # noqa: E402
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
 MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 SCHEMA = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.teams-sharepoint.json"
+BPMN_VIEWER_CONFIG = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-bpmn-viewer.provisioning.json"
 PRIVILEGED_CHANGE_CONFIG = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.json"
 )
@@ -119,6 +125,7 @@ def validate() -> list[str]:
     contract = _read_json(CONTRACT, errors)
     mcp_contract = _read_json(MCP_CONTRACT, errors)
     schema = _read_json(SCHEMA, errors)
+    bpmn_viewer_config = _read_json(BPMN_VIEWER_CONFIG, errors)
     privileged_change_config = _read_json(PRIVILEGED_CHANGE_CONFIG, errors)
     provisioned_state = _read_json(PROVISIONED_STATE, errors)
     privileged_applied_state = _read_json(PRIVILEGED_APPLIED_STATE, errors)
@@ -127,7 +134,7 @@ def validate() -> list[str]:
     if contract:
         errors.extend(_validate_contract(contract))
     if mcp_contract:
-        errors.extend(_validate_mcp_runtime_contract(mcp_contract, contract, schema))
+        errors.extend(_validate_mcp_runtime_contract(mcp_contract, contract, schema, bpmn_viewer_config))
     if schema:
         errors.extend(validate_schema(schema))
         errors.extend(_validate_schema_against_contract(schema, contract))
@@ -157,6 +164,17 @@ def validate() -> list[str]:
                     errors.append(f"privileged change plan missing action {action}")
             except ValueError as exc:
                 errors.append(str(exc))
+    if bpmn_viewer_config and schema:
+        errors.extend(validate_bpmn_viewer_provisioning_config(bpmn_viewer_config))
+        try:
+            bpmn_viewer_plan = build_bpmn_viewer_provisioning_plan(bpmn_viewer_config, schema)
+            summary = summarize_bpmn_viewer_provisioning_plan(bpmn_viewer_plan)
+            if summary["operation_count"] < 50:
+                errors.append("BPMN viewer provisioning plan must include optional library, list and column operations")
+            if summary["mutates_tenant_now"] is not False:
+                errors.append("BPMN viewer provisioning plan must not mutate tenant state now")
+        except ValueError as exc:
+            errors.append(str(exc))
     if privileged_applied_state:
         errors.extend(
             _validate_privileged_applied_state(
@@ -495,6 +513,7 @@ def _validate_mcp_runtime_contract(
     payload: dict[str, Any],
     data_plane_contract: dict[str, Any],
     schema: dict[str, Any] | None = None,
+    bpmn_viewer_config: dict[str, Any] | None = None,
 ) -> list[str]:
     errors = validate_mcp_contract(payload)
     if errors:
@@ -516,26 +535,33 @@ def _validate_mcp_runtime_contract(
     if tool_names != data_plane_tools:
         errors.append("teams-sharepoint-data-mcp tools must match data-plane mcp_boundary.allowed_runtime_tools")
 
+    optional_mcp_lists = _bpmn_viewer_mcp_list_names(bpmn_viewer_config)
+    allowed_tool_lists = REQUIRED_LISTS | optional_mcp_lists
     for tool in payload.get("tools", []):
         if not isinstance(tool, dict):
             errors.append("teams-sharepoint-data-mcp tools entries must be objects")
             continue
         if tool.get("graph_method") not in {"GET", "POST", "PATCH"}:
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} graph_method is invalid")
-        if tool.get("list_name") not in REQUIRED_LISTS:
-            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} list_name must target an MVP list")
+        if tool.get("list_name") not in allowed_tool_lists:
+            errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} list_name must target an MVP or optional BPMN viewer list")
         if tool.get("reads_files") is not False:
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} must not read files")
         if tool.get("writes_items") is True and tool.get("graph_method") == "GET":
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} write tool cannot use GET")
     if schema:
-        errors.extend(_validate_mcp_schema_binding(payload, schema))
+        errors.extend(_validate_mcp_schema_binding(payload, schema, bpmn_viewer_config))
     return errors
 
 
-def _validate_mcp_schema_binding(payload: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+def _validate_mcp_schema_binding(
+    payload: dict[str, Any],
+    schema: dict[str, Any],
+    bpmn_viewer_config: dict[str, Any] | None = None,
+) -> list[str]:
     errors: list[str] = []
     schema_lists = _schema_lists_by_name(schema)
+    schema_lists.update(_bpmn_viewer_mcp_lists_by_name(bpmn_viewer_config))
     provisioned_state = _dummy_provisioned_state(schema_lists)
     context = RuntimeContext(
         actor_id="validator",
@@ -557,8 +583,14 @@ def _validate_mcp_schema_binding(payload: dict[str, Any], schema: dict[str, Any]
             continue
         list_schema = schema_lists[list_name]
         indexed_columns = set(_strings(list_schema.get("indexed_columns")))
-        if tool_id in {"case_get", "document_list"} and "NacCaseId" not in indexed_columns:
+        if tool_id in {"case_get", "document_list", "bpmn_viewer_overlay_get"} and "NacCaseId" not in indexed_columns:
             errors.append(f"teams-sharepoint-data-mcp {tool_id} must filter on indexed NacCaseId")
+        if tool_id == "bpmn_model_get" and "NacBpmnModelId" not in indexed_columns:
+            errors.append("teams-sharepoint-data-mcp bpmn_model_get must filter on indexed NacBpmnModelId")
+        if tool_id == "bpmn_model_get" and "ViewerEnabled" not in indexed_columns:
+            errors.append("teams-sharepoint-data-mcp bpmn_model_get must filter on indexed ViewerEnabled")
+        if tool_id == "process_register_list" and "ViewerEnabled" not in indexed_columns:
+            errors.append("teams-sharepoint-data-mcp process_register_list must filter on indexed ViewerEnabled")
         sample_args = _sample_mcp_arguments(tool_id)
         if sample_args is None:
             errors.append(f"teams-sharepoint-data-mcp {tool_id} missing schema-binding sample arguments")
@@ -611,6 +643,28 @@ def _schema_lists_by_name(schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
         for item in schema.get("sharepoint", {}).get("lists", [])
         if isinstance(item, dict) and isinstance(item.get("display_name"), str)
     }
+
+
+def _bpmn_viewer_mcp_lists_by_name(config: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if not isinstance(config, dict):
+        return {}
+    sharepoint = config.get("sharepoint")
+    if not isinstance(sharepoint, dict):
+        return {}
+    items: list[dict[str, Any]] = []
+    for key in ("lists", "document_libraries"):
+        values = sharepoint.get(key)
+        if isinstance(values, list):
+            items.extend(item for item in values if isinstance(item, dict))
+    return {
+        str(item["display_name"]): item
+        for item in items
+        if isinstance(item.get("display_name"), str)
+    }
+
+
+def _bpmn_viewer_mcp_list_names(config: dict[str, Any] | None) -> set[str]:
+    return set(_bpmn_viewer_mcp_lists_by_name(config))
 
 
 def _schema_columns_by_name(list_schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -678,6 +732,9 @@ def _sample_mcp_arguments(tool_id: str) -> dict[str, Any] | None:
             "object_id": "case-1",
         },
         "document_list": {"case_id": "case-1"},
+        "bpmn_model_get": {"bpmn_model_id": "bpmn-model-1"},
+        "process_register_list": {},
+        "bpmn_viewer_overlay_get": {"case_id": "case-1"},
     }
     sample = samples.get(tool_id)
     return dict(sample) if sample is not None else None

@@ -7,7 +7,19 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
+    build_bpmn_viewer_provisioning_plan,
+    summarize_bpmn_viewer_provisioning_plan,
+    validate_bpmn_viewer_provisioning_config,
+)
+
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "m365-sharepoint-bpmn-viewer-adapter.contract.json"
+BPMN_VIEWER_PROVISIONING = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-bpmn-viewer.provisioning.json"
+DATA_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 CONTRACTS_README = REPO_ROOT / "workflows" / "contracts" / "README.md"
 DATA_PLANE_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-data-plane.md"
 DATA_PLANE_EN = REPO_ROOT / "docs" / "en" / "architecture" / "teams-sharepoint-graph-data-plane.md"
@@ -64,8 +76,14 @@ def main() -> int:
 def validate() -> list[str]:
     errors: list[str] = []
     contract = _read_json(CONTRACT, errors)
+    bpmn_viewer_provisioning = _read_json(BPMN_VIEWER_PROVISIONING, errors)
+    data_mcp_contract = _read_json(DATA_MCP_CONTRACT, errors)
     if contract:
-        errors.extend(_validate_contract(contract))
+        errors.extend(_validate_contract(contract, bpmn_viewer_provisioning, data_mcp_contract))
+    if bpmn_viewer_provisioning:
+        errors.extend(_validate_bpmn_viewer_provisioning(bpmn_viewer_provisioning))
+    if data_mcp_contract:
+        errors.extend(_validate_data_mcp_contract(data_mcp_contract))
     errors.extend(_validate_docs())
     errors.extend(_validate_quality_gate())
     return errors
@@ -86,7 +104,11 @@ def _read_json(path: Path, errors: list[str]) -> dict[str, Any]:
     return payload
 
 
-def _validate_contract(payload: dict[str, Any]) -> list[str]:
+def _validate_contract(
+    payload: dict[str, Any],
+    provisioning: dict[str, Any],
+    data_mcp_contract: dict[str, Any],
+) -> list[str]:
     errors: list[str] = []
     expected = {
         "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.1",
@@ -156,6 +178,38 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             if spfx.get(flag) is not False:
                 errors.append(f"spfx_surface.{flag} must be false")
 
+    optional_plan = payload.get("optional_provisioning_plan")
+    if not isinstance(optional_plan, dict):
+        errors.append("optional_provisioning_plan must be an object")
+    else:
+        expected = {
+            "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json",
+            "command": "nac m365 teams-sharepoint bpmn-viewer-plan --format json",
+            "status": "optional_plan_only_no_live_apply",
+        }
+        for key, value in expected.items():
+            if optional_plan.get(key) != value:
+                errors.append(f"optional_provisioning_plan.{key} must be {value}")
+        for flag in (
+            "adds_to_required_mvp_schema_now",
+            "live_apply_implemented",
+            "mutates_tenant_now",
+        ):
+            if optional_plan.get(flag) is not False:
+                errors.append(f"optional_provisioning_plan.{flag} must be false")
+        if optional_plan.get("owner_gate_required_before_future_apply") is not True:
+            errors.append("optional_provisioning_plan.owner_gate_required_before_future_apply must be true")
+        if set(_as_list(optional_plan.get("planned_document_libraries"))) != {"BPMN Models"}:
+            errors.append("optional_provisioning_plan.planned_document_libraries must be BPMN Models")
+        if set(_as_list(optional_plan.get("planned_lists"))) != {"Prozessregister"}:
+            errors.append("optional_provisioning_plan.planned_lists must be Prozessregister")
+        if provisioning:
+            live_apply = provisioning.get("live_apply", {})
+            if live_apply.get("implemented") != optional_plan.get("live_apply_implemented"):
+                errors.append("optional_provisioning_plan live_apply flag must match provisioning artifact")
+            if live_apply.get("mutates_tenant_now") != optional_plan.get("mutates_tenant_now"):
+                errors.append("optional_provisioning_plan tenant mutation flag must match provisioning artifact")
+
     graph = payload.get("graph_policy")
     if not isinstance(graph, dict):
         errors.append("graph_policy must be an object")
@@ -199,6 +253,21 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
         for tool in ("bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"):
             if tool not in future_tools:
                 errors.append(f"mcp_boundary.future_tools missing {tool}")
+        request_plan_tools = set(_as_list(mcp.get("request_plan_tools_enabled_now")))
+        if request_plan_tools != {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"}:
+            errors.append("mcp_boundary.request_plan_tools_enabled_now must contain only BPMN viewer metadata tools")
+        live_read_tools = set(_as_list(mcp.get("owner_gated_live_read_tools_enabled_now")))
+        if live_read_tools != {"case_get", "document_list"}:
+            errors.append("mcp_boundary.owner_gated_live_read_tools_enabled_now must stay case_get/document_list")
+        if data_mcp_contract:
+            data_tools = {
+                tool.get("id")
+                for tool in _as_list(data_mcp_contract.get("tools"))
+                if isinstance(tool, dict)
+            }
+            for tool in request_plan_tools:
+                if tool not in data_tools:
+                    errors.append(f"teams-sharepoint-data-mcp missing request-plan tool {tool}")
 
     relationship = payload.get("relationship_to_bpmn_js_editor")
     if not isinstance(relationship, dict):
@@ -215,6 +284,79 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_bpmn_viewer_provisioning(payload: dict[str, Any]) -> list[str]:
+    errors = validate_bpmn_viewer_provisioning_config(payload)
+    if errors:
+        return errors
+    operations = build_bpmn_viewer_provisioning_plan(payload)
+    summary = summarize_bpmn_viewer_provisioning_plan(operations)
+    if summary.get("operation_count", 0) < 1:
+        errors.append("bpmn viewer provisioning plan must emit operations")
+    if summary.get("owner_gated_operations") != summary.get("operation_count"):
+        errors.append("bpmn viewer provisioning operations must all be owner-gated")
+    if summary.get("mutates_tenant_now") is not False:
+        errors.append("bpmn viewer provisioning plan must not mutate the tenant now")
+    if summary.get("live_apply_implemented") is not False:
+        errors.append("bpmn viewer provisioning live apply must not be implemented in this slice")
+    sharepoint = payload.get("sharepoint", {})
+    library_names = {
+        item.get("display_name")
+        for item in _as_list(sharepoint.get("document_libraries"))
+        if isinstance(item, dict)
+    }
+    list_names = {
+        item.get("display_name")
+        for item in _as_list(sharepoint.get("lists"))
+        if isinstance(item, dict)
+    }
+    if library_names != {"BPMN Models"}:
+        errors.append("bpmn viewer provisioning document libraries must only add BPMN Models")
+    if list_names != {"Prozessregister"}:
+        errors.append("bpmn viewer provisioning lists must only add Prozessregister")
+    return errors
+
+
+def _validate_data_mcp_contract(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if payload.get("server_id") != "teams-sharepoint-data-mcp":
+        errors.append("teams-sharepoint-data-mcp server_id is invalid")
+    if payload.get("graph", {}).get("rest_only") is not True:
+        errors.append("teams-sharepoint-data-mcp graph.rest_only must be true")
+    live_read = payload.get("runtime_boundary", {}).get("owner_gated_live_read_mode", {})
+    if set(_as_list(live_read.get("allowed_tools"))) != {"case_get", "document_list"}:
+        errors.append("teams-sharepoint-data-mcp live-read tools must remain case_get and document_list")
+    tools = {
+        tool.get("id"): tool
+        for tool in _as_list(payload.get("tools"))
+        if isinstance(tool, dict)
+    }
+    expected = {
+        "bpmn_model_get": "BPMN Models",
+        "process_register_list": "Prozessregister",
+        "bpmn_viewer_overlay_get": "AufgabenFristen",
+    }
+    for tool_id, list_name in expected.items():
+        tool = tools.get(tool_id)
+        if not isinstance(tool, dict):
+            errors.append(f"teams-sharepoint-data-mcp missing {tool_id}")
+            continue
+        if tool.get("graph_method") != "GET":
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} must use GET")
+        if tool.get("list_name") != list_name:
+            errors.append(f"teams-sharepoint-data-mcp {tool_id} must target {list_name}")
+        for flag in ("reads_items", "requires_role_case_purpose_gate"):
+            if tool.get(flag) is not True:
+                errors.append(f"teams-sharepoint-data-mcp {tool_id}.{flag} must be true")
+        for flag in ("reads_files", "writes_items", "requires_write_approval"):
+            if tool.get(flag) is not False:
+                errors.append(f"teams-sharepoint-data-mcp {tool_id}.{flag} must be false")
+    blocked = set(_as_list(payload.get("blocked_operations")))
+    for operation in ("bpmn_model_write", "bpmn_modeler_save", "workflow_execution"):
+        if operation not in blocked:
+            errors.append(f"teams-sharepoint-data-mcp blocked_operations missing {operation}")
+    return errors
+
+
 def _validate_docs() -> list[str]:
     errors: list[str] = []
     required_docs = {
@@ -222,6 +364,8 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "bpmn-viewer-plan",
+            "optional_plan_only_no_live_apply",
             "Microsoft Graph REST",
             "kein SharePoint-Plugin",
             "keinen BPMN-Modeler",
@@ -232,6 +376,8 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "bpmn-viewer-plan",
+            "optional_plan_only_no_live_apply",
             "Microsoft Graph REST",
             "does not build a SharePoint plugin",
             "not the source, editor or execution engine",
@@ -241,11 +387,13 @@ def _validate_docs() -> list[str]:
             "M365 SharePoint BPMN Viewer Adapter",
             "Microsoft Graph REST",
             "SPFx",
+            "nac-bpmn-viewer.provisioning.json",
         ],
         DATA_PLANE_EN: [
             "M365 SharePoint BPMN Viewer Adapter",
             "Microsoft Graph REST",
             "SPFx",
+            "nac-bpmn-viewer.provisioning.json",
         ],
         BPMN_DE: [
             "M365 SharePoint BPMN Viewer Adapter",

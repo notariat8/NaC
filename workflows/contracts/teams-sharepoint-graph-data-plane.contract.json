@@ -261,7 +261,10 @@
       "task_create",
       "grant_request",
       "audit_append",
-      "document_list"
+      "document_list",
+      "bpmn_model_get",
+      "process_register_list",
+      "bpmn_viewer_overlay_get"
     ],
     "runtime_writes_require_role_case_gate": true
   },

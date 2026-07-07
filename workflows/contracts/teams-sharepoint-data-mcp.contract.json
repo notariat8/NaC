@@ -4,8 +4,8 @@
   "server_id": "teams-sharepoint-data-mcp",
   "title": "Teams/SharePoint Data MCP runtime boundary",
   "status": "owner_gated_live_read_no_live_write",
-  "last_update": "2026-07-06",
-  "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence and document pointers stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
+  "last_update": "2026-07-07",
+  "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence, document pointers and optional BPMN viewer metadata stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
   "mcp_protocol": {
     "protocol_version": "2025-11-25",
     "transport": "stdio",
@@ -209,6 +209,49 @@
       "writes_items": false,
       "requires_role_case_purpose_gate": true,
       "requires_write_approval": false
+    },
+    {
+      "id": "bpmn_model_get",
+      "description": "Plan a read-only lookup for an approved BPMN model metadata record in the BPMN Models library. Current runtime returns a Graph request plan only; live file-content reads are not enabled.",
+      "graph_method": "GET",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items?$expand=fields&$filter=fields/NacBpmnModelId%20eq%20%27{bpmn-model-id-filter}%27%20and%20fields/ApprovalStatus%20eq%20%27Approved%27%20and%20fields/ViewerEnabled%20eq%20true%20and%20fields/ContainsMatterData%20eq%20false",
+      "list_name": "BPMN Models",
+      "required_inputs": [
+        "bpmn_model_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    },
+    {
+      "id": "process_register_list",
+      "description": "Plan a bounded read-only query for approved viewer-enabled Prozessregister entries.",
+      "graph_method": "GET",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items?$expand=fields&$top=50&$filter=fields/ProcessStatus%20eq%20%27Approved%27%20and%20fields/ViewerEnabled%20eq%20true",
+      "list_name": "Prozessregister",
+      "required_inputs": [],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    },
+    {
+      "id": "bpmn_viewer_overlay_get",
+      "description": "Plan a read-only metadata overlay query for BPMN viewer task status from AufgabenFristen. It returns only list metadata and never reads SharePoint files.",
+      "graph_method": "GET",
+      "graph_path_template": "/sites/{site-id}/lists/{list-id}/items?$expand=fields&$top=50&$filter=fields/NacCaseId%20eq%20%27{case-id-filter}%27",
+      "list_name": "AufgabenFristen",
+      "required_inputs": [
+        "case_id"
+      ],
+      "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
     }
   ],
   "blocked_operations": [
@@ -216,6 +259,9 @@
     "team_creation_or_deletion",
     "sharepoint_schema_mutation",
     "sharepoint_file_content_read",
+    "bpmn_model_write",
+    "bpmn_modeler_save",
+    "workflow_execution",
     "unbounded_list_dump",
     "legacy_sharepoint_rest",
     "graph_beta",

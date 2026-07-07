@@ -1,0 +1,234 @@
+{
+  "schema_version": "nac.m365-bpmn-viewer-provisioning/v0.1",
+  "name": "nac-bpmn-viewer-optional-sharepoint-surface",
+  "status": "optional_plan_only_no_live_apply",
+  "description": "Optional SharePoint artifacts for a future read-only SPFx BPMN viewer. This plan is separate from the required M365 MVP runtime schema.",
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "graph_beta_allowed": false
+  },
+  "source_of_truth": {
+    "git_bpmn_templates_remain_source_of_truth": true,
+    "python_validation_required_before_publish": true,
+    "pull_request_required_before_publish": true,
+    "sharepoint_stores_approved_copies_or_pointers_only": true
+  },
+  "live_apply": {
+    "implemented": false,
+    "owner_gate_required_before_future_apply": true,
+    "mutates_tenant_now": false
+  },
+  "sharepoint": {
+    "document_libraries": [
+      {
+        "display_name": "BPMN Models",
+        "template": "documentLibrary",
+        "description": "Freigegebene BPMN-XML-Kopien oder Pointer für den read-only NaC BPMN Viewer.",
+        "indexed_columns": [
+          "NacBpmnModelId",
+          "ProcessKey",
+          "BpmnXmlSha256",
+          "ViewerEnabled"
+        ],
+        "columns": [
+          {
+            "name": "NacBpmnModelId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "ProcessKey",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "NacBpmnVersion",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnGitPath",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnGitCommitSha",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnXmlSha256",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "ApprovalStatus",
+            "type": "choice",
+            "choices": [
+              "Approved",
+              "ReviewRequired",
+              "Retired"
+            ],
+            "required": true
+          },
+          {
+            "name": "NacDataClass",
+            "type": "choice",
+            "choices": [
+              "Template",
+              "Demo",
+              "Reference"
+            ],
+            "required": true
+          },
+          {
+            "name": "ContainsMatterData",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "ViewerEnabled",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "PublishedAt",
+            "type": "dateTime",
+            "required": false
+          },
+          {
+            "name": "PublishedBy",
+            "type": "user",
+            "required": false
+          },
+          {
+            "name": "ReviewDueDate",
+            "type": "dateTime",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "lists": [
+      {
+        "display_name": "Prozessregister",
+        "template": "genericList",
+        "description": "Prozesskatalog für freigegebene BPMN-Modelle, Review-Status und Viewer-Metadaten.",
+        "indexed_columns": [
+          "NacProcessId",
+          "ProcessKey",
+          "ProcessStatus",
+          "NacBpmnModelId",
+          "ViewerEnabled"
+        ],
+        "columns": [
+          {
+            "name": "NacProcessId",
+            "type": "text",
+            "required": true,
+            "enforce_unique_values": true
+          },
+          {
+            "name": "ProcessKey",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "ProcessName",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "ProcessOwner",
+            "type": "user",
+            "required": true
+          },
+          {
+            "name": "ProcessStatus",
+            "type": "choice",
+            "choices": [
+              "Draft",
+              "Approved",
+              "ReviewRequired",
+              "Retired"
+            ],
+            "required": true
+          },
+          {
+            "name": "NacBpmnModelId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnDriveItemId",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnXmlSha256",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnGitPath",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "BpmnGitCommitSha",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "NacBpmnVersion",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "ViewerEnabled",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "OverlayPolicy",
+            "type": "choice",
+            "choices": [
+              "None",
+              "MetadataOnly"
+            ],
+            "required": true
+          },
+          {
+            "name": "LastReviewedAt",
+            "type": "dateTime",
+            "required": false
+          },
+          {
+            "name": "ReviewDueDate",
+            "type": "dateTime",
+            "required": false
+          }
+        ]
+      }
+    ]
+  },
+  "blocked_operations": [
+    "live_apply",
+    "write_bpmn_xml",
+    "save_bpmn_model",
+    "execute_workflow",
+    "start_process_instance",
+    "mutate_team_or_site_membership",
+    "read_matter_document_content",
+    "read_matter_payload",
+    "legacy_sharepoint_rest",
+    "sharepoint_csom",
+    "pnp",
+    "microsoft_graph_sdk",
+    "graph_beta"
+  ]
+}

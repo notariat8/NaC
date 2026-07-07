@@ -89,14 +89,16 @@ Jeder Vertrag soll definieren:
 - [workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json](m365-sharepoint-bpmn-viewer-adapter.contract.json):
   Vertrag für einen späteren read-only SPFx-BPMN-Viewer in SharePoint mit
   `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder
-  Pointern, Prozessregister-Metadaten und ohne Modeler, Workflow-Ausführung,
-  Mandatsdaten, alte SharePoint-APIs oder SDKs.
+  Pointern, optionalem Provisioning-Plan für `BPMN Models` und
+  `Prozessregister`, Prozessregister-Metadaten und ohne Modeler,
+  Workflow-Ausführung, Mandatsdaten, alte SharePoint-APIs oder SDKs.
 - [workflows/contracts/teams-sharepoint-data-mcp.contract.json](teams-sharepoint-data-mcp.contract.json):
   Vertrag für den ersten `teams-sharepoint-data-mcp`-Runtime-Skeleton mit
   Tool-Manifest, MCP-stdio-Adapter, Rollen-/Akten-/Zweckgate,
   Graph-REST-Request-Planung, owner-gated Live-Reads für `case_get` und
-  `document_list`, redigierten `mcp-live-read-smoke` sowie ohne Live-Writes,
-  Secrets, Dateiinhalt oder Mandatsdaten im Produktrepo.
+  `document_list`, optionalen BPMN-Viewer-Request-Plan-Tools, redigierten
+  `mcp-live-read-smoke` sowie ohne Live-Writes, Secrets, Dateiinhalt oder
+  Mandatsdaten im Produktrepo.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

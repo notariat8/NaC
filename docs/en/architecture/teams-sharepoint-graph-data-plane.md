@@ -98,6 +98,12 @@ remains mandatory, and legacy SharePoint APIs, CSOM, PnP and SDKs remain
 blocked. The adapter must not write BPMN models, execute workflows or read
 matter document contents or mandate payloads.
 
+The optional SharePoint surface is deliberately not part of the required MVP
+schema. It is described in
+[deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json](../../../deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json)
+and rendered only as a plan through `nac m365 teams-sharepoint
+bpmn-viewer-plan --format json`. A later apply needs a separate owner gate.
+
 ## Graph REST Boundary
 
 Only raw HTTPS calls against `https://graph.microsoft.com/v1.0` are allowed.

@@ -11,6 +11,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 WRITE_TOOLS = {"case_create", "case_update_status", "task_create", "grant_request", "audit_append"}
+READ_ONLY_TOOLS_WITHOUT_PAYLOAD = {
+    "case_get",
+    "document_list",
+    "bpmn_model_get",
+    "process_register_list",
+    "bpmn_viewer_overlay_get",
+}
 
 
 class McpRuntimeError(ValueError):
@@ -138,6 +145,9 @@ def validate_mcp_contract(contract: dict[str, Any]) -> list[str]:
         "grant_request",
         "audit_append",
         "document_list",
+        "bpmn_model_get",
+        "process_register_list",
+        "bpmn_viewer_overlay_get",
     }
     missing = sorted(required - set(tools))
     for tool_id in missing:
@@ -285,6 +295,11 @@ def _render_graph_path(
         if not case_id:
             raise McpRuntimeError(f"{tool['id']} requires case_id")
         path = path.replace("{case-id-filter}", _quote_query_value(case_id))
+    if "{bpmn-model-id-filter}" in path:
+        bpmn_model_id = str(arguments.get("bpmn_model_id") or "")
+        if not bpmn_model_id:
+            raise McpRuntimeError(f"{tool['id']} requires bpmn_model_id")
+        path = path.replace("{bpmn-model-id-filter}", _quote_query_value(bpmn_model_id))
     return path
 
 
@@ -293,7 +308,7 @@ def _payload_for_tool(
     context: RuntimeContext,
     arguments: dict[str, Any],
 ) -> dict[str, Any] | None:
-    if tool_name in {"case_get", "document_list"}:
+    if tool_name in READ_ONLY_TOOLS_WITHOUT_PAYLOAD:
         return None
     if tool_name == "case_update_status":
         return {"Status": arguments["status"]}

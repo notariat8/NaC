@@ -53,6 +53,33 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertTrue(self.contract["sharepoint_surface"]["approved_bpmn_xml_content_read_allowed"])
         self.assertFalse(self.contract["sharepoint_surface"]["matter_document_content_reads_allowed"])
 
+    def test_contract_links_optional_provisioning_plan_without_live_apply(self) -> None:
+        optional_plan = self.contract["optional_provisioning_plan"]
+
+        self.assertEqual(
+            optional_plan["artifact"],
+            "deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json",
+        )
+        self.assertEqual(optional_plan["command"], "nac m365 teams-sharepoint bpmn-viewer-plan --format json")
+        self.assertEqual(optional_plan["status"], "optional_plan_only_no_live_apply")
+        self.assertFalse(optional_plan["adds_to_required_mvp_schema_now"])
+        self.assertFalse(optional_plan["live_apply_implemented"])
+        self.assertFalse(optional_plan["mutates_tenant_now"])
+        self.assertTrue(optional_plan["owner_gate_required_before_future_apply"])
+        self.assertEqual(optional_plan["planned_document_libraries"], ["BPMN Models"])
+        self.assertEqual(optional_plan["planned_lists"], ["Prozessregister"])
+
+    def test_contract_keeps_bpmn_mcp_tools_planning_only(self) -> None:
+        mcp = self.contract["mcp_boundary"]
+
+        self.assertEqual(
+            set(mcp["request_plan_tools_enabled_now"]),
+            {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"},
+        )
+        self.assertEqual(set(mcp["owner_gated_live_read_tools_enabled_now"]), {"case_get", "document_list"})
+        self.assertTrue(mcp["tools_read_only"])
+        self.assertTrue(mcp["tools_must_not_return_matter_document_content"])
+
     def test_validator_passes(self) -> None:
         result = subprocess.run(
             [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],

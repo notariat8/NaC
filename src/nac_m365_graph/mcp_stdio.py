@@ -90,9 +90,10 @@ class TeamsSharePointDataMcpServer:
             },
             "instructions": (
                 "Plans Microsoft Graph REST v1.0 requests for Teams-connected "
-                "SharePoint list metadata. Live reads for case_get and document_list "
-                "are available only when the server is started in owner-gated "
-                "live-read mode. The adapter never executes write tools or stores tokens."
+                "SharePoint list metadata, including optional BPMN viewer metadata "
+                "request plans. Live reads for case_get and document_list are "
+                "available only when the server is started in owner-gated live-read "
+                "mode. The adapter never executes write tools or stores tokens."
             ),
         }
 

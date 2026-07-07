@@ -48,6 +48,13 @@ data. Status overlays are allowed only as reviewed metadata, for example from
 `AufgabenFristen`, `AuditJournalLite`, `DokumentRegister` or a later
 `Prozessregister`.
 
+For this MVP slice there is only an optional provisioning plan at
+`deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json`. Its status is
+`optional_plan_only_no_live_apply`: `nac m365 teams-sharepoint
+bpmn-viewer-plan --format json` renders the planned library, list and columns,
+but does not run a live apply against Microsoft 365 and does not extend the
+required MVP SharePoint schema.
+
 ## Graph REST Boundary
 
 All access runs through Microsoft Graph REST v1.0 or an MCP server that also
@@ -98,7 +105,8 @@ existing `teams-sharepoint-data-mcp` boundary. Possible read-only tools are:
 - `bpmn_viewer_overlay_get`
 
 These tools remain read-only, redact metadata and do not return matter
-document contents.
+document contents. In the current runtime they are request-plan tools; the
+owner-gated live-read mode remains limited to `case_get` and `document_list`.
 
 ## Relationship To The BPMN-js Editor
 
@@ -112,6 +120,7 @@ The contract is enforced by these checks:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
+python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter
 python3 scripts/quality_gate.py --profile strict
 ```

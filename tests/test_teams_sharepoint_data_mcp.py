@@ -114,6 +114,9 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
                 "grant_request",
                 "audit_append",
                 "document_list",
+                "bpmn_model_get",
+                "process_register_list",
+                "bpmn_viewer_overlay_get",
             },
         )
 
@@ -124,7 +127,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(manifest["executesGraphRequests"])
         self.assertEqual(manifest["ownerGatedLiveRead"]["allowed_tools"], ["case_get", "document_list"])
         self.assertFalse(manifest["ownerGatedLiveRead"]["writes_allowed"])
-        self.assertEqual(len(manifest["tools"]), 7)
+        self.assertEqual(len(manifest["tools"]), 10)
         for tool in manifest["tools"]:
             self.assertTrue(tool["requiresRoleCasePurposeGate"])
             self.assertFalse(tool["readsFiles"])
@@ -244,6 +247,32 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(structured["requestPlan"]["list_name"], "DokumentRegister")
         self.assertEqual(structured["graphResponse"]["value"][0]["id"], "doc-1")
         self.assertIn("/lists/list-docs/items", graph_client.paths[0])
+
+    def test_stdio_live_read_blocks_optional_bpmn_viewer_tools(self) -> None:
+        graph_client = _FakeGraphReadClient({"unexpected": True})
+        server = _mcp_server(live_read_enabled=True, graph_client=graph_client)
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 37,
+                "method": "tools/call",
+                "params": {
+                    "name": "bpmn_model_get",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {"bpmn_model_id": "model-1"},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        self.assertTrue(result["isError"])
+        self.assertEqual(result["structuredContent"]["errorType"], "McpLiveReadBlocked")
+        self.assertFalse(result["structuredContent"]["executesGraphRequests"])
+        self.assertEqual(graph_client.paths, [])
 
     def test_stdio_live_read_without_graph_client_returns_tool_error(self) -> None:
         server = _mcp_server(live_read_enabled=True)
@@ -852,6 +881,36 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(plan.reads_files)
         self.assertFalse(plan.writes_items)
 
+    def test_optional_bpmn_viewer_tools_plan_graph_rest_requests_without_payloads(self) -> None:
+        contract = load_mcp_contract(DEFAULT_MCP_CONTRACT)
+        state = _provisioned_state()
+        context = _open_context(case_id="case-1")
+
+        bpmn_model = plan_tool_request(contract, state, context, "bpmn_model_get", {"bpmn_model_id": "model-1"})
+        process_register = plan_tool_request(contract, state, context, "process_register_list", {})
+        overlay = plan_tool_request(contract, state, context, "bpmn_viewer_overlay_get", {"case_id": "case-1"})
+
+        self.assertEqual(bpmn_model.method, "GET")
+        self.assertEqual(bpmn_model.list_name, "BPMN Models")
+        self.assertIn("/lists/list-bpmn-models/items", bpmn_model.path)
+        self.assertIn("fields/NacBpmnModelId%20eq%20%27model-1%27", bpmn_model.path)
+        self.assertIn("fields/ContainsMatterData%20eq%20false", bpmn_model.path)
+        self.assertIsNone(bpmn_model.payload)
+        self.assertFalse(bpmn_model.reads_files)
+
+        self.assertEqual(process_register.method, "GET")
+        self.assertEqual(process_register.list_name, "Prozessregister")
+        self.assertIn("/lists/list-process-register/items", process_register.path)
+        self.assertIn("$top=50", process_register.path)
+        self.assertIn("fields/ViewerEnabled%20eq%20true", process_register.path)
+        self.assertIsNone(process_register.payload)
+
+        self.assertEqual(overlay.method, "GET")
+        self.assertEqual(overlay.list_name, "AufgabenFristen")
+        self.assertIn("/lists/list-tasks/items", overlay.path)
+        self.assertIn("fields/NacCaseId%20eq%20%27case-1%27", overlay.path)
+        self.assertIsNone(overlay.payload)
+
     def test_write_tool_requires_open_gate_and_write_approval(self) -> None:
         with self.assertRaisesRegex(McpGateError, "role/case/purpose gate is closed"):
             plan_tool_request(
@@ -946,7 +1005,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["tool_count"], 7)
+        self.assertEqual(payload["summary"]["tool_count"], 10)
         self.assertFalse(payload["result"]["executesGraphRequests"])
 
     def test_central_cli_mcp_stdio_process_handles_initialize_and_tools_list(self) -> None:
@@ -985,7 +1044,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         lines = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0]["result"]["protocolVersion"], MCP_PROTOCOL_VERSION)
-        self.assertEqual(len(lines[1]["result"]["tools"]), 7)
+        self.assertEqual(len(lines[1]["result"]["tools"]), 10)
 
     def test_central_cli_mcp_live_read_requires_owner_approval_before_stdio(self) -> None:
         result = subprocess.run(
@@ -1319,6 +1378,8 @@ def _provisioned_state() -> dict:
                     "Vertretungsfreigaben": {"id": "list-grants"},
                     "AuditJournalLite": {"id": "list-audit"},
                     "DokumentRegister": {"id": "list-docs"},
+                    "BPMN Models": {"id": "list-bpmn-models"},
+                    "Prozessregister": {"id": "list-process-register"},
                 },
             }
         ]

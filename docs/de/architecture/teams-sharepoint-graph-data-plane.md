@@ -101,6 +101,13 @@ bleibt Pflicht, alte SharePoint-APIs, CSOM, PnP und SDKs bleiben gesperrt.
 Der Adapter darf keine BPMN-Modelle schreiben, keine Workflows ausführen und
 keine Akten-Dokumentinhalte oder Mandats-Payloads lesen.
 
+Die optionale SharePoint-Oberfläche ist bewusst nicht Teil des
+verpflichtenden MVP-Schemas. Sie wird in
+[deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json](../../../deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json)
+beschrieben und über `nac m365 teams-sharepoint bpmn-viewer-plan --format
+json` nur als Plan gerendert. Ein späterer Apply braucht ein eigenes
+Owner-Gate.
+
 ## Graph-REST-Grenze
 
 Erlaubt sind nur rohe HTTPS-Aufrufe gegen `https://graph.microsoft.com/v1.0`.

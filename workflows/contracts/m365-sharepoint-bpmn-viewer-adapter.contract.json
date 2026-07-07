@@ -52,6 +52,21 @@
     "requires_custom_script": false,
     "modern_page_loose_html_embedding_allowed": false
   },
+  "optional_provisioning_plan": {
+    "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json",
+    "command": "nac m365 teams-sharepoint bpmn-viewer-plan --format json",
+    "status": "optional_plan_only_no_live_apply",
+    "adds_to_required_mvp_schema_now": false,
+    "live_apply_implemented": false,
+    "mutates_tenant_now": false,
+    "owner_gate_required_before_future_apply": true,
+    "planned_document_libraries": [
+      "BPMN Models"
+    ],
+    "planned_lists": [
+      "Prozessregister"
+    ]
+  },
   "graph_policy": {
     "base_url": "https://graph.microsoft.com/v1.0",
     "graph_rest_only": true,
@@ -99,6 +114,15 @@
       "bpmn_model_get",
       "process_register_list",
       "bpmn_viewer_overlay_get"
+    ],
+    "request_plan_tools_enabled_now": [
+      "bpmn_model_get",
+      "process_register_list",
+      "bpmn_viewer_overlay_get"
+    ],
+    "owner_gated_live_read_tools_enabled_now": [
+      "case_get",
+      "document_list"
     ],
     "tools_read_only": true,
     "tools_must_return_redacted_metadata": true,

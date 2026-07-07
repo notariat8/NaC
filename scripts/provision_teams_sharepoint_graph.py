@@ -13,6 +13,13 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_m365_graph.auth import GraphConfig, GraphConfigError, runtime_token_provider_from_env, token_provider_from_env  # noqa: E402
+from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
+    DEFAULT_BPMN_VIEWER_PROVISIONING,
+    build_bpmn_viewer_provisioning_plan,
+    load_bpmn_viewer_provisioning_config,
+    summarize_bpmn_viewer_provisioning_plan,
+    validate_bpmn_viewer_provisioning_config,
+)
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
@@ -108,6 +115,7 @@ def parse_args() -> argparse.Namespace:
             "validate",
             "plan",
             "application-owner-readiness",
+            "bpmn-viewer-plan",
             "privileged-plan",
             "privileged-apply",
             "runtime-certificate-expiry-monitor",
@@ -128,6 +136,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
+            "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
@@ -139,6 +148,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_SCHEMA,
         help="Path to the declarative Teams/SharePoint schema.",
+    )
+    parser.add_argument(
+        "--bpmn-viewer-config",
+        type=Path,
+        default=DEFAULT_BPMN_VIEWER_PROVISIONING,
+        help="Path to the optional BPMN viewer SharePoint provisioning plan.",
     )
     parser.add_argument(
         "--owner-approved",
@@ -856,13 +871,53 @@ def main() -> int:
     if args.command == "validate":
         return _emit({"status": "PASSED", "message": "schema is valid"}, args.json)
 
-    plan = build_plan(schema)
     if args.command == "plan":
+        plan = build_plan(schema)
         return _emit(
             {
                 "status": "PASSED",
                 "summary": summarize_plan(plan),
                 "operations": [operation.to_dict() for operation in plan],
+            },
+            args.json,
+        )
+
+    if args.command == "bpmn-viewer-plan":
+        config = load_bpmn_viewer_provisioning_config(args.bpmn_viewer_config)
+        errors = validate_bpmn_viewer_provisioning_config(config)
+        if errors:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": errors,
+                },
+                args.json,
+                return_code=1,
+            )
+        try:
+            operations = build_bpmn_viewer_provisioning_plan(config, schema)
+        except ValueError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        return _emit(
+            {
+                "status": "PASSED",
+                "summary": summarize_bpmn_viewer_provisioning_plan(operations),
+                "operations": [operation.to_dict() for operation in operations],
+                "guardrails": {
+                    "mutates_tenant_now": False,
+                    "live_apply_implemented": False,
+                    "owner_gate_required_before_future_apply": True,
+                    "graph_rest_only": True,
+                    "legacy_sharepoint_api_allowed": False,
+                    "mcp_tools_request_plan_only": True,
+                },
             },
             args.json,
         )
