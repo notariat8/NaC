@@ -69,6 +69,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "release-gate-post-run-report-index-json-output",
         "release-gate-write-post-run-report",
         "release-gate-write-post-run-report-index",
+        "rechte Correlation-ID",
         "release-gate-github-comment-output",
         "release_gate_readiness=READY",
     ),
@@ -82,6 +83,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "release-gate-post-run-report-index-json-output",
         "release-gate-write-post-run-report",
         "release-gate-write-post-run-report-index",
+        "right correlation ID",
         "release-gate-github-comment-output",
         "release_gate_readiness=READY",
     ),
@@ -101,6 +103,7 @@ REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
     "src/nac_cli/cli.py": (
         "_apply_m365_release_gate_mvp_defaults",
         "_m365_release_gate_run_readiness_audit_pack_dir",
+        "_m365_release_readiness_audit_pack_candidates",
         "_write_m365_release_gate_post_run_report",
         "_write_m365_release_gate_run_post_run_report",
         "_write_m365_release_gate_run_post_run_report_index",
@@ -123,6 +126,7 @@ REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
     "tests/test_m365_release_gate_runner.py": (
         "test_release_gate_post_run_report_auto_selects_previous_baseline_and_writes_comment_draft",
         "test_release_gate_run_can_write_optional_post_run_report",
+        "test_release_readiness_auto_discovers_audit_pack_by_right_correlation",
         "release_gate_post_run_report_index",
         "test_release_gate_post_run_report_blocks_without_previous_baseline",
         "test_release_gate_post_run_report_index_lists_and_filters_artifacts",

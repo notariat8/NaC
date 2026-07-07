@@ -486,7 +486,10 @@ Retention-, Evidence- und optional Audit-Pack-Artefakte, prüft
 Step-Status und Privacy-Flags und gibt `mvp_release_readiness=READY` nur bei
 einem vollständigen `PASSED`-Stand aus. Mit
 `--release-gate-readiness-require-audit-pack` blockiert der Status, wenn kein
-passendes redigiertes Audit-Pack mit `PASSED` vorliegt. Der Befehl führt keine
+passendes redigiertes Audit-Pack mit `PASSED` vorliegt. Ein expliziter
+`--release-gate-audit-pack-dir` hat Vorrang; ohne expliziten Pfad sucht der
+Befehl lokal nach redigierten Audit-Packs, deren rechte Correlation-ID dem
+ausgewählten Lauf entspricht. Der Befehl führt keine
 Graph-Anfrage, keinen Tenant-Write, keine Löschung und keinen SharePoint-
 Content-Read aus.
 `release-gate-post-run-report` erzeugt nach einem Release-Gate aus einer

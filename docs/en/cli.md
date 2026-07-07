@@ -475,7 +475,10 @@ audit-pack artifacts, checks `complete_release_gate_artifacts`, all required
 artifacts, the retention reference, step statuses and privacy flags, and emits
 `mvp_release_readiness=READY` only for a complete `PASSED` state. With
 `--release-gate-readiness-require-audit-pack`, the status blocks when no
-matching redacted audit pack with `PASSED` exists. The command performs no
+matching redacted audit pack with `PASSED` exists. An explicit
+`--release-gate-audit-pack-dir` takes precedence; without an explicit path the
+command searches locally for redacted audit packs whose right correlation ID
+matches the selected run. The command performs no
 Graph request, tenant write, delete or SharePoint content read.
 `release-gate-post-run-report` creates a redacted offline post-gate report from
 a correlation ID after a release gate. The command runs `release-readiness`
