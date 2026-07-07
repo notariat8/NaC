@@ -46,6 +46,11 @@ from nac_m365_graph.mcp_live_read_smoke import (  # noqa: E402
     run_mcp_live_read_smoke_from_paths,
     write_mcp_live_read_smoke_artifact,
 )
+from nac_m365_graph.mcp_inventory_smoke import (  # noqa: E402
+    DEFAULT_MCP_INVENTORY_SMOKE_OUTPUT,
+    run_mcp_inventory_smoke_from_paths,
+    write_mcp_inventory_smoke_artifact,
+)
 from nac_m365_graph.mcp_positive_write_read_smoke import (  # noqa: E402
     DEFAULT_MCP_POSITIVE_WRITE_READ_SMOKE_OUTPUT,
     run_mcp_positive_write_read_smoke_from_paths,
@@ -101,6 +106,7 @@ from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
+    "mcp-inventory-smoke": "mcp-inventory-smoke",
     "mcp-live-read-smoke": "mcp-live-read-smoke",
     "mcp-positive-write-read-smoke": "mcp-positive-write-read-smoke",
     "mcp-smoke-cleanup": "mcp-smoke-cleanup",
@@ -136,6 +142,7 @@ def parse_args() -> argparse.Namespace:
             "runtime-metadata",
             "mcp-manifest",
             "mcp-stdio",
+            "mcp-inventory-smoke",
             "mcp-live-read-smoke",
             "mcp-positive-write-read-smoke",
             "mcp-smoke-cleanup",
@@ -154,7 +161,7 @@ def parse_args() -> argparse.Namespace:
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
-            "mcp-stdio starts the local MCP adapter."
+            "mcp-stdio starts the local MCP adapter. mcp-inventory-smoke is offline metadata-only evidence."
         ),
     )
     parser.add_argument(
@@ -290,6 +297,12 @@ def parse_args() -> argparse.Namespace:
         help="Path for the redacted MCP live-read smoke artifact under out/.",
     )
     parser.add_argument(
+        "--mcp-inventory-smoke-output",
+        type=Path,
+        default=DEFAULT_MCP_INVENTORY_SMOKE_OUTPUT,
+        help="Path for the redacted MCP inventory smoke artifact under out/.",
+    )
+    parser.add_argument(
         "--mcp-positive-smoke-output",
         type=Path,
         default=DEFAULT_MCP_POSITIVE_WRITE_READ_SMOKE_OUTPUT,
@@ -390,6 +403,36 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.mcp_leftover_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "mcp-inventory-smoke":
+        try:
+            result = run_mcp_inventory_smoke_from_paths(
+                contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=mcp_smoke_correlation_id,
+            )
+            write_mcp_inventory_smoke_artifact(result, args.mcp_inventory_smoke_output)
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.mcp_inventory_smoke_output)
         return _emit(
             {
                 "status": result["status"],

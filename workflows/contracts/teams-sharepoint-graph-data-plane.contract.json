@@ -253,6 +253,8 @@
     "owner_gated_live_read_smoke_redacted_artifact": "out/m365/teams-sharepoint/mcp-live-read-smoke.redacted.json",
     "owner_gated_live_read_smoke_stores_raw_graph_response": false,
     "owner_gated_live_read_smoke_stores_raw_matter_values": false,
+    "metadata_inventory_smoke_command": "nac m365 teams-sharepoint mcp-inventory-smoke --format json",
+    "metadata_inventory_smoke_redacted_artifact": "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json",
     "runtime_writes_executed_by_mcp": false,
     "allowed_runtime_tools": [
       "case_get",

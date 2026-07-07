@@ -88,6 +88,17 @@
       "reads_sharepoint_file_content": false,
       "stores_tokens_or_secrets": false,
       "requires_role_case_purpose_gate": true,
+      "offline_smoke": {
+        "command": "nac m365 teams-sharepoint mcp-inventory-smoke --format json",
+        "redacted_artifact_path": "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json",
+        "requires_owner_approved_cli_flag": false,
+        "executes_graph_requests": false,
+        "calls_external_bnotk_systems": false,
+        "stores_source_fulltext": false,
+        "stores_raw_xsd": false,
+        "stores_credentials": false,
+        "stores_matter_data": false
+      },
       "tools": [
         "notarial_interface_inventory_list",
         "notarial_interface_boundary_check"
