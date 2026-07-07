@@ -82,6 +82,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(
             [step["step"] for step in payload["steps"]],
             [
+                "mcp_inventory_smoke",
                 "runtime_certificate_expiry",
                 "runtime_smoke",
                 "runtime_metadata",
@@ -94,6 +95,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(
             invoked_steps,
             [
+                "mcp-inventory-smoke",
                 "runtime-certificate-expiry-monitor",
                 "runtime-smoke",
                 "runtime-metadata",
@@ -102,23 +104,24 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 "release-gate-evidence",
             ],
         )
-        self.assertIn("--runtime-certificate-expiry-output", calls[0])
-        self.assertIn("--mcp-suite-cleanup", calls[3])
-        self.assertIn("--mcp-leftover-dry-run", calls[4])
-        self.assertIn("--release-gate-require-runtime-artifacts", calls[5])
-        self.assertIn("--release-gate-inventory-artifact", calls[5])
-        inventory_arg_index = calls[5].index("--release-gate-inventory-artifact") + 1
-        self.assertTrue(calls[5][inventory_arg_index].endswith("mcp-inventory-smoke.redacted.json"))
-        self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[5])
-        self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[5])
-        bootstrap_arg_index = calls[5].index("--release-gate-runtime-env-bootstrap-artifact") + 1
-        self.assertEqual(calls[5][bootstrap_arg_index], str(runtime_env_bootstrap_output))
+        self.assertIn("--mcp-inventory-smoke-output", calls[0])
+        self.assertIn("--runtime-certificate-expiry-output", calls[1])
+        self.assertIn("--mcp-suite-cleanup", calls[4])
+        self.assertIn("--mcp-leftover-dry-run", calls[5])
+        self.assertIn("--release-gate-require-runtime-artifacts", calls[6])
+        self.assertIn("--release-gate-inventory-artifact", calls[6])
+        inventory_arg_index = calls[6].index("--release-gate-inventory-artifact") + 1
+        self.assertTrue(calls[6][inventory_arg_index].endswith("mcp-inventory-smoke.redacted.json"))
+        self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[6])
+        self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[6])
+        bootstrap_arg_index = calls[6].index("--release-gate-runtime-env-bootstrap-artifact") + 1
+        self.assertEqual(calls[6][bootstrap_arg_index], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["release_gate_run_artifact_dir"], str(retention_dir))
         self.assertTrue(payload["summary"]["release_gate_retention_index"].endswith("release-gate-retention-index.redacted.json"))
 
-    def test_release_gate_run_pins_missing_inventory_artifact_when_not_explicitly_attached(self) -> None:
+    def test_release_gate_run_generates_inventory_artifact_by_default(self) -> None:
         calls: list[list[str]] = []
 
         def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -159,10 +162,15 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
 
         self.assertEqual(return_code, 0)
         self.assertEqual(payload["status"], "PASSED")
-        evidence_call = calls[5]
+        inventory_call = calls[0]
+        self.assertIn("--mcp-inventory-smoke-output", inventory_call)
+        inventory_output_index = inventory_call.index("--mcp-inventory-smoke-output") + 1
+        self.assertTrue(inventory_call[inventory_output_index].endswith("mcp-inventory-smoke.redacted.json"))
+
+        evidence_call = calls[6]
         self.assertIn("--release-gate-inventory-artifact", evidence_call)
         inventory_arg_index = evidence_call.index("--release-gate-inventory-artifact") + 1
-        self.assertTrue(evidence_call[inventory_arg_index].endswith("mcp-inventory-smoke.not-attached.redacted.json"))
+        self.assertEqual(evidence_call[inventory_arg_index], inventory_call[inventory_output_index])
 
     def test_release_gate_run_writes_retention_index_with_run_artifact_copies(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -174,6 +182,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             runtime_certificate_expiry_output = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
             runtime_smoke_output = tmp_path / "runtime-smoke.redacted.json"
             runtime_metadata_output = tmp_path / "runtime-metadata.redacted.json"
+            mcp_inventory_output = tmp_path / "mcp-inventory-smoke.redacted.json"
             mcp_suite_output = tmp_path / "mcp-smoke-suite.redacted.json"
             mcp_leftover_output = tmp_path / "mcp-smoke-leftover-cleanup.redacted.json"
             evidence_output = tmp_path / "release-gate-evidence.redacted.md"
@@ -189,6 +198,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 _write_output_arg(command, "--runtime-certificate-expiry-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--runtime-smoke-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--runtime-metadata-output", {"status": "PASSED", "step": step})
+                _write_output_arg(command, "--mcp-inventory-smoke-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--mcp-suite-output", {"status": "PASSED", "step": step})
                 _write_output_arg(command, "--mcp-leftover-output", {"status": "PASSED", "step": step})
                 if "--release-gate-evidence-output" in command:
@@ -222,6 +232,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(runtime_smoke_output),
                         "--runtime-metadata-output",
                         str(runtime_metadata_output),
+                        "--release-gate-inventory-artifact",
+                        str(mcp_inventory_output),
                         "--mcp-suite-output",
                         str(mcp_suite_output),
                         "--mcp-leftover-output",
@@ -257,7 +269,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             retained_evidence_json["summary"]["release_gate_retention_index_path"],
             str(retention_dir / "release-gate-retention-index.redacted.json"),
         )
-        self.assertEqual(retained_evidence_json["summary"]["retained_artifact_count"], 9)
+        self.assertEqual(retained_evidence_json["summary"]["retained_artifact_count"], 10)
         self.assertTrue(retained_evidence_json["summary"]["retention_index_attached"])
         self.assertEqual(
             retained_artifact_index["retention"]["retention_index_path"],
@@ -269,8 +281,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         artifacts = {artifact["id"]: artifact for artifact in retention_index["artifacts"]}
         self.assertEqual(artifacts["runtime_env_bootstrap"]["status"], "COPIED")
         self.assertEqual(len(artifacts["runtime_env_bootstrap"]["artifact_sha256"]), 64)
-        self.assertEqual(artifacts["mcp_inventory_smoke"]["status"], "NOT_ATTACHED")
-        self.assertEqual(artifacts["mcp_inventory_smoke"]["artifact_sha256"], None)
+        self.assertEqual(artifacts["mcp_inventory_smoke"]["status"], "COPIED")
+        self.assertEqual(len(artifacts["mcp_inventory_smoke"]["artifact_sha256"]), 64)
         self.assertTrue(retained_bootstrap_exists)
         self.assertTrue(retained_evidence_json_exists)
 
@@ -512,6 +524,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             ],
         )
         env_by_step = dict(calls)
+        self.assertIsNone(env_by_step["mcp-inventory-smoke"])
         self.assertIsNone(env_by_step["runtime-certificate-expiry-monitor"])
         self.assertIsNone(env_by_step["release-gate-evidence"])
         for step in (
@@ -610,9 +623,9 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         self.assertEqual(payload["status"], "FAILED")
         self.assertEqual(payload["summary"]["failed_step"], "runtime_metadata")
-        self.assertEqual(payload["summary"]["steps_completed"], 2)
+        self.assertEqual(payload["summary"]["steps_completed"], 3)
         self.assertEqual(payload["errors"], ["metadata failed"])
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(calls), 4)
 
     def test_release_gate_retention_list_reads_local_run_indexes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1298,6 +1311,33 @@ def _write_output_arg(command: list[str], option: str, payload: dict) -> None:
 
 
 def _write_release_gate_output_args(command: list[str]) -> None:
+    if "--mcp-inventory-smoke-output" in command:
+        output_path = Path(command[command.index("--mcp-inventory-smoke-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "nac.m365-mcp-inventory-smoke/v0.1",
+                    "status": "PASSED",
+                    "summary": {
+                        "workspace_id": "notary_team_01",
+                        "correlation_id": "runner-corr",
+                        "graph_requests_executed": False,
+                        "tenant_writes_executed": False,
+                        "tenant_deletes_executed": False,
+                        "stores_tokens_or_secrets": False,
+                        "reads_sharepoint_file_content": False,
+                    },
+                    "privacy": {
+                        "storesTokensOrSecrets": False,
+                        "storesRawGraphResponse": False,
+                        "storesRawCaseId": False,
+                        "readsSharePointFileContent": False,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
     if "--release-gate-evidence-output" in command:
         output_path = Path(command[command.index("--release-gate-evidence-output") + 1])
         output_path.parent.mkdir(parents=True, exist_ok=True)

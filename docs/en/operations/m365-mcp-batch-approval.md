@@ -126,21 +126,21 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
 ```
 
 The one-shot runner remains owner-gated and internally covers
-`runtime-certificate-expiry-monitor`, `runtime-smoke`, `runtime-metadata`,
-`mcp-smoke-suite --mcp-suite-cleanup`,
+`mcp-inventory-smoke`, `runtime-certificate-expiry-monitor`, `runtime-smoke`,
+`runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`,
 `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
 `release-gate-evidence --release-gate-require-runtime-artifacts`.
-`runtime-certificate-expiry-monitor` is offline, `runtime-smoke` and
-`runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
-synthetic matter, and the leftover dry-run only reads the match count.
+`mcp-inventory-smoke` and `runtime-certificate-expiry-monitor` are offline,
+`runtime-smoke` and `runtime-metadata` are read-only, the MCP Smoke Suite
+writes and deletes one synthetic matter, and the leftover dry-run only reads
+the match count.
 `release-gate-evidence` runs offline at the end and reads only local redacted
 artifacts. The expiry monitor, `runtime-smoke` and `runtime-metadata` write
 their own redacted runtime artifacts so the completion report can return
-`complete_release_gate_artifacts`. The offline `mcp-inventory-smoke` remains a
-separate diagnostic and evidence command and can be optionally attached to the
-completion report with `--release-gate-inventory-artifact`; the one-shot runner
-does not execute it automatically. The individual commands remain a diagnostic
-and fallback path when a runner step must be reproduced in isolation.
+`complete_release_gate_artifacts`. `mcp-inventory-smoke` writes a redacted
+inventory artifact and attaches it to the completion report automatically. The
+individual command remains a diagnostic and fallback path when that runner step
+must be reproduced in isolation.
 
 ## Runtime Certificate Rotation Approval
 
@@ -338,11 +338,15 @@ steps outside the release-gate batch are documented as `NOT_ATTACHED`. In the
 release-gate batch, export blocks when runtime artifacts are missing.
 
 Before live steps, `release-gate-run` internally uses the offline
-`runtime-env-bootstrap`: tenant and runtime client IDs are resolved from the
-non-secret runtime-smoke state only as child-process environment, and local
-certificate/private-key paths are passed only to the live child processes. The
-runner writes `out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`
-and attaches it to `release-gate-evidence` and the artifact index. The artifact
+`mcp-inventory-smoke` and offline `runtime-env-bootstrap`:
+`mcp-inventory-smoke` checks the metadata-only interface-inventory boundary
+without Graph or credential access and writes
+`out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json`. Tenant and
+runtime client IDs are resolved from the non-secret runtime-smoke state only as
+child-process environment, and local certificate/private-key paths are passed
+only to the live child processes. The runner writes
+`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json` and attaches it
+to `release-gate-evidence` and the artifact index. The artifact
 contains no tenant ID, client ID, certificate thumbprints, certificate body,
 private-key data, tokens or secret values.
 

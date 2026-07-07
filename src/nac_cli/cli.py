@@ -88,9 +88,7 @@ DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release
 DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparisons")
 DEFAULT_RELEASE_GATE_COMPARE_INDEX_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparison-indexes")
 DEFAULT_RELEASE_GATE_AUDIT_PACK_ROOT = Path("out/m365/teams-sharepoint/release-gate-audit-packs")
-DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT = Path(
-    "out/m365/teams-sharepoint/mcp-inventory-smoke.not-attached.redacted.json"
-)
+DEFAULT_RELEASE_GATE_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
 
 PLUGIN_CLI_ROLES = {
     "cli_role": "kanonische Bedienkante der NaC-CLI für Prüfung, Automatisierung und Dokumentation.",
@@ -1354,6 +1352,7 @@ def _build_m365_batch_approval_payload(
             audit_pack_dir=release_gate_audit_pack_dir,
         )
         release_gate_covers_steps = [
+            "mcp_inventory_smoke",
             "runtime_certificate_expiry_monitor",
             "runtime_smoke",
             "runtime_metadata",
@@ -1408,6 +1407,7 @@ def _build_m365_batch_approval_payload(
             audit_pack_dir=release_gate_audit_pack_dir,
         )
         rotation_release_gate_covers_steps = [
+            "mcp_inventory_smoke",
             "runtime_certificate_expiry_monitor",
             "runtime_smoke",
             "runtime_metadata",
@@ -1875,7 +1875,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     release_gate_inventory_artifact = _resolve_m365_release_gate_path(
         repo_root,
         args.release_gate_inventory_artifact,
-        DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT,
+        DEFAULT_RELEASE_GATE_INVENTORY_ARTIFACT,
     )
     evidence_output = _resolve_m365_release_gate_path(repo_root, args.release_gate_evidence_output, DEFAULT_EVIDENCE_OUTPUT)
     evidence_json_output = _resolve_m365_release_gate_path(
@@ -1895,6 +1895,22 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
     )
 
     steps = [
+        (
+            "mcp_inventory_smoke",
+            [
+                "m365",
+                "teams-sharepoint",
+                "mcp-inventory-smoke",
+                "--mcp-smoke-workspace-id",
+                workspace_id,
+                "--mcp-smoke-correlation-id",
+                correlation_id,
+                "--mcp-inventory-smoke-output",
+                str(release_gate_inventory_artifact),
+                "--format",
+                "json",
+            ],
+        ),
         (
             "runtime_certificate_expiry",
             [
@@ -2010,20 +2026,35 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         ),
     ]
     if args.schema:
-        for step_id, command in steps[1:3]:
+        for command in _m365_release_gate_step_commands(steps, {"runtime_smoke", "runtime_metadata"}):
             command[3:3] = ["--schema", str(args.schema)]
     if args.runtime_smoke_state:
-        steps[0][1][3:3] = ["--runtime-smoke-state", str(args.runtime_smoke_state)]
+        _m365_release_gate_step_command(steps, "runtime_certificate_expiry")[3:3] = [
+            "--runtime-smoke-state",
+            str(args.runtime_smoke_state),
+        ]
     if args.runtime_metadata_state:
-        steps[0][1][3:3] = ["--runtime-metadata-state", str(args.runtime_metadata_state)]
+        _m365_release_gate_step_command(steps, "runtime_certificate_expiry")[3:3] = [
+            "--runtime-metadata-state",
+            str(args.runtime_metadata_state),
+        ]
     if args.provisioned_state:
-        for step_id, command in steps[1:5]:
+        for command in _m365_release_gate_step_commands(
+            steps,
+            {"mcp_inventory_smoke", "runtime_smoke", "runtime_metadata", "mcp_smoke_suite", "mcp_leftover_dry_run"},
+        ):
             command[3:3] = ["--provisioned-state", str(args.provisioned_state)]
     if args.mcp_contract:
-        for step_id, command in steps[3:5]:
+        for command in _m365_release_gate_step_commands(
+            steps,
+            {"mcp_inventory_smoke", "mcp_smoke_suite", "mcp_leftover_dry_run"},
+        ):
             command[3:3] = ["--mcp-contract", str(args.mcp_contract)]
     if args.mcp_smoke_case_id:
-        steps[3][1][3:3] = ["--mcp-smoke-case-id", args.mcp_smoke_case_id]
+        _m365_release_gate_step_command(steps, "mcp_smoke_suite")[3:3] = [
+            "--mcp-smoke-case-id",
+            args.mcp_smoke_case_id,
+        ]
 
     runtime_env_overlay, runtime_env_summary = _m365_runtime_env_overlay(
         repo_root,
@@ -2202,6 +2233,17 @@ _M365_RELEASE_GATE_RUNTIME_ENV_STEPS = {
     "mcp_smoke_suite",
     "mcp_leftover_dry_run",
 }
+
+
+def _m365_release_gate_step_command(steps: list[tuple[str, list[str]]], step_id: str) -> list[str]:
+    for candidate_step_id, command in steps:
+        if candidate_step_id == step_id:
+            return command
+    raise AssertionError(f"release-gate step not found: {step_id}")
+
+
+def _m365_release_gate_step_commands(steps: list[tuple[str, list[str]]], step_ids: set[str]) -> list[list[str]]:
+    return [command for candidate_step_id, command in steps if candidate_step_id in step_ids]
 
 
 def _list_m365_release_gate_retention(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
