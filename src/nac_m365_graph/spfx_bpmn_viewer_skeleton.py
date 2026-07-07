@@ -20,6 +20,13 @@ REQUIRED_MCP_TOOLS = {
     "process_register_list",
     "bpmn_viewer_overlay_get",
 }
+REQUIRED_GRAPH_CONTENT_METADATA_GATES = {
+    "ApprovalStatus=Approved",
+    "ViewerEnabled=true",
+    "ContainsMatterData=false",
+    "NacDataClass in Template,Demo,Reference",
+    "BpmnXmlSha256 matches downloaded XML",
+}
 REQUIRED_BLOCKED_OPERATIONS = {
     "app_catalog_deploy",
     "tenant_wide_deploy",
@@ -174,6 +181,9 @@ def validate_spfx_bpmn_viewer_skeleton(
             errors.append("SPFx BPMN viewer skeleton live content read must be disabled now")
         if graph.get("fixture_content_allowed_now") is not True:
             errors.append("SPFx BPMN viewer skeleton fixture content must be allowed now")
+        metadata_gates = set(_strings(graph.get("required_metadata_gates")))
+        for gate in sorted(REQUIRED_GRAPH_CONTENT_METADATA_GATES - metadata_gates):
+            errors.append(f"SPFx BPMN viewer skeleton metadata gate missing {gate}")
 
     blocked = set(_strings(skeleton.get("blocked_operations")))
     for operation in sorted(REQUIRED_BLOCKED_OPERATIONS - blocked):
@@ -324,6 +334,12 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
             errors.append("SPFx BPMN viewer render fixture model must be viewer-enabled")
         if model.get("containsMatterData") is not False:
             errors.append("SPFx BPMN viewer render fixture model must not contain matter data")
+        if model.get("bpmnContentMode") != "ApprovedCopy":
+            errors.append("SPFx BPMN viewer render fixture model must be an approved BPMN copy")
+        if model.get("bpmnXmlMimeType") not in {"application/xml", "text/xml"}:
+            errors.append("SPFx BPMN viewer render fixture model must use an allowed BPMN XML mime type")
+        if not model.get("bpmnDriveItemId"):
+            errors.append("SPFx BPMN viewer render fixture model must include bpmnDriveItemId")
     expected_tools = set(_strings(fixture.get("expected_request_plan_tools")))
     if expected_tools != REQUIRED_MCP_TOOLS:
         errors.append("SPFx BPMN viewer render fixture expected_request_plan_tools is invalid")

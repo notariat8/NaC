@@ -91,9 +91,10 @@ Jeder Vertrag soll definieren:
   `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder
   Pointern, optionalem Provisioning-Plan für `BPMN Models` und
   `Prozessregister`, source-only Skeleton unter `spfx/nac-bpmn-viewer`,
-  Prozessregister-Metadaten und ohne Modeler, Workflow-Ausführung,
-  Mandatsdaten, alte SharePoint-APIs, SDKs, App-Catalog-Deploy oder
-  Live-Tenant-Apply.
+  `bpmn-viewer-runtime-readiness` für SPFx-Paketierungs-, App-Catalog- und
+  `.bpmn`-Graph-Content-Read-Gates, Prozessregister-Metadaten und ohne
+  Modeler, Workflow-Ausführung, Mandatsdaten, alte SharePoint-APIs, SDKs,
+  App-Catalog-Deploy oder Live-Tenant-Apply.
 - [workflows/contracts/teams-sharepoint-data-mcp.contract.json](teams-sharepoint-data-mcp.contract.json):
   Vertrag für den ersten `teams-sharepoint-data-mcp`-Runtime-Skeleton mit
   Tool-Manifest, MCP-stdio-Adapter, Rollen-/Akten-/Zweckgate,

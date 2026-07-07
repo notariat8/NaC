@@ -12,9 +12,12 @@
     "nacBpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
     "processKey": "immobilienkaufvertrag",
     "nacBpmnVersion": "fixture-v1",
+    "bpmnDriveItemId": "fixture-drive-item-id",
+    "bpmnContentMode": "ApprovedCopy",
     "bpmnGitPath": "bpmn/immobilienkaufvertrag.bpmn",
     "bpmnGitCommitSha": "fixture",
     "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+    "bpmnXmlMimeType": "application/xml",
     "approvalStatus": "Approved",
     "viewerEnabled": true,
     "containsMatterData": false

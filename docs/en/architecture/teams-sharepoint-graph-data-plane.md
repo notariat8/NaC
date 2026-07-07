@@ -102,7 +102,11 @@ The optional SharePoint surface is deliberately not part of the required MVP
 schema. It is described in
 [deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json](../../../deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json)
 and rendered only as a plan through `nac m365 teams-sharepoint
-bpmn-viewer-plan --format json`. A later apply needs a separate owner gate.
+bpmn-viewer-plan --format json`. Runtime readiness for SPFx packaging, the App
+Catalog and the later `.bpmn` Graph content read is checked separately with
+`nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`. A
+later apply, App Catalog upload or live content read needs a separate owner
+gate.
 
 ## Graph REST Boundary
 

@@ -21,11 +21,18 @@ from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     load_spfx_bpmn_viewer_render_fixture,
     validate_spfx_bpmn_viewer_skeleton,
 )
+from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
+    build_bpmn_viewer_runtime_readiness_result,
+    validate_bpmn_viewer_runtime_readiness,
+)
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "m365-sharepoint-bpmn-viewer-adapter.contract.json"
 BPMN_VIEWER_PROVISIONING = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-bpmn-viewer.provisioning.json"
 SPFX_BPMN_VIEWER_SKELETON = (
     REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-spfx-bpmn-viewer.skeleton.json"
+)
+BPMN_VIEWER_RUNTIME_READINESS = (
+    REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-bpmn-viewer.runtime-readiness.json"
 )
 DATA_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 CONTRACTS_README = REPO_ROOT / "workflows" / "contracts" / "README.md"
@@ -51,8 +58,14 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "pnp",
     "microsoft_graph_sdk",
     "custom_script_page_embedding",
+    "spfx_bundle",
+    "spfx_package_solution",
+    "create_sppkg",
+    "app_catalog_upload",
+    "site_app_install",
     "app_catalog_deploy",
     "tenant_wide_deploy",
+    "live_bpmn_content_read",
     "store_secrets",
     "store_mandate_data",
 }
@@ -88,6 +101,7 @@ def validate() -> list[str]:
     contract = _read_json(CONTRACT, errors)
     bpmn_viewer_provisioning = _read_json(BPMN_VIEWER_PROVISIONING, errors)
     spfx_bpmn_viewer_skeleton = _read_json(SPFX_BPMN_VIEWER_SKELETON, errors)
+    bpmn_viewer_runtime_readiness = _read_json(BPMN_VIEWER_RUNTIME_READINESS, errors)
     data_mcp_contract = _read_json(DATA_MCP_CONTRACT, errors)
     if contract:
         errors.extend(
@@ -95,6 +109,7 @@ def validate() -> list[str]:
                 contract,
                 bpmn_viewer_provisioning,
                 spfx_bpmn_viewer_skeleton,
+                bpmn_viewer_runtime_readiness,
                 data_mcp_contract,
             )
         )
@@ -102,6 +117,15 @@ def validate() -> list[str]:
         errors.extend(_validate_bpmn_viewer_provisioning(bpmn_viewer_provisioning))
     if spfx_bpmn_viewer_skeleton:
         errors.extend(_validate_spfx_bpmn_viewer_skeleton(spfx_bpmn_viewer_skeleton, data_mcp_contract))
+    if bpmn_viewer_runtime_readiness:
+        errors.extend(
+            _validate_bpmn_viewer_runtime_readiness(
+                bpmn_viewer_runtime_readiness,
+                spfx_bpmn_viewer_skeleton,
+                bpmn_viewer_provisioning,
+                data_mcp_contract,
+            )
+        )
     if data_mcp_contract:
         errors.extend(_validate_data_mcp_contract(data_mcp_contract))
     errors.extend(_validate_docs())
@@ -128,6 +152,7 @@ def _validate_contract(
     payload: dict[str, Any],
     provisioning: dict[str, Any],
     spfx_skeleton: dict[str, Any],
+    runtime_readiness_artifact: dict[str, Any],
     data_mcp_contract: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
@@ -279,6 +304,55 @@ def _validate_contract(
             if spfx_skeleton.get("status") != offline_skeleton.get("status"):
                 errors.append("offline_spfx_skeleton status must match skeleton artifact")
 
+    runtime_readiness = payload.get("runtime_readiness")
+    if not isinstance(runtime_readiness, dict):
+        errors.append("runtime_readiness must be an object")
+    else:
+        expected = {
+            "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
+            "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
+            "status": "offline_runtime_readiness_no_live_deploy",
+            "redacted_artifact_kind": "redacted_offline_readiness_json",
+        }
+        for key, value in expected.items():
+            if runtime_readiness.get(key) != value:
+                errors.append(f"runtime_readiness.{key} must be {value}")
+        for flag in (
+            "spfx_package_allowed_now",
+            "app_catalog_upload_allowed_now",
+            "tenant_apply_allowed_now",
+            "live_bpmn_content_read_enabled_now",
+            "executes_graph_requests_now",
+        ):
+            if runtime_readiness.get(flag) is not False:
+                errors.append(f"runtime_readiness.{flag} must be false")
+        metadata_gates = set(_as_list(runtime_readiness.get("metadata_gates")))
+        for gate in (
+            "ApprovalStatus=Approved",
+            "ViewerEnabled=true",
+            "ContainsMatterData=false",
+            "BpmnXmlSha256 matches downloaded XML",
+            "NacDataClass in Template,Demo,Reference",
+        ):
+            if gate not in metadata_gates:
+                errors.append(f"runtime_readiness.metadata_gates missing {gate}")
+        privacy_guards = runtime_readiness.get("privacy_guards")
+        if not isinstance(privacy_guards, dict):
+            errors.append("runtime_readiness.privacy_guards must be an object")
+        else:
+            for flag in (
+                "stores_raw_graph_response",
+                "stores_raw_graph_path",
+                "stores_raw_drive_item_id",
+                "stores_tokens_or_secrets",
+                "stores_raw_matter_values",
+            ):
+                if privacy_guards.get(flag) is not False:
+                    errors.append(f"runtime_readiness.privacy_guards.{flag} must be false")
+        if runtime_readiness_artifact:
+            if runtime_readiness_artifact.get("status") != runtime_readiness.get("status"):
+                errors.append("runtime_readiness status must match runtime-readiness artifact")
+
     graph = payload.get("graph_policy")
     if not isinstance(graph, dict):
         errors.append("graph_policy must be an object")
@@ -418,12 +492,81 @@ def _validate_spfx_bpmn_viewer_skeleton(
     return errors
 
 
+def _validate_bpmn_viewer_runtime_readiness(
+    payload: dict[str, Any],
+    spfx_skeleton: dict[str, Any],
+    provisioning: dict[str, Any],
+    data_mcp_contract: dict[str, Any],
+) -> list[str]:
+    errors = validate_bpmn_viewer_runtime_readiness(
+        payload,
+        skeleton=spfx_skeleton if spfx_skeleton else None,
+        provisioning=provisioning if provisioning else None,
+        mcp_contract=data_mcp_contract if data_mcp_contract else None,
+    )
+    if errors:
+        return errors
+    result = build_bpmn_viewer_runtime_readiness_result(
+        payload,
+        skeleton=spfx_skeleton if spfx_skeleton else None,
+        provisioning=provisioning if provisioning else None,
+        mcp_contract=data_mcp_contract if data_mcp_contract else None,
+    )
+    if result.get("status") != "PASSED":
+        errors.append("BPMN viewer runtime readiness result must pass")
+        return errors
+    summary = result.get("summary", {})
+    if summary.get("readiness_gate_count") != 3:
+        errors.append("BPMN viewer runtime readiness must expose three readiness gates")
+    for flag in (
+        "live_deploy_allowed_now",
+        "live_content_read_enabled_now",
+        "app_catalog_upload_allowed_now",
+    ):
+        if summary.get(flag) is not False:
+            errors.append(f"BPMN viewer runtime readiness summary.{flag} must be false")
+    guardrails = result.get("guardrails", {})
+    for flag in (
+        "npm_install_allowed_now",
+        "package_solution_allowed_now",
+        "tenant_wide_deploy_allowed_now",
+        "live_content_read_enabled_now",
+        "graph_sdk_allowed",
+        "workflow_execution_allowed",
+    ):
+        if guardrails.get(flag) is not False:
+            errors.append(f"BPMN viewer runtime readiness guardrails.{flag} must be false")
+    if guardrails.get("graph_rest_only") is not True:
+        errors.append("BPMN viewer runtime readiness guardrails.graph_rest_only must be true")
+    return errors
+
+
 def _validate_data_mcp_contract(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if payload.get("server_id") != "teams-sharepoint-data-mcp":
         errors.append("teams-sharepoint-data-mcp server_id is invalid")
     if payload.get("graph", {}).get("rest_only") is not True:
         errors.append("teams-sharepoint-data-mcp graph.rest_only must be true")
+    readiness = payload.get("runtime_boundary", {}).get("bpmn_viewer_runtime_readiness", {})
+    if not isinstance(readiness, dict):
+        errors.append("teams-sharepoint-data-mcp bpmn_viewer_runtime_readiness must be an object")
+    else:
+        if readiness.get("command") != "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json":
+            errors.append("teams-sharepoint-data-mcp bpmn_viewer_runtime_readiness command is invalid")
+        for flag in ("available_now", "owner_gate_required_before_live_bpmn_content_read"):
+            if readiness.get(flag) is not True:
+                errors.append(f"teams-sharepoint-data-mcp bpmn_viewer_runtime_readiness.{flag} must be true")
+        for flag in ("executes_graph_requests", "reads_sharepoint_file_content"):
+            if readiness.get(flag) is not False:
+                errors.append(f"teams-sharepoint-data-mcp bpmn_viewer_runtime_readiness.{flag} must be false")
+        if set(_as_list(readiness.get("request_plan_tools_remain_planning_only"))) != {
+            "bpmn_model_get",
+            "process_register_list",
+            "bpmn_viewer_overlay_get",
+        }:
+            errors.append("teams-sharepoint-data-mcp BPMN readiness tools must stay planning-only")
+        if set(_as_list(readiness.get("live_read_tools_enabled_now"))) != {"case_get", "document_list"}:
+            errors.append("teams-sharepoint-data-mcp BPMN readiness live tools must stay case_get/document_list")
     live_read = payload.get("runtime_boundary", {}).get("owner_gated_live_read_mode", {})
     if set(_as_list(live_read.get("allowed_tools"))) != {"case_get", "document_list"}:
         errors.append("teams-sharepoint-data-mcp live-read tools must remain case_get and document_list")
@@ -466,6 +609,7 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "bpmn-viewer-plan",
             "optional_plan_only_no_live_apply",
@@ -479,6 +623,7 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
             "bpmn-viewer-plan",
             "optional_plan_only_no_live_apply",
@@ -491,12 +636,14 @@ def _validate_docs() -> list[str]:
             "M365 SharePoint BPMN Viewer Adapter",
             "Microsoft Graph REST",
             "SPFx",
+            "bpmn-viewer-runtime-readiness",
             "nac-bpmn-viewer.provisioning.json",
         ],
         DATA_PLANE_EN: [
             "M365 SharePoint BPMN Viewer Adapter",
             "Microsoft Graph REST",
             "SPFx",
+            "bpmn-viewer-runtime-readiness",
             "nac-bpmn-viewer.provisioning.json",
         ],
         BPMN_DE: [
@@ -511,6 +658,7 @@ def _validate_docs() -> list[str]:
             "m365-sharepoint-bpmn-viewer-adapter.contract.json",
             "SPFx",
             "BPMN",
+            "bpmn-viewer-runtime-readiness",
             "spfx/nac-bpmn-viewer",
         ],
     }

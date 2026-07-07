@@ -102,6 +102,15 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(contract["runtime_boundary"]["executes_graph_requests"])
         self.assertFalse(contract["runtime_boundary"]["stores_tokens_or_secrets"])
         self.assertFalse(contract["runtime_boundary"]["reads_sharepoint_file_content"])
+        readiness = contract["runtime_boundary"]["bpmn_viewer_runtime_readiness"]
+        self.assertEqual(
+            readiness["command"],
+            "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
+        )
+        self.assertFalse(readiness["executes_graph_requests"])
+        self.assertFalse(readiness["reads_sharepoint_file_content"])
+        self.assertTrue(readiness["owner_gate_required_before_live_bpmn_content_read"])
+        self.assertEqual(set(readiness["live_read_tools_enabled_now"]), {"case_get", "document_list"})
 
         tool_names = {tool["id"] for tool in contract["tools"]}
         self.assertEqual(

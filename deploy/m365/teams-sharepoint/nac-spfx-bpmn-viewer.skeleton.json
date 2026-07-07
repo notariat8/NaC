@@ -91,6 +91,7 @@
       "ApprovalStatus=Approved",
       "ViewerEnabled=true",
       "ContainsMatterData=false",
+      "NacDataClass in Template,Demo,Reference",
       "BpmnXmlSha256 matches downloaded XML"
     ]
   },
