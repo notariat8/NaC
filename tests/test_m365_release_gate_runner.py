@@ -803,6 +803,111 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["comparisons"], [])
         self.assertTrue(payload["errors"])
 
+    def test_release_gate_retention_audit_pack_writes_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            pack_dir = tmp_path / "audit-pack"
+            _write_retention_run(
+                retention_root / "corr-left",
+                correlation_id="corr-left",
+                generated_at="2026-07-07T12:00:00Z",
+                copied_artifact_count=1,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "aaa"},
+                    {"id": "mcp_inventory_smoke", "status": "NOT_ATTACHED", "artifact_sha256": None},
+                ],
+            )
+            _write_retention_run(
+                retention_root / "corr-right",
+                correlation_id="corr-right",
+                generated_at="2026-07-07T12:30:00Z",
+                copied_artifact_count=2,
+                artifacts=[
+                    {"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "changed"},
+                    {"id": "mcp_inventory_smoke", "status": "COPIED", "artifact_sha256": "inventory"},
+                ],
+            )
+
+            payload, return_code = _invoke_retention_audit_pack(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-compare-left",
+                    "corr-left",
+                    "--release-gate-compare-right",
+                    "corr-right",
+                    "--release-gate-audit-pack-dir",
+                    str(pack_dir),
+                    "--format",
+                    "json",
+                ]
+            )
+            manifest = json.loads((pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text(encoding="utf-8"))
+            manifest_report = (pack_dir / "release-gate-retention-audit-pack.redacted.md").read_text(encoding="utf-8")
+            retention_list = json.loads((pack_dir / "release-gate-retention-list.redacted.json").read_text(encoding="utf-8"))
+            compare = json.loads(
+                (
+                    pack_dir
+                    / "comparisons"
+                    / "corr-left__corr-right"
+                    / "release-gate-retention-compare.redacted.json"
+                ).read_text(encoding="utf-8")
+            )
+            compare_index = json.loads((pack_dir / "release-gate-retention-compare-index.redacted.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.m365-release-gate-retention-audit-pack/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["pack_dir"], str(pack_dir))
+        self.assertEqual(payload["summary"]["artifact_count"], 3)
+        self.assertFalse(payload["summary"]["graph_requests_executed"])
+        self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
+        self.assertTrue(manifest_report.startswith("# M365 Release Gate Retention Audit Pack"))
+        self.assertEqual(manifest["summary"]["left_correlation_id"], "corr-left")
+        self.assertEqual(retention_list["summary"]["run_count"], 2)
+        self.assertEqual(compare["summary"]["left_correlation_id"], "corr-left")
+        self.assertEqual(compare["summary"]["right_correlation_id"], "corr-right")
+        self.assertEqual(compare_index["summary"]["comparison_count"], 1)
+        self.assertEqual(compare_index["comparisons"][0]["left_correlation_id"], "corr-left")
+        self.assertEqual(
+            {artifact["id"] for artifact in payload["artifacts"]},
+            {"retention_list", "retention_compare", "retention_compare_index"},
+        )
+
+    def test_release_gate_retention_audit_pack_blocks_without_compare_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            pack_dir = tmp_path / "audit-pack"
+            _write_retention_run(
+                retention_root / "corr-left",
+                correlation_id="corr-left",
+                generated_at="2026-07-07T12:00:00Z",
+                copied_artifact_count=1,
+                artifacts=[{"id": "runtime_smoke", "status": "COPIED", "artifact_sha256": "aaa"}],
+            )
+
+            payload, return_code = _invoke_retention_audit_pack(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-audit-pack-dir",
+                    str(pack_dir),
+                    "--format",
+                    "json",
+                ]
+            )
+            manifest = json.loads((pack_dir / "release-gate-retention-audit-pack.redacted.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(manifest["status"], "BLOCKED")
+        self.assertIn("left release gate reference is required", payload["errors"][0])
+        self.assertEqual(payload["artifacts"][0]["id"], "retention_list")
+        self.assertEqual(payload["artifacts"][1]["status"], "BLOCKED")
+        self.assertEqual(payload["artifacts"][2]["status"], "NOT_WRITTEN")
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -903,6 +1008,24 @@ def _invoke_retention_compare_index_artifact(extra_args: list[str]) -> tuple[dic
             "m365",
             "teams-sharepoint",
             "release-gate-retention-compare-index-artifact",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
+def _invoke_retention_audit_pack(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-gate-retention-audit-pack",
             *extra_args,
         ]
     )
