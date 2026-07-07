@@ -290,6 +290,23 @@ redigierte Artefakt in `release-gate-evidence`. Bei manuellem
 `release-gate-evidence` kann dasselbe Artefakt weiterhin optional mit
 `--release-gate-inventory-artifact` referenziert werden.
 
+Die Mandatszugriffs- und Vertretungsfreigabegrenze ist im separaten
+[M365-Mandatszugriffsdelegation](m365-matter-access-delegation.md)-Contract
+definiert. `matter-access-plan` rendert den Request-Plan ohne Live-Tenant-
+Aktion; `matter-access-smoke` erzeugt dazu den redigierten Offline-Nachweis:
+
+```bash
+nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
+```
+
+Der Smoke schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`.
+Er prüft sechs Request-Plan-Operationen pro Workspace, drei owner-gated
+schreibende Vertretungspläne, die request-plan-only MCP-Toolverträge und die
+Privacy-Grenze ohne Graph-Ausführung. `release-gate-run` führt ihn vor den
+Live-Schritten automatisch aus und hängt das Artefakt als optionalen Evidence-
+Step an `release-gate-evidence` und den Artifact-Index an.
+
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 
 ```bash

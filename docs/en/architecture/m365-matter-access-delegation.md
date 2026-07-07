@@ -36,6 +36,20 @@ SharePoint item permissions. It only renders the offline plan through:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-plan --format json
 ```
 
+The redacted offline evidence for this plan runs through:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
+```
+
+`matter-access-smoke` writes
+`out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json` by
+default. The artifact contains only counts, action names, a correlation ID and
+privacy attestations. It stores no raw matter payloads, no tokens, no
+SharePoint file content and no concrete Graph paths. `release-gate-run`
+executes this smoke before the live runtime steps and attaches it as optional
+evidence to `release-gate-evidence` and the artifact index.
+
 ## MCP Boundary
 
 The leading runtime edge remains `teams-sharepoint-data-mcp`.

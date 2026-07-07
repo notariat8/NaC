@@ -19,6 +19,10 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
     summarize_matter_access_plan,
     validate_matter_access_delegation_contract,
 )
+from nac_m365_graph.matter_access_delegation_smoke import (  # noqa: E402
+    run_matter_access_delegation_smoke,
+    write_matter_access_delegation_smoke_artifact,
+)
 from nac_m365_graph.mcp_runtime import (  # noqa: E402
     DEFAULT_MCP_CONTRACT,
     McpRuntimeError,
@@ -78,6 +82,42 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertTrue(all(not operation.executes_graph_requests_now for operation in operations))
         self.assertTrue(all(not operation.reads_files for operation in operations))
 
+    def test_matter_access_smoke_writes_redacted_offline_evidence(self) -> None:
+        with self.subTest("payload"):
+            payload = run_matter_access_delegation_smoke(
+                self.contract,
+                self.schema,
+                workspace_id="notary_team_01",
+                correlation_id="delegation-corr",
+                timestamp="2026-07-07T00:00:00Z",
+            )
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["schema_version"], "nac.m365-matter-access-delegation-smoke/v0.1")
+        self.assertEqual(payload["summary"]["workspace_id"], "notary_team_01")
+        self.assertEqual(payload["summary"]["correlation_id"], "delegation-corr")
+        self.assertEqual(payload["summary"]["workspace_operation_count"], 6)
+        self.assertEqual(payload["summary"]["owner_gated_workspace_operations"], 3)
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["executes_graph_writes"])
+        self.assertFalse(payload["summary"]["tenant_mutation_allowed"])
+        self.assertFalse(payload["summary"]["team_membership_mutation_allowed"])
+        self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
+        self.assertFalse(payload["privacy"]["storesMatterPayloads"])
+        self.assertFalse(payload["privacy"]["readsSharePointFileContent"])
+        serialized = json.dumps(payload)
+        self.assertNotIn("/sites/{site-id}/", serialized)
+        self.assertNotIn("BEGIN PRIVATE KEY", serialized)
+
+        output = REPO_ROOT / "out" / "test" / "matter-access-delegation-smoke.redacted.json"
+        try:
+            write_matter_access_delegation_smoke_artifact(payload, output)
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+        finally:
+            if output.exists():
+                output.unlink()
+        self.assertEqual(artifact["status"], "PASSED")
+
     def test_central_cli_exposes_matter_access_plan_without_credentials(self) -> None:
         result = subprocess.run(
             [
@@ -107,6 +147,45 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertFalse(payload["guardrails"]["reads_sharepoint_file_content"])
         self.assertTrue(payload["guardrails"]["owner_gate_required_before_future_apply"])
         self.assertEqual(payload["summary"]["operation_count"], len(self.schema["workspaces"]) * 6)
+
+    def test_central_cli_exposes_matter_access_smoke_without_credentials(self) -> None:
+        output = REPO_ROOT / "out" / "test" / "matter-access-delegation-smoke-cli.redacted.json"
+        if output.exists():
+            output.unlink()
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "matter-access-smoke",
+                "--mcp-smoke-workspace-id",
+                "notary_team_01",
+                "--mcp-smoke-correlation-id",
+                "delegation-corr",
+                "--matter-access-smoke-output",
+                str(output),
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["status"], "PASSED")
+            self.assertEqual(payload["summary"]["artifact_path"], str(output))
+            self.assertFalse(payload["summary"]["executes_graph_requests"])
+            self.assertTrue(output.exists())
+        finally:
+            if output.exists():
+                output.unlink()
 
     def test_grant_request_reuses_existing_mcp_tool_and_validates_semantics(self) -> None:
         plan = plan_tool_request(
