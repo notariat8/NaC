@@ -240,6 +240,24 @@ Ohne explizite Pfade schreibt der Befehl
 `--release-gate-compare-output` und `--release-gate-compare-json-output`
 setzen eigene Zielpfade. Der Export bleibt redigiert und offline.
 
+Der lokale Index vorhandener Vergleichsnachweise läuft ebenfalls offline:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare-index \
+  --release-gate-compare-query <search-text> \
+  --format json
+```
+
+Der Befehl liest nur lokale
+`release-gate-retention-compare.redacted.json`-Dateien unter
+`out/m365/teams-sharepoint/release-gate-comparisons/` und gibt
+Left-/Right-Correlation-ID, Timestamp, Status, Differenzzahlen sowie lokale
+Report- und JSON-Pfade aus. `--release-gate-compare-left`,
+`--release-gate-compare-right`, `--release-gate-compare-status` und
+`--release-gate-compare-query` filtern den Index. Er führt keine
+Graph-Anfrage, keinen Tenant-Write und keine Löschung aus und liest keine
+SharePoint-Dateiinhalte.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
