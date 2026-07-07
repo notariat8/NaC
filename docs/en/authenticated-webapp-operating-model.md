@@ -37,11 +37,11 @@ roles, contracts and `nac` validation.
 flowchart TD
     Static["GitHub Pages / Jekyll: static content"] --> Public["public orientation"]
     User["authenticated user"] --> AuthApp["authenticated web app or mobile app"]
-    AuthApp --> OciIdp["OCI Identity Domains, OIDC/SCIM, group anchors"]
-    OciIdp --> NacRole["NaC role and case gate"]
+    AuthApp --> EntraId["Entra ID, OIDC/SCIM, Microsoft 365 group anchors"]
+    EntraId --> NacRole["NaC role and case gate"]
     NacRole --> Runtime["NaC runtime / backend"]
     Runtime --> DataRepo["separate data repository"]
-    Runtime --> Storage["object store, database blob or OneDrive"]
+    Runtime --> Storage["SharePoint Team Site, OneDrive or later EU storage"]
     Runtime --> Audit["audit, hash, purpose, expiry, revocation"]
     Workstation --> O365["Office 365 / Microsoft 365 client layer"]
     O365 --> OneDrive["OneDrive / SharePoint / Outlook / Teams"]
@@ -53,13 +53,11 @@ flowchart TD
     Card --> Runtime
 ```
 
-Office 365 is mandatory on the client side. For NaC, that does not mean the
-SaaS identity layer or the current OCI deployment changes. Office 365 is the
-mandatory workstation, document, calendar, communication and collaboration
-layer for the notary office; NaC may therefore plan integrations with OneDrive,
-SharePoint, Outlook, Teams and future Microsoft 365 features, while every
-access path remains bounded by NaC roles, matter binding, purpose binding,
-audit and human approval.
+Microsoft 365 is not only the client layer in the MVP, but also the active
+identity, group, team and SharePoint data plane. Entra ID is the login and
+group anchor; Teams and SharePoint are the first reproducible work and storage
+edge. Every access path still remains bounded by NaC roles, matter binding,
+purpose binding, audit and human approval.
 
 Microsoft Agent 365 Agent Registry is included as a target-architecture
 building block for agent governance. Microsoft Learn describes Agent Registry
@@ -93,37 +91,35 @@ review step without turning the source into a product integration.
 
 ## Identity And Authorization
 
-Oracle OCI Identity Domains is the productive identity layer for this SaaS
-path. The public transition from `www-n8` into the NaC app is tenant-aware:
-existing customers pass a tenant hint, while new customers first run through a
-domain-readiness check. NaC then creates a reviewable admin-provisioning plan
-for OCI Identity Domains.
+Entra ID is the active identity and group-anchor layer for the M365 MVP. The
+public transition from `www-n8` into the NaC app is tenant-aware: existing
+customers pass a tenant hint, while new customers first run through a
+domain-readiness check. NaC then creates a reviewable provisioning plan for the
+Microsoft 365 group, team, SharePoint site, lists, role binding and audit
+boundaries.
 
 The customer-facing surface is `notariat8`. `https://app.notariat8.de/login`
-is the canonical entry point for users; direct OCI Identity Domain URLs, OCI
-Console paths or internal domain names such as `nac-customers` are operational
-details and not primary user guidance. In the short term, customer-facing login
-copy, support guidance and demo runbooks must therefore describe notariat8 as
-the product surface. OCI Identity Domains remains the internal broker and
-trust layer behind that entry point.
+is the canonical entry point for users; direct Entra Admin Center, Azure
+Portal or Graph Explorer URLs as well as internal tenant, group or app names
+are operational details and not primary user guidance. Customer-facing login
+copy, support guidance and demo runbooks therefore describe notariat8 as the
+product surface. Entra ID remains the internal trust layer behind that entry
+point.
 
-Office 365 complements this path on the client and workstation side. OCI
-Identity Domains remains the IdP and tenant-provisioning layer for the current
-SaaS path; Microsoft 365 supplies workstation services and agent governance
-unless a separate reviewed IdP change decides otherwise.
-
-End users do not work in the OCI Console. NaC operates Identity Domains through
-reviewed API and CLI contracts; productive writes to users, groups or
-memberships require a separate owner review and explicit approval before
-apply.
+End users do not work in the Entra Admin Center, Azure Portal or Graph
+Explorer. NaC operates Entra ID, Microsoft 365 groups, Teams and SharePoint
+through reviewed Microsoft Graph REST or MCP contracts; productive writes to
+users, groups, Teams, SharePoint schema, site permissions or memberships
+require a separate owner review and explicit approval before apply.
 
 Later customer-IdP federation does not change that customer-facing surface. A
 notary office may connect its own IdP, but the user still starts at
-`https://app.notariat8.de/login`; OCI Identity Domains brokers between
-notariat8 and the customer IdP. Federation, branding, group mapping, SCIM sync
-or app-client changes each need separate design, security, DPA, role and owner
-apply gates. This document authorizes no OCI write, no secret access and no
-productive mandate-data processing.
+`https://app.notariat8.de/login`; Entra ID or an explicitly reviewed
+federation contract brokers between notariat8 and the customer IdP.
+Federation, branding, group mapping, SCIM sync or app-client changes each need
+separate design, security, DPA, role and owner apply gates. This document
+authorizes no Graph or tenant write, no secret access and no productive
+mandate-data processing.
 
 The IdP login only answers whether a person is trusted for login. The
 subject-matter permission is decided afterwards by the NaC role and case gate:
@@ -136,11 +132,10 @@ subject-matter permission is decided afterwards by the NaC role and case gate:
 - four-eyes requirement for sensitive steps.
 
 The first NaC app entry therefore uses a login-intent contract instead of an
-implicit login. NaC builds the OIDC redirect to OCI Identity Domains through
-`/.well-known/openid-configuration` and `/oauth2/v1/authorize`, requires
-server-generated `state` and `nonce` values, and treats `tenant_hint` only as
-context. The hint must not be translated into roles, groups, matter access or
-OCI writes.
+implicit login. NaC builds the OIDC redirect to Entra ID through OIDC metadata
+and the authorization endpoint, requires server-generated `state` and `nonce`
+values, and treats `tenant_hint` only as context. The hint must not be
+translated into roles, groups, matter access or Graph/tenant writes.
 
 In this model, the auth callback is not yet a successful login. It is first a
 closed intermediate event with its own `nac.auth-callback/v0.1` contract:
@@ -192,7 +187,7 @@ The operational boundary for signed state values and callback logs is defined
 in [OIDC State and Log Boundary](operations/oidc-state-log-boundary.md).
 
 XNP and German eID paths with card readers remain local workstation gates. They
-can provide identity or readiness evidence, but they replace neither OCI login
+can provide identity or readiness evidence, but they replace neither Entra login
 nor NaC authorization and they do not store PINs, raw card data, raw eID data
 or certificate material in the repository.
 
@@ -258,8 +253,9 @@ from a product idea into a checkable NaC artifact path.
 1. Keep using the static GitHub Pages layer for public content and synthetic
    demos.
 2. Design the internal authenticated web app for notary-office users through
-   OCI Identity Domains and the NaC role gate; users start at
-   `https://app.notariat8.de/login`, not at direct OCI URLs.
+   Entra ID, Microsoft 365 groups and the NaC role gate; users start at
+   `https://app.notariat8.de/login`, not at direct provider, admin or Graph
+   URLs.
 3. Track Office 365 as the mandatory client layer and Microsoft Agent 365 Agent
    Registry as a Preview governance anchor in the target architecture and
    backlog.
