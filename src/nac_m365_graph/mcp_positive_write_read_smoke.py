@@ -155,7 +155,7 @@ def _case_create_arguments(case_id: str, workspace_id: str, timestamp: str) -> d
     return {
         "case_id": case_id,
         "aktenzeichen": f"SMOKE-{_timestamp_stamp(timestamp)}",
-        "vorgangstyp": "synthetischer_mcp_smoke",
+        "vorgangstyp": "immobilienkaufvertrag",
         "status": "Entwurf",
         "notar_team": "NaC-Notar-01" if workspace_id == "notary_team_01" else "NaC-Notar-02",
         "vertraulichkeitsstufe": "Normal",

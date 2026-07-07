@@ -22,6 +22,14 @@ if PROVISION_CLI_SPEC is None or PROVISION_CLI_SPEC.loader is None:
     raise ImportError("Could not load provision_teams_sharepoint_graph.py")
 provision_cli = importlib.util.module_from_spec(PROVISION_CLI_SPEC)
 PROVISION_CLI_SPEC.loader.exec_module(provision_cli)
+VALIDATOR_SPEC = importlib.util.spec_from_file_location(
+    "validate_teams_sharepoint_graph_data_plane",
+    SCRIPTS_ROOT / "validate_teams_sharepoint_graph_data_plane.py",
+)
+if VALIDATOR_SPEC is None or VALIDATOR_SPEC.loader is None:
+    raise ImportError("Could not load validate_teams_sharepoint_graph_data_plane.py")
+data_plane_validator = importlib.util.module_from_spec(VALIDATOR_SPEC)
+VALIDATOR_SPEC.loader.exec_module(data_plane_validator)
 
 from nac_m365_graph.mcp_runtime import (  # noqa: E402
     DEFAULT_MCP_CONTRACT,
@@ -407,6 +415,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(len(graph_client.posts), 1)
         self.assertEqual(len(graph_client.gets), 1)
         self.assertIn("/sites/example.sharepoint.com,site-01,web-01/lists/list-akten/items", graph_client.posts[0][0])
+        self.assertEqual(graph_client.posts[0][1]["fields"]["Vorgangstyp"], "immobilienkaufvertrag")
         self.assertEqual(result["writeRequest"]["payloadFieldNames"], [
             "Aktenzeichen",
             "KgVersion",
@@ -420,6 +429,32 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         serialized = json.dumps(result, ensure_ascii=False)
         for raw_value in ("case-1", "AZ-1", "raw-created-item-id", "example.sharepoint.com"):
             self.assertNotIn(raw_value, serialized)
+
+    def test_mcp_schema_binding_rejects_invalid_choice_values(self) -> None:
+        schema = json.loads((REPO_ROOT / "deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json").read_text())
+        akten_schema = {
+            item["display_name"]: item
+            for item in schema["sharepoint"]["lists"]
+        }["Akten"]
+
+        errors = data_plane_validator._validate_mcp_payload_fields(
+            "case_create",
+            akten_schema,
+            {
+                "fields": {
+                    "NacCaseId": "case-1",
+                    "Aktenzeichen": "SMOKE-1",
+                    "Vorgangstyp": "synthetischer_mcp_smoke",
+                    "Status": "Entwurf",
+                    "NotarTeam": "NaC-Notar-01",
+                    "Vertraulichkeitsstufe": "Normal",
+                    "NacWorkflowVersion": "m365-mcp-smoke-v0.1",
+                    "KgVersion": "kg-smoke-v0.1",
+                }
+            },
+        )
+
+        self.assertIn("invalid choice value 'synthetischer_mcp_smoke'", "\n".join(errors))
 
     def test_mcp_positive_write_read_smoke_writes_redacted_artifact(self) -> None:
         graph_client = _FakeGraphWriteReadClient(
