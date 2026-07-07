@@ -32,6 +32,9 @@ from nac_m365_graph.runtime_metadata import (  # noqa: E402
     redact_runtime_metadata_snapshot,
     write_runtime_metadata_artifact,
 )
+from nac_m365_graph.runtime_certificate_readiness import (  # noqa: E402
+    build_runtime_certificate_readiness,
+)
 from nac_m365_graph.runtime_smoke import (  # noqa: E402
     redact_runtime_site_smoke_result,
     run_runtime_site_smoke,
@@ -48,6 +51,7 @@ from nac_m365_graph.schema import (  # noqa: E402
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-graph-data-plane.contract.json"
 APPLIED_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.privileged-change-path.applied.f8.json"
 RUNTIME_SMOKE_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-smoke.f8.json"
+RUNTIME_METADATA_STATE = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-mvp.runtime-metadata.f8.json"
 GRAPH_APP_ID = "00000003-0000-0000-c000-000000000000"
 
 
@@ -635,6 +639,42 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
             self.assertGreaterEqual(workspace["observed_list_count"], workspace["expected_list_count"])
             self.assertEqual(workspace["missing_lists"], [])
 
+    def test_runtime_certificate_readiness_is_offline_and_redacted(self) -> None:
+        smoke_state = json.loads(RUNTIME_SMOKE_STATE.read_text(encoding="utf-8"))
+        metadata_state = json.loads(RUNTIME_METADATA_STATE.read_text(encoding="utf-8"))
+
+        readiness = build_runtime_certificate_readiness(
+            smoke_state,
+            metadata_state,
+            now_utc="2026-07-07T00:00:00Z",
+        )
+        serialized = json.dumps(readiness)
+        checks = {check["id"]: check for check in readiness["checks"]}
+
+        self.assertEqual(readiness["status"], "PASSED")
+        self.assertEqual(readiness["summary"]["preferred_authentication_mode"], "client_credentials_with_certificate")
+        self.assertTrue(readiness["summary"]["certificate_thumbprint_present"])
+        self.assertFalse(readiness["summary"]["certificate_thumbprint_emitted"])
+        self.assertEqual(readiness["summary"]["certificate_days_until_expiry"], 28)
+        self.assertTrue(readiness["summary"]["certificate_rotation_review_required"])
+        self.assertTrue(readiness["summary"]["runtime_metadata_thumbprint_matches_smoke"])
+        self.assertFalse(readiness["summary"]["secret_env_values_read"])
+        self.assertFalse(readiness["summary"]["credential_files_read"])
+        self.assertFalse(readiness["summary"]["executes_graph_requests"])
+        self.assertFalse(readiness["summary"]["executes_graph_writes"])
+        self.assertFalse(readiness["summary"]["mandate_data_allowed"])
+        self.assertFalse(readiness["summary"]["private_key_allowed_in_repo"])
+        self.assertFalse(readiness["summary"]["certificate_body_allowed_in_repo"])
+        self.assertTrue(readiness["summary"]["certificate_generation_owner_gate_required"])
+        self.assertTrue(readiness["summary"]["app_credential_upload_owner_gate_required"])
+        self.assertIn("M365_RUNTIME_CLIENT_CERTIFICATE_PATH", readiness["summary"]["required_environment_variables"])
+        self.assertEqual(checks["certificate_rotation_window"]["status"], "REVIEW_REQUIRED")
+        self.assertEqual(checks["secret_material_not_stored"]["status"], "PASSED")
+        self.assertNotIn("870c862b-56f7-4c9b-b0d9-f1f7d32c835c", serialized)
+        self.assertNotIn("0d98b5a5-479b-452d-9b43-c3fbbcab9d24", serialized)
+        self.assertNotIn("316556FE00B228235DC066C82CF615AF08B738D1", serialized)
+        self.assertNotIn("funktion8.sharepoint.com", serialized)
+
     def test_column_mapping_uses_graph_column_payloads(self) -> None:
         payload = column_create_payload(
             {
@@ -720,6 +760,22 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertEqual(payload["summary"]["governance_group"], "nac_platform_admins")
         self.assertEqual(payload["summary"]["technical_owner_user"], "funktion8@funktion8.de")
+
+    def test_cli_runtime_certificate_readiness_runs_without_credentials(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/provision_teams_sharepoint_graph.py", "runtime-certificate-readiness", "--json"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["credential_files_read"])
+        self.assertTrue(payload["summary"]["certificate_generation_owner_gate_required"])
 
     def test_cli_privileged_apply_requires_owner_approval_before_credentials(self) -> None:
         result = subprocess.run(
@@ -811,6 +867,31 @@ class TeamsSharePointGraphDataPlaneTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertTrue(payload["summary"]["owner_gate_required_for_live_apply"])
+
+    def test_nac_cli_exposes_runtime_certificate_readiness(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "runtime-certificate-readiness",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["secret_env_values_read"])
 
     def test_nac_cli_exposes_m365_teams_sharepoint_runtime_smoke_gate(self) -> None:
         result = subprocess.run(

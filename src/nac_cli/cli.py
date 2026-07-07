@@ -256,6 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "privileged-plan",
             "privileged-apply",
+            "runtime-certificate-readiness",
             "runtime-smoke",
             "runtime-metadata",
             "mcp-manifest",
@@ -295,9 +296,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pfad fuer das redigierte Runtime-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument(
+        "--runtime-smoke-state",
+        type=Path,
+        help="Optionaler nicht-geheimer Runtime-Smoke-Evidence-State.",
+    )
+    teams_sharepoint.add_argument(
         "--runtime-metadata-output",
         type=Path,
         help="Pfad fuer das redigierte Runtime-Metadata-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--runtime-metadata-state",
+        type=Path,
+        help="Optionaler nicht-geheimer Runtime-Metadata-Evidence-State.",
     )
     teams_sharepoint.add_argument(
         "--mcp-live-read",
@@ -1277,8 +1288,12 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-contract", str(args.mcp_contract)])
         if args.runtime_smoke_output:
             script_args.extend(["--runtime-smoke-output", str(args.runtime_smoke_output)])
+        if args.runtime_smoke_state:
+            script_args.extend(["--runtime-smoke-state", str(args.runtime_smoke_state)])
         if args.runtime_metadata_output:
             script_args.extend(["--runtime-metadata-output", str(args.runtime_metadata_output)])
+        if args.runtime_metadata_state:
+            script_args.extend(["--runtime-metadata-state", str(args.runtime_metadata_state)])
         if args.mcp_live_read:
             script_args.append("--mcp-live-read")
         if args.mcp_smoke_tool:
