@@ -318,9 +318,16 @@ offline; the emitted live commands remain owner-gated.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
-`out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. The exporter
-performs no Graph request and does not write to or delete from the tenant. When
-runtime and MCP artifacts are present, it reports
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.md`,
+`out/m365/teams-sharepoint/release-gate-evidence.redacted.json` and
+`out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json`. The
+artifact index contains step status, required/attached flags, local paths and
+SHA-256 hashes of the redacted local artifacts, but no tokens, raw Graph
+responses, raw case IDs or SharePoint file content. Paths can be overridden
+with `--release-gate-evidence-output`, `--release-gate-evidence-json-output`
+and `--release-gate-artifact-index-output`. The exporter performs no Graph
+request and does not write to or delete from the tenant. When runtime and MCP
+artifacts are present, it reports
 `complete_release_gate_artifacts`; if optional runtime artifacts are missing,
 the report marks the runtime steps as `NOT_ATTACHED`. With
 `--release-gate-require-runtime-artifacts`, export blocks in that case.

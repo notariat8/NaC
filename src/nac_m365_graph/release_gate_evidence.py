@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 
 DEFAULT_EVIDENCE_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.md")
+DEFAULT_EVIDENCE_JSON_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.json")
+DEFAULT_ARTIFACT_INDEX_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json")
 DEFAULT_MCP_SMOKE_SUITE_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-suite.redacted.json")
 DEFAULT_MCP_LEFTOVER_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json")
 DEFAULT_RUNTIME_SMOKE_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-smoke.redacted.json")
@@ -73,7 +76,7 @@ def build_release_gate_evidence(
         "stores_raw_case_id": _any_privacy_flag(steps, "raw_case_id_stored"),
         "reads_sharepoint_file_content": _any_privacy_flag(steps, "reads_sharepoint_file_content"),
     }
-    return {
+    evidence = {
         "schema_version": "nac.m365-release-gate-evidence/v0.1",
         "status": status,
         "generated_at": generated_at,
@@ -91,11 +94,81 @@ def build_release_gate_evidence(
             "readsSharePointFileContent": False,
         },
     }
+    attach_release_gate_artifact_index(evidence)
+    return evidence
 
 
 def write_release_gate_evidence_report(evidence: dict[str, Any], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(render_release_gate_evidence_markdown(evidence), encoding="utf-8")
+
+
+def write_release_gate_evidence_json(evidence: dict[str, Any], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def write_release_gate_artifact_index(index: dict[str, Any], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def attach_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, Any]:
+    evidence["artifact_index"] = build_release_gate_artifact_index(evidence)
+    return evidence
+
+
+def build_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, Any]:
+    summary = _dict(evidence.get("summary"))
+    artifacts = []
+    for step in evidence.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        errors = step.get("errors")
+        artifact_path = Path(str(step.get("artifact_path", "")))
+        artifact_exists = artifact_path.exists()
+        artifacts.append(
+            {
+                "id": step.get("id"),
+                "label": step.get("label"),
+                "status": step.get("status"),
+                "required": step.get("required") is True,
+                "attached": artifact_exists,
+                "artifact_path": str(artifact_path),
+                "artifact_sha256": _file_sha256(artifact_path) if artifact_exists else None,
+                "error_count": len(errors) if isinstance(errors, list) else 0,
+            }
+        )
+    return {
+        "schema_version": "nac.m365-release-gate-evidence-index/v0.1",
+        "status": evidence.get("status"),
+        "generated_at": evidence.get("generated_at"),
+        "workspace_id": summary.get("workspace_id"),
+        "correlation_id": summary.get("correlation_id"),
+        "evidence_completeness": summary.get("evidence_completeness"),
+        "report_path": summary.get("report_path"),
+        "json_path": summary.get("json_path"),
+        "artifact_index_path": summary.get("artifact_index_path"),
+        "artifacts": artifacts,
+        "privacy": {
+            "source_artifacts_must_be_redacted": True,
+            "graph_requests_executed": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "storesRawCaseId": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def _file_sha256(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def render_release_gate_evidence_markdown(evidence: dict[str, Any]) -> str:
