@@ -16,9 +16,17 @@ from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
     summarize_bpmn_viewer_provisioning_plan,
     validate_bpmn_viewer_provisioning_config,
 )
+from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
+    build_spfx_bpmn_viewer_skeleton_result,
+    load_spfx_bpmn_viewer_render_fixture,
+    validate_spfx_bpmn_viewer_skeleton,
+)
 
 CONTRACT = REPO_ROOT / "workflows" / "contracts" / "m365-sharepoint-bpmn-viewer-adapter.contract.json"
 BPMN_VIEWER_PROVISIONING = REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-bpmn-viewer.provisioning.json"
+SPFX_BPMN_VIEWER_SKELETON = (
+    REPO_ROOT / "deploy" / "m365" / "teams-sharepoint" / "nac-spfx-bpmn-viewer.skeleton.json"
+)
 DATA_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
 CONTRACTS_README = REPO_ROOT / "workflows" / "contracts" / "README.md"
 DATA_PLANE_DE = REPO_ROOT / "docs" / "de" / "architecture" / "teams-sharepoint-graph-data-plane.md"
@@ -43,6 +51,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "pnp",
     "microsoft_graph_sdk",
     "custom_script_page_embedding",
+    "app_catalog_deploy",
+    "tenant_wide_deploy",
     "store_secrets",
     "store_mandate_data",
 }
@@ -77,11 +87,21 @@ def validate() -> list[str]:
     errors: list[str] = []
     contract = _read_json(CONTRACT, errors)
     bpmn_viewer_provisioning = _read_json(BPMN_VIEWER_PROVISIONING, errors)
+    spfx_bpmn_viewer_skeleton = _read_json(SPFX_BPMN_VIEWER_SKELETON, errors)
     data_mcp_contract = _read_json(DATA_MCP_CONTRACT, errors)
     if contract:
-        errors.extend(_validate_contract(contract, bpmn_viewer_provisioning, data_mcp_contract))
+        errors.extend(
+            _validate_contract(
+                contract,
+                bpmn_viewer_provisioning,
+                spfx_bpmn_viewer_skeleton,
+                data_mcp_contract,
+            )
+        )
     if bpmn_viewer_provisioning:
         errors.extend(_validate_bpmn_viewer_provisioning(bpmn_viewer_provisioning))
+    if spfx_bpmn_viewer_skeleton:
+        errors.extend(_validate_spfx_bpmn_viewer_skeleton(spfx_bpmn_viewer_skeleton, data_mcp_contract))
     if data_mcp_contract:
         errors.extend(_validate_data_mcp_contract(data_mcp_contract))
     errors.extend(_validate_docs())
@@ -107,6 +127,7 @@ def _read_json(path: Path, errors: list[str]) -> dict[str, Any]:
 def _validate_contract(
     payload: dict[str, Any],
     provisioning: dict[str, Any],
+    spfx_skeleton: dict[str, Any],
     data_mcp_contract: dict[str, Any],
 ) -> list[str]:
     errors: list[str] = []
@@ -168,7 +189,27 @@ def _validate_contract(
             errors.append("spfx_surface.library must be bpmn-js")
         if spfx.get("bpmn_js_mode") != "viewer_only":
             errors.append("spfx_surface.bpmn_js_mode must be viewer_only")
+        expected = {
+            "included_in_nac_repo_now": True,
+            "source_skeleton_included_now": True,
+            "uses_mock_or_fixture_bpmn_now": True,
+            "uses_bpmn_js_viewer_only": True,
+        }
+        for key, value in expected.items():
+            if spfx.get(key) is not value:
+                errors.append(f"spfx_surface.{key} must be {value}")
+        if spfx.get("package_root") != "spfx/nac-bpmn-viewer":
+            errors.append("spfx_surface.package_root must be spfx/nac-bpmn-viewer")
+        if spfx.get("status") != "offline_source_only":
+            errors.append("spfx_surface.status must be offline_source_only")
         for flag in (
+            "npm_install_required_now",
+            "build_required_now",
+            "app_catalog_deploy_allowed_now",
+            "tenant_apply_allowed_now",
+            "executes_graph_requests_now",
+            "uses_bpmn_js_modeler",
+            "writes_sharepoint_or_bpmn",
             "modeler_enabled",
             "workflow_execution_allowed",
             "custom_script_dependency_allowed",
@@ -209,6 +250,34 @@ def _validate_contract(
                 errors.append("optional_provisioning_plan live_apply flag must match provisioning artifact")
             if live_apply.get("mutates_tenant_now") != optional_plan.get("mutates_tenant_now"):
                 errors.append("optional_provisioning_plan tenant mutation flag must match provisioning artifact")
+
+    offline_skeleton = payload.get("offline_spfx_skeleton")
+    if not isinstance(offline_skeleton, dict):
+        errors.append("offline_spfx_skeleton must be an object")
+    else:
+        expected = {
+            "artifact": "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
+            "package_root": "spfx/nac-bpmn-viewer",
+            "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json",
+            "status": "offline_skeleton_no_package_deploy",
+        }
+        for key, value in expected.items():
+            if offline_skeleton.get(key) != value:
+                errors.append(f"offline_spfx_skeleton.{key} must be {value}")
+        if offline_skeleton.get("source_skeleton_included_now") is not True:
+            errors.append("offline_spfx_skeleton.source_skeleton_included_now must be true")
+        for flag in (
+            "actual_spfx_package_included_now",
+            "package_solution_enabled_now",
+            "app_catalog_deploy_allowed_now",
+            "tenant_apply_allowed_now",
+            "executes_graph_requests_now",
+        ):
+            if offline_skeleton.get(flag) is not False:
+                errors.append(f"offline_spfx_skeleton.{flag} must be false")
+        if spfx_skeleton:
+            if spfx_skeleton.get("status") != offline_skeleton.get("status"):
+                errors.append("offline_spfx_skeleton status must match skeleton artifact")
 
     graph = payload.get("graph_policy")
     if not isinstance(graph, dict):
@@ -316,6 +385,39 @@ def _validate_bpmn_viewer_provisioning(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_spfx_bpmn_viewer_skeleton(
+    payload: dict[str, Any],
+    data_mcp_contract: dict[str, Any],
+) -> list[str]:
+    render_fixture = load_spfx_bpmn_viewer_render_fixture()
+    errors = validate_spfx_bpmn_viewer_skeleton(
+        payload,
+        render_fixture=render_fixture,
+        mcp_contract=data_mcp_contract if data_mcp_contract else None,
+    )
+    if errors:
+        return errors
+    result = build_spfx_bpmn_viewer_skeleton_result(
+        payload,
+        render_fixture=render_fixture,
+        mcp_contract=data_mcp_contract if data_mcp_contract else None,
+    )
+    if result.get("status") != "PASSED":
+        errors.append("SPFx BPMN viewer skeleton result must pass")
+        return errors
+    summary = result.get("summary", {})
+    if summary.get("request_plan_count") != 3:
+        errors.append("SPFx BPMN viewer skeleton must expose three MCP request plans")
+    for flag in (
+        "app_catalog_deploy_allowed_now",
+        "live_tenant_apply_allowed_now",
+        "live_content_read_enabled_now",
+    ):
+        if summary.get(flag) is not False:
+            errors.append(f"SPFx BPMN viewer skeleton summary.{flag} must be false")
+    return errors
+
+
 def _validate_data_mcp_contract(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if payload.get("server_id") != "teams-sharepoint-data-mcp":
@@ -364,6 +466,7 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "spfx-bpmn-viewer-skeleton",
             "bpmn-viewer-plan",
             "optional_plan_only_no_live_apply",
             "Microsoft Graph REST",
@@ -376,6 +479,7 @@ def _validate_docs() -> list[str]:
             "SPFx",
             "bpmn-js",
             "viewer-only",
+            "spfx-bpmn-viewer-skeleton",
             "bpmn-viewer-plan",
             "optional_plan_only_no_live_apply",
             "Microsoft Graph REST",
@@ -407,6 +511,7 @@ def _validate_docs() -> list[str]:
             "m365-sharepoint-bpmn-viewer-adapter.contract.json",
             "SPFx",
             "BPMN",
+            "spfx/nac-bpmn-viewer",
         ],
     }
     for path, markers in required_docs.items():

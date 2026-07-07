@@ -1,0 +1,30 @@
+{
+  "name": "@notariat8/nac-bpmn-viewer-spfx-skeleton",
+  "version": "0.0.0-skeleton",
+  "private": true,
+  "description": "Source-only SPFx skeleton for the read-only NaC BPMN Viewer.",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "validate:skeleton": "python3 ../../scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"
+  },
+  "dependencies": {
+    "@microsoft/sp-core-library": "^1.20.0",
+    "@microsoft/sp-property-pane": "^1.20.0",
+    "@microsoft/sp-webpart-base": "^1.20.0",
+    "bpmn-js": "^17.11.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@microsoft/sp-build-web": "^1.20.0",
+    "typescript": "~5.3.3"
+  },
+  "nacSkeleton": {
+    "status": "offline_source_only",
+    "npmInstallRequiredNow": false,
+    "buildRequiredNow": false,
+    "appCatalogDeployAllowedNow": false,
+    "tenantApplyAllowedNow": false,
+    "executesGraphRequestsNow": false
+  }
+}

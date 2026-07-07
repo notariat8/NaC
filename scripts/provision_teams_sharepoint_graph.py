@@ -88,6 +88,11 @@ from nac_m365_graph.runtime_smoke import (  # noqa: E402
     write_runtime_site_smoke_artifact,
 )
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
+from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
+    DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
+    build_spfx_bpmn_viewer_skeleton_result,
+    load_spfx_bpmn_viewer_skeleton,
+)
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
@@ -116,6 +121,7 @@ def parse_args() -> argparse.Namespace:
             "plan",
             "application-owner-readiness",
             "bpmn-viewer-plan",
+            "spfx-bpmn-viewer-skeleton",
             "privileged-plan",
             "privileged-apply",
             "runtime-certificate-expiry-monitor",
@@ -137,6 +143,7 @@ def parse_args() -> argparse.Namespace:
             "Provisioning command. validate, plan and privileged-plan run without Microsoft 365 credentials; "
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
+            "spfx-bpmn-viewer-skeleton renders the offline SPFx/bpmn-js viewer source skeleton and request plans; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
@@ -154,6 +161,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_BPMN_VIEWER_PROVISIONING,
         help="Path to the optional BPMN viewer SharePoint provisioning plan.",
+    )
+    parser.add_argument(
+        "--spfx-bpmn-viewer-skeleton",
+        type=Path,
+        default=DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
+        help="Path to the offline SPFx BPMN viewer skeleton artifact.",
     )
     parser.add_argument(
         "--owner-approved",
@@ -920,6 +933,21 @@ def main() -> int:
                 },
             },
             args.json,
+        )
+
+    if args.command == "spfx-bpmn-viewer-skeleton":
+        skeleton = load_spfx_bpmn_viewer_skeleton(args.spfx_bpmn_viewer_skeleton)
+        mcp_contract = load_mcp_contract(args.mcp_contract)
+        provisioned_state = load_provisioned_state(args.provisioned_state)
+        result = build_spfx_bpmn_viewer_skeleton_result(
+            skeleton,
+            mcp_contract=mcp_contract,
+            provisioned_state=provisioned_state,
+        )
+        return _emit(
+            result,
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
         )
 
     if not args.owner_approved:

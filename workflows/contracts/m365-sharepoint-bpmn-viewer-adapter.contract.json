@@ -42,10 +42,23 @@
   "spfx_surface": {
     "delivery": "SharePoint Framework Web Part",
     "recommended_component": "NaC BPMN Viewer",
-    "included_in_nac_repo_now": false,
+    "included_in_nac_repo_now": true,
+    "skeleton_slice": "spfx-bpmn-viewer-skeleton",
+    "package_root": "spfx/nac-bpmn-viewer",
+    "status": "offline_source_only",
     "package_repo_recommended": "separate_spfx_repo_or_future_app_package",
     "library": "bpmn-js",
     "bpmn_js_mode": "viewer_only",
+    "source_skeleton_included_now": true,
+    "npm_install_required_now": false,
+    "build_required_now": false,
+    "app_catalog_deploy_allowed_now": false,
+    "tenant_apply_allowed_now": false,
+    "executes_graph_requests_now": false,
+    "uses_mock_or_fixture_bpmn_now": true,
+    "uses_bpmn_js_viewer_only": true,
+    "uses_bpmn_js_modeler": false,
+    "writes_sharepoint_or_bpmn": false,
     "modeler_enabled": false,
     "workflow_execution_allowed": false,
     "custom_script_dependency_allowed": false,
@@ -66,6 +79,18 @@
     "planned_lists": [
       "Prozessregister"
     ]
+  },
+  "offline_spfx_skeleton": {
+    "artifact": "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
+    "package_root": "spfx/nac-bpmn-viewer",
+    "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json",
+    "status": "offline_skeleton_no_package_deploy",
+    "source_skeleton_included_now": true,
+    "actual_spfx_package_included_now": false,
+    "package_solution_enabled_now": false,
+    "app_catalog_deploy_allowed_now": false,
+    "tenant_apply_allowed_now": false,
+    "executes_graph_requests_now": false
   },
   "graph_policy": {
     "base_url": "https://graph.microsoft.com/v1.0",
@@ -104,6 +129,8 @@
     "pnp",
     "microsoft_graph_sdk",
     "custom_script_page_embedding",
+    "app_catalog_deploy",
+    "tenant_wide_deploy",
     "store_secrets",
     "store_mandate_data"
   ],
@@ -136,6 +163,7 @@
   },
   "validation_commands": [
     "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
+    "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton",
     "python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter",
     "python3 scripts/quality_gate.py --profile strict"
   ]
