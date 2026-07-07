@@ -470,8 +470,11 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("mcp_boundary.current_transport must be stdio")
         if mcp.get("current_protocol_version") != "2025-11-25":
             errors.append("mcp_boundary.current_protocol_version must be 2025-11-25")
-        if mcp.get("current_runtime_mode") != "request_planning_with_owner_gated_live_read":
-            errors.append("mcp_boundary.current_runtime_mode must be request_planning_with_owner_gated_live_read")
+        if mcp.get("current_runtime_mode") != "request_planning_with_owner_gated_live_read_and_metadata_inventory":
+            errors.append(
+                "mcp_boundary.current_runtime_mode must be "
+                "request_planning_with_owner_gated_live_read_and_metadata_inventory"
+            )
         if mcp.get("mcp_must_use_graph_rest_only") is not True:
             errors.append("mcp_boundary.mcp_must_use_graph_rest_only must be true")
         if mcp.get("owner_gated_live_read_allowed") is not True:
@@ -493,7 +496,15 @@ def _validate_contract(payload: dict[str, Any]) -> list[str]:
                 errors.append(f"mcp_boundary.{flag} must be false")
         if mcp.get("runtime_writes_executed_by_mcp") is not False:
             errors.append("mcp_boundary.runtime_writes_executed_by_mcp must be false")
-        for tool in ("case_get", "case_create", "grant_request", "audit_append", "document_list"):
+        for tool in (
+            "case_get",
+            "case_create",
+            "grant_request",
+            "audit_append",
+            "document_list",
+            "notarial_interface_inventory_list",
+            "notarial_interface_boundary_check",
+        ):
             if tool not in set(_strings(mcp.get("allowed_runtime_tools"))):
                 errors.append(f"mcp_boundary.allowed_runtime_tools missing {tool}")
 
@@ -541,6 +552,14 @@ def _validate_mcp_runtime_contract(
         if not isinstance(tool, dict):
             errors.append("teams-sharepoint-data-mcp tools entries must be objects")
             continue
+        if tool.get("tool_type") == "metadata_only_inventory":
+            if tool.get("graph_method") != "NONE":
+                errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} metadata tool graph_method must be NONE")
+            if tool.get("list_name") is not None:
+                errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} metadata tool must not target a list")
+            if tool.get("reads_items") is not False or tool.get("writes_items") is not False:
+                errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} metadata tool must not read or write items")
+            continue
         if tool.get("graph_method") not in {"GET", "POST", "PATCH"}:
             errors.append(f"teams-sharepoint-data-mcp {tool.get('id')} graph_method is invalid")
         if tool.get("list_name") not in allowed_tool_lists:
@@ -575,6 +594,8 @@ def _validate_mcp_schema_binding(
     )
     for tool in payload.get("tools", []):
         if not isinstance(tool, dict):
+            continue
+        if tool.get("tool_type") == "metadata_only_inventory":
             continue
         tool_id = str(tool.get("id", ""))
         list_name = tool.get("list_name")

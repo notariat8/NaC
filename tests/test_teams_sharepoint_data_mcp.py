@@ -126,6 +126,8 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
                 "bpmn_model_get",
                 "process_register_list",
                 "bpmn_viewer_overlay_get",
+                "notarial_interface_inventory_list",
+                "notarial_interface_boundary_check",
             },
         )
 
@@ -136,7 +138,13 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertFalse(manifest["executesGraphRequests"])
         self.assertEqual(manifest["ownerGatedLiveRead"]["allowed_tools"], ["case_get", "document_list"])
         self.assertFalse(manifest["ownerGatedLiveRead"]["writes_allowed"])
-        self.assertEqual(len(manifest["tools"]), 10)
+        self.assertEqual(len(manifest["tools"]), 12)
+        by_name = {tool["name"]: tool for tool in manifest["tools"]}
+        self.assertTrue(by_name["notarial_interface_inventory_list"]["metadataOnly"])
+        self.assertEqual(
+            by_name["notarial_interface_boundary_check"]["sourceContract"],
+            "workflow.notarial_application_interface_inventory",
+        )
         for tool in manifest["tools"]:
             self.assertTrue(tool["requiresRoleCasePurposeGate"])
             self.assertFalse(tool["readsFiles"])
@@ -175,6 +183,97 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         case_get = by_name["case_get"]
         self.assertEqual(case_get["inputSchema"]["required"], ["context", "arguments"])
         self.assertEqual(case_get["inputSchema"]["properties"]["arguments"]["required"], ["case_id"])
+        boundary_check = by_name["notarial_interface_boundary_check"]
+        self.assertEqual(
+            boundary_check["inputSchema"]["properties"]["arguments"]["required"],
+            ["interface_id", "requested_operation"],
+        )
+
+    def test_stdio_inventory_list_returns_metadata_only_contract_rows(self) -> None:
+        server = _mcp_server()
+
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 30,
+                "method": "tools/call",
+                "params": {
+                    "name": "notarial_interface_inventory_list",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {},
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(response)
+        result = response["result"]
+        structured = result["structuredContent"]
+        self.assertEqual(structured["runtime_mode"], "metadata_inventory_only")
+        self.assertFalse(structured["executes_graph_requests"])
+        self.assertEqual(structured["source_contract"], "workflow.notarial_application_interface_inventory")
+        self.assertEqual(len(structured["interfaces"]), 10)
+        ids = {item["interfaceId"] for item in structured["interfaces"]}
+        self.assertIn("ben", ids)
+        self.assertIn("xjustiz_331", ids)
+        self.assertFalse(structured["privacy"]["callsExternalBnotkSystems"])
+        serialized = json.dumps(structured, ensure_ascii=False)
+        for forbidden in ("<html", "<xsd:schema", "IdentityToken=", "BEGIN CERTIFICATE"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_stdio_inventory_boundary_check_marks_safe_and_owner_gated_operations(self) -> None:
+        server = _mcp_server(live_read_enabled=True, graph_client=_FakeGraphReadClient({"unexpected": True}))
+
+        safe_response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 31,
+                "method": "tools/call",
+                "params": {
+                    "name": "notarial_interface_boundary_check",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {
+                            "interface_id": "zvr",
+                            "requested_operation": "metadata_inventory",
+                        },
+                    },
+                },
+            }
+        )
+        gated_response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 32,
+                "method": "tools/call",
+                "params": {
+                    "name": "notarial_interface_boundary_check",
+                    "arguments": {
+                        "context": _mcp_context(case_id="case-1"),
+                        "arguments": {
+                            "interface_id": "ben",
+                            "requested_operation": "productive_ben_send_or_fetch",
+                        },
+                    },
+                },
+            }
+        )
+
+        self.assertIsNotNone(safe_response)
+        safe_check = safe_response["result"]["structuredContent"]["boundary_check"]
+        self.assertEqual(safe_check["boundaryStatus"], "allowed_metadata_only")
+        self.assertTrue(safe_check["allowedNow"])
+        self.assertFalse(safe_check["ownerGateRequired"])
+        self.assertFalse(safe_response["result"]["structuredContent"]["executes_graph_requests"])
+
+        self.assertIsNotNone(gated_response)
+        gated_check = gated_response["result"]["structuredContent"]["boundary_check"]
+        self.assertEqual(gated_check["boundaryStatus"], "owner_gate_required")
+        self.assertFalse(gated_check["allowedNow"])
+        self.assertTrue(gated_check["ownerGateRequired"])
+        self.assertTrue(gated_check["privateOperatingFrameRequired"])
+        self.assertEqual(gated_check["area"], "besonderes elektronisches Notarpostfach")
 
     def test_stdio_tools_call_returns_request_plan_structured_content(self) -> None:
         server = _mcp_server()
@@ -1014,7 +1113,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["tool_count"], 10)
+        self.assertEqual(payload["summary"]["tool_count"], 12)
         self.assertFalse(payload["result"]["executesGraphRequests"])
 
     def test_central_cli_mcp_stdio_process_handles_initialize_and_tools_list(self) -> None:
@@ -1053,7 +1152,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         lines = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0]["result"]["protocolVersion"], MCP_PROTOCOL_VERSION)
-        self.assertEqual(len(lines[1]["result"]["tools"]), 10)
+        self.assertEqual(len(lines[1]["result"]["tools"]), 12)
 
     def test_central_cli_mcp_live_read_requires_owner_approval_before_stdio(self) -> None:
         result = subprocess.run(

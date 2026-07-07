@@ -5,7 +5,7 @@
   "title": "Teams/SharePoint Data MCP runtime boundary",
   "status": "owner_gated_live_read_no_live_write",
   "last_update": "2026-07-07",
-  "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence, document pointers and optional BPMN viewer metadata stored in Teams-connected SharePoint sites through Microsoft Graph REST v1.0 only.",
+  "purpose": "Define the first runtime MCP boundary for matter metadata, tasks, substitution grants, audit evidence, document pointers, optional BPMN viewer metadata and metadata-only notarial interface inventory tools. SharePoint-backed tools use Microsoft Graph REST v1.0 only; inventory tools execute no Graph request.",
   "mcp_protocol": {
     "protocol_version": "2025-11-25",
     "transport": "stdio",
@@ -76,6 +76,21 @@
       "live_read_tools_enabled_now": [
         "case_get",
         "document_list"
+      ]
+    },
+    "notarial_interface_inventory": {
+      "source_contract": "workflow.notarial_application_interface_inventory",
+      "source_contract_path": "workflows/contracts/notarial-application-interface-inventory.contract.json",
+      "available_now": true,
+      "runtime_mode": "metadata_inventory_only",
+      "executes_graph_requests": false,
+      "reads_sharepoint_items": false,
+      "reads_sharepoint_file_content": false,
+      "stores_tokens_or_secrets": false,
+      "requires_role_case_purpose_gate": true,
+      "tools": [
+        "notarial_interface_inventory_list",
+        "notarial_interface_boundary_check"
       ]
     }
   },
@@ -264,6 +279,39 @@
         "case_id"
       ],
       "reads_items": true,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    },
+    {
+      "id": "notarial_interface_inventory_list",
+      "description": "Return the metadata-only notarial application interface inventory from the local NaC contract. It never calls BNotK, SharePoint or Microsoft Graph and never returns source full text.",
+      "tool_type": "metadata_only_inventory",
+      "source_contract": "workflow.notarial_application_interface_inventory",
+      "graph_method": "NONE",
+      "graph_path_template": null,
+      "list_name": null,
+      "required_inputs": [],
+      "reads_items": false,
+      "reads_files": false,
+      "writes_items": false,
+      "requires_role_case_purpose_gate": true,
+      "requires_write_approval": false
+    },
+    {
+      "id": "notarial_interface_boundary_check",
+      "description": "Check whether a requested notarial interface operation is metadata-only, requires private operating frame, or requires an owner apply gate. It never calls external BNotK systems.",
+      "tool_type": "metadata_only_inventory",
+      "source_contract": "workflow.notarial_application_interface_inventory",
+      "graph_method": "NONE",
+      "graph_path_template": null,
+      "list_name": null,
+      "required_inputs": [
+        "interface_id",
+        "requested_operation"
+      ],
+      "reads_items": false,
       "reads_files": false,
       "writes_items": false,
       "requires_role_case_purpose_gate": true,

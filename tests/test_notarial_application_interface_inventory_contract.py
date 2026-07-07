@@ -53,9 +53,29 @@ class NotarialApplicationInterfaceInventoryContractTests(unittest.TestCase):
         ):
             self.assertIs(policy[key], False, key)
 
-        self.assertIs(policy["read_only_mcp_contract_required_before_runtime"], True)
+        self.assertIs(policy["read_only_mcp_contract_required_before_runtime"], False)
         self.assertIs(policy["private_operating_frame_required_before_live"], True)
         self.assertIs(policy["owner_apply_gate_required_before_live"], True)
+
+    def test_contract_binds_inventory_tools_to_teams_sharepoint_mcp(self) -> None:
+        payload = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        binding = payload["runtime_binding"]
+
+        self.assertEqual("teams-sharepoint-data-mcp", binding["server_id"])
+        self.assertEqual(
+            "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+            binding["implemented_in_contract"],
+        )
+        self.assertTrue(binding["implemented_now"])
+        self.assertFalse(binding["executes_graph_requests"])
+
+        tools = {tool["name"]: tool for tool in payload["read_only_mcp_tools"]}
+        self.assertEqual(
+            set(tools),
+            {"notarial_interface_inventory_list", "notarial_interface_boundary_check"},
+        )
+        for tool in tools.values():
+            self.assertIn("external BNotK calls", tool["blocked_output"])
 
     def test_required_interface_ids_are_present(self) -> None:
         payload = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))

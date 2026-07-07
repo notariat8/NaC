@@ -1,7 +1,7 @@
 {
   "schema_version": "nac.workflow-contract/v0.1",
   "contract_id": "workflow.notarial_application_interface_inventory",
-  "status": "offline_inventory_no_live_apply",
+  "status": "offline_inventory_with_read_only_mcp_tools",
   "purpose": "Metadata-only inventory for owner-provided BNotK application interface, beN and XJustiz 3.3.1 sources. It defines NaC integration boundaries without storing source full text, credentials, payloads or schema copies in the product repository.",
   "source_documents": {
     "architecture_de": "docs/de/architecture/notarial-application-interface-inventory.md",
@@ -40,7 +40,7 @@
     "live_connector_apply_allowed": false,
     "productive_specialist_system_write_allowed": false,
     "m365_mvp_data_plane_changed": false,
-    "read_only_mcp_contract_required_before_runtime": true,
+    "read_only_mcp_contract_required_before_runtime": false,
     "private_operating_frame_required_before_live": true,
     "privacy_review_required_before_personal_data": true,
     "owner_apply_gate_required_before_live": true
@@ -153,7 +153,15 @@
       "mvp_boundary": "schema_reference_metadata_only"
     }
   ],
-  "planned_read_only_mcp_tools": [
+  "runtime_binding": {
+    "server_id": "teams-sharepoint-data-mcp",
+    "implemented_in_contract": "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+    "implemented_now": true,
+    "runtime_mode": "metadata_inventory_only",
+    "executes_graph_requests": false,
+    "requires_role_case_purpose_gate": true
+  },
+  "read_only_mcp_tools": [
     {
       "name": "notarial_interface_inventory_list",
       "allowed_output": "interface ids, areas, source labels, family identifiers and MVP boundary labels",
