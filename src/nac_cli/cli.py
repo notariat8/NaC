@@ -84,6 +84,7 @@ from .tenant import (
 
 DEFAULT_PORT = 8765
 DEFAULT_RELEASE_GATE_RUN_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gates")
+DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT = Path("out/m365/teams-sharepoint/release-gate-comparisons")
 DEFAULT_RELEASE_GATE_INVENTORY_NOT_ATTACHED_ARTIFACT = Path(
     "out/m365/teams-sharepoint/mcp-inventory-smoke.not-attached.redacted.json"
 )
@@ -303,6 +304,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-smoke-suite",
             "release-gate-evidence",
             "release-gate-retention-compare",
+            "release-gate-retention-compare-artifact",
             "release-gate-retention-list",
             "release-gate-run",
             "apply",
@@ -500,6 +502,16 @@ def build_parser() -> argparse.ArgumentParser:
             "Rechter Release-Gate-Lauf fuer release-gate-retention-compare; "
             "akzeptiert Correlation-ID, Laufordner oder Retention-Index-Pfad."
         ),
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-compare-output",
+        type=Path,
+        help="Optionaler Markdown-Pfad fuer das redigierte Release-Gate-Retention-Compare-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-compare-json-output",
+        type=Path,
+        help="Optionaler JSON-Pfad fuer das redigierte Release-Gate-Retention-Compare-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-suite-artifact",
@@ -1522,6 +1534,14 @@ def command_m365(args: argparse.Namespace) -> int:
                 _print_m365_release_gate_retention_compare(payload)
             return 0 if payload["status"] == "PASSED" else 2
 
+        if args.teams_sharepoint_command == "release-gate-retention-compare-artifact":
+            payload = _write_m365_release_gate_retention_compare_artifact(repo_root, args)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                _print_m365_release_gate_retention_compare_artifact(payload)
+            return 0 if payload["status"] == "PASSED" else 2
+
         if args.teams_sharepoint_command == "release-gate-evidence":
             output_path = _resolve_m365_release_gate_path(
                 repo_root,
@@ -2131,6 +2151,146 @@ def _compare_m365_release_gate_retention(repo_root: Path, args: argparse.Namespa
     }
 
 
+def _write_m365_release_gate_retention_compare_artifact(repo_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+    payload = _compare_m365_release_gate_retention(repo_root, args)
+    if payload["status"] != "PASSED":
+        return {
+            **payload,
+            "schema_version": "nac.m365-release-gate-retention-compare-artifact/v0.1",
+        }
+    report_path, json_path = _m365_release_gate_retention_compare_artifact_paths(repo_root, args, payload)
+    payload = {
+        **payload,
+        "schema_version": "nac.m365-release-gate-retention-compare-artifact/v0.1",
+        "generated_at": _now_utc(),
+    }
+    payload["summary"] = {
+        **payload["summary"],
+        "artifact_directory": str(report_path.parent),
+        "report_path": str(report_path),
+        "json_path": str(json_path),
+        "source_artifacts_must_be_redacted": True,
+    }
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    report_path.write_text(_render_m365_release_gate_retention_compare_report(payload), encoding="utf-8")
+    return payload
+
+
+def _m365_release_gate_retention_compare_artifact_paths(
+    repo_root: Path,
+    args: argparse.Namespace,
+    payload: dict[str, Any],
+) -> tuple[Path, Path]:
+    summary = payload.get("summary", {})
+    left = _safe_release_gate_correlation_id(str(summary.get("left_correlation_id") or "left"))
+    right = _safe_release_gate_correlation_id(str(summary.get("right_correlation_id") or "right"))
+    default_dir = DEFAULT_RELEASE_GATE_COMPARE_ARTIFACT_ROOT / f"{left}__{right}"
+    default_report = default_dir / "release-gate-retention-compare.redacted.md"
+    default_json = default_dir / "release-gate-retention-compare.redacted.json"
+    report_path = _resolve_m365_release_gate_path(repo_root, args.release_gate_compare_output, default_report)
+    json_path = _resolve_m365_release_gate_path(repo_root, args.release_gate_compare_json_output, default_json)
+    return report_path, json_path
+
+
+def _render_m365_release_gate_retention_compare_report(payload: dict[str, Any]) -> str:
+    summary = payload.get("summary", {})
+    comparison = payload.get("comparison", {})
+    artifacts = comparison.get("artifacts", {})
+    missing = comparison.get("missing_attachments", {})
+    lines = [
+        "# M365 Release Gate Retention Compare",
+        "",
+        f"Status: {payload.get('status')}",
+        f"Generated at: {payload.get('generated_at')}",
+        f"Left correlation ID: {summary.get('left_correlation_id')}",
+        f"Right correlation ID: {summary.get('right_correlation_id')}",
+        f"Differences found: {summary.get('differences_found')}",
+        f"Difference count: {summary.get('difference_count')}",
+        "",
+        "## Privacy",
+        "",
+        "- Graph requests executed: false",
+        "- Tenant writes executed: false",
+        "- Tenant deletes executed: false",
+        "- Stores tokens or secrets: false",
+        "- Reads SharePoint file content: false",
+        "",
+        "## Runs",
+        "",
+        "| Side | Status | Workspace | Timestamp | Retained | Missing attachments |",
+        "| --- | --- | --- | --- | ---: | ---: |",
+        _m365_release_gate_retention_run_markdown_row("Left", payload.get("left") or {}),
+        _m365_release_gate_retention_run_markdown_row("Right", payload.get("right") or {}),
+        "",
+        "## Field Differences",
+        "",
+    ]
+    field_diffs = comparison.get("fields", [])
+    if field_diffs:
+        lines.extend(["| Field | Left | Right |", "| --- | --- | --- |"])
+        lines.extend(
+            f"| {item.get('field')} | {_md_cell(item.get('left'))} | {_md_cell(item.get('right'))} |"
+            for item in field_diffs
+        )
+    else:
+        lines.append("No field differences.")
+    lines.extend(["", "## Artifact Differences", ""])
+    lines.append(f"Added in right: {', '.join(artifacts.get('added_in_right') or []) or 'none'}")
+    lines.append(f"Removed in right: {', '.join(artifacts.get('removed_in_right') or []) or 'none'}")
+    changed = artifacts.get("changed", [])
+    if changed:
+        lines.extend(["", "| Artifact | Changed fields |", "| --- | --- |"])
+        lines.extend(
+            f"| {item.get('id')} | {', '.join(item.get('changed_fields') or [])} |"
+            for item in changed
+        )
+    else:
+        lines.append("Changed artifacts: none")
+    lines.extend(
+        [
+            "",
+            "## Missing Attachments",
+            "",
+            f"Left missing: {', '.join(missing.get('left_missing') or []) or 'none'}",
+            f"Right missing: {', '.join(missing.get('right_missing') or []) or 'none'}",
+            f"Resolved in right: {', '.join(missing.get('resolved_in_right') or []) or 'none'}",
+            f"Newly missing in right: {', '.join(missing.get('newly_missing_in_right') or []) or 'none'}",
+            "",
+            "## Evidence Paths",
+            "",
+        ]
+    )
+    path_diffs = comparison.get("evidence_paths", {}).get("differences", [])
+    if path_diffs:
+        lines.extend(["| Field | Left | Right |", "| --- | --- | --- |"])
+        lines.extend(
+            f"| {item.get('field')} | `{_md_cell(item.get('left'))}` | `{_md_cell(item.get('right'))}` |"
+            for item in path_diffs
+        )
+    else:
+        lines.append("No evidence path differences.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _m365_release_gate_retention_run_markdown_row(side: str, run: dict[str, Any]) -> str:
+    return (
+        f"| {side} | {_md_cell(run.get('status'))} | {_md_cell(run.get('workspace_id'))} | "
+        f"{_md_cell(run.get('timestamp'))} | {_md_cell(run.get('copied_artifact_count'))} | "
+        f"{_md_cell(run.get('not_attached_artifact_count'))} |"
+    )
+
+
+def _md_cell(value: Any) -> str:
+    return str(value).replace("|", "\\|") if value is not None else ""
+
+
+def _now_utc() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def _load_m365_release_gate_retention_compare_side(
     repo_root: Path,
     retention_root: Path,
@@ -2308,6 +2468,14 @@ def _print_m365_release_gate_retention_compare(payload: dict[str, Any]) -> None:
         print(f"- missing attachment resolved in right: {artifact_id}")
     for artifact_id in missing.get("newly_missing_in_right", []):
         print(f"- missing attachment new in right: {artifact_id}")
+
+
+def _print_m365_release_gate_retention_compare_artifact(payload: dict[str, Any]) -> None:
+    _print_m365_release_gate_retention_compare(payload)
+    summary = payload.get("summary", {})
+    if payload["status"] == "PASSED":
+        print(f"Report: {summary.get('report_path')}")
+        print(f"JSON: {summary.get('json_path')}")
 
 
 def _mtime_utc(path: Path) -> str | None:

@@ -211,6 +211,23 @@ status, timestamp, artifact, missing-attachment and evidence-path differences,
 but reads no SharePoint file content and performs no Graph request, tenant
 write or delete.
 
+A versionable comparison evidence artifact is written offline with the same
+input:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-retention-compare-artifact \
+  --release-gate-compare-left <left-correlation-id> \
+  --release-gate-compare-right <right-correlation-id> \
+  --format json
+```
+
+Without explicit paths, the command writes
+`release-gate-retention-compare.redacted.md` and
+`release-gate-retention-compare.redacted.json` under
+`out/m365/teams-sharepoint/release-gate-comparisons/<left>__<right>/`.
+`--release-gate-compare-output` and `--release-gate-compare-json-output` set
+custom targets. The export remains redacted and offline.
+
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
   --mcp-smoke-workspace-id notary_team_01 \
