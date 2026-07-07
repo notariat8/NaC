@@ -169,6 +169,32 @@ Mit `--release-gate-write-readiness` kann der One-Shot-Runner diesen Status
 direkt für die aktuelle Correlation-ID schreiben; der Einzelbefehl bleibt der
 Diagnose- und Re-Run-Pfad für vorhandene Retention-Läufe.
 
+## MVP-Go/No-Go-Abnahmekriterium
+
+`release-readiness` ist das verbindliche MVP-Go/No-Go-Abnahmekriterium für den
+M365-Runtime-Pfad. Eine M365-MVP-Laufzeitfreigabe gilt erst als `READY`, wenn
+der One-Shot-Runner in derselben owner-gated Ausführung das Audit-Pack und den
+Readiness-Status schreibt und die Ausgabe `mvp_release_readiness=READY` sowie
+`release_gate_readiness=READY` enthält.
+
+Der Standardlauf für eine Abnahme nutzt daher immer diese Flags:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --release-gate-write-audit-pack \
+  --release-gate-write-readiness \
+  --release-gate-readiness-require-audit-pack \
+  --format json
+```
+
+Keine MVP-Freigabe erfolgt nur auf Basis von `mcp-smoke-suite`,
+`runtime-smoke` oder Konsolenausgabe. Diese Einzelbefehle bleiben Diagnose- und
+Reproduktionspfade; die Abnahmeentscheidung hängt am redigierten Retention-
+Index, `release-gate-evidence`, Audit-Pack und `release-readiness`.
+
 ## Runtime-Zertifikatsrotation-Freigabe
 
 Nach einer `runtime-certificate-readiness`-Warnung rendert der Agent das
