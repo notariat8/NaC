@@ -101,25 +101,27 @@ python3 scripts/nac.py batch-approval m365 --batch-mode release-gate --workspace
 ```
 
 The renderer performs no GitHub or Graph write action. It emits the copyable
-owner approval and the fixed sequence:
+owner approval and exactly one leading live command:
 
-1. `runtime-smoke`
-2. `runtime-metadata`
-3. `mcp-smoke-suite --mcp-suite-cleanup`
-4. `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run`
-5. `release-gate-evidence --release-gate-require-runtime-artifacts`
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --format json
+```
 
-The emitted live commands remain owner-gated. `runtime-smoke` and
-`runtime-metadata` are read-only, the MCP Smoke Suite writes and deletes one
-synthetic matter, and the leftover dry-run only reads the match count.
-`release-gate-evidence` runs offline afterwards and reads only local redacted
-artifacts. `runtime-smoke` and `runtime-metadata` write their own redacted
-runtime artifacts so the completion report can return
-`complete_release_gate_artifacts`. In the release-gate batch,
-`--release-gate-require-runtime-artifacts` is mandatory; when
-`runtime-smoke.redacted.json` or `runtime-metadata.redacted.json` is missing,
-the final evidence step blocks instead of falling back to
-`mcp_artifacts_only`.
+The one-shot runner remains owner-gated and internally covers `runtime-smoke`,
+`runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`,
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` and
+`release-gate-evidence --release-gate-require-runtime-artifacts`.
+`runtime-smoke` and `runtime-metadata` are read-only, the MCP Smoke Suite writes
+and deletes one synthetic matter, and the leftover dry-run only reads the match
+count. `release-gate-evidence` runs offline at the end and reads only local
+redacted artifacts. `runtime-smoke` and `runtime-metadata` write their own
+redacted runtime artifacts so the completion report can return
+`complete_release_gate_artifacts`. The individual commands remain a diagnostic
+and fallback path when a runner step must be reproduced in isolation.
 
 ## Standard Runtime Evidence For MCP/Runtime Changes
 
@@ -139,8 +141,9 @@ read, cleanup, redacted artifact, workspace clean state and concrete result in
 the final status. If a synthetic leftover remains after the run, the agent must
 immediately prepare the owner-gated `mcp-smoke-leftover-cleanup` path.
 
-After a successful gate, the agent creates the redacted completion report
-without another owner approval:
+When `release-gate-run` is used, the runner creates the redacted completion
+report in the same owner-gated run. The following offline exporter remains only
+for diagnostics or re-exporting existing artifacts:
 
 ```bash
 python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \

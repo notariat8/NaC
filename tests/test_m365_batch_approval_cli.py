@@ -154,15 +154,16 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertEqual(
             release_gate["commands"],
             [
-                "python3 scripts/nac.py m365 teams-sharepoint runtime-smoke --owner-approved --runtime-smoke-output out/m365/teams-sharepoint/runtime-smoke.redacted.json --format json",
-                "python3 scripts/nac.py m365 teams-sharepoint runtime-metadata --owner-approved --runtime-metadata-output out/m365/teams-sharepoint/runtime-metadata.redacted.json --format json",
-                "python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-suite --owner-approved --mcp-suite-cleanup --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
-                "python3 scripts/nac.py m365 teams-sharepoint mcp-smoke-leftover-cleanup --owner-approved --mcp-leftover-dry-run --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
-                "python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --release-gate-require-runtime-artifacts --format json",
+                "python3 scripts/nac.py m365 teams-sharepoint release-gate-run --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id release-gate-corr --format json",
             ],
         )
         self.assertEqual(
             [step["step"] for step in release_gate["operator_sequence"]],
+            ["release_gate_run"],
+        )
+        self.assertEqual(release_gate["operator_sequence"][0]["owner_gate"], "m365_runtime_release_gate")
+        self.assertEqual(
+            release_gate["operator_sequence"][0]["covers_steps"],
             [
                 "runtime_smoke",
                 "runtime_metadata",
@@ -171,9 +172,6 @@ class M365BatchApprovalCliTests(unittest.TestCase):
                 "release_gate_evidence_export",
             ],
         )
-        self.assertEqual(release_gate["operator_sequence"][0]["owner_gate"], "m365_tenant_read_only")
-        self.assertEqual(release_gate["operator_sequence"][2]["owner_gate"], "m365_tenant_write_and_delete")
-        self.assertEqual(release_gate["operator_sequence"][4]["owner_gate"], "none")
 
     def test_batch_approval_requires_prs_for_merge_mode(self) -> None:
         result = subprocess.run(

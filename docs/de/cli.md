@@ -316,18 +316,21 @@ Das redigierte Artefakt liegt unter
 `out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json`.
 
 `batch-approval m365 --batch-mode release-gate` rendert die wiederholbare
-Release-Gate-Sequenz für Runtime-/MCP-Änderungen. Das Paket enthält
-`runtime-smoke`, `runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`, den
-anschließenden `mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` und den
-offline `release-gate-evidence`-Export in einer festen Reihenfolge. Der
-Renderer selbst ist offline; die ausgegebenen Live-Kommandos bleiben
-owner-gated.
+Release-Gate-Freigabe für Runtime-/MCP-Änderungen. Das Paket gibt den
+owner-gated One-Shot-Befehl `release-gate-run --owner-approved` als führenden
+Live-Pfad aus und dokumentiert die intern abgedeckten Schritte:
+`runtime-smoke`, `runtime-metadata`, `mcp-smoke-suite --mcp-suite-cleanup`,
+`mcp-smoke-leftover-cleanup --mcp-leftover-dry-run` und
+`release-gate-evidence --release-gate-require-runtime-artifacts`. Der Renderer
+selbst ist offline; der ausgegebene Live-Befehl bleibt owner-gated.
 
 `release-gate-run` führt dieselbe Sequenz in einem owner-gated Lauf aus und
 stoppt beim ersten fehlgeschlagenen Schritt. Der Runner schreibt nur die
 redigierten Standardartefakte unter `out/m365/teams-sharepoint/`, verlangt
 `--owner-approved` und lässt den abschließenden Evidence-Export mit
-`--release-gate-require-runtime-artifacts` laufen.
+`--release-gate-require-runtime-artifacts` laufen. Die Einzelbefehle bleiben
+Diagnose- und Fallback-Pfad, wenn ein Runner-Schritt isoliert reproduziert
+werden muss.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
