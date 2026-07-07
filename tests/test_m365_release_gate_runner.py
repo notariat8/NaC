@@ -1096,6 +1096,64 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["artifacts"][1]["status"], "BLOCKED")
         self.assertEqual(payload["artifacts"][2]["status"], "NOT_WRITTEN")
 
+    def test_release_readiness_passes_for_complete_retained_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            run_dir = retention_root / "ready-run"
+            audit_pack_dir = tmp_path / "release-gate-audit-packs" / "left-ready-run__right-ready-run"
+            _write_readiness_run(run_dir, correlation_id="ready-run")
+            _write_audit_pack(audit_pack_dir)
+
+            payload, return_code = _invoke_release_readiness(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "ready-run",
+                    "--release-gate-audit-pack-dir",
+                    str(audit_pack_dir),
+                    "--release-gate-readiness-require-audit-pack",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["mvp_release_readiness"], "READY")
+        self.assertEqual(payload["summary"]["correlation_id"], "ready-run")
+        self.assertEqual(payload["summary"]["retained_artifact_count"], 10)
+        self.assertEqual(payload["summary"]["audit_pack_status"], "PASSED")
+        self.assertTrue(all(check["status"] == "PASSED" for check in payload["checks"]))
+
+    def test_release_readiness_blocks_when_required_artifact_is_not_attached(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            run_dir = retention_root / "blocked-run"
+            _write_readiness_run(
+                run_dir,
+                correlation_id="blocked-run",
+                artifact_overrides={"mcp_inventory_smoke": {"status": "NOT_ATTACHED", "artifact_sha256": None}},
+            )
+
+            payload, return_code = _invoke_release_readiness(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "blocked-run",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["mvp_release_readiness"], "NOT_READY")
+        self.assertIn("mcp_inventory_smoke", "\n".join(payload["errors"]))
+
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
     parser = cli.build_parser()
@@ -1223,6 +1281,24 @@ def _invoke_retention_audit_pack(extra_args: list[str]) -> tuple[dict, int]:
     return json.loads(output.getvalue()), return_code
 
 
+def _invoke_release_readiness(extra_args: list[str]) -> tuple[dict, int]:
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "--repo-root",
+            str(REPO_ROOT),
+            "m365",
+            "teams-sharepoint",
+            "release-readiness",
+            *extra_args,
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        return_code = args.func(args)
+    return json.loads(output.getvalue()), return_code
+
+
 def _write_retention_run(
     run_dir: Path,
     *,
@@ -1253,6 +1329,93 @@ def _write_retention_run(
                 "schema_version": "nac.m365-release-gate-evidence/v0.1",
                 "status": "PASSED",
                 "generated_at": generated_at,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_readiness_run(
+    run_dir: Path,
+    *,
+    correlation_id: str,
+    artifact_overrides: dict[str, dict] | None = None,
+) -> None:
+    artifact_overrides = artifact_overrides or {}
+    run_dir.mkdir(parents=True)
+    artifacts = []
+    for artifact_id in cli.M365_RELEASE_READINESS_REQUIRED_ARTIFACTS:
+        override = artifact_overrides.get(artifact_id, {})
+        artifacts.append(
+            {
+                "id": artifact_id,
+                "status": override.get("status", "COPIED"),
+                "source_path": str(run_dir / f"{artifact_id}.redacted.json"),
+                "retained_path": str(run_dir / f"{artifact_id}.redacted.json"),
+                "artifact_sha256": override.get("artifact_sha256", "a" * 64),
+            }
+        )
+    copied_count = sum(1 for artifact in artifacts if artifact["status"] == "COPIED")
+    (run_dir / "release-gate-retention-index.redacted.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-retention-index/v0.1",
+                "status": "PASSED",
+                "workspace_id": "notary_team_01",
+                "correlation_id": correlation_id,
+                "artifact_dir": str(run_dir),
+                "copied_artifact_count": copied_count,
+                "artifacts": artifacts,
+                "privacy": {"storesTokensOrSecrets": False},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "release-gate-evidence.redacted.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-evidence/v0.1",
+                "status": "PASSED",
+                "generated_at": "2026-07-07T14:00:00Z",
+                "summary": {
+                    "workspace_id": "notary_team_01",
+                    "correlation_id": correlation_id,
+                    "evidence_completeness": "complete_release_gate_artifacts",
+                    "retention_index_attached": True,
+                    "retained_artifact_count": copied_count,
+                    "stores_tokens_or_secrets": False,
+                    "stores_raw_graph_response": False,
+                    "stores_raw_case_id": False,
+                    "reads_sharepoint_file_content": False,
+                },
+                "steps": [
+                    {"id": step_id, "status": "PASSED", "errors": []}
+                    for step_id in cli.M365_RELEASE_READINESS_REQUIRED_EVIDENCE_STEPS
+                ],
+                "errors": [],
+                "privacy": {"storesTokensOrSecrets": False},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_audit_pack(pack_dir: Path) -> None:
+    pack_dir.mkdir(parents=True)
+    (pack_dir / "release-gate-retention-audit-pack.redacted.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-release-gate-retention-audit-pack/v0.1",
+                "status": "PASSED",
+                "summary": {
+                    "pack_dir": str(pack_dir),
+                    "graph_requests_executed": False,
+                    "tenant_writes_executed": False,
+                    "tenant_deletes_executed": False,
+                    "stores_tokens_or_secrets": False,
+                    "reads_sharepoint_file_content": False,
+                },
+                "errors": [],
             }
         ),
         encoding="utf-8",

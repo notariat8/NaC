@@ -149,6 +149,21 @@ dabei ein redigiertes Inventar-Artefakt und hängt es automatisch an den
 Abschlussbericht an. Der Einzelbefehl bleibt ein Diagnose-/Fallback-Pfad, wenn
 dieser Runner-Schritt isoliert reproduziert werden muss.
 
+Nach einem erfolgreichen Live-Gate verdichtet der Offline-Befehl
+`release-readiness` den neuesten oder ausgewählten Retention-Lauf in einen
+kompakten MVP-Abnahmestatus:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-readiness \
+  --release-gate-readiness-correlation-id <correlation-id> \
+  --release-gate-readiness-require-audit-pack \
+  --format json
+```
+
+Der Status liest nur redigierte lokale Retention-, Evidence- und Audit-Pack-
+Artefakte. Er führt keine Graph-Anfrage, keinen Tenant-Write, keine Löschung
+und keinen SharePoint-Content-Read aus.
+
 ## Runtime-Zertifikatsrotation-Freigabe
 
 Nach einer `runtime-certificate-readiness`-Warnung rendert der Agent das

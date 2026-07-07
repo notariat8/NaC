@@ -94,6 +94,14 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertNotIn("does not execute it automatically", content)
             self.assertNotIn("mcp-inventory-smoke.not-attached", content)
 
+    def test_cli_docs_include_release_readiness_status(self) -> None:
+        for relative_path in ("docs/de/cli.md", "docs/en/cli.md"):
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+            self.assertIn("release-readiness --format json", content)
+            self.assertIn("mvp_release_readiness", content)
+            self.assertIn("release-gate-readiness-correlation-id", content)
+
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
