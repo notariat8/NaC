@@ -317,7 +317,9 @@ enthält Variablennamen, Status und Privacy-Flags, aber keine Tenant-ID,
 Client-ID, Zertifikatsthumbprint, Zertifikatskörper, Private-Key-Daten,
 Token- oder Secret-Werte. `release-gate-run` nutzt dieselbe Bootstrap-Logik
 intern, damit `runtime-smoke`, `runtime-metadata` und die MCP-Smoke-Schritte
-die benötigten Runtime-Env-Werte als Subprozess-Overlay erhalten. Der Live-Lauf
+die benötigten Runtime-Env-Werte als Subprozess-Overlay erhalten. Der Runner
+schreibt diesen Bootstrap-Nachweis zusätzlich als redigiertes Artefakt und
+hängt ihn an `release-gate-evidence` und den Artifact-Index an. Der Live-Lauf
 bleibt trotzdem owner-gated und führt ohne `--owner-approved` nicht aus.
 
 `runtime-smoke` und `runtime-metadata` lesen dabei nur Graph-REST-Metadaten und
@@ -408,9 +410,8 @@ PR refreshen, altes Entra-Credential entfernen, lokales altes Zertifikatsarchiv
 löschen und lokale delegated M365-CLI-Session abmelden.
 
 `release-gate-run` führt dieselbe Sequenz in einem owner-gated Lauf aus und
-startet mit dem offline `runtime-certificate-expiry-monitor`, bevor Live-
-Schritte laufen. Der Runner stoppt beim ersten fehlgeschlagenen Schritt und
-schreibt nur die
+bereitet vor den Live-Schritten offline das Runtime-Environment vor. Der Runner
+stoppt beim ersten fehlgeschlagenen Schritt und schreibt nur die
 redigierten Standardartefakte unter `out/m365/teams-sharepoint/`, verlangt
 `--owner-approved` und lässt den abschließenden Evidence-Export mit
 `--release-gate-require-runtime-artifacts` laufen. Der offline
@@ -434,6 +435,11 @@ Runtime- und MCP-Artefakte vorhanden sind, meldet er
 `complete_release_gate_artifacts`; fehlen optionale Runtime-Artefakte, markiert
 der Bericht die Runtime-Schritte als `NOT_ATTACHED`. Mit
 `--release-gate-require-runtime-artifacts` blockiert der Export in diesem Fall.
+Ein vorhandenes `runtime-env-bootstrap.redacted.json` kann zusätzlich mit
+`--release-gate-runtime-env-bootstrap-artifact` angehängt werden; fehlt es,
+bleibt dieser Evidence-Schritt `NOT_ATTACHED`, ohne die
+Vollständigkeitsbewertung zu verschlechtern. Ist es vorhanden, aber ungültig
+oder nicht redigiert, schlägt der Export fehl.
 Ein vorhandenes `mcp-inventory-smoke.redacted.json` kann zusätzlich mit
 `--release-gate-inventory-artifact` angehängt werden; fehlt es, bleibt dieser
 Evidence-Schritt `NOT_ATTACHED`, ohne das Release-Gate zu blockieren. Ist es

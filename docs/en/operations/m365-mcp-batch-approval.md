@@ -165,7 +165,8 @@ separate owner gate because the internally covered
 `mcp-smoke-suite --mcp-suite-cleanup` step writes and deletes a synthetic matter
 in the live tenant. After approval, the agent must complete the run end to end:
 runtime smoke, runtime metadata, write, read, cleanup, leftover dry-run,
-certificate expiry monitor, evidence export, workspace clean state and concrete result in the final
+certificate expiry monitor, runtime env bootstrap, evidence export, workspace
+clean state and concrete result in the final
 status. The MCP Smoke Suite remains the diagnostic/component path when only
 that step must be reproduced in isolation. If a synthetic leftover remains
 after the run, the agent must immediately prepare the owner-gated
@@ -185,12 +186,14 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
 
 The exporter performs no Graph request. It reads the local redacted artifacts
 `runtime-certificate-expiry-monitor.redacted.json`,
+`runtime-env-bootstrap.redacted.json`,
 `runtime-smoke.redacted.json`, `runtime-metadata.redacted.json`,
 `mcp-smoke-suite.redacted.json` and
 `mcp-smoke-leftover-cleanup.redacted.json` and writes
 `out/m365/teams-sharepoint/release-gate-evidence.redacted.md`. Optional
 runtime artifacts can be attached with
 `--release-gate-runtime-certificate-expiry-artifact`,
+`--release-gate-runtime-env-bootstrap-artifact`,
 `--release-gate-runtime-smoke-artifact` and
 `--release-gate-runtime-metadata-artifact`; when they are missing, the runtime
 steps outside the release-gate batch are documented as `NOT_ATTACHED`. In the
@@ -200,9 +203,10 @@ Before live steps, `release-gate-run` internally uses the offline
 `runtime-env-bootstrap`: tenant and runtime client IDs are resolved from the
 non-secret runtime-smoke state only as child-process environment, and local
 certificate/private-key paths are passed only to the live child processes. The
-optional `out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`
-artifact contains no tenant ID, client ID, certificate thumbprints, certificate
-body, private-key data, tokens or secret values.
+runner writes `out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`
+and attaches it to `release-gate-evidence` and the artifact index. The artifact
+contains no tenant ID, client ID, certificate thumbprints, certificate body,
+private-key data, tokens or secret values.
 
 ## Completion Rule
 

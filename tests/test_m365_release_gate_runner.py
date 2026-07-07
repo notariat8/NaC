@@ -49,6 +49,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             tmp_path = Path(tmp)
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
             certificate_path.touch()
             private_key_path.touch()
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
@@ -65,6 +66,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(certificate_path),
                         "--runtime-private-key-path",
                         str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
                         "--format",
                         "json",
                     ]
@@ -101,7 +104,11 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertIn("--release-gate-require-runtime-artifacts", calls[5])
         self.assertIn("--release-gate-inventory-artifact", calls[5])
         self.assertIn("--release-gate-runtime-certificate-expiry-artifact", calls[5])
+        self.assertIn("--release-gate-runtime-env-bootstrap-artifact", calls[5])
+        bootstrap_arg_index = calls[5].index("--release-gate-runtime-env-bootstrap-artifact") + 1
+        self.assertEqual(calls[5][bootstrap_arg_index], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["summary"]["correlation_id"], "runner-corr")
+        self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
 
     def test_release_gate_run_bootstraps_runtime_env_for_live_steps(self) -> None:
         calls: list[tuple[str, dict[str, str] | None]] = []
@@ -110,6 +117,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             runtime_state = tmp_path / "runtime-state.json"
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
             runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
             certificate_path.touch()
             private_key_path.touch()
@@ -134,14 +142,23 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(certificate_path),
                         "--runtime-private-key-path",
                         str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
                         "--format",
                         "json",
                     ]
                 )
+                bootstrap_artifact = json.loads(runtime_env_bootstrap_output.read_text(encoding="utf-8"))
 
         self.assertEqual(return_code, 0)
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_status"], "PASSED")
+        self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
+        self.assertEqual(bootstrap_artifact["status"], "PASSED")
+        self.assertEqual(bootstrap_artifact["summary"]["artifact_path"], str(runtime_env_bootstrap_output))
+        self.assertFalse(bootstrap_artifact["summary"]["tenant_id_emitted"])
+        self.assertFalse(bootstrap_artifact["summary"]["client_id_emitted"])
+        self.assertFalse(bootstrap_artifact["summary"]["credential_files_read"])
         self.assertEqual(
             payload["summary"]["runtime_env_overlay_variable_names"],
             [
@@ -178,6 +195,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             runtime_state = tmp_path / "runtime-state.json"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
             runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
                 payload, return_code = _invoke_release_gate_run(
@@ -189,6 +207,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(tmp_path / "missing.cert.pem"),
                         "--runtime-private-key-path",
                         str(tmp_path / "missing.key.pem"),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
                         "--format",
                         "json",
                     ]
@@ -198,6 +218,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "FAILED")
         self.assertEqual(payload["summary"]["failed_step"], "runtime_env_bootstrap")
         self.assertEqual(payload["summary"]["runtime_env_bootstrap_status"], "REVIEW_REQUIRED")
+        self.assertEqual(payload["summary"]["runtime_env_bootstrap_artifact"], str(runtime_env_bootstrap_output))
         self.assertEqual(payload["steps"], [])
         self.assertEqual(calls, [])
 
@@ -220,6 +241,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             tmp_path = Path(tmp)
             certificate_path = tmp_path / "runtime.cert.pem"
             private_key_path = tmp_path / "runtime.key.pem"
+            runtime_env_bootstrap_output = tmp_path / "runtime-env-bootstrap.redacted.json"
             certificate_path.touch()
             private_key_path.touch()
             with patch.object(cli.subprocess, "run", side_effect=fake_run):
@@ -232,6 +254,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(certificate_path),
                         "--runtime-private-key-path",
                         str(private_key_path),
+                        "--runtime-env-bootstrap-output",
+                        str(runtime_env_bootstrap_output),
                         "--format",
                         "json",
                     ]

@@ -10,6 +10,7 @@ from typing import Any
 DEFAULT_EVIDENCE_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.md")
 DEFAULT_EVIDENCE_JSON_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-evidence.redacted.json")
 DEFAULT_ARTIFACT_INDEX_OUTPUT = Path("out/m365/teams-sharepoint/release-gate-artifact-index.redacted.json")
+DEFAULT_RUNTIME_ENV_BOOTSTRAP_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json")
 DEFAULT_MCP_INVENTORY_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json")
 DEFAULT_MCP_SMOKE_SUITE_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-suite.redacted.json")
 DEFAULT_MCP_LEFTOVER_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json")
@@ -19,6 +20,19 @@ DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT = Path(
 DEFAULT_RUNTIME_SMOKE_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-smoke.redacted.json")
 DEFAULT_RUNTIME_METADATA_ARTIFACT = Path("out/m365/teams-sharepoint/runtime-metadata.redacted.json")
 
+_RUNTIME_ENV_BOOTSTRAP_ALLOWED_ENV_KEYS = {
+    "M365_TENANT_ID",
+    "M365_RUNTIME_CLIENT_ID",
+    "M365_RUNTIME_CLIENT_CERTIFICATE_PATH",
+    "M365_RUNTIME_CLIENT_KEY_PATH",
+}
+_RUNTIME_ENV_BOOTSTRAP_SECRET_KEYS = {
+    "M365_RUNTIME_GRAPH_ACCESS_TOKEN",
+    "M365_RUNTIME_GRAPH_ACCESS_TOKEN_FILE",
+    "M365_RUNTIME_CLIENT_SECRET",
+    "M365_RUNTIME_CLIENT_KEY_PASSWORD",
+}
+
 
 def build_release_gate_evidence(
     *,
@@ -26,6 +40,7 @@ def build_release_gate_evidence(
     mcp_inventory_artifact: Path | None = None,
     mcp_suite_artifact: Path | None = None,
     mcp_leftover_artifact: Path | None = None,
+    runtime_env_bootstrap_artifact: Path | None = None,
     runtime_certificate_expiry_artifact: Path | None = None,
     runtime_smoke_artifact: Path | None = None,
     runtime_metadata_artifact: Path | None = None,
@@ -41,6 +56,11 @@ def build_release_gate_evidence(
             runtime_certificate_expiry_artifact,
             DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT,
         ),
+        "runtime_env_bootstrap": _resolve(
+            repo_root,
+            runtime_env_bootstrap_artifact,
+            DEFAULT_RUNTIME_ENV_BOOTSTRAP_ARTIFACT,
+        ),
         "runtime_smoke": _resolve(repo_root, runtime_smoke_artifact, DEFAULT_RUNTIME_SMOKE_ARTIFACT),
         "runtime_metadata": _resolve(repo_root, runtime_metadata_artifact, DEFAULT_RUNTIME_METADATA_ARTIFACT),
         "mcp_inventory_smoke": _resolve(repo_root, mcp_inventory_artifact, DEFAULT_MCP_INVENTORY_ARTIFACT),
@@ -50,6 +70,7 @@ def build_release_gate_evidence(
 
     steps = [
         _runtime_certificate_expiry_step(paths["runtime_certificate_expiry"], required=require_runtime_artifacts),
+        _runtime_env_bootstrap_step(paths["runtime_env_bootstrap"]),
         _runtime_smoke_step(paths["runtime_smoke"], required=require_runtime_artifacts),
         _runtime_metadata_step(paths["runtime_metadata"], required=require_runtime_artifacts),
         _mcp_inventory_step(paths["mcp_inventory_smoke"]),
@@ -81,11 +102,12 @@ def build_release_gate_evidence(
         "evidence_completeness": completeness,
         "runtime_artifacts_required": require_runtime_artifacts,
         "runtime_certificate_expiry_status": steps[0]["status"],
-        "runtime_smoke_status": steps[1]["status"],
-        "runtime_metadata_status": steps[2]["status"],
-        "mcp_inventory_smoke_status": steps[3]["status"],
-        "mcp_smoke_suite_status": steps[4]["status"],
-        "mcp_leftover_dry_run_status": steps[5]["status"],
+        "runtime_env_bootstrap_status": steps[1]["status"],
+        "runtime_smoke_status": steps[2]["status"],
+        "runtime_metadata_status": steps[3]["status"],
+        "mcp_inventory_smoke_status": steps[4]["status"],
+        "mcp_smoke_suite_status": steps[5]["status"],
+        "mcp_leftover_dry_run_status": steps[6]["status"],
         "graph_rest_only": _all_privacy_flag(steps, "graph_rest_only", default=True),
         "stores_tokens_or_secrets": _any_privacy_flag(steps, "stores_tokens_or_secrets"),
         "stores_raw_graph_response": _any_privacy_flag(steps, "raw_graph_response_stored"),
@@ -313,6 +335,62 @@ def _runtime_certificate_expiry_step(path: Path, *, required: bool) -> dict[str,
     return step
 
 
+def _runtime_env_bootstrap_step(path: Path) -> dict[str, Any]:
+    artifact, error = _load_optional_json(path)
+    step = _base_step(
+        step_id="runtime_env_bootstrap",
+        label="runtime-env-bootstrap",
+        artifact_path=path,
+        required=False,
+        artifact=artifact,
+        load_error=error,
+    )
+    if artifact is None:
+        return step
+    summary = _dict(artifact.get("summary"))
+    env_overlay_variable_names = _string_list(summary.get("env_overlay_variable_names"))
+    step["summary"] = {
+        "runtime_state_attached": summary.get("runtime_state_attached"),
+        "preferred_authentication_mode": summary.get("preferred_authentication_mode"),
+        "runtime_authentication_mode": summary.get("runtime_authentication_mode"),
+        "explicit_runtime_credential_mode": summary.get("explicit_runtime_credential_mode"),
+        "env_overlay_variable_count": summary.get("env_overlay_variable_count"),
+        "env_overlay_variable_names": env_overlay_variable_names,
+        "tenant_id_resolved_from_state": summary.get("tenant_id_resolved_from_state"),
+        "client_id_resolved_from_state": summary.get("client_id_resolved_from_state"),
+        "tenant_id_emitted": summary.get("tenant_id_emitted"),
+        "client_id_emitted": summary.get("client_id_emitted"),
+        "certificate_thumbprint_emitted": summary.get("certificate_thumbprint_emitted"),
+        "credential_files_read": summary.get("credential_files_read"),
+        "secret_env_values_read": summary.get("secret_env_values_read"),
+        "executes_graph_requests": summary.get("executes_graph_requests"),
+        "executes_graph_writes": summary.get("executes_graph_writes"),
+        "owner_gate_required_for_live_use": summary.get("owner_gate_required_for_live_use"),
+        "graph_rest_only": True,
+        "raw_graph_response_stored": False,
+        "stores_tokens_or_secrets": summary.get("stores_tokens_or_secrets"),
+        "reads_sharepoint_file_content": False,
+    }
+    _expect_status_passed(step, artifact)
+    if artifact.get("schema_version") != "nac.m365-runtime-env-bootstrap/v0.1":
+        _fail(step, f"{step['label']} schema_version is not nac.m365-runtime-env-bootstrap/v0.1")
+    _expect_summary_value(step, summary, "runtime_state_attached", True)
+    _expect_summary_value(step, summary, "preferred_authentication_mode", "client_credentials_with_certificate")
+    _expect_summary_value(step, summary, "runtime_authentication_mode", "client_credentials_with_certificate")
+    _expect_summary_value(step, summary, "tenant_id_emitted", False)
+    _expect_summary_value(step, summary, "client_id_emitted", False)
+    _expect_summary_value(step, summary, "certificate_thumbprint_emitted", False)
+    _expect_summary_value(step, summary, "credential_files_read", False)
+    _expect_summary_value(step, summary, "secret_env_values_read", False)
+    _expect_summary_value(step, summary, "executes_graph_requests", False)
+    _expect_summary_value(step, summary, "executes_graph_writes", False)
+    _expect_summary_value(step, summary, "stores_tokens_or_secrets", False)
+    _expect_summary_value(step, summary, "owner_gate_required_for_live_use", True)
+    _expect_runtime_env_overlay_names(step, summary, env_overlay_variable_names)
+    _expect_privacy_flags(step, step["summary"])
+    return step
+
+
 def _runtime_metadata_step(path: Path, *, required: bool) -> dict[str, Any]:
     artifact, error = _load_optional_json(path)
     step = _base_step(
@@ -531,6 +609,24 @@ def _expect_summary_minimum(step: dict[str, Any], summary: dict[str, Any], key: 
         _fail(step, f"{step['label']} summary.{key} expected at least {minimum}, got {value!r}")
 
 
+def _expect_runtime_env_overlay_names(
+    step: dict[str, Any],
+    summary: dict[str, Any],
+    env_overlay_variable_names: list[str],
+) -> None:
+    count = summary.get("env_overlay_variable_count")
+    if not isinstance(count, int) or count != len(env_overlay_variable_names):
+        _fail(
+            step,
+            f"{step['label']} summary.env_overlay_variable_count expected {len(env_overlay_variable_names)!r}, got {count!r}",
+        )
+    for name in env_overlay_variable_names:
+        if name in _RUNTIME_ENV_BOOTSTRAP_SECRET_KEYS:
+            _fail(step, f"{step['label']} env overlay must not expose secret variable {name}")
+        if name not in _RUNTIME_ENV_BOOTSTRAP_ALLOWED_ENV_KEYS:
+            _fail(step, f"{step['label']} env overlay contains unexpected variable {name}")
+
+
 def _expect_privacy_flags(step: dict[str, Any], summary: dict[str, Any]) -> None:
     true_flags = ["graph_rest_only"]
     false_flags = [
@@ -588,7 +684,9 @@ def _evidence_completeness(steps: list[dict[str, Any]]) -> str:
     if any(step["status"] in {"BLOCKED", "FAILED"} for step in steps):
         return "incomplete"
     required_for_completeness = [
-        step for step in steps if step.get("id") != "mcp_inventory_smoke"
+        step
+        for step in steps
+        if step.get("id") not in {"runtime_env_bootstrap", "mcp_inventory_smoke"}
     ]
     if all(step["status"] == "PASSED" for step in required_for_completeness):
         return "complete_release_gate_artifacts"
@@ -648,6 +746,8 @@ def _step_summary_text(step: dict[str, Any]) -> str:
         "correlation_id",
         "certificate_expiry_level",
         "certificate_days_until_expiry",
+        "env_overlay_variable_count",
+        "runtime_authentication_mode",
         "interface_count",
         "metadata_boundary_status",
         "owner_gated_boundary_status",
@@ -675,6 +775,12 @@ def _resolve(repo_root: Path, path: Path | None, default: Path) -> Path:
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def _md(value: str) -> str:
