@@ -196,6 +196,14 @@ runtime artifacts can be attached with
 steps outside the release-gate batch are documented as `NOT_ATTACHED`. In the
 release-gate batch, export blocks when runtime artifacts are missing.
 
+Before live steps, `release-gate-run` internally uses the offline
+`runtime-env-bootstrap`: tenant and runtime client IDs are resolved from the
+non-secret runtime-smoke state only as child-process environment, and local
+certificate/private-key paths are passed only to the live child processes. The
+optional `out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`
+artifact contains no tenant ID, client ID, certificate thumbprints, certificate
+body, private-key data, tokens or secret values.
+
 ## Completion Rule
 
 After an approved batch, the agent is done only when all approved actions have

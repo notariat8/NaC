@@ -208,6 +208,15 @@ die Runtime-Schritte außerhalb des Release-Gate-Batchs als `NOT_ATTACHED`
 dokumentiert. Im Release-Gate-Batch blockiert der Export bei fehlenden
 Runtime-Artefakten.
 
+Vor den Live-Schritten nutzt `release-gate-run` intern den Offline-
+`runtime-env-bootstrap`: aus dem nicht-geheimen Runtime-Smoke-State werden
+Tenant- und Runtime-Client-ID nur als Subprozess-Environment aufgelöst; lokale
+Zertifikats- und Private-Key-Pfade werden nur an die Live-Subprozesse
+übergeben. Das optionale Artefakt
+`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json` enthält keine
+Tenant-ID, Client-ID, Zertifikatsthumbprints, Zertifikatskörper, Private-Key-
+Daten, Tokens oder Secret-Werte.
+
 ## Abschlussregel
 
 Nach einem freigegebenen Batch ist der Agent erst fertig, wenn alle
