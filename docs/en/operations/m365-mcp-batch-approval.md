@@ -237,6 +237,20 @@ approval decision is bound to the redacted retention index,
 `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
 `matter_access_apply_request_plan` and `matter_access_apply_policy_smoke`.
 
+## Matter Access Apply Live-Smoke Release Lane
+
+The real apply smoke for timeboxed deputy grants is a separate owner-gated
+release lane and not a silent part of the standard gate. The standard is in
+[m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md).
+
+This split is binding because `matter-access-apply-smoke` writes, reads back
+and deletes real synthetic SharePoint items in `Vertretungsfreigaben` and
+`AuditJournalLite`. The normal gate contains only the mandatory offline
+evidence `matter-access-apply-readiness`, `matter-access-apply-request-plan`
+and `matter-access-apply-policy-smoke`. A successful live-smoke artifact may
+only be attached to evidence after explicit approval with
+`--release-gate-matter-access-apply-smoke-artifact`.
+
 ## Runtime Certificate Rotation Approval
 
 After a `runtime-certificate-readiness` warning, the agent renders the complete

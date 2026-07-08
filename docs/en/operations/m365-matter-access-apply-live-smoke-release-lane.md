@@ -1,0 +1,123 @@
+# M365 Matter Access Apply Live-Smoke Release Lane
+
+This release-lane standard deliberately separates the owner-gated
+`matter-access-apply-smoke` from the normal M365 Runtime Release Gate. The
+smoke writes real synthetic SharePoint list items to `Vertretungsfreigaben`
+and `AuditJournalLite`, reads them back, deletes them in the same run and
+stores only redacted evidence. Therefore it is not a silent default in the
+one-shot runner.
+
+The `matter-access-apply-smoke` is an owner-gated release lane: not a silent
+default, not automatically attached to evidence and not started without the
+prepared approval text.
+
+## Purpose
+
+The live smoke proves that the future apply path for timeboxed deputy grants is
+not only planned offline, but can write, read and clean up through Graph REST
+in the workspace.
+
+It complements, but does not replace:
+
+- `matter-access-apply-readiness`
+- `matter-access-apply-request-plan`
+- `matter-access-apply-policy-smoke`
+- the normal `release-gate-run` with `mvp_release_readiness=READY`
+
+## Trigger
+
+Run the live smoke separately when at least one of these conditions applies:
+
+- the apply path for `grant_request` or `audit_append` changed
+- the SharePoint list model for `Vertretungsfreigaben` or `AuditJournalLite`
+  changed
+- runtime credentials, app permissions or Graph REST boundaries changed
+- a real synthetic write-read-cleanup must be proven before domain acceptance
+
+An agent must not infer this smoke automatically from a normal release gate.
+The live smoke always needs explicit owner approval.
+
+## Preconditions
+
+- local `main` is current
+- the normal M365 Runtime Release Gate is `PASSED`
+- `release-readiness` reports `mvp_release_readiness=READY`
+- `matter-access-apply-policy-smoke` reports `5/5` negative cases and
+  fail-closed behavior before Graph writes
+- the target workspace is explicitly approved, normally `notary_team_01` in
+  the MVP
+- only synthetic IDs with prefixes `NAC-SMOKE-GRANT-` and
+  `NAC-SMOKE-MATTER-` are used
+
+## Approval Text
+
+```text
+Freigabe: Matter-Access Apply Live-Smoke im Workspace notary_team_01 owner-approved ausführen, inklusive synthetischer Vertretungsfreigabe, Audit-Event, Readback, Cleanup und redigiertem Evidence-Artefakt.
+```
+
+## Command
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-smoke \
+  --owner-approved \
+  --mcp-smoke-workspace-id notary_team_01 \
+  --mcp-smoke-correlation-id <correlation-id> \
+  --format json
+```
+
+The default artifact path is:
+
+```text
+out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json
+```
+
+An existing owner-gated artifact can then be explicitly attached to release
+gate evidence:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint release-gate-evidence \
+  --release-gate-matter-access-apply-smoke-artifact out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json \
+  --format json
+```
+
+Without this parameter, `matter_access_apply_smoke` intentionally remains
+`NOT_ATTACHED` in `release-gate-evidence`; existing default files are not
+picked up automatically.
+
+## Acceptance Criteria
+
+- `status=PASSED`
+- `write_tools=["grant_request", "audit_append"]`
+- `write_lists=["Vertretungsfreigaben", "AuditJournalLite"]`
+- `executed_graph_requests=true`
+- `executed_graph_writes=true`
+- `sharepoint_item_writes_executed=true`
+- `planned_write_count=2`
+- `grant_read_value_count=1`
+- `audit_read_value_count=1`
+- `cleanup_requested=true`
+- `grant_cleanup_read_after_value_count=0`
+- `audit_cleanup_read_after_value_count=0`
+- `tenant_mutation_allowed=false`
+- `team_membership_mutation_allowed=false`
+- `sharepoint_item_permission_mutation_allowed=false`
+- `stores_tokens_or_secrets=false`
+- `stores_matter_payloads=false`
+- `raw_graph_path_stored=false`
+- `raw_graph_response_stored=false`
+- `raw_write_payload_stored=false`
+- `reads_sharepoint_file_content=false`
+
+## Failure Behavior
+
+If the smoke is not `PASSED`, the release lane is blocked. If cleanup or
+cleanup readback fails, no approval continues. The next step is a separate
+owner-gated cleanup action with redacted leftover evidence; productive matter
+IDs must not be used as fallback targets.
+
+## Boundaries
+
+This standard does not allow productive deputy grants, Teams membership
+changes, SharePoint item permission mutations, SharePoint file content reads,
+Graph beta, SDK or PnP use, or storage of tokens, secrets, raw responses,
+concrete Graph paths or matter payloads.

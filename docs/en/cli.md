@@ -642,7 +642,9 @@ tokens or matter payloads.
 because it performs real synthetic SharePoint item writes. An already
 owner-gated `matter-access-apply-smoke.redacted.json` can still be attached to
 `release-gate-evidence`, the artifact index and the retained run copy with
-`--release-gate-matter-access-apply-smoke-artifact`.
+`--release-gate-matter-access-apply-smoke-artifact`. The binding release-lane
+standard is documented in
+`docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md`.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates

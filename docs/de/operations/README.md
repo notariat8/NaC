@@ -35,6 +35,9 @@ produktive Apply-Kommandos blockiert.
   Command-Grenzen.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): Batch-Freigabe für
   vorbereitete M365-MCP-PRs und getrennt freizugebende Live-Smokes.
+- [m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md):
+  separater owner-gated Release-Lane-Standard für echte synthetische
+  Vertretungsfreigaben mit Readback, Cleanup und redigierter Evidence.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optionaler lokaler qmd-Suchindex
   für Agent-Regeln, Release-Memory und Runbooks ohne Secrets oder Mandatsdaten.
 - [oci-runtime.md](oci-runtime.md): archivierter Legacy-Runtime-Vertrag für

@@ -72,21 +72,22 @@ CI:
 27. `m365_release_readiness_gate` (nur `strict`)
 28. `m365_sharepoint_bpmn_viewer_adapter` (nur `strict`)
 29. `m365_matter_access_delegation` (nur `strict`)
-30. `notarial_application_interface_inventory` (nur `strict`)
-31. `matter_data_classification_redaction` (nur `strict`)
-32. `private_operating_frame_gate` (nur `strict`)
-33. `private_payload_target_design` (nur `strict`)
-34. `private_payload_access_policy` (nur `strict`)
-35. `gnotkg_costs` (nur `strict`)
-36. `secure_document_links` (nur `strict`)
-37. `legal_research_connectors` (nur `strict`)
-38. `legal_source_inventory_license_tdm` (nur `strict`)
-39. `legal_model_customization_readiness` (nur `strict`)
-40. `legal_model_card_ai_sbom_delta` (nur `strict`)
-41. `legal_model_card_proposal` (nur `strict`)
-42. `legal_ai_sbom_delta_proposal` (nur `strict`)
-43. `legal_model_evaluation_benchmark` (nur `strict`)
-44. `legal_graph_contracts` (nur `strict`)
+30. `m365_matter_access_apply_live_smoke_release_lane` (nur `strict`)
+31. `notarial_application_interface_inventory` (nur `strict`)
+32. `matter_data_classification_redaction` (nur `strict`)
+33. `private_operating_frame_gate` (nur `strict`)
+34. `private_payload_target_design` (nur `strict`)
+35. `private_payload_access_policy` (nur `strict`)
+36. `gnotkg_costs` (nur `strict`)
+37. `secure_document_links` (nur `strict`)
+38. `legal_research_connectors` (nur `strict`)
+39. `legal_source_inventory_license_tdm` (nur `strict`)
+40. `legal_model_customization_readiness` (nur `strict`)
+41. `legal_model_card_ai_sbom_delta` (nur `strict`)
+42. `legal_model_card_proposal` (nur `strict`)
+43. `legal_ai_sbom_delta_proposal` (nur `strict`)
+44. `legal_model_evaluation_benchmark` (nur `strict`)
+45. `legal_graph_contracts` (nur `strict`)
 
 ## Artefakte
 
@@ -110,6 +111,11 @@ Standardausgabe:
   (`missing_reason`, `expired_delegation`, `workspace_scope_violation`,
   `missing_cleanup`, `audit_readback_missing`) und die Fail-Closed-Grenze vor
   Graph-Writes bestätigen.
+- Der echte `matter-access-apply-smoke` ist ein separater owner-gated
+  Release-Lane-Standard. Er ist kein Default-Schritt im One-Shot-Gate; ein
+  Live-Smoke-Artefakt darf nur explizit mit
+  `--release-gate-matter-access-apply-smoke-artifact` an Evidence angehängt
+  werden.
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

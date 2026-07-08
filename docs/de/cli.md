@@ -664,7 +664,8 @@ es echte synthetische SharePoint-Item-Writes ausführt. Ein bereits owner-gated
 erzeugtes `matter-access-apply-smoke.redacted.json` kann aber mit
 `--release-gate-matter-access-apply-smoke-artifact` an
 `release-gate-evidence`, den Artifact-Index und die Retention-Kopie angehängt
-werden.
+werden. Der verbindliche Release-Lane-Standard steht unter
+`docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md`.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt

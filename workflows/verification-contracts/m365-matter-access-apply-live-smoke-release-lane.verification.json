@@ -1,0 +1,98 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_matter_access_apply_live_smoke_release_lane",
+  "domain_contract_id": "m365.matter_access_delegation",
+  "title": "M365 Matter Access Apply Live-Smoke Release Lane Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/de/operations/m365-mcp-batch-approval.md",
+      "docs/en/operations/m365-mcp-batch-approval.md",
+      "docs/de/cli.md",
+      "docs/en/cli.md",
+      "src/nac_m365_graph/matter_access_apply_smoke.py",
+      "src/nac_m365_graph/release_gate_evidence.py",
+      "src/nac_cli/cli.py",
+      "tests/test_m365_matter_access_delegation.py",
+      "tests/test_m365_release_gate_evidence.py",
+      "scripts/validate_m365_matter_access_apply_live_smoke_release_lane.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/process-policy.yaml",
+      "policies/access-control-policy.yaml",
+      "policies/data-protection-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/de/architecture/m365-matter-access-delegation.md",
+      "docs/en/architecture/m365-matter-access-delegation.md",
+      "src/nac_m365_graph/matter_access_apply_smoke.py",
+      "src/nac_m365_graph/release_gate_evidence.py",
+      "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json",
+      "out/m365/teams-sharepoint/release-gate-evidence.redacted.json"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_m365_matter_access_apply_live_smoke_release_lane.py",
+    "python -m unittest tests.test_m365_matter_access_apply_live_smoke_release_lane tests.test_m365_matter_access_delegation tests.test_m365_release_gate_evidence",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "matter-access-apply-smoke is a separate owner-gated release lane, not a default one-shot release-gate step.",
+    "The live smoke may write only synthetic SharePoint list items with NAC-SMOKE-GRANT- and NAC-SMOKE-MATTER- prefixes.",
+    "The same live-smoke run must read back exactly one grant item and one audit item.",
+    "The same live-smoke run must delete the synthetic grant and audit items and verify zero-item cleanup readback.",
+    "The evidence artifact must remain redacted and must not store tokens, secrets, matter payloads, raw write payloads, concrete Graph paths or raw Graph responses.",
+    "The live smoke may not mutate Teams membership, tenant configuration or SharePoint item permissions.",
+    "The live smoke stays Microsoft Graph REST-only."
+  ],
+  "thresholds": {
+    "required_write_tools": 2,
+    "required_write_lists": 2,
+    "required_readback_count_per_list": 1,
+    "required_cleanup_readback_count_per_list": 0,
+    "max_default_auto_attach_count": 0
+  },
+  "required_evidence": [
+    "release_lane_standard_de",
+    "release_lane_standard_en",
+    "explicit_owner_approval_text",
+    "--release-gate-matter-access-apply-smoke-artifact",
+    "matter_access_apply_smoke_artifact_shape",
+    "release_gate_optional_attach_boundary",
+    "agent_context_index_link",
+    "quality_gate_check"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "release_lane_documented": true,
+    "not_default_runner_step": true,
+    "explicit_owner_gate_required": true,
+    "redacted_evidence_only": true,
+    "no_secrets": true,
+    "no_mandate_data": true
+  },
+  "failure_behavior": {
+    "missing_owner_gate": "block_live_smoke",
+    "cleanup_readback_missing": "block_release_lane",
+    "default_auto_attach_detected": "block_completion",
+    "graph_boundary_broken": "block_completion",
+    "redaction_broken": "block_completion",
+    "quality_gate_failure": "block_completion"
+  }
+}

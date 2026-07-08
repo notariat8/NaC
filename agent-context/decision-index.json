@@ -10,6 +10,7 @@
       "status": "accepted",
       "decision_date": "2026-07-08",
       "domain": "m365_matter_access_delegation",
+      "context_key": "m365_matter_access_apply_live_smoke_release_lane",
       "owner": "ofunk",
       "summary": "The MVP uses a private Microsoft 365 Team and SharePoint site per notary team. Matters reference the responsible team and assigned people instead of being visible to all notary-office users.",
       "source_paths": [
@@ -56,6 +57,25 @@
       ],
       "verification_contracts": [
         "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+      ]
+    },
+    {
+      "id": "ADR-M365-MATTER-ACCESS-004",
+      "title": "Apply live-smoke is a separate owner-gated release lane",
+      "status": "accepted",
+      "decision_date": "2026-07-08",
+      "domain": "m365_matter_access_delegation",
+      "owner": "ofunk",
+      "summary": "The real matter-access apply smoke writes and deletes synthetic SharePoint list items, so it is not a silent default in the one-shot release gate. It requires explicit owner approval and is attached to release-gate evidence only via an explicit artifact path.",
+      "source_paths": [
+        "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "src/nac_m365_graph/matter_access_apply_smoke.py",
+        "src/nac_m365_graph/release_gate_evidence.py"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
+        "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json"
       ]
     }
   ]

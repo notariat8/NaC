@@ -94,6 +94,24 @@
         "scripts/validate_m365_matter_access_delegation.py",
         "scripts/validate_verification_contracts_domain_pilot.py"
       ]
+    },
+    {
+      "id": "invariant.m365_matter_access.apply_live_smoke_not_default",
+      "domain": "m365_matter_access_delegation",
+      "severity": "critical",
+      "statement": "The real matter-access apply smoke is a separate owner-gated release lane and must not run or attach automatically in the default one-shot release gate.",
+      "source_paths": [
+        "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json",
+        "src/nac_m365_graph/matter_access_apply_smoke.py",
+        "src/nac_m365_graph/release_gate_evidence.py"
+      ],
+      "enforced_by": [
+        "scripts/validate_verification_contracts_domain_pilot.py",
+        "scripts/validate_m365_matter_access_apply_live_smoke_release_lane.py",
+        "tests/test_m365_release_gate_evidence.py"
+      ]
     }
   ]
 }

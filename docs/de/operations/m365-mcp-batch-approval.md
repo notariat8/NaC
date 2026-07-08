@@ -245,6 +245,22 @@ Index, `release-gate-evidence`, Audit-Pack, `release-readiness`,
 `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
 `matter_access_apply_request_plan` und `matter_access_apply_policy_smoke`.
 
+## Matter-Access Apply Live-Smoke Release Lane
+
+Der echte Apply-Smoke für zeitbegrenzte Vertretungsfreigaben ist eine getrennte
+owner-gated Release Lane und kein stillschweigender Bestandteil des
+Standard-Gates. Der Standard steht in
+[m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md).
+
+Diese Trennung ist verbindlich, weil `matter-access-apply-smoke` echte
+synthetische SharePoint-Items in `Vertretungsfreigaben` und
+`AuditJournalLite` schreibt, zurückliest und löscht. Das normale Gate enthält
+nur die Offline-Pflichtnachweise `matter-access-apply-readiness`,
+`matter-access-apply-request-plan` und `matter-access-apply-policy-smoke`.
+Ein erfolgreiches Live-Smoke-Artefakt darf erst nach expliziter Freigabe mit
+`--release-gate-matter-access-apply-smoke-artifact` an die Evidence angehängt
+werden.
+
 ## Runtime-Zertifikatsrotation-Freigabe
 
 Nach einer `runtime-certificate-readiness`-Warnung rendert der Agent das

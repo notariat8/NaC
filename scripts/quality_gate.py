@@ -214,6 +214,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_matter_access_delegation.py"],
                 ),
                 (
+                    "m365_matter_access_apply_live_smoke_release_lane",
+                    "M365 Matter Access Apply Live-Smoke Release Lane",
+                    [
+                        sys.executable,
+                        "scripts/validate_m365_matter_access_apply_live_smoke_release_lane.py",
+                    ],
+                ),
+                (
                     "notarial_application_interface_inventory",
                     "Notarial Application Interface Inventory",
                     [sys.executable, "scripts/validate_notarial_application_interface_inventory.py"],

@@ -35,6 +35,9 @@ apply commands.
   command boundaries.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
   prepared M365 MCP PRs and separately approved live smokes.
+- [m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md):
+  separate owner-gated release-lane standard for real synthetic deputy grants
+  with readback, cleanup and redacted evidence.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index
   for agent rules, release memory and runbooks without secrets or mandate data.
 - [oci-runtime.md](oci-runtime.md): archived legacy runtime contract for OCI,

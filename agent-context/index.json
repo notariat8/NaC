@@ -131,6 +131,19 @@
             "tests/test_codex_memory_hooks_operating_model.py",
             "workflows/verification-contracts/codex-memory-hooks.verification.json"
           ]
+        },
+        {
+          "id": "m365_matter_access_apply_live_smoke_release_lane",
+          "description": "Separate owner-gated release lane for synthetic SharePoint deputy-grant writes, readback, cleanup and redacted evidence.",
+          "paths": [
+            "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+            "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+            "src/nac_m365_graph/matter_access_apply_smoke.py",
+            "src/nac_m365_graph/release_gate_evidence.py",
+            "scripts/validate_m365_matter_access_apply_live_smoke_release_lane.py",
+            "tests/test_m365_matter_access_apply_live_smoke_release_lane.py",
+            "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json"
+          ]
         }
       ]
     },
@@ -152,6 +165,7 @@
     "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
     "workflows/verification-contracts/codex-memory-hooks.verification.json",
     "workflows/verification-contracts/codex-command-rules.verification.json",
-    "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+    "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
+    "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json"
   ]
 }
