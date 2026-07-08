@@ -18,8 +18,10 @@ from nac_cli import cli
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
+    build_matter_access_apply_live_smoke_retention_upgrade_plan,
     format_matter_access_apply_live_smoke_retention_index,
     format_matter_access_apply_live_smoke_retention_readiness,
+    format_matter_access_apply_live_smoke_retention_upgrade_plan,
     retain_matter_access_apply_live_smoke_artifact,
     validate_matter_access_apply_live_smoke_redaction_shape,
 )
@@ -342,6 +344,82 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertIn("legacy-cli-corr", readiness_report)
             self.assertIn("matter-access-apply-live-smoke-retain", readiness_report)
             self.assertIn("performs no Graph request", readiness_report)
+
+    def test_cli_upgrade_plan_dry_run_reports_commands_without_mutating_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "retention"
+            _write_legacy_retention_fixture(
+                tmp_path=tmp_path,
+                retention_root=retention_root,
+                correlation_id="legacy-plan-corr",
+            )
+            retention_json = next(retention_root.glob("*/matter-access-apply-live-smoke-retention.redacted.json"))
+            retention_json_before = retention_json.read_text(encoding="utf-8")
+
+            plan_payload, plan_rc = _invoke_cli(
+                [
+                    "matter-access-apply-live-smoke-retention-upgrade-plan",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "legacy-plan-corr",
+                    "--format",
+                    "json",
+                ]
+            )
+            plan_report, plan_report_rc = _invoke_cli_text(
+                [
+                    "matter-access-apply-live-smoke-retention-upgrade-plan",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "legacy-plan-corr",
+                    "--format",
+                    "text",
+                ]
+            )
+
+            self.assertEqual(plan_rc, 0)
+            self.assertEqual(plan_report_rc, 0)
+            self.assertEqual(plan_payload["status"], "UPGRADE_REQUIRED")
+            self.assertTrue(plan_payload["summary"]["dry_run"])
+            self.assertFalse(plan_payload["summary"]["mutates_artifacts"])
+            self.assertFalse(plan_payload["summary"]["would_execute_commands"])
+            self.assertEqual(plan_payload["summary"]["upgrade_command_count"], 1)
+            self.assertEqual(plan_payload["commands"][0]["correlation_id"], "legacy-plan-corr")
+            self.assertTrue(plan_payload["commands"][0]["dry_run"])
+            self.assertFalse(plan_payload["commands"][0]["would_execute"])
+            self.assertFalse(plan_payload["commands"][0]["mutates_artifacts"])
+            self.assertIn("matter-access-apply-live-smoke-retain", plan_payload["commands"][0]["command"])
+            self.assertFalse(plan_payload["privacy"]["executesGraphRequests"])
+            self.assertFalse(plan_payload["privacy"]["mutatesArtifacts"])
+            self.assertEqual(retention_json_before, retention_json.read_text(encoding="utf-8"))
+            self.assertIn("Retention Upgrade Plan", plan_report)
+            self.assertIn("Dry run: `True`", plan_report)
+            self.assertIn("matter-access-apply-live-smoke-retain", plan_report)
+
+    def test_upgrade_plan_reports_current_when_no_upgrade_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "retention"
+            artifact = tmp_path / "current-plan.redacted.json"
+            artifact.write_text(json.dumps(_apply_smoke_payload("current-plan-corr")), encoding="utf-8")
+            retain_matter_access_apply_live_smoke_artifact(artifact, retention_root=retention_root)
+
+            plan = build_matter_access_apply_live_smoke_retention_upgrade_plan(
+                retention_root=retention_root,
+                correlation_id="current-plan-corr",
+                now_utc="2026-07-08T17:00:00Z",
+            )
+            report = format_matter_access_apply_live_smoke_retention_upgrade_plan(plan)
+
+            self.assertEqual(plan["status"], "CURRENT")
+            self.assertEqual(plan["summary"]["upgrade_command_count"], 0)
+            self.assertEqual(plan["commands"], [])
+            self.assertTrue(plan["summary"]["dry_run"])
+            self.assertFalse(plan["summary"]["mutates_artifacts"])
+            self.assertIn("No retention upgrade commands are required", report)
 
     def test_retention_validator_passes(self) -> None:
         self.assertEqual([], validator.validate())

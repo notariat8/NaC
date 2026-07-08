@@ -60,6 +60,7 @@
     "The retention index is local, redacted and filterable by correlation ID, workspace, status and query.",
     "The retention index and readiness evidence must surface redaction-shape status counts and legacy-missing redaction evidence instead of hiding absent shape data.",
     "Legacy or missing redaction-shape evidence must include machine-readable offline upgrade advice that reruns local retention without Graph or tenant action.",
+    "matter-access-apply-live-smoke-retention-upgrade-plan must render the recommended re-retention command as dry_run=true, mutates_artifacts=false and would_execute=false without changing local artifacts.",
     "matter-access-apply-live-smoke-retention-readiness evaluates retained local evidence as READY or NOT_READY without Graph or tenant action.",
     "The retained artifact path, retention report path and root index path must be visible in the live-smoke command summary."
   ],
@@ -80,6 +81,7 @@
     "live_smoke_command_fail_closed_on_retention_failure",
     "retention_validator",
     "retention_upgrade_advice_smoke",
+    "retention_upgrade_command_dry_run",
     "quality_gate_check",
     "agent_context_index_link"
   ],
@@ -95,6 +97,7 @@
     "legacy_missing_redaction_shape_visible": true,
     "legacy_redaction_shape_upgrade_advice_visible": true,
     "legacy_upgrade_advice_smoke_passes": true,
+    "retention_upgrade_command_dry_run_noop": true,
     "no_secrets": true,
     "no_mandate_data": true
   },

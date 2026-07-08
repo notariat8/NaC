@@ -128,6 +128,10 @@ The retention validator includes an `upgrade advice` smoke for this path: it
 creates a legacy fixture, reads it through the CLI index/readiness paths and
 checks the Markdown `Upgrade Advice` section plus the local re-retention
 command.
+`matter-access-apply-live-smoke-retention-upgrade-plan` additionally exposes
+that re-retention command as a pure plan: the JSON evidence sets
+`dry_run=true`, `mutates_artifacts=false` and `would_execute=false`, reads only
+local redacted retention files and changes no artifacts.
 
 Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
 acceptance. The readiness command reads only the local redacted retention index

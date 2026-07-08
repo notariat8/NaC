@@ -44,9 +44,11 @@ from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
+    build_matter_access_apply_live_smoke_retention_upgrade_plan,
     format_matter_access_apply_live_smoke_retention,
     format_matter_access_apply_live_smoke_retention_index,
     format_matter_access_apply_live_smoke_retention_readiness,
+    format_matter_access_apply_live_smoke_retention_upgrade_plan,
     retain_matter_access_apply_live_smoke_artifact,
 )
 from nac_m365_graph.release_gate_evidence import (
@@ -442,6 +444,7 @@ def build_parser() -> argparse.ArgumentParser:
             "matter-access-apply-live-smoke-retain",
             "matter-access-apply-live-smoke-retention-index",
             "matter-access-apply-live-smoke-retention-readiness",
+            "matter-access-apply-live-smoke-retention-upgrade-plan",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
@@ -2221,6 +2224,24 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 print(format_matter_access_apply_live_smoke_retention_readiness(readiness).rstrip())
             return 0 if readiness["status"] == "READY" else 2
+
+        if args.teams_sharepoint_command == "matter-access-apply-live-smoke-retention-upgrade-plan":
+            plan = build_matter_access_apply_live_smoke_retention_upgrade_plan(
+                retention_root=_resolve_m365_release_gate_path(
+                    repo_root,
+                    args.matter_access_apply_live_smoke_retention_root,
+                    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+                ),
+                correlation_id=args.matter_access_apply_live_smoke_correlation_id,
+                workspace_id=args.matter_access_apply_live_smoke_workspace_id,
+                status=args.matter_access_apply_live_smoke_status,
+                query=args.matter_access_apply_live_smoke_query,
+            )
+            if args.format == "json":
+                print_json(plan)
+            else:
+                print(format_matter_access_apply_live_smoke_retention_upgrade_plan(plan).rstrip())
+            return 0 if plan["status"] in {"CURRENT", "UPGRADE_REQUIRED"} else 2
 
         if args.teams_sharepoint_command == "release-gate-retention-list":
             payload = _list_m365_release_gate_retention(repo_root, args)

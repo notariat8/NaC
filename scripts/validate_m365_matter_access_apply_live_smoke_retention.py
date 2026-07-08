@@ -14,8 +14,10 @@ if str(SRC_ROOT) not in sys.path:
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (  # noqa: E402
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
+    build_matter_access_apply_live_smoke_retention_upgrade_plan,
     format_matter_access_apply_live_smoke_retention_index,
     format_matter_access_apply_live_smoke_retention_readiness,
+    format_matter_access_apply_live_smoke_retention_upgrade_plan,
     retain_matter_access_apply_live_smoke_artifact,
 )
 
@@ -75,6 +77,7 @@ def validate() -> list[str]:
     errors.extend(_validate_contract_and_indexes())
     errors.extend(_validate_synthetic_retention_roundtrip())
     errors.extend(_validate_synthetic_upgrade_advice_smoke())
+    errors.extend(_validate_synthetic_upgrade_plan_dry_run_smoke())
     return errors
 
 
@@ -100,12 +103,15 @@ def _validate_code() -> list[str]:
         "READINESS_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1\"",
         "REDACTION_SHAPE_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1\"",
         "UPGRADE_ADVICE_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-upgrade-advice/v0.1\"",
+        "UPGRADE_PLAN_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-upgrade-plan/v0.1\"",
         "retain_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_redaction_shape",
         "build_matter_access_apply_live_smoke_retention_index",
         "build_matter_access_apply_live_smoke_retention_readiness",
+        "build_matter_access_apply_live_smoke_retention_upgrade_plan",
         "format_matter_access_apply_live_smoke_retention_readiness",
+        "format_matter_access_apply_live_smoke_retention_upgrade_plan",
         "_readiness_checks",
         "redaction_shape_status",
         "redaction_shape_violation_count",
@@ -119,7 +125,10 @@ def _validate_code() -> list[str]:
         "_retention_upgrade_advice",
         "_row_upgrade_advice",
         "_format_upgrade_advice",
+        "_upgrade_plan_command",
         "rerun_offline_retention_from_existing_redacted_live_smoke_artifact",
+        "would_execute_commands",
+        "mutates_artifacts",
         "sourceArtifactRedactionShapeChecked",
         "all_runs_have_valid_redaction_shape",
         "all_runs_have_redaction_shape_evidence",
@@ -137,6 +146,7 @@ def _validate_code() -> list[str]:
         "matter-access-apply-live-smoke-retain",
         "matter-access-apply-live-smoke-retention-index",
         "matter-access-apply-live-smoke-retention-readiness",
+        "matter-access-apply-live-smoke-retention-upgrade-plan",
         "--matter-access-apply-live-smoke-retention-root",
         "--matter-access-apply-live-smoke-artifact",
         "--matter-access-apply-live-smoke-correlation-id",
@@ -144,6 +154,7 @@ def _validate_code() -> list[str]:
         "retain_matter_access_apply_live_smoke_artifact",
         "build_matter_access_apply_live_smoke_retention_index",
         "build_matter_access_apply_live_smoke_retention_readiness",
+        "build_matter_access_apply_live_smoke_retention_upgrade_plan",
     ):
         _require(marker, cli, "cli", errors)
 
@@ -171,6 +182,8 @@ def _validate_code() -> list[str]:
         "test_readiness_blocks_when_no_retained_live_smoke_matches",
         "test_cli_reports_live_smoke_retention_readiness_without_graph",
         "test_cli_upgrade_advice_smoke_uses_legacy_fixture_and_reports_upgrade_required",
+        "test_cli_upgrade_plan_dry_run_reports_commands_without_mutating_artifacts",
+        "test_upgrade_plan_reports_current_when_no_upgrade_is_required",
         "_write_legacy_retention_fixture",
         "test_retention_validator_passes",
     ):
@@ -188,6 +201,7 @@ def _validate_docs() -> list[str]:
         "matter-access-apply-live-smoke-retain",
         "matter-access-apply-live-smoke-retention-index",
         "matter-access-apply-live-smoke-retention-readiness",
+        "matter-access-apply-live-smoke-retention-upgrade-plan",
         "matter-access-apply-live-smoke-retention-readiness.redacted.json",
         "matter-access-apply-live-smoke-retention-readiness.redacted.md",
         "--matter-access-apply-live-smoke-write-readiness",
@@ -199,6 +213,8 @@ def _validate_docs() -> list[str]:
         "redaction_shape_upgrade_required",
         "UPGRADE_REQUIRED",
         "upgrade_advice.status=UPGRADE_REQUIRED",
+        "dry_run=true",
+        "mutates_artifacts=false",
         "upgrade advice",
         "sourceArtifactRedactionShapeChecked=true",
         "retention_executes_graph_requests=false",
@@ -244,6 +260,7 @@ def _validate_contract_and_indexes() -> list[str]:
             "scripts/validate_m365_matter_access_apply_live_smoke_retention.py",
             "tests/test_m365_matter_access_apply_live_smoke_retention.py",
             "matter-access-apply-live-smoke-retention-readiness",
+            "matter-access-apply-live-smoke-retention-upgrade-plan",
         ):
             if marker not in json.dumps(contract, ensure_ascii=False):
                 errors.append(f"verification contract missing marker: {marker}")
@@ -261,6 +278,10 @@ def _validate_contract_and_indexes() -> list[str]:
             errors.append("verification contract missing legacy_upgrade_advice_smoke_passes pass condition")
         if "retention_upgrade_advice_smoke" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing retention_upgrade_advice_smoke evidence")
+        if "retention_upgrade_command_dry_run" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing retention_upgrade_command_dry_run evidence")
+        if "retention_upgrade_command_dry_run_noop" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing retention_upgrade_command_dry_run_noop pass condition")
         if "recursive redaction-shape check" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing recursive redaction-shape invariant")
 
@@ -395,6 +416,61 @@ def _validate_synthetic_upgrade_advice_smoke() -> list[str]:
             value = summary.get(key)
             if not value or not Path(value).is_file():
                 errors.append(f"synthetic upgrade advice smoke missing file for summary.{key}")
+    return errors
+
+
+def _validate_synthetic_upgrade_plan_dry_run_smoke() -> list[str]:
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        artifact_path = tmp_path / "legacy-upgrade-plan.redacted.json"
+        payload = _synthetic_apply_smoke_payload()
+        payload["summary"]["correlation_id"] = "validator-legacy-upgrade-plan"
+        artifact_path.write_text(json.dumps(payload), encoding="utf-8")
+        retention_root = tmp_path / "retention"
+        retention = retain_matter_access_apply_live_smoke_artifact(
+            artifact_path,
+            retention_root=retention_root,
+            now_utc="2026-07-08T15:50:00Z",
+        )
+        retention_json = Path(str(retention.get("summary", {}).get("retention_json_path") or ""))
+        if not retention_json.is_file():
+            errors.append("synthetic upgrade plan dry-run smoke missing retention JSON")
+            return errors
+        legacy_payload = json.loads(retention_json.read_text(encoding="utf-8"))
+        legacy_payload.pop("redaction_shape", None)
+        legacy_summary = legacy_payload.get("summary") if isinstance(legacy_payload.get("summary"), dict) else {}
+        for key in ("redaction_shape_status", "redaction_shape_violation_count", "redaction_shape_checked_node_count"):
+            legacy_summary.pop(key, None)
+        retention_json.write_text(json.dumps(legacy_payload), encoding="utf-8")
+        before = retention_json.read_text(encoding="utf-8")
+
+        plan = build_matter_access_apply_live_smoke_retention_upgrade_plan(
+            retention_root=retention_root,
+            correlation_id="validator-legacy-upgrade-plan",
+            now_utc="2026-07-08T15:51:00Z",
+        )
+        report = format_matter_access_apply_live_smoke_retention_upgrade_plan(plan)
+        if plan.get("status") != "UPGRADE_REQUIRED":
+            errors.append("synthetic upgrade plan dry-run smoke must report UPGRADE_REQUIRED")
+        summary = plan.get("summary") if isinstance(plan.get("summary"), dict) else {}
+        if summary.get("dry_run") is not True or summary.get("mutates_artifacts") is not False:
+            errors.append("synthetic upgrade plan dry-run smoke must be dry_run and non-mutating")
+        commands = plan.get("commands") if isinstance(plan.get("commands"), list) else []
+        if len(commands) != 1:
+            errors.append("synthetic upgrade plan dry-run smoke must render one command")
+        else:
+            command = commands[0]
+            if command.get("would_execute") is not False:
+                errors.append("synthetic upgrade plan dry-run smoke command must not execute")
+            if command.get("mutates_artifacts") is not False:
+                errors.append("synthetic upgrade plan dry-run smoke command must not mutate artifacts")
+            if "matter-access-apply-live-smoke-retain" not in str(command.get("command")):
+                errors.append("synthetic upgrade plan dry-run smoke missing retain command")
+        if "Dry run: `True`" not in report:
+            errors.append("synthetic upgrade plan dry-run report missing dry-run marker")
+        if before != retention_json.read_text(encoding="utf-8"):
+            errors.append("synthetic upgrade plan dry-run smoke mutated retention JSON")
     return errors
 
 

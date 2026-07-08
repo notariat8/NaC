@@ -131,6 +131,10 @@ Tenant-Aktion aus.
 Der Retention-Validator enthält dafür einen `upgrade advice`-Smoke: Er erzeugt
 eine Legacy-Fixture, liest sie über die CLI-Index-/Readiness-Pfade und prüft den
 Markdown-Abschnitt `Upgrade Advice` sowie den lokalen Nacharchivierungsbefehl.
+`matter-access-apply-live-smoke-retention-upgrade-plan` macht diesen
+Nacharchivierungsbefehl zusätzlich als reinen Plan sichtbar: Die JSON-Evidence
+setzt `dry_run=true`, `mutates_artifacts=false` und `would_execute=false`, liest
+nur lokale redigierte Retention-Dateien und verändert keine Artefakte.
 
 Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
 bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten

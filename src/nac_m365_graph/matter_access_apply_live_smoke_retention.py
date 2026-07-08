@@ -25,6 +25,7 @@ INDEX_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-index/
 READINESS_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1"
 REDACTION_SHAPE_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1"
 UPGRADE_ADVICE_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-upgrade-advice/v0.1"
+UPGRADE_PLAN_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-upgrade-plan/v0.1"
 
 ALLOWED_FALSE_PRIVACY_FLAG_KEYS = {
     "storesrawgraphpath",
@@ -433,6 +434,74 @@ def build_matter_access_apply_live_smoke_retention_readiness(
     return payload
 
 
+def build_matter_access_apply_live_smoke_retention_upgrade_plan(
+    *,
+    retention_root: Path = DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+    correlation_id: str | None = None,
+    workspace_id: str | None = None,
+    status: str | None = None,
+    query: str | None = None,
+    now_utc: str | None = None,
+) -> dict[str, Any]:
+    generated_at = now_utc or _now()
+    index = build_matter_access_apply_live_smoke_retention_index(
+        retention_root=retention_root,
+        correlation_id=correlation_id,
+        workspace_id=workspace_id,
+        status=status,
+        query=query,
+        now_utc=generated_at,
+    )
+    advice = _dict(index.get("upgrade_advice"))
+    items = [item for item in advice.get("items", []) if isinstance(item, dict)]
+    commands = [_upgrade_plan_command(item) for item in items]
+    errors = index.get("errors") if isinstance(index.get("errors"), list) else []
+    plan_status = "BLOCKED" if index.get("status") != "PASSED" else "UPGRADE_REQUIRED" if commands else "CURRENT"
+    return {
+        "schema_version": UPGRADE_PLAN_SCHEMA_VERSION,
+        "status": plan_status,
+        "generated_at": generated_at,
+        "summary": {
+            "retention_root": str(retention_root),
+            "filter_correlation_id": correlation_id,
+            "filter_workspace_id": workspace_id,
+            "filter_status": status,
+            "filter_query": query,
+            "upgrade_command_count": len(commands),
+            "dry_run": True,
+            "mutates_artifacts": False,
+            "would_execute_commands": False,
+            "executes_graph_requests": False,
+            "executes_graph_writes": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "changes_credentials": False,
+        },
+        "commands": commands,
+        "retention_index": {
+            "schema_version": index.get("schema_version"),
+            "status": index.get("status"),
+            "generated_at": index.get("generated_at"),
+            "run_count": _dict(index.get("summary")).get("run_count"),
+            "redaction_shape_status_counts": _dict(index.get("summary")).get("redaction_shape_status_counts"),
+            "upgrade_advice": advice,
+        },
+        "errors": errors,
+        "privacy": {
+            "readsLocalRedactedArtifactsOnly": True,
+            "executesGraphRequests": False,
+            "executesGraphWrites": False,
+            "tenantWritesExecuted": False,
+            "tenantDeletesExecuted": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "readsSharePointFileContent": False,
+            "mutatesArtifacts": False,
+            "dryRunOnly": True,
+        },
+    }
+
+
 def format_matter_access_apply_live_smoke_retention(payload: dict[str, Any]) -> str:
     summary = _dict(payload.get("summary"))
     lines = [
@@ -512,6 +581,46 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
         lines.extend(f"- {error}" for error in errors)
     lines.extend(_format_upgrade_advice(payload.get("upgrade_advice")))
     lines.append("")
+    return "\n".join(lines)
+
+
+def format_matter_access_apply_live_smoke_retention_upgrade_plan(payload: dict[str, Any]) -> str:
+    summary = _dict(payload.get("summary"))
+    commands = [item for item in payload.get("commands", []) if isinstance(item, dict)]
+    lines = [
+        "# Matter-Access Apply Live-Smoke Retention Upgrade Plan",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Retention root: `{summary.get('retention_root')}`",
+        f"- Upgrade command count: `{summary.get('upgrade_command_count')}`",
+        f"- Dry run: `{summary.get('dry_run')}`",
+        f"- Mutates artifacts: `{summary.get('mutates_artifacts')}`",
+        f"- Would execute commands: `{summary.get('would_execute_commands')}`",
+        f"- Executes Graph requests: `{summary.get('executes_graph_requests')}`",
+        f"- Tenant writes executed: `{summary.get('tenant_writes_executed')}`",
+        "",
+    ]
+    if commands:
+        lines.extend(
+            [
+                "## Upgrade Commands",
+                "",
+                "| Correlation ID | Workspace | Retained Artifact Available | Dry Run | Command |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for command in commands:
+            lines.append(
+                f"| `{command.get('correlation_id')}` | `{command.get('workspace_id')}` | `{command.get('retained_artifact_available')}` | `{command.get('dry_run')}` | `{command.get('command')}` |"
+            )
+        lines.append("")
+    else:
+        lines.extend(["No retention upgrade commands are required for the selected filters.", ""])
+    errors = payload.get("errors") if isinstance(payload.get("errors"), list) else []
+    if errors:
+        lines.extend(["## Errors", ""])
+        lines.extend(f"- {error}" for error in errors)
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -760,6 +869,28 @@ def _format_upgrade_advice(value: Any) -> list[str]:
             f"- `{item.get('correlation_id')}`: `{item.get('recommended_action')}` via `{item.get('command')}`"
         )
     return lines
+
+
+def _upgrade_plan_command(item: dict[str, Any]) -> dict[str, Any]:
+    command_argv = item.get("command_argv") if isinstance(item.get("command_argv"), list) else []
+    return {
+        "correlation_id": item.get("correlation_id"),
+        "workspace_id": item.get("workspace_id"),
+        "reason": item.get("reason"),
+        "recommended_action": item.get("recommended_action"),
+        "retention_json_path": item.get("retention_json_path"),
+        "retained_artifact_path": item.get("retained_artifact_path"),
+        "retained_artifact_available": item.get("retained_artifact_available"),
+        "command_argv": command_argv,
+        "command": item.get("command") or " ".join(str(part) for part in command_argv),
+        "dry_run": True,
+        "would_execute": False,
+        "mutates_artifacts": False,
+        "executes_graph_requests": False,
+        "tenant_writes_executed": False,
+        "tenant_deletes_executed": False,
+        "changes_credentials": False,
+    }
 
 
 def _retention_redaction_shape_summary(payload: dict[str, Any]) -> dict[str, Any]:

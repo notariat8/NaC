@@ -441,7 +441,11 @@ absent. When such runs are found, evidence sets
 `matter-access-apply-live-smoke-retain` re-retention command without Graph or
 tenant action. The validator runs an `upgrade advice` smoke with a legacy
 fixture through the CLI index/readiness outputs and the Markdown `Upgrade Advice`
-section. With
+section. `matter-access-apply-live-smoke-retention-upgrade-plan` renders the
+same re-retention command as an explicit dry-run plan with `dry_run=true`,
+`mutates_artifacts=false` and `would_execute=false`; the command changes no
+retention artifact, executes no shell command and uses no Graph or tenant
+access. With
 `matter-access-apply-live-smoke-retention-readiness`, the same local retention
 index is evaluated offline as `READY`/`NOT_READY`; optionally,
 `--matter-access-apply-live-smoke-write-readiness` writes the redacted artifacts
