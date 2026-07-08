@@ -37,6 +37,7 @@ REQUIRED_EVIDENCE = {
     "matter_access_delegation_smoke",
     "matter_access_apply_readiness",
     "matter_access_apply_request_plan",
+    "matter_access_apply_policy_smoke",
     "negative_apply_policy_smoke",
     "release_gate_evidence_index",
 }
@@ -198,8 +199,8 @@ def _validate_verification_contract(payload: dict[str, Any]) -> list[str]:
             errors.append("minimum_indexed_decisions is below required decisions")
         if thresholds.get("minimum_indexed_invariants", 0) < len(REQUIRED_INVARIANTS):
             errors.append("minimum_indexed_invariants is below required invariants")
-        if thresholds.get("required_matter_access_release_gate_artifacts") != 3:
-            errors.append("required_matter_access_release_gate_artifacts must be 3")
+        if thresholds.get("required_matter_access_release_gate_artifacts") != 4:
+            errors.append("required_matter_access_release_gate_artifacts must be 4")
         if thresholds.get("max_live_apply_steps_without_owner_gate") != 0:
             errors.append("max_live_apply_steps_without_owner_gate must be 0")
 

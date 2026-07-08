@@ -513,8 +513,8 @@ selected with `--release-gate-readiness-correlation-id`, into a compact MVP
 status. The command reads only redacted retention, evidence and optional
 audit-pack artifacts, checks `complete_release_gate_artifacts`, all required
 artifacts including `matter_access_delegation_smoke` and
-`matter_access_apply_readiness` and `matter_access_apply_request_plan`, the
-retention reference, step statuses and
+`matter_access_apply_readiness`, `matter_access_apply_request_plan` and
+`matter_access_apply_policy_smoke`, the retention reference, step statuses and
 privacy flags, and emits `mvp_release_readiness=READY` only for a complete
 `PASSED` state. With
 `--release-gate-readiness-require-audit-pack`, the status blocks when no

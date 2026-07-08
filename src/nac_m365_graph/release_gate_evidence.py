@@ -19,6 +19,9 @@ DEFAULT_MATTER_ACCESS_APPLY_READINESS_ARTIFACT = Path(
 DEFAULT_MATTER_ACCESS_APPLY_REQUEST_ARTIFACT = Path(
     "out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json"
 )
+DEFAULT_MATTER_ACCESS_APPLY_POLICY_SMOKE_ARTIFACT = Path(
+    "out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json"
+)
 DEFAULT_MATTER_ACCESS_APPLY_SMOKE_ARTIFACT = Path(
     "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json"
 )
@@ -51,6 +54,7 @@ def build_release_gate_evidence(
     matter_access_artifact: Path | None = None,
     matter_access_apply_readiness_artifact: Path | None = None,
     matter_access_apply_request_artifact: Path | None = None,
+    matter_access_apply_policy_smoke_artifact: Path | None = None,
     matter_access_apply_smoke_artifact: Path | None = None,
     mcp_suite_artifact: Path | None = None,
     mcp_leftover_artifact: Path | None = None,
@@ -64,6 +68,7 @@ def build_release_gate_evidence(
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     generated_at = generated_at or _now()
+    attach_matter_access_apply_policy_smoke = matter_access_apply_policy_smoke_artifact is not None
     attach_matter_access_apply_smoke = matter_access_apply_smoke_artifact is not None
     paths = {
         "runtime_certificate_expiry": _resolve(
@@ -94,6 +99,11 @@ def build_release_gate_evidence(
             matter_access_apply_request_artifact,
             DEFAULT_MATTER_ACCESS_APPLY_REQUEST_ARTIFACT,
         ),
+        "matter_access_apply_policy_smoke": _resolve(
+            repo_root,
+            matter_access_apply_policy_smoke_artifact,
+            DEFAULT_MATTER_ACCESS_APPLY_POLICY_SMOKE_ARTIFACT,
+        ),
         "matter_access_apply_smoke": _resolve(
             repo_root,
             matter_access_apply_smoke_artifact,
@@ -112,6 +122,10 @@ def build_release_gate_evidence(
         _matter_access_step(paths["matter_access_delegation_smoke"]),
         _matter_access_apply_readiness_step(paths["matter_access_apply_readiness"]),
         _matter_access_apply_request_step(paths["matter_access_apply_request_plan"]),
+        _matter_access_apply_policy_smoke_step(
+            paths["matter_access_apply_policy_smoke"],
+            attach=attach_matter_access_apply_policy_smoke,
+        ),
         _mcp_suite_step(paths["mcp_smoke_suite"]),
         _mcp_leftover_step(paths["mcp_leftover_dry_run"]),
         _matter_access_apply_smoke_step(
@@ -151,9 +165,10 @@ def build_release_gate_evidence(
         "matter_access_delegation_smoke_status": steps[5]["status"],
         "matter_access_apply_readiness_status": steps[6]["status"],
         "matter_access_apply_request_plan_status": steps[7]["status"],
-        "mcp_smoke_suite_status": steps[8]["status"],
-        "mcp_leftover_dry_run_status": steps[9]["status"],
-        "matter_access_apply_smoke_status": steps[10]["status"],
+        "matter_access_apply_policy_smoke_status": steps[8]["status"],
+        "mcp_smoke_suite_status": steps[9]["status"],
+        "mcp_leftover_dry_run_status": steps[10]["status"],
+        "matter_access_apply_smoke_status": steps[11]["status"],
         "graph_rest_only": _all_privacy_flag(steps, "graph_rest_only", default=True),
         "stores_tokens_or_secrets": _any_privacy_flag(steps, "stores_tokens_or_secrets"),
         "stores_raw_graph_response": _any_privacy_flag(steps, "raw_graph_response_stored"),
@@ -800,6 +815,90 @@ def _matter_access_apply_request_step(path: Path) -> dict[str, Any]:
     _expect_matter_access_privacy_flags(step, privacy)
     if privacy.get("sharePointItemPermissionMutationAllowed") is not False:
         _fail(step, f"{step['label']} privacy flag sharePointItemPermissionMutationAllowed must be false")
+    return step
+
+
+def _matter_access_apply_policy_smoke_step(path: Path, *, attach: bool) -> dict[str, Any]:
+    if attach:
+        artifact, error = _load_optional_json(path)
+    else:
+        artifact = None
+        error = f"missing evidence artifact: {path}"
+    step = _base_step(
+        step_id="matter_access_apply_policy_smoke",
+        label="matter-access-apply-policy-smoke",
+        artifact_path=path,
+        required=False,
+        artifact=artifact,
+        load_error=error,
+    )
+    if artifact is None:
+        return step
+    summary = _dict(artifact.get("summary"))
+    privacy = _dict(artifact.get("privacy"))
+    step["summary"] = {
+        "workspace_id": summary.get("workspace_id"),
+        "correlation_id": summary.get("correlation_id"),
+        "negative_case_count": summary.get("negative_case_count"),
+        "detected_policy_violation_count": summary.get("detected_policy_violation_count"),
+        "expected_case_ids": summary.get("expected_case_ids"),
+        "uses_fake_graph_client": summary.get("uses_fake_graph_client"),
+        "graph_rest_only": summary.get("graph_rest_only"),
+        "executes_graph_requests": summary.get("executes_graph_requests"),
+        "executes_graph_writes": summary.get("executes_graph_writes"),
+        "tenant_writes_executed": summary.get("tenant_writes_executed"),
+        "sharepoint_item_writes_executed": summary.get("sharepoint_item_writes_executed"),
+        "stores_tokens_or_secrets": privacy.get("storesTokensOrSecrets"),
+        "stores_matter_payloads": privacy.get("storesMatterPayloads"),
+        "reads_sharepoint_file_content": privacy.get("readsSharePointFileContent"),
+    }
+    _expect_status_passed(step, artifact)
+    if artifact.get("schema_version") != "nac.m365-matter-access-apply-policy-smoke/v0.1":
+        _fail(step, f"{step['label']} schema_version is not nac.m365-matter-access-apply-policy-smoke/v0.1")
+    expected_case_ids = {
+        "missing_reason",
+        "expired_delegation",
+        "workspace_scope_violation",
+        "missing_cleanup",
+        "audit_readback_missing",
+    }
+    if set(summary.get("expected_case_ids", [])) != expected_case_ids:
+        _fail(step, f"{step['label']} expected_case_ids must cover all negative apply policy cases")
+    _expect_summary_value(step, summary, "negative_case_count", 5)
+    _expect_summary_value(step, summary, "detected_policy_violation_count", 5)
+    for flag in ("uses_fake_graph_client", "graph_rest_only"):
+        _expect_summary_value(step, summary, flag, True)
+    for flag in (
+        "executes_graph_requests",
+        "executes_graph_writes",
+        "tenant_writes_executed",
+        "sharepoint_item_writes_executed",
+        "stores_tokens_or_secrets",
+        "stores_matter_payloads",
+        "reads_sharepoint_file_content",
+    ):
+        _expect_summary_value(step, summary, flag, False)
+    for flag in (
+        "metadataOnly",
+        "storesSourceFullText",
+        "storesRawXsd",
+        "storesCredentials",
+        "storesTokensOrSecrets",
+        "storesMatterData",
+        "storesMatterPayloads",
+        "storesRawGraphPath",
+        "storesRawGraphResponse",
+        "storesRawWritePayload",
+        "readsSharePointFileContent",
+        "executesGraphRequests",
+        "executesGraphWrites",
+        "tenantWritesExecuted",
+        "teamMembershipMutationAllowed",
+        "sharePointItemPermissionMutationAllowed",
+    ):
+        expected = True if flag == "metadataOnly" else False
+        if privacy.get(flag) is not expected:
+            _fail(step, f"{step['label']} privacy flag {flag} must be {str(expected).lower()}")
     return step
 
 

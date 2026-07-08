@@ -29,6 +29,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             matter_access_artifact = tmp_path / "missing-matter-access.redacted.json"
             apply_readiness_artifact = tmp_path / "missing-apply-readiness.redacted.json"
             apply_request_artifact = tmp_path / "missing-apply-request.redacted.json"
+            apply_policy_artifact = tmp_path / "missing-apply-policy-smoke.redacted.json"
             runtime_env_bootstrap_artifact = tmp_path / "missing-runtime-env-bootstrap.redacted.json"
             runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
@@ -42,6 +43,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 matter_access_artifact=matter_access_artifact,
                 matter_access_apply_readiness_artifact=apply_readiness_artifact,
                 matter_access_apply_request_artifact=apply_request_artifact,
+                matter_access_apply_policy_smoke_artifact=apply_policy_artifact,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
                 runtime_env_bootstrap_artifact=runtime_env_bootstrap_artifact,
@@ -74,9 +76,11 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(index["artifacts"][6]["attached"], False)
         self.assertEqual(index["artifacts"][7]["id"], "matter_access_apply_request_plan")
         self.assertEqual(index["artifacts"][7]["attached"], False)
-        self.assertEqual(index["artifacts"][8]["id"], "mcp_smoke_suite")
-        self.assertEqual(index["artifacts"][8]["attached"], True)
-        self.assertEqual(len(index["artifacts"][8]["artifact_sha256"]), 64)
+        self.assertEqual(index["artifacts"][8]["id"], "matter_access_apply_policy_smoke")
+        self.assertEqual(index["artifacts"][8]["attached"], False)
+        self.assertEqual(index["artifacts"][9]["id"], "mcp_smoke_suite")
+        self.assertEqual(index["artifacts"][9]["attached"], True)
+        self.assertEqual(len(index["artifacts"][9]["artifact_sha256"]), 64)
         self.assertFalse(index["privacy"]["storesTokensOrSecrets"])
         report = render_release_gate_evidence_markdown(evidence)
         self.assertIn("mcp-inventory-smoke", report)
@@ -93,6 +97,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             matter_access_artifact = tmp_path / "missing-matter-access.redacted.json"
             apply_readiness_artifact = tmp_path / "missing-apply-readiness.redacted.json"
             apply_request_artifact = tmp_path / "missing-apply-request.redacted.json"
+            apply_policy_artifact = tmp_path / "matter-access-apply-policy-smoke.redacted.json"
             runtime_env_bootstrap_artifact = tmp_path / "missing-runtime-env-bootstrap.redacted.json"
             runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             runtime_smoke_artifact = tmp_path / "missing-runtime-smoke.redacted.json"
@@ -129,12 +134,14 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             matter_access_artifact = tmp_path / "missing-matter-access.redacted.json"
             apply_readiness_artifact = tmp_path / "missing-apply-readiness.redacted.json"
             apply_request_artifact = tmp_path / "missing-apply-request.redacted.json"
+            apply_policy_artifact = tmp_path / "matter-access-apply-policy-smoke.redacted.json"
             runtime_env_bootstrap_artifact = tmp_path / "missing-runtime-env-bootstrap.redacted.json"
             runtime_certificate_expiry_artifact = tmp_path / "runtime-certificate-expiry-monitor.redacted.json"
             runtime_smoke_artifact = tmp_path / "runtime-smoke.redacted.json"
             runtime_metadata_artifact = tmp_path / "runtime-metadata.redacted.json"
             suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
             leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            apply_policy_artifact.write_text(json.dumps(_matter_access_apply_policy_smoke_payload()), encoding="utf-8")
             runtime_certificate_expiry_artifact.write_text(
                 json.dumps(_runtime_certificate_expiry_payload()),
                 encoding="utf-8",
@@ -148,6 +155,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                 matter_access_artifact=matter_access_artifact,
                 matter_access_apply_readiness_artifact=apply_readiness_artifact,
                 matter_access_apply_request_artifact=apply_request_artifact,
+                matter_access_apply_policy_smoke_artifact=apply_policy_artifact,
                 mcp_suite_artifact=suite_artifact,
                 mcp_leftover_artifact=leftover_artifact,
                 runtime_env_bootstrap_artifact=runtime_env_bootstrap_artifact,
@@ -167,6 +175,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(evidence["summary"]["matter_access_delegation_smoke_status"], "NOT_ATTACHED")
         self.assertEqual(evidence["summary"]["matter_access_apply_readiness_status"], "NOT_ATTACHED")
         self.assertEqual(evidence["summary"]["matter_access_apply_request_plan_status"], "NOT_ATTACHED")
+        self.assertEqual(evidence["summary"]["matter_access_apply_policy_smoke_status"], "PASSED")
 
     def test_attaches_optional_runtime_env_bootstrap_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -404,6 +413,46 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(len(evidence["artifact_index"]["artifacts"][7]["artifact_sha256"]), 64)
         self.assertNotIn("grant-raw", json.dumps(evidence))
 
+    def test_attaches_matter_access_apply_policy_smoke_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            suite_artifact = tmp_path / "suite.redacted.json"
+            leftover_artifact = tmp_path / "leftover.redacted.json"
+            missing_artifact = tmp_path / "missing.redacted.json"
+            apply_policy_artifact = tmp_path / "matter-access-apply-policy-smoke.redacted.json"
+            suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
+            leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            apply_policy_artifact.write_text(json.dumps(_matter_access_apply_policy_smoke_payload()), encoding="utf-8")
+
+            evidence = build_release_gate_evidence(
+                repo_root=REPO_ROOT,
+                mcp_inventory_artifact=missing_artifact,
+                matter_access_artifact=missing_artifact,
+                matter_access_apply_readiness_artifact=missing_artifact,
+                matter_access_apply_request_artifact=missing_artifact,
+                matter_access_apply_policy_smoke_artifact=apply_policy_artifact,
+                mcp_suite_artifact=suite_artifact,
+                mcp_leftover_artifact=leftover_artifact,
+                runtime_env_bootstrap_artifact=missing_artifact,
+                runtime_certificate_expiry_artifact=missing_artifact,
+                runtime_smoke_artifact=missing_artifact,
+                runtime_metadata_artifact=missing_artifact,
+                expected_workspace_id="notary_team_01",
+                expected_correlation_id="corr-1",
+                generated_at="2026-07-06T20:30:00Z",
+            )
+
+        self.assertEqual(evidence["status"], "PASSED")
+        self.assertEqual(evidence["summary"]["matter_access_apply_policy_smoke_status"], "PASSED")
+        policy_step = evidence["steps"][8]
+        self.assertEqual(policy_step["id"], "matter_access_apply_policy_smoke")
+        self.assertEqual(policy_step["summary"]["negative_case_count"], 5)
+        self.assertEqual(policy_step["summary"]["detected_policy_violation_count"], 5)
+        self.assertTrue(policy_step["summary"]["uses_fake_graph_client"])
+        self.assertFalse(policy_step["summary"]["executes_graph_requests"])
+        self.assertTrue(evidence["artifact_index"]["artifacts"][8]["attached"])
+        self.assertEqual(len(evidence["artifact_index"]["artifacts"][8]["artifact_sha256"]), 64)
+
     def test_attaches_optional_matter_access_apply_smoke_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -434,15 +483,15 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
 
         self.assertEqual(evidence["status"], "PASSED")
         self.assertEqual(evidence["summary"]["matter_access_apply_smoke_status"], "PASSED")
-        smoke_step = evidence["steps"][10]
+        smoke_step = evidence["steps"][11]
         self.assertEqual(smoke_step["id"], "matter_access_apply_smoke")
         self.assertEqual(smoke_step["summary"]["write_tools"], ["grant_request", "audit_append"])
         self.assertTrue(smoke_step["summary"]["executed_graph_requests"])
         self.assertTrue(smoke_step["summary"]["executed_graph_writes"])
         self.assertTrue(smoke_step["summary"]["cleanup_requested"])
         self.assertEqual(smoke_step["summary"]["grant_cleanup_read_after_value_count"], 0)
-        self.assertTrue(evidence["artifact_index"]["artifacts"][10]["attached"])
-        self.assertEqual(len(evidence["artifact_index"]["artifacts"][10]["artifact_sha256"]), 64)
+        self.assertTrue(evidence["artifact_index"]["artifacts"][11]["attached"])
+        self.assertEqual(len(evidence["artifact_index"]["artifacts"][11]["artifact_sha256"]), 64)
         self.assertNotIn("NAC-SMOKE-GRANT-20260708T000000Z", json.dumps(evidence))
 
     def test_does_not_auto_attach_matter_access_apply_smoke_default_artifact(self) -> None:
@@ -479,10 +528,10 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
 
         self.assertEqual(evidence["status"], "PASSED")
         self.assertEqual(evidence["summary"]["matter_access_apply_smoke_status"], "NOT_ATTACHED")
-        smoke_step = evidence["steps"][10]
+        smoke_step = evidence["steps"][11]
         self.assertEqual(smoke_step["artifact_path"], str(default_apply_smoke_artifact))
         self.assertEqual(smoke_step["status"], "NOT_ATTACHED")
-        self.assertFalse(evidence["artifact_index"]["artifacts"][10]["attached"])
+        self.assertFalse(evidence["artifact_index"]["artifacts"][11]["attached"])
         self.assertNotIn("live-correlation-from-previous-run", json.dumps(evidence))
 
     def test_fails_when_attached_runtime_artifact_is_invalid(self) -> None:
@@ -526,6 +575,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             matter_access_artifact = tmp_path / "matter-access-delegation-smoke.redacted.json"
             apply_readiness_artifact = tmp_path / "matter-access-apply-readiness.redacted.json"
             apply_request_artifact = tmp_path / "matter-access-apply-request-plan.redacted.json"
+            apply_policy_artifact = tmp_path / "matter-access-apply-policy-smoke.redacted.json"
             runtime_env_bootstrap_artifact = tmp_path / "missing-runtime-env-bootstrap.redacted.json"
             runtime_certificate_expiry_artifact = tmp_path / "missing-runtime-certificate-expiry.redacted.json"
             report_path = tmp_path / "release-gate-evidence.redacted.md"
@@ -539,6 +589,7 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
             matter_access_artifact.write_text(json.dumps(_matter_access_payload()), encoding="utf-8")
             apply_readiness_artifact.write_text(json.dumps(_matter_access_apply_readiness_payload()), encoding="utf-8")
             apply_request_artifact.write_text(json.dumps(_matter_access_apply_request_payload()), encoding="utf-8")
+            apply_policy_artifact.write_text(json.dumps(_matter_access_apply_policy_smoke_payload()), encoding="utf-8")
 
             result = subprocess.run(
                 [
@@ -557,6 +608,8 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
                     str(apply_readiness_artifact),
                     "--release-gate-matter-access-apply-request-artifact",
                     str(apply_request_artifact),
+                    "--release-gate-matter-access-apply-policy-smoke-artifact",
+                    str(apply_policy_artifact),
                     "--release-gate-suite-artifact",
                     str(suite_artifact),
                     "--release-gate-leftover-artifact",
@@ -611,8 +664,9 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(index_payload["artifacts"][5]["id"], "matter_access_delegation_smoke")
         self.assertEqual(index_payload["artifacts"][6]["id"], "matter_access_apply_readiness")
         self.assertEqual(index_payload["artifacts"][7]["id"], "matter_access_apply_request_plan")
-        self.assertEqual(index_payload["artifacts"][8]["id"], "mcp_smoke_suite")
-        self.assertEqual(len(index_payload["artifacts"][8]["artifact_sha256"]), 64)
+        self.assertEqual(index_payload["artifacts"][8]["id"], "matter_access_apply_policy_smoke")
+        self.assertEqual(index_payload["artifacts"][9]["id"], "mcp_smoke_suite")
+        self.assertEqual(len(index_payload["artifacts"][9]["artifact_sha256"]), 64)
 
 
 def _suite_payload() -> dict:
@@ -923,6 +977,60 @@ def _matter_access_apply_request_payload() -> dict:
             "storesMessagePayloads": False,
             "storesRawGraphPath": False,
             "storesRawGraphResponse": False,
+            "readsSharePointFileContent": False,
+            "executesGraphRequests": False,
+            "executesGraphWrites": False,
+            "tenantWritesExecuted": False,
+            "teamMembershipMutationAllowed": False,
+            "sharePointItemPermissionMutationAllowed": False,
+        },
+        "errors": [],
+    }
+
+
+def _matter_access_apply_policy_smoke_payload() -> dict:
+    return {
+        "schema_version": "nac.m365-matter-access-apply-policy-smoke/v0.1",
+        "status": "PASSED",
+        "generated_at": "2026-07-08T11:05:00Z",
+        "summary": {
+            "workspace_id": "notary_team_01",
+            "correlation_id": "corr-1",
+            "negative_case_count": 5,
+            "detected_policy_violation_count": 5,
+            "expected_case_ids": [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+            "executes_graph_requests": False,
+            "executes_graph_writes": False,
+            "tenant_writes_executed": False,
+            "sharepoint_item_writes_executed": False,
+            "uses_fake_graph_client": True,
+            "graph_rest_only": True,
+            "stores_tokens_or_secrets": False,
+            "stores_raw_graph_path": False,
+            "stores_raw_graph_response": False,
+            "stores_raw_write_payload": False,
+            "stores_matter_payloads": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "cases": [],
+        "privacy": {
+            "metadataOnly": True,
+            "storesSourceFullText": False,
+            "storesRawXsd": False,
+            "storesCredentials": False,
+            "storesTokensOrSecrets": False,
+            "storesMatterData": False,
+            "storesMatterPayloads": False,
+            "storesMessagePayloads": False,
+            "storesRawGraphPath": False,
+            "storesRawGraphResponse": False,
+            "storesRawWritePayload": False,
             "readsSharePointFileContent": False,
             "executesGraphRequests": False,
             "executesGraphWrites": False,

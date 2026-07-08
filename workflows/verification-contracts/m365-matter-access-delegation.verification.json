@@ -51,6 +51,7 @@
       "out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json",
       "out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json",
       "out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json",
       "out/m365/teams-sharepoint/release-gates/<correlation-id>/release-gate-evidence.redacted.json"
     ]
   },
@@ -72,7 +73,7 @@
   "thresholds": {
     "minimum_indexed_decisions": 3,
     "minimum_indexed_invariants": 6,
-    "required_matter_access_release_gate_artifacts": 3,
+    "required_matter_access_release_gate_artifacts": 4,
     "max_live_apply_steps_without_owner_gate": 0,
     "minimum_negative_policy_cases": 5
   },
@@ -84,6 +85,7 @@
     "matter_access_delegation_smoke",
     "matter_access_apply_readiness",
     "matter_access_apply_request_plan",
+    "matter_access_apply_policy_smoke",
     "negative_apply_policy_smoke",
     "release_gate_evidence_index"
   ],

@@ -526,8 +526,8 @@ ein passendes redigiertes Audit-Pack mit `PASSED` vorliegt.
 Lauf zu einem kompakten MVP-Status. Der Befehl liest nur redigierte
 Retention-, Evidence- und optional Audit-Pack-Artefakte, prüft
 `complete_release_gate_artifacts`, alle Pflichtartefakte inklusive
-`matter_access_delegation_smoke`, `matter_access_apply_readiness` und
-`matter_access_apply_request_plan`,
+`matter_access_delegation_smoke`, `matter_access_apply_readiness`,
+`matter_access_apply_request_plan` und `matter_access_apply_policy_smoke`,
 Retention-Verweis, Step-Status und Privacy-Flags und gibt
 `mvp_release_readiness=READY` nur bei einem vollständigen `PASSED`-Stand aus. Mit
 `--release-gate-readiness-require-audit-pack` blockiert der Status, wenn kein

@@ -213,8 +213,9 @@ one-shot runner writes the audit pack and readiness status in the same
 owner-gated execution and the output contains `mvp_release_readiness=READY` and
 `release_gate_readiness=READY`. The approval includes the matter-access
 required evidence `matter_access_delegation_smoke`,
-`matter_access_apply_readiness` and `matter_access_apply_request_plan`; if they
-are missing from the retained run, the MVP status remains `NOT_READY`.
+`matter_access_apply_readiness`, `matter_access_apply_request_plan` and
+`matter_access_apply_policy_smoke`; if they are missing from the retained run,
+the MVP status remains `NOT_READY`.
 
 The standard approval run therefore always uses these flags:
 
@@ -233,8 +234,8 @@ No MVP approval is based only on `mcp-smoke-suite`, `runtime-smoke` or console
 output. These individual commands remain diagnostic and reproduction paths; the
 approval decision is bound to the redacted retention index,
 `release-gate-evidence`, audit pack, `release-readiness`,
-`matter_access_delegation_smoke`, `matter_access_apply_readiness` and
-`matter_access_apply_request_plan`.
+`matter_access_delegation_smoke`, `matter_access_apply_readiness`,
+`matter_access_apply_request_plan` and `matter_access_apply_policy_smoke`.
 
 ## Runtime Certificate Rotation Approval
 

@@ -18,6 +18,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
         "release-gate-post-run-report",
         "release-gate-post-run-report-index",
         "release-gate-post-run-report-index-artifact",
@@ -41,6 +42,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
         "release-gate-post-run-report",
         "release-gate-post-run-report-index",
         "release-gate-post-run-report-index-artifact",
@@ -61,6 +63,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
     ),
     "docs/en/operations/release-checklist.md": (
         "For M365 MVP runtime approvals",
@@ -70,6 +73,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
     ),
     "docs/de/cli.md": (
         "release-readiness --format json",
@@ -87,6 +91,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
     ),
     "docs/en/cli.md": (
         "release-readiness --format json",
@@ -104,6 +109,7 @@ REQUIRED_DOC_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
     ),
     "docs/de/runbooks/m365-cli-admin-accelerator.md": (
         "rendert standardmäßig den MVP-Go/No-Go-Lauf",
@@ -135,6 +141,7 @@ REQUIRED_BATCH_APPROVAL_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
         '"release-gate", "runtime-certificate-rotation"',
         "return (True, True, True)",
         "MVP-Standard impliziert",
@@ -168,6 +175,7 @@ REQUIRED_QUALITY_GATE_MARKERS = (
     "matter_access_delegation_smoke",
     "matter_access_apply_readiness",
     "matter_access_apply_request_plan",
+    "matter_access_apply_policy_smoke",
 )
 
 REQUIRED_REPORT_SURFACE_MARKERS: dict[str, tuple[str, ...]] = {
@@ -181,6 +189,7 @@ REQUIRED_REPORT_SURFACE_MARKERS: dict[str, tuple[str, ...]] = {
         "matter_access_delegation_smoke",
         "matter_access_apply_readiness",
         "matter_access_apply_request_plan",
+        "matter_access_apply_policy_smoke",
     ),
     "docs/de/quality-gate.md": (
         "M365-MVP-Readiness-Status",
@@ -189,6 +198,7 @@ REQUIRED_REPORT_SURFACE_MARKERS: dict[str, tuple[str, ...]] = {
         "`matter_access_delegation_smoke`",
         "`matter_access_apply_readiness`",
         "`matter_access_apply_request_plan`",
+        "`matter_access_apply_policy_smoke`",
     ),
     "docs/en/quality-gate.md": (
         "M365 MVP readiness status",
@@ -197,6 +207,7 @@ REQUIRED_REPORT_SURFACE_MARKERS: dict[str, tuple[str, ...]] = {
         "`matter_access_delegation_smoke`",
         "`matter_access_apply_readiness`",
         "`matter_access_apply_request_plan`",
+        "`matter_access_apply_policy_smoke`",
     ),
 }
 

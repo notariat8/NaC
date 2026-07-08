@@ -102,7 +102,8 @@ Standardausgabe:
   `m365_release_readiness_gate`, Go/No-Go-Ziel `mvp_release_readiness=READY`
   und Runner-Zusammenfassung `release_gate_readiness=READY` sowie die
   Pflichtnachweise `matter_access_delegation_smoke`,
-  `matter_access_apply_readiness` und `matter_access_apply_request_plan`
+  `matter_access_apply_readiness`, `matter_access_apply_request_plan` und
+  `matter_access_apply_policy_smoke`
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

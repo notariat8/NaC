@@ -55,11 +55,13 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
 
         self.assertEqual(payload["schema_version"], "nac.verification-contract/v0.1")
         self.assertEqual(payload["domain_contract_id"], "m365.matter_access_delegation")
-        self.assertEqual(payload["thresholds"]["required_matter_access_release_gate_artifacts"], 3)
+        self.assertEqual(payload["thresholds"]["required_matter_access_release_gate_artifacts"], 4)
         self.assertEqual(payload["thresholds"]["max_live_apply_steps_without_owner_gate"], 0)
         self.assertTrue(payload["pass_condition"]["all_required_invariants_indexed"])
         self.assertTrue(payload["pass_condition"]["matter_access_artifacts_attached_to_release_gate"])
         self.assertIn("matter_access_apply_request_plan", payload["required_evidence"])
+        self.assertIn("matter_access_apply_policy_smoke", payload["required_evidence"])
+        self.assertIn("negative_apply_policy_smoke", payload["required_evidence"])
         self.assertEqual(payload["failure_behavior"]["owner_gate_missing"], "block_live_apply")
 
     def test_agent_context_routes_domain_indexes_and_verification_contract(self) -> None:

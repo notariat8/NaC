@@ -102,8 +102,8 @@ Default output:
   enforcement for the `m365_release_readiness_gate`, Go/No-Go target
   `mvp_release_readiness=READY` and runner summary
   `release_gate_readiness=READY` plus the required evidence
-  `matter_access_delegation_smoke`, `matter_access_apply_readiness` and
-  `matter_access_apply_request_plan`
+  `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
+  `matter_access_apply_request_plan` and `matter_access_apply_policy_smoke`
 
 These artifacts are uploaded during CI runs.
 
