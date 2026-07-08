@@ -18,6 +18,8 @@ from nac_cli import cli
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
+    format_matter_access_apply_live_smoke_retention_index,
+    format_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
     validate_matter_access_apply_live_smoke_redaction_shape,
 )
@@ -102,16 +104,31 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
                 retention_root=retention_root,
                 correlation_id="legacy-corr",
             )
+            index_report = format_matter_access_apply_live_smoke_retention_index(index)
+            readiness_report = format_matter_access_apply_live_smoke_retention_readiness(readiness)
 
             self.assertEqual(index["summary"]["redaction_shape_status_counts"]["NOT_EVALUATED"], 1)
             self.assertEqual(index["summary"]["redaction_shape_legacy_missing_count"], 1)
+            self.assertTrue(index["summary"]["redaction_shape_upgrade_required"])
+            self.assertEqual(index["summary"]["redaction_shape_upgrade_item_count"], 1)
             self.assertEqual(index["live_smokes"][0]["redaction_shape_status"], "NOT_EVALUATED")
             self.assertFalse(index["live_smokes"][0]["redaction_shape_evidence_present"])
             self.assertTrue(index["live_smokes"][0]["redaction_shape_legacy_missing"])
+            self.assertTrue(index["live_smokes"][0]["upgrade_advice"]["required"])
+            self.assertEqual(index["upgrade_advice"]["status"], "UPGRADE_REQUIRED")
+            self.assertEqual(index["upgrade_advice"]["items"][0]["correlation_id"], "legacy-corr")
+            self.assertFalse(index["upgrade_advice"]["items"][0]["executes_graph_requests"])
+            self.assertFalse(index["upgrade_advice"]["items"][0]["tenant_writes_executed"])
+            self.assertIn("matter-access-apply-live-smoke-retain", index["upgrade_advice"]["items"][0]["command"])
             self.assertEqual(readiness["status"], "NOT_READY")
             self.assertEqual(readiness["summary"]["latest_redaction_shape_status"], "NOT_EVALUATED")
             self.assertEqual(readiness["summary"]["redaction_shape_legacy_missing_count"], 1)
+            self.assertTrue(readiness["summary"]["redaction_shape_upgrade_required"])
+            self.assertEqual(readiness["upgrade_advice"]["status"], "UPGRADE_REQUIRED")
             self.assertIn("redaction-shape evidence", "\n".join(readiness["errors"]))
+            self.assertIn("Upgrade Advice", index_report)
+            self.assertIn("legacy-corr", readiness_report)
+            self.assertIn("matter-access-apply-live-smoke-retain", readiness_report)
 
     def test_retention_blocks_invalid_source_without_copying(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -219,6 +236,8 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertEqual(readiness["summary"]["latest_redaction_shape_status"], "PASSED")
             self.assertEqual(readiness["summary"]["redaction_shape_passed_count"], 1)
             self.assertEqual(readiness["summary"]["redaction_shape_legacy_missing_count"], 0)
+            self.assertFalse(readiness["summary"]["redaction_shape_upgrade_required"])
+            self.assertEqual(readiness["upgrade_advice"]["status"], "CURRENT")
             self.assertFalse(readiness["summary"]["executes_graph_requests"])
             self.assertTrue(Path(readiness["summary"]["readiness_json_path"]).is_file())
             self.assertTrue(Path(readiness["summary"]["readiness_report_path"]).is_file())

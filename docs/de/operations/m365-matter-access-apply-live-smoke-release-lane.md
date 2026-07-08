@@ -123,6 +123,11 @@ Der Retention-Index und die Readiness-Evidence aggregieren diese Formprüfung
 `redaction_shape_legacy_missing_count`; ältere Retention-Läufe ohne eingebettete
 Shape-Evidence erscheinen dadurch ausdrücklich als `NOT_EVALUATED` und
 blockieren die Readiness, bis ein aktueller Lauf nacharchiviert wurde.
+In diesem Fall setzt die JSON-Evidence `redaction_shape_upgrade_required=true`
+und liefert `upgrade_advice.status=UPGRADE_REQUIRED` mit einem lokalen
+`matter-access-apply-live-smoke-retain`-Nacharchivierungsbefehl für das bereits
+redigierte Live-Smoke-Artefakt; dieser Upgrade-Hinweis führt keine Graph- oder
+Tenant-Aktion aus.
 
 Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
 bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten

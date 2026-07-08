@@ -445,7 +445,11 @@ Redaktions-Shape-Check `redaction_shape_status=PASSED` und
 Readiness-Ausgabe zeigen zusätzlich `redaction_shape_status_counts` und
 `redaction_shape_legacy_missing_count`, damit ältere Retention-Läufe ohne
 Shape-Evidence ausdrücklich als `NOT_EVALUATED` statt stillschweigend fehlend
-sichtbar sind. Mit
+sichtbar sind. Wenn solche Läufe gefunden werden, setzt die Evidence
+`redaction_shape_upgrade_required=true` und
+`upgrade_advice.status=UPGRADE_REQUIRED` mit einem lokalen
+`matter-access-apply-live-smoke-retain`-Nacharchivierungsbefehl ohne Graph- oder
+Tenant-Aktion. Mit
 `matter-access-apply-live-smoke-retention-readiness` wird derselbe lokale
 Retention-Index offline als `READY`/`NOT_READY` bewertet; optional schreibt
 `--matter-access-apply-live-smoke-write-readiness` die redigierten Artefakte

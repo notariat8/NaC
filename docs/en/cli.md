@@ -435,7 +435,11 @@ redaction-shape check must report `redaction_shape_status=PASSED` and
 output also expose `redaction_shape_status_counts` and
 `redaction_shape_legacy_missing_count`, so older retention runs without shape
 evidence are explicitly visible as `NOT_EVALUATED` instead of being silently
-absent. With
+absent. When such runs are found, evidence sets
+`redaction_shape_upgrade_required=true` and
+`upgrade_advice.status=UPGRADE_REQUIRED` with a local
+`matter-access-apply-live-smoke-retain` re-retention command without Graph or
+tenant action. With
 `matter-access-apply-live-smoke-retention-readiness`, the same local retention
 index is evaluated offline as `READY`/`NOT_READY`; optionally,
 `--matter-access-apply-live-smoke-write-readiness` writes the redacted artifacts

@@ -24,6 +24,7 @@ SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention/v0.1"
 INDEX_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-index/v0.1"
 READINESS_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1"
 REDACTION_SHAPE_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1"
+UPGRADE_ADVICE_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-upgrade-advice/v0.1"
 
 ALLOWED_FALSE_PRIVACY_FLAG_KEYS = {
     "storesrawgraphpath",
@@ -304,6 +305,7 @@ def build_matter_access_apply_live_smoke_retention_index(
                 rows.append(row)
     rows.sort(key=lambda item: (str(item.get("generated_at") or ""), str(item.get("correlation_id") or "")))
     redaction_shape_status_counts = _redaction_shape_status_counts(rows)
+    upgrade_advice = _retention_upgrade_advice(rows)
     return {
         "schema_version": INDEX_SCHEMA_VERSION,
         "status": "PASSED" if not errors else "BLOCKED",
@@ -322,6 +324,8 @@ def build_matter_access_apply_live_smoke_retention_index(
             "redaction_shape_legacy_missing_count": sum(
                 1 for row in rows if row.get("redaction_shape_legacy_missing") is True
             ),
+            "redaction_shape_upgrade_required": _dict(upgrade_advice.get("summary")).get("upgrade_required"),
+            "redaction_shape_upgrade_item_count": _dict(upgrade_advice.get("summary")).get("upgrade_item_count"),
             "executes_graph_requests": False,
             "executes_graph_writes": False,
             "tenant_writes_executed": False,
@@ -330,6 +334,7 @@ def build_matter_access_apply_live_smoke_retention_index(
             "reads_sharepoint_file_content": False,
         },
         "live_smokes": rows,
+        "upgrade_advice": upgrade_advice,
         "errors": errors,
         "privacy": {
             "readsLocalRedactedArtifactsOnly": True,
@@ -365,6 +370,7 @@ def build_matter_access_apply_live_smoke_retention_readiness(
     errors = [check["message"] for check in checks if check.get("status") != "PASSED"]
     latest_row = rows[-1] if rows else {}
     index_summary = _dict(index.get("summary"))
+    upgrade_advice = _retention_upgrade_advice(rows)
     payload = {
         "schema_version": READINESS_SCHEMA_VERSION,
         "status": "READY" if not errors else "NOT_READY",
@@ -386,6 +392,8 @@ def build_matter_access_apply_live_smoke_retention_readiness(
             "redaction_shape_blocked_count": index_summary.get("redaction_shape_blocked_count"),
             "redaction_shape_not_evaluated_count": index_summary.get("redaction_shape_not_evaluated_count"),
             "redaction_shape_legacy_missing_count": index_summary.get("redaction_shape_legacy_missing_count"),
+            "redaction_shape_upgrade_required": _dict(upgrade_advice.get("summary")).get("upgrade_required"),
+            "redaction_shape_upgrade_item_count": _dict(upgrade_advice.get("summary")).get("upgrade_item_count"),
             "readiness_json_path": str(retention_root / RETENTION_READINESS_JSON_NAME),
             "readiness_report_path": str(retention_root / RETENTION_READINESS_REPORT_NAME),
             "executes_graph_requests": False,
@@ -404,6 +412,7 @@ def build_matter_access_apply_live_smoke_retention_readiness(
             "redaction_shape_status_counts": index_summary.get("redaction_shape_status_counts"),
             "live_smokes": rows,
         },
+        "upgrade_advice": upgrade_advice,
         "privacy": {
             "readsLocalRedactedArtifactsOnly": True,
             "executesGraphRequests": False,
@@ -469,6 +478,7 @@ def format_matter_access_apply_live_smoke_retention_index(payload: dict[str, Any
         lines.append(
             f"| `{row.get('correlation_id')}` | `{row.get('workspace_id')}` | `{row.get('status')}` | `{row.get('redaction_shape_status')}` | `{row.get('redaction_shape_violation_count')}` | `{row.get('retained_artifact_path')}` |"
         )
+    lines.extend(_format_upgrade_advice(payload.get("upgrade_advice")))
     lines.append("")
     return "\n".join(lines)
 
@@ -485,6 +495,7 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
         f"- Latest retained artifact: `{summary.get('latest_retained_artifact_path')}`",
         f"- Latest redaction shape status: `{summary.get('latest_redaction_shape_status')}`",
         f"- Redaction shape status counts: `{summary.get('redaction_shape_status_counts')}`",
+        f"- Redaction shape upgrade required: `{summary.get('redaction_shape_upgrade_required')}`",
         f"- Executes Graph requests: `{summary.get('executes_graph_requests')}`",
         f"- Tenant writes executed: `{summary.get('tenant_writes_executed')}`",
         "",
@@ -499,6 +510,7 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
     if errors:
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {error}" for error in errors)
+    lines.extend(_format_upgrade_advice(payload.get("upgrade_advice")))
     lines.append("")
     return "\n".join(lines)
 
@@ -506,11 +518,12 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
 def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
     summary = _dict(payload.get("summary"))
     redaction_shape_summary = _retention_redaction_shape_summary(payload)
-    return {
+    row = {
         "correlation_id": summary.get("correlation_id"),
         "workspace_id": summary.get("workspace_id"),
         "status": payload.get("status"),
         "generated_at": payload.get("generated_at"),
+        "retention_root_path": str(path.parent.parent),
         "retention_json_path": str(path),
         "retention_report_path": summary.get("retention_report_path"),
         "retained_artifact_path": summary.get("retained_artifact_path"),
@@ -527,6 +540,8 @@ def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
         "grant_cleanup_read_after_value_count": summary.get("grant_cleanup_read_after_value_count"),
         "audit_cleanup_read_after_value_count": summary.get("audit_cleanup_read_after_value_count"),
     }
+    row["upgrade_advice"] = _row_upgrade_advice(row)
+    return row
 
 
 def _readiness_checks(index: dict[str, Any], rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -653,6 +668,98 @@ def _blocked_retention(generated_at: str, artifact_path: Path, retention_root: P
             "readsSharePointFileContent": False,
         },
     }
+
+
+def _retention_upgrade_advice(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    items = [
+        _dict(row.get("upgrade_advice"))
+        for row in rows
+        if _dict(row.get("upgrade_advice")).get("required") is True
+    ]
+    return {
+        "schema_version": UPGRADE_ADVICE_SCHEMA_VERSION,
+        "status": "UPGRADE_REQUIRED" if items else "CURRENT",
+        "summary": {
+            "upgrade_required": bool(items),
+            "upgrade_item_count": len(items),
+            "legacy_missing_redaction_shape_count": sum(
+                1 for item in items if item.get("reason") == "legacy_missing_redaction_shape_evidence"
+            ),
+            "executes_graph_requests": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "changes_credentials": False,
+        },
+        "items": items,
+        "privacy": {
+            "readsLocalRedactedArtifactsOnly": True,
+            "executesGraphRequests": False,
+            "tenantWritesExecuted": False,
+            "tenantDeletesExecuted": False,
+            "storesTokensOrSecrets": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+
+
+def _row_upgrade_advice(row: dict[str, Any]) -> dict[str, Any]:
+    if row.get("redaction_shape_legacy_missing") is not True:
+        return {
+            "required": False,
+            "reason": None,
+            "executes_graph_requests": False,
+            "tenant_writes_executed": False,
+        }
+    retained_artifact_path = str(row.get("retained_artifact_path") or "")
+    retention_root_path = str(row.get("retention_root_path") or "")
+    command_argv = [
+        "python3",
+        "scripts/nac.py",
+        "m365",
+        "teams-sharepoint",
+        "matter-access-apply-live-smoke-retain",
+        "--matter-access-apply-live-smoke-artifact",
+        retained_artifact_path or "<redacted-live-smoke-artifact>",
+        "--matter-access-apply-live-smoke-retention-root",
+        retention_root_path or "<retention-root>",
+        "--format",
+        "json",
+    ]
+    return {
+        "required": True,
+        "reason": "legacy_missing_redaction_shape_evidence",
+        "correlation_id": row.get("correlation_id"),
+        "workspace_id": row.get("workspace_id"),
+        "retention_json_path": row.get("retention_json_path"),
+        "retained_artifact_path": retained_artifact_path or None,
+        "retained_artifact_available": Path(retained_artifact_path).is_file() if retained_artifact_path else False,
+        "recommended_action": "rerun_offline_retention_from_existing_redacted_live_smoke_artifact",
+        "command_argv": command_argv,
+        "command": " ".join(command_argv),
+        "executes_graph_requests": False,
+        "tenant_writes_executed": False,
+        "tenant_deletes_executed": False,
+        "changes_credentials": False,
+    }
+
+
+def _format_upgrade_advice(value: Any) -> list[str]:
+    upgrade_advice = _dict(value)
+    items = [item for item in upgrade_advice.get("items", []) if isinstance(item, dict)]
+    if not items:
+        return []
+    lines = [
+        "",
+        "## Upgrade Advice",
+        "",
+        "Legacy or missing redaction-shape evidence was found. Re-run offline retention from the existing redacted live-smoke artifact; this performs no Graph request and no tenant write.",
+        "",
+    ]
+    for item in items:
+        lines.append(
+            f"- `{item.get('correlation_id')}`: `{item.get('recommended_action')}` via `{item.get('command')}`"
+        )
+    return lines
 
 
 def _retention_redaction_shape_summary(payload: dict[str, Any]) -> dict[str, Any]:

@@ -59,6 +59,7 @@
     "Retention must run the recursive redaction-shape check before copying and must block forbidden raw keys or sensitive string markers.",
     "The retention index is local, redacted and filterable by correlation ID, workspace, status and query.",
     "The retention index and readiness evidence must surface redaction-shape status counts and legacy-missing redaction evidence instead of hiding absent shape data.",
+    "Legacy or missing redaction-shape evidence must include machine-readable offline upgrade advice that reruns local retention without Graph or tenant action.",
     "matter-access-apply-live-smoke-retention-readiness evaluates retained local evidence as READY or NOT_READY without Graph or tenant action.",
     "The retained artifact path, retention report path and root index path must be visible in the live-smoke command summary."
   ],
@@ -91,6 +92,7 @@
     "redaction_shape_fail_closed": true,
     "redaction_shape_indexed": true,
     "legacy_missing_redaction_shape_visible": true,
+    "legacy_redaction_shape_upgrade_advice_visible": true,
     "no_secrets": true,
     "no_mandate_data": true
   },

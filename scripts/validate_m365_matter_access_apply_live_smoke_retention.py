@@ -96,6 +96,7 @@ def _validate_code() -> list[str]:
         "INDEX_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-index/v0.1\"",
         "READINESS_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1\"",
         "REDACTION_SHAPE_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1\"",
+        "UPGRADE_ADVICE_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-upgrade-advice/v0.1\"",
         "retain_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_redaction_shape",
@@ -107,8 +108,15 @@ def _validate_code() -> list[str]:
         "redaction_shape_violation_count",
         "redaction_shape_status_counts",
         "redaction_shape_legacy_missing_count",
+        "redaction_shape_upgrade_required",
+        "redaction_shape_upgrade_item_count",
         "redaction_shape_evidence_present",
         "latest_redaction_shape_status",
+        "upgrade_advice",
+        "_retention_upgrade_advice",
+        "_row_upgrade_advice",
+        "_format_upgrade_advice",
+        "rerun_offline_retention_from_existing_redacted_live_smoke_artifact",
         "sourceArtifactRedactionShapeChecked",
         "all_runs_have_valid_redaction_shape",
         "all_runs_have_redaction_shape_evidence",
@@ -183,6 +191,8 @@ def _validate_docs() -> list[str]:
         "redaction_shape_status=PASSED",
         "redaction_shape_status_counts",
         "redaction_shape_legacy_missing_count",
+        "redaction_shape_upgrade_required",
+        "UPGRADE_REQUIRED",
         "sourceArtifactRedactionShapeChecked=true",
         "retention_executes_graph_requests=false",
         "retention_tenant_writes_executed=false",
@@ -238,6 +248,8 @@ def _validate_contract_and_indexes() -> list[str]:
             errors.append("verification contract missing redaction_shape_indexed pass condition")
         if "legacy_missing_redaction_shape_visible" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing legacy_missing_redaction_shape_visible pass condition")
+        if "legacy_redaction_shape_upgrade_advice_visible" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing legacy_redaction_shape_upgrade_advice_visible pass condition")
         if "recursive redaction-shape check" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing recursive redaction-shape invariant")
 

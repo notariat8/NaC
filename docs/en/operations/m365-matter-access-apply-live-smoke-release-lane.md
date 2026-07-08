@@ -119,6 +119,11 @@ The retention index and readiness evidence aggregate this shape check through
 `redaction_shape_legacy_missing_count`; older retention runs without embedded
 shape evidence are explicitly shown as `NOT_EVALUATED` and block readiness
 until a current run is retained.
+In that case the JSON evidence sets `redaction_shape_upgrade_required=true` and
+returns `upgrade_advice.status=UPGRADE_REQUIRED` with a local
+`matter-access-apply-live-smoke-retain` re-retention command for the already
+redacted live-smoke artifact; this upgrade advice performs no Graph or tenant
+action.
 
 Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
 acceptance. The readiness command reads only the local redacted retention index
