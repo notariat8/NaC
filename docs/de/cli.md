@@ -513,7 +513,8 @@ ein passendes redigiertes Audit-Pack mit `PASSED` vorliegt.
 Lauf zu einem kompakten MVP-Status. Der Befehl liest nur redigierte
 Retention-, Evidence- und optional Audit-Pack-Artefakte, prüft
 `complete_release_gate_artifacts`, alle Pflichtartefakte inklusive
-`matter_access_delegation_smoke` und `matter_access_apply_readiness`,
+`matter_access_delegation_smoke`, `matter_access_apply_readiness` und
+`matter_access_apply_request_plan`,
 Retention-Verweis, Step-Status und Privacy-Flags und gibt
 `mvp_release_readiness=READY` nur bei einem vollständigen `PASSED`-Stand aus. Mit
 `--release-gate-readiness-require-audit-pack` blockiert der Status, wenn kein
@@ -631,6 +632,13 @@ Artifact-Index an. Für `release-readiness` ist
 `matter_access_apply_readiness` ein Pflichtnachweis. Der Einzelbefehl bleibt
 der Diagnose- und Fallback-Pfad, wenn dieser
 Runner-Schritt isoliert reproduziert werden muss.
+`matter-access-apply-request-plan` läuft danach ebenfalls im One-Shot-Runner
+und hängt den konkreten redigierten Owner-Apply-Auftrag für `grant_request` und
+`audit_append` an `release-gate-evidence`, den Artifact-Index und die
+Retention-Kopie an. Für `release-readiness` ist
+`matter_access_apply_request_plan` ein Pflichtnachweis. Bei manuellem
+`release-gate-evidence` kann dasselbe Artefakt mit
+`--release-gate-matter-access-apply-request-artifact` referenziert werden.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
@@ -668,6 +676,11 @@ Ein vorhandenes `matter-access-apply-readiness.redacted.json` kann mit
 Fehlt es außerhalb des One-Shot-Runners, bleibt dieser Evidence-Schritt
 `NOT_ATTACHED`; `release-readiness` stuft einen archivierten Lauf ohne diesen
 Pflichtnachweis jedoch als `NOT_READY` ein.
+Ein vorhandenes `matter-access-apply-request-plan.redacted.json` kann mit
+`--release-gate-matter-access-apply-request-artifact` angehängt werden. Fehlt
+es außerhalb des One-Shot-Runners, bleibt dieser Evidence-Schritt
+`NOT_ATTACHED`; `release-readiness` stuft einen archivierten Lauf ohne diesen
+Pflichtnachweis ebenfalls als `NOT_READY` ein.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

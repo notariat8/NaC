@@ -501,7 +501,8 @@ selected with `--release-gate-readiness-correlation-id`, into a compact MVP
 status. The command reads only redacted retention, evidence and optional
 audit-pack artifacts, checks `complete_release_gate_artifacts`, all required
 artifacts including `matter_access_delegation_smoke` and
-`matter_access_apply_readiness`, the retention reference, step statuses and
+`matter_access_apply_readiness` and `matter_access_apply_request_plan`, the
+retention reference, step statuses and
 privacy flags, and emits `mvp_release_readiness=READY` only for a complete
 `PASSED` state. With
 `--release-gate-readiness-require-audit-pack`, the status blocks when no
@@ -612,6 +613,12 @@ owner-gated apply edge to `release-gate-evidence` and the artifact index. For
 `release-readiness`, `matter_access_apply_readiness` is required evidence. The
 individual command remains the diagnostic and fallback path when that runner
 step must be reproduced in isolation.
+`matter-access-apply-request-plan` then also runs in the one-shot runner and
+attaches the concrete redacted owner-apply request for `grant_request` and
+`audit_append` to `release-gate-evidence`, the artifact index and the retained
+run copy. For `release-readiness`, `matter_access_apply_request_plan` is
+required evidence. A manual `release-gate-evidence` export can reference the
+same artifact with `--release-gate-matter-access-apply-request-artifact`.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
@@ -646,6 +653,11 @@ An existing `matter-access-apply-readiness.redacted.json` can be attached with
 outside the one-shot runner, this evidence step remains `NOT_ATTACHED`;
 `release-readiness` still marks a retained run without this required evidence
 as `NOT_READY`.
+An existing `matter-access-apply-request-plan.redacted.json` can be attached
+with `--release-gate-matter-access-apply-request-artifact`. When it is missing
+outside the one-shot runner, this evidence step remains `NOT_ATTACHED`;
+`release-readiness` also marks a retained run without this required evidence as
+`NOT_READY`.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 

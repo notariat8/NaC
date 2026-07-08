@@ -158,6 +158,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertIn("Release-Gate-Audit-Pack", release_gate["approval_text"])
         self.assertIn("MVP-Readiness-Status", release_gate["approval_text"])
         self.assertIn("Matter-Access-Apply-Readiness", release_gate["approval_text"])
+        self.assertIn("Matter-Access-Apply-Request-Plan", release_gate["approval_text"])
         self.assertEqual(
             release_gate["commands"],
             [
@@ -178,6 +179,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
                 "mcp_inventory_smoke",
                 "matter_access_delegation_smoke",
                 "matter_access_apply_readiness",
+                "matter_access_apply_request_plan",
                 "runtime_certificate_expiry_monitor",
                 "runtime_smoke",
                 "runtime_metadata",
@@ -360,6 +362,7 @@ class M365BatchApprovalCliTests(unittest.TestCase):
         self.assertFalse(rotation["operator_sequence"][2]["private_key_uploaded"])
         self.assertFalse(rotation["operator_sequence"][5]["stores_secret_material"])
         self.assertIn("matter_access_apply_readiness", rotation["operator_sequence"][4]["covers_steps"])
+        self.assertIn("matter_access_apply_request_plan", rotation["operator_sequence"][4]["covers_steps"])
         self.assertIn("release_gate_audit_pack", rotation["operator_sequence"][4]["covers_steps"])
         self.assertIn("release_gate_readiness", rotation["operator_sequence"][4]["covers_steps"])
 

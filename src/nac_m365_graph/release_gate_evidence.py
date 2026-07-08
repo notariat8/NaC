@@ -16,6 +16,9 @@ DEFAULT_MATTER_ACCESS_ARTIFACT = Path("out/m365/teams-sharepoint/matter-access-d
 DEFAULT_MATTER_ACCESS_APPLY_READINESS_ARTIFACT = Path(
     "out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json"
 )
+DEFAULT_MATTER_ACCESS_APPLY_REQUEST_ARTIFACT = Path(
+    "out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json"
+)
 DEFAULT_MCP_SMOKE_SUITE_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-suite.redacted.json")
 DEFAULT_MCP_LEFTOVER_ARTIFACT = Path("out/m365/teams-sharepoint/mcp-smoke-leftover-cleanup.redacted.json")
 DEFAULT_RUNTIME_CERTIFICATE_EXPIRY_ARTIFACT = Path(
@@ -44,6 +47,7 @@ def build_release_gate_evidence(
     mcp_inventory_artifact: Path | None = None,
     matter_access_artifact: Path | None = None,
     matter_access_apply_readiness_artifact: Path | None = None,
+    matter_access_apply_request_artifact: Path | None = None,
     mcp_suite_artifact: Path | None = None,
     mcp_leftover_artifact: Path | None = None,
     runtime_env_bootstrap_artifact: Path | None = None,
@@ -80,6 +84,11 @@ def build_release_gate_evidence(
             matter_access_apply_readiness_artifact,
             DEFAULT_MATTER_ACCESS_APPLY_READINESS_ARTIFACT,
         ),
+        "matter_access_apply_request_plan": _resolve(
+            repo_root,
+            matter_access_apply_request_artifact,
+            DEFAULT_MATTER_ACCESS_APPLY_REQUEST_ARTIFACT,
+        ),
         "mcp_smoke_suite": _resolve(repo_root, mcp_suite_artifact, DEFAULT_MCP_SMOKE_SUITE_ARTIFACT),
         "mcp_leftover_dry_run": _resolve(repo_root, mcp_leftover_artifact, DEFAULT_MCP_LEFTOVER_ARTIFACT),
     }
@@ -92,6 +101,7 @@ def build_release_gate_evidence(
         _mcp_inventory_step(paths["mcp_inventory_smoke"]),
         _matter_access_step(paths["matter_access_delegation_smoke"]),
         _matter_access_apply_readiness_step(paths["matter_access_apply_readiness"]),
+        _matter_access_apply_request_step(paths["matter_access_apply_request_plan"]),
         _mcp_suite_step(paths["mcp_smoke_suite"]),
         _mcp_leftover_step(paths["mcp_leftover_dry_run"]),
     ]
@@ -126,8 +136,9 @@ def build_release_gate_evidence(
         "mcp_inventory_smoke_status": steps[4]["status"],
         "matter_access_delegation_smoke_status": steps[5]["status"],
         "matter_access_apply_readiness_status": steps[6]["status"],
-        "mcp_smoke_suite_status": steps[7]["status"],
-        "mcp_leftover_dry_run_status": steps[8]["status"],
+        "matter_access_apply_request_plan_status": steps[7]["status"],
+        "mcp_smoke_suite_status": steps[8]["status"],
+        "mcp_leftover_dry_run_status": steps[9]["status"],
         "graph_rest_only": _all_privacy_flag(steps, "graph_rest_only", default=True),
         "stores_tokens_or_secrets": _any_privacy_flag(steps, "stores_tokens_or_secrets"),
         "stores_raw_graph_response": _any_privacy_flag(steps, "raw_graph_response_stored"),
@@ -706,6 +717,77 @@ def _matter_access_apply_readiness_step(path: Path) -> dict[str, Any]:
     return step
 
 
+def _matter_access_apply_request_step(path: Path) -> dict[str, Any]:
+    artifact, error = _load_optional_json(path)
+    step = _base_step(
+        step_id="matter_access_apply_request_plan",
+        label="matter-access-apply-request-plan",
+        artifact_path=path,
+        required=False,
+        artifact=artifact,
+        load_error=error,
+    )
+    if artifact is None:
+        return step
+    summary = _dict(artifact.get("summary"))
+    privacy = _dict(artifact.get("privacy"))
+    step["summary"] = {
+        "workspace_id": summary.get("workspace_id"),
+        "correlation_id": summary.get("correlation_id"),
+        "future_apply_mode": summary.get("future_apply_mode"),
+        "planned_write_count": summary.get("planned_write_count"),
+        "planned_tools": summary.get("planned_tools"),
+        "planned_lists": summary.get("planned_lists"),
+        "required_write_approval": summary.get("required_write_approval"),
+        "owner_gate_required": summary.get("owner_gate_required"),
+        "role_case_purpose_gate_required": summary.get("role_case_purpose_gate_required"),
+        "graph_rest_only": summary.get("graph_rest_only"),
+        "executes_graph_requests": summary.get("executes_graph_requests"),
+        "executes_graph_writes": summary.get("executes_graph_writes"),
+        "tenant_mutation_allowed": summary.get("tenant_mutation_allowed"),
+        "team_membership_mutation_allowed": summary.get("team_membership_mutation_allowed"),
+        "sharepoint_item_permission_mutation_allowed": summary.get("sharepoint_item_permission_mutation_allowed"),
+        "raw_graph_path_stored": summary.get("raw_graph_path_stored"),
+        "raw_graph_response_stored": summary.get("raw_graph_response_stored"),
+        "stores_tokens_or_secrets": privacy.get("storesTokensOrSecrets"),
+        "reads_sharepoint_file_content": privacy.get("readsSharePointFileContent"),
+        "stores_matter_payloads": privacy.get("storesMatterPayloads"),
+    }
+    _expect_status_passed(step, artifact)
+    if artifact.get("schema_version") != "nac.m365-matter-access-apply-request-plan/v0.1":
+        _fail(step, f"{step['label']} schema_version is not nac.m365-matter-access-apply-request-plan/v0.1")
+    _expect_summary_value(step, summary, "future_apply_mode", "owner_gated_graph_rest_item_writes")
+    _expect_summary_value(step, summary, "planned_write_count", 2)
+    if summary.get("planned_tools") != ["grant_request", "audit_append"]:
+        _fail(step, f"{step['label']} planned_tools must be grant_request and audit_append")
+    if summary.get("planned_lists") != ["Vertretungsfreigaben", "AuditJournalLite"]:
+        _fail(step, f"{step['label']} planned_lists must be Vertretungsfreigaben and AuditJournalLite")
+    for flag in (
+        "required_write_approval",
+        "owner_gate_required",
+        "role_case_purpose_gate_required",
+        "graph_rest_only",
+    ):
+        _expect_summary_value(step, summary, flag, True)
+    for flag in (
+        "executes_graph_requests",
+        "executes_graph_writes",
+        "tenant_mutation_allowed",
+        "team_membership_mutation_allowed",
+        "sharepoint_item_permission_mutation_allowed",
+        "raw_graph_path_stored",
+        "raw_graph_response_stored",
+        "stores_tokens_or_secrets",
+        "stores_matter_payloads",
+        "reads_sharepoint_file_content",
+    ):
+        _expect_summary_value(step, summary, flag, False)
+    _expect_matter_access_privacy_flags(step, privacy)
+    if privacy.get("sharePointItemPermissionMutationAllowed") is not False:
+        _fail(step, f"{step['label']} privacy flag sharePointItemPermissionMutationAllowed must be false")
+    return step
+
+
 def _mcp_leftover_step(path: Path) -> dict[str, Any]:
     artifact, error = _load_optional_json(path)
     step = _base_step(
@@ -908,6 +990,7 @@ def _evidence_completeness(steps: list[dict[str, Any]]) -> str:
             "mcp_inventory_smoke",
             "matter_access_delegation_smoke",
             "matter_access_apply_readiness",
+            "matter_access_apply_request_plan",
         }
     ]
     if all(step["status"] == "PASSED" for step in required_for_completeness):

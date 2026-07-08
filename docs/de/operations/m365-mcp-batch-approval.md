@@ -211,9 +211,9 @@ M365-Runtime-Pfad. Eine M365-MVP-Laufzeitfreigabe gilt erst als `READY`, wenn
 der One-Shot-Runner in derselben owner-gated Ausführung das Audit-Pack und den
 Readiness-Status schreibt und die Ausgabe `mvp_release_readiness=READY` sowie
 `release_gate_readiness=READY` enthält. Die Abnahme umfasst die
-Matter-Access-Pflichtnachweise `matter_access_delegation_smoke` und
-`matter_access_apply_readiness`; fehlen sie im archivierten Lauf, bleibt der
-MVP-Status `NOT_READY`.
+Matter-Access-Pflichtnachweise `matter_access_delegation_smoke`,
+`matter_access_apply_readiness` und `matter_access_apply_request_plan`;
+fehlen sie im archivierten Lauf, bleibt der MVP-Status `NOT_READY`.
 
 Der Standardlauf für eine Abnahme nutzt daher immer diese Flags:
 
@@ -232,7 +232,8 @@ Keine MVP-Freigabe erfolgt nur auf Basis von `mcp-smoke-suite`,
 `runtime-smoke` oder Konsolenausgabe. Diese Einzelbefehle bleiben Diagnose- und
 Reproduktionspfade; die Abnahmeentscheidung hängt am redigierten Retention-
 Index, `release-gate-evidence`, Audit-Pack, `release-readiness`,
-`matter_access_delegation_smoke` und `matter_access_apply_readiness`.
+`matter_access_delegation_smoke`, `matter_access_apply_readiness` und
+`matter_access_apply_request_plan`.
 
 ## Runtime-Zertifikatsrotation-Freigabe
 

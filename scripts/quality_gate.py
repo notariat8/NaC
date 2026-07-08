@@ -325,7 +325,10 @@ def m365_release_readiness_report_lines(payload: dict) -> list[str]:
         "",
         "- Go/No-Go: `mvp_release_readiness=READY`",
         "- Runner summary: `release_gate_readiness=READY`",
-        "- Required matter access evidence: `matter_access_delegation_smoke`, `matter_access_apply_readiness`",
+        (
+            "- Required matter access evidence: `matter_access_delegation_smoke`, "
+            "`matter_access_apply_readiness`, `matter_access_apply_request_plan`"
+        ),
         f"- CI enforcement: `{summary['ci_enforcement']}`",
         f"- Gate check: `{summary['check_status']}`",
         f"- Check duration: `{summary['duration_ms']} ms`",
