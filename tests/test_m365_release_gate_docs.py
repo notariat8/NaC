@@ -140,6 +140,7 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("release_gate_readiness=READY", content)
             self.assertIn("matter_access_delegation_smoke", content)
             self.assertIn("matter_access_apply_readiness", content)
+            self.assertIn("matter_access_apply_request_plan", content)
 
     def test_batch_approval_docs_make_readiness_the_default_for_release_gate_modes(self) -> None:
         documents = (
@@ -194,6 +195,7 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
 
             self.assertIn("matter_access_delegation_smoke", content)
             self.assertIn("matter_access_apply_readiness", content)
+            self.assertIn("matter_access_apply_request_plan", content)
 
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

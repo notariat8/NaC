@@ -43,7 +43,8 @@ Before tag and release, the affected checks must be freshly documented:
 - GitHub checks for privacy, secrets and quality gate,
 - For M365 MVP runtime approvals: `release-readiness` as Go/No-Go evidence
   with `mvp_release_readiness=READY`, `release_gate_readiness=READY`,
-  `matter_access_delegation_smoke` and `matter_access_apply_readiness`,
+  `matter_access_delegation_smoke`, `matter_access_apply_readiness` and
+  `matter_access_apply_request_plan`,
 - review decision according to the selected delivery mode.
 
 If a check does not apply, document why. A missing tool is not a silent

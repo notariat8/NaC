@@ -45,7 +45,8 @@ Vor Tag und Release müssen die betroffenen Prüfungen frisch dokumentiert sein:
 - GitHub-Checks für Privacy, Secrets und Quality Gate,
 - Für M365-MVP-Laufzeitfreigaben: `release-readiness` als Go/No-Go-Nachweis
   mit `mvp_release_readiness=READY`, `release_gate_readiness=READY`,
-  `matter_access_delegation_smoke` und `matter_access_apply_readiness`,
+  `matter_access_delegation_smoke`, `matter_access_apply_readiness` und
+  `matter_access_apply_request_plan`,
 - Review-Entscheidung nach dem gewählten Delivery Mode.
 
 Wenn eine Prüfung nicht anwendbar ist, wird der Grund dokumentiert. Ein
