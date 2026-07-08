@@ -40,6 +40,42 @@
     "containsMatterData": false,
     "nacDataClass": "Template"
   },
+  "process_register_rows": [
+    {
+      "workspaceId": "notary_team_01",
+      "nacProcessId": "process-immobilienkaufvertrag",
+      "processKey": "immobilienkaufvertrag",
+      "processName": "Immobilienkaufvertrag",
+      "processOwner": "redacted-owner",
+      "processStatus": "Approved",
+      "nacBpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
+      "bpmnDriveItemId": "fixture-drive-item-id",
+      "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+      "bpmnGitPath": "bpmn/immobilienkaufvertrag.bpmn",
+      "bpmnGitCommitSha": "fixture",
+      "nacBpmnVersion": "fixture-v1",
+      "bpmnContentMode": "ApprovedCopy",
+      "viewerEnabled": true,
+      "overlayPolicy": "MetadataOnly"
+    }
+  ],
+  "bpmn_models": [
+    {
+      "nacBpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
+      "processKey": "immobilienkaufvertrag",
+      "nacBpmnVersion": "fixture-v1",
+      "bpmnDriveItemId": "fixture-drive-item-id",
+      "bpmnContentMode": "ApprovedCopy",
+      "bpmnGitPath": "bpmn/immobilienkaufvertrag.bpmn",
+      "bpmnGitCommitSha": "fixture",
+      "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+      "bpmnXmlMimeType": "application/xml",
+      "approvalStatus": "Approved",
+      "viewerEnabled": true,
+      "containsMatterData": false,
+      "nacDataClass": "Template"
+    }
+  ],
   "render_cases": [
     {
       "name": "approved_renderable",

@@ -137,6 +137,7 @@ from nac_m365_graph.runtime_smoke import (  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema, validate_schema  # noqa: E402
 from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
+    build_spfx_bpmn_viewer_process_selection_result,
     build_spfx_bpmn_viewer_skeleton_result,
     load_spfx_bpmn_viewer_skeleton,
 )
@@ -188,6 +189,7 @@ def parse_args() -> argparse.Namespace:
             "matter-access-smoke",
             "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
+            "spfx-bpmn-viewer-process-selection",
             "privileged-plan",
             "privileged-apply",
             "runtime-certificate-expiry-monitor",
@@ -219,6 +221,7 @@ def parse_args() -> argparse.Namespace:
             "matter-access-smoke writes redacted offline evidence for that request-plan boundary; "
             "bpmn-viewer-runtime-readiness validates offline package/App Catalog/Graph content-read gates; "
             "spfx-bpmn-viewer-skeleton renders the offline SPFx/bpmn-js viewer source skeleton and request plans; "
+            "spfx-bpmn-viewer-process-selection checks the metadata-only Prozessregister to BPMN Models selection; "
             "runtime-certificate-expiry-monitor is an offline expiry gate for the runtime certificate; "
             "runtime-certificate-readiness is offline evidence for the runtime certificate path; "
             "privileged-apply, runtime-smoke and runtime-metadata are owner-gated and use Graph REST only. "
@@ -1437,6 +1440,19 @@ def main() -> int:
             skeleton,
             mcp_contract=mcp_contract,
             provisioned_state=provisioned_state,
+        )
+        return _emit(
+            result,
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "spfx-bpmn-viewer-process-selection":
+        skeleton = load_spfx_bpmn_viewer_skeleton(args.spfx_bpmn_viewer_skeleton)
+        mcp_contract = load_mcp_contract(args.mcp_contract)
+        result = build_spfx_bpmn_viewer_process_selection_result(
+            skeleton,
+            mcp_contract=mcp_contract,
         )
         return _emit(
             result,

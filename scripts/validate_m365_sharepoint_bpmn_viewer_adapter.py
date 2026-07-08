@@ -352,6 +352,48 @@ def _validate_contract(
             if skeleton_render.get("dom_markers") != offline_render.get("dom_markers"):
                 errors.append("offline_render_contract DOM markers must match skeleton artifact")
 
+    process_selection = payload.get("process_register_selection")
+    if not isinstance(process_selection, dict):
+        errors.append("process_register_selection must be an object")
+    else:
+        expected = {
+            "slice": "spfx-bpmn-viewer-process-register-selection-contract",
+            "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json",
+            "status": "offline_selection_no_live_read",
+            "selects_from": "Prozessregister",
+            "links_to": "BPMN Models",
+            "requires_process_status": "Approved",
+            "requires_overlay_policy": "MetadataOnly",
+        }
+        for key, value in expected.items():
+            if process_selection.get(key) != value:
+                errors.append(f"process_register_selection.{key} must be {value}")
+        if process_selection.get("requires_viewer_enabled") is not True:
+            errors.append("process_register_selection.requires_viewer_enabled must be true")
+        for flag in (
+            "executes_graph_requests_now",
+            "reads_sharepoint_file_content_now",
+            "app_catalog_deploy_allowed_now",
+            "returns_matter_document_content",
+        ):
+            if process_selection.get(flag) is not False:
+                errors.append(f"process_register_selection.{flag} must be false")
+        if set(_as_list(process_selection.get("request_plan_tools"))) != {
+            "bpmn_model_get",
+            "process_register_list",
+            "bpmn_viewer_overlay_get",
+        }:
+            errors.append("process_register_selection.request_plan_tools is invalid")
+        if set(_as_list(process_selection.get("required_checks"))) != {
+            "single_process_register_match",
+            "process_status_approved",
+            "process_viewer_enabled",
+            "overlay_policy_metadata_only",
+            "linked_bpmn_model_found",
+            "linked_bpmn_model_renderable",
+        }:
+            errors.append("process_register_selection.required_checks is invalid")
+
     runtime_readiness = payload.get("runtime_readiness")
     if not isinstance(runtime_readiness, dict):
         errors.append("runtime_readiness must be an object")
@@ -667,6 +709,8 @@ def _validate_docs() -> list[str]:
             "nicht die Ausführungsengine",
             "teams-sharepoint-data-mcp",
             "spfx-bpmn-viewer-offline-render-contract",
+            "spfx-bpmn-viewer-process-register-selection-contract",
+            "spfx-bpmn-viewer-process-selection",
             "data-nac-render-state",
             "request_plan_count=3",
         ],
@@ -683,6 +727,8 @@ def _validate_docs() -> list[str]:
             "not the source, editor or execution engine",
             "teams-sharepoint-data-mcp",
             "spfx-bpmn-viewer-offline-render-contract",
+            "spfx-bpmn-viewer-process-register-selection-contract",
+            "spfx-bpmn-viewer-process-selection",
             "data-nac-render-state",
             "request_plan_count=3",
         ],

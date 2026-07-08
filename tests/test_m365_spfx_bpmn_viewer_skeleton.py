@@ -16,7 +16,9 @@ from nac_m365_graph.mcp_runtime import load_mcp_contract  # noqa: E402
 from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
     DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE,
     DEFAULT_SPFX_BPMN_VIEWER_SKELETON,
+    build_spfx_bpmn_viewer_process_selection_result,
     build_spfx_bpmn_viewer_skeleton_result,
+    evaluate_spfx_bpmn_viewer_process_selection,
     evaluate_spfx_bpmn_viewer_render_case,
     load_spfx_bpmn_viewer_render_fixture,
     load_spfx_bpmn_viewer_skeleton,
@@ -151,6 +153,71 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
             self.assertFalse(plan["reads_files"])
             self.assertFalse(plan["writes_items"])
 
+    def test_process_selection_contract_selects_approved_metadata_only_process(self) -> None:
+        fixture = load_spfx_bpmn_viewer_render_fixture(DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE)
+        result = build_spfx_bpmn_viewer_process_selection_result(
+            load_spfx_bpmn_viewer_skeleton(),
+            render_fixture=fixture,
+        )
+
+        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["selectionState"], "approved_process_model_selected")
+        self.assertEqual(result["summary"]["selectedProcessId"], "process-immobilienkaufvertrag")
+        self.assertEqual(result["summary"]["selectedBpmnModelId"], "bpmn-model-immobilienkaufvertrag-v1")
+        self.assertFalse(result["summary"]["executesGraphRequestsNow"])
+        self.assertFalse(result["summary"]["readsSharePointFileContentNow"])
+        self.assertEqual(result["selectedProcess"]["overlayPolicy"], "MetadataOnly")
+        self.assertTrue(result["selectedProcess"]["bpmnDriveItemIdPresent"])
+        self.assertTrue(result["selectedProcess"]["bpmnXmlSha256Present"])
+        self.assertEqual(
+            {check["id"] for check in result["checks"]},
+            {
+                "single_process_register_match",
+                "process_status_approved",
+                "process_viewer_enabled",
+                "overlay_policy_metadata_only",
+                "linked_bpmn_model_found",
+                "linked_bpmn_model_renderable",
+            },
+        )
+        self.assertTrue(all(check["passed"] for check in result["checks"]))
+        self.assertFalse(result["guardrails"]["writesBpmnXml"])
+        self.assertFalse(result["guardrails"]["startsWorkflow"])
+
+    def test_process_selection_blocks_non_approved_process_rows(self) -> None:
+        fixture = load_spfx_bpmn_viewer_render_fixture(DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE)
+        process_rows = json.loads(json.dumps(fixture["process_register_rows"]))
+        process_rows[0]["processStatus"] = "ReviewRequired"
+
+        result = evaluate_spfx_bpmn_viewer_process_selection(
+            process_rows,
+            fixture["bpmn_models"],
+            workspace_id=fixture["workspace_id"],
+            process_id=fixture["component_props"]["processId"],
+            bpmn_model_id=fixture["component_props"]["bpmnModelId"],
+        )
+
+        self.assertEqual(result["status"], "BLOCKED")
+        checks = {check["id"]: check for check in result["checks"]}
+        self.assertFalse(checks["process_status_approved"]["passed"])
+        self.assertFalse(result["summary"]["executesGraphRequestsNow"])
+        self.assertIsNotNone(result["selectedProcess"])
+
+    def test_process_selection_blocks_missing_model_link(self) -> None:
+        fixture = load_spfx_bpmn_viewer_render_fixture(DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE)
+
+        result = evaluate_spfx_bpmn_viewer_process_selection(
+            fixture["process_register_rows"],
+            [],
+            workspace_id=fixture["workspace_id"],
+            process_id=fixture["component_props"]["processId"],
+            bpmn_model_id=fixture["component_props"]["bpmnModelId"],
+        )
+
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["selectionState"], "linked_bpmn_model_missing")
+        self.assertFalse({check["id"]: check for check in result["checks"]}["linked_bpmn_model_found"]["passed"])
+
     def test_central_cli_exposes_spfx_bpmn_viewer_skeleton(self) -> None:
         result = subprocess.run(
             [
@@ -184,6 +251,33 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertFalse(payload["guardrails"]["app_catalog_deploy_allowed_now"])
         self.assertFalse(payload["guardrails"]["tenant_wide_deploy_allowed_now"])
         self.assertTrue(payload["guardrails"]["mcp_tools_request_plan_only_now"])
+
+    def test_central_cli_exposes_spfx_bpmn_viewer_process_selection(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "spfx-bpmn-viewer-process-selection",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["selectionState"], "approved_process_model_selected")
+        self.assertFalse(payload["summary"]["executesGraphRequestsNow"])
+        self.assertEqual(payload["selectedProcess"]["processKey"], "immobilienkaufvertrag")
 
 
 if __name__ == "__main__":

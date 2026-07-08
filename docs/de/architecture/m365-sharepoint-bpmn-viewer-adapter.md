@@ -77,6 +77,17 @@ Overlay enthält keine Akteninhalte, Mandatswerte, Credential-Materialien oder
 rohen Graph-Pfade. Der CLI-Vertrag bleibt offline mit `liveTenantAccess=false`,
 `appCatalogDeploy=false` und `request_plan_count=3`.
 
+Der Prozessregister-Auswahlvertrag
+`spfx-bpmn-viewer-process-register-selection-contract` bleibt ebenfalls
+offline. Der Befehl
+`nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json`
+wählt aus synthetischen `Prozessregister`-Metadaten genau einen freigegebenen,
+viewer-aktivierten Eintrag, verknüpft ihn mit `BPMN Models` und blockiert bei
+fehlender Freigabe, deaktiviertem Viewer, nicht-`MetadataOnly`-Overlay oder
+nicht renderbarem BPMN-Modell. Der Befehl liest keine SharePoint-Dateiinhalte,
+führt keine Graph-Requests aus, startet keinen Workflow und deployt kein
+SPFx-Paket.
+
 Der Runtime-Readiness-Schnitt bleibt ebenfalls offline:
 `nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`
 prüft die Grenzen für SPFx-Paketierung, App-Catalog-Deploy und den späteren
@@ -159,6 +170,7 @@ Der Vertrag wird durch diese Checks abgesichert:
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
 python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness
 python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
+python3 scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json
 python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter
 python3 scripts/quality_gate.py --profile strict

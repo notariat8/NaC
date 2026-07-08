@@ -34,6 +34,14 @@ REQUIRED_RENDER_STATES = {
     "contains_matter_data",
     "invalid_mime_or_hash_missing",
 }
+REQUIRED_PROCESS_SELECTION_CHECKS = {
+    "single_process_register_match",
+    "process_status_approved",
+    "process_viewer_enabled",
+    "overlay_policy_metadata_only",
+    "linked_bpmn_model_found",
+    "linked_bpmn_model_renderable",
+}
 REQUIRED_DOM_MARKERS = {
     "render_state": "data-nac-render-state",
     "content_source": "data-nac-content-source",
@@ -312,6 +320,121 @@ def evaluate_spfx_bpmn_viewer_render_case(model: dict[str, Any]) -> dict[str, An
     }
 
 
+def evaluate_spfx_bpmn_viewer_process_selection(
+    process_rows: list[dict[str, Any]],
+    bpmn_models: list[dict[str, Any]],
+    *,
+    workspace_id: str,
+    process_id: str | None = None,
+    process_key: str | None = None,
+    bpmn_model_id: str | None = None,
+) -> dict[str, Any]:
+    candidates = [
+        row
+        for row in process_rows
+        if _process_row_matches(
+            row,
+            workspace_id=workspace_id,
+            process_id=process_id,
+            process_key=process_key,
+            bpmn_model_id=bpmn_model_id,
+        )
+    ]
+    checks = _process_selection_base_checks(candidates)
+    if len(candidates) != 1:
+        return _process_selection_blocked(
+            "ambiguous_or_missing_process_register_match",
+            checks,
+            match_count=len(candidates),
+        )
+
+    selected = candidates[0]
+    checks.extend(_process_selection_policy_checks(selected))
+    model = _find_bpmn_model(bpmn_models, str(_field(selected, "nacBpmnModelId", "NacBpmnModelId") or ""))
+    checks.append(
+        {
+            "id": "linked_bpmn_model_found",
+            "passed": model is not None,
+        }
+    )
+    if model is None:
+        return _process_selection_blocked("linked_bpmn_model_missing", checks, match_count=1)
+
+    render_decision = evaluate_spfx_bpmn_viewer_render_case(model)
+    checks.append(
+        {
+            "id": "linked_bpmn_model_renderable",
+            "passed": render_decision.get("renderAllowed") is True,
+            "renderState": render_decision.get("renderState"),
+        }
+    )
+    status = "PASSED" if all(bool(check.get("passed")) for check in checks) else "BLOCKED"
+    return {
+        "status": status,
+        "selectionState": "approved_process_model_selected" if status == "PASSED" else "selection_policy_blocked",
+        "summary": {
+            "workspaceId": workspace_id,
+            "matchCount": 1,
+            "selectedProcessId": _field(selected, "nacProcessId", "NacProcessId"),
+            "selectedProcessKey": _field(selected, "processKey", "ProcessKey"),
+            "selectedBpmnModelId": _field(selected, "nacBpmnModelId", "NacBpmnModelId"),
+            "renderState": render_decision.get("renderState"),
+            "executesGraphRequestsNow": False,
+            "readsSharePointFileContentNow": False,
+            "appCatalogDeployAllowedNow": False,
+        },
+        "selectedProcess": _redact_selected_process(selected, model, render_decision),
+        "checks": checks,
+        "guardrails": _process_selection_guardrails(),
+    }
+
+
+def build_spfx_bpmn_viewer_process_selection_result(
+    skeleton: dict[str, Any],
+    *,
+    render_fixture: dict[str, Any] | None = None,
+    mcp_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    render_fixture = render_fixture or load_spfx_bpmn_viewer_render_fixture()
+    mcp_contract = mcp_contract or load_mcp_contract()
+    validation_errors = validate_spfx_bpmn_viewer_skeleton(
+        skeleton,
+        render_fixture=render_fixture,
+        mcp_contract=mcp_contract,
+    )
+    selection_errors = _validate_process_selection_fixture(render_fixture)
+    errors = validation_errors + selection_errors
+    if errors:
+        return {"status": "FAILED", "errors": errors}
+
+    props = render_fixture["component_props"]
+    process_rows = [
+        row
+        for row in render_fixture["process_register_rows"]
+        if isinstance(row, dict)
+    ]
+    bpmn_models = [
+        model
+        for model in render_fixture["bpmn_models"]
+        if isinstance(model, dict)
+    ]
+    result = evaluate_spfx_bpmn_viewer_process_selection(
+        process_rows,
+        bpmn_models,
+        workspace_id=str(props["workspaceId"]),
+        process_id=str(props.get("processId", "")) or None,
+        bpmn_model_id=str(props.get("bpmnModelId", "")) or None,
+    )
+    result["contract"] = {
+        "schema_version": "nac.m365-spfx-bpmn-viewer-process-selection/v0.1",
+        "status": "offline_selection_no_live_read",
+        "fixture": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
+        "requestPlanTools": sorted(REQUIRED_MCP_TOOLS),
+        "requiredChecks": sorted(REQUIRED_PROCESS_SELECTION_CHECKS),
+    }
+    return result
+
+
 def build_spfx_bpmn_viewer_skeleton_result(
     skeleton: dict[str, Any],
     *,
@@ -506,6 +629,32 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
     return errors
 
 
+def _validate_process_selection_fixture(fixture: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    rows = _as_list(fixture.get("process_register_rows"))
+    models = _as_list(fixture.get("bpmn_models"))
+    if not rows:
+        errors.append("SPFx BPMN viewer process selection fixture requires process_register_rows")
+    if not models:
+        errors.append("SPFx BPMN viewer process selection fixture requires bpmn_models")
+    props = fixture.get("component_props")
+    if not isinstance(props, dict):
+        return errors
+    result = evaluate_spfx_bpmn_viewer_process_selection(
+        [row for row in rows if isinstance(row, dict)],
+        [model for model in models if isinstance(model, dict)],
+        workspace_id=str(props.get("workspaceId", "")),
+        process_id=str(props.get("processId", "")) or None,
+        bpmn_model_id=str(props.get("bpmnModelId", "")) or None,
+    )
+    if result.get("status") != "PASSED":
+        errors.append("SPFx BPMN viewer process selection fixture must select one approved renderable process")
+    checks = {check.get("id") for check in _as_list(result.get("checks")) if isinstance(check, dict)}
+    for missing in sorted(REQUIRED_PROCESS_SELECTION_CHECKS - checks):
+        errors.append(f"SPFx BPMN viewer process selection fixture missing check {missing}")
+    return errors
+
+
 def _validate_mcp_contract_binding(contract: dict[str, Any]) -> list[str]:
     errors = validate_mcp_contract(contract)
     if errors:
@@ -526,6 +675,110 @@ def _validate_mcp_contract_binding(contract: dict[str, Any]) -> list[str]:
             if tool.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer MCP binding {tool_id}.{flag} must be false")
     return errors
+
+
+def _process_row_matches(
+    row: dict[str, Any],
+    *,
+    workspace_id: str,
+    process_id: str | None,
+    process_key: str | None,
+    bpmn_model_id: str | None,
+) -> bool:
+    row_workspace = _field(row, "workspaceId", "WorkspaceId")
+    if row_workspace and row_workspace != workspace_id:
+        return False
+    if process_id and _field(row, "nacProcessId", "NacProcessId") != process_id:
+        return False
+    if process_key and _field(row, "processKey", "ProcessKey") != process_key:
+        return False
+    if bpmn_model_id and _field(row, "nacBpmnModelId", "NacBpmnModelId") != bpmn_model_id:
+        return False
+    return True
+
+
+def _process_selection_base_checks(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "single_process_register_match",
+            "passed": len(candidates) == 1,
+            "matchCount": len(candidates),
+        }
+    ]
+
+
+def _process_selection_policy_checks(row: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "process_status_approved",
+            "passed": _field(row, "processStatus", "ProcessStatus") == "Approved",
+        },
+        {
+            "id": "process_viewer_enabled",
+            "passed": _field(row, "viewerEnabled", "ViewerEnabled") is True,
+        },
+        {
+            "id": "overlay_policy_metadata_only",
+            "passed": _field(row, "overlayPolicy", "OverlayPolicy") == "MetadataOnly",
+        },
+    ]
+
+
+def _find_bpmn_model(models: list[dict[str, Any]], model_id: str) -> dict[str, Any] | None:
+    for model in models:
+        if _field(model, "nacBpmnModelId", "NacBpmnModelId") == model_id:
+            return model
+    return None
+
+
+def _process_selection_blocked(reason: str, checks: list[dict[str, Any]], *, match_count: int) -> dict[str, Any]:
+    return {
+        "status": "BLOCKED",
+        "selectionState": reason,
+        "summary": {
+            "matchCount": match_count,
+            "executesGraphRequestsNow": False,
+            "readsSharePointFileContentNow": False,
+            "appCatalogDeployAllowedNow": False,
+        },
+        "selectedProcess": None,
+        "checks": checks,
+        "guardrails": _process_selection_guardrails(),
+    }
+
+
+def _redact_selected_process(
+    process: dict[str, Any],
+    model: dict[str, Any],
+    render_decision: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "nacProcessId": _field(process, "nacProcessId", "NacProcessId"),
+        "processKey": _field(process, "processKey", "ProcessKey"),
+        "processName": _field(process, "processName", "ProcessName"),
+        "processStatus": _field(process, "processStatus", "ProcessStatus"),
+        "nacBpmnModelId": _field(process, "nacBpmnModelId", "NacBpmnModelId"),
+        "nacBpmnVersion": _field(process, "nacBpmnVersion", "NacBpmnVersion"),
+        "bpmnGitPath": _field(process, "bpmnGitPath", "BpmnGitPath"),
+        "bpmnContentMode": _field(process, "bpmnContentMode", "BpmnContentMode"),
+        "overlayPolicy": _field(process, "overlayPolicy", "OverlayPolicy"),
+        "bpmnDriveItemIdPresent": bool(_field(model, "bpmnDriveItemId", "BpmnDriveItemId")),
+        "bpmnXmlSha256Present": bool(_field(model, "bpmnXmlSha256", "BpmnXmlSha256")),
+        "renderState": render_decision.get("renderState"),
+        "metadataOverlay": render_decision.get("metadataOverlay"),
+    }
+
+
+def _process_selection_guardrails() -> dict[str, bool]:
+    return {
+        "metadataOnly": True,
+        "executesGraphRequestsNow": False,
+        "readsSharePointFileContentNow": False,
+        "returnsMatterDocumentContent": False,
+        "writesBpmnXml": False,
+        "startsWorkflow": False,
+        "appCatalogDeployAllowedNow": False,
+    }
 
 
 def _state_with_optional_bpmn_viewer_lists(state: dict[str, Any]) -> dict[str, Any]:
@@ -605,3 +858,10 @@ def _as_list(value: Any) -> list[Any]:
 
 def _strings(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _field(value: dict[str, Any], *names: str) -> Any:
+    for name in names:
+        if name in value:
+            return value[name]
+    return None

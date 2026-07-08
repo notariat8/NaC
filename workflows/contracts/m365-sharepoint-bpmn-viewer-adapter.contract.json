@@ -119,6 +119,33 @@
       "raw_graph_paths_present": false
     }
   },
+  "process_register_selection": {
+    "slice": "spfx-bpmn-viewer-process-register-selection-contract",
+    "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json",
+    "status": "offline_selection_no_live_read",
+    "selects_from": "Prozessregister",
+    "links_to": "BPMN Models",
+    "request_plan_tools": [
+      "bpmn_model_get",
+      "process_register_list",
+      "bpmn_viewer_overlay_get"
+    ],
+    "required_checks": [
+      "single_process_register_match",
+      "process_status_approved",
+      "process_viewer_enabled",
+      "overlay_policy_metadata_only",
+      "linked_bpmn_model_found",
+      "linked_bpmn_model_renderable"
+    ],
+    "requires_process_status": "Approved",
+    "requires_overlay_policy": "MetadataOnly",
+    "requires_viewer_enabled": true,
+    "executes_graph_requests_now": false,
+    "reads_sharepoint_file_content_now": false,
+    "app_catalog_deploy_allowed_now": false,
+    "returns_matter_document_content": false
+  },
   "runtime_readiness": {
     "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
     "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
@@ -223,6 +250,7 @@
     "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
     "python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness",
     "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton",
+    "python3 scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json",
     "python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter",
     "python3 scripts/quality_gate.py --profile strict"
   ]

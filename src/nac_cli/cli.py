@@ -447,6 +447,7 @@ def build_parser() -> argparse.ArgumentParser:
             "matter-access-smoke",
             "bpmn-viewer-runtime-readiness",
             "spfx-bpmn-viewer-skeleton",
+            "spfx-bpmn-viewer-process-selection",
             "privileged-plan",
             "privileged-apply",
             "runtime-certificate-expiry-monitor",

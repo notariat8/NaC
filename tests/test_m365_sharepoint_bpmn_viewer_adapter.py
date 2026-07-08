@@ -98,6 +98,30 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertFalse(skeleton["tenant_apply_allowed_now"])
         self.assertFalse(skeleton["executes_graph_requests_now"])
 
+    def test_contract_links_process_register_selection_without_live_read(self) -> None:
+        selection = self.contract["process_register_selection"]
+
+        self.assertEqual(selection["slice"], "spfx-bpmn-viewer-process-register-selection-contract")
+        self.assertEqual(
+            selection["command"],
+            "nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json",
+        )
+        self.assertEqual(selection["status"], "offline_selection_no_live_read")
+        self.assertEqual(selection["selects_from"], "Prozessregister")
+        self.assertEqual(selection["links_to"], "BPMN Models")
+        self.assertEqual(selection["requires_process_status"], "Approved")
+        self.assertEqual(selection["requires_overlay_policy"], "MetadataOnly")
+        self.assertTrue(selection["requires_viewer_enabled"])
+        self.assertFalse(selection["executes_graph_requests_now"])
+        self.assertFalse(selection["reads_sharepoint_file_content_now"])
+        self.assertFalse(selection["app_catalog_deploy_allowed_now"])
+        self.assertFalse(selection["returns_matter_document_content"])
+        self.assertEqual(
+            set(selection["request_plan_tools"]),
+            {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"},
+        )
+        self.assertIn("linked_bpmn_model_renderable", selection["required_checks"])
+
     def test_contract_links_runtime_readiness_without_deploy_or_live_read(self) -> None:
         readiness = self.contract["runtime_readiness"]
 
