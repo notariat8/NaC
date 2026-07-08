@@ -91,7 +91,9 @@ Standardausgabe:
 - Markdown-Report und PR-Kommentar zeigen zusätzlich den
   M365-MVP-Readiness-Status: CI-Enforcement für den
   `m365_release_readiness_gate`, Go/No-Go-Ziel `mvp_release_readiness=READY`
-  und Runner-Zusammenfassung `release_gate_readiness=READY`
+  und Runner-Zusammenfassung `release_gate_readiness=READY` sowie die
+  Pflichtnachweise `matter_access_delegation_smoke` und
+  `matter_access_apply_readiness`
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

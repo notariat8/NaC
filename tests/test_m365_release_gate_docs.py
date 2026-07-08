@@ -138,6 +138,8 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
             self.assertIn("--release-gate-readiness-require-audit-pack", content)
             self.assertIn("mvp_release_readiness=READY", content)
             self.assertIn("release_gate_readiness=READY", content)
+            self.assertIn("matter_access_delegation_smoke", content)
+            self.assertIn("matter_access_apply_readiness", content)
 
     def test_batch_approval_docs_make_readiness_the_default_for_release_gate_modes(self) -> None:
         documents = (
@@ -178,6 +180,20 @@ class M365ReleaseGateDocsTests(unittest.TestCase):
 
             self.assertIn(release_gate_marker, content)
             self.assertIn(readiness_marker, content)
+
+    def test_release_readiness_docs_include_matter_access_required_evidence(self) -> None:
+        for relative_path in (
+            "docs/de/cli.md",
+            "docs/en/cli.md",
+            "docs/de/operations/release-checklist.md",
+            "docs/en/operations/release-checklist.md",
+            "docs/de/quality-gate.md",
+            "docs/en/quality-gate.md",
+        ):
+            content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+            self.assertIn("matter_access_delegation_smoke", content)
+            self.assertIn("matter_access_apply_readiness", content)
 
     def test_data_plane_validator_accepts_product_edge_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

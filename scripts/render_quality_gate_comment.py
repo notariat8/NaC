@@ -179,6 +179,7 @@ def _m365_release_readiness_markdown(readiness: dict) -> list[str]:
         "",
         "- Go/No-Go: `mvp_release_readiness=READY`",
         "- Runner summary: `release_gate_readiness=READY`",
+        "- Required matter access evidence: `matter_access_delegation_smoke`, `matter_access_apply_readiness`",
         f"- CI enforcement: **{readiness.get('ci_enforcement', 'UNKNOWN')}**",
         f"- Gate check: `{readiness.get('check_status', 'UNKNOWN')}`",
         f"- Check duration: `{readiness.get('duration_ms', 0)} ms`",

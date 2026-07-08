@@ -91,7 +91,8 @@ Default output:
 - Markdown report and PR comment also show the M365 MVP readiness status: CI
   enforcement for the `m365_release_readiness_gate`, Go/No-Go target
   `mvp_release_readiness=READY` and runner summary
-  `release_gate_readiness=READY`
+  `release_gate_readiness=READY` plus the required evidence
+  `matter_access_delegation_smoke` and `matter_access_apply_readiness`
 
 These artifacts are uploaded during CI runs.
 

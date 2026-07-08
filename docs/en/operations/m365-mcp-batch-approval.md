@@ -202,7 +202,10 @@ redacted JSON and Markdown evidence;
 M365 runtime path. An M365 MVP runtime approval is only `READY` when the
 one-shot runner writes the audit pack and readiness status in the same
 owner-gated execution and the output contains `mvp_release_readiness=READY` and
-`release_gate_readiness=READY`.
+`release_gate_readiness=READY`. The approval includes the matter-access
+required evidence `matter_access_delegation_smoke` and
+`matter_access_apply_readiness`; if they are missing from the retained run, the
+MVP status remains `NOT_READY`.
 
 The standard approval run therefore always uses these flags:
 
@@ -220,7 +223,8 @@ python3 scripts/nac.py m365 teams-sharepoint release-gate-run \
 No MVP approval is based only on `mcp-smoke-suite`, `runtime-smoke` or console
 output. These individual commands remain diagnostic and reproduction paths; the
 approval decision is bound to the redacted retention index,
-`release-gate-evidence`, audit pack and `release-readiness`.
+`release-gate-evidence`, audit pack, `release-readiness`,
+`matter_access_delegation_smoke` and `matter_access_apply_readiness`.
 
 ## Runtime Certificate Rotation Approval
 

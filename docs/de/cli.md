@@ -503,9 +503,10 @@ ein passendes redigiertes Audit-Pack mit `PASSED` vorliegt.
 `--release-gate-readiness-correlation-id` ausgewählten lokalen Release-Gate-
 Lauf zu einem kompakten MVP-Status. Der Befehl liest nur redigierte
 Retention-, Evidence- und optional Audit-Pack-Artefakte, prüft
-`complete_release_gate_artifacts`, alle Pflichtartefakte, Retention-Verweis,
-Step-Status und Privacy-Flags und gibt `mvp_release_readiness=READY` nur bei
-einem vollständigen `PASSED`-Stand aus. Mit
+`complete_release_gate_artifacts`, alle Pflichtartefakte inklusive
+`matter_access_delegation_smoke` und `matter_access_apply_readiness`,
+Retention-Verweis, Step-Status und Privacy-Flags und gibt
+`mvp_release_readiness=READY` nur bei einem vollständigen `PASSED`-Stand aus. Mit
 `--release-gate-readiness-require-audit-pack` blockiert der Status, wenn kein
 passendes redigiertes Audit-Pack mit `PASSED` vorliegt. Ein expliziter
 `--release-gate-audit-pack-dir` hat Vorrang; ohne expliziten Pfad sucht der
@@ -611,14 +612,15 @@ Der offline
 owner-gated Live-Schritten offline ohne Runtime-Credential-Overlay und hängt
 sein redigiertes Inventar-Artefakt automatisch an `release-gate-evidence` an.
 `matter-access-smoke` läuft direkt danach ebenfalls offline und hängt sein
-redigiertes Akten-/Vertretungszugriffsartefakt als optionalen Evidence-Step an
-`release-gate-evidence` und den Artifact-Index an.
+redigiertes Akten-/Vertretungszugriffsartefakt an `release-gate-evidence` und
+den Artifact-Index an. Für `release-readiness` ist
+`matter_access_delegation_smoke` ein Pflichtnachweis.
 `matter-access-apply-readiness` läuft im One-Shot-Runner nach dem Smoke,
 ebenfalls ohne Runtime-Credential-Overlay, und hängt den redigierten Nachweis
-für die spätere owner-gated Apply-Kante optional an `release-gate-evidence` und
-den Artifact-Index an. Der Einzelbefehl bleibt der Diagnose- und Fallback-Pfad,
-wenn dieser Runner-Schritt isoliert reproduziert werden muss.
-Der Einzelbefehl bleibt Diagnose- und Fallback-Pfad, wenn dieser
+für die spätere owner-gated Apply-Kante an `release-gate-evidence` und den
+Artifact-Index an. Für `release-readiness` ist
+`matter_access_apply_readiness` ein Pflichtnachweis. Der Einzelbefehl bleibt
+der Diagnose- und Fallback-Pfad, wenn dieser
 Runner-Schritt isoliert reproduziert werden muss.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
@@ -652,6 +654,11 @@ Ein vorhandenes `matter-access-delegation-smoke.redacted.json` kann analog mit
 `--release-gate-matter-access-artifact` angehängt werden. Fehlt es außerhalb
 des One-Shot-Runners, bleibt dieser Evidence-Schritt `NOT_ATTACHED`; ist es
 vorhanden, aber nicht redigiert oder inkonsistent, schlägt der Export fehl.
+Ein vorhandenes `matter-access-apply-readiness.redacted.json` kann mit
+`--release-gate-matter-access-apply-readiness-artifact` angehängt werden.
+Fehlt es außerhalb des One-Shot-Runners, bleibt dieser Evidence-Schritt
+`NOT_ATTACHED`; `release-readiness` stuft einen archivierten Lauf ohne diesen
+Pflichtnachweis jedoch als `NOT_READY` ein.
 
 OCI/ATP ist für den MVP archiviert und keine aktive CLI-Bedienkante.
 

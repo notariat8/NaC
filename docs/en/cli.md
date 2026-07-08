@@ -491,8 +491,10 @@ a matching redacted audit pack with `PASSED` exists.
 selected with `--release-gate-readiness-correlation-id`, into a compact MVP
 status. The command reads only redacted retention, evidence and optional
 audit-pack artifacts, checks `complete_release_gate_artifacts`, all required
-artifacts, the retention reference, step statuses and privacy flags, and emits
-`mvp_release_readiness=READY` only for a complete `PASSED` state. With
+artifacts including `matter_access_delegation_smoke` and
+`matter_access_apply_readiness`, the retention reference, step statuses and
+privacy flags, and emits `mvp_release_readiness=READY` only for a complete
+`PASSED` state. With
 `--release-gate-readiness-require-audit-pack`, the status blocks when no
 matching redacted audit pack with `PASSED` exists. An explicit
 `--release-gate-audit-pack-dir` takes precedence; without an explicit path the
@@ -592,13 +594,15 @@ The offline
 owner-gated live steps without the runtime credential overlay and automatically
 attaches its redacted inventory artifact to `release-gate-evidence`. The
 `matter-access-smoke` step runs directly after that, also offline, and
-attaches its redacted matter/deputy access artifact as optional evidence to
-`release-gate-evidence` and the artifact index. `matter-access-apply-readiness`
-runs after the smoke, also without the runtime credential overlay, and attaches
-the redacted evidence for the future owner-gated apply edge optionally to
-`release-gate-evidence` and the artifact index. The individual command remains
-the diagnostic and fallback path when that runner step must be reproduced in
-isolation.
+attaches its redacted matter/deputy access artifact to `release-gate-evidence`
+and the artifact index. For `release-readiness`,
+`matter_access_delegation_smoke` is required evidence.
+`matter-access-apply-readiness` runs after the smoke, also without the runtime
+credential overlay, and attaches the redacted evidence for the future
+owner-gated apply edge to `release-gate-evidence` and the artifact index. For
+`release-readiness`, `matter_access_apply_readiness` is required evidence. The
+individual command remains the diagnostic and fallback path when that runner
+step must be reproduced in isolation.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates
@@ -628,6 +632,11 @@ An existing `matter-access-delegation-smoke.redacted.json` can be attached the
 same way with `--release-gate-matter-access-artifact`. When it is missing
 outside the one-shot runner, this evidence step remains `NOT_ATTACHED`; if it
 is present but not redacted or inconsistent, the export fails.
+An existing `matter-access-apply-readiness.redacted.json` can be attached with
+`--release-gate-matter-access-apply-readiness-artifact`. When it is missing
+outside the one-shot runner, this evidence step remains `NOT_ATTACHED`;
+`release-readiness` still marks a retained run without this required evidence
+as `NOT_READY`.
 
 OCI/ATP is archived for the MVP and is not an active CLI operating edge.
 
