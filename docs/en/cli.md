@@ -439,7 +439,9 @@ absent. When such runs are found, evidence sets
 `redaction_shape_upgrade_required=true` and
 `upgrade_advice.status=UPGRADE_REQUIRED` with a local
 `matter-access-apply-live-smoke-retain` re-retention command without Graph or
-tenant action. With
+tenant action. The validator runs an `upgrade advice` smoke with a legacy
+fixture through the CLI index/readiness outputs and the Markdown `Upgrade Advice`
+section. With
 `matter-access-apply-live-smoke-retention-readiness`, the same local retention
 index is evaluated offline as `READY`/`NOT_READY`; optionally,
 `--matter-access-apply-live-smoke-write-readiness` writes the redacted artifacts

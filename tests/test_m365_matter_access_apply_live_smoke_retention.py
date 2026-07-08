@@ -280,11 +280,79 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertFalse(payload["summary"]["tenant_writes_executed"])
             self.assertTrue(Path(payload["summary"]["readiness_json_path"]).is_file())
 
+    def test_cli_upgrade_advice_smoke_uses_legacy_fixture_and_reports_upgrade_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "retention"
+            _write_legacy_retention_fixture(
+                tmp_path=tmp_path,
+                retention_root=retention_root,
+                correlation_id="legacy-cli-corr",
+            )
+
+            index_payload, index_rc = _invoke_cli(
+                [
+                    "matter-access-apply-live-smoke-retention-index",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "legacy-cli-corr",
+                    "--format",
+                    "json",
+                ]
+            )
+            readiness_payload, readiness_rc = _invoke_cli(
+                [
+                    "matter-access-apply-live-smoke-retention-readiness",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "legacy-cli-corr",
+                    "--matter-access-apply-live-smoke-write-readiness",
+                    "--format",
+                    "json",
+                ]
+            )
+            index_report, index_report_rc = _invoke_cli_text(
+                [
+                    "matter-access-apply-live-smoke-retention-index",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "legacy-cli-corr",
+                    "--format",
+                    "text",
+                ]
+            )
+
+            self.assertEqual(index_rc, 0)
+            self.assertEqual(index_payload["summary"]["run_count"], 1)
+            self.assertTrue(index_payload["summary"]["redaction_shape_upgrade_required"])
+            self.assertEqual(index_payload["upgrade_advice"]["status"], "UPGRADE_REQUIRED")
+            self.assertIn("matter-access-apply-live-smoke-retain", index_payload["upgrade_advice"]["items"][0]["command"])
+            self.assertFalse(index_payload["upgrade_advice"]["privacy"]["executesGraphRequests"])
+            self.assertEqual(readiness_rc, 2)
+            self.assertEqual(readiness_payload["status"], "NOT_READY")
+            self.assertTrue(readiness_payload["summary"]["redaction_shape_upgrade_required"])
+            readiness_report_path = Path(readiness_payload["summary"]["readiness_report_path"])
+            self.assertTrue(readiness_report_path.is_file())
+            readiness_report = readiness_report_path.read_text(encoding="utf-8")
+            self.assertEqual(index_report_rc, 0)
+            self.assertIn("Upgrade Advice", index_report)
+            self.assertIn("legacy-cli-corr", readiness_report)
+            self.assertIn("matter-access-apply-live-smoke-retain", readiness_report)
+            self.assertIn("performs no Graph request", readiness_report)
+
     def test_retention_validator_passes(self) -> None:
         self.assertEqual([], validator.validate())
 
 
 def _invoke_cli(extra_args: list[str]) -> tuple[dict, int]:
+    output, return_code = _invoke_cli_text(extra_args)
+    return json.loads(output), return_code
+
+
+def _invoke_cli_text(extra_args: list[str]) -> tuple[str, int]:
     parser = cli.build_parser()
     args = parser.parse_args(
         [
@@ -296,7 +364,20 @@ def _invoke_cli(extra_args: list[str]) -> tuple[dict, int]:
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
         return_code = args.func(args)
-    return json.loads(output.getvalue()), return_code
+    return output.getvalue(), return_code
+
+
+def _write_legacy_retention_fixture(*, tmp_path: Path, retention_root: Path, correlation_id: str) -> None:
+    artifact = tmp_path / f"{correlation_id}.redacted.json"
+    artifact.write_text(json.dumps(_apply_smoke_payload(correlation_id)), encoding="utf-8")
+    payload = retain_matter_access_apply_live_smoke_artifact(artifact, retention_root=retention_root)
+    retention_json = Path(payload["summary"]["retention_json_path"])
+    legacy_payload = json.loads(retention_json.read_text(encoding="utf-8"))
+    legacy_payload.pop("redaction_shape", None)
+    legacy_payload["summary"].pop("redaction_shape_status", None)
+    legacy_payload["summary"].pop("redaction_shape_violation_count", None)
+    legacy_payload["summary"].pop("redaction_shape_checked_node_count", None)
+    retention_json.write_text(json.dumps(legacy_payload), encoding="utf-8")
 
 
 def _apply_smoke_payload(correlation_id: str, workspace_id: str = "notary_team_01") -> dict:

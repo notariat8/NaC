@@ -14,6 +14,8 @@ if str(SRC_ROOT) not in sys.path:
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (  # noqa: E402
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
+    format_matter_access_apply_live_smoke_retention_index,
+    format_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
 )
 
@@ -72,6 +74,7 @@ def validate() -> list[str]:
     errors.extend(_validate_quality_gate())
     errors.extend(_validate_contract_and_indexes())
     errors.extend(_validate_synthetic_retention_roundtrip())
+    errors.extend(_validate_synthetic_upgrade_advice_smoke())
     return errors
 
 
@@ -167,6 +170,8 @@ def _validate_code() -> list[str]:
         "test_readiness_reports_ready_for_retained_live_smoke",
         "test_readiness_blocks_when_no_retained_live_smoke_matches",
         "test_cli_reports_live_smoke_retention_readiness_without_graph",
+        "test_cli_upgrade_advice_smoke_uses_legacy_fixture_and_reports_upgrade_required",
+        "_write_legacy_retention_fixture",
         "test_retention_validator_passes",
     ):
         _require(marker, tests, "tests", errors)
@@ -193,6 +198,8 @@ def _validate_docs() -> list[str]:
         "redaction_shape_legacy_missing_count",
         "redaction_shape_upgrade_required",
         "UPGRADE_REQUIRED",
+        "upgrade_advice.status=UPGRADE_REQUIRED",
+        "upgrade advice",
         "sourceArtifactRedactionShapeChecked=true",
         "retention_executes_graph_requests=false",
         "retention_tenant_writes_executed=false",
@@ -250,6 +257,10 @@ def _validate_contract_and_indexes() -> list[str]:
             errors.append("verification contract missing legacy_missing_redaction_shape_visible pass condition")
         if "legacy_redaction_shape_upgrade_advice_visible" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing legacy_redaction_shape_upgrade_advice_visible pass condition")
+        if "legacy_upgrade_advice_smoke_passes" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing legacy_upgrade_advice_smoke_passes pass condition")
+        if "retention_upgrade_advice_smoke" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing retention_upgrade_advice_smoke evidence")
         if "recursive redaction-shape check" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing recursive redaction-shape invariant")
 
@@ -330,6 +341,60 @@ def _validate_synthetic_retention_roundtrip() -> list[str]:
             value = summary.get(key)
             if not value or not Path(value).is_file():
                 errors.append(f"synthetic retention readiness missing file for summary.{key}")
+    return errors
+
+
+def _validate_synthetic_upgrade_advice_smoke() -> list[str]:
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        artifact_path = tmp_path / "legacy-upgrade-smoke.redacted.json"
+        payload = _synthetic_apply_smoke_payload()
+        payload["summary"]["correlation_id"] = "validator-legacy-upgrade-correlation"
+        artifact_path.write_text(json.dumps(payload), encoding="utf-8")
+        retention_root = tmp_path / "retention"
+        retention = retain_matter_access_apply_live_smoke_artifact(
+            artifact_path,
+            retention_root=retention_root,
+            now_utc="2026-07-08T15:40:00Z",
+        )
+        retention_json = Path(str(retention.get("summary", {}).get("retention_json_path") or ""))
+        if not retention_json.is_file():
+            errors.append("synthetic upgrade advice smoke missing retention JSON")
+            return errors
+        legacy_payload = json.loads(retention_json.read_text(encoding="utf-8"))
+        legacy_payload.pop("redaction_shape", None)
+        legacy_summary = legacy_payload.get("summary") if isinstance(legacy_payload.get("summary"), dict) else {}
+        for key in ("redaction_shape_status", "redaction_shape_violation_count", "redaction_shape_checked_node_count"):
+            legacy_summary.pop(key, None)
+        retention_json.write_text(json.dumps(legacy_payload), encoding="utf-8")
+
+        index = build_matter_access_apply_live_smoke_retention_index(
+            retention_root=retention_root,
+            correlation_id="validator-legacy-upgrade-correlation",
+        )
+        readiness = build_matter_access_apply_live_smoke_retention_readiness(
+            retention_root=retention_root,
+            correlation_id="validator-legacy-upgrade-correlation",
+            write_artifact=True,
+        )
+        index_report = format_matter_access_apply_live_smoke_retention_index(index)
+        readiness_report = format_matter_access_apply_live_smoke_retention_readiness(readiness)
+        if index.get("upgrade_advice", {}).get("status") != "UPGRADE_REQUIRED":
+            errors.append("synthetic upgrade advice smoke index must report UPGRADE_REQUIRED")
+        if readiness.get("status") != "NOT_READY":
+            errors.append("synthetic upgrade advice smoke readiness must be NOT_READY")
+        if readiness.get("upgrade_advice", {}).get("status") != "UPGRADE_REQUIRED":
+            errors.append("synthetic upgrade advice smoke readiness must report UPGRADE_REQUIRED")
+        if "matter-access-apply-live-smoke-retain" not in index_report:
+            errors.append("synthetic upgrade advice smoke index report missing retain command")
+        if "Upgrade Advice" not in readiness_report:
+            errors.append("synthetic upgrade advice smoke readiness report missing Upgrade Advice section")
+        summary = readiness.get("summary") if isinstance(readiness.get("summary"), dict) else {}
+        for key in ("readiness_json_path", "readiness_report_path"):
+            value = summary.get(key)
+            if not value or not Path(value).is_file():
+                errors.append(f"synthetic upgrade advice smoke missing file for summary.{key}")
     return errors
 
 

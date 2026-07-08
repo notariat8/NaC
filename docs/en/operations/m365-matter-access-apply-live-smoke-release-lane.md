@@ -124,6 +124,10 @@ returns `upgrade_advice.status=UPGRADE_REQUIRED` with a local
 `matter-access-apply-live-smoke-retain` re-retention command for the already
 redacted live-smoke artifact; this upgrade advice performs no Graph or tenant
 action.
+The retention validator includes an `upgrade advice` smoke for this path: it
+creates a legacy fixture, reads it through the CLI index/readiness paths and
+checks the Markdown `Upgrade Advice` section plus the local re-retention
+command.
 
 Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
 acceptance. The readiness command reads only the local redacted retention index

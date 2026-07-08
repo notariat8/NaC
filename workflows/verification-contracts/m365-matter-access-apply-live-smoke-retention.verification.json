@@ -79,6 +79,7 @@
     "matter_access_apply_live_smoke_redaction_shape_check",
     "live_smoke_command_fail_closed_on_retention_failure",
     "retention_validator",
+    "retention_upgrade_advice_smoke",
     "quality_gate_check",
     "agent_context_index_link"
   ],
@@ -93,6 +94,7 @@
     "redaction_shape_indexed": true,
     "legacy_missing_redaction_shape_visible": true,
     "legacy_redaction_shape_upgrade_advice_visible": true,
+    "legacy_upgrade_advice_smoke_passes": true,
     "no_secrets": true,
     "no_mandate_data": true
   },

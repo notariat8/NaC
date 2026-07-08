@@ -128,6 +128,9 @@ und liefert `upgrade_advice.status=UPGRADE_REQUIRED` mit einem lokalen
 `matter-access-apply-live-smoke-retain`-Nacharchivierungsbefehl für das bereits
 redigierte Live-Smoke-Artefakt; dieser Upgrade-Hinweis führt keine Graph- oder
 Tenant-Aktion aus.
+Der Retention-Validator enthält dafür einen `upgrade advice`-Smoke: Er erzeugt
+eine Legacy-Fixture, liest sie über die CLI-Index-/Readiness-Pfade und prüft den
+Markdown-Abschnitt `Upgrade Advice` sowie den lokalen Nacharchivierungsbefehl.
 
 Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
 bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten

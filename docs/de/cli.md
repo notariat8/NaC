@@ -449,7 +449,9 @@ sichtbar sind. Wenn solche Läufe gefunden werden, setzt die Evidence
 `redaction_shape_upgrade_required=true` und
 `upgrade_advice.status=UPGRADE_REQUIRED` mit einem lokalen
 `matter-access-apply-live-smoke-retain`-Nacharchivierungsbefehl ohne Graph- oder
-Tenant-Aktion. Mit
+Tenant-Aktion. Der Validator führt dafür einen `upgrade advice`-Smoke mit
+Legacy-Fixture über die CLI-Index-/Readiness-Ausgaben und den Markdown-Abschnitt
+`Upgrade Advice` aus. Mit
 `matter-access-apply-live-smoke-retention-readiness` wird derselbe lokale
 Retention-Index offline als `READY`/`NOT_READY` bewertet; optional schreibt
 `--matter-access-apply-live-smoke-write-readiness` die redigierten Artefakte
