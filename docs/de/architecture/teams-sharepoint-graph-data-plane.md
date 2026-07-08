@@ -298,6 +298,7 @@ Aktion; `matter-access-smoke` erzeugt dazu den redigierten Offline-Nachweis:
 ```bash
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
+nac m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 Der Smoke schreibt standardmäßig
@@ -315,6 +316,13 @@ prüft offline, ob die künftige Apply-Kante für `grant_request` und
 auditierbar ist. Auch dieses Artefakt wird im `release-gate-run` automatisch
 vor den Live-Schritten erzeugt und optional an Evidence und Artifact-Index
 angehängt.
+
+`matter-access-apply-request-plan` schreibt den konkreten redigierten
+Owner-Apply-Auftrag nach
+`out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json`.
+Der Plan bündelt `grant_request` und `audit_append`, speichert nur Hashes,
+Feldnamen, Listenrollen und Privacy-Flags und führt keine Graph Requests oder
+SharePoint-Item-Writes aus.
 
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 

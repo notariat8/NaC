@@ -38,6 +38,11 @@ from nac_m365_graph.matter_access_apply_readiness import (  # noqa: E402
     build_matter_access_apply_readiness_from_paths,
     write_matter_access_apply_readiness_artifact,
 )
+from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_APPLY_REQUEST_OUTPUT,
+    build_matter_access_apply_request_plan_from_paths,
+    write_matter_access_apply_request_plan_artifact,
+)
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_APPLIED_STATE,
@@ -123,6 +128,7 @@ from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
+    "matter-access-apply-request-plan": "matter-access-apply-request-plan",
     "matter-access-apply-readiness": "matter-access-apply-readiness",
     "matter-access-smoke": "matter-access-delegation-smoke",
     "mcp-inventory-smoke": "mcp-inventory-smoke",
@@ -152,6 +158,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
             "bpmn-viewer-runtime-readiness",
@@ -179,6 +186,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
             "matter-access-plan renders the offline matter visibility and deputy delegation request plan; "
+            "matter-access-apply-request-plan renders a concrete redacted future grant request bundle without live apply; "
             "matter-access-apply-readiness validates the future owner-gated write boundary without live apply; "
             "matter-access-smoke writes redacted offline evidence for that request-plan boundary; "
             "bpmn-viewer-runtime-readiness validates offline package/App Catalog/Graph content-read gates; "
@@ -345,6 +353,30 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_MATTER_ACCESS_APPLY_READINESS_OUTPUT,
         help="Path for the redacted matter access apply-readiness artifact under out/.",
     )
+    parser.add_argument(
+        "--matter-access-apply-request-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_REQUEST_OUTPUT,
+        help="Path for the redacted matter access apply request plan artifact under out/.",
+    )
+    parser.add_argument("--matter-access-grant-id", help="Synthetic grant id seed; redacted artifacts store only a hash.")
+    parser.add_argument(
+        "--matter-access-from-user",
+        help="Synthetic source user seed; redacted artifacts store only a hash.",
+    )
+    parser.add_argument(
+        "--matter-access-to-user",
+        help="Synthetic deputy user seed; redacted artifacts store only a hash.",
+    )
+    parser.add_argument("--matter-access-granted-role", default="SachbearbeitungVertretung")
+    parser.add_argument("--matter-access-reason", default="Synthetischer Offline-Vertretungsfreigabeplan")
+    parser.add_argument("--matter-access-valid-from", default="2026-07-08T09:00:00Z")
+    parser.add_argument("--matter-access-valid-until", default="2026-07-15T09:00:00Z")
+    parser.add_argument(
+        "--matter-access-approved-by",
+        help="Synthetic approver seed; redacted artifacts store only a hash.",
+    )
+    parser.add_argument("--matter-access-status", default="Aktiv")
     parser.add_argument(
         "--mcp-positive-smoke-output",
         type=Path,
@@ -537,6 +569,48 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.matter_access_apply_readiness_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "matter-access-apply-request-plan":
+        try:
+            result = build_matter_access_apply_request_plan_from_paths(
+                contract_path=args.matter_access_contract,
+                schema_path=args.schema,
+                mcp_contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=mcp_smoke_correlation_id,
+                grant_id=args.matter_access_grant_id,
+                case_id=args.mcp_smoke_case_id,
+                from_user=args.matter_access_from_user,
+                to_user=args.matter_access_to_user,
+                granted_role=args.matter_access_granted_role,
+                reason=args.matter_access_reason,
+                valid_from=args.matter_access_valid_from,
+                valid_until=args.matter_access_valid_until,
+                approved_by=args.matter_access_approved_by,
+                status=args.matter_access_status,
+            )
+            write_matter_access_apply_request_plan_artifact(result, args.matter_access_apply_request_output)
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.matter_access_apply_request_output)
         return _emit(
             {
                 "status": result["status"],

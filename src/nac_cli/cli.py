@@ -356,6 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
             "bpmn-viewer-runtime-readiness",
@@ -523,6 +524,32 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Pfad fuer das redigierte Matter-Access-Apply-Readiness-Artefakt.",
     )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-request-output",
+        type=Path,
+        help="Pfad fuer das redigierte Matter-Access-Apply-Request-Plan-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-grant-id",
+        help="Synthetischer Grant-ID-Seed; redigierte Artefakte speichern nur einen Hash.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-from-user",
+        help="Synthetischer FromUser-Seed; redigierte Artefakte speichern nur einen Hash.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-to-user",
+        help="Synthetischer ToUser-Seed; redigierte Artefakte speichern nur einen Hash.",
+    )
+    teams_sharepoint.add_argument("--matter-access-granted-role", default="SachbearbeitungVertretung")
+    teams_sharepoint.add_argument("--matter-access-reason", default="Synthetischer Offline-Vertretungsfreigabeplan")
+    teams_sharepoint.add_argument("--matter-access-valid-from", default="2026-07-08T09:00:00Z")
+    teams_sharepoint.add_argument("--matter-access-valid-until", default="2026-07-15T09:00:00Z")
+    teams_sharepoint.add_argument(
+        "--matter-access-approved-by",
+        help="Synthetischer ApprovedBy-Seed; redigierte Artefakte speichern nur einen Hash.",
+    )
+    teams_sharepoint.add_argument("--matter-access-status", default="Aktiv")
     teams_sharepoint.add_argument(
         "--mcp-positive-smoke-output",
         type=Path,
@@ -2086,6 +2113,26 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(
                 ["--matter-access-apply-readiness-output", str(args.matter_access_apply_readiness_output)]
             )
+        if args.matter_access_apply_request_output:
+            script_args.extend(["--matter-access-apply-request-output", str(args.matter_access_apply_request_output)])
+        if args.matter_access_grant_id:
+            script_args.extend(["--matter-access-grant-id", args.matter_access_grant_id])
+        if args.matter_access_from_user:
+            script_args.extend(["--matter-access-from-user", args.matter_access_from_user])
+        if args.matter_access_to_user:
+            script_args.extend(["--matter-access-to-user", args.matter_access_to_user])
+        if args.matter_access_granted_role:
+            script_args.extend(["--matter-access-granted-role", args.matter_access_granted_role])
+        if args.matter_access_reason:
+            script_args.extend(["--matter-access-reason", args.matter_access_reason])
+        if args.matter_access_valid_from:
+            script_args.extend(["--matter-access-valid-from", args.matter_access_valid_from])
+        if args.matter_access_valid_until:
+            script_args.extend(["--matter-access-valid-until", args.matter_access_valid_until])
+        if args.matter_access_approved_by:
+            script_args.extend(["--matter-access-approved-by", args.matter_access_approved_by])
+        if args.matter_access_status:
+            script_args.extend(["--matter-access-status", args.matter_access_status])
         if args.mcp_positive_smoke_output:
             script_args.extend(["--mcp-positive-smoke-output", str(args.mcp_positive_smoke_output)])
         if args.mcp_cleanup_output:

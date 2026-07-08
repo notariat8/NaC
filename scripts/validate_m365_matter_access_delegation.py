@@ -19,7 +19,9 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
 )
 from nac_m365_graph.matter_access_delegation_smoke import run_matter_access_delegation_smoke  # noqa: E402
 from nac_m365_graph.matter_access_apply_readiness import build_matter_access_apply_readiness  # noqa: E402
+from nac_m365_graph.matter_access_apply_request import build_matter_access_apply_request_plan  # noqa: E402
 from nac_m365_graph.mcp_runtime import DEFAULT_MCP_CONTRACT, load_mcp_contract, validate_mcp_contract  # noqa: E402
+from nac_m365_graph.privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema  # noqa: E402
 
 
@@ -45,6 +47,7 @@ REQUIRED_DOC_MARKERS = {
         "Vertretungsfreigaben",
         "matter-access-plan",
         "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
         "matter-access-smoke",
         "Microsoft Graph REST",
         "keine Live-Tenant-Aktion",
@@ -54,6 +57,7 @@ REQUIRED_DOC_MARKERS = {
         "Vertretungsfreigaben",
         "matter-access-plan",
         "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
         "matter-access-smoke",
         "Microsoft Graph REST",
         "no live tenant action",
@@ -62,17 +66,29 @@ REQUIRED_DOC_MARKERS = {
         "m365-matter-access-delegation.md",
         "matter-access-plan",
         "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
         "matter-access-smoke",
     ],
     DATA_PLANE_EN: [
         "m365-matter-access-delegation.md",
         "matter-access-plan",
         "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
         "matter-access-smoke",
     ],
-    CLI_DE: ["matter-access-plan", "matter-access-apply-readiness", "matter-access-smoke"],
-    CLI_EN: ["matter-access-plan", "matter-access-apply-readiness", "matter-access-smoke"],
-    CONTRACTS_README: ["m365-matter-access-delegation.contract.json"],
+    CLI_DE: [
+        "matter-access-plan",
+        "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
+        "matter-access-smoke",
+    ],
+    CLI_EN: [
+        "matter-access-plan",
+        "matter-access-apply-readiness",
+        "matter-access-apply-request-plan",
+        "matter-access-smoke",
+    ],
+    CONTRACTS_README: ["m365-matter-access-delegation.contract.json", "matter-access-apply-request-plan"],
     QUALITY_DE: ["m365_matter_access_delegation"],
     QUALITY_EN: ["m365_matter_access_delegation"],
 }
@@ -179,6 +195,61 @@ def validate() -> list[str]:
                 ):
                     if apply_summary.get(flag) is not False:
                         errors.append(f"matter-access-apply-readiness summary.{flag} must be false")
+                apply_request = build_matter_access_apply_request_plan(
+                    mcp_contract,
+                    load_provisioned_state(DEFAULT_PROVISIONED_STATE),
+                    apply_readiness,
+                    workspace_id=schema["workspaces"][0]["id"],
+                    correlation_id="validator-apply-request",
+                    grant_id="validator-grant",
+                    case_id="validator-case",
+                    from_user="validator-from-user",
+                    to_user="validator-to-user",
+                    reason="Validator-Vertretung",
+                    approved_by="validator-approver",
+                    timestamp="2026-07-07T00:00:00Z",
+                )
+                if apply_request["status"] != "PASSED":
+                    errors.append("matter-access-apply-request-plan must pass for the first workspace")
+                apply_request_summary = apply_request["summary"]
+                if apply_request_summary["planned_write_count"] != 2:
+                    errors.append("matter-access-apply-request-plan must report two planned writes")
+                if apply_request_summary["planned_tools"] != ["grant_request", "audit_append"]:
+                    errors.append("matter-access-apply-request-plan must bundle grant_request and audit_append")
+                for flag in (
+                    "required_write_approval",
+                    "owner_gate_required",
+                    "role_case_purpose_gate_required",
+                    "graph_rest_only",
+                ):
+                    if apply_request_summary.get(flag) is not True:
+                        errors.append(f"matter-access-apply-request-plan summary.{flag} must be true")
+                for flag in (
+                    "executes_graph_requests",
+                    "executes_graph_writes",
+                    "tenant_mutation_allowed",
+                    "team_membership_mutation_allowed",
+                    "sharepoint_item_permission_mutation_allowed",
+                    "raw_graph_path_stored",
+                    "raw_graph_response_stored",
+                    "stores_tokens_or_secrets",
+                    "stores_matter_payloads",
+                    "reads_sharepoint_file_content",
+                ):
+                    if apply_request_summary.get(flag) is not False:
+                        errors.append(f"matter-access-apply-request-plan summary.{flag} must be false")
+                apply_request_text = json.dumps(apply_request, ensure_ascii=False)
+                for raw_value in (
+                    "validator-grant",
+                    "validator-case",
+                    "validator-from-user",
+                    "validator-to-user",
+                    "validator-approver",
+                    "Validator-Vertretung",
+                    "funktion8.sharepoint.com",
+                ):
+                    if raw_value in apply_request_text:
+                        errors.append(f"matter-access-apply-request-plan stores raw value {raw_value!r}")
 
     if mcp_contract:
         errors.extend(validate_mcp_contract(mcp_contract))
@@ -256,6 +327,8 @@ def _validate_docs_and_wiring() -> list[str]:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-smoke'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-readiness" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-readiness'")
+        if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-request-plan" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-request-plan'")
     return errors
 
 

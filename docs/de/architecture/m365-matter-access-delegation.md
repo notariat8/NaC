@@ -1,7 +1,7 @@
 # M365-Mandatszugriffsdelegation
 
 Status: Contract-first, offline, keine Live-Tenant-Aktion
-Letzte Inhaltsänderung: 2026-07-07
+Letzte Inhaltsänderung: 2026-07-08
 
 ## Zweck
 
@@ -49,6 +49,13 @@ ohne Live-Apply geprüft:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
+Ein konkreter redigierter Apply-Request-Plan für eine spätere
+owner-gated Freigabe wird weiterhin ohne Live-Apply gerendert:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+```
+
 `matter-access-smoke` schreibt standardmäßig
 `out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`.
 Das Artefakt enthält nur Counts, Aktionsnamen, Correlation-ID und
@@ -65,6 +72,15 @@ owner-gated Graph-REST-Schreibkante bereit sind: explizite Write-Approval,
 Rollen-/Akten-/Zweckgate, Grund, Gültigkeitsfenster, Approver,
 Audit-Correlation und Privacy-Grenze. Es führt keine Graph Requests aus,
 schreibt keine SharePoint-Items und speichert keine konkreten Graph-Pfade.
+
+`matter-access-apply-request-plan` schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json`.
+Das Artefakt bündelt die geplanten MCP-Schreibkanten `grant_request` und
+`audit_append` als späteren Owner-Apply-Auftrag. Es speichert nur Hashes,
+Feldnamen, Listenrollen und Privacy-Flags: keine konkreten Graph-Pfade, keine
+Graph-Rohantworten, keine Tokens, keine Nutzerdaten im Klartext und keine
+Mandats-Payloads. Der Befehl führt keine Graph Requests aus und schreibt keine
+SharePoint-Items.
 
 ## MCP-Grenze
 

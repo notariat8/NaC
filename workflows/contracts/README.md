@@ -108,7 +108,10 @@ Jeder Vertrag soll definieren:
   Vertretungsfreigaben über `Akten`, `Vertretungsfreigaben`,
   `AuditJournalLite` und `teams-sharepoint-data-mcp`; `matter-access-plan`
   rendert nur Graph-REST-Requestpläne ohne Live-Tenant-Aktion,
-  Dateiinhalt, Secrets oder Mandats-Rohdaten.
+  `matter-access-apply-readiness` prüft die spätere owner-gated Apply-Grenze
+  und `matter-access-apply-request-plan` schreibt einen redigierten Auftrag
+  für `grant_request` plus `audit_append` ohne Live-Apply, Dateiinhalt,
+  Secrets oder Mandats-Rohdaten.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.
