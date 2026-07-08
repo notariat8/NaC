@@ -23,6 +23,64 @@ RETAINED_SMOKE_ARTIFACT_NAME = "matter-access-apply-smoke.redacted.json"
 SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention/v0.1"
 INDEX_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-index/v0.1"
 READINESS_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1"
+REDACTION_SHAPE_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1"
+
+ALLOWED_FALSE_PRIVACY_FLAG_KEYS = {
+    "storesrawgraphpath",
+    "storesrawgraphresponse",
+    "storesrawwritepayload",
+    "storestokensorsecrets",
+    "storesmatterpayloads",
+    "readsSharePointFileContent".lower(),
+    "raw_graph_path_stored",
+    "raw_graph_response_stored",
+    "raw_write_payload_stored",
+    "stores_tokens_or_secrets",
+    "stores_matter_payloads",
+    "reads_sharepoint_file_content",
+}
+FORBIDDEN_REDACTION_SHAPE_KEYS = {
+    "accesstoken",
+    "authorization",
+    "bearertoken",
+    "certificatesecret",
+    "clientsecret",
+    "documentcontent",
+    "graphpath",
+    "graphresponse",
+    "mandatepayload",
+    "matterpayload",
+    "password",
+    "privatekey",
+    "privatedocumentcontent",
+    "privatepayload",
+    "rawgraphpath",
+    "rawgraphresponse",
+    "rawwritepayload",
+    "refreshtoken",
+    "requestbody",
+    "responsebody",
+    "secret",
+    "token",
+    "writepayload",
+}
+FORBIDDEN_REDACTION_SHAPE_VALUE_MARKERS = (
+    "BEGIN " + "PRIVATE KEY",
+    "PRIVATE " + "KEY",
+    "Authorization:",
+    "Bearer ",
+    "access_token",
+    "client" + "_secret",
+    "refresh_token",
+    "password" + "=",
+    "https://graph.microsoft.com/",
+    "/sites/",
+    "/drives/",
+    "/lists/",
+    "fields/",
+    "Akteninhalt",
+    "Mandatswert",
+)
 
 
 def retain_matter_access_apply_live_smoke_artifact(
@@ -37,7 +95,9 @@ def retain_matter_access_apply_live_smoke_artifact(
     except (OSError, json.JSONDecodeError) as exc:
         return _blocked_retention(generated_at, artifact_path, retention_root, [str(exc)])
 
+    redaction_shape = validate_matter_access_apply_live_smoke_redaction_shape(artifact)
     errors = validate_matter_access_apply_live_smoke_artifact(artifact)
+    errors.extend(redaction_shape.get("errors", []))
     summary = _artifact_summary(artifact)
     correlation_id = str(summary.get("correlation_id") or "")
     workspace_id = str(summary.get("workspace_id") or "")
@@ -87,11 +147,16 @@ def retain_matter_access_apply_live_smoke_artifact(
             "raw_graph_response_stored": summary.get("raw_graph_response_stored"),
             "raw_write_payload_stored": summary.get("raw_write_payload_stored"),
             "reads_sharepoint_file_content": summary.get("reads_sharepoint_file_content"),
+            "redaction_shape_status": redaction_shape.get("status"),
+            "redaction_shape_violation_count": _dict(redaction_shape.get("summary")).get("violation_count"),
+            "redaction_shape_checked_node_count": _dict(redaction_shape.get("summary")).get("checked_node_count"),
         },
         "checks": _retention_checks(errors),
         "errors": errors,
+        "redaction_shape": redaction_shape,
         "privacy": {
             "source_artifact_must_be_redacted": True,
+            "sourceArtifactRedactionShapeChecked": True,
             "retentionReadsLocalRedactedArtifactOnly": True,
             "retentionExecutesGraphRequests": False,
             "retentionExecutesGraphWrites": False,
@@ -160,6 +225,57 @@ def validate_matter_access_apply_live_smoke_artifact(artifact: dict[str, Any]) -
         if privacy.get(key) is not False:
             errors.append(f"artifact privacy.{key} must be false")
     return errors
+
+
+def validate_matter_access_apply_live_smoke_redaction_shape(artifact: dict[str, Any]) -> dict[str, Any]:
+    violations: list[dict[str, str]] = []
+    checked_node_count = 0
+    for path, value in _walk_json(artifact):
+        checked_node_count += 1
+        if path:
+            key = path[-1]
+            if isinstance(key, str) and _is_forbidden_redaction_shape_key(key, value):
+                violations.append(
+                    {
+                        "path": _format_json_path(path),
+                        "reason": "forbidden_key",
+                        "marker": key,
+                    }
+                )
+        if isinstance(value, str):
+            marker = _forbidden_value_marker(value)
+            if marker is not None:
+                violations.append(
+                    {
+                        "path": _format_json_path(path),
+                        "reason": "forbidden_value_marker",
+                        "marker": marker,
+                    }
+                )
+    return {
+        "schema_version": REDACTION_SHAPE_SCHEMA_VERSION,
+        "status": "PASSED" if not violations else "BLOCKED",
+        "summary": {
+            "checked_node_count": checked_node_count,
+            "violation_count": len(violations),
+            "executes_graph_requests": False,
+            "tenant_writes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "violations": violations,
+        "errors": [
+            f"artifact redaction shape violation at {item['path']}: {item['reason']} {item['marker']!r}"
+            for item in violations
+        ],
+        "privacy": {
+            "checksLocalArtifactOnly": True,
+            "executesGraphRequests": False,
+            "tenantWritesExecuted": False,
+            "storesTokensOrSecrets": False,
+            "readsSharePointFileContent": False,
+        },
+    }
 
 
 def build_matter_access_apply_live_smoke_retention_index(
@@ -376,6 +492,8 @@ def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
         "retention_report_path": summary.get("retention_report_path"),
         "retained_artifact_path": summary.get("retained_artifact_path"),
         "retained_artifact_sha256": summary.get("retained_artifact_sha256"),
+        "redaction_shape_status": summary.get("redaction_shape_status"),
+        "redaction_shape_violation_count": summary.get("redaction_shape_violation_count"),
         "source_executed_graph_writes": summary.get("source_executed_graph_writes"),
         "grant_read_value_count": summary.get("grant_read_value_count"),
         "audit_read_value_count": summary.get("audit_read_value_count"),
@@ -429,6 +547,11 @@ def _readiness_checks(index: dict[str, Any], rows: list[dict[str, Any]]) -> list
                     "Every retained live-smoke proves cleanup by zero-value readback.",
                 ),
                 _check(
+                    "all_runs_have_valid_redaction_shape",
+                    all(row.get("redaction_shape_status") == "PASSED" for row in rows),
+                    "Every retained live-smoke has passed the recursive redaction-shape check.",
+                ),
+                _check(
                     "all_retained_artifacts_exist",
                     all(Path(str(row.get("retained_artifact_path") or "")).is_file() for row in rows),
                     "Every retained live-smoke row points to an existing redacted retained artifact.",
@@ -471,9 +594,23 @@ def _blocked_retention(generated_at: str, artifact_path: Path, retention_root: P
             "retention_executes_graph_writes": False,
             "retention_tenant_writes_executed": False,
             "retention_tenant_deletes_executed": False,
+            "redaction_shape_status": "NOT_EVALUATED",
+            "redaction_shape_violation_count": None,
         },
         "checks": _retention_checks(errors),
         "errors": errors,
+        "redaction_shape": {
+            "schema_version": REDACTION_SHAPE_SCHEMA_VERSION,
+            "status": "NOT_EVALUATED",
+            "summary": {
+                "checked_node_count": 0,
+                "violation_count": None,
+                "executes_graph_requests": False,
+                "tenant_writes_executed": False,
+            },
+            "violations": [],
+            "errors": [],
+        },
         "privacy": {
             "readsLocalRedactedArtifactsOnly": True,
             "executesGraphRequests": False,
@@ -489,6 +626,7 @@ def _blocked_retention(generated_at: str, artifact_path: Path, retention_root: P
 def _retention_checks(errors: list[str]) -> list[dict[str, Any]]:
     return [
         _check("source_artifact_valid", not errors, "Source live-smoke artifact is PASSED and redacted."),
+        _check("redaction_shape_valid", not errors, "Source live-smoke artifact has no forbidden raw fields or sensitive markers."),
         _check("offline_retention", True, "Retention reads and writes local redacted artifacts only."),
         _check("no_graph_or_tenant_action", True, "Retention performs no Graph request, tenant write or delete."),
     ]
@@ -518,6 +656,43 @@ def _expect(summary: dict[str, Any], key: str, expected: Any, errors: list[str])
 def _safe_segment(value: str) -> str:
     safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in value).strip(".-_")
     return safe or "unknown"
+
+
+def _walk_json(value: Any, path: tuple[str, ...] = ()) -> list[tuple[tuple[str, ...], Any]]:
+    rows: list[tuple[tuple[str, ...], Any]] = [(path, value)]
+    if isinstance(value, dict):
+        for key, child in value.items():
+            rows.extend(_walk_json(child, (*path, str(key))))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            rows.extend(_walk_json(child, (*path, str(index))))
+    return rows
+
+
+def _is_forbidden_redaction_shape_key(key: str, value: Any) -> bool:
+    normalized = _normalize_key(key)
+    if normalized in ALLOWED_FALSE_PRIVACY_FLAG_KEYS and value is False:
+        return False
+    if normalized in FORBIDDEN_REDACTION_SHAPE_KEYS:
+        return True
+    return False
+
+
+def _normalize_key(value: str) -> str:
+    return "".join(ch for ch in value.lower() if ch.isalnum() or ch == "_")
+
+
+def _forbidden_value_marker(value: str) -> str | None:
+    for marker in FORBIDDEN_REDACTION_SHAPE_VALUE_MARKERS:
+        if marker in value:
+            return marker
+    return None
+
+
+def _format_json_path(path: tuple[str, ...]) -> str:
+    if not path:
+        return "$"
+    return "$." + ".".join(path)
 
 
 def _sha256_file(path: Path) -> str:

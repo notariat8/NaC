@@ -112,6 +112,13 @@ python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-rete
   --format json
 ```
 
+Die Retention prüft zusätzlich die Form des redigierten Live-Smoke-Artefakts.
+Der rekursive Shape-Check blockiert vor dem Kopieren, wenn verbotene Rohfelder
+oder sensitive Marker wie rohe Graph-Pfade, Rohantworten, Write-Payloads,
+Tokens, Secrets oder Mandats-Payloads auftauchen. Ein akzeptiertes Artefakt
+meldet `redaction_shape_status=PASSED` und
+`sourceArtifactRedactionShapeChecked=true`.
+
 Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
 bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten
 Retention-Index und führt keine Graph- oder Tenant-Aktion aus:
@@ -168,6 +175,8 @@ werden nicht automatisch übernommen.
 - `reads_sharepoint_file_content=false`
 - Retention: `retention_executes_graph_requests=false`
 - Retention: `retention_tenant_writes_executed=false`
+- Retention: `redaction_shape_status=PASSED`
+- Retention: `sourceArtifactRedactionShapeChecked=true`
 - Retention: correlation-basierter Ordner und Root-Index vorhanden
 - Readiness: `status=READY`
 - Readiness: `executes_graph_requests=false`

@@ -108,6 +108,13 @@ python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-rete
   --format json
 ```
 
+Retention also checks the shape of the redacted live-smoke artifact. The
+recursive shape check blocks before copying when forbidden raw fields or
+sensitive markers such as raw Graph paths, raw responses, write payloads,
+tokens, secrets or matter payloads appear. An accepted artifact reports
+`redaction_shape_status=PASSED` and
+`sourceArtifactRedactionShapeChecked=true`.
+
 Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
 acceptance. The readiness command reads only the local redacted retention index
 and performs no Graph or tenant action:
@@ -164,6 +171,8 @@ picked up automatically.
 - `reads_sharepoint_file_content=false`
 - Retention: `retention_executes_graph_requests=false`
 - Retention: `retention_tenant_writes_executed=false`
+- Retention: `redaction_shape_status=PASSED`
+- Retention: `sourceArtifactRedactionShapeChecked=true`
 - Retention: correlation-based folder and root index exist
 - Readiness: `status=READY`
 - Readiness: `executes_graph_requests=false`

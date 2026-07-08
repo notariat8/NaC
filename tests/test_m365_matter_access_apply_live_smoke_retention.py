@@ -19,6 +19,7 @@ from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     build_matter_access_apply_live_smoke_retention_index,
     build_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
+    validate_matter_access_apply_live_smoke_redaction_shape,
 )
 from scripts import validate_m365_matter_access_apply_live_smoke_retention as validator
 
@@ -45,12 +46,17 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertTrue(Path(payload["summary"]["retained_artifact_path"]).is_file())
             self.assertTrue(Path(payload["summary"]["retention_json_path"]).is_file())
             self.assertTrue(Path(payload["summary"]["retention_index_json_path"]).is_file())
+            self.assertEqual(payload["summary"]["redaction_shape_status"], "PASSED")
+            self.assertEqual(payload["summary"]["redaction_shape_violation_count"], 0)
+            self.assertGreater(payload["summary"]["redaction_shape_checked_node_count"], 0)
+            self.assertEqual(payload["redaction_shape"]["status"], "PASSED")
 
             index = build_matter_access_apply_live_smoke_retention_index(retention_root=retention_root)
             self.assertEqual(index["status"], "PASSED")
             self.assertEqual(index["summary"]["run_count"], 1)
             self.assertEqual(index["live_smokes"][0]["correlation_id"], "corr-1")
             self.assertEqual(index["live_smokes"][0]["status"], "PASSED")
+            self.assertEqual(index["live_smokes"][0]["redaction_shape_status"], "PASSED")
 
     def test_index_filters_by_correlation_workspace_status_and_query(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -89,6 +95,37 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertEqual(result["status"], "BLOCKED")
             self.assertIn("raw_graph_response_stored", "\n".join(result["errors"]))
             self.assertFalse((tmp_path / "retention" / "corr-invalid").exists())
+
+    def test_redaction_shape_blocks_forbidden_raw_graph_path_key_without_copying(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            artifact = tmp_path / "invalid-raw-path.json"
+            payload = _apply_smoke_payload("corr-raw-path")
+            payload["readBackShape"]["rawGraphPath"] = "/sites/example.sharepoint.com/lists/list-grants/items"
+            artifact.write_text(json.dumps(payload), encoding="utf-8")
+
+            result = retain_matter_access_apply_live_smoke_artifact(
+                artifact,
+                retention_root=tmp_path / "retention",
+            )
+
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertEqual(result["summary"]["redaction_shape_status"], "BLOCKED")
+            self.assertEqual(result["summary"]["redaction_shape_violation_count"], 2)
+            self.assertIn("rawGraphPath", "\n".join(result["errors"]))
+            self.assertIn("/sites/", "\n".join(result["errors"]))
+            self.assertFalse((tmp_path / "retention" / "corr-raw-path").exists())
+
+    def test_redaction_shape_blocks_secret_like_value_marker(self) -> None:
+        payload = _apply_smoke_payload("corr-secret-marker")
+        payload["writeResponseShape"]["diagnostic"] = "Authorization: Bearer redacted-but-invalid-shape"
+
+        result = validate_matter_access_apply_live_smoke_redaction_shape(payload)
+
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["summary"]["violation_count"], 1)
+        self.assertIn("Authorization:", "\n".join(result["errors"]))
+        self.assertFalse(result["privacy"]["executesGraphRequests"])
 
     def test_cli_retains_and_indexes_without_graph(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

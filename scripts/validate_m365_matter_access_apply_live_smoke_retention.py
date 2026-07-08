@@ -95,12 +95,18 @@ def _validate_code() -> list[str]:
         "SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention/v0.1\"",
         "INDEX_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-index/v0.1\"",
         "READINESS_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1\"",
+        "REDACTION_SHAPE_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1\"",
         "retain_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_artifact",
+        "validate_matter_access_apply_live_smoke_redaction_shape",
         "build_matter_access_apply_live_smoke_retention_index",
         "build_matter_access_apply_live_smoke_retention_readiness",
         "format_matter_access_apply_live_smoke_retention_readiness",
         "_readiness_checks",
+        "redaction_shape_status",
+        "redaction_shape_violation_count",
+        "sourceArtifactRedactionShapeChecked",
+        "all_runs_have_valid_redaction_shape",
         "retention_executes_graph_requests\": False",
         "retentionExecutesGraphRequests\": False",
         "retentionTenantWritesExecuted\": False",
@@ -139,6 +145,8 @@ def _validate_code() -> list[str]:
         "test_retains_redacted_live_smoke_and_updates_index",
         "test_index_filters_by_correlation_workspace_status_and_query",
         "test_retention_blocks_invalid_source_without_copying",
+        "test_redaction_shape_blocks_forbidden_raw_graph_path_key_without_copying",
+        "test_redaction_shape_blocks_secret_like_value_marker",
         "test_cli_retains_and_indexes_without_graph",
         "test_readiness_reports_ready_for_retained_live_smoke",
         "test_readiness_blocks_when_no_retained_live_smoke_matches",
@@ -164,6 +172,8 @@ def _validate_docs() -> list[str]:
         "--matter-access-apply-live-smoke-write-readiness",
         "READY",
         "NOT_READY",
+        "redaction_shape_status=PASSED",
+        "sourceArtifactRedactionShapeChecked=true",
         "retention_executes_graph_requests=false",
         "retention_tenant_writes_executed=false",
     )
@@ -212,6 +222,10 @@ def _validate_contract_and_indexes() -> list[str]:
                 errors.append(f"verification contract missing marker: {marker}")
         if "quality_gate_failure" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing quality_gate_failure behavior")
+        if "redaction_shape_fail_closed" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing redaction_shape_fail_closed pass condition")
+        if "recursive redaction-shape check" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing recursive redaction-shape invariant")
 
     readme = _read("verification_readme")
     _require("m365-matter-access-apply-live-smoke-retention.verification.json", readme, "verification_readme", errors)
