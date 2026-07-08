@@ -17,6 +17,7 @@ if str(SRC_ROOT) not in sys.path:
 from nac_cli import cli
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     build_matter_access_apply_live_smoke_retention_index,
+    build_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
 )
 from scripts import validate_m365_matter_access_apply_live_smoke_retention as validator
@@ -124,6 +125,67 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertEqual(index_rc, 0)
             self.assertEqual(index_payload["summary"]["run_count"], 1)
             self.assertEqual(index_payload["live_smokes"][0]["correlation_id"], "cli-corr")
+
+    def test_readiness_reports_ready_for_retained_live_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            artifact = tmp_path / "matter-access-apply-smoke.redacted.json"
+            artifact.write_text(json.dumps(_apply_smoke_payload("ready-corr")), encoding="utf-8")
+            retention_root = tmp_path / "retention"
+            retain_matter_access_apply_live_smoke_artifact(artifact, retention_root=retention_root)
+
+            readiness = build_matter_access_apply_live_smoke_retention_readiness(
+                retention_root=retention_root,
+                correlation_id="ready-corr",
+                workspace_id="notary_team_01",
+                now_utc="2026-07-08T16:00:00Z",
+                write_artifact=True,
+            )
+
+            self.assertEqual(readiness["status"], "READY")
+            self.assertEqual(readiness["summary"]["ready_run_count"], 1)
+            self.assertEqual(readiness["summary"]["latest_correlation_id"], "ready-corr")
+            self.assertFalse(readiness["summary"]["executes_graph_requests"])
+            self.assertTrue(Path(readiness["summary"]["readiness_json_path"]).is_file())
+            self.assertTrue(Path(readiness["summary"]["readiness_report_path"]).is_file())
+
+    def test_readiness_blocks_when_no_retained_live_smoke_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            readiness = build_matter_access_apply_live_smoke_retention_readiness(
+                retention_root=Path(tmp) / "retention",
+                correlation_id="missing-corr",
+            )
+
+            self.assertEqual(readiness["status"], "NOT_READY")
+            self.assertIn("retained_live_smoke_present", [check["id"] for check in readiness["checks"]])
+            self.assertIn("At least one PASSED", "\n".join(readiness["errors"]))
+            self.assertFalse(readiness["privacy"]["executesGraphRequests"])
+
+    def test_cli_reports_live_smoke_retention_readiness_without_graph(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            artifact = tmp_path / "matter-access-apply-smoke.redacted.json"
+            artifact.write_text(json.dumps(_apply_smoke_payload("cli-ready-corr")), encoding="utf-8")
+            retention_root = tmp_path / "retention"
+            retain_matter_access_apply_live_smoke_artifact(artifact, retention_root=retention_root)
+
+            payload, return_code = _invoke_cli(
+                [
+                    "matter-access-apply-live-smoke-retention-readiness",
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(retention_root),
+                    "--matter-access-apply-live-smoke-correlation-id",
+                    "cli-ready-corr",
+                    "--matter-access-apply-live-smoke-write-readiness",
+                    "--format",
+                    "json",
+                ]
+            )
+
+            self.assertEqual(return_code, 0)
+            self.assertEqual(payload["status"], "READY")
+            self.assertFalse(payload["summary"]["tenant_writes_executed"])
+            self.assertTrue(Path(payload["summary"]["readiness_json_path"]).is_file())
 
     def test_retention_validator_passes(self) -> None:
         self.assertEqual([], validator.validate())

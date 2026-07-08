@@ -112,6 +112,24 @@ python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-rete
   --format json
 ```
 
+Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
+bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten
+Retention-Index und führt keine Graph- oder Tenant-Aktion aus:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retention-readiness \
+  --matter-access-apply-live-smoke-correlation-id <correlation-id> \
+  --matter-access-apply-live-smoke-write-readiness \
+  --format json
+```
+
+Bei `--matter-access-apply-live-smoke-write-readiness` entstehen zusätzlich:
+
+```text
+matter-access-apply-live-smoke-retention-readiness.redacted.json
+matter-access-apply-live-smoke-retention-readiness.redacted.md
+```
+
 Ein vorhandenes, owner-gated erzeugtes Artefakt kann danach explizit an die
 Release-Gate-Evidence angehängt werden:
 
@@ -151,6 +169,9 @@ werden nicht automatisch übernommen.
 - Retention: `retention_executes_graph_requests=false`
 - Retention: `retention_tenant_writes_executed=false`
 - Retention: correlation-basierter Ordner und Root-Index vorhanden
+- Readiness: `status=READY`
+- Readiness: `executes_graph_requests=false`
+- Readiness: `tenant_writes_executed=false`
 
 ## Fehlerverhalten
 
@@ -158,9 +179,11 @@ Wenn der Smoke nicht `PASSED` ist, gilt die Release Lane als blockiert. Wenn
 Cleanup oder Cleanup-Readback fehlschlägt, wird nicht weiter freigegeben. Wenn
 der Smoke zwar bestanden hat, die correlation-basierte Retention aber nicht
 `PASSED` ist, gibt der Befehl ebenfalls keinen erfolgreichen Abschluss zurück.
-Der nächste Schritt ist dann ein separater owner-gated Cleanup-Auftrag mit
-redigierter Leftover-Evidence bzw. ein Offline-Retention-Fix; produktive
-Mandats-IDs dürfen nicht als Fallback-Ziel verwendet werden.
+Wenn die Retention-Readiness `NOT_READY` meldet, wird keine fachliche Abnahme
+behauptet. Der nächste Schritt ist dann ein separater owner-gated
+Cleanup-Auftrag mit redigierter Leftover-Evidence bzw. ein
+Offline-Retention-Fix; produktive Mandats-IDs dürfen nicht als Fallback-Ziel
+verwendet werden.
 
 ## Grenzen
 

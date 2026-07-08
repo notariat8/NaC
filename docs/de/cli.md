@@ -437,7 +437,13 @@ Correlation-ID, Workspace, Status oder Suchtext gelesen. Diese Retention- und
 Indexbefehle führen keine Graph-Anfrage, keinen Tenant-Write und keine
 Löschung aus. Die Retention-Evidence setzt
 `retention_executes_graph_requests=false` und
-`retention_tenant_writes_executed=false`.
+`retention_tenant_writes_executed=false`. Mit
+`matter-access-apply-live-smoke-retention-readiness` wird derselbe lokale
+Retention-Index offline als `READY`/`NOT_READY` bewertet; optional schreibt
+`--matter-access-apply-live-smoke-write-readiness` die redigierten Artefakte
+`matter-access-apply-live-smoke-retention-readiness.redacted.json` und
+`matter-access-apply-live-smoke-retention-readiness.redacted.md`, ohne Graph-
+oder Tenant-Aktion.
 `nac batch-approval m365` ist ebenfalls offline. Der Befehl rendert kopierbare
 Owner-Freigabetexte für vorbereitete PR-Batches, synthetische Live-Smoke-Batches
 das M365 Runtime Release-Gate und den M365 Runtime-Zertifikatslebenszyklus,

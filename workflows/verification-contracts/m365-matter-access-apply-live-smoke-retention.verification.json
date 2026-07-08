@@ -43,7 +43,8 @@
       "fresh validator output",
       "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json",
       "out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/matter-access-apply-live-smoke-retention.redacted.json",
-      "out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-index.redacted.json"
+      "out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-index.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-readiness.redacted.json"
     ]
   },
   "checks": [
@@ -56,11 +57,13 @@
     "Retention reads only the redacted local live-smoke artifact and must not execute Graph requests, tenant writes or tenant deletes.",
     "Retention must reject a source artifact that is not PASSED, lacks readback or cleanup counts, or stores raw Graph paths, raw Graph responses, raw write payloads, tokens, secrets or matter payloads.",
     "The retention index is local, redacted and filterable by correlation ID, workspace, status and query.",
+    "matter-access-apply-live-smoke-retention-readiness evaluates retained local evidence as READY or NOT_READY without Graph or tenant action.",
     "The retained artifact path, retention report path and root index path must be visible in the live-smoke command summary."
   ],
   "thresholds": {
     "required_retained_artifact_count_per_live_smoke": 1,
     "required_root_index_count_per_retention_root": 1,
+    "required_readiness_status_for_acceptance": "READY",
     "required_retention_graph_request_count": 0,
     "required_retention_tenant_write_count": 0,
     "required_retention_tenant_delete_count": 0
@@ -69,6 +72,7 @@
     "matter_access_apply_live_smoke_retention_module",
     "matter_access_apply_live_smoke_retention_cli_commands",
     "matter_access_apply_live_smoke_retention_index_command",
+    "matter_access_apply_live_smoke_retention_readiness_command",
     "live_smoke_command_fail_closed_on_retention_failure",
     "retention_validator",
     "quality_gate_check",
@@ -78,6 +82,7 @@
     "all_checks_pass": true,
     "correlation_based_retention_present": true,
     "root_index_present": true,
+    "retention_readiness_ready_for_acceptance": true,
     "retention_offline_only": true,
     "source_artifact_validation_fail_closed": true,
     "no_secrets": true,
@@ -86,6 +91,7 @@
   "failure_behavior": {
     "retention_write_missing": "block_live_smoke_pass_status",
     "invalid_source_artifact": "block_retention",
+    "retention_readiness_not_ready": "block_business_acceptance",
     "graph_boundary_broken": "block_completion",
     "redaction_broken": "block_completion",
     "quality_gate_failure": "block_completion"

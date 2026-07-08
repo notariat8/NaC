@@ -160,7 +160,7 @@
         },
         {
           "id": "m365_matter_access_apply_live_smoke_retention",
-          "description": "Correlation-based offline retention and index for redacted owner-gated matter-access apply live-smoke artifacts.",
+          "description": "Correlation-based offline retention, index and READY/NOT_READY readiness for redacted owner-gated matter-access apply live-smoke artifacts.",
           "paths": [
             "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
             "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",

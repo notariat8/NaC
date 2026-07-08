@@ -427,7 +427,13 @@ Existing artifacts can be retained offline with
 workspace, status or query. These retention and index commands perform no
 Graph request, tenant write or delete. The retention evidence sets
 `retention_executes_graph_requests=false` and
-`retention_tenant_writes_executed=false`.
+`retention_tenant_writes_executed=false`. With
+`matter-access-apply-live-smoke-retention-readiness`, the same local retention
+index is evaluated offline as `READY`/`NOT_READY`; optionally,
+`--matter-access-apply-live-smoke-write-readiness` writes the redacted artifacts
+`matter-access-apply-live-smoke-retention-readiness.redacted.json` and
+`matter-access-apply-live-smoke-retention-readiness.redacted.md` without Graph
+or tenant action.
 `nac batch-approval m365` is offline as well. The command renders copyable
 owner approval texts for prepared PR batches, synthetic live-smoke batches and
 the M365 Runtime Release Gate and M365 runtime certificate lifecycle, but

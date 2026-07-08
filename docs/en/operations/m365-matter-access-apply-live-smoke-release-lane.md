@@ -108,6 +108,24 @@ python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-rete
   --format json
 ```
 
+Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
+acceptance. The readiness command reads only the local redacted retention index
+and performs no Graph or tenant action:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retention-readiness \
+  --matter-access-apply-live-smoke-correlation-id <correlation-id> \
+  --matter-access-apply-live-smoke-write-readiness \
+  --format json
+```
+
+With `--matter-access-apply-live-smoke-write-readiness`, it also writes:
+
+```text
+matter-access-apply-live-smoke-retention-readiness.redacted.json
+matter-access-apply-live-smoke-retention-readiness.redacted.md
+```
+
 An existing owner-gated artifact can then be explicitly attached to release
 gate evidence:
 
@@ -147,13 +165,17 @@ picked up automatically.
 - Retention: `retention_executes_graph_requests=false`
 - Retention: `retention_tenant_writes_executed=false`
 - Retention: correlation-based folder and root index exist
+- Readiness: `status=READY`
+- Readiness: `executes_graph_requests=false`
+- Readiness: `tenant_writes_executed=false`
 
 ## Failure Behavior
 
 If the smoke is not `PASSED`, the release lane is blocked. If cleanup or
 cleanup readback fails, no approval continues. If the smoke passed but the
 correlation-based retention is not `PASSED`, the command also does not return a
-successful completion. The next step is a separate owner-gated cleanup action
+successful completion. If retention readiness reports `NOT_READY`, no business
+acceptance is claimed. The next step is a separate owner-gated cleanup action
 with redacted leftover evidence or an offline retention fix; productive matter
 IDs must not be used as fallback targets.
 

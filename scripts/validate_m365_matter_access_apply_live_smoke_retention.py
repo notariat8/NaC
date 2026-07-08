@@ -13,6 +13,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (  # noqa: E402
     build_matter_access_apply_live_smoke_retention_index,
+    build_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
 )
 
@@ -93,9 +94,13 @@ def _validate_code() -> list[str]:
         "DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT",
         "SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention/v0.1\"",
         "INDEX_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-index/v0.1\"",
+        "READINESS_SCHEMA_VERSION = \"nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1\"",
         "retain_matter_access_apply_live_smoke_artifact",
         "validate_matter_access_apply_live_smoke_artifact",
         "build_matter_access_apply_live_smoke_retention_index",
+        "build_matter_access_apply_live_smoke_retention_readiness",
+        "format_matter_access_apply_live_smoke_retention_readiness",
+        "_readiness_checks",
         "retention_executes_graph_requests\": False",
         "retentionExecutesGraphRequests\": False",
         "retentionTenantWritesExecuted\": False",
@@ -107,11 +112,14 @@ def _validate_code() -> list[str]:
     for marker in (
         "matter-access-apply-live-smoke-retain",
         "matter-access-apply-live-smoke-retention-index",
+        "matter-access-apply-live-smoke-retention-readiness",
         "--matter-access-apply-live-smoke-retention-root",
         "--matter-access-apply-live-smoke-artifact",
         "--matter-access-apply-live-smoke-correlation-id",
+        "--matter-access-apply-live-smoke-write-readiness",
         "retain_matter_access_apply_live_smoke_artifact",
         "build_matter_access_apply_live_smoke_retention_index",
+        "build_matter_access_apply_live_smoke_retention_readiness",
     ):
         _require(marker, cli, "cli", errors)
 
@@ -132,6 +140,9 @@ def _validate_code() -> list[str]:
         "test_index_filters_by_correlation_workspace_status_and_query",
         "test_retention_blocks_invalid_source_without_copying",
         "test_cli_retains_and_indexes_without_graph",
+        "test_readiness_reports_ready_for_retained_live_smoke",
+        "test_readiness_blocks_when_no_retained_live_smoke_matches",
+        "test_cli_reports_live_smoke_retention_readiness_without_graph",
         "test_retention_validator_passes",
     ):
         _require(marker, tests, "tests", errors)
@@ -147,6 +158,12 @@ def _validate_docs() -> list[str]:
         "matter-access-apply-live-smokes/<correlation-id>/",
         "matter-access-apply-live-smoke-retain",
         "matter-access-apply-live-smoke-retention-index",
+        "matter-access-apply-live-smoke-retention-readiness",
+        "matter-access-apply-live-smoke-retention-readiness.redacted.json",
+        "matter-access-apply-live-smoke-retention-readiness.redacted.md",
+        "--matter-access-apply-live-smoke-write-readiness",
+        "READY",
+        "NOT_READY",
         "retention_executes_graph_requests=false",
         "retention_tenant_writes_executed=false",
     )
@@ -189,6 +206,7 @@ def _validate_contract_and_indexes() -> list[str]:
             "src/nac_m365_graph/matter_access_apply_live_smoke_retention.py",
             "scripts/validate_m365_matter_access_apply_live_smoke_retention.py",
             "tests/test_m365_matter_access_apply_live_smoke_retention.py",
+            "matter-access-apply-live-smoke-retention-readiness",
         ):
             if marker not in json.dumps(contract, ensure_ascii=False):
                 errors.append(f"verification contract missing marker: {marker}")
@@ -258,6 +276,20 @@ def _validate_synthetic_retention_roundtrip() -> list[str]:
         index = build_matter_access_apply_live_smoke_retention_index(retention_root=retention_root)
         if index.get("status") != "PASSED" or index.get("summary", {}).get("run_count") != 1:
             errors.append("synthetic retention index must pass with one retained live smoke")
+        readiness = build_matter_access_apply_live_smoke_retention_readiness(
+            retention_root=retention_root,
+            correlation_id="validator-correlation",
+            workspace_id="notary_team_01",
+            now_utc="2026-07-08T15:31:00Z",
+            write_artifact=True,
+        )
+        if readiness.get("status") != "READY":
+            errors.append(f"synthetic retention readiness must be READY: {readiness.get('errors')}")
+        summary = readiness.get("summary") if isinstance(readiness.get("summary"), dict) else {}
+        for key in ("readiness_json_path", "readiness_report_path"):
+            value = summary.get(key)
+            if not value or not Path(value).is_file():
+                errors.append(f"synthetic retention readiness missing file for summary.{key}")
     return errors
 
 

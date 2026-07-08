@@ -43,8 +43,10 @@ from nac_m365_graph.matter_access_decision_replay import (
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
     build_matter_access_apply_live_smoke_retention_index,
+    build_matter_access_apply_live_smoke_retention_readiness,
     format_matter_access_apply_live_smoke_retention,
     format_matter_access_apply_live_smoke_retention_index,
+    format_matter_access_apply_live_smoke_retention_readiness,
     retain_matter_access_apply_live_smoke_artifact,
 )
 from nac_m365_graph.release_gate_evidence import (
@@ -439,6 +441,7 @@ def build_parser() -> argparse.ArgumentParser:
             "matter-access-apply-smoke",
             "matter-access-apply-live-smoke-retain",
             "matter-access-apply-live-smoke-retention-index",
+            "matter-access-apply-live-smoke-retention-readiness",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
@@ -970,6 +973,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-runtime-metadata-artifact",
         type=Path,
         help="Optionaler Pfad zu einem redigierten Runtime-Metadata-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-write-readiness",
+        action="store_true",
+        help="Schreibt fuer matter-access-apply-live-smoke-retention-readiness ein redigiertes JSON/Markdown-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-require-runtime-artifacts",
@@ -2195,6 +2203,23 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 print(format_matter_access_apply_live_smoke_retention_index(index).rstrip())
             return 0 if index["status"] == "PASSED" else 2
+
+        if args.teams_sharepoint_command == "matter-access-apply-live-smoke-retention-readiness":
+            readiness = build_matter_access_apply_live_smoke_retention_readiness(
+                retention_root=_resolve_m365_release_gate_path(
+                    repo_root,
+                    args.matter_access_apply_live_smoke_retention_root,
+                    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+                ),
+                correlation_id=args.matter_access_apply_live_smoke_correlation_id,
+                workspace_id=args.matter_access_apply_live_smoke_workspace_id,
+                write_artifact=args.matter_access_apply_live_smoke_write_readiness,
+            )
+            if args.format == "json":
+                print_json(readiness)
+            else:
+                print(format_matter_access_apply_live_smoke_retention_readiness(readiness).rstrip())
+            return 0 if readiness["status"] == "READY" else 2
 
         if args.teams_sharepoint_command == "release-gate-retention-list":
             payload = _list_m365_release_gate_retention(repo_root, args)

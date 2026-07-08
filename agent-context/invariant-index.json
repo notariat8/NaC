@@ -117,7 +117,7 @@
       "id": "invariant.m365_matter_access.apply_live_smoke_retention_required",
       "domain": "m365_matter_access_delegation",
       "severity": "critical",
-      "statement": "A PASSED owner-gated matter-access apply live smoke must retain its redacted artifact in a correlation-based local archive and update the local retention index before the command returns PASSED.",
+      "statement": "A PASSED owner-gated matter-access apply live smoke must retain its redacted artifact in a correlation-based local archive, update the local retention index and support offline READY/NOT_READY retention readiness before business acceptance.",
       "source_paths": [
         "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
         "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",

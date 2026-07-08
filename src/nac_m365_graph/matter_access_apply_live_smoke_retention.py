@@ -16,10 +16,13 @@ RETENTION_JSON_NAME = "matter-access-apply-live-smoke-retention.redacted.json"
 RETENTION_REPORT_NAME = "matter-access-apply-live-smoke-retention.redacted.md"
 RETENTION_INDEX_JSON_NAME = "matter-access-apply-live-smoke-retention-index.redacted.json"
 RETENTION_INDEX_REPORT_NAME = "matter-access-apply-live-smoke-retention-index.redacted.md"
+RETENTION_READINESS_JSON_NAME = "matter-access-apply-live-smoke-retention-readiness.redacted.json"
+RETENTION_READINESS_REPORT_NAME = "matter-access-apply-live-smoke-retention-readiness.redacted.md"
 RETAINED_SMOKE_ARTIFACT_NAME = "matter-access-apply-smoke.redacted.json"
 
 SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention/v0.1"
 INDEX_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-index/v0.1"
+READINESS_SCHEMA_VERSION = "nac.m365-matter-access-apply-live-smoke-retention-readiness/v0.1"
 
 
 def retain_matter_access_apply_live_smoke_artifact(
@@ -217,6 +220,77 @@ def build_matter_access_apply_live_smoke_retention_index(
     }
 
 
+def build_matter_access_apply_live_smoke_retention_readiness(
+    *,
+    retention_root: Path = DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+    correlation_id: str | None = None,
+    workspace_id: str | None = None,
+    now_utc: str | None = None,
+    write_artifact: bool = False,
+) -> dict[str, Any]:
+    generated_at = now_utc or _now()
+    index = build_matter_access_apply_live_smoke_retention_index(
+        retention_root=retention_root,
+        correlation_id=correlation_id,
+        workspace_id=workspace_id,
+        status="PASSED",
+        now_utc=generated_at,
+    )
+    rows = [row for row in index.get("live_smokes", []) if isinstance(row, dict)]
+    checks = _readiness_checks(index, rows)
+    errors = [check["message"] for check in checks if check.get("status") != "PASSED"]
+    latest_row = rows[-1] if rows else {}
+    payload = {
+        "schema_version": READINESS_SCHEMA_VERSION,
+        "status": "READY" if not errors else "NOT_READY",
+        "generated_at": generated_at,
+        "summary": {
+            "retention_root": str(retention_root),
+            "filter_correlation_id": correlation_id,
+            "filter_workspace_id": workspace_id,
+            "ready_run_count": len(rows),
+            "latest_correlation_id": latest_row.get("correlation_id"),
+            "latest_workspace_id": latest_row.get("workspace_id"),
+            "latest_retention_json_path": latest_row.get("retention_json_path"),
+            "latest_retained_artifact_path": latest_row.get("retained_artifact_path"),
+            "latest_retention_report_path": latest_row.get("retention_report_path"),
+            "readiness_json_path": str(retention_root / RETENTION_READINESS_JSON_NAME),
+            "readiness_report_path": str(retention_root / RETENTION_READINESS_REPORT_NAME),
+            "executes_graph_requests": False,
+            "executes_graph_writes": False,
+            "tenant_writes_executed": False,
+            "tenant_deletes_executed": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "checks": checks,
+        "errors": errors,
+        "retention_index": {
+            "status": index.get("status"),
+            "generated_at": index.get("generated_at"),
+            "run_count": _dict(index.get("summary")).get("run_count"),
+            "live_smokes": rows,
+        },
+        "privacy": {
+            "readsLocalRedactedArtifactsOnly": True,
+            "executesGraphRequests": False,
+            "executesGraphWrites": False,
+            "tenantWritesExecuted": False,
+            "tenantDeletesExecuted": False,
+            "storesTokensOrSecrets": False,
+            "storesRawGraphResponse": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+    if write_artifact:
+        _write_json(payload, retention_root / RETENTION_READINESS_JSON_NAME)
+        _write_text(
+            format_matter_access_apply_live_smoke_retention_readiness(payload),
+            retention_root / RETENTION_READINESS_REPORT_NAME,
+        )
+    return payload
+
+
 def format_matter_access_apply_live_smoke_retention(payload: dict[str, Any]) -> str:
     summary = _dict(payload.get("summary"))
     lines = [
@@ -263,6 +337,34 @@ def format_matter_access_apply_live_smoke_retention_index(payload: dict[str, Any
     return "\n".join(lines)
 
 
+def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str, Any]) -> str:
+    summary = _dict(payload.get("summary"))
+    lines = [
+        "# Matter-Access Apply Live-Smoke Retention Readiness",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Retention root: `{summary.get('retention_root')}`",
+        f"- Ready run count: `{summary.get('ready_run_count')}`",
+        f"- Latest correlation ID: `{summary.get('latest_correlation_id')}`",
+        f"- Latest retained artifact: `{summary.get('latest_retained_artifact_path')}`",
+        f"- Executes Graph requests: `{summary.get('executes_graph_requests')}`",
+        f"- Tenant writes executed: `{summary.get('tenant_writes_executed')}`",
+        "",
+        "## Checks",
+        "",
+    ]
+    for check in payload.get("checks", []):
+        if not isinstance(check, dict):
+            continue
+        lines.append(f"- `{check.get('id')}`: `{check.get('status')}` - {check.get('message')}")
+    errors = payload.get("errors") if isinstance(payload.get("errors"), list) else []
+    if errors:
+        lines.extend(["", "## Errors", ""])
+        lines.extend(f"- {error}" for error in errors)
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
     summary = _dict(payload.get("summary"))
     return {
@@ -280,6 +382,60 @@ def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
         "grant_cleanup_read_after_value_count": summary.get("grant_cleanup_read_after_value_count"),
         "audit_cleanup_read_after_value_count": summary.get("audit_cleanup_read_after_value_count"),
     }
+
+
+def _readiness_checks(index: dict[str, Any], rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    checks = [
+        _check(
+            "retention_index_passed",
+            index.get("status") == "PASSED",
+            "Retention index is readable and PASSED.",
+        ),
+        _check(
+            "retained_live_smoke_present",
+            bool(rows),
+            "At least one PASSED retained owner-gated live-smoke artifact is present for the selected filters.",
+        ),
+        _check(
+            "readiness_offline_only",
+            True,
+            "Readiness uses only local redacted retention artifacts and performs no Graph request.",
+        ),
+    ]
+    if rows:
+        checks.extend(
+            [
+                _check(
+                    "all_runs_executed_graph_writes",
+                    all(row.get("source_executed_graph_writes") is True for row in rows),
+                    "Every retained live-smoke proves synthetic Graph writes were executed in the source smoke.",
+                ),
+                _check(
+                    "all_runs_have_readback",
+                    all(
+                        row.get("grant_read_value_count") == 1
+                        and row.get("audit_read_value_count") == 1
+                        for row in rows
+                    ),
+                    "Every retained live-smoke has grant and audit readback evidence.",
+                ),
+                _check(
+                    "all_runs_have_cleanup_readback",
+                    all(
+                        row.get("grant_cleanup_read_after_value_count") == 0
+                        and row.get("audit_cleanup_read_after_value_count") == 0
+                        for row in rows
+                    ),
+                    "Every retained live-smoke proves cleanup by zero-value readback.",
+                ),
+                _check(
+                    "all_retained_artifacts_exist",
+                    all(Path(str(row.get("retained_artifact_path") or "")).is_file() for row in rows),
+                    "Every retained live-smoke row points to an existing redacted retained artifact.",
+                ),
+            ]
+        )
+    return checks
 
 
 def _matches(
