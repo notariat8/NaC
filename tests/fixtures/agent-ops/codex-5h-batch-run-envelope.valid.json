@@ -1,0 +1,137 @@
+{
+  "schema_version": "nac.codex-5h-batch-run-envelope/v0.1",
+  "status": "READY",
+  "generated_at": "2026-07-08T15:30:00Z",
+  "session_id": "nac-5h-batch-20260708",
+  "objective": "Prepare independent offline NaC MVP slices in parallel.",
+  "time_budget_hours": 5,
+  "source": {
+    "explicit_offline_owner_request": true,
+    "github_issue": null,
+    "owner_request_summary": "5h autonomous offline batch; no live tenant action and no merges."
+  },
+  "context_load_plan": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/process-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "agent-context/index.json",
+      "agent-context/subagent-registry.json",
+      "workflows/verification-contracts/"
+    ],
+    "runtime": [
+      "fresh git status",
+      "fresh validator output",
+      "fresh PR checks"
+    ],
+    "shared_context_excludes": [
+      "customer_data_shared",
+      "mandate_data_shared",
+      "raw_tool_output_shared",
+      "runtime_logs_shared",
+      "secrets_shared",
+      "tokens_shared"
+    ]
+  },
+  "lanes": [
+    {
+      "id": "matter-access-decision-replay",
+      "slice": "Matter Access Decision Replay",
+      "worktree_required": true,
+      "worktree_path": "NaC-matter-access-decision-replay",
+      "write_scope": [
+        "src/nac_m365_graph/matter_access_decision_replay.py",
+        "tests/test_m365_matter_access_decision_replay.py"
+      ],
+      "owner_gate_required": false
+    },
+    {
+      "id": "spfx-bpmn-render-contract",
+      "slice": "SPFx BPMN Viewer Offline Render Contract",
+      "worktree_required": true,
+      "worktree_path": "NaC-spfx-bpmn-render-contract",
+      "write_scope": [
+        "spfx/nac-bpmn-viewer/",
+        "tests/test_m365_spfx_bpmn_viewer_skeleton.py"
+      ],
+      "owner_gate_required": false
+    }
+  ],
+  "subagent_review": {
+    "independent_review_questions_count": 4,
+    "subagent_plan": [
+      {
+        "id": "matter-access-scout",
+        "role": "Matter Access scout",
+        "read_only": true
+      },
+      {
+        "id": "bpmn-scout",
+        "role": "BPMN/SPFx scout",
+        "read_only": true
+      },
+      {
+        "id": "xjustiz-scout",
+        "role": "XJustiz package-boundary scout",
+        "read_only": true
+      }
+    ],
+    "no_split_reason": null
+  },
+  "command_risk_matrix": [
+    {
+      "risk": "GREEN",
+      "command": "git status",
+      "decision": "allow"
+    },
+    {
+      "risk": "GREEN",
+      "command": "python3 scripts/quality_gate.py --profile strict",
+      "decision": "allow"
+    },
+    {
+      "risk": "YELLOW",
+      "command": "git push",
+      "decision": "owner_gate"
+    },
+    {
+      "risk": "YELLOW",
+      "command": "gh pr create",
+      "decision": "owner_gate"
+    }
+  ],
+  "stop_lines": [
+    "no_destructive_git_or_filesystem",
+    "no_live_tenant_apply",
+    "no_merge_without_owner_approval",
+    "no_secrets_or_credentials"
+  ],
+  "validator_matrix": [
+    "python3 scripts/validate_codex_5h_batch_run_envelope.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "resume_checkpoints": [
+    "fresh git status per worktree",
+    "pending PR and CI state",
+    "open owner gates batched as copyable text"
+  ],
+  "owner_gates": [
+    "PR merge",
+    "branch cleanup",
+    "live Microsoft 365 tenant action",
+    "secret, certificate or Entra credential change",
+    "destructive git or filesystem cleanup"
+  ],
+  "privacy": {
+    "storesTokensOrSecrets": false,
+    "storesMandateData": false,
+    "sharesRuntimeLogsAsPersistentContext": false,
+    "sharesRawToolOutputAsPersistentContext": false
+  }
+}

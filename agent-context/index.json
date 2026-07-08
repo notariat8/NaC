@@ -120,6 +120,19 @@
           ]
         },
         {
+          "id": "codex_5h_batch_run_envelope",
+          "description": "Long autonomous offline-batch envelope with worktree isolation, subagent plan, command-risk matrix and bundled owner gates.",
+          "paths": [
+            "docs/de/operations/codex-5h-batch-run-envelope.md",
+            "docs/en/operations/codex-5h-batch-run-envelope.md",
+            "src/nac_agent_ops/batch_run_envelope.py",
+            "scripts/validate_codex_5h_batch_run_envelope.py",
+            "tests/test_codex_5h_batch_run_envelope.py",
+            "tests/fixtures/agent-ops/codex-5h-batch-run-envelope.valid.json",
+            "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json"
+          ]
+        },
+        {
           "id": "memory_hooks",
           "description": "Local recall and hook operating model without live hook activation.",
           "paths": [
@@ -179,6 +192,7 @@
     "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
     "workflows/verification-contracts/codex-memory-hooks.verification.json",
     "workflows/verification-contracts/codex-command-rules.verification.json",
+    "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json",
     "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
     "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json",
     "workflows/verification-contracts/m365-matter-access-apply-live-smoke-retention.verification.json"

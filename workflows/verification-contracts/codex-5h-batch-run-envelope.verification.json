@@ -1,0 +1,89 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_5h_batch_run_envelope",
+  "title": "Codex 5h Batch Run Envelope Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "docs/*/operations/codex-5h-batch-run-envelope.md",
+      "src/nac_agent_ops/batch_run_envelope.py",
+      "scripts/validate_codex_5h_batch_run_envelope.py",
+      "tests/test_codex_5h_batch_run_envelope.py",
+      "tests/fixtures/agent-ops/codex-5h-batch-run-envelope.valid.json",
+      "agent-context/index.json",
+      "src/nac_cli/cli.py",
+      "scripts/quality_gate.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml",
+      "policies/process-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "agent-context/index.json",
+      "docs/de/operations/codex-worktree-operating-model.md",
+      "docs/en/operations/codex-worktree-operating-model.md",
+      "docs/de/operations/codex-subagent-operating-gate.md",
+      "docs/en/operations/codex-subagent-operating-gate.md",
+      "docs/de/operations/codex-command-rules-operating-model.md",
+      "docs/en/operations/codex-command-rules-operating-model.md"
+    ],
+    "runtime": [
+      "fresh git status per worktree",
+      "fresh validator output",
+      "fresh PR checks",
+      "batched owner gates"
+    ]
+  },
+  "checks": [
+    "python3 scripts/validate_codex_5h_batch_run_envelope.py",
+    "python3 scripts/nac.py agent-batch validate --format json",
+    "python3 scripts/nac.py contracts verify",
+    "python3 -m unittest tests.test_codex_5h_batch_run_envelope",
+    "python3 scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "A 5h autonomous batch must be explicitly requested by the owner or linked to a GitHub issue.",
+    "Writable parallel lanes must use distinct worktrees.",
+    "Overlapping write scopes fail closed before implementation continues.",
+    "Two or more independent review questions require a subagent plan or an explicit no-split reason.",
+    "RED commands are prohibited in the envelope.",
+    "YELLOW commands require an owner gate or an approved batch envelope.",
+    "The envelope cannot execute live tenant actions, merge pull requests, rotate credentials or change secrets."
+  ],
+  "thresholds": {
+    "max_time_budget_hours": 5,
+    "minimum_parallel_lanes": 2,
+    "minimum_required_stop_lines": 4,
+    "minimum_validator_commands": 3
+  },
+  "required_evidence": [
+    "batch_run_envelope_fixture",
+    "batch_run_envelope_validator",
+    "agent_batch_cli_status",
+    "agent_context_index_route",
+    "verification_contract",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "no_live_tenant_apply": true,
+    "no_secrets_or_credentials": true,
+    "no_destructive_cleanup": true,
+    "no_merge_without_owner_approval": true
+  },
+  "failure_behavior": {
+    "missing_worktree_isolation": "fail_closed",
+    "overlapping_write_scope": "fail_closed",
+    "missing_subagent_plan": "fail_closed",
+    "red_command": "fail_closed",
+    "yellow_command_without_owner_gate": "fail_closed",
+    "quality_gate_failure": "block_completion"
+  }
+}

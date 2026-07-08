@@ -33,6 +33,9 @@ apply commands.
 - [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):
   GREEN/YELLOW/RED command governance, repo-local `.rules` and owner-gated
   command boundaries.
+- [codex-5h-batch-run-envelope.md](codex-5h-batch-run-envelope.md):
+  verifiable envelope for long autonomous offline batches with parallel
+  worktrees, subagent scouts and bundled owner gates.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
   prepared M365 MCP PRs and separately approved live smokes.
 - [m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md):

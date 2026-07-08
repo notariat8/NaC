@@ -70,6 +70,18 @@ GATES: dict[str, dict[str, object]] = {
             "docs/en/operations/codex-command-rules-operating-model.md",
         ],
     },
+    "codex_5h_batch_run_envelope": {
+        "quality_gate_id": "codex_5h_batch_run_envelope",
+        "verification_contract": "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json",
+        "validators": ["scripts/validate_codex_5h_batch_run_envelope.py"],
+        "tests": ["tests/test_codex_5h_batch_run_envelope.py"],
+        "required_paths": [
+            "docs/de/operations/codex-5h-batch-run-envelope.md",
+            "docs/en/operations/codex-5h-batch-run-envelope.md",
+            "src/nac_agent_ops/batch_run_envelope.py",
+            "tests/fixtures/agent-ops/codex-5h-batch-run-envelope.valid.json",
+        ],
+    },
 }
 
 PROHIBITED_MARKERS = {
@@ -93,7 +105,7 @@ def main() -> int:
     print("STATUS: PASSED")
     print(
         "OK: Agent-context index audit cross-links worktree, subagent, "
-        "memory/hooks and command-rules gates for nac contracts verify."
+        "memory/hooks, command-rules and 5h-batch gates for nac contracts verify."
     )
     return 0
 

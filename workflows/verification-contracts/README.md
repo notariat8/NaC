@@ -16,6 +16,9 @@ can prove that a slice is complete.
 - [codex-command-rules.verification.json](codex-command-rules.verification.json):
   command-governance verification for GREEN/YELLOW/RED permission profiles,
   repo-local `.rules`, owner-gated prompts and blocked destructive commands.
+- [codex-5h-batch-run-envelope.verification.json](codex-5h-batch-run-envelope.verification.json):
+  long-batch verification for parallel offline lanes, worktree isolation,
+  subagent plans, command-risk boundaries and bundled owner gates.
 - [codex-worktree-operating-model.verification.json](codex-worktree-operating-model.verification.json):
   read-only worktree-audit verification for branch isolation and owner-gated
   cleanup boundaries.

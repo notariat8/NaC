@@ -13,6 +13,7 @@
       "docs/*/operations/codex-subagent-operating-gate.md",
       "docs/*/operations/codex-memory-hooks-operating-model.md",
       "docs/*/operations/codex-command-rules-operating-model.md",
+      "docs/*/operations/codex-5h-batch-run-envelope.md",
       "workflows/verification-contracts/codex-*.verification.json",
       "scripts/validate_codex_agent_context_index_audit.py",
       "tests/test_codex_agent_context_index_audit.py"
@@ -44,15 +45,15 @@
     "python scripts/quality_gate.py --profile strict"
   ],
   "invariants": [
-    "Worktree, subagent, memory/hooks and command-rules gates each have an agent-context category.",
+    "Worktree, subagent, memory/hooks, command-rules and 5h-batch gates each have an agent-context category.",
     "Each gate category links its operating docs, validator, tests and verification contract.",
     "agent-context/index.json verification_contracts lists every gate verification contract.",
     "nac contracts verify includes the compact index-audit proof.",
     "No runtime output, secrets or mandate data become shared context."
   ],
   "thresholds": {
-    "required_gate_count": 4,
-    "required_verification_contract_count": 4,
+    "required_gate_count": 5,
+    "required_verification_contract_count": 5,
     "minimum_required_paths_per_gate": 4
   },
   "required_evidence": [
@@ -62,6 +63,7 @@
     "subagent_gate_crosslink",
     "memory_hooks_gate_crosslink",
     "command_rules_gate_crosslink",
+    "codex_5h_batch_run_envelope_crosslink",
     "nac_contracts_verify_summary",
     "quality_gate_result"
   ],

@@ -33,6 +33,9 @@ produktive Apply-Kommandos blockiert.
 - [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):
   GREEN/YELLOW/RED-Command-Governance, repo-lokale `.rules` und owner-gated
   Command-Grenzen.
+- [codex-5h-batch-run-envelope.md](codex-5h-batch-run-envelope.md):
+  prüfbarer Envelope für lange autonome Offline-Batches mit parallelen
+  Worktrees, Subagent-Scouts und gebündelten Owner-Gates.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): Batch-Freigabe für
   vorbereitete M365-MCP-PRs und getrennt freizugebende Live-Smokes.
 - [m365-matter-access-apply-live-smoke-release-lane.md](m365-matter-access-apply-live-smoke-release-lane.md):

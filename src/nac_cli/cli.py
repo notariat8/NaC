@@ -17,6 +17,13 @@ from typing import Any
 
 from business_os.engine import BusinessProcessEngine
 from nac_ai_sbom.export_mapping import ai_sbom_export_mapping_status
+from nac_agent_ops.batch_run_envelope import (
+    DEFAULT_TEMPLATE_SESSION_ID,
+    build_batch_run_envelope_template,
+    batch_run_envelope_status,
+    format_batch_run_envelope_status,
+    load_batch_run_envelope,
+)
 from nac_gnotkg.costs import quote_fee
 from nac_git.worktree_hygiene import build_worktree_audit, format_worktree_audit_text
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
@@ -314,6 +321,32 @@ def build_parser() -> argparse.ArgumentParser:
     contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge, Secure-Link- und Connector-Grenzen.")
     contracts_sub.add_parser("verify", help="Validiert agentische Verification Contracts und Kontext-Harness.")
     contracts.set_defaults(func=command_contracts)
+
+    agent_batch = subparsers.add_parser("agent-batch", help="Prueft lange agentische Offline-Batches.")
+    agent_batch_sub = agent_batch.add_subparsers(dest="agent_batch_command", required=True)
+    agent_batch_validate = agent_batch_sub.add_parser(
+        "validate",
+        help="Validiert einen 5h-Batch-Envelope ohne Live-Aktion.",
+    )
+    agent_batch_validate.add_argument(
+        "--envelope",
+        type=Path,
+        default=Path("tests/fixtures/agent-ops/codex-5h-batch-run-envelope.valid.json"),
+        help="Pfad zum Batch-Envelope-JSON.",
+    )
+    agent_batch_validate.add_argument("--format", choices=["text", "json"], default="text")
+    agent_batch_template = agent_batch_sub.add_parser(
+        "template",
+        help="Rendert eine 5h-Batch-Envelope-Vorlage ohne Datei zu schreiben.",
+    )
+    agent_batch_template.add_argument("--session-id", default=DEFAULT_TEMPLATE_SESSION_ID)
+    agent_batch_template.add_argument(
+        "--objective",
+        default="Prepare independent NaC offline MVP slices in parallel.",
+    )
+    agent_batch_template.add_argument("--time-budget-hours", type=int, default=5)
+    agent_batch_template.add_argument("--format", choices=["text", "json"], default="json")
+    agent_batch.set_defaults(func=command_agent_batch)
 
     batch_approval = subparsers.add_parser("batch-approval", help="Rendert kopierbare Batch-Freigaben.")
     batch_approval_sub = batch_approval.add_subparsers(dest="batch_approval_command", required=True)
@@ -1236,6 +1269,7 @@ def command_status(args: argparse.Namespace) -> int:
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
             "contracts_verify": "nac contracts verify",
+            "agent_batch_validate": "nac agent-batch validate",
             "m365_teams_sharepoint_plan": "nac m365 teams-sharepoint plan",
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
@@ -1589,6 +1623,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Codex Memory Hooks Operating Model", "validate_codex_memory_hooks_operating_model.py"),
             ("Codex Command Rules Verification Contract", "validate_codex_command_rules_operating_model.py"),
             ("Codex Command Rules Adoption Smoke", "validate_codex_command_rules_adoption.py"),
+            ("Codex 5h Batch Run Envelope", "validate_codex_5h_batch_run_envelope.py"),
             ("Codex Agent Context Index Audit", "validate_codex_agent_context_index_audit.py"),
             ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
         ]
@@ -1618,6 +1653,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_codex_memory_hooks_operating_model.py",
             "scripts/validate_codex_command_rules_operating_model.py",
             "scripts/validate_codex_command_rules_adoption.py",
+            "scripts/validate_codex_5h_batch_run_envelope.py",
             "scripts/validate_codex_agent_context_index_audit.py",
             "scripts/validate_verification_contracts_domain_pilot.py",
         ]
@@ -1629,6 +1665,33 @@ def command_contracts(args: argparse.Namespace) -> int:
         return overall_rc
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
+
+
+def command_agent_batch(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    if args.agent_batch_command == "validate":
+        envelope = args.envelope if args.envelope.is_absolute() else repo_root / args.envelope
+        payload = load_batch_run_envelope(envelope)
+        status = batch_run_envelope_status(payload)
+        if args.format == "json":
+            print(json.dumps(status, indent=2, ensure_ascii=False))
+        else:
+            print(format_batch_run_envelope_status(status))
+        return 0 if status.get("status") == "PASSED" else 1
+
+    if args.agent_batch_command == "template":
+        payload = build_batch_run_envelope_template(
+            session_id=args.session_id,
+            objective=args.objective,
+            time_budget_hours=args.time_budget_hours,
+        )
+        if args.format == "json":
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(format_batch_run_envelope_status(batch_run_envelope_status(payload)))
+        return 0 if not batch_run_envelope_status(payload).get("errors") else 1
+
+    raise AssertionError(f"Unknown agent-batch command: {args.agent_batch_command}")
 
 
 def command_batch_approval(args: argparse.Namespace) -> int:

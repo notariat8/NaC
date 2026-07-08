@@ -34,6 +34,8 @@ NaC uses several agent-readable artifact types:
 - Memory/hooks: local recall and hook boundaries without live hook activation.
 - Command rules: GREEN/YELLOW/RED shell-command profiles and repo-local
   `.rules` guardrails for repeated command decisions.
+- 5h batch run envelope: long autonomous offline batch with worktree isolation,
+  subagent plan, runtime checkpoints and bundled owner gates.
 
 These artifacts do not replace truth for mandate data or notarial decisions.
 They explain architecture, boundaries and evidence.
@@ -47,9 +49,11 @@ The first domain pilot is
 [m365-matter-access-delegation.verification.json](../../../workflows/verification-contracts/m365-matter-access-delegation.verification.json).
 Command permission profiles are verified by
 [codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json).
-The compact cross-link proof for worktree, subagent, memory/hooks and command
-rules gates is
+The compact cross-link proof for worktree, subagent, memory/hooks, command
+rules and 5h-batch gates is
 [codex-agent-context-index-audit.verification.json](../../../workflows/verification-contracts/codex-agent-context-index-audit.verification.json).
+Long autonomous batches are verified by
+[codex-5h-batch-run-envelope.verification.json](../../../workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json).
 
 Required fields:
 

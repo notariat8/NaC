@@ -189,6 +189,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_command_rules_adoption.py"],
                 ),
                 (
+                    "codex_5h_batch_run_envelope",
+                    "Codex 5h Batch Run Envelope",
+                    [sys.executable, "scripts/validate_codex_5h_batch_run_envelope.py"],
+                ),
+                (
                     "verification_contracts_domain_pilot",
                     "Verification Contracts Domain Pilot",
                     [sys.executable, "scripts/validate_verification_contracts_domain_pilot.py"],

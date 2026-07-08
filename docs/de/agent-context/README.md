@@ -34,6 +34,8 @@ NaC nutzt mehrere agentenlesbare Artefaktarten:
 - Memory/hooks: lokale Recall- und Hook-Grenzen ohne Live-Hook-Aktivierung.
 - Command rules: GREEN/YELLOW/RED-Shell-Command-Profile und repo-lokale
   `.rules`-Guardrails für wiederkehrende Command-Entscheidungen.
+- 5h batch run envelope: langer autonomer Offline-Batch mit Worktree-
+  Isolation, Subagent-Plan, Runtime-Checkpoints und gebündelten Owner-Gates.
 
 Diese Artefakte sind keine Ersatz-Wahrheit für Mandatsdaten oder notarielle
 Entscheidungen. Sie erklären Architektur, Grenzen und Nachweise.
@@ -48,9 +50,12 @@ Der erste fachliche Domain-Pilot ist
 Command-Permission-Profile werden durch
 [codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json)
 verifiziert.
-Der kompakte Querverweisnachweis für Worktree-, Subagent-, Memory/Hooks- und
-Command-Rules-Gates ist
+Der kompakte Querverweisnachweis für Worktree-, Subagent-, Memory/Hooks-,
+Command-Rules- und 5h-Batch-Gates ist
 [codex-agent-context-index-audit.verification.json](../../../workflows/verification-contracts/codex-agent-context-index-audit.verification.json).
+Lange autonome Batches werden durch
+[codex-5h-batch-run-envelope.verification.json](../../../workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json)
+verifiziert.
 
 Pflichtfelder:
 

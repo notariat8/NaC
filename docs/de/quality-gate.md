@@ -33,6 +33,7 @@ CI:
   Documentation Links + BPMN-Modellprüfung + Cloud Runbook Parity + Gantt +
   AI-SBOM + AI-SBOM-Export-Mapping + Knowledge Graph +
   Codex-Worktree-Betriebsmodell + Codex-Agent-Context-Betriebsmodell +
+  Codex-5h-Batch-Run-Envelope +
   Teams-/SharePoint-Graph-Datenebene + Mandatsdaten-Klassifikation und Redaktionsgrenze + privater Betriebsrahmen +
   Private-Payload-Zielarchitektur + Private-Payload-Zugriffsmatrix +
   Legal-Source-Inventar-Lizenz-TDM + Legal-Nemotron-Readiness +
@@ -67,29 +68,30 @@ CI:
 22. `codex_memory_hooks_operating_model` (nur `strict`)
 23. `codex_command_rules_operating_model` (nur `strict`)
 24. `codex_command_rules_adoption_smoke` (nur `strict`)
-25. `verification_contracts_domain_pilot` (nur `strict`)
-26. `teams_sharepoint_graph_data_plane` (nur `strict`)
-27. `m365_release_readiness_gate` (nur `strict`)
-28. `m365_sharepoint_bpmn_viewer_adapter` (nur `strict`)
-29. `m365_matter_access_delegation` (nur `strict`)
-30. `m365_matter_access_decision_replay` (nur `strict`)
-31. `m365_matter_access_apply_live_smoke_release_lane` (nur `strict`)
-32. `m365_matter_access_apply_live_smoke_retention` (nur `strict`)
-33. `notarial_application_interface_inventory` (nur `strict`)
-34. `matter_data_classification_redaction` (nur `strict`)
-35. `private_operating_frame_gate` (nur `strict`)
-36. `private_payload_target_design` (nur `strict`)
-37. `private_payload_access_policy` (nur `strict`)
-38. `gnotkg_costs` (nur `strict`)
-39. `secure_document_links` (nur `strict`)
-40. `legal_research_connectors` (nur `strict`)
-41. `legal_source_inventory_license_tdm` (nur `strict`)
-42. `legal_model_customization_readiness` (nur `strict`)
-43. `legal_model_card_ai_sbom_delta` (nur `strict`)
-44. `legal_model_card_proposal` (nur `strict`)
-45. `legal_ai_sbom_delta_proposal` (nur `strict`)
-46. `legal_model_evaluation_benchmark` (nur `strict`)
-47. `legal_graph_contracts` (nur `strict`)
+25. `codex_5h_batch_run_envelope` (nur `strict`)
+26. `verification_contracts_domain_pilot` (nur `strict`)
+27. `teams_sharepoint_graph_data_plane` (nur `strict`)
+28. `m365_release_readiness_gate` (nur `strict`)
+29. `m365_sharepoint_bpmn_viewer_adapter` (nur `strict`)
+30. `m365_matter_access_delegation` (nur `strict`)
+31. `m365_matter_access_decision_replay` (nur `strict`)
+32. `m365_matter_access_apply_live_smoke_release_lane` (nur `strict`)
+33. `m365_matter_access_apply_live_smoke_retention` (nur `strict`)
+34. `notarial_application_interface_inventory` (nur `strict`)
+35. `matter_data_classification_redaction` (nur `strict`)
+36. `private_operating_frame_gate` (nur `strict`)
+37. `private_payload_target_design` (nur `strict`)
+38. `private_payload_access_policy` (nur `strict`)
+39. `gnotkg_costs` (nur `strict`)
+40. `secure_document_links` (nur `strict`)
+41. `legal_research_connectors` (nur `strict`)
+42. `legal_source_inventory_license_tdm` (nur `strict`)
+43. `legal_model_customization_readiness` (nur `strict`)
+44. `legal_model_card_ai_sbom_delta` (nur `strict`)
+45. `legal_model_card_proposal` (nur `strict`)
+46. `legal_ai_sbom_delta_proposal` (nur `strict`)
+47. `legal_model_evaluation_benchmark` (nur `strict`)
+48. `legal_graph_contracts` (nur `strict`)
 
 ## Artefakte
 

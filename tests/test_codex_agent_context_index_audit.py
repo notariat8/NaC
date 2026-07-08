@@ -43,6 +43,13 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                 "scripts/validate_codex_command_rules_adoption.py",
                 "workflows/verification-contracts/codex-command-rules.verification.json",
             },
+            "codex_5h_batch_run_envelope": {
+                "docs/de/operations/codex-5h-batch-run-envelope.md",
+                "docs/en/operations/codex-5h-batch-run-envelope.md",
+                "scripts/validate_codex_5h_batch_run_envelope.py",
+                "tests/test_codex_5h_batch_run_envelope.py",
+                "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json",
+            },
         }
         for category_id, required_paths in expected.items():
             self.assertIn(category_id, categories)
@@ -60,6 +67,7 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
                 "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
                 "workflows/verification-contracts/codex-memory-hooks.verification.json",
                 "workflows/verification-contracts/codex-command-rules.verification.json",
+                "workflows/verification-contracts/codex-5h-batch-run-envelope.verification.json",
             },
         )
 
@@ -69,6 +77,7 @@ class CodexAgentContextIndexAuditTests(unittest.TestCase):
         self.assertIn("Codex Agent Context Index Audit", text)
         self.assertIn("scripts/validate_codex_agent_context_index_audit.py", text)
         self.assertIn("scripts/validate_codex_worktree_operating_model.py", text)
+        self.assertIn("scripts/validate_codex_5h_batch_run_envelope.py", text)
 
 
 def _read_json(rel_path: str) -> dict[str, object]:
