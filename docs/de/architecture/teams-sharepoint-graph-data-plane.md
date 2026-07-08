@@ -299,6 +299,7 @@ Aktion; `matter-access-smoke` erzeugt dazu den redigierten Offline-Nachweis:
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+nac m365 teams-sharepoint matter-access-apply-smoke --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 Der Smoke schreibt standardmäßig
@@ -323,6 +324,13 @@ Owner-Apply-Auftrag nach
 Der Plan bündelt `grant_request` und `audit_append`, speichert nur Hashes,
 Feldnamen, Listenrollen und Privacy-Flags und führt keine Graph Requests oder
 SharePoint-Item-Writes aus.
+
+`matter-access-apply-smoke` ist dagegen ein owner-gated Live-Smoke. Er schreibt
+eine synthetische zeitbegrenzte Vertretungsfreigabe per `grant_request`, hängt
+ein synthetisches Audit-Event per `audit_append` an, liest beide Items zurück
+und löscht sie im selben Lauf wieder. Der Smoke ist auf `NAC-SMOKE-GRANT-` und
+`NAC-SMOKE-MATTER-` begrenzt und speichert im Artefakt nur Hashes,
+Request-Shapes, Counts, Cleanup-Status und Privacy-Flags.
 
 Der erste owner-gated Live-Read-Modus wird explizit gestartet:
 

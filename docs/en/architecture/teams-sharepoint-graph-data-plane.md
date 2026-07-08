@@ -288,6 +288,7 @@ The matter visibility and deputy-access boundary is defined in the separate
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+nac m365 teams-sharepoint matter-access-apply-smoke --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 By default, the smoke writes
@@ -311,6 +312,13 @@ request to
 The plan bundles `grant_request` and `audit_append`, stores only hashes, field
 names, list roles and privacy flags, and executes no Graph requests or
 SharePoint item writes.
+
+`matter-access-apply-smoke` is the owner-gated live smoke. It writes a
+synthetic timeboxed deputy grant through `grant_request`, appends a synthetic
+audit event through `audit_append`, reads both items back and deletes them in
+the same run. The smoke is limited to `NAC-SMOKE-GRANT-` and
+`NAC-SMOKE-MATTER-` and stores only hashes, request shapes, counts, cleanup
+status and privacy flags in the artifact.
 
 The first owner-gated live-read mode starts explicitly:
 

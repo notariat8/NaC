@@ -404,6 +404,47 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(len(evidence["artifact_index"]["artifacts"][7]["artifact_sha256"]), 64)
         self.assertNotIn("grant-raw", json.dumps(evidence))
 
+    def test_attaches_optional_matter_access_apply_smoke_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            suite_artifact = tmp_path / "suite.redacted.json"
+            leftover_artifact = tmp_path / "leftover.redacted.json"
+            apply_smoke_artifact = tmp_path / "matter-access-apply-smoke.redacted.json"
+            missing_artifact = tmp_path / "missing.redacted.json"
+            suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
+            leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            apply_smoke_artifact.write_text(json.dumps(_matter_access_apply_smoke_payload()), encoding="utf-8")
+
+            evidence = build_release_gate_evidence(
+                repo_root=REPO_ROOT,
+                mcp_inventory_artifact=missing_artifact,
+                matter_access_artifact=missing_artifact,
+                matter_access_apply_readiness_artifact=missing_artifact,
+                matter_access_apply_request_artifact=missing_artifact,
+                matter_access_apply_smoke_artifact=apply_smoke_artifact,
+                mcp_suite_artifact=suite_artifact,
+                mcp_leftover_artifact=leftover_artifact,
+                runtime_env_bootstrap_artifact=missing_artifact,
+                runtime_certificate_expiry_artifact=missing_artifact,
+                runtime_smoke_artifact=missing_artifact,
+                runtime_metadata_artifact=missing_artifact,
+                expected_workspace_id="notary_team_01",
+                expected_correlation_id="corr-1",
+            )
+
+        self.assertEqual(evidence["status"], "PASSED")
+        self.assertEqual(evidence["summary"]["matter_access_apply_smoke_status"], "PASSED")
+        smoke_step = evidence["steps"][10]
+        self.assertEqual(smoke_step["id"], "matter_access_apply_smoke")
+        self.assertEqual(smoke_step["summary"]["write_tools"], ["grant_request", "audit_append"])
+        self.assertTrue(smoke_step["summary"]["executed_graph_requests"])
+        self.assertTrue(smoke_step["summary"]["executed_graph_writes"])
+        self.assertTrue(smoke_step["summary"]["cleanup_requested"])
+        self.assertEqual(smoke_step["summary"]["grant_cleanup_read_after_value_count"], 0)
+        self.assertTrue(evidence["artifact_index"]["artifacts"][10]["attached"])
+        self.assertEqual(len(evidence["artifact_index"]["artifacts"][10]["artifact_sha256"]), 64)
+        self.assertNotIn("NAC-SMOKE-GRANT-20260708T000000Z", json.dumps(evidence))
+
     def test_fails_when_attached_runtime_artifact_is_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -850,6 +891,83 @@ def _matter_access_apply_request_payload() -> dict:
             "sharePointItemPermissionMutationAllowed": False,
         },
         "errors": [],
+    }
+
+
+def _matter_access_apply_smoke_payload() -> dict:
+    return {
+        "schema_version": "nac.m365-matter-access-apply-smoke/v0.1",
+        "status": "PASSED",
+        "generated_at": "2026-07-08T11:05:00Z",
+        "summary": {
+            "workspace_id": "notary_team_01",
+            "correlation_id": "corr-1",
+            "grant_id_sha256": "a" * 64,
+            "case_id_sha256": "b" * 64,
+            "event_id_sha256": "c" * 64,
+            "from_user_sha256": "d" * 64,
+            "to_user_sha256": "e" * 64,
+            "approved_by_sha256": "f" * 64,
+            "reason_sha256": "1" * 64,
+            "valid_from": "2026-07-08T11:05:00Z",
+            "valid_until": "2026-07-09T11:05:00Z",
+            "granted_role": "SachbearbeitungVertretung",
+            "grant_status": "Aktiv",
+            "write_tools": ["grant_request", "audit_append"],
+            "write_lists": ["Vertretungsfreigaben", "AuditJournalLite"],
+            "planned_write_count": 2,
+            "executed_graph_requests": True,
+            "executed_graph_writes": True,
+            "sharepoint_item_writes_executed": True,
+            "tenant_mutation_allowed": False,
+            "team_membership_mutation_allowed": False,
+            "sharepoint_item_permission_mutation_allowed": False,
+            "grant_read_value_count": 1,
+            "audit_read_value_count": 1,
+            "cleanup_requested": True,
+            "grant_cleanup_read_after_value_count": 0,
+            "audit_cleanup_read_after_value_count": 0,
+            "graph_rest_only": True,
+            "raw_graph_path_stored": False,
+            "raw_graph_response_stored": False,
+            "raw_write_payload_stored": False,
+            "stores_tokens_or_secrets": False,
+            "reads_sharepoint_file_content": False,
+        },
+        "writeRequestShapes": [],
+        "writeResponseShape": {"storesRawGraphResponse": False},
+        "readBackShape": {"storesRawGraphPath": False, "storesRawGraphResponse": False},
+        "cleanupShape": {
+            "requested": True,
+            "target": "synthetic_matter_access_apply_smoke_items",
+            "grantIdPrefixRequired": "NAC-SMOKE-GRANT-",
+            "caseIdPrefixRequired": "NAC-SMOKE-MATTER-",
+            "grantDeleteStatus": "PASSED",
+            "auditDeleteStatus": "PASSED",
+            "grantReadAfterValueCount": 0,
+            "auditReadAfterValueCount": 0,
+            "storesRawGraphPath": False,
+            "storesRawGraphResponse": False,
+        },
+        "checks": [{"id": "cleanup", "status": "PASSED"}],
+        "privacy": {
+            "metadataOnly": False,
+            "storesSourceFullText": False,
+            "storesRawXsd": False,
+            "storesCredentials": False,
+            "storesTokensOrSecrets": False,
+            "storesMatterData": False,
+            "storesMatterPayloads": False,
+            "storesRawWritePayload": False,
+            "storesRawGraphPath": False,
+            "storesRawGraphResponse": False,
+            "readsSharePointFileContent": False,
+            "executesGraphRequests": True,
+            "executesGraphWrites": True,
+            "tenantWritesExecuted": False,
+            "teamMembershipMutationAllowed": False,
+            "sharePointItemPermissionMutationAllowed": False,
+        },
     }
 
 

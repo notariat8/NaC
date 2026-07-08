@@ -20,6 +20,7 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
 from nac_m365_graph.matter_access_delegation_smoke import run_matter_access_delegation_smoke  # noqa: E402
 from nac_m365_graph.matter_access_apply_readiness import build_matter_access_apply_readiness  # noqa: E402
 from nac_m365_graph.matter_access_apply_request import build_matter_access_apply_request_plan  # noqa: E402
+from nac_m365_graph.matter_access_apply_smoke import run_matter_access_apply_smoke  # noqa: E402
 from nac_m365_graph.mcp_runtime import DEFAULT_MCP_CONTRACT, load_mcp_contract, validate_mcp_contract  # noqa: E402
 from nac_m365_graph.privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state  # noqa: E402
 from nac_m365_graph.schema import DEFAULT_SCHEMA, load_schema  # noqa: E402
@@ -46,6 +47,7 @@ REQUIRED_DOC_MARKERS = {
         "M365-Mandatszugriffsdelegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
@@ -56,6 +58,7 @@ REQUIRED_DOC_MARKERS = {
         "M365 Matter Access Delegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
@@ -65,6 +68,7 @@ REQUIRED_DOC_MARKERS = {
     DATA_PLANE_DE: [
         "m365-matter-access-delegation.md",
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
@@ -72,18 +76,21 @@ REQUIRED_DOC_MARKERS = {
     DATA_PLANE_EN: [
         "m365-matter-access-delegation.md",
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
     ],
     CLI_DE: [
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
     ],
     CLI_EN: [
         "matter-access-plan",
+        "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
@@ -250,6 +257,80 @@ def validate() -> list[str]:
                 ):
                     if raw_value in apply_request_text:
                         errors.append(f"matter-access-apply-request-plan stores raw value {raw_value!r}")
+                apply_smoke = run_matter_access_apply_smoke(
+                    _FakeMatterAccessApplySmokeClient(
+                        post_responses=[{"id": "validator-grant-item"}, {"id": "validator-audit-item"}],
+                        get_responses=[
+                            {
+                                "value": [
+                                    {
+                                        "id": "validator-grant-item",
+                                        "fields": {"GrantId": "NAC-SMOKE-GRANT-20260708T000000Z"},
+                                    }
+                                ]
+                            },
+                            {
+                                "value": [
+                                    {
+                                        "id": "validator-audit-item",
+                                        "fields": {"EventId": "NAC-SMOKE-AUDIT-20260708T000000Z"},
+                                    }
+                                ]
+                            },
+                            {"value": []},
+                            {"value": []},
+                        ],
+                        delete_response={},
+                    ),
+                    mcp_contract,
+                    load_provisioned_state(DEFAULT_PROVISIONED_STATE),
+                    workspace_id=schema["workspaces"][0]["id"],
+                    correlation_id="validator-apply-smoke",
+                    grant_id="NAC-SMOKE-GRANT-20260708T000000Z",
+                    case_id="NAC-SMOKE-MATTER-20260708T000000Z",
+                    from_user="validator-from-user",
+                    to_user="validator-to-user",
+                    reason="Validator-Vertretung",
+                    approved_by="validator-approver",
+                    timestamp="2026-07-08T00:00:00Z",
+                )
+                if apply_smoke["status"] != "PASSED":
+                    errors.append("matter-access-apply-smoke must pass with fake Graph client")
+                apply_smoke_summary = apply_smoke["summary"]
+                if apply_smoke_summary.get("write_tools") != ["grant_request", "audit_append"]:
+                    errors.append("matter-access-apply-smoke must execute grant_request and audit_append")
+                if apply_smoke_summary.get("cleanup_requested") is not True:
+                    errors.append("matter-access-apply-smoke cleanup must be requested")
+                for flag in ("executed_graph_requests", "executed_graph_writes", "sharepoint_item_writes_executed"):
+                    if apply_smoke_summary.get(flag) is not True:
+                        errors.append(f"matter-access-apply-smoke summary.{flag} must be true")
+                for flag in (
+                    "tenant_mutation_allowed",
+                    "team_membership_mutation_allowed",
+                    "sharepoint_item_permission_mutation_allowed",
+                    "raw_graph_path_stored",
+                    "raw_graph_response_stored",
+                    "raw_write_payload_stored",
+                    "stores_tokens_or_secrets",
+                    "reads_sharepoint_file_content",
+                ):
+                    if apply_smoke_summary.get(flag) is not False:
+                        errors.append(f"matter-access-apply-smoke summary.{flag} must be false")
+                apply_smoke_text = json.dumps(apply_smoke, ensure_ascii=False)
+                for raw_value in (
+                    "NAC-SMOKE-GRANT-20260708T000000Z",
+                    "NAC-SMOKE-MATTER-20260708T000000Z",
+                    "NAC-SMOKE-AUDIT-20260708T000000Z",
+                    "validator-from-user",
+                    "validator-to-user",
+                    "validator-approver",
+                    "Validator-Vertretung",
+                    "validator-grant-item",
+                    "validator-audit-item",
+                    "funktion8.sharepoint.com",
+                ):
+                    if raw_value in apply_smoke_text:
+                        errors.append(f"matter-access-apply-smoke stores raw value {raw_value!r}")
 
     if mcp_contract:
         errors.extend(validate_mcp_contract(mcp_contract))
@@ -325,6 +406,8 @@ def _validate_docs_and_wiring() -> list[str]:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-plan'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-smoke" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-smoke'")
+        if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-smoke" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-smoke'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-readiness" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-readiness'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-request-plan" not in text:
@@ -358,6 +441,28 @@ def _strings(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, str)]
+
+
+class _FakeMatterAccessApplySmokeClient:
+    def __init__(
+        self,
+        *,
+        post_responses: list[dict[str, Any]],
+        get_responses: list[dict[str, Any]],
+        delete_response: dict[str, Any],
+    ) -> None:
+        self.post_responses = list(post_responses)
+        self.get_responses = list(get_responses)
+        self.delete_response = delete_response
+
+    def post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.post_responses.pop(0)
+
+    def get(self, path: str) -> dict[str, Any]:
+        return self.get_responses.pop(0)
+
+    def delete(self, path: str) -> dict[str, Any]:
+        return self.delete_response
 
 
 if __name__ == "__main__":

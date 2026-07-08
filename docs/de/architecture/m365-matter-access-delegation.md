@@ -82,6 +82,17 @@ Graph-Rohantworten, keine Tokens, keine Nutzerdaten im Klartext und keine
 Mandats-Payloads. Der Befehl führt keine Graph Requests aus und schreibt keine
 SharePoint-Items.
 
+`matter-access-apply-smoke` ist die vorbereitete owner-gated Live-Kante für
+eine echte synthetische Vertretungsfreigabe. Der Befehl schreibt nur
+synthetische Items mit `NAC-SMOKE-GRANT-` und `NAC-SMOKE-MATTER-` in
+`Vertretungsfreigaben` und `AuditJournalLite`, liest genau diese Items zurück
+und löscht sie im selben Lauf wieder. Das Artefakt
+`out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json` speichert
+nur Hashes, Feldnamen, Counts, Cleanup-Status und Privacy-Flags; konkrete
+Graph-Pfade, Graph-Rohantworten, Nutzerdaten, Gründe, Tokens und Secrets
+werden nicht gespeichert. Ohne explizites `--owner-approved` ist der Befehl
+blockiert.
+
 ## MCP-Grenze
 
 Die führende Runtime-Kante bleibt `teams-sharepoint-data-mcp`.

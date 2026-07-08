@@ -43,6 +43,11 @@ from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
     build_matter_access_apply_request_plan_from_paths,
     write_matter_access_apply_request_plan_artifact,
 )
+from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
+    run_matter_access_apply_smoke_from_paths,
+    write_matter_access_apply_smoke_artifact,
+)
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_APPLIED_STATE,
@@ -128,6 +133,7 @@ from nac_m365_graph.spfx_bpmn_viewer_runtime_readiness import (  # noqa: E402
 
 
 MCP_SMOKE_CORRELATION_DEFAULTS = {
+    "matter-access-apply-smoke": "matter-access-apply-smoke",
     "matter-access-apply-request-plan": "matter-access-apply-request-plan",
     "matter-access-apply-readiness": "matter-access-apply-readiness",
     "matter-access-smoke": "matter-access-delegation-smoke",
@@ -158,6 +164,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-smoke",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
@@ -186,6 +193,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
             "matter-access-plan renders the offline matter visibility and deputy delegation request plan; "
+            "matter-access-apply-smoke executes an owner-gated synthetic grant_request plus audit_append write/read/cleanup; "
             "matter-access-apply-request-plan renders a concrete redacted future grant request bundle without live apply; "
             "matter-access-apply-readiness validates the future owner-gated write boundary without live apply; "
             "matter-access-smoke writes redacted offline evidence for that request-plan boundary; "
@@ -358,6 +366,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_MATTER_ACCESS_APPLY_REQUEST_OUTPUT,
         help="Path for the redacted matter access apply request plan artifact under out/.",
+    )
+    parser.add_argument(
+        "--matter-access-apply-smoke-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
+        help="Path for the redacted owner-gated matter access apply smoke artifact under out/.",
     )
     parser.add_argument("--matter-access-grant-id", help="Synthetic grant id seed; redacted artifacts store only a hash.")
     parser.add_argument(
@@ -611,6 +625,88 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.matter_access_apply_request_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "matter-access-apply-smoke":
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["matter-access-apply-smoke requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            smoke_valid_from = args.matter_access_valid_from
+            smoke_valid_until = args.matter_access_valid_until
+            if (
+                smoke_valid_from == "2026-07-08T09:00:00Z"
+                and smoke_valid_until == "2026-07-15T09:00:00Z"
+            ):
+                smoke_valid_from = None
+                smoke_valid_until = None
+            result = run_matter_access_apply_smoke_from_paths(
+                client,
+                contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=mcp_smoke_correlation_id,
+                grant_id=args.matter_access_grant_id,
+                case_id=args.mcp_smoke_case_id,
+                from_user=args.matter_access_from_user,
+                to_user=args.matter_access_to_user,
+                granted_role=args.matter_access_granted_role,
+                reason=args.matter_access_reason,
+                valid_from=smoke_valid_from,
+                valid_until=smoke_valid_until,
+                approved_by=args.matter_access_approved_by,
+                status=args.matter_access_status,
+                cleanup_after=True,
+            )
+            write_matter_access_apply_smoke_artifact(result, args.matter_access_apply_smoke_output)
+        except GraphConfigError as exc:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=2,
+            )
+        except GraphHttpError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": ["Microsoft Graph request failed during matter access apply smoke"],
+                    "summary": {
+                        "graph_http_status": exc.status,
+                        "graph_error_code": _graph_error_code(exc.body),
+                    },
+                },
+                args.json,
+                return_code=1,
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.matter_access_apply_smoke_output)
         return _emit(
             {
                 "status": result["status"],

@@ -80,6 +80,16 @@ names, list roles and privacy flags: no concrete Graph paths, no raw Graph
 responses, no tokens, no cleartext user data and no matter payloads. The
 command executes no Graph requests and writes no SharePoint items.
 
+`matter-access-apply-smoke` is the prepared owner-gated live edge for a real
+synthetic deputy grant. The command writes only synthetic items with
+`NAC-SMOKE-GRANT-` and `NAC-SMOKE-MATTER-` to `Vertretungsfreigaben` and
+`AuditJournalLite`, reads exactly those items back and deletes them in the same
+run. The artifact
+`out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json` stores only
+hashes, field names, counts, cleanup status and privacy flags; concrete Graph
+paths, raw Graph responses, user data, reasons, tokens and secrets are not
+stored. Without explicit `--owner-approved`, the command is blocked.
+
 ## MCP Boundary
 
 The leading runtime edge remains `teams-sharepoint-data-mcp`.

@@ -31,6 +31,10 @@ from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
     build_matter_access_apply_request_plan,
     write_matter_access_apply_request_plan_artifact,
 )
+from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
+    run_matter_access_apply_smoke,
+    write_matter_access_apply_smoke_artifact,
+)
 from nac_m365_graph.mcp_runtime import (  # noqa: E402
     DEFAULT_MCP_CONTRACT,
     McpRuntimeError,
@@ -421,6 +425,124 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
             if output.exists():
                 output.unlink()
 
+    def test_matter_access_apply_smoke_writes_reads_cleans_and_redacts(self) -> None:
+        grant_id = "NAC-SMOKE-GRANT-20260708T000000Z"
+        case_id = "NAC-SMOKE-MATTER-20260708T000000Z"
+        event_id = "NAC-SMOKE-AUDIT-20260708T000000Z"
+        graph_client = _FakeMatterAccessApplySmokeClient(
+            post_responses=[{"id": "raw-grant-item"}, {"id": "raw-audit-item"}],
+            get_responses=[
+                {"value": [{"id": "raw-grant-item", "fields": {"GrantId": grant_id}}]},
+                {"value": [{"id": "raw-audit-item", "fields": {"EventId": event_id}}]},
+                {"value": []},
+                {"value": []},
+            ],
+            delete_response={},
+        )
+
+        payload = run_matter_access_apply_smoke(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            correlation_id="apply-smoke-corr",
+            grant_id=grant_id,
+            case_id=case_id,
+            from_user="notary-1",
+            to_user="clerk-2",
+            reason="Urlaubsvertretung",
+            approved_by="notary-1",
+            timestamp="2026-07-08T00:00:00Z",
+        )
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["schema_version"], "nac.m365-matter-access-apply-smoke/v0.1")
+        self.assertEqual(payload["summary"]["write_tools"], ["grant_request", "audit_append"])
+        self.assertEqual(payload["summary"]["write_lists"], ["Vertretungsfreigaben", "AuditJournalLite"])
+        self.assertTrue(payload["summary"]["executed_graph_requests"])
+        self.assertTrue(payload["summary"]["executed_graph_writes"])
+        self.assertTrue(payload["summary"]["sharepoint_item_writes_executed"])
+        self.assertFalse(payload["summary"]["tenant_mutation_allowed"])
+        self.assertFalse(payload["summary"]["team_membership_mutation_allowed"])
+        self.assertFalse(payload["summary"]["sharepoint_item_permission_mutation_allowed"])
+        self.assertEqual(payload["summary"]["grant_read_value_count"], 1)
+        self.assertEqual(payload["summary"]["audit_read_value_count"], 1)
+        self.assertEqual(payload["summary"]["grant_cleanup_read_after_value_count"], 0)
+        self.assertEqual(payload["summary"]["audit_cleanup_read_after_value_count"], 0)
+        self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
+        self.assertFalse(payload["privacy"]["storesRawWritePayload"])
+        self.assertFalse(payload["privacy"]["storesRawGraphPath"])
+        self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
+        self.assertEqual(len(graph_client.posts), 2)
+        self.assertEqual(len(graph_client.gets), 4)
+        self.assertEqual(len(graph_client.deletes), 2)
+
+        serialized = json.dumps(payload, ensure_ascii=False)
+        for raw_value in (
+            grant_id,
+            case_id,
+            event_id,
+            "notary-1",
+            "clerk-2",
+            "Urlaubsvertretung",
+            "raw-grant-item",
+            "raw-audit-item",
+            "example.sharepoint.com",
+            "list-grants",
+            "list-audit",
+        ):
+            self.assertNotIn(raw_value, serialized)
+
+        output = REPO_ROOT / "out" / "test" / "matter-access-apply-smoke.redacted.json"
+        try:
+            write_matter_access_apply_smoke_artifact(payload, output)
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+        finally:
+            if output.exists():
+                output.unlink()
+        self.assertEqual(artifact["status"], "PASSED")
+
+    def test_matter_access_apply_smoke_rejects_non_synthetic_ids_before_graph_calls(self) -> None:
+        graph_client = _FakeMatterAccessApplySmokeClient(post_responses=[], get_responses=[], delete_response={})
+
+        with self.assertRaisesRegex(ValueError, "NAC-SMOKE-GRANT-"):
+            run_matter_access_apply_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                correlation_id="apply-smoke-corr",
+                grant_id="grant-1",
+                case_id="NAC-SMOKE-MATTER-20260708T000000Z",
+                timestamp="2026-07-08T00:00:00Z",
+            )
+
+        self.assertEqual(graph_client.posts, [])
+        self.assertEqual(graph_client.gets, [])
+        self.assertEqual(graph_client.deletes, [])
+
+    def test_central_cli_matter_access_apply_smoke_requires_owner_approval(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "matter-access-apply-smoke",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("STATUS: BLOCKED", result.stdout)
+        self.assertIn("--owner-approved", result.stdout)
+
     def test_grant_request_reuses_existing_mcp_tool_and_validates_semantics(self) -> None:
         plan = plan_tool_request(
             load_mcp_contract(DEFAULT_MCP_CONTRACT),
@@ -523,6 +645,34 @@ def _provisioned_state() -> dict[str, object]:
             }
         ]
     }
+
+
+class _FakeMatterAccessApplySmokeClient:
+    def __init__(
+        self,
+        *,
+        post_responses: list[dict[str, object]],
+        get_responses: list[dict[str, object]],
+        delete_response: dict[str, object],
+    ) -> None:
+        self.post_responses = list(post_responses)
+        self.get_responses = list(get_responses)
+        self.delete_response = delete_response
+        self.posts: list[tuple[str, dict[str, object]]] = []
+        self.gets: list[str] = []
+        self.deletes: list[str] = []
+
+    def post(self, path: str, payload: dict[str, object]) -> dict[str, object]:
+        self.posts.append((path, payload))
+        return self.post_responses.pop(0)
+
+    def get(self, path: str) -> dict[str, object]:
+        self.gets.append(path)
+        return self.get_responses.pop(0)
+
+    def delete(self, path: str) -> dict[str, object]:
+        self.deletes.append(path)
+        return self.delete_response
 
 
 if __name__ == "__main__":

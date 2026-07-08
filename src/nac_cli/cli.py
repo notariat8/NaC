@@ -103,6 +103,10 @@ DEFAULT_RELEASE_GATE_MATTER_ACCESS_APPLY_READINESS_ARTIFACT = Path(
 DEFAULT_RELEASE_GATE_MATTER_ACCESS_APPLY_REQUEST_ARTIFACT = Path(
     "out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json"
 )
+DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT = Path(
+    "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json"
+)
+DEFAULT_RELEASE_GATE_MATTER_ACCESS_APPLY_SMOKE_ARTIFACT = DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT
 DEFAULT_RELEASE_READINESS_OUTPUT = Path("out/m365/teams-sharepoint/release-readiness.redacted.json")
 M365_RELEASE_READINESS_REQUIRED_ARTIFACTS = (
     "runtime_certificate_expiry",
@@ -361,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-smoke",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
@@ -533,6 +538,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--matter-access-apply-request-output",
         type=Path,
         help="Pfad fuer das redigierte Matter-Access-Apply-Request-Plan-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-smoke-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
+        help="Pfad fuer das redigierte owner-gated Matter-Access-Apply-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--matter-access-grant-id",
@@ -808,6 +819,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-gate-matter-access-apply-request-artifact",
         type=Path,
         help="Optionaler Pfad zum redigierten Matter-Access-Apply-Request-Plan-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--release-gate-matter-access-apply-smoke-artifact",
+        type=Path,
+        help="Optionaler Pfad zum redigierten owner-gated Matter-Access-Apply-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-runtime-smoke-artifact",
@@ -2051,6 +2067,7 @@ def command_m365(args: argparse.Namespace) -> int:
                 matter_access_artifact=args.release_gate_matter_access_artifact,
                 matter_access_apply_readiness_artifact=args.release_gate_matter_access_apply_readiness_artifact,
                 matter_access_apply_request_artifact=args.release_gate_matter_access_apply_request_artifact,
+                matter_access_apply_smoke_artifact=args.release_gate_matter_access_apply_smoke_artifact,
                 mcp_suite_artifact=args.release_gate_suite_artifact,
                 mcp_leftover_artifact=args.release_gate_leftover_artifact,
                 runtime_smoke_artifact=args.release_gate_runtime_smoke_artifact,
@@ -2129,6 +2146,8 @@ def command_m365(args: argparse.Namespace) -> int:
             )
         if args.matter_access_apply_request_output:
             script_args.extend(["--matter-access-apply-request-output", str(args.matter_access_apply_request_output)])
+        if args.matter_access_apply_smoke_output:
+            script_args.extend(["--matter-access-apply-smoke-output", str(args.matter_access_apply_smoke_output)])
         if args.matter_access_grant_id:
             script_args.extend(["--matter-access-grant-id", args.matter_access_grant_id])
         if args.matter_access_from_user:
@@ -2270,6 +2289,11 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
         repo_root,
         args.release_gate_run_artifact_dir,
         correlation_id,
+    )
+    release_gate_matter_access_apply_smoke_artifact = _resolve_m365_release_gate_path(
+        repo_root,
+        args.release_gate_matter_access_apply_smoke_artifact,
+        release_gate_run_artifact_dir / DEFAULT_RELEASE_GATE_MATTER_ACCESS_APPLY_SMOKE_ARTIFACT.name,
     )
 
     steps = [
@@ -2434,6 +2458,8 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
                 str(release_gate_matter_access_apply_readiness_artifact),
                 "--release-gate-matter-access-apply-request-artifact",
                 str(release_gate_matter_access_apply_request_artifact),
+                "--release-gate-matter-access-apply-smoke-artifact",
+                str(release_gate_matter_access_apply_smoke_artifact),
                 "--release-gate-runtime-certificate-expiry-artifact",
                 str(runtime_certificate_expiry_output),
                 "--release-gate-runtime-env-bootstrap-artifact",
@@ -2584,6 +2610,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             "matter_access_delegation_smoke": release_gate_matter_access_artifact,
             "matter_access_apply_readiness": release_gate_matter_access_apply_readiness_artifact,
             "matter_access_apply_request_plan": release_gate_matter_access_apply_request_artifact,
+            "matter_access_apply_smoke": release_gate_matter_access_apply_smoke_artifact,
             "mcp_smoke_suite": mcp_suite_output,
             "mcp_leftover_dry_run": mcp_leftover_output,
             "release_gate_evidence_report": evidence_output,
@@ -2611,6 +2638,7 @@ def _run_m365_release_gate(repo_root: Path, args: argparse.Namespace) -> tuple[d
             "matter_access_delegation_smoke": release_gate_matter_access_artifact,
             "matter_access_apply_readiness": release_gate_matter_access_apply_readiness_artifact,
             "matter_access_apply_request_plan": release_gate_matter_access_apply_request_artifact,
+            "matter_access_apply_smoke": release_gate_matter_access_apply_smoke_artifact,
             "mcp_smoke_suite": mcp_suite_output,
             "mcp_leftover_dry_run": mcp_leftover_output,
             "release_gate_evidence_report": evidence_output,
