@@ -1564,7 +1564,9 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["mvp_release_readiness"], "READY")
         self.assertEqual(payload["summary"]["correlation_id"], "ready-run")
-        self.assertEqual(payload["summary"]["retained_artifact_count"], 10)
+        self.assertEqual(payload["summary"]["retained_artifact_count"], 12)
+        self.assertEqual(payload["summary"]["matter_access_delegation_smoke_status"], "PASSED")
+        self.assertEqual(payload["summary"]["matter_access_apply_readiness_status"], "PASSED")
         self.assertEqual(payload["summary"]["audit_pack_status"], "PASSED")
         self.assertTrue(all(check["status"] == "PASSED" for check in payload["checks"]))
 
@@ -1632,6 +1634,38 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertEqual(payload["summary"]["mvp_release_readiness"], "NOT_READY")
         self.assertIn("mcp_inventory_smoke", "\n".join(payload["errors"]))
+
+    def test_release_readiness_blocks_when_matter_access_artifacts_are_not_attached(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            run_dir = retention_root / "blocked-matter-access-run"
+            _write_readiness_run(
+                run_dir,
+                correlation_id="blocked-matter-access-run",
+                artifact_overrides={
+                    "matter_access_delegation_smoke": {"status": "NOT_ATTACHED", "artifact_sha256": None},
+                    "matter_access_apply_readiness": {"status": "NOT_ATTACHED", "artifact_sha256": None},
+                },
+            )
+
+            payload, return_code = _invoke_release_readiness(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "blocked-matter-access-run",
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["mvp_release_readiness"], "NOT_READY")
+        error_text = "\n".join(payload["errors"])
+        self.assertIn("matter_access_delegation_smoke", error_text)
+        self.assertIn("matter_access_apply_readiness", error_text)
 
     def test_release_gate_post_run_report_auto_selects_previous_baseline_and_writes_comment_draft(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2239,6 +2273,8 @@ def _write_readiness_run(
                     "evidence_completeness": "complete_release_gate_artifacts",
                     "retention_index_attached": True,
                     "retained_artifact_count": copied_count,
+                    "matter_access_delegation_smoke_status": "PASSED",
+                    "matter_access_apply_readiness_status": "PASSED",
                     "stores_tokens_or_secrets": False,
                     "stores_raw_graph_response": False,
                     "stores_raw_case_id": False,
