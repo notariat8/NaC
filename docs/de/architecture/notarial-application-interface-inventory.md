@@ -1,7 +1,7 @@
 # Notarielles Anwendungsschnittstellen-Inventar
 
 Status: Offline-Inventar mit read-only MCP-Werkzeugen ohne Live-Apply
-Letzte inhaltliche Anpassung: 2026-07-07
+Letzte inhaltliche Anpassung: 2026-07-08
 
 ## Zweck
 
@@ -23,6 +23,7 @@ geprüft.
 | BNotK Onlinehilfe, Anwendungsschnittstellen: https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/anwendungsschnittstellen.html | Seitenstand 2026-06-01, owner-provided Offline-Archiv vom 2026-07-07 | Nur Modul-, Protokoll- und Grenzmetadaten; keine HTML-/Asset-Kopie im Repo |
 | BNotK Onlinehilfe, beN: https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/ben.html | owner-provided Offline-Archiv vom 2026-07-07 | Nur Architekturgrenzen wie XTA-WS, OSCI, Zertifikat, IdentityToken und Polling; keine WSDL-/Beispielpayload-Kopie im Repo |
 | XJustiz 3.3.1 XSD-Paket | owner-provided ZIP `xjustiz_3_3_1_xsd.zip`, Paketdateien mit Zeitstempel 2021-11-04 | Nur Paketmetadaten; keine XSD-Rohkopie ohne Lizenz- und Quellenfreigabe |
+| NaC XNotar-/XJustiz-Paketgrenze | [workflows/contracts/xnotar-xjustiz-package-boundary.contract.json](../../../workflows/contracts/xnotar-xjustiz-package-boundary.contract.json) | Nur Contract- und Fixture-Metadaten; kein Import, kein beN-Versand, keine XML-/XSD-/WSDL-/ZIP-Rohkopie |
 
 ## Schnittstellenmatrix
 
@@ -38,6 +39,7 @@ geprüft.
 | `zvr` | Zentrales Vorsorgeregister | REST-API-Funktionsaufrufe aus NSW | Eigener Integrationspfad mit BNotK-/ZVR-Zulassung, Zertifikaten und Owner-Gate |
 | `ben` | besonderes elektronisches Notarpostfach | XTA-WS, EGVP/OSCI-Container, TLS-Clientzertifikat, IdentityToken, Postfach-Polling und Transportstatus | Lokaler Companion-/Evidence-Pfad; keine Secrets, keine Nachrichteninhalte und keine produktive Sendung im Produktrepo |
 | `xjustiz_331` | XJustiz 3.3.1 | 66 XSD-Dateien mit Grunddatensatz, Nachrichten, Register, Vorsorgeregister, eEB, ZTR und weiteren Domänenmodulen | Schema-Referenz für spätere Mapping- und Validierungspipeline; kein XSD-Volltext und kein Payload-Testdatensatz im Repo |
+| `xnotar_xjustiz_package_boundary` | XNotar/XJustiz Exchange-Folder-Readiness | Austauschordner-Metadaten, `xjustiz_nachricht.xml`-Pointer, Anlagen-Pointer-Inventar und redigierte Readiness-Evidence | Metadata-only Prüfung der Paketgrenze; kein XNotar-Import, keine XSD-Ingestion, kein XML-Payload und kein beN-Versand |
 
 ## Architekturentscheidung
 

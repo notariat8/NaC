@@ -167,6 +167,17 @@ class XNotarXJustizPackageBoundaryTests(unittest.TestCase):
 
         self.assertIn("validate_xnotar_xjustiz_package_boundary.py", cli_source)
 
+    def test_notarial_interface_inventory_binds_boundary_row(self) -> None:
+        inventory_path = REPO_ROOT / "workflows" / "contracts" / "notarial-application-interface-inventory.contract.json"
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+        rows = {entry["id"]: entry for entry in inventory["interfaces"]}
+
+        self.assertIn(INTERFACE_ID, rows)
+        row = rows[INTERFACE_ID]
+        self.assertEqual("xnotar_xjustiz_package_boundary_contract", row["source"])
+        self.assertEqual("package_boundary_metadata_only_no_import", row["mvp_boundary"])
+        self.assertIn("xjustiz_message_pointer", row["families"])
+
     def test_no_raw_exchange_artifacts_are_committed(self) -> None:
         forbidden_suffixes = {".zip", ".xsd", ".wsdl", ".xml"}
         forbidden_names = {

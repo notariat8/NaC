@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MCP_INVENTORY_SMOKE_OUTPUT = (
     REPO_ROOT / "out" / "m365" / "teams-sharepoint" / "mcp-inventory-smoke.redacted.json"
 )
-DEFAULT_METADATA_INTERFACE_ID = "xjustiz_331"
+DEFAULT_METADATA_INTERFACE_ID = "xnotar_xjustiz_package_boundary"
 DEFAULT_OWNER_GATED_INTERFACE_ID = "ben"
 DEFAULT_METADATA_OPERATION = "metadata_inventory"
 DEFAULT_OWNER_GATED_OPERATION = "productive_ben_send_or_fetch"

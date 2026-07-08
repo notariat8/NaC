@@ -14,6 +14,15 @@ und wird durch
 [scripts/validate_xnotar_xjustiz_package_boundary.py](../../../scripts/validate_xnotar_xjustiz_package_boundary.py)
 geprüft.
 
+## Inventory-Binding
+
+Das notarielle Anwendungsschnittstellen-Inventar führt diese Grenze unter
+`xnotar_xjustiz_package_boundary` als metadata-only Eintrag. Die read-only
+MCP-Werkzeuge `notarial_interface_inventory_list` und
+`notarial_interface_boundary_check` dürfen diese Zeile anzeigen und als
+`allowed_metadata_only` bewerten, rufen dabei aber weder XNotar noch BNotK,
+SharePoint oder Microsoft Graph auf.
+
 ## Paketform
 
 Für das MVP ist nur eine redigierte Paketbereitschaft zulässig:

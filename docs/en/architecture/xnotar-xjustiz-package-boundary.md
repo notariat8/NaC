@@ -13,6 +13,14 @@ The machine-readable contract is
 and is validated by
 [scripts/validate_xnotar_xjustiz_package_boundary.py](../../../scripts/validate_xnotar_xjustiz_package_boundary.py).
 
+## Inventory Binding
+
+The notarial application interface inventory exposes this boundary as the
+metadata-only entry `xnotar_xjustiz_package_boundary`. The read-only MCP tools
+`notarial_interface_inventory_list` and `notarial_interface_boundary_check` may
+show this row and evaluate it as `allowed_metadata_only`, but they do not call
+XNotar, BNotK, SharePoint or Microsoft Graph.
+
 ## Package Shape
 
 For the MVP, only redacted package readiness is allowed:

@@ -26,6 +26,11 @@
       "xsd_file_count": 66,
       "package_file_timestamp": "2021-11-04",
       "repository_storage": "metadata_only"
+    },
+    "xnotar_xjustiz_package_boundary_contract": {
+      "label": "NaC XNotar/XJustiz package boundary contract",
+      "path": "workflows/contracts/xnotar-xjustiz-package-boundary.contract.json",
+      "repository_storage": "metadata_only"
     }
   },
   "global_policy": {
@@ -151,6 +156,18 @@
         "ztr"
       ],
       "mvp_boundary": "schema_reference_metadata_only"
+    },
+    {
+      "id": "xnotar_xjustiz_package_boundary",
+      "area": "XNotar/XJustiz Exchange-Folder-Readiness",
+      "source": "xnotar_xjustiz_package_boundary_contract",
+      "families": [
+        "exchange_folder_metadata",
+        "xjustiz_message_pointer",
+        "attachment_pointer_inventory",
+        "redacted_readiness_evidence"
+      ],
+      "mvp_boundary": "package_boundary_metadata_only_no_import"
     }
   ],
   "runtime_binding": {

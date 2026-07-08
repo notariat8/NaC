@@ -222,10 +222,11 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(structured["runtime_mode"], "metadata_inventory_only")
         self.assertFalse(structured["executes_graph_requests"])
         self.assertEqual(structured["source_contract"], "workflow.notarial_application_interface_inventory")
-        self.assertEqual(len(structured["interfaces"]), 10)
+        self.assertEqual(len(structured["interfaces"]), 11)
         ids = {item["interfaceId"] for item in structured["interfaces"]}
         self.assertIn("ben", ids)
         self.assertIn("xjustiz_331", ids)
+        self.assertIn("xnotar_xjustiz_package_boundary", ids)
         self.assertFalse(structured["privacy"]["callsExternalBnotkSystems"])
         serialized = json.dumps(structured, ensure_ascii=False)
         for forbidden in ("<html", "<xsd:schema", "IdentityToken=", "BEGIN CERTIFICATE"):
@@ -295,7 +296,7 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "PASSED")
-        self.assertEqual(result["summary"]["interface_count"], 10)
+        self.assertEqual(result["summary"]["interface_count"], 11)
         self.assertEqual(result["summary"]["metadata_boundary_status"], "allowed_metadata_only")
         self.assertEqual(result["summary"]["owner_gated_boundary_status"], "owner_gate_required")
         self.assertTrue(result["summary"]["closed_gate_blocks"])

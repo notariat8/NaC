@@ -21,6 +21,7 @@ REQUIRED_INTERFACE_IDS = {
     "zvr",
     "ben",
     "xjustiz_331",
+    "xnotar_xjustiz_package_boundary",
 }
 REQUIRED_SOURCE_KEYS = {
     "architecture_de",
@@ -28,6 +29,7 @@ REQUIRED_SOURCE_KEYS = {
     "bnotk_application_interfaces",
     "bnotk_ben",
     "xjustiz_331_xsd",
+    "xnotar_xjustiz_package_boundary_contract",
 }
 REQUIRED_OWNER_GATES = {
     "bnotk_credential_use",
@@ -137,6 +139,16 @@ def _validate_source_documents(payload: dict[str, Any]) -> list[str]:
             errors.append("xjustiz_331_xsd.xsd_file_count muss 66 sein")
         if xjustiz.get("repository_storage") != "metadata_only":
             errors.append("xjustiz_331_xsd.repository_storage muss metadata_only sein")
+    boundary = source_documents.get("xnotar_xjustiz_package_boundary_contract")
+    if not isinstance(boundary, dict):
+        errors.append("source_documents.xnotar_xjustiz_package_boundary_contract muss ein Objekt sein")
+    else:
+        if boundary.get("repository_storage") != "metadata_only":
+            errors.append("xnotar_xjustiz_package_boundary_contract.repository_storage muss metadata_only sein")
+        if boundary.get("path") != "workflows/contracts/xnotar-xjustiz-package-boundary.contract.json":
+            errors.append("xnotar_xjustiz_package_boundary_contract.path muss auf den Boundary-Vertrag zeigen")
+        elif not (REPO_ROOT / boundary["path"]).is_file():
+            errors.append("xnotar_xjustiz_package_boundary_contract.path zeigt auf fehlende Datei")
     return errors
 
 
@@ -257,6 +269,8 @@ def _validate_docs() -> list[str]:
             "Zentrales Vorsorgeregister",
             "beN",
             "XJustiz 3.3.1",
+            "xnotar_xjustiz_package_boundary",
+            "XNotar/XJustiz Exchange-Folder-Readiness",
             "MCP",
         ):
             if term not in text:

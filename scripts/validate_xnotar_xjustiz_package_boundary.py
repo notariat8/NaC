@@ -10,6 +10,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "xnotar-xjustiz-package-boundary.contract.json"
+INVENTORY_CONTRACT_PATH = REPO_ROOT / "workflows" / "contracts" / "notarial-application-interface-inventory.contract.json"
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "xnotar-xjustiz" / "package-boundary.metadata.json"
 CONTRACTS_README = REPO_ROOT / "workflows" / "contracts" / "README.md"
 QUALITY_DE = REPO_ROOT / "docs" / "de" / "quality-gate.md"
@@ -194,6 +195,7 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
     errors.extend(_validate_evidence_shape(payload))
     errors.extend(_validate_owner_gates(payload))
     errors.extend(_validate_validation_commands(payload))
+    errors.extend(_validate_inventory_binding())
     errors.extend(_validate_docs_and_repo_boundary())
     return errors
 
@@ -352,6 +354,39 @@ def _validate_validation_commands(payload: dict[str, Any]) -> list[str]:
         "python -m unittest tests/test_xnotar_xjustiz_package_boundary.py",
     }
     return [f"validation_commands fehlt: {command}" for command in sorted(required - commands)]
+
+
+def _validate_inventory_binding() -> list[str]:
+    errors: list[str] = []
+    inventory = _load_json(INVENTORY_CONTRACT_PATH, errors)
+    if inventory is None:
+        return errors
+    interfaces = {
+        item.get("id"): item
+        for item in inventory.get("interfaces", [])
+        if isinstance(item, dict)
+    }
+    row = interfaces.get(INTERFACE_ID)
+    if not isinstance(row, dict):
+        return [f"notarielles Anwendungsschnittstellen-Inventar fehlt: {INTERFACE_ID}"]
+    expected = {
+        "source": "xnotar_xjustiz_package_boundary_contract",
+        "mvp_boundary": "package_boundary_metadata_only_no_import",
+    }
+    for key, expected_value in expected.items():
+        if row.get(key) != expected_value:
+            errors.append(f"Inventory-Zeile {INTERFACE_ID}.{key} muss {expected_value} sein")
+    families = set(_string_list(row.get("families")))
+    for family in ("exchange_folder_metadata", "xjustiz_message_pointer", "redacted_readiness_evidence"):
+        if family not in families:
+            errors.append(f"Inventory-Zeile {INTERFACE_ID}.families fehlt: {family}")
+    source_documents = inventory.get("source_documents")
+    source = source_documents.get("xnotar_xjustiz_package_boundary_contract") if isinstance(source_documents, dict) else None
+    if not isinstance(source, dict):
+        errors.append("Inventory-Quelle xnotar_xjustiz_package_boundary_contract fehlt")
+    elif source.get("path") != "workflows/contracts/xnotar-xjustiz-package-boundary.contract.json":
+        errors.append("Inventory-Quelle xnotar_xjustiz_package_boundary_contract.path zeigt nicht auf Boundary-Vertrag")
+    return errors
 
 
 def _validate_docs_and_repo_boundary() -> list[str]:

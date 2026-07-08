@@ -1,7 +1,7 @@
 # Notarial Application Interface Inventory
 
 Status: offline inventory with read-only MCP tools without live apply
-Last content update: 2026-07-07
+Last content update: 2026-07-08
 
 ## Purpose
 
@@ -21,6 +21,7 @@ and is validated by
 | BNotK Onlinehilfe, application interfaces: https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/anwendungsschnittstellen.html | page state 2026-06-01, owner-provided offline archive from 2026-07-07 | Module, protocol and boundary metadata only; no HTML or asset copy in the repository |
 | BNotK Onlinehilfe, beN: https://onlinehilfe.bnotk.de/technischer-bereich/softwarehersteller/ben.html | owner-provided offline archive from 2026-07-07 | Architecture boundaries such as XTA-WS, OSCI, certificate, IdentityToken and polling only; no WSDL or sample payload copy in the repository |
 | XJustiz 3.3.1 XSD package | owner-provided ZIP `xjustiz_3_3_1_xsd.zip`, package files timestamped 2021-11-04 | Package metadata only; no raw XSD copy without license and source approval |
+| NaC XNotar/XJustiz package boundary | [workflows/contracts/xnotar-xjustiz-package-boundary.contract.json](../../../workflows/contracts/xnotar-xjustiz-package-boundary.contract.json) | Contract and fixture metadata only; no import, no beN dispatch, no raw XML/XSD/WSDL/ZIP copy |
 
 ## Interface Matrix
 
@@ -36,6 +37,7 @@ and is validated by
 | `zvr` | Zentrales Vorsorgeregister | REST API function calls from NSW | Separate integration path with BNotK/ZVR approval, certificates and owner gate |
 | `ben` | besondere elektronische Notarpostfach | XTA-WS, EGVP/OSCI container, TLS client certificate, IdentityToken, mailbox polling and transport status | Local companion/evidence path; no secrets, no message content and no production sending in the product repository |
 | `xjustiz_331` | XJustiz 3.3.1 | 66 XSD files with base dataset, messages, register, Vorsorgeregister, eEB, ZTR and further domain modules | Schema reference for a later mapping and validation pipeline; no XSD full text and no payload test dataset in the repository |
+| `xnotar_xjustiz_package_boundary` | XNotar/XJustiz Exchange-Folder-Readiness | Exchange-folder metadata, `xjustiz_nachricht.xml` pointer, attachment pointer inventory and redacted readiness evidence | Metadata-only package-boundary check; no XNotar import, no XSD ingestion, no XML payload and no beN dispatch |
 
 ## Architecture Decision
 

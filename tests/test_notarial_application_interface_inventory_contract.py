@@ -102,6 +102,23 @@ class NotarialApplicationInterfaceInventoryContractTests(unittest.TestCase):
         self.assertEqual(66, xjustiz["xsd_file_count"])
         self.assertEqual("metadata_only", xjustiz["repository_storage"])
 
+    def test_xnotar_xjustiz_package_boundary_is_inventory_bound(self) -> None:
+        payload = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        sources = payload["source_documents"]
+        interfaces = {entry["id"]: entry for entry in payload["interfaces"]}
+
+        source = sources["xnotar_xjustiz_package_boundary_contract"]
+        self.assertEqual(
+            "workflows/contracts/xnotar-xjustiz-package-boundary.contract.json",
+            source["path"],
+        )
+        self.assertEqual("metadata_only", source["repository_storage"])
+
+        boundary = interfaces["xnotar_xjustiz_package_boundary"]
+        self.assertEqual("xnotar_xjustiz_package_boundary_contract", boundary["source"])
+        self.assertEqual("package_boundary_metadata_only_no_import", boundary["mvp_boundary"])
+        self.assertIn("redacted_readiness_evidence", boundary["families"])
+
     def test_no_source_archive_or_schema_copy_is_committed(self) -> None:
         forbidden_suffixes = {".zip"}
         forbidden_names = {
