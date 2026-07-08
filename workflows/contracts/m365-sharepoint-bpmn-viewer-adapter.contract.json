@@ -2,7 +2,7 @@
   "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.1",
   "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
   "status": "contract_first",
-  "last_update": "2026-07-07",
+  "last_update": "2026-07-08",
   "purpose": "Defines the read-only SharePoint/SPFx BPMN viewer adapter boundary for publishing approved NaC BPMN models into the Microsoft 365 work surface without making SharePoint the BPMN source of truth, workflow engine or modeler.",
   "source_of_truth": {
     "approved_bpmn_templates": [
@@ -85,12 +85,39 @@
     "package_root": "spfx/nac-bpmn-viewer",
     "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json",
     "status": "offline_skeleton_no_package_deploy",
+    "offline_render_contract": "spfx-bpmn-viewer-offline-render-contract",
     "source_skeleton_included_now": true,
     "actual_spfx_package_included_now": false,
     "package_solution_enabled_now": false,
     "app_catalog_deploy_allowed_now": false,
     "tenant_apply_allowed_now": false,
     "executes_graph_requests_now": false
+  },
+  "offline_render_contract": {
+    "slice": "spfx-bpmn-viewer-offline-render-contract",
+    "fixture": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
+    "liveTenantAccess": false,
+    "appCatalogDeploy": false,
+    "request_plan_count": 3,
+    "render_states": [
+      "approved_renderable",
+      "approval_missing_or_review_required",
+      "viewer_disabled",
+      "contains_matter_data",
+      "invalid_mime_or_hash_missing"
+    ],
+    "dom_markers": {
+      "render_state": "data-nac-render-state",
+      "content_source": "data-nac-content-source",
+      "metadata_overlay": "data-nac-metadata-overlay"
+    },
+    "metadata_overlay": {
+      "kind": "redacted_metadata_only",
+      "matter_content_present": false,
+      "private_payload_values_present": false,
+      "credential_material_present": false,
+      "raw_graph_paths_present": false
+    }
   },
   "runtime_readiness": {
     "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",

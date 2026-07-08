@@ -27,6 +27,30 @@ REQUIRED_GRAPH_CONTENT_METADATA_GATES = {
     "NacDataClass in Template,Demo,Reference",
     "BpmnXmlSha256 matches downloaded XML",
 }
+REQUIRED_RENDER_STATES = {
+    "approved_renderable",
+    "approval_missing_or_review_required",
+    "viewer_disabled",
+    "contains_matter_data",
+    "invalid_mime_or_hash_missing",
+}
+REQUIRED_DOM_MARKERS = {
+    "render_state": "data-nac-render-state",
+    "content_source": "data-nac-content-source",
+    "metadata_overlay": "data-nac-metadata-overlay",
+}
+ALLOWED_BPMN_XML_MIME_TYPES = {"application/xml", "text/xml"}
+REDACTED_OVERLAY_FORBIDDEN_MARKERS = {
+    "NAC-FIXTURE-CASE",
+    "/sites/",
+    "/drives/",
+    "/lists/",
+    "fields/",
+    "token",
+    "secret",
+    "Akteninhalt",
+    "Mandatswert",
+}
 REQUIRED_BLOCKED_OPERATIONS = {
     "app_catalog_deploy",
     "tenant_wide_deploy",
@@ -155,6 +179,29 @@ def validate_spfx_bpmn_viewer_skeleton(
         for item in ("raw_matter_document_content", "tokens_or_secrets", "bpmn_model_write_payload"):
             if item not in forbidden:
                 errors.append(f"SPFx BPMN viewer skeleton forbidden_outputs missing {item}")
+        if set(_strings(render.get("render_states"))) != REQUIRED_RENDER_STATES:
+            errors.append("SPFx BPMN viewer skeleton render_contract.render_states is invalid")
+        dom_markers = render.get("dom_markers")
+        if not isinstance(dom_markers, dict):
+            errors.append("SPFx BPMN viewer skeleton render_contract.dom_markers must be an object")
+        else:
+            for key, value in REQUIRED_DOM_MARKERS.items():
+                if dom_markers.get(key) != value:
+                    errors.append(f"SPFx BPMN viewer skeleton render_contract.dom_markers.{key} must be {value}")
+        overlay = render.get("metadata_overlay")
+        if not isinstance(overlay, dict):
+            errors.append("SPFx BPMN viewer skeleton render_contract.metadata_overlay must be an object")
+        else:
+            if overlay.get("kind") != "redacted_metadata_only":
+                errors.append("SPFx BPMN viewer skeleton metadata overlay kind must be redacted_metadata_only")
+            for flag in (
+                "matter_content_present",
+                "private_payload_values_present",
+                "credential_material_present",
+                "raw_graph_paths_present",
+            ):
+                if overlay.get(flag) is not False:
+                    errors.append(f"SPFx BPMN viewer skeleton metadata_overlay.{flag} must be false")
 
     binding = skeleton.get("mcp_request_plan_binding")
     if not isinstance(binding, dict):
@@ -224,13 +271,45 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         for blocked in ("Model" + "er", "save" + "XML", "start" + "Process", "execute" + "Workflow"):
             if blocked in text:
                 errors.append(f"SPFx BPMN viewer component contains blocked viewer marker {blocked!r}")
+        for marker in REQUIRED_DOM_MARKERS.values():
+            if marker not in text:
+                errors.append(f"SPFx BPMN viewer component missing DOM marker {marker}")
+        if "data-case-id" in text:
+            errors.append("SPFx BPMN viewer component must not render raw case IDs into DOM attributes")
     service = root / "src" / "webparts" / "nacBpmnViewer" / "services" / "BpmnViewerRequestPlan.ts"
     if service.is_file():
         text = service.read_text(encoding="utf-8")
         for tool in sorted(REQUIRED_MCP_TOOLS):
             if tool not in text:
                 errors.append(f"SPFx BPMN viewer request plan service missing {tool}")
+        for render_state in sorted(REQUIRED_RENDER_STATES):
+            if render_state not in text:
+                errors.append(f"SPFx BPMN viewer request plan service missing render state {render_state}")
     return errors
+
+
+def evaluate_spfx_bpmn_viewer_render_case(model: dict[str, Any]) -> dict[str, Any]:
+    if model.get("approvalStatus") != "Approved":
+        render_state = "approval_missing_or_review_required"
+    elif model.get("viewerEnabled") is not True:
+        render_state = "viewer_disabled"
+    elif model.get("containsMatterData") is not False:
+        render_state = "contains_matter_data"
+    elif not _has_valid_bpmn_xml_reference(model):
+        render_state = "invalid_mime_or_hash_missing"
+    else:
+        render_state = "approved_renderable"
+
+    render_allowed = render_state == "approved_renderable"
+    return {
+        "renderState": render_state,
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "approved_bpmn_xml_fixture" if render_allowed else "blocked_metadata_only",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": render_allowed,
+        "liveTenantAccess": False,
+        "appCatalogDeploy": False,
+    }
 
 
 def build_spfx_bpmn_viewer_skeleton_result(
@@ -273,6 +352,7 @@ def build_spfx_bpmn_viewer_skeleton_result(
         plan_tool_request(mcp_contract, provisioned_state, context, "process_register_list", {}),
         plan_tool_request(mcp_contract, provisioned_state, context, "bpmn_viewer_overlay_get", {"case_id": case_id}),
     ]
+    render_case_results = _build_render_case_results(render_fixture)
     return {
         "status": "PASSED",
         "summary": {
@@ -292,8 +372,14 @@ def build_spfx_bpmn_viewer_skeleton_result(
         },
         "renderContract": {
             "containerId": skeleton["render_contract"]["container_id"],
-            "componentProps": render_fixture["component_props"],
+            "componentProps": _redact_component_props(render_fixture["component_props"]),
+            "request_plan_count": len(request_plans),
+            "liveTenantAccess": False,
+            "appCatalogDeploy": False,
+            "domMarkers": skeleton["render_contract"]["dom_markers"],
+            "metadataOverlay": skeleton["render_contract"]["metadata_overlay"],
             "expectedRenderState": render_fixture["expected_render_state"],
+            "cases": render_case_results,
         },
         "requestPlans": [plan.to_dict() for plan in request_plans],
         "guardrails": {
@@ -324,6 +410,37 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
         for key in ("workspaceId", "bpmnModelId"):
             if not props.get(key):
                 errors.append(f"SPFx BPMN viewer render fixture component_props.{key} is required")
+    render_contract = fixture.get("render_contract")
+    if not isinstance(render_contract, dict):
+        errors.append("SPFx BPMN viewer render fixture render_contract must be an object")
+    else:
+        if render_contract.get("liveTenantAccess") is not False:
+            errors.append("SPFx BPMN viewer render fixture render_contract.liveTenantAccess must be false")
+        if render_contract.get("appCatalogDeploy") is not False:
+            errors.append("SPFx BPMN viewer render fixture render_contract.appCatalogDeploy must be false")
+        if render_contract.get("request_plan_count") != len(REQUIRED_MCP_TOOLS):
+            errors.append("SPFx BPMN viewer render fixture request_plan_count must be 3")
+        dom_markers = render_contract.get("dom_markers")
+        if not isinstance(dom_markers, dict):
+            errors.append("SPFx BPMN viewer render fixture dom_markers must be an object")
+        else:
+            for key, value in REQUIRED_DOM_MARKERS.items():
+                if dom_markers.get(key) != value:
+                    errors.append(f"SPFx BPMN viewer render fixture dom_markers.{key} must be {value}")
+        if render_contract.get("metadata_overlay") != "redacted_metadata_only":
+            errors.append("SPFx BPMN viewer render fixture metadata_overlay must be redacted_metadata_only")
+        redaction = render_contract.get("redaction_policy")
+        if not isinstance(redaction, dict):
+            errors.append("SPFx BPMN viewer render fixture redaction_policy must be an object")
+        else:
+            for flag in (
+                "matter_content_present",
+                "private_payload_values_present",
+                "credential_material_present",
+                "raw_graph_paths_present",
+            ):
+                if redaction.get(flag) is not False:
+                    errors.append(f"SPFx BPMN viewer render fixture redaction_policy.{flag} must be false")
     model = fixture.get("approved_bpmn_model")
     if not isinstance(model, dict):
         errors.append("SPFx BPMN viewer render fixture approved_bpmn_model must be an object")
@@ -340,6 +457,36 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
             errors.append("SPFx BPMN viewer render fixture model must use an allowed BPMN XML mime type")
         if not model.get("bpmnDriveItemId"):
             errors.append("SPFx BPMN viewer render fixture model must include bpmnDriveItemId")
+        if evaluate_spfx_bpmn_viewer_render_case(model).get("renderState") != "approved_renderable":
+            errors.append("SPFx BPMN viewer render fixture approved_bpmn_model must evaluate as approved_renderable")
+    cases = _as_list(fixture.get("render_cases"))
+    case_names = {item.get("name") for item in cases if isinstance(item, dict)}
+    if case_names != REQUIRED_RENDER_STATES:
+        errors.append("SPFx BPMN viewer render fixture render_cases must cover all required states")
+    for item in cases:
+        if not isinstance(item, dict):
+            errors.append("SPFx BPMN viewer render fixture render_cases entries must be objects")
+            continue
+        name = item.get("name")
+        case_model = item.get("bpmn_model")
+        if not isinstance(case_model, dict):
+            errors.append(f"SPFx BPMN viewer render case {name!r} bpmn_model must be an object")
+            continue
+        decision = evaluate_spfx_bpmn_viewer_render_case(case_model)
+        if decision.get("renderState") != name:
+            errors.append(f"SPFx BPMN viewer render case {name!r} does not evaluate to its name")
+        expected = item.get("expected_render_state")
+        if not isinstance(expected, dict):
+            errors.append(f"SPFx BPMN viewer render case {name!r} expected_render_state must be an object")
+        else:
+            for key, value in decision.items():
+                if expected.get(key) != value:
+                    errors.append(f"SPFx BPMN viewer render case {name!r} expected_render_state.{key} is invalid")
+        overlay = item.get("redacted_overlay")
+        if not isinstance(overlay, dict):
+            errors.append(f"SPFx BPMN viewer render case {name!r} redacted_overlay must be an object")
+        else:
+            errors.extend(_validate_redacted_overlay(overlay, f"render case {name!r}"))
     expected_tools = set(_strings(fixture.get("expected_request_plan_tools")))
     if expected_tools != REQUIRED_MCP_TOOLS:
         errors.append("SPFx BPMN viewer render fixture expected_request_plan_tools is invalid")
@@ -349,6 +496,10 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
     else:
         if expected_state.get("bpmnJsMode") != skeleton.get("spfx", {}).get("bpmn_js_mode"):
             errors.append("SPFx BPMN viewer render fixture bpmnJsMode must match skeleton")
+        approved_decision = evaluate_spfx_bpmn_viewer_render_case(model if isinstance(model, dict) else {})
+        for key, value in approved_decision.items():
+            if expected_state.get(key) != value:
+                errors.append(f"SPFx BPMN viewer render fixture expected_render_state.{key} is invalid")
         for flag in ("liveTenantAccess", "appCatalogDeploy"):
             if expected_state.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer render fixture expected_render_state.{flag} must be false")
@@ -387,6 +538,65 @@ def _state_with_optional_bpmn_viewer_lists(state: dict[str, Any]) -> dict[str, A
             lists.setdefault("BPMN Models", {"id": "list-bpmn-models"})
             lists.setdefault("Prozessregister", {"id": "list-process-register"})
     return cloned
+
+
+def _has_valid_bpmn_xml_reference(model: dict[str, Any]) -> bool:
+    return bool(model.get("bpmnXmlSha256")) and model.get("bpmnXmlMimeType") in ALLOWED_BPMN_XML_MIME_TYPES
+
+
+def _build_render_case_results(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for item in _as_list(fixture.get("render_cases")):
+        if not isinstance(item, dict) or not isinstance(item.get("bpmn_model"), dict):
+            continue
+        decision = evaluate_spfx_bpmn_viewer_render_case(item["bpmn_model"])
+        results.append(
+            {
+                "name": item.get("name"),
+                "renderState": decision["renderState"],
+                "contentSource": decision["contentSource"],
+                "metadataOverlay": decision["metadataOverlay"],
+                "renderAllowed": decision["renderAllowed"],
+                "redactedOverlay": _redacted_overlay(decision),
+            }
+        )
+    return results
+
+
+def _redact_component_props(props: dict[str, Any]) -> dict[str, Any]:
+    redacted = dict(props)
+    if redacted.get("caseId"):
+        redacted["caseId"] = "redacted"
+    return redacted
+
+
+def _redacted_overlay(decision: dict[str, Any]) -> dict[str, str]:
+    return {
+        "state": str(decision["renderState"]),
+        "content_source": str(decision["contentSource"]),
+        "case_context": "redacted",
+        "data_boundary": "metadata_only",
+    }
+
+
+def _validate_redacted_overlay(overlay: dict[str, Any], label: str) -> list[str]:
+    errors: list[str] = []
+    overlay_text = json.dumps(overlay, sort_keys=True)
+    for marker in sorted(REDACTED_OVERLAY_FORBIDDEN_MARKERS):
+        if marker in overlay_text:
+            errors.append(f"SPFx BPMN viewer {label} redacted overlay contains forbidden marker {marker!r}")
+    expected_values = {
+        "case_context": "redacted",
+        "data_boundary": "metadata_only",
+    }
+    for key, value in expected_values.items():
+        if overlay.get(key) != value:
+            errors.append(f"SPFx BPMN viewer {label} redacted overlay {key} must be {value}")
+    if overlay.get("state") not in REQUIRED_RENDER_STATES:
+        errors.append(f"SPFx BPMN viewer {label} redacted overlay state is invalid")
+    if overlay.get("content_source") not in {"approved_bpmn_xml_fixture", "blocked_metadata_only"}:
+        errors.append(f"SPFx BPMN viewer {label} redacted overlay content_source is invalid")
+    return errors
 
 
 def _as_list(value: Any) -> list[Any]:

@@ -2,7 +2,7 @@
   "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.1",
   "name": "nac-spfx-bpmn-viewer-skeleton",
   "status": "offline_skeleton_no_package_deploy",
-  "last_update": "2026-07-07",
+  "last_update": "2026-07-08",
   "purpose": "Offline skeleton for a future SharePoint Framework client-side web part that renders approved BPMN XML through bpmn-js Viewer without making SharePoint the BPMN source, editor, workflow engine or deployment target in this slice.",
   "spfx": {
     "framework": "SharePoint Framework",
@@ -62,6 +62,32 @@
       "fit_viewport_canvas_state",
       "redacted_metadata_overlay"
     ],
+    "render_states": [
+      "approved_renderable",
+      "approval_missing_or_review_required",
+      "viewer_disabled",
+      "contains_matter_data",
+      "invalid_mime_or_hash_missing"
+    ],
+    "dom_markers": {
+      "render_state": "data-nac-render-state",
+      "content_source": "data-nac-content-source",
+      "metadata_overlay": "data-nac-metadata-overlay"
+    },
+    "offline_decision_order": [
+      "approvalStatus must be Approved",
+      "viewerEnabled must be true",
+      "containsMatterData must be false",
+      "bpmnXmlMimeType must be application/xml or text/xml",
+      "bpmnXmlSha256 must be present"
+    ],
+    "metadata_overlay": {
+      "kind": "redacted_metadata_only",
+      "matter_content_present": false,
+      "private_payload_values_present": false,
+      "credential_material_present": false,
+      "raw_graph_paths_present": false
+    },
     "forbidden_outputs": [
       "raw_matter_document_content",
       "mandate_payload_values",

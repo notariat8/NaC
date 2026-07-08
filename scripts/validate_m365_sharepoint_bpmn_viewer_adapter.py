@@ -17,6 +17,8 @@ from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
     validate_bpmn_viewer_provisioning_config,
 )
 from nac_m365_graph.spfx_bpmn_viewer_skeleton import (  # noqa: E402
+    REQUIRED_DOM_MARKERS,
+    REQUIRED_RENDER_STATES,
     build_spfx_bpmn_viewer_skeleton_result,
     load_spfx_bpmn_viewer_render_fixture,
     validate_spfx_bpmn_viewer_skeleton,
@@ -285,6 +287,7 @@ def _validate_contract(
             "package_root": "spfx/nac-bpmn-viewer",
             "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json",
             "status": "offline_skeleton_no_package_deploy",
+            "offline_render_contract": "spfx-bpmn-viewer-offline-render-contract",
         }
         for key, value in expected.items():
             if offline_skeleton.get(key) != value:
@@ -303,6 +306,51 @@ def _validate_contract(
         if spfx_skeleton:
             if spfx_skeleton.get("status") != offline_skeleton.get("status"):
                 errors.append("offline_spfx_skeleton status must match skeleton artifact")
+
+    offline_render = payload.get("offline_render_contract")
+    if not isinstance(offline_render, dict):
+        errors.append("offline_render_contract must be an object")
+    else:
+        expected = {
+            "slice": "spfx-bpmn-viewer-offline-render-contract",
+            "fixture": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
+            "request_plan_count": 3,
+        }
+        for key, value in expected.items():
+            if offline_render.get(key) != value:
+                errors.append(f"offline_render_contract.{key} must be {value}")
+        for flag in ("liveTenantAccess", "appCatalogDeploy"):
+            if offline_render.get(flag) is not False:
+                errors.append(f"offline_render_contract.{flag} must be false")
+        if set(_as_list(offline_render.get("render_states"))) != REQUIRED_RENDER_STATES:
+            errors.append("offline_render_contract.render_states is invalid")
+        dom_markers = offline_render.get("dom_markers")
+        if not isinstance(dom_markers, dict):
+            errors.append("offline_render_contract.dom_markers must be an object")
+        else:
+            for key, value in REQUIRED_DOM_MARKERS.items():
+                if dom_markers.get(key) != value:
+                    errors.append(f"offline_render_contract.dom_markers.{key} must be {value}")
+        metadata_overlay = offline_render.get("metadata_overlay")
+        if not isinstance(metadata_overlay, dict):
+            errors.append("offline_render_contract.metadata_overlay must be an object")
+        else:
+            if metadata_overlay.get("kind") != "redacted_metadata_only":
+                errors.append("offline_render_contract.metadata_overlay.kind must be redacted_metadata_only")
+            for flag in (
+                "matter_content_present",
+                "private_payload_values_present",
+                "credential_material_present",
+                "raw_graph_paths_present",
+            ):
+                if metadata_overlay.get(flag) is not False:
+                    errors.append(f"offline_render_contract.metadata_overlay.{flag} must be false")
+        if spfx_skeleton:
+            skeleton_render = spfx_skeleton.get("render_contract", {})
+            if set(_as_list(skeleton_render.get("render_states"))) != set(_as_list(offline_render.get("render_states"))):
+                errors.append("offline_render_contract render states must match skeleton artifact")
+            if skeleton_render.get("dom_markers") != offline_render.get("dom_markers"):
+                errors.append("offline_render_contract DOM markers must match skeleton artifact")
 
     runtime_readiness = payload.get("runtime_readiness")
     if not isinstance(runtime_readiness, dict):
@@ -618,6 +666,9 @@ def _validate_docs() -> list[str]:
             "keinen BPMN-Modeler",
             "nicht die Ausführungsengine",
             "teams-sharepoint-data-mcp",
+            "spfx-bpmn-viewer-offline-render-contract",
+            "data-nac-render-state",
+            "request_plan_count=3",
         ],
         DOC_EN: [
             "SPFx",
@@ -631,6 +682,9 @@ def _validate_docs() -> list[str]:
             "does not build a SharePoint plugin",
             "not the source, editor or execution engine",
             "teams-sharepoint-data-mcp",
+            "spfx-bpmn-viewer-offline-render-contract",
+            "data-nac-render-state",
+            "request_plan_count=3",
         ],
         DATA_PLANE_DE: [
             "M365 SharePoint BPMN Viewer Adapter",

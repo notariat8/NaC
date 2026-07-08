@@ -8,6 +8,23 @@
     "bpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
     "caseId": "NAC-FIXTURE-CASE-0001"
   },
+  "render_contract": {
+    "liveTenantAccess": false,
+    "appCatalogDeploy": false,
+    "request_plan_count": 3,
+    "dom_markers": {
+      "render_state": "data-nac-render-state",
+      "content_source": "data-nac-content-source",
+      "metadata_overlay": "data-nac-metadata-overlay"
+    },
+    "metadata_overlay": "redacted_metadata_only",
+    "redaction_policy": {
+      "matter_content_present": false,
+      "private_payload_values_present": false,
+      "credential_material_present": false,
+      "raw_graph_paths_present": false
+    }
+  },
   "approved_bpmn_model": {
     "nacBpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
     "processKey": "immobilienkaufvertrag",
@@ -20,17 +37,152 @@
     "bpmnXmlMimeType": "application/xml",
     "approvalStatus": "Approved",
     "viewerEnabled": true,
-    "containsMatterData": false
+    "containsMatterData": false,
+    "nacDataClass": "Template"
   },
+  "render_cases": [
+    {
+      "name": "approved_renderable",
+      "bpmn_model": {
+        "approvalStatus": "Approved",
+        "viewerEnabled": true,
+        "containsMatterData": false,
+        "bpmnXmlMimeType": "application/xml",
+        "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+        "nacDataClass": "Template"
+      },
+      "expected_render_state": {
+        "renderState": "approved_renderable",
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "approved_bpmn_xml_fixture",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": true,
+        "liveTenantAccess": false,
+        "appCatalogDeploy": false
+      },
+      "redacted_overlay": {
+        "state": "approved_renderable",
+        "content_source": "approved_bpmn_xml_fixture",
+        "case_context": "redacted",
+        "data_boundary": "metadata_only"
+      }
+    },
+    {
+      "name": "approval_missing_or_review_required",
+      "bpmn_model": {
+        "approvalStatus": "ReviewRequired",
+        "viewerEnabled": true,
+        "containsMatterData": false,
+        "bpmnXmlMimeType": "application/xml",
+        "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+        "nacDataClass": "Template"
+      },
+      "expected_render_state": {
+        "renderState": "approval_missing_or_review_required",
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "blocked_metadata_only",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": false,
+        "liveTenantAccess": false,
+        "appCatalogDeploy": false
+      },
+      "redacted_overlay": {
+        "state": "approval_missing_or_review_required",
+        "content_source": "blocked_metadata_only",
+        "case_context": "redacted",
+        "data_boundary": "metadata_only"
+      }
+    },
+    {
+      "name": "viewer_disabled",
+      "bpmn_model": {
+        "approvalStatus": "Approved",
+        "viewerEnabled": false,
+        "containsMatterData": false,
+        "bpmnXmlMimeType": "application/xml",
+        "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+        "nacDataClass": "Template"
+      },
+      "expected_render_state": {
+        "renderState": "viewer_disabled",
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "blocked_metadata_only",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": false,
+        "liveTenantAccess": false,
+        "appCatalogDeploy": false
+      },
+      "redacted_overlay": {
+        "state": "viewer_disabled",
+        "content_source": "blocked_metadata_only",
+        "case_context": "redacted",
+        "data_boundary": "metadata_only"
+      }
+    },
+    {
+      "name": "contains_matter_data",
+      "bpmn_model": {
+        "approvalStatus": "Approved",
+        "viewerEnabled": true,
+        "containsMatterData": true,
+        "bpmnXmlMimeType": "application/xml",
+        "bpmnXmlSha256": "fixture-only-not-a-live-content-hash",
+        "nacDataClass": "Restricted"
+      },
+      "expected_render_state": {
+        "renderState": "contains_matter_data",
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "blocked_metadata_only",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": false,
+        "liveTenantAccess": false,
+        "appCatalogDeploy": false
+      },
+      "redacted_overlay": {
+        "state": "contains_matter_data",
+        "content_source": "blocked_metadata_only",
+        "case_context": "redacted",
+        "data_boundary": "metadata_only"
+      }
+    },
+    {
+      "name": "invalid_mime_or_hash_missing",
+      "bpmn_model": {
+        "approvalStatus": "Approved",
+        "viewerEnabled": true,
+        "containsMatterData": false,
+        "bpmnXmlMimeType": "application/json",
+        "bpmnXmlSha256": "",
+        "nacDataClass": "Template"
+      },
+      "expected_render_state": {
+        "renderState": "invalid_mime_or_hash_missing",
+        "bpmnJsMode": "viewer_only",
+        "contentSource": "blocked_metadata_only",
+        "metadataOverlay": "redacted_metadata_only",
+        "renderAllowed": false,
+        "liveTenantAccess": false,
+        "appCatalogDeploy": false
+      },
+      "redacted_overlay": {
+        "state": "invalid_mime_or_hash_missing",
+        "content_source": "blocked_metadata_only",
+        "case_context": "redacted",
+        "data_boundary": "metadata_only"
+      }
+    }
+  ],
   "expected_request_plan_tools": [
     "bpmn_model_get",
     "process_register_list",
     "bpmn_viewer_overlay_get"
   ],
   "expected_render_state": {
+    "renderState": "approved_renderable",
     "bpmnJsMode": "viewer_only",
     "contentSource": "approved_bpmn_xml_fixture",
     "metadataOverlay": "redacted_metadata_only",
+    "renderAllowed": true,
     "liveTenantAccess": false,
     "appCatalogDeploy": false
   }

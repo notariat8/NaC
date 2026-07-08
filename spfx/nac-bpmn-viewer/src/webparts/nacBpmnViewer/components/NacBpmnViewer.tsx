@@ -1,7 +1,11 @@
 import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
 import { sampleApprovedBpmnXml } from '../fixtures/sampleBpmn';
-import { bpmnViewerRequestPlans, assertRequestPlanOnly } from '../services/BpmnViewerRequestPlan';
+import {
+  approvedFixtureRenderDecision,
+  bpmnViewerRequestPlans,
+  assertRequestPlanOnly
+} from '../services/BpmnViewerRequestPlan';
 
 export interface NacBpmnViewerProps {
   workspaceId: string;
@@ -16,6 +20,9 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   React.useEffect(() => {
     bpmnViewerRequestPlans.forEach(assertRequestPlanOnly);
     if (!containerRef.current) {
+      return;
+    }
+    if (!approvedFixtureRenderDecision.renderAllowed) {
       return;
     }
 
@@ -38,15 +45,28 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   }, [props.workspaceId, props.bpmnModelId, props.processId, props.caseId]);
 
   return (
-    <section data-nac-component="spfx-bpmn-viewer-skeleton">
+    <section
+      data-nac-component="spfx-bpmn-viewer-skeleton"
+      data-nac-render-state={approvedFixtureRenderDecision.renderState}
+      data-nac-content-source={approvedFixtureRenderDecision.contentSource}
+      data-nac-metadata-overlay={approvedFixtureRenderDecision.metadataOverlay}
+    >
       <div
         id="nac-bpmn-viewer-container"
         ref={containerRef}
         data-workspace-id={props.workspaceId}
         data-bpmn-model-id={props.bpmnModelId}
         data-process-id={props.processId || ''}
-        data-case-id={props.caseId || ''}
+        data-case-context={props.caseId ? 'redacted' : ''}
       />
+      <aside
+        className="nac-bpmn-viewer-overlay"
+        data-nac-metadata-overlay={approvedFixtureRenderDecision.metadataOverlay}
+        data-nac-overlay-redaction="metadata_only_no_private_payload_or_credentials"
+      >
+        <span data-nac-overlay-field="render-state">{approvedFixtureRenderDecision.renderState}</span>
+        <span data-nac-overlay-field="content-source">{approvedFixtureRenderDecision.contentSource}</span>
+      </aside>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 # M365 SharePoint BPMN Viewer Adapter
 
 Status: contract-first decision
-Last content update: 2026-07-07
+Last content update: 2026-07-08
 
 ## Purpose
 
@@ -61,6 +61,21 @@ skeleton, the synthetic render fixture and the MCP request plans for
 `bpmn_model_get`, `process_register_list` and `bpmn_viewer_overlay_get`. This
 slice does not build an SPFx package, does not create `package-lock.json`, does
 not use the App Catalog and does not run a Graph or tenant apply.
+
+The offline render contract `spfx-bpmn-viewer-offline-render-contract` is wired
+through
+[nac-spfx-bpmn-viewer.skeleton.json](../../../deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json),
+[render-contract.fixture.json](../../../tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json)
+and the
+[M365 SharePoint BPMN viewer adapter contract](../../../workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json).
+It has exactly the states `approved_renderable`,
+`approval_missing_or_review_required`, `viewer_disabled`,
+`contains_matter_data` and `invalid_mime_or_hash_missing`. The DOM markers
+`data-nac-render-state`, `data-nac-content-source` and
+`data-nac-metadata-overlay` carry only the redacted render status; the overlay
+contains no matter contents, mandate values, credential material or raw Graph
+paths. The CLI contract remains offline with `liveTenantAccess=false`,
+`appCatalogDeploy=false` and `request_plan_count=3`.
 
 The runtime-readiness slice also remains offline:
 `nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`
