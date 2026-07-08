@@ -17,6 +17,8 @@ model and repository consolidation.
   tool time, approvals and repeated waiting time.
 - [codex-worktree-operating-model.md](codex-worktree-operating-model.md): read-only
   worktree hygiene audit, naming scheme and owner-gated cleanup boundaries.
+- [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): memory sources,
+  hook boundaries and progressive context layers without live hook activation.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
   prepared M365 MCP PRs and separately approved live smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index

@@ -191,6 +191,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [src/business_os/](../../src/business_os) contains the legacy deterministic process engine behind the NaC CLI.
 - [.github/workflows/](../../.github/workflows) contains governance and runtime workflows.
 - [AGENTS.md](../../AGENTS.md) and [.codex/agents/](../../.codex/agents) mirror Codex-facing rules.
+- [docs/en/agent-context/README.md](agent-context/README.md) and
+  [agent-context/index.json](../../agent-context/index.json) describe
+  progressive disclosure, agent-readable maps/history/guardrails and
+  verification contracts.
 
 ## Quick Start
 

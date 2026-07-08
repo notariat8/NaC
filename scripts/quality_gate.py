@@ -151,6 +151,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_worktree_operating_model.py"],
                 ),
                 (
+                    "codex_agent_context_operating_model",
+                    "Codex Agent Context Operating Model",
+                    [sys.executable, "scripts/validate_codex_agent_context_operating_model.py"],
+                ),
+                (
                     "teams_sharepoint_graph_data_plane",
                     "Teams SharePoint Graph Data Plane",
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],

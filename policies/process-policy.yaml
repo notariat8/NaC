@@ -173,6 +173,33 @@ agent_workflows:
       oci_write_access: false
       may_propose_changes: true
       may_apply_changes_without_owner_approval: false
+  progressive_disclosure:
+    enabled: true
+    root_agents_md_role: router_not_encyclopedia
+    context_index: agent-context/index.json
+    always_on_sources:
+      - AGENTS.md
+      - .codex/config.toml
+      - docs/de/START_HERE.md
+      - docs/en/START_HERE.md
+    scoped_sources:
+      - docs/AGENTS.md
+      - workflows/contracts/AGENTS.md
+      - .codex/agents
+    on_demand_sources:
+      - docs/*/architecture
+      - docs/*/operations
+      - workflows/contracts
+      - workflows/verification-contracts
+    runtime_context_sources:
+      - current_prompt
+      - tool_output
+      - logs
+      - diffs
+      - fresh_validation_evidence
+    verification_contract_schema: nac.verification-contract/v0.1
+    verification_contract_root: workflows/verification-contracts
+    hooks_are_opt_in_examples_not_repo_activation: true
   release_memory:
     enabled: false
     status: archived_legacy_oci_release_lane

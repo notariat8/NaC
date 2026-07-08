@@ -1,0 +1,87 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_agent_context",
+  "title": "Codex Agent Context Operating Model Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "AGENTS.md",
+      "CODEOWNERS",
+      ".codex/**",
+      "agent-context/**",
+      "docs/AGENTS.md",
+      "docs/*/agent-context/**",
+      "docs/*/operations/codex-*.md",
+      "workflows/contracts/AGENTS.md",
+      "workflows/contracts/codex-parallel-review.contract.json",
+      "workflows/verification-contracts/**",
+      "scripts/validate_codex_agent_context_operating_model.py",
+      "scripts/validate_codex_parallel_review.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md",
+      ".codex/agents/"
+    ],
+    "on_demand": [
+      "agent-context/index.json",
+      "docs/de/operations/codex-memory-hooks-operating-model.md",
+      "docs/en/operations/codex-memory-hooks-operating-model.md",
+      "docs/de/operations/codex-worktree-operating-model.md",
+      "docs/en/operations/codex-worktree-operating-model.md"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_codex_agent_context_operating_model.py",
+    "python scripts/validate_codex_parallel_review.py",
+    "python -m unittest tests.test_codex_agent_context_operating_model",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "AGENTS.md remains a router and points to layered context instead of duplicating all operational details.",
+    "Subagents are read-only by default and use an exact repository registry.",
+    "Hooks are documented as opt-in examples and are not activated by this repository slice.",
+    "Shared truth lives in repo artifacts or approved external systems, not in volatile chat memory.",
+    "No mandate data, credentials, tokens, certificate private material or customer secrets are stored."
+  ],
+  "thresholds": {
+    "max_agent_threads": 6,
+    "max_agent_depth": 1,
+    "max_agent_runtime_seconds": 1800,
+    "minimum_context_layers": 4,
+    "minimum_artifact_categories": 4
+  },
+  "required_evidence": [
+    "agent_context_index",
+    "verification_contract",
+    "memory_hooks_operating_model",
+    "scoped_agents_docs",
+    "subagent_registry_validator",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "no_secrets": true,
+    "no_mandate_data": true,
+    "no_live_hook_activation": true
+  },
+  "failure_behavior": {
+    "missing_required_context": "fail_closed",
+    "unknown_agent_profile": "fail_closed",
+    "hook_activation_detected": "fail_closed",
+    "verification_contract_not_applicable": "report_not_applicable",
+    "quality_gate_failure": "block_completion"
+  }
+}
+

@@ -35,6 +35,7 @@ Dieses Repository ist ein Muster für `Notariat as Code` mit `NaC` als konkreter
 - Knowledge-Graph-Artefakte liegen usecase-lokal als `knowledge-graph.graph.json` und `knowledge-graph.md`; ein zentraler `knowledge-graph/` Ordner ist nicht zulässig.
 - Konzeptänderungen werden Codex-first synchron zwischen Policy, AGENTS.md und Codex-Agentenprofilen gepflegt.
 - Onboarding wird für den Codex-Pfad und alle aktiven Repo-Startdokumente gepflegt.
+- Progressive Disclosure gilt für Agentenkontext: [AGENTS.md](AGENTS.md) ist Router, nicht Enzyklopädie. Always-on-Regeln bleiben hier; scoped Regeln stehen in verschachtelten [AGENTS.md](AGENTS.md)-Dateien; on-demand Maps, History, Guardrails und Verification Contracts stehen im maschinenlesbaren [agent-context/index.json](agent-context/index.json); Runtime-Kontext entsteht nur aus aktueller Toolausgabe, Logs, Diffs und Evidence.
 - README-, START_HERE-, Index- und Agentenregel-Dateien müssen interne Repo-Verweise als klickbare Markdown-Links führen; reine Code-Formatierung ist für Befehle, Konfigurationsschlüssel, Dateimuster und Code-Identifier reserviert.
 - Der verbindliche Technikstack steht in [policies/technology-policy.yaml](policies/technology-policy.yaml).
 - Neue NaC-Funktionalität braucht eine Bedienkante in der zentralen `nac`-CLI; direkte Skripte dürfen als interne Kompatibilität bleiben, aber Produktdokumentation führt über [docs/de/cli.md](docs/de/cli.md) und [docs/en/cli.md](docs/en/cli.md).

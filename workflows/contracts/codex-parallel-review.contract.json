@@ -15,6 +15,58 @@
       "Codex MCP server with OpenAI Agents SDK"
     ]
   },
+  "subagent_operating_gate": {
+    "exact_agent_registry_required": true,
+    "rogue_agent_profiles_allowed": false,
+    "worker_agents_allowed_for_disjoint_write_scopes": true,
+    "explorer_agents_read_only_by_default": true,
+    "lead_agent_integrates_results": true,
+    "max_threads": 6,
+    "max_depth": 1,
+    "job_max_runtime_seconds": 1800,
+    "batch_thresholds": {
+      "use_subagents_when_independent_questions": 2,
+      "use_worktrees_when_parallel_write_scopes": 2,
+      "do_not_split_if_coordination_cost_exceeds_review_value": true
+    },
+    "prohibited_delegations": [
+      "secrets",
+      "certificate_private_material",
+      "real_mandate_data",
+      "productive_m365_writes",
+      "entra_app_credentials",
+      "release_apply",
+      "destructive_git_cleanup"
+    ]
+  },
+  "progressive_disclosure": {
+    "context_index": "agent-context/index.json",
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md",
+      ".codex/agents/"
+    ],
+    "on_demand": [
+      "docs/*/architecture/*.md",
+      "docs/*/operations/*.md",
+      "workflows/contracts/*.json",
+      "workflows/verification-contracts/*.json"
+    ],
+    "runtime": [
+      "current prompt",
+      "tool output",
+      "logs",
+      "diffs",
+      "fresh validation evidence"
+    ]
+  },
+  "verification_contracts": [
+    "workflows/verification-contracts/codex-agent-context.verification.json"
+  ],
   "agent_profiles": [
     {
       "name": "nac_scope_mapper",

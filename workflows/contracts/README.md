@@ -14,6 +14,13 @@ Jeder Vertrag soll definieren:
 - Datenklasse
 - Form des Nachweisdatensatzes
 
+Ergänzend können wiederkehrende agentische Definition-of-Done-Fragen als
+Verification Contracts unter [../verification-contracts/](../verification-contracts)
+modelliert werden. Diese Verträge beschreiben `applies_when`, benötigten
+Kontext, Checks, Invarianten, Thresholds, Evidence, Pass-Bedingung und
+Fehlerverhalten. Sie ersetzen die fachlichen Domain-Contracts nicht, sondern
+machen die Abnahmeharness agentisch lesbar.
+
 ## Implementierte Verträge
 
 - [workflows/contracts/kg-editor.contract.json](kg-editor.contract.json):

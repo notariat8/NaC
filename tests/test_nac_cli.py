@@ -79,8 +79,14 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("Legal Graph Contracts", output)
         self.assertIn("Teams SharePoint Graph Data Plane", output)
         self.assertIn("M365 Matter Access Delegation", output)
+        self.assertIn("Codex Agent Context Verification Contract", output)
         self.assertIn("Spec Traceability", output)
         self.assertIn("STATUS: PASSED", output)
+
+    def test_contracts_verify_agent_context_harness(self) -> None:
+        rc, output = run_cli("contracts", "verify")
+
+        self.assertEqual(rc, 0, output)
 
     def test_kg_status_is_available_through_nac_cli(self) -> None:
         rc, output = run_cli("kg", "status")

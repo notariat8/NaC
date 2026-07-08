@@ -287,6 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
     contracts = subparsers.add_parser("contracts", help="Prüft NaC-Workflow-Verträge.")
     contracts_sub = contracts.add_subparsers(dest="contracts_command", required=True)
     contracts_sub.add_parser("validate", help="Validiert Workflow-Verträge, Secure-Link- und Connector-Grenzen.")
+    contracts_sub.add_parser("verify", help="Validiert agentische Verification Contracts und Kontext-Harness.")
     contracts.set_defaults(func=command_contracts)
 
     batch_approval = subparsers.add_parser("batch-approval", help="Rendert kopierbare Batch-Freigaben.")
@@ -1158,6 +1159,7 @@ def command_status(args: argparse.Namespace) -> int:
             "ai_sbom_export_mapping": "nac ai-sbom export-mapping",
             "bpmn_validate": "nac bpmn validate",
             "contracts_validate": "nac contracts validate",
+            "contracts_verify": "nac contracts verify",
             "m365_teams_sharepoint_plan": "nac m365 teams-sharepoint plan",
             "config_validate": "nac config validate",
             "plugin_actions": "nac plugins actions",
@@ -1505,6 +1507,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Teams SharePoint Graph Data Plane", "validate_teams_sharepoint_graph_data_plane.py"),
             ("M365 Matter Access Delegation", "validate_m365_matter_access_delegation.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
+            ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -1523,6 +1526,9 @@ def command_contracts(args: argparse.Namespace) -> int:
             if result.returncode != 0:
                 overall_rc = result.returncode
         return overall_rc
+
+    if args.contracts_command == "verify":
+        return run_script(repo_root, "scripts/validate_codex_agent_context_operating_model.py", [])
 
     raise AssertionError(f"Unknown contracts command: {args.contracts_command}")
 

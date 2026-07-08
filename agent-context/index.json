@@ -1,0 +1,102 @@
+{
+  "schema_version": "nac.agent-context-index/v0.1",
+  "index_id": "codex_agent_context",
+  "status": "active_mvp",
+  "purpose": "Agent-readable router for loading the right NaC context at the right time without turning AGENTS.md into an encyclopedia.",
+  "guardrails": {
+    "root_agents_md_is_router": true,
+    "real_mandate_data_allowed": false,
+    "secrets_allowed": false,
+    "runtime_logs_loaded_only_for_current_task": true,
+    "external_memory_is_source_of_shared_truth": true
+  },
+  "layers": [
+    {
+      "id": "always_on",
+      "description": "Stable invariants and navigation loaded at session start.",
+      "paths": [
+        "AGENTS.md",
+        ".codex/config.toml",
+        "docs/de/START_HERE.md",
+        "docs/en/START_HERE.md",
+        "policies/technology-policy.yaml",
+        "policies/data-protection-policy.yaml",
+        "policies/language-policy.yaml"
+      ]
+    },
+    {
+      "id": "scoped",
+      "description": "Directory- or domain-specific instructions loaded when files in that scope are touched.",
+      "paths": [
+        "docs/AGENTS.md",
+        "workflows/contracts/AGENTS.md",
+        ".codex/agents/nac-scope-mapper.toml",
+        ".codex/agents/nac-policy-reviewer.toml",
+        ".codex/agents/nac-docs-parity-reviewer.toml",
+        ".codex/agents/nac-validation-reviewer.toml"
+      ]
+    },
+    {
+      "id": "on_demand",
+      "description": "Architecture maps, decisions, guardrails and runbooks loaded only when relevant.",
+      "categories": [
+        {
+          "id": "maps",
+          "description": "System shape and dependency maps.",
+          "paths": [
+            "docs/de/architecture/teams-sharepoint-graph-data-plane.md",
+            "docs/en/architecture/teams-sharepoint-graph-data-plane.md",
+            "docs/de/architecture/nemo-agent-toolkit-aiq-m365.md",
+            "docs/en/architecture/nemo-agent-toolkit-aiq-m365.md",
+            "workflows/contracts/README.md"
+          ]
+        },
+        {
+          "id": "history",
+          "description": "Why decisions were made.",
+          "paths": [
+            "docs/de/technology-decision.md",
+            "docs/en/technology-decision.md",
+            "docs/de/operations/codex-worktree-operating-model.md",
+            "docs/en/operations/codex-worktree-operating-model.md"
+          ]
+        },
+        {
+          "id": "guardrails",
+          "description": "Rules that prevent critical behavior from being broken.",
+          "paths": [
+            "CODEOWNERS",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            "docs/de/quality-gate.md",
+            "docs/en/quality-gate.md",
+            "workflows/verification-contracts/codex-agent-context.verification.json"
+          ]
+        },
+        {
+          "id": "memory_hooks",
+          "description": "Local recall and hook operating model without live hook activation.",
+          "paths": [
+            "docs/de/operations/codex-memory-hooks-operating-model.md",
+            "docs/en/operations/codex-memory-hooks-operating-model.md",
+            ".codex/hooks/README.md",
+            ".codex/hooks/pre_tool_use_policy.example.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "runtime",
+      "description": "Task-specific prompts, tool output, logs, diffs and evidence loaded for the current run only.",
+      "paths": [
+        "out/quality/status.json",
+        "out/quality/report.md",
+        "out/m365/teams-sharepoint/"
+      ],
+      "load_policy": "only_after_command_execution_or_current_task_request"
+    }
+  ],
+  "verification_contracts": [
+    "workflows/verification-contracts/codex-agent-context.verification.json"
+  ]
+}
+

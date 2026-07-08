@@ -205,6 +205,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Rollen-, Zugriffs-, SBOM- und Drittbetriebsregeln.
 - [AGENTS.md](../../AGENTS.md) und [.codex/agents/](../../.codex/agents) spiegeln die
   verbindlichen Codex-Agentenregeln.
+- [docs/de/agent-context/README.md](agent-context/README.md) und
+  [agent-context/index.json](../../agent-context/index.json) beschreiben
+  Progressive Disclosure, agentisch lesbare Maps/History/Guardrails und
+  Verification Contracts.
 - [schemas/](../../schemas), [bpmn/](../../bpmn), [processes/](../../processes), [src/](../../src) und [scripts/](../../scripts) enthalten
   strukturierte Prozessanträge, Prozessmodelle, technische Fixtures, Runtime
   und lokale Werkzeuge.

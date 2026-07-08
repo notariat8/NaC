@@ -46,6 +46,15 @@ REQUIRED_DEFAULT_POLICY_DIMENSIONS = {
     "validation_surface",
     "coordination_cost",
 }
+REQUIRED_PROHIBITED_DELEGATIONS = {
+    "secrets",
+    "certificate_private_material",
+    "real_mandate_data",
+    "productive_m365_writes",
+    "entra_app_credentials",
+    "release_apply",
+    "destructive_git_cleanup",
+}
 REQUIRED_VALIDATION_COMMANDS = {
     "python scripts/validate_codex_parallel_review.py",
     "python scripts/validate_language_parity.py",
@@ -106,6 +115,46 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
         for dimension in sorted(REQUIRED_DEFAULT_POLICY_DIMENSIONS - dimensions):
             errors.append(f"default_policy.assessment_dimensions fehlt: {dimension}")
 
+    operating_gate = payload.get("subagent_operating_gate")
+    if not isinstance(operating_gate, dict):
+        errors.append("subagent_operating_gate muss ein Objekt sein")
+    else:
+        expected_values = {
+            "exact_agent_registry_required": True,
+            "rogue_agent_profiles_allowed": False,
+            "worker_agents_allowed_for_disjoint_write_scopes": True,
+            "explorer_agents_read_only_by_default": True,
+            "lead_agent_integrates_results": True,
+            "max_threads": 6,
+            "max_depth": 1,
+            "job_max_runtime_seconds": 1800,
+        }
+        for key, expected in expected_values.items():
+            if operating_gate.get(key) != expected:
+                errors.append(f"subagent_operating_gate.{key} muss {expected!r} sein")
+        prohibited_delegations = set(_string_list(operating_gate.get("prohibited_delegations")))
+        for missing in sorted(REQUIRED_PROHIBITED_DELEGATIONS - prohibited_delegations):
+            errors.append(f"subagent_operating_gate.prohibited_delegations fehlt: {missing}")
+        thresholds = operating_gate.get("batch_thresholds")
+        if not isinstance(thresholds, dict):
+            errors.append("subagent_operating_gate.batch_thresholds muss ein Objekt sein")
+        elif thresholds.get("use_subagents_when_independent_questions") != 2:
+            errors.append("subagent_operating_gate.batch_thresholds.use_subagents_when_independent_questions muss 2 sein")
+
+    progressive_disclosure = payload.get("progressive_disclosure")
+    if not isinstance(progressive_disclosure, dict):
+        errors.append("progressive_disclosure muss ein Objekt sein")
+    else:
+        if progressive_disclosure.get("context_index") != "agent-context/index.json":
+            errors.append("progressive_disclosure.context_index muss agent-context/index.json sein")
+        for field in ("always_on", "scoped", "on_demand", "runtime"):
+            if not _string_list(progressive_disclosure.get(field)):
+                errors.append(f"progressive_disclosure.{field} muss eine nicht leere String-Liste sein")
+
+    verification_contracts = set(_string_list(payload.get("verification_contracts")))
+    if "workflows/verification-contracts/codex-agent-context.verification.json" not in verification_contracts:
+        errors.append("verification_contracts muss codex-agent-context.verification.json referenzieren")
+
     agent_profiles = payload.get("agent_profiles")
     if not isinstance(agent_profiles, list) or not agent_profiles:
         errors.append("agent_profiles muss eine nicht leere Liste sein")
@@ -133,6 +182,10 @@ def validate_contract(path: Path = CONTRACT_PATH) -> list[str]:
 
         for missing in sorted(REQUIRED_AGENT_NAMES - seen_names):
             errors.append(f"agent_profiles fehlt: {missing}")
+        if seen_names != REQUIRED_AGENT_NAMES:
+            extra = seen_names - REQUIRED_AGENT_NAMES
+            for name in sorted(extra):
+                errors.append(f"agent_profiles enthaelt nicht registriertes Profil: {name}")
 
     for field in ("allowed_inputs", "prohibited_inputs", "review_gates", "evidence_fields"):
         if not _string_list(payload.get(field)):
@@ -162,6 +215,21 @@ def validate_codex_config(path: Path = CONFIG_PATH) -> list[str]:
         errors.append(".codex/config.toml soll agents.max_threads = 6 setzen")
     if "max_depth = 1" not in text:
         errors.append(".codex/config.toml soll agents.max_depth = 1 setzen")
+    if "job_max_runtime_seconds = 1800" not in text:
+        errors.append(".codex/config.toml soll agents.job_max_runtime_seconds = 1800 setzen")
+    return errors
+
+
+def validate_agent_registry(path: Path = AGENT_DIR) -> list[str]:
+    errors: list[str] = []
+    if not path.is_dir():
+        return [f"Agentprofilordner fehlt: {path.relative_to(REPO_ROOT)}"]
+    actual = {item.stem.replace("-", "_") for item in path.glob("*.toml")}
+    expected = {name.replace("_", "_") for name in REQUIRED_AGENT_NAMES}
+    for missing in sorted(expected - actual):
+        errors.append(f"Agentprofil-Datei fehlt fuer Registry-Eintrag: {missing}")
+    for extra in sorted(actual - expected):
+        errors.append(f"Nicht registriertes Agentprofil gefunden: {extra}")
     return errors
 
 
@@ -196,6 +264,7 @@ def main() -> int:
     errors: list[str] = []
     errors.extend(validate_contract())
     errors.extend(validate_codex_config())
+    errors.extend(validate_agent_registry())
 
     if not AGENT_DIR.is_dir():
         errors.append(f"Agentprofilordner fehlt: {AGENT_DIR.relative_to(REPO_ROOT)}")

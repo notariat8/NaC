@@ -1,5 +1,15 @@
 # Governance-relevante Dateien nur mit Owner-Review aendern.
 policies/* @ofunk
 AGENTS.md @ofunk
+.codex/* @ofunk
+.codex/agents/* @ofunk
+.codex/hooks/* @ofunk
+agent-context/* @ofunk
+docs/AGENTS.md @ofunk
+docs/*/agent-context/* @ofunk
+docs/*/operations/codex-*.md @ofunk
+workflows/contracts/* @ofunk
+workflows/verification-contracts/* @ofunk
 scripts/validate_governance_sync.py @ofunk
+scripts/validate_codex_*.py @ofunk
 .github/workflows/governance-policy-sync.yml @ofunk

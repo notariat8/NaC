@@ -17,6 +17,8 @@ Arbeitsmodell und Repo-Konsolidierung.
   Toolzeit, Freigaben und wiederkehrende Wartezeiten.
 - [codex-worktree-operating-model.md](codex-worktree-operating-model.md): read-only
   Worktree-Hygiene-Audit, Namensschema und owner-gated Cleanup-Grenzen.
+- [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): Memory-Quellen,
+  Hook-Grenzen und progressive Context-Layer ohne Live-Hook-Aktivierung.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): Batch-Freigabe für
   vorbereitete M365-MCP-PRs und getrennt freizugebende Live-Smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optionaler lokaler qmd-Suchindex
