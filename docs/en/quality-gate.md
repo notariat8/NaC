@@ -32,7 +32,8 @@ CI:
 - `strict`: `standard` plus governance policy sync, spec traceability,
   technology policy, language parity including skill language markers,
   documentation links, BPMN model validation, cloud runbook parity, Gantt,
-  AI-SBOM, AI-SBOM export mapping, knowledge graph, Teams/SharePoint Graph data plane, matter-data
+  AI-SBOM, AI-SBOM export mapping, knowledge graph, Codex worktree operating model,
+  Teams/SharePoint Graph data plane, matter-data
   classification/redaction and private operating frame gate, private-payload target design and
   private-payload access policy plus legal source inventory/license TDM,
   Legal Nemotron readiness, legal model-card/AI-SBOM delta, legal model-card
@@ -59,25 +60,26 @@ CI:
 15. `knowledge_graph` only in `strict`
 16. `kg_editor` only in `strict`
 17. `codex_parallel_review` only in `strict`
-18. `teams_sharepoint_graph_data_plane` only in `strict`
-19. `m365_release_readiness_gate` only in `strict`
-20. `m365_sharepoint_bpmn_viewer_adapter` only in `strict`
-21. `m365_matter_access_delegation` only in `strict`
-22. `notarial_application_interface_inventory` only in `strict`
-23. `matter_data_classification_redaction` only in `strict`
-24. `private_operating_frame_gate` only in `strict`
-25. `private_payload_target_design` only in `strict`
-26. `private_payload_access_policy` only in `strict`
-27. `gnotkg_costs` only in `strict`
-28. `secure_document_links` only in `strict`
-29. `legal_research_connectors` only in `strict`
-30. `legal_source_inventory_license_tdm` only in `strict`
-31. `legal_model_customization_readiness` only in `strict`
-32. `legal_model_card_ai_sbom_delta` only in `strict`
-33. `legal_model_card_proposal` only in `strict`
-34. `legal_ai_sbom_delta_proposal` only in `strict`
-35. `legal_model_evaluation_benchmark` only in `strict`
-36. `legal_graph_contracts` only in `strict`
+18. `codex_worktree_operating_model` only in `strict`
+19. `teams_sharepoint_graph_data_plane` only in `strict`
+20. `m365_release_readiness_gate` only in `strict`
+21. `m365_sharepoint_bpmn_viewer_adapter` only in `strict`
+22. `m365_matter_access_delegation` only in `strict`
+23. `notarial_application_interface_inventory` only in `strict`
+24. `matter_data_classification_redaction` only in `strict`
+25. `private_operating_frame_gate` only in `strict`
+26. `private_payload_target_design` only in `strict`
+27. `private_payload_access_policy` only in `strict`
+28. `gnotkg_costs` only in `strict`
+29. `secure_document_links` only in `strict`
+30. `legal_research_connectors` only in `strict`
+31. `legal_source_inventory_license_tdm` only in `strict`
+32. `legal_model_customization_readiness` only in `strict`
+33. `legal_model_card_ai_sbom_delta` only in `strict`
+34. `legal_model_card_proposal` only in `strict`
+35. `legal_ai_sbom_delta_proposal` only in `strict`
+36. `legal_model_evaluation_benchmark` only in `strict`
+37. `legal_graph_contracts` only in `strict`
 
 ## Artifacts
 

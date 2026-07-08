@@ -55,6 +55,7 @@ prüfbare technische Handlung zurückgeführt werden kann.
 ```bash
 python scripts/nac.py status
 python scripts/nac.py doctor --profile strict
+python scripts/nac.py git worktree-audit --format json
 python scripts/nac.py web
 python scripts/nac.py kg status
 python scripts/nac.py kg cost-view immobilienkaufvertrag
@@ -103,6 +104,7 @@ Nach Installation entsprechend:
 ```bash
 nac status
 nac doctor --profile strict
+nac git worktree-audit --format json
 nac web
 nac kg status
 nac kg cost-view immobilienkaufvertrag
@@ -155,6 +157,7 @@ nac time-ledger summary
 | --- | --- | --- |
 | Überblick | `nac status` | Zeigt Usecases, offene Pflichtangaben, BPMN-Modelle und Konfigurationen. |
 | Qualität | `nac doctor --profile strict` | Führt den strikten Quality Gate aus. |
+| Git-Hygiene | `nac git worktree-audit` | Prüft lokale Worktrees, Branches und Cleanup-Kandidaten read-only; Löschaktionen bleiben owner-gated. |
 | Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
 | Knowledge Graphs | `nac kg status`, `nac kg workflow-contract <slug>` und `nac kg pilot-checklist <slug>` | Zeigt den Stand der usecase-lokalen Wissensgraphen, erzeugt mandatsdatenfreie Workflow-Vertragsentwürfe und baut deterministische Pilot-Aufnahmechecklisten aus einem Usecase-KG. |

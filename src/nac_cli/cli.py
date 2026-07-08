@@ -18,6 +18,7 @@ from typing import Any
 from business_os.engine import BusinessProcessEngine
 from nac_ai_sbom.export_mapping import ai_sbom_export_mapping_status
 from nac_gnotkg.costs import quote_fee
+from nac_git.worktree_hygiene import build_worktree_audit, format_worktree_audit_text
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
 from nac_identity.tenant_readiness import check_domain_ready
 from nac_legal_graph.ai_sbom import legal_ai_sbom_delta_proposal_status
@@ -197,6 +198,15 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--json-output", type=Path, default=Path("out/quality/status.json"))
     doctor.add_argument("--md-output", type=Path, default=Path("out/quality/report.md"))
     doctor.set_defaults(func=command_doctor)
+
+    git_parser = subparsers.add_parser("git", help="Prüft lokale Git-/Worktree-Hygiene read-only.")
+    git_sub = git_parser.add_subparsers(dest="git_command", required=True)
+    git_worktree_audit = git_sub.add_parser(
+        "worktree-audit",
+        help="Auditiert lokale Worktrees und Branches ohne Cleanup-Aktion.",
+    )
+    git_worktree_audit.add_argument("--format", choices=["text", "json"], default="text")
+    git_parser.set_defaults(func=command_git)
 
     web = subparsers.add_parser("web", help="Startet den lokalen NaC-Webserver.")
     add_web_args(web, default_port=DEFAULT_PORT)
@@ -1139,6 +1149,7 @@ def command_status(args: argparse.Namespace) -> int:
         "configs": len(configs),
         "commands": {
             "quality_gate": "nac doctor --profile strict",
+            "git_worktree_audit": "nac git worktree-audit",
             "local_web": "nac web",
             "local_operator": "nac operator --open",
             "kg_status": "nac kg status",
@@ -1185,6 +1196,23 @@ def command_doctor(args: argparse.Namespace) -> int:
             str(args.md_output),
         ],
     )
+
+
+def command_git(args: argparse.Namespace) -> int:
+    repo_root = resolve_repo_root(args.repo_root)
+    try:
+        if args.git_command == "worktree-audit":
+            payload = build_worktree_audit(repo_root)
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(format_worktree_audit_text(payload))
+            return 0
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    raise AssertionError(f"Unknown git command: {args.git_command}")
 
 
 def command_web(args: argparse.Namespace) -> int:
