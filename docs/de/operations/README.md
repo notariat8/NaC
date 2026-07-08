@@ -24,6 +24,10 @@ produktive Apply-Kommandos blockiert.
   Toolzeit, Freigaben und wiederkehrende Wartezeiten.
 - [codex-worktree-operating-model.md](codex-worktree-operating-model.md): read-only
   Worktree-Hygiene-Audit, Namensschema und owner-gated Cleanup-Grenzen.
+- [codex-subagent-operating-gate.md](codex-subagent-operating-gate.md):
+  exakte read-only Subagent-Registry, Runtime-Limits, Rogue-Agent-Blocker und
+  Batch-/Worktree-Einsatzschwelle; Quell-Registry:
+  [agent-context/subagent-registry.json](../../../agent-context/subagent-registry.json).
 - [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): Memory-Quellen,
   Hook-Grenzen und progressive Context-Layer ohne Live-Hook-Aktivierung.
 - [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):

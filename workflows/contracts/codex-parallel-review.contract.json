@@ -3,11 +3,12 @@
   "contract_id": "workflow.codex_parallel_review",
   "title": "Codex Parallel Review Workflow für NaC",
   "status": "active_mvp",
-  "last_update": "2026-06-25",
+  "last_update": "2026-07-08",
   "purpose": "Explizite Codex-Subagents prüfen nichttriviale NaC-Änderungen standardmäßig parallel, wenn die Abschätzung Netto-Nutzen zeigt, ohne autonome Produktivschreibungen oder notarielle Freigaben zu ersetzen.",
   "runtime": {
     "primary_surface": "Codex CLI, Codex app or Codex SDK",
     "repo_config": ".codex/config.toml",
+    "agent_registry": "agent-context/subagent-registry.json",
     "agent_profile_dir": ".codex/agents",
     "optional_orchestration": [
       "codex exec",
@@ -65,7 +66,8 @@
     ]
   },
   "verification_contracts": [
-    "workflows/verification-contracts/codex-agent-context.verification.json"
+    "workflows/verification-contracts/codex-agent-context.verification.json",
+    "workflows/verification-contracts/codex-subagent-operating-gate.verification.json"
   ],
   "agent_profiles": [
     {
@@ -159,6 +161,7 @@
   ],
   "validation_commands": [
     "python scripts/validate_codex_parallel_review.py",
+    "python scripts/validate_codex_subagent_operating_gate.py",
     "python scripts/validate_language_parity.py",
     "python scripts/validate_governance_sync.py",
     "python scripts/validate_knowledge_graph.py",

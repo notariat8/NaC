@@ -57,6 +57,7 @@ REQUIRED_PROHIBITED_DELEGATIONS = {
 }
 REQUIRED_VALIDATION_COMMANDS = {
     "python scripts/validate_codex_parallel_review.py",
+    "python scripts/validate_codex_subagent_operating_gate.py",
     "python scripts/validate_language_parity.py",
     "python scripts/validate_governance_sync.py",
 }

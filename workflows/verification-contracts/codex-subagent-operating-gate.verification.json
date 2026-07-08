@@ -1,0 +1,83 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_subagent_operating_gate",
+  "title": "Codex Subagent Operating Gate Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      ".codex/config.toml",
+      ".codex/agents/**",
+      "agent-context/index.json",
+      "agent-context/subagent-registry.json",
+      "docs/*/operations/codex-subagent-operating-gate.md",
+      "docs/*/operations/codex-worktree-operating-model.md",
+      "workflows/contracts/codex-parallel-review.contract.json",
+      "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
+      "scripts/validate_codex_subagent_operating_gate.py",
+      "tests/test_codex_subagent_operating_gate.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml"
+    ],
+    "scoped": [
+      ".codex/agents/",
+      "agent-context/subagent-registry.json"
+    ],
+    "on_demand": [
+      "docs/de/operations/codex-subagent-operating-gate.md",
+      "docs/en/operations/codex-subagent-operating-gate.md",
+      "workflows/contracts/codex-parallel-review.contract.json"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_codex_subagent_operating_gate.py",
+    "python -m unittest tests.test_codex_subagent_operating_gate",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Subagent profiles are registered exactly and unknown profiles fail closed.",
+    "Every subagent profile remains read-only and forbids file edits.",
+    "Subagents are used only when at least two independent review questions exist.",
+    "Worktrees, not subagents, isolate parallel write scopes.",
+    "Secrets, real mandate data, credentials, release apply work and destructive cleanup are never delegated to subagents.",
+    "The lead agent keeps ownership of final diff, validation evidence and owner-gate wording."
+  ],
+  "thresholds": {
+    "required_profile_count": 6,
+    "max_agent_threads": 6,
+    "max_agent_depth": 1,
+    "max_agent_runtime_seconds": 1800,
+    "minimum_independent_questions_for_subagents": 2,
+    "minimum_parallel_write_scopes_for_worktrees": 2
+  },
+  "required_evidence": [
+    "subagent_registry",
+    "exact_agent_profile_match",
+    "read_only_toml_profiles",
+    "runtime_limit_check",
+    "rogue_agent_blocker",
+    "batch_thresholds",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "unknown_profiles_fail_closed": true,
+    "all_profiles_read_only": true,
+    "runtime_limits_match": true
+  },
+  "failure_behavior": {
+    "unknown_agent_profile": "fail_closed",
+    "runtime_limit_drift": "fail_closed",
+    "writable_agent_profile": "fail_closed",
+    "verification_contract_not_applicable": "report_not_applicable",
+    "quality_gate_failure": "block_completion"
+  }
+}

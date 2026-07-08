@@ -1,0 +1,83 @@
+{
+  "schema_version": "nac.codex-subagent-registry/v0.1",
+  "registry_id": "codex_subagent_registry",
+  "status": "active_mvp",
+  "source_contract": "workflows/contracts/codex-parallel-review.contract.json",
+  "runtime_config": ".codex/config.toml",
+  "agent_profile_dir": ".codex/agents",
+  "default_sandbox_mode": "read-only",
+  "limits": {
+    "max_threads": 6,
+    "max_depth": 1,
+    "job_max_runtime_seconds": 1800
+  },
+  "batch_thresholds": {
+    "use_subagents_when_independent_questions": 2,
+    "use_worktrees_when_parallel_write_scopes": 2,
+    "do_not_split_if_coordination_cost_exceeds_review_value": true
+  },
+  "rogue_agent_policy": {
+    "unknown_profile_behavior": "fail_closed",
+    "local_extra_toml_allowed": false,
+    "registry_must_match_agent_dir_exactly": true,
+    "lead_agent_keeps_ownership": true
+  },
+  "allowed_profiles": [
+    {
+      "name": "nac_scope_mapper",
+      "path": ".codex/agents/nac-scope-mapper.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "Scope, artifacts, risks and review routing."
+    },
+    {
+      "name": "nac_kg_reviewer",
+      "path": ".codex/agents/nac-kg-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "Knowledge graph, stable ID, provenance and privacy-class review."
+    },
+    {
+      "name": "nac_bpmn_reviewer",
+      "path": ".codex/agents/nac-bpmn-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "BPMN, nac-moddle property and process-to-KG review."
+    },
+    {
+      "name": "nac_policy_reviewer",
+      "path": ".codex/agents/nac-policy-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "Privacy, role, license, SBOM and provider-boundary review."
+    },
+    {
+      "name": "nac_docs_parity_reviewer",
+      "path": ".codex/agents/nac-docs-parity-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "German/English documentation parity, links and agent-rule mirror review."
+    },
+    {
+      "name": "nac_validation_reviewer",
+      "path": ".codex/agents/nac-validation-reviewer.toml",
+      "sandbox_mode": "read-only",
+      "may_edit_files": false,
+      "role": "Validation strategy, quality-gate coverage and evidence review."
+    }
+  ],
+  "prohibited_delegations": [
+    "secrets",
+    "certificate_private_material",
+    "real_mandate_data",
+    "productive_m365_writes",
+    "entra_app_credentials",
+    "release_apply",
+    "destructive_git_cleanup"
+  ],
+  "validation_commands": [
+    "python3 scripts/validate_codex_subagent_operating_gate.py",
+    "python3 -m unittest tests.test_codex_subagent_operating_gate",
+    "python3 scripts/quality_gate.py --profile strict"
+  ]
+}

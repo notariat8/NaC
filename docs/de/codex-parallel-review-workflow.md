@@ -31,7 +31,9 @@ Secrets, OCI-Schreibaktionen, Apply-, Release- oder destruktive Gates.
 
 ## Agentprofile
 
-Die repo-lokalen Profile liegen unter [`.codex/agents/`](../../.codex/agents):
+Die repo-lokalen Profile liegen unter [`.codex/agents/`](../../.codex/agents);
+die exakte Registry steht in
+[agent-context/subagent-registry.json](../../agent-context/subagent-registry.json).
 
 | Agent | Aufgabe |
 | --- | --- |
@@ -44,6 +46,11 @@ Die repo-lokalen Profile liegen unter [`.codex/agents/`](../../.codex/agents):
 
 Alle Profile sind zunächst `read-only`. Änderungen bleiben beim führenden
 Codex-Lauf oder bei einem ausdrücklich freigegebenen Implementierungsschritt.
+
+Unbekannte oder zusätzliche `.codex/agents/*.toml`-Profile scheitern
+fail-closed. Die `codex-subagent-operating-gate` Registry muss exakt zu den
+lokalen TOML-Dateien passen, und `.codex/config.toml` begrenzt Subagent-Läufe
+auf `max_threads = 6`, `max_depth = 1` und `job_max_runtime_seconds = 1800`.
 
 ## Ablauf
 
@@ -84,6 +91,7 @@ Prüfung:
 
 ```bash
 python scripts/validate_codex_parallel_review.py
+python scripts/validate_codex_subagent_operating_gate.py
 ```
 
 Für breitere Änderungen bleiben zusätzlich relevant:

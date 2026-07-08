@@ -33,7 +33,10 @@
         ".codex/agents/nac-scope-mapper.toml",
         ".codex/agents/nac-policy-reviewer.toml",
         ".codex/agents/nac-docs-parity-reviewer.toml",
-        ".codex/agents/nac-validation-reviewer.toml"
+        ".codex/agents/nac-validation-reviewer.toml",
+        ".codex/agents/nac-kg-reviewer.toml",
+        ".codex/agents/nac-bpmn-reviewer.toml",
+        "agent-context/subagent-registry.json"
       ]
     },
     {
@@ -76,6 +79,17 @@
           ]
         },
         {
+          "id": "subagent_operating_gate",
+          "description": "Exact read-only subagent registry, runtime limits and batch thresholds.",
+          "paths": [
+            "agent-context/subagent-registry.json",
+            "docs/de/operations/codex-subagent-operating-gate.md",
+            "docs/en/operations/codex-subagent-operating-gate.md",
+            "workflows/contracts/codex-parallel-review.contract.json",
+            "workflows/verification-contracts/codex-subagent-operating-gate.verification.json"
+          ]
+        },
+        {
           "id": "command_rules",
           "description": "Reusable command permission profiles for GREEN/YELLOW/RED shell-command governance.",
           "paths": [
@@ -112,6 +126,7 @@
   ],
   "verification_contracts": [
     "workflows/verification-contracts/codex-agent-context.verification.json",
+    "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
     "workflows/verification-contracts/codex-command-rules.verification.json",
     "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
   ]

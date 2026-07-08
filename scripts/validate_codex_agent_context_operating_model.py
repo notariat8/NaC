@@ -13,7 +13,14 @@ VERIFICATION_CONTRACT = REPO_ROOT / "workflows" / "verification-contracts" / "co
 CODEX_CONFIG = REPO_ROOT / ".codex" / "config.toml"
 CODEOWNERS = REPO_ROOT / "CODEOWNERS"
 REQUIRED_LAYERS = {"always_on", "scoped", "on_demand", "runtime"}
-REQUIRED_ARTIFACT_CATEGORIES = {"maps", "history", "guardrails", "command_rules", "memory_hooks"}
+REQUIRED_ARTIFACT_CATEGORIES = {
+    "maps",
+    "history",
+    "guardrails",
+    "subagent_operating_gate",
+    "command_rules",
+    "memory_hooks",
+}
 REQUIRED_VERIFICATION_FIELDS = {
     "schema_version",
     "contract_id",

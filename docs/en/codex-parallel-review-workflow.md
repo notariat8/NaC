@@ -32,6 +32,8 @@ release, or destructive gates to subagents.
 ## Agent Profiles
 
 The repository-local profiles live under [`.codex/agents/`](../../.codex/agents):
+the exact registry is
+[agent-context/subagent-registry.json](../../agent-context/subagent-registry.json).
 
 | Agent | Job |
 | --- | --- |
@@ -44,6 +46,11 @@ The repository-local profiles live under [`.codex/agents/`](../../.codex/agents)
 
 All profiles are `read-only` at first. File changes stay with the lead Codex
 run or with an explicitly approved implementation step.
+
+Unknown or extra `.codex/agents/*.toml` profiles fail closed. The
+`codex-subagent-operating-gate` registry must match the local TOML files
+exactly, and `.codex/config.toml` limits subagent runs to `max_threads = 6`,
+`max_depth = 1` and `job_max_runtime_seconds = 1800`.
 
 ## Flow
 
@@ -82,6 +89,7 @@ Check:
 
 ```bash
 python scripts/validate_codex_parallel_review.py
+python scripts/validate_codex_subagent_operating_gate.py
 ```
 
 For broader changes, these commands also remain relevant:

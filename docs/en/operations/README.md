@@ -24,6 +24,10 @@ apply commands.
   tool time, approvals and repeated waiting time.
 - [codex-worktree-operating-model.md](codex-worktree-operating-model.md): read-only
   worktree hygiene audit, naming scheme and owner-gated cleanup boundaries.
+- [codex-subagent-operating-gate.md](codex-subagent-operating-gate.md):
+  exact read-only subagent registry, runtime limits, rogue-agent blocker and
+  batch/worktree split threshold; source registry:
+  [agent-context/subagent-registry.json](../../../agent-context/subagent-registry.json).
 - [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): memory sources,
   hook boundaries and progressive context layers without live hook activation.
 - [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):

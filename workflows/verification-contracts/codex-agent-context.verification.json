@@ -34,7 +34,10 @@
       "docs/de/operations/codex-memory-hooks-operating-model.md",
       "docs/en/operations/codex-memory-hooks-operating-model.md",
       "docs/de/operations/codex-worktree-operating-model.md",
-      "docs/en/operations/codex-worktree-operating-model.md"
+      "docs/en/operations/codex-worktree-operating-model.md",
+      "docs/de/operations/codex-subagent-operating-gate.md",
+      "docs/en/operations/codex-subagent-operating-gate.md",
+      "agent-context/subagent-registry.json"
     ],
     "runtime": [
       "fresh git diff",
@@ -45,6 +48,7 @@
   "checks": [
     "python scripts/validate_codex_agent_context_operating_model.py",
     "python scripts/validate_codex_parallel_review.py",
+    "python scripts/validate_codex_subagent_operating_gate.py",
     "python -m unittest tests.test_codex_agent_context_operating_model",
     "python scripts/quality_gate.py --profile strict"
   ],
@@ -68,6 +72,7 @@
     "memory_hooks_operating_model",
     "scoped_agents_docs",
     "subagent_registry_validator",
+    "subagent_operating_gate",
     "quality_gate_result"
   ],
   "pass_condition": {
@@ -84,4 +89,3 @@
     "quality_gate_failure": "block_completion"
   }
 }
-

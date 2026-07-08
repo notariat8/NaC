@@ -23,7 +23,10 @@ class CodexAgentContextOperatingModelTests(unittest.TestCase):
             for layer in payload["layers"]
             for category in layer.get("categories", [])
         }
-        self.assertGreaterEqual(categories, {"maps", "history", "guardrails", "command_rules", "memory_hooks"})
+        self.assertGreaterEqual(
+            categories,
+            {"maps", "history", "guardrails", "subagent_operating_gate", "command_rules", "memory_hooks"},
+        )
 
     def test_verification_contract_declares_definition_of_done(self) -> None:
         payload = _read_json("workflows/verification-contracts/codex-agent-context.verification.json")

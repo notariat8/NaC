@@ -146,6 +146,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_parallel_review.py"],
                 ),
                 (
+                    "codex_subagent_operating_gate",
+                    "Codex Subagent Operating Gate",
+                    [sys.executable, "scripts/validate_codex_subagent_operating_gate.py"],
+                ),
+                (
                     "codex_worktree_operating_model",
                     "Codex Worktree Operating Model",
                     [sys.executable, "scripts/validate_codex_worktree_operating_model.py"],
