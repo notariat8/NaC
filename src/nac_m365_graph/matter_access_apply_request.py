@@ -199,6 +199,8 @@ def build_matter_access_apply_request_plan(
         "checks": checks,
         "privacy": {
             "metadataOnly": True,
+            "storesSourceFullText": False,
+            "storesRawXsd": False,
             "storesCredentials": False,
             "storesTokensOrSecrets": False,
             "storesMatterData": False,
