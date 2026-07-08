@@ -114,6 +114,11 @@ sensitive markers such as raw Graph paths, raw responses, write payloads,
 tokens, secrets or matter payloads appear. An accepted artifact reports
 `redaction_shape_status=PASSED` and
 `sourceArtifactRedactionShapeChecked=true`.
+The retention index and readiness evidence aggregate this shape check through
+`redaction_shape_status_counts` and
+`redaction_shape_legacy_missing_count`; older retention runs without embedded
+shape evidence are explicitly shown as `NOT_EVALUATED` and block readiness
+until a current run is retained.
 
 Retained evidence can be evaluated offline as `READY`/`NOT_READY` before
 acceptance. The readiness command reads only the local redacted retention index

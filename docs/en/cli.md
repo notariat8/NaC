@@ -431,7 +431,11 @@ Graph request, tenant write or delete. The retention evidence sets
 `retention_executes_graph_requests=false` and
 `retention_tenant_writes_executed=false`; additionally, the recursive
 redaction-shape check must report `redaction_shape_status=PASSED` and
-`sourceArtifactRedactionShapeChecked=true`. With
+`sourceArtifactRedactionShapeChecked=true`. The local index and readiness
+output also expose `redaction_shape_status_counts` and
+`redaction_shape_legacy_missing_count`, so older retention runs without shape
+evidence are explicitly visible as `NOT_EVALUATED` instead of being silently
+absent. With
 `matter-access-apply-live-smoke-retention-readiness`, the same local retention
 index is evaluated offline as `READY`/`NOT_READY`; optionally,
 `--matter-access-apply-live-smoke-write-readiness` writes the redacted artifacts

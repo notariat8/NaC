@@ -105,8 +105,15 @@ def _validate_code() -> list[str]:
         "_readiness_checks",
         "redaction_shape_status",
         "redaction_shape_violation_count",
+        "redaction_shape_status_counts",
+        "redaction_shape_legacy_missing_count",
+        "redaction_shape_evidence_present",
+        "latest_redaction_shape_status",
         "sourceArtifactRedactionShapeChecked",
         "all_runs_have_valid_redaction_shape",
+        "all_runs_have_redaction_shape_evidence",
+        "_retention_redaction_shape_summary",
+        "_redaction_shape_status_counts",
         "retention_executes_graph_requests\": False",
         "retentionExecutesGraphRequests\": False",
         "retentionTenantWritesExecuted\": False",
@@ -145,6 +152,7 @@ def _validate_code() -> list[str]:
         "test_retains_redacted_live_smoke_and_updates_index",
         "test_index_filters_by_correlation_workspace_status_and_query",
         "test_retention_blocks_invalid_source_without_copying",
+        "test_index_surfaces_legacy_missing_redaction_shape_evidence",
         "test_redaction_shape_blocks_forbidden_raw_graph_path_key_without_copying",
         "test_redaction_shape_blocks_secret_like_value_marker",
         "test_cli_retains_and_indexes_without_graph",
@@ -173,6 +181,8 @@ def _validate_docs() -> list[str]:
         "READY",
         "NOT_READY",
         "redaction_shape_status=PASSED",
+        "redaction_shape_status_counts",
+        "redaction_shape_legacy_missing_count",
         "sourceArtifactRedactionShapeChecked=true",
         "retention_executes_graph_requests=false",
         "retention_tenant_writes_executed=false",
@@ -224,6 +234,10 @@ def _validate_contract_and_indexes() -> list[str]:
             errors.append("verification contract missing quality_gate_failure behavior")
         if "redaction_shape_fail_closed" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing redaction_shape_fail_closed pass condition")
+        if "redaction_shape_indexed" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing redaction_shape_indexed pass condition")
+        if "legacy_missing_redaction_shape_visible" not in json.dumps(contract, ensure_ascii=False):
+            errors.append("verification contract missing legacy_missing_redaction_shape_visible pass condition")
         if "recursive redaction-shape check" not in json.dumps(contract, ensure_ascii=False):
             errors.append("verification contract missing recursive redaction-shape invariant")
 

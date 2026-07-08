@@ -118,6 +118,11 @@ oder sensitive Marker wie rohe Graph-Pfade, Rohantworten, Write-Payloads,
 Tokens, Secrets oder Mandats-Payloads auftauchen. Ein akzeptiertes Artefakt
 meldet `redaction_shape_status=PASSED` und
 `sourceArtifactRedactionShapeChecked=true`.
+Der Retention-Index und die Readiness-Evidence aggregieren diese Formprüfung
+über `redaction_shape_status_counts` und
+`redaction_shape_legacy_missing_count`; ältere Retention-Läufe ohne eingebettete
+Shape-Evidence erscheinen dadurch ausdrücklich als `NOT_EVALUATED` und
+blockieren die Readiness, bis ein aktueller Lauf nacharchiviert wurde.
 
 Die retenierte Evidence kann vor Abnahme offline als `READY`/`NOT_READY`
 bewertet werden. Der Readiness-Befehl liest nur den lokalen redigierten

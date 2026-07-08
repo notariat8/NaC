@@ -303,6 +303,7 @@ def build_matter_access_apply_live_smoke_retention_index(
             if _matches(row, correlation_id=correlation_id, workspace_id=workspace_id, status=status, query=query):
                 rows.append(row)
     rows.sort(key=lambda item: (str(item.get("generated_at") or ""), str(item.get("correlation_id") or "")))
+    redaction_shape_status_counts = _redaction_shape_status_counts(rows)
     return {
         "schema_version": INDEX_SCHEMA_VERSION,
         "status": "PASSED" if not errors else "BLOCKED",
@@ -314,6 +315,13 @@ def build_matter_access_apply_live_smoke_retention_index(
             "filter_workspace_id": workspace_id,
             "filter_status": status,
             "filter_query": query,
+            "redaction_shape_status_counts": redaction_shape_status_counts,
+            "redaction_shape_passed_count": redaction_shape_status_counts.get("PASSED", 0),
+            "redaction_shape_blocked_count": redaction_shape_status_counts.get("BLOCKED", 0),
+            "redaction_shape_not_evaluated_count": redaction_shape_status_counts.get("NOT_EVALUATED", 0),
+            "redaction_shape_legacy_missing_count": sum(
+                1 for row in rows if row.get("redaction_shape_legacy_missing") is True
+            ),
             "executes_graph_requests": False,
             "executes_graph_writes": False,
             "tenant_writes_executed": False,
@@ -356,6 +364,7 @@ def build_matter_access_apply_live_smoke_retention_readiness(
     checks = _readiness_checks(index, rows)
     errors = [check["message"] for check in checks if check.get("status") != "PASSED"]
     latest_row = rows[-1] if rows else {}
+    index_summary = _dict(index.get("summary"))
     payload = {
         "schema_version": READINESS_SCHEMA_VERSION,
         "status": "READY" if not errors else "NOT_READY",
@@ -370,6 +379,13 @@ def build_matter_access_apply_live_smoke_retention_readiness(
             "latest_retention_json_path": latest_row.get("retention_json_path"),
             "latest_retained_artifact_path": latest_row.get("retained_artifact_path"),
             "latest_retention_report_path": latest_row.get("retention_report_path"),
+            "latest_redaction_shape_status": latest_row.get("redaction_shape_status"),
+            "latest_redaction_shape_violation_count": latest_row.get("redaction_shape_violation_count"),
+            "redaction_shape_status_counts": index_summary.get("redaction_shape_status_counts"),
+            "redaction_shape_passed_count": index_summary.get("redaction_shape_passed_count"),
+            "redaction_shape_blocked_count": index_summary.get("redaction_shape_blocked_count"),
+            "redaction_shape_not_evaluated_count": index_summary.get("redaction_shape_not_evaluated_count"),
+            "redaction_shape_legacy_missing_count": index_summary.get("redaction_shape_legacy_missing_count"),
             "readiness_json_path": str(retention_root / RETENTION_READINESS_JSON_NAME),
             "readiness_report_path": str(retention_root / RETENTION_READINESS_REPORT_NAME),
             "executes_graph_requests": False,
@@ -384,7 +400,8 @@ def build_matter_access_apply_live_smoke_retention_readiness(
         "retention_index": {
             "status": index.get("status"),
             "generated_at": index.get("generated_at"),
-            "run_count": _dict(index.get("summary")).get("run_count"),
+            "run_count": index_summary.get("run_count"),
+            "redaction_shape_status_counts": index_summary.get("redaction_shape_status_counts"),
             "live_smokes": rows,
         },
         "privacy": {
@@ -421,6 +438,8 @@ def format_matter_access_apply_live_smoke_retention(payload: dict[str, Any]) -> 
         f"- Source Graph writes executed: `{summary.get('source_executed_graph_writes')}`",
         f"- Cleanup after readback: `grant={summary.get('grant_cleanup_read_after_value_count')}`, `audit={summary.get('audit_cleanup_read_after_value_count')}`",
         f"- Retention Graph requests executed: `{summary.get('retention_executes_graph_requests')}`",
+        f"- Redaction shape status: `{summary.get('redaction_shape_status')}`",
+        f"- Redaction shape violations: `{summary.get('redaction_shape_violation_count')}`",
         "",
     ]
     errors = payload.get("errors") if isinstance(payload.get("errors"), list) else []
@@ -439,15 +458,16 @@ def format_matter_access_apply_live_smoke_retention_index(payload: dict[str, Any
         f"- Status: `{payload.get('status')}`",
         f"- Retention root: `{summary.get('retention_root')}`",
         f"- Run count: `{summary.get('run_count')}`",
+        f"- Redaction shape status counts: `{summary.get('redaction_shape_status_counts')}`",
         "",
-        "| Correlation ID | Workspace | Status | Artifact |",
-        "| --- | --- | --- | --- |",
+        "| Correlation ID | Workspace | Status | Redaction Shape | Violations | Artifact |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload.get("live_smokes", []):
         if not isinstance(row, dict):
             continue
         lines.append(
-            f"| `{row.get('correlation_id')}` | `{row.get('workspace_id')}` | `{row.get('status')}` | `{row.get('retained_artifact_path')}` |"
+            f"| `{row.get('correlation_id')}` | `{row.get('workspace_id')}` | `{row.get('status')}` | `{row.get('redaction_shape_status')}` | `{row.get('redaction_shape_violation_count')}` | `{row.get('retained_artifact_path')}` |"
         )
     lines.append("")
     return "\n".join(lines)
@@ -463,6 +483,8 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
         f"- Ready run count: `{summary.get('ready_run_count')}`",
         f"- Latest correlation ID: `{summary.get('latest_correlation_id')}`",
         f"- Latest retained artifact: `{summary.get('latest_retained_artifact_path')}`",
+        f"- Latest redaction shape status: `{summary.get('latest_redaction_shape_status')}`",
+        f"- Redaction shape status counts: `{summary.get('redaction_shape_status_counts')}`",
         f"- Executes Graph requests: `{summary.get('executes_graph_requests')}`",
         f"- Tenant writes executed: `{summary.get('tenant_writes_executed')}`",
         "",
@@ -483,6 +505,7 @@ def format_matter_access_apply_live_smoke_retention_readiness(payload: dict[str,
 
 def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
     summary = _dict(payload.get("summary"))
+    redaction_shape_summary = _retention_redaction_shape_summary(payload)
     return {
         "correlation_id": summary.get("correlation_id"),
         "workspace_id": summary.get("workspace_id"),
@@ -492,8 +515,12 @@ def _retention_row(payload: dict[str, Any], path: Path) -> dict[str, Any]:
         "retention_report_path": summary.get("retention_report_path"),
         "retained_artifact_path": summary.get("retained_artifact_path"),
         "retained_artifact_sha256": summary.get("retained_artifact_sha256"),
-        "redaction_shape_status": summary.get("redaction_shape_status"),
-        "redaction_shape_violation_count": summary.get("redaction_shape_violation_count"),
+        "redaction_shape_status": redaction_shape_summary.get("status"),
+        "redaction_shape_violation_count": redaction_shape_summary.get("violation_count"),
+        "redaction_shape_checked_node_count": redaction_shape_summary.get("checked_node_count"),
+        "redaction_shape_evidence_present": redaction_shape_summary.get("evidence_present"),
+        "redaction_shape_legacy_missing": redaction_shape_summary.get("legacy_missing"),
+        "redaction_shape_schema_version": redaction_shape_summary.get("schema_version"),
         "source_executed_graph_writes": summary.get("source_executed_graph_writes"),
         "grant_read_value_count": summary.get("grant_read_value_count"),
         "audit_read_value_count": summary.get("audit_read_value_count"),
@@ -545,6 +572,11 @@ def _readiness_checks(index: dict[str, Any], rows: list[dict[str, Any]]) -> list
                         for row in rows
                     ),
                     "Every retained live-smoke proves cleanup by zero-value readback.",
+                ),
+                _check(
+                    "all_runs_have_redaction_shape_evidence",
+                    all(row.get("redaction_shape_evidence_present") is True for row in rows),
+                    "Every retained live-smoke exposes redaction-shape evidence in the retention index.",
                 ),
                 _check(
                     "all_runs_have_valid_redaction_shape",
@@ -621,6 +653,46 @@ def _blocked_retention(generated_at: str, artifact_path: Path, retention_root: P
             "readsSharePointFileContent": False,
         },
     }
+
+
+def _retention_redaction_shape_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _dict(payload.get("summary"))
+    redaction_shape = _dict(payload.get("redaction_shape"))
+    redaction_shape_summary = _dict(redaction_shape.get("summary"))
+    status = summary.get("redaction_shape_status") or redaction_shape.get("status")
+    evidence_present = bool(status) and status != "NOT_EVALUATED" and bool(redaction_shape)
+    normalized_status = str(status or "NOT_EVALUATED")
+    return {
+        "schema_version": redaction_shape.get("schema_version"),
+        "status": normalized_status,
+        "violation_count": _first_present(
+            summary.get("redaction_shape_violation_count"),
+            redaction_shape_summary.get("violation_count"),
+        ),
+        "checked_node_count": _first_present(
+            summary.get("redaction_shape_checked_node_count"),
+            redaction_shape_summary.get("checked_node_count"),
+        ),
+        "evidence_present": evidence_present,
+        "legacy_missing": not evidence_present,
+    }
+
+
+def _redaction_shape_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("redaction_shape_status") or "NOT_EVALUATED")
+        counts[status] = counts.get(status, 0) + 1
+    for status in ("PASSED", "BLOCKED", "NOT_EVALUATED"):
+        counts.setdefault(status, 0)
+    return counts
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _retention_checks(errors: list[str]) -> list[dict[str, Any]]:

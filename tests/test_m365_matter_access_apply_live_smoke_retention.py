@@ -54,9 +54,12 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             index = build_matter_access_apply_live_smoke_retention_index(retention_root=retention_root)
             self.assertEqual(index["status"], "PASSED")
             self.assertEqual(index["summary"]["run_count"], 1)
+            self.assertEqual(index["summary"]["redaction_shape_status_counts"]["PASSED"], 1)
+            self.assertEqual(index["summary"]["redaction_shape_legacy_missing_count"], 0)
             self.assertEqual(index["live_smokes"][0]["correlation_id"], "corr-1")
             self.assertEqual(index["live_smokes"][0]["status"], "PASSED")
             self.assertEqual(index["live_smokes"][0]["redaction_shape_status"], "PASSED")
+            self.assertTrue(index["live_smokes"][0]["redaction_shape_evidence_present"])
 
     def test_index_filters_by_correlation_workspace_status_and_query(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -78,6 +81,37 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertEqual(index["summary"]["run_count"], 1)
             self.assertEqual(index["live_smokes"][0]["correlation_id"], "corr-b")
             self.assertFalse(index["privacy"]["executesGraphRequests"])
+
+    def test_index_surfaces_legacy_missing_redaction_shape_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "retention"
+            artifact = tmp_path / "legacy.json"
+            artifact.write_text(json.dumps(_apply_smoke_payload("legacy-corr")), encoding="utf-8")
+            payload = retain_matter_access_apply_live_smoke_artifact(artifact, retention_root=retention_root)
+            retention_json = Path(payload["summary"]["retention_json_path"])
+            legacy_payload = json.loads(retention_json.read_text(encoding="utf-8"))
+            legacy_payload.pop("redaction_shape", None)
+            legacy_payload["summary"].pop("redaction_shape_status", None)
+            legacy_payload["summary"].pop("redaction_shape_violation_count", None)
+            legacy_payload["summary"].pop("redaction_shape_checked_node_count", None)
+            retention_json.write_text(json.dumps(legacy_payload), encoding="utf-8")
+
+            index = build_matter_access_apply_live_smoke_retention_index(retention_root=retention_root)
+            readiness = build_matter_access_apply_live_smoke_retention_readiness(
+                retention_root=retention_root,
+                correlation_id="legacy-corr",
+            )
+
+            self.assertEqual(index["summary"]["redaction_shape_status_counts"]["NOT_EVALUATED"], 1)
+            self.assertEqual(index["summary"]["redaction_shape_legacy_missing_count"], 1)
+            self.assertEqual(index["live_smokes"][0]["redaction_shape_status"], "NOT_EVALUATED")
+            self.assertFalse(index["live_smokes"][0]["redaction_shape_evidence_present"])
+            self.assertTrue(index["live_smokes"][0]["redaction_shape_legacy_missing"])
+            self.assertEqual(readiness["status"], "NOT_READY")
+            self.assertEqual(readiness["summary"]["latest_redaction_shape_status"], "NOT_EVALUATED")
+            self.assertEqual(readiness["summary"]["redaction_shape_legacy_missing_count"], 1)
+            self.assertIn("redaction-shape evidence", "\n".join(readiness["errors"]))
 
     def test_retention_blocks_invalid_source_without_copying(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -182,6 +216,9 @@ class M365MatterAccessApplyLiveSmokeRetentionTests(unittest.TestCase):
             self.assertEqual(readiness["status"], "READY")
             self.assertEqual(readiness["summary"]["ready_run_count"], 1)
             self.assertEqual(readiness["summary"]["latest_correlation_id"], "ready-corr")
+            self.assertEqual(readiness["summary"]["latest_redaction_shape_status"], "PASSED")
+            self.assertEqual(readiness["summary"]["redaction_shape_passed_count"], 1)
+            self.assertEqual(readiness["summary"]["redaction_shape_legacy_missing_count"], 0)
             self.assertFalse(readiness["summary"]["executes_graph_requests"])
             self.assertTrue(Path(readiness["summary"]["readiness_json_path"]).is_file())
             self.assertTrue(Path(readiness["summary"]["readiness_report_path"]).is_file())

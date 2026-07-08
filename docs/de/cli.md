@@ -441,7 +441,11 @@ Löschung aus. Die Retention-Evidence setzt
 `retention_executes_graph_requests=false` und
 `retention_tenant_writes_executed=false`; zusätzlich muss der rekursive
 Redaktions-Shape-Check `redaction_shape_status=PASSED` und
-`sourceArtifactRedactionShapeChecked=true` melden. Mit
+`sourceArtifactRedactionShapeChecked=true` melden. Der lokale Index und die
+Readiness-Ausgabe zeigen zusätzlich `redaction_shape_status_counts` und
+`redaction_shape_legacy_missing_count`, damit ältere Retention-Läufe ohne
+Shape-Evidence ausdrücklich als `NOT_EVALUATED` statt stillschweigend fehlend
+sichtbar sind. Mit
 `matter-access-apply-live-smoke-retention-readiness` wird derselbe lokale
 Retention-Index offline als `READY`/`NOT_READY` bewertet; optional schreibt
 `--matter-access-apply-live-smoke-write-readiness` die redigierten Artefakte
