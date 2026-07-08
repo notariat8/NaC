@@ -710,9 +710,31 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(readiness["summary"]["mvp_release_readiness"], "READY")
         self.assertEqual(post_report["summary"]["baseline_selection"], "previous_retained_run")
         self.assertEqual(post_report["summary"]["baseline_correlation_id"], "baseline-corr")
+        self.assertEqual(post_report["summary"]["matter_access_apply_policy_review_status"], "PASSED")
+        self.assertEqual(
+            post_report["summary"]["matter_access_apply_policy_contract"],
+            "verification.m365_matter_access_delegation",
+        )
+        self.assertEqual(post_report["summary"]["matter_access_apply_policy_negative_case_count"], 5)
+        self.assertEqual(post_report["summary"]["matter_access_apply_policy_detected_violation_count"], 5)
+        self.assertEqual(post_report["matter_access_apply_policy_review"]["status"], "PASSED")
+        self.assertEqual(
+            post_report["matter_access_apply_policy_review"]["case_ids"],
+            [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+        )
         self.assertEqual(post_report_index["summary"]["post_run_report_count"], 1)
         self.assertEqual(post_report_index["post_run_reports"][0]["correlation_id"], "runner-corr")
         self.assertIn("Draft only", comment)
+        self.assertIn("Matter-Access Apply Policy Verification", comment)
+        self.assertIn("verification.m365_matter_access_delegation", comment)
+        self.assertIn("Negative cases detected: `5/5`", comment)
+        self.assertIn("missing_reason", comment)
         self.assertFalse(post_report["privacy"]["github_comment_posted"])
 
     def test_release_gate_run_readiness_uses_baseline_audit_pack_default_dir(self) -> None:
@@ -2343,6 +2365,10 @@ def _write_readiness_run(
                 "artifact_sha256": override.get("artifact_sha256", "a" * 64),
             }
         )
+    (run_dir / "matter_access_apply_policy_smoke.redacted.json").write_text(
+        json.dumps(_matter_access_apply_policy_smoke_payload()),
+        encoding="utf-8",
+    )
     copied_count = sum(1 for artifact in artifacts if artifact["status"] == "COPIED")
     (run_dir / "release-gate-retention-index.redacted.json").write_text(
         json.dumps(
@@ -2374,6 +2400,7 @@ def _write_readiness_run(
                     "matter_access_delegation_smoke_status": "PASSED",
                     "matter_access_apply_readiness_status": "PASSED",
                     "matter_access_apply_request_plan_status": "PASSED",
+                    "matter_access_apply_policy_smoke_status": "PASSED",
                     "stores_tokens_or_secrets": False,
                     "stores_raw_graph_response": False,
                     "stores_raw_case_id": False,
@@ -2795,7 +2822,6 @@ def _write_complete_release_gate_output_args(command: list[str], *, correlation_
         "--matter-access-smoke-output",
         "--matter-access-apply-readiness-output",
         "--matter-access-apply-request-output",
-        "--matter-access-apply-policy-smoke-output",
         "--mcp-suite-output",
         "--mcp-leftover-output",
     ):
@@ -2825,6 +2851,10 @@ def _write_complete_release_gate_output_args(command: list[str], *, correlation_
                 ),
                 encoding="utf-8",
             )
+    if "--matter-access-apply-policy-smoke-output" in command:
+        output_path = Path(command[command.index("--matter-access-apply-policy-smoke-output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(_matter_access_apply_policy_smoke_payload()), encoding="utf-8")
     if "--release-gate-evidence-output" in command:
         output_path = Path(command[command.index("--release-gate-evidence-output") + 1])
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2855,6 +2885,17 @@ def _write_complete_release_gate_output_args(command: list[str], *, correlation_
                         "workspace_id": "notary_team_01",
                         "correlation_id": correlation_id,
                         "evidence_completeness": "complete_release_gate_artifacts",
+                        "runtime_certificate_expiry_status": "PASSED",
+                        "runtime_env_bootstrap_status": "PASSED",
+                        "runtime_smoke_status": "PASSED",
+                        "runtime_metadata_status": "PASSED",
+                        "mcp_inventory_smoke_status": "PASSED",
+                        "matter_access_delegation_smoke_status": "PASSED",
+                        "matter_access_apply_readiness_status": "PASSED",
+                        "matter_access_apply_request_plan_status": "PASSED",
+                        "matter_access_apply_policy_smoke_status": "PASSED",
+                        "mcp_smoke_suite_status": "PASSED",
+                        "mcp_leftover_dry_run_status": "PASSED",
                         "stores_tokens_or_secrets": False,
                         "stores_raw_graph_response": False,
                         "stores_raw_case_id": False,

@@ -141,6 +141,15 @@ M365_RELEASE_READINESS_REQUIRED_EVIDENCE_STEPS = (
     "mcp_smoke_suite",
     "mcp_leftover_dry_run",
 )
+M365_MATTER_ACCESS_POLICY_CONTRACT_ID = "verification.m365_matter_access_delegation"
+M365_MATTER_ACCESS_POLICY_ARTIFACT_ID = "matter_access_apply_policy_smoke"
+M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS = (
+    "missing_reason",
+    "expired_delegation",
+    "workspace_scope_violation",
+    "missing_cleanup",
+    "audit_readback_missing",
+)
 
 PLUGIN_CLI_ROLES = {
     "cli_role": "kanonische Bedienkante der NaC-CLI für Prüfung, Automatisierung und Dokumentation.",
@@ -3546,6 +3555,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             baseline_selection="not_requested",
             readiness_payload=None,
             compare_payload=None,
+            policy_review=None,
             checks=[
                 _m365_release_gate_post_run_check(
                     "target_correlation_id",
@@ -3572,6 +3582,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             baseline_selection="explicit" if args.release_gate_compare_left else "not_available",
             readiness_payload=None,
             compare_payload=None,
+            policy_review=None,
             checks=[
                 _m365_release_gate_post_run_check("target_retention_index", "BLOCKED", str(exc)),
             ],
@@ -3623,6 +3634,8 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
     )
     readiness_payload = _build_m365_release_readiness(repo_root, readiness_args)
     errors.extend(readiness_payload.get("errors", []))
+    policy_review = _m365_release_gate_policy_review_summary(repo_root, target_index, readiness_payload)
+    errors.extend(policy_review.get("errors", []))
 
     checks = [
         _m365_release_gate_post_run_check(
@@ -3639,6 +3652,11 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             "release_readiness",
             str(readiness_payload.get("status") or "BLOCKED"),
             f"release-readiness status is {readiness_payload.get('status')}",
+        ),
+        _m365_release_gate_post_run_check(
+            "matter_access_apply_policy_review",
+            str(policy_review.get("status") or "BLOCKED"),
+            _m365_release_gate_policy_review_message(policy_review),
         ),
         _m365_release_gate_post_run_check(
             "retention_compare",
@@ -3661,6 +3679,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
         baseline_selection=baseline_selection,
         readiness_payload=readiness_payload,
         compare_payload=compare_payload,
+        policy_review=policy_review,
         checks=checks,
         errors=errors,
     )
@@ -3749,6 +3768,154 @@ def _m365_release_gate_post_run_baseline_message(
     return "no previous retained PASSED release-gate baseline is available"
 
 
+def _m365_release_gate_policy_review_missing() -> dict[str, Any]:
+    return {
+        "schema_version": "nac.m365-matter-access-apply-policy-review/v0.1",
+        "status": "BLOCKED",
+        "contract_id": M365_MATTER_ACCESS_POLICY_CONTRACT_ID,
+        "required_artifact_id": M365_MATTER_ACCESS_POLICY_ARTIFACT_ID,
+        "expected_case_ids": list(M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS),
+        "case_ids": [],
+        "negative_case_count": None,
+        "detected_policy_violation_count": None,
+        "artifact_status": "NOT_ATTACHED",
+        "artifact_path": None,
+        "errors": ["matter-access apply policy review artifact is not attached"],
+        "privacy": _m365_release_gate_policy_review_privacy(),
+    }
+
+
+def _m365_release_gate_policy_review_summary(
+    repo_root: Path,
+    retention_index: dict[str, Any],
+    readiness_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    readiness_summary = readiness_payload.get("summary", {}) if isinstance(readiness_payload, dict) else {}
+    artifacts = _m365_release_gate_retention_artifacts_by_id(retention_index)
+    artifact = artifacts.get(M365_MATTER_ACCESS_POLICY_ARTIFACT_ID)
+    if not artifact:
+        return _m365_release_gate_policy_review_missing()
+
+    artifact_path_text = artifact.get("retained_path") or artifact.get("source_path")
+    artifact_path = _m365_release_gate_policy_review_artifact_path(repo_root, artifact_path_text)
+    errors: list[str] = []
+    payload: dict[str, Any] | None = None
+    if artifact.get("status") != "COPIED":
+        errors.append(f"{M365_MATTER_ACCESS_POLICY_ARTIFACT_ID} artifact status is {artifact.get('status')}")
+    if artifact_path is None:
+        errors.append(f"{M365_MATTER_ACCESS_POLICY_ARTIFACT_ID} artifact path is missing")
+    else:
+        try:
+            payload = _load_json_object(artifact_path, "matter access apply policy smoke")
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            errors.append(str(exc))
+
+    payload_summary = payload.get("summary", {}) if isinstance(payload, dict) else {}
+    case_ids = _m365_release_gate_policy_review_case_ids(payload, payload_summary)
+    expected_case_ids = list(M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS)
+    negative_case_count = payload_summary.get("negative_case_count")
+    detected_policy_violation_count = payload_summary.get("detected_policy_violation_count")
+    if payload and payload.get("status") != "PASSED":
+        errors.append(f"matter-access apply policy smoke status is {payload.get('status')}")
+    if readiness_summary.get("matter_access_apply_policy_smoke_status") != "PASSED":
+        errors.append(
+            "release-readiness does not report matter_access_apply_policy_smoke_status=PASSED"
+        )
+    if case_ids != expected_case_ids:
+        errors.append("matter-access apply policy smoke case IDs do not match the verification contract")
+    if negative_case_count != len(expected_case_ids):
+        errors.append("matter-access apply policy smoke negative case count is not 5")
+    if detected_policy_violation_count != len(expected_case_ids):
+        errors.append("matter-access apply policy smoke did not detect all negative cases")
+    for flag in (
+        "executes_graph_requests",
+        "executes_graph_writes",
+        "tenant_writes_executed",
+        "sharepoint_item_writes_executed",
+        "stores_tokens_or_secrets",
+        "stores_raw_graph_path",
+        "stores_raw_graph_response",
+        "stores_raw_write_payload",
+        "stores_matter_payloads",
+        "reads_sharepoint_file_content",
+    ):
+        if payload_summary.get(flag) is not False:
+            errors.append(f"matter-access apply policy smoke summary.{flag} must be false")
+    if payload_summary.get("graph_rest_only") is not True:
+        errors.append("matter-access apply policy smoke summary.graph_rest_only must be true")
+    if payload_summary.get("uses_fake_graph_client") is not True:
+        errors.append("matter-access apply policy smoke summary.uses_fake_graph_client must be true")
+
+    return {
+        "schema_version": "nac.m365-matter-access-apply-policy-review/v0.1",
+        "status": "PASSED" if not errors else "FAILED",
+        "contract_id": M365_MATTER_ACCESS_POLICY_CONTRACT_ID,
+        "required_artifact_id": M365_MATTER_ACCESS_POLICY_ARTIFACT_ID,
+        "expected_case_ids": expected_case_ids,
+        "case_ids": case_ids,
+        "negative_case_count": negative_case_count,
+        "detected_policy_violation_count": detected_policy_violation_count,
+        "artifact_status": artifact.get("status"),
+        "artifact_path": str(artifact_path) if artifact_path is not None else None,
+        "readiness_smoke_status": readiness_summary.get("matter_access_apply_policy_smoke_status"),
+        "fail_closed_before_graph_write": "PASSED" if not errors else "FAILED",
+        "executes_graph_writes": payload_summary.get("executes_graph_writes"),
+        "tenant_writes_executed": payload_summary.get("tenant_writes_executed"),
+        "stores_tokens_or_secrets": payload_summary.get("stores_tokens_or_secrets"),
+        "graph_rest_only": payload_summary.get("graph_rest_only"),
+        "errors": errors,
+        "privacy": _m365_release_gate_policy_review_privacy(),
+    }
+
+
+def _m365_release_gate_policy_review_artifact_path(repo_root: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _m365_release_gate_policy_review_case_ids(
+    payload: dict[str, Any] | None,
+    summary: dict[str, Any],
+) -> list[str]:
+    summary_case_ids = summary.get("expected_case_ids")
+    if isinstance(summary_case_ids, list) and all(isinstance(item, str) for item in summary_case_ids):
+        return list(summary_case_ids)
+    if not isinstance(payload, dict):
+        return []
+    cases = payload.get("cases")
+    if not isinstance(cases, list):
+        return []
+    return [str(case.get("id")) for case in cases if isinstance(case, dict) and isinstance(case.get("id"), str)]
+
+
+def _m365_release_gate_policy_review_message(policy_review: dict[str, Any]) -> str:
+    if policy_review.get("status") == "PASSED":
+        return (
+            "matter-access apply policy verification contract passed: "
+            f"{policy_review.get('detected_policy_violation_count')}/"
+            f"{policy_review.get('negative_case_count')} negative cases detected"
+        )
+    errors = policy_review.get("errors")
+    if isinstance(errors, list) and errors:
+        return "; ".join(str(error) for error in errors)
+    return "matter-access apply policy verification contract is not proven"
+
+
+def _m365_release_gate_policy_review_privacy() -> dict[str, bool]:
+    return {
+        "source_artifacts_must_be_redacted": True,
+        "graph_requests_executed": False,
+        "tenant_writes_executed": False,
+        "tenant_deletes_executed": False,
+        "storesTokensOrSecrets": False,
+        "storesRawGraphResponse": False,
+        "storesRawCaseId": False,
+        "readsSharePointFileContent": False,
+    }
+
+
 def _m365_release_gate_post_run_payload(
     *,
     status: str,
@@ -3759,12 +3926,14 @@ def _m365_release_gate_post_run_payload(
     baseline_selection: str,
     readiness_payload: dict[str, Any] | None,
     compare_payload: dict[str, Any] | None,
+    policy_review: dict[str, Any] | None,
     checks: list[dict[str, Any]],
     errors: list[str],
 ) -> dict[str, Any]:
     target_run = target_run or {}
     readiness_summary = readiness_payload.get("summary", {}) if isinstance(readiness_payload, dict) else {}
     compare_summary = compare_payload.get("summary", {}) if isinstance(compare_payload, dict) else {}
+    policy_review = policy_review or _m365_release_gate_policy_review_missing()
     return {
         "schema_version": "nac.m365-release-gate-post-run-report/v0.1",
         "status": status,
@@ -3782,6 +3951,12 @@ def _m365_release_gate_post_run_payload(
             "audit_pack_status": readiness_summary.get("audit_pack_status"),
             "audit_pack_path": readiness_summary.get("audit_pack_path"),
             "retention_compare_status": compare_payload.get("status") if isinstance(compare_payload, dict) else None,
+            "matter_access_apply_policy_review_status": policy_review.get("status"),
+            "matter_access_apply_policy_contract": policy_review.get("contract_id"),
+            "matter_access_apply_policy_negative_case_count": policy_review.get("negative_case_count"),
+            "matter_access_apply_policy_detected_violation_count": policy_review.get(
+                "detected_policy_violation_count"
+            ),
             "difference_count": compare_summary.get("difference_count"),
             "artifact_difference_count": compare_summary.get("artifact_difference_count"),
             "missing_attachment_difference_count": compare_summary.get("missing_attachment_difference_count"),
@@ -3797,6 +3972,7 @@ def _m365_release_gate_post_run_payload(
             "source_artifacts_must_be_redacted": True,
         },
         "checks": checks,
+        "matter_access_apply_policy_review": policy_review,
         "readiness": readiness_payload,
         "retention_compare": compare_payload,
         "errors": errors,
@@ -3922,6 +4098,7 @@ def _render_m365_release_gate_post_run_report(payload: dict[str, Any]) -> str:
         lines.append(
             f"| {_md_cell(check.get('id'))} | {_md_cell(check.get('status'))} | {_md_cell(check.get('message'))} |"
         )
+    lines.extend(_render_m365_release_gate_policy_review_markdown(payload.get("matter_access_apply_policy_review")))
     lines.extend(
         [
             "",
@@ -3964,15 +4141,44 @@ def _render_m365_release_gate_github_comment(payload: dict[str, Any]) -> str:
         f"- Missing attachment differences: `{_md_cell(summary.get('missing_attachment_difference_count'))}`",
         f"- Report: `{_md_cell(summary.get('report_path'))}`",
         f"- JSON: `{_md_cell(summary.get('json_path'))}`",
-        "",
-        "Privacy: no Graph requests, no tenant writes/deletes, no GitHub write, no tokens/secrets, no raw Graph response, no raw case ID, no SharePoint file content reads.",
     ]
+    lines.extend(_render_m365_release_gate_policy_review_markdown(payload.get("matter_access_apply_policy_review")))
+    lines.extend(
+        [
+            "",
+            "Privacy: no Graph requests, no tenant writes/deletes, no GitHub write, no tokens/secrets, no raw Graph response, no raw case ID, no SharePoint file content reads.",
+        ]
+    )
     errors = payload.get("errors", [])
     if errors:
         lines.extend(["", "Blocking notes:"])
         lines.extend(f"- {_md_cell(error)}" for error in errors)
     lines.append("")
     return "\n".join(lines)
+
+
+def _render_m365_release_gate_policy_review_markdown(policy_review: Any) -> list[str]:
+    if not isinstance(policy_review, dict):
+        policy_review = _m365_release_gate_policy_review_missing()
+    case_ids = policy_review.get("case_ids") or policy_review.get("expected_case_ids") or []
+    case_list = "`, `".join(str(case_id) for case_id in case_ids)
+    return [
+        "",
+        "## Matter-Access Apply Policy Verification",
+        "",
+        f"- Contract: `{_md_cell(policy_review.get('contract_id'))}`",
+        f"- Status: `{_md_cell(policy_review.get('status'))}`",
+        f"- Evidence artifact: `{_md_cell(policy_review.get('required_artifact_id'))}`",
+        (
+            f"- Negative cases detected: `{_md_cell(policy_review.get('detected_policy_violation_count'))}/"
+            f"{_md_cell(policy_review.get('negative_case_count'))}`"
+        ),
+        f"- Required negative cases: `{case_list}`",
+        f"- Fail-closed boundary: `{_md_cell(policy_review.get('fail_closed_before_graph_write'))}`",
+        f"- Executes Graph writes: `{_md_cell(policy_review.get('executes_graph_writes'))}`",
+        f"- Tenant writes executed: `{_md_cell(policy_review.get('tenant_writes_executed'))}`",
+        f"- Artifact: `{_md_cell(policy_review.get('artifact_path'))}`",
+    ]
 
 
 def _print_m365_release_gate_post_run_report(payload: dict[str, Any]) -> None:

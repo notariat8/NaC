@@ -45,6 +45,11 @@ Before tag and release, the affected checks must be freshly documented:
   with `mvp_release_readiness=READY`, `release_gate_readiness=READY`,
   `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
   `matter_access_apply_request_plan` and `matter_access_apply_policy_smoke`,
+- For matter-access apply changes: visible review evidence for verification
+  contract `verification.m365_matter_access_delegation` with `5/5` detected
+  negative cases (`missing_reason`, `expired_delegation`,
+  `workspace_scope_violation`, `missing_cleanup`, `audit_readback_missing`)
+  and a fail-closed boundary before Graph writes,
 - review decision according to the selected delivery mode.
 
 If a check does not apply, document why. A missing tool is not a silent

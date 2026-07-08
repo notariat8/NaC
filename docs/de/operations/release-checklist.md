@@ -47,6 +47,11 @@ Vor Tag und Release müssen die betroffenen Prüfungen frisch dokumentiert sein:
   mit `mvp_release_readiness=READY`, `release_gate_readiness=READY`,
   `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
   `matter_access_apply_request_plan` und `matter_access_apply_policy_smoke`,
+- Für Matter-Access-Apply-Änderungen: sichtbarer Review-Nachweis zum
+  Verification Contract `verification.m365_matter_access_delegation` mit
+  `5/5` erkannten Negativfällen (`missing_reason`, `expired_delegation`,
+  `workspace_scope_violation`, `missing_cleanup`,
+  `audit_readback_missing`) und Fail-Closed-Grenze vor Graph-Writes,
 - Review-Entscheidung nach dem gewählten Delivery Mode.
 
 Wenn eine Prüfung nicht anwendbar ist, wird der Grund dokumentiert. Ein

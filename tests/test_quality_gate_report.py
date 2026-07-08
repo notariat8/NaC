@@ -37,6 +37,10 @@ class QualityGateReportTests(unittest.TestCase):
         self.assertIn("- CI enforcement: `ENFORCED`", report)
         self.assertIn("- Gate check: `PASSED`", report)
         self.assertIn("release-gate-write-audit-pack", report)
+        self.assertIn("verification.m365_matter_access_delegation", report)
+        self.assertIn("`5/5` negative cases detected", report)
+        self.assertIn("`missing_reason`, `expired_delegation`, `workspace_scope_violation`, `missing_cleanup`, `audit_readback_missing`", report)
+        self.assertIn("fail-closed before Graph writes", report)
 
     def test_markdown_report_marks_readiness_gate_not_evaluated_when_missing(self) -> None:
         payload = {

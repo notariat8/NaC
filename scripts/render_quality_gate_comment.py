@@ -16,6 +16,16 @@ sys.path.insert(0, SRC_ROOT_TEXT)
 from notary_kg.catalog import all_case_summaries, load_catalogs
 
 
+M365_MATTER_ACCESS_POLICY_CONTRACT_ID = "verification.m365_matter_access_delegation"
+M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS = (
+    "missing_reason",
+    "expired_delegation",
+    "workspace_scope_violation",
+    "missing_cleanup",
+    "audit_readback_missing",
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Rendert einen kompakten PR-Kommentar fuer den NaC Developer CI Status.")
     parser.add_argument(
@@ -174,7 +184,7 @@ def _build_m365_release_readiness_summary(payload: dict) -> dict:
 
 
 def _m365_release_readiness_markdown(readiness: dict) -> list[str]:
-    return [
+    lines = [
         "### M365 MVP Readiness",
         "",
         "- Go/No-Go: `mvp_release_readiness=READY`",
@@ -188,6 +198,24 @@ def _m365_release_readiness_markdown(readiness: dict) -> list[str]:
         f"- Gate check: `{readiness.get('check_status', 'UNKNOWN')}`",
         f"- Check duration: `{readiness.get('duration_ms', 0)} ms`",
         "- Live evidence: owner-gated `release-gate-run --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack`",
+    ]
+    lines.extend(_m365_matter_access_policy_review_markdown())
+    return lines
+
+
+def _m365_matter_access_policy_review_markdown() -> list[str]:
+    case_list = "`, `".join(M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS)
+    return [
+        (
+            f"- Matter-access verification contract: `{M365_MATTER_ACCESS_POLICY_CONTRACT_ID}` "
+            "is required in PR/release review"
+        ),
+        (
+            "- Apply-policy enforcement: `matter_access_apply_policy_smoke` must show "
+            "`5/5` negative cases detected"
+        ),
+        f"- Required negative cases: `{case_list}`",
+        "- Required boundary: fail-closed before Graph writes; no tenant writes; exact grant/audit readback and cleanup evidence required",
     ]
 
 

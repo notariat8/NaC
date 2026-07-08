@@ -104,6 +104,12 @@ Default output:
   `release_gate_readiness=READY` plus the required evidence
   `matter_access_delegation_smoke`, `matter_access_apply_readiness`,
   `matter_access_apply_request_plan` and `matter_access_apply_policy_smoke`
+- For matter-access changes, the review must also surface the verification
+  contract `verification.m365_matter_access_delegation`: the apply-policy
+  smoke artifact must show `5/5` negative cases (`missing_reason`,
+  `expired_delegation`, `workspace_scope_violation`, `missing_cleanup`,
+  `audit_readback_missing`) and confirm the fail-closed boundary before Graph
+  writes.
 
 These artifacts are uploaded during CI runs.
 

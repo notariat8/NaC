@@ -104,6 +104,12 @@ Standardausgabe:
   Pflichtnachweise `matter_access_delegation_smoke`,
   `matter_access_apply_readiness`, `matter_access_apply_request_plan` und
   `matter_access_apply_policy_smoke`
+- Für Matter-Access-Änderungen muss der Review außerdem den Verification
+  Contract `verification.m365_matter_access_delegation` sichtbar machen: das
+  Apply-Policy-Smoke-Artefakt muss `5/5` Negativfälle zeigen
+  (`missing_reason`, `expired_delegation`, `workspace_scope_violation`,
+  `missing_cleanup`, `audit_readback_missing`) und die Fail-Closed-Grenze vor
+  Graph-Writes bestätigen.
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

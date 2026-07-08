@@ -11,6 +11,14 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+M365_MATTER_ACCESS_POLICY_CONTRACT_ID = "verification.m365_matter_access_delegation"
+M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS = (
+    "missing_reason",
+    "expired_delegation",
+    "workspace_scope_violation",
+    "missing_cleanup",
+    "audit_readback_missing",
+)
 
 
 @dataclass(slots=True)
@@ -360,7 +368,7 @@ def write_markdown(path: Path, payload: dict) -> None:
 
 def m365_release_readiness_report_lines(payload: dict) -> list[str]:
     summary = m365_release_readiness_report_summary(payload)
-    return [
+    lines = [
         "## M365 MVP Readiness",
         "",
         "- Go/No-Go: `mvp_release_readiness=READY`",
@@ -374,6 +382,24 @@ def m365_release_readiness_report_lines(payload: dict) -> list[str]:
         f"- Gate check: `{summary['check_status']}`",
         f"- Check duration: `{summary['duration_ms']} ms`",
         "- Live evidence: owner-gated `release-gate-run --release-gate-write-audit-pack --release-gate-write-readiness --release-gate-readiness-require-audit-pack`",
+    ]
+    lines.extend(m365_matter_access_policy_review_lines())
+    return lines
+
+
+def m365_matter_access_policy_review_lines() -> list[str]:
+    case_list = "`, `".join(M365_MATTER_ACCESS_POLICY_NEGATIVE_CASE_IDS)
+    return [
+        (
+            f"- Matter-access verification contract: `{M365_MATTER_ACCESS_POLICY_CONTRACT_ID}` "
+            "is a required review signal"
+        ),
+        (
+            "- Apply-policy enforcement: `matter_access_apply_policy_smoke` must show "
+            "`5/5` negative cases detected"
+        ),
+        f"- Required negative cases: `{case_list}`",
+        "- Required boundary: fail-closed before Graph writes; no tenant writes; exact grant/audit readback and cleanup evidence required",
     ]
 
 
