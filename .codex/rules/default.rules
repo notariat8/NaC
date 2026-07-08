@@ -1,0 +1,101 @@
+# NaC Codex command rules
+#
+# This file mirrors policies/codex-command-rules-policy.json for Codex clients
+# that support repository-local .rules files. The policy JSON remains the
+# machine-readable source of truth validated by CI.
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "GREEN: read-only repository status.",
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "GREEN: read-only diff review.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "view"],
+    decision = "allow",
+    justification = "GREEN: read-only PR status.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "checks"],
+    decision = "allow",
+    justification = "GREEN: read-only PR checks.",
+)
+
+prefix_rule(
+    pattern = ["python3", "scripts/quality_gate.py"],
+    decision = "allow",
+    justification = "GREEN: local validation.",
+)
+
+prefix_rule(
+    pattern = ["python3", "scripts/validate_codex_command_rules_operating_model.py"],
+    decision = "allow",
+    justification = "GREEN: command-rules validator.",
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "YELLOW: publishing a feature branch must be visible or covered by a batch approval.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "create"],
+    decision = "prompt",
+    justification = "YELLOW: opening a PR must be visible or covered by a batch approval.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "merge"],
+    decision = "prompt",
+    justification = "YELLOW: owner approval required before merging.",
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "-d"],
+    decision = "prompt",
+    justification = "YELLOW: branch cleanup requires owner-visible intent.",
+)
+
+prefix_rule(
+    pattern = ["python3", "scripts/nac.py", "m365", "teams-sharepoint", "release-gate-run"],
+    decision = "prompt",
+    justification = "YELLOW: live M365 gate only inside an owner-approved synthetic smoke envelope.",
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "block",
+    justification = "RED: destructive reset is blocked by reusable rules.",
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "block",
+    justification = "RED: discarding local changes is blocked by reusable rules.",
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "block",
+    justification = "RED: recursive deletion is blocked by reusable rules.",
+)
+
+prefix_rule(
+    pattern = ["az", "ad", "app", "credential"],
+    decision = "block",
+    justification = "RED: Entra credential mutation requires a dedicated owner-approved credential run.",
+)
+
+prefix_rule(
+    pattern = ["terraform", "apply"],
+    decision = "block",
+    justification = "RED: infrastructure apply is a deploy/migration boundary.",
+)

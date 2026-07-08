@@ -156,6 +156,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_agent_context_operating_model.py"],
                 ),
                 (
+                    "codex_command_rules_operating_model",
+                    "Codex Command Rules Operating Model",
+                    [sys.executable, "scripts/validate_codex_command_rules_operating_model.py"],
+                ),
+                (
                     "verification_contracts_domain_pilot",
                     "Verification Contracts Domain Pilot",
                     [sys.executable, "scripts/validate_verification_contracts_domain_pilot.py"],

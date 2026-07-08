@@ -28,6 +28,8 @@ NaC nutzt drei Artefaktarten:
 - Maps: Systemform, Datenebene, Runtime- und Contract-Karten.
 - History: Technologieentscheidungen, Architekturentscheidungen, Operating Models.
 - Guardrails: Policies, CODEOWNERS, PR-Template, Quality Gate und Verification Contracts.
+- Command rules: GREEN/YELLOW/RED-Shell-Command-Profile und repo-lokale
+  `.rules`-Guardrails für wiederkehrende Command-Entscheidungen.
 
 Diese Artefakte sind keine Ersatz-Wahrheit für Mandatsdaten oder notarielle
 Entscheidungen. Sie erklären Architektur, Grenzen und Nachweise.
@@ -39,6 +41,9 @@ wenn sie wiederholt als Definition of Done diskutiert werden. Der erste Pilot
 ist [codex-agent-context.verification.json](../../../workflows/verification-contracts/codex-agent-context.verification.json).
 Der erste fachliche Domain-Pilot ist
 [m365-matter-access-delegation.verification.json](../../../workflows/verification-contracts/m365-matter-access-delegation.verification.json).
+Command-Permission-Profile werden durch
+[codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json)
+verifiziert.
 
 Pflichtfelder:
 

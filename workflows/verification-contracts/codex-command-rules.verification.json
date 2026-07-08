@@ -1,0 +1,84 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_command_rules",
+  "title": "Codex Command Rules Operating Model Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      ".codex/rules/**",
+      "policies/codex-command-rules-policy.json",
+      "docs/*/operations/codex-command-rules-operating-model.md",
+      "agent-context/index.json",
+      "scripts/validate_codex_command_rules_operating_model.py",
+      "tests/test_codex_command_rules_operating_model.py",
+      "scripts/quality_gate.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml",
+      "policies/process-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "agent-context/index.json",
+      "policies/codex-command-rules-policy.json",
+      "docs/de/operations/codex-command-rules-operating-model.md",
+      "docs/en/operations/codex-command-rules-operating-model.md",
+      ".codex/rules/default.rules"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_codex_command_rules_operating_model.py",
+    "python -m unittest tests.test_codex_command_rules_operating_model",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "GREEN profiles are limited to read-only repository status, search and local validation.",
+    "YELLOW profiles remain prompt-based or covered by an explicit batch approval.",
+    "RED profiles block destructive git/filesystem actions, secret and credential mutation, deploys, migrations and productive apply.",
+    "Rules do not replace owner gates for merges, secrets, certificates, Entra credentials or live tenant mutation.",
+    "Rules do not activate hooks and do not mutate local user Codex configuration.",
+    "Rules do not store secrets, tokens, certificate private material or mandate data."
+  ],
+  "thresholds": {
+    "minimum_green_commands": 8,
+    "minimum_yellow_commands": 5,
+    "minimum_red_commands": 6,
+    "minimum_profiles": 6
+  },
+  "required_evidence": [
+    "command_rules_policy",
+    "repo_rules_file",
+    "command_rules_docs_de",
+    "command_rules_docs_en",
+    "command_rules_validator",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "red_profiles_block": true,
+    "yellow_profiles_prompt": true,
+    "green_profiles_are_safe": true,
+    "no_secrets": true,
+    "no_mandate_data": true,
+    "no_live_hook_activation": true
+  },
+  "failure_behavior": {
+    "missing_policy": "fail_closed",
+    "missing_repo_rules_file": "fail_closed",
+    "red_rule_not_blocked": "fail_closed",
+    "yellow_rule_not_prompted": "fail_closed",
+    "green_rule_expands_scope": "fail_closed",
+    "quality_gate_failure": "block_completion"
+  }
+}

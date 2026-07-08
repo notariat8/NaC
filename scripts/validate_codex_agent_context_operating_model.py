@@ -13,7 +13,7 @@ VERIFICATION_CONTRACT = REPO_ROOT / "workflows" / "verification-contracts" / "co
 CODEX_CONFIG = REPO_ROOT / ".codex" / "config.toml"
 CODEOWNERS = REPO_ROOT / "CODEOWNERS"
 REQUIRED_LAYERS = {"always_on", "scoped", "on_demand", "runtime"}
-REQUIRED_ARTIFACT_CATEGORIES = {"maps", "history", "guardrails", "memory_hooks"}
+REQUIRED_ARTIFACT_CATEGORIES = {"maps", "history", "guardrails", "command_rules", "memory_hooks"}
 REQUIRED_VERIFICATION_FIELDS = {
     "schema_version",
     "contract_id",
@@ -141,8 +141,12 @@ def validate_docs_and_hooks() -> list[str]:
         "docs/en/agent-context/README.md",
         "docs/de/operations/codex-memory-hooks-operating-model.md",
         "docs/en/operations/codex-memory-hooks-operating-model.md",
+        "docs/de/operations/codex-command-rules-operating-model.md",
+        "docs/en/operations/codex-command-rules-operating-model.md",
         ".codex/hooks/README.md",
         ".codex/hooks/pre_tool_use_policy.example.py",
+        ".codex/rules/README.md",
+        ".codex/rules/default.rules",
     ]
     for rel_path in required_docs:
         path = REPO_ROOT / rel_path
@@ -159,6 +163,8 @@ def validate_docs_and_hooks() -> list[str]:
         "docs/en/agent-context/README.md",
         "docs/de/operations/codex-memory-hooks-operating-model.md",
         "docs/en/operations/codex-memory-hooks-operating-model.md",
+        "docs/de/operations/codex-command-rules-operating-model.md",
+        "docs/en/operations/codex-command-rules-operating-model.md",
     ):
         text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
         for marker in ("agent-context/index.json", "Verification", "Runtime"):
@@ -185,6 +191,7 @@ def validate_codeowners(path: Path = CODEOWNERS) -> list[str]:
     for pattern in (
         ".codex/agents/*",
         ".codex/hooks/*",
+        ".codex/rules/*",
         "agent-context/*",
         "workflows/contracts/*",
         "workflows/verification-contracts/*",
@@ -276,4 +283,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

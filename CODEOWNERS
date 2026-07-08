@@ -1,9 +1,11 @@
 # Governance-relevante Dateien nur mit Owner-Review aendern.
 policies/* @ofunk
+policies/codex-command-rules-policy.json @ofunk
 AGENTS.md @ofunk
 .codex/* @ofunk
 .codex/agents/* @ofunk
 .codex/hooks/* @ofunk
+.codex/rules/* @ofunk
 agent-context/* @ofunk
 docs/AGENTS.md @ofunk
 docs/*/agent-context/* @ofunk

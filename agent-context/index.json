@@ -76,6 +76,18 @@
           ]
         },
         {
+          "id": "command_rules",
+          "description": "Reusable command permission profiles for GREEN/YELLOW/RED shell-command governance.",
+          "paths": [
+            "policies/codex-command-rules-policy.json",
+            ".codex/rules/README.md",
+            ".codex/rules/default.rules",
+            "docs/de/operations/codex-command-rules-operating-model.md",
+            "docs/en/operations/codex-command-rules-operating-model.md",
+            "workflows/verification-contracts/codex-command-rules.verification.json"
+          ]
+        },
+        {
           "id": "memory_hooks",
           "description": "Local recall and hook operating model without live hook activation.",
           "paths": [
@@ -100,6 +112,7 @@
   ],
   "verification_contracts": [
     "workflows/verification-contracts/codex-agent-context.verification.json",
+    "workflows/verification-contracts/codex-command-rules.verification.json",
     "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
   ]
 }

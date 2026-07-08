@@ -28,6 +28,8 @@ NaC uses three artifact types:
 - Maps: system shape, data plane, runtime and contract maps.
 - History: technology decisions, architecture decisions, operating models.
 - Guardrails: policies, CODEOWNERS, PR template, quality gate and verification contracts.
+- Command rules: GREEN/YELLOW/RED shell-command profiles and repo-local
+  `.rules` guardrails for repeated command decisions.
 
 These artifacts do not replace truth for mandate data or notarial decisions.
 They explain architecture, boundaries and evidence.
@@ -39,6 +41,8 @@ definition of done is discussed repeatedly. The first pilot is
 [codex-agent-context.verification.json](../../../workflows/verification-contracts/codex-agent-context.verification.json).
 The first domain pilot is
 [m365-matter-access-delegation.verification.json](../../../workflows/verification-contracts/m365-matter-access-delegation.verification.json).
+Command permission profiles are verified by
+[codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json).
 
 Required fields:
 

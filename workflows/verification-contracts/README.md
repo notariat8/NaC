@@ -10,6 +10,9 @@ can prove that a slice is complete.
 - [codex-agent-context.verification.json](codex-agent-context.verification.json):
   operating-model verification for progressive disclosure, memory, hooks,
   subagent guardrails and agent-readable context.
+- [codex-command-rules.verification.json](codex-command-rules.verification.json):
+  command-governance verification for GREEN/YELLOW/RED permission profiles,
+  repo-local `.rules`, owner-gated prompts and blocked destructive commands.
 - [m365-matter-access-delegation.verification.json](m365-matter-access-delegation.verification.json):
   domain verification pilot for M365 matter visibility, timeboxed deputy access,
   Graph REST-only request plans, redacted release-gate evidence and owner-gated

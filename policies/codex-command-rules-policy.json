@@ -1,0 +1,289 @@
+{
+  "schema_version": "nac.codex-command-rules-policy/v0.1",
+  "policy_id": "codex_command_rules_operating_model",
+  "status": "active_mvp",
+  "purpose": "Classify repeated Codex shell-command decisions into reusable GREEN/YELLOW/RED permission profiles while preserving owner gates for destructive, secret, credential, merge, live-tenant and productive-data actions.",
+  "source_rule_file": ".codex/rules/default.rules",
+  "local_user_config_mutation_allowed_by_repo": false,
+  "risk_levels": [
+    {
+      "id": "GREEN",
+      "decision": "allow",
+      "meaning": "Routine read-only or local validation work may run without repeated owner prompts.",
+      "owner_input_required": false
+    },
+    {
+      "id": "YELLOW",
+      "decision": "prompt",
+      "meaning": "Publishing, PR creation, owner-approved synthetic live gates and branch cleanup require a clear prompt or pre-approved batch envelope.",
+      "owner_input_required": true
+    },
+    {
+      "id": "RED",
+      "decision": "block",
+      "meaning": "Destructive, secret, credential, certificate, Entra credential, migration, deploy or productive data actions must not run from reusable automation rules.",
+      "owner_input_required": true
+    }
+  ],
+  "permission_profiles": [
+    {
+      "id": "green_read_only_repository_status",
+      "risk": "GREEN",
+      "decision": "allow",
+      "owner_input_required": false,
+      "commands": [
+        {
+          "prefix": [
+            "git",
+            "status"
+          ],
+          "justification": "Read-only repository status."
+        },
+        {
+          "prefix": [
+            "git",
+            "diff"
+          ],
+          "justification": "Read-only local diff review."
+        },
+        {
+          "prefix": [
+            "git",
+            "show"
+          ],
+          "justification": "Read-only commit inspection."
+        },
+        {
+          "prefix": [
+            "gh",
+            "pr",
+            "view"
+          ],
+          "justification": "Read-only pull request status."
+        },
+        {
+          "prefix": [
+            "gh",
+            "pr",
+            "checks"
+          ],
+          "justification": "Read-only pull request check status."
+        }
+      ]
+    },
+    {
+      "id": "green_local_validation",
+      "risk": "GREEN",
+      "decision": "allow",
+      "owner_input_required": false,
+      "commands": [
+        {
+          "prefix": [
+            "python3",
+            "scripts/quality_gate.py"
+          ],
+          "justification": "Local quality gate validation."
+        },
+        {
+          "prefix": [
+            "python3",
+            "scripts/validate_codex_command_rules_operating_model.py"
+          ],
+          "justification": "Command-rules operating-model validator."
+        },
+        {
+          "prefix": [
+            "python3",
+            "-m",
+            "unittest"
+          ],
+          "justification": "Local unit tests."
+        },
+        {
+          "prefix": [
+            "rg"
+          ],
+          "justification": "Read-only repository search."
+        },
+        {
+          "prefix": [
+            "sed"
+          ],
+          "justification": "Read-only file excerpts."
+        }
+      ]
+    },
+    {
+      "id": "yellow_pr_preparation",
+      "risk": "YELLOW",
+      "decision": "prompt",
+      "owner_input_required": false,
+      "commands": [
+        {
+          "prefix": [
+            "git",
+            "push"
+          ],
+          "justification": "Publishing a feature branch is allowed in an approved batch but should be visible."
+        },
+        {
+          "prefix": [
+            "gh",
+            "pr",
+            "create"
+          ],
+          "justification": "Opening a PR is allowed in an approved batch but should be visible."
+        }
+      ]
+    },
+    {
+      "id": "yellow_owner_merge_cleanup",
+      "risk": "YELLOW",
+      "decision": "prompt",
+      "owner_input_required": true,
+      "commands": [
+        {
+          "prefix": [
+            "gh",
+            "pr",
+            "merge"
+          ],
+          "justification": "Owner approval is required before merging."
+        },
+        {
+          "prefix": [
+            "git",
+            "branch",
+            "-d"
+          ],
+          "justification": "Branch cleanup is destructive enough to remain visible."
+        },
+        {
+          "prefix": [
+            "git",
+            "push",
+            "origin",
+            "--delete"
+          ],
+          "justification": "Remote branch deletion requires owner-visible cleanup intent."
+        }
+      ]
+    },
+    {
+      "id": "yellow_owner_gated_live_smoke",
+      "risk": "YELLOW",
+      "decision": "prompt",
+      "owner_input_required": true,
+      "commands": [
+        {
+          "prefix": [
+            "python3",
+            "scripts/nac.py",
+            "m365",
+            "teams-sharepoint",
+            "release-gate-run"
+          ],
+          "justification": "Live M365 release-gate execution is allowed only inside an owner-approved synthetic smoke envelope."
+        },
+        {
+          "prefix": [
+            "python3",
+            "scripts/nac.py",
+            "m365",
+            "teams-sharepoint",
+            "matter-access-apply-smoke"
+          ],
+          "justification": "Synthetic write-read-cleanup smoke requires explicit owner approval."
+        }
+      ]
+    },
+    {
+      "id": "red_destructive_git_and_filesystem",
+      "risk": "RED",
+      "decision": "block",
+      "owner_input_required": true,
+      "commands": [
+        {
+          "prefix": [
+            "git",
+            "reset",
+            "--hard"
+          ],
+          "justification": "Destructive reset must never be reusable automation."
+        },
+        {
+          "prefix": [
+            "git",
+            "checkout",
+            "--"
+          ],
+          "justification": "Discarding local changes must never be reusable automation."
+        },
+        {
+          "prefix": [
+            "rm",
+            "-rf"
+          ],
+          "justification": "Recursive deletion is blocked by reusable rules."
+        }
+      ]
+    },
+    {
+      "id": "red_secret_credential_certificate_and_productive_apply",
+      "risk": "RED",
+      "decision": "block",
+      "owner_input_required": true,
+      "commands": [
+        {
+          "prefix": [
+            "az",
+            "ad",
+            "app",
+            "credential"
+          ],
+          "justification": "Entra app credential mutation requires a dedicated owner-approved credential run."
+        },
+        {
+          "prefix": [
+            "m365",
+            "entra",
+            "app",
+            "password"
+          ],
+          "justification": "Application secrets must not be generated by reusable command rules."
+        },
+        {
+          "prefix": [
+            "terraform",
+            "apply"
+          ],
+          "justification": "Infrastructure apply is a deploy/migration boundary."
+        },
+        {
+          "prefix": [
+            "python3",
+            "scripts/nac.py",
+            "m365",
+            "teams-sharepoint",
+            "privileged-apply"
+          ],
+          "justification": "Privileged M365 apply is outside reusable command automation."
+        }
+      ]
+    }
+  ],
+  "invariants": {
+    "rules_do_not_replace_owner_gates": true,
+    "rules_do_not_expand_filesystem_or_network_access": true,
+    "rules_do_not_store_secrets_or_mandate_data": true,
+    "rules_do_not_activate_hooks": true,
+    "red_profiles_must_block": true,
+    "yellow_profiles_must_prompt_or_require_batch_approval": true,
+    "green_profiles_must_be_read_only_or_local_validation": true
+  },
+  "validation_commands": [
+    "python3 scripts/validate_codex_command_rules_operating_model.py",
+    "python3 -m unittest tests.test_codex_command_rules_operating_model",
+    "python3 scripts/quality_gate.py --profile strict"
+  ]
+}
