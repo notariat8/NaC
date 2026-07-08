@@ -37,6 +37,7 @@ REQUIRED_EVIDENCE = {
     "matter_access_delegation_smoke",
     "matter_access_apply_readiness",
     "matter_access_apply_request_plan",
+    "matter_access_apply_policy_enforcement",
     "matter_access_apply_policy_smoke",
     "negative_apply_policy_smoke",
     "release_gate_evidence_index",

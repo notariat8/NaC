@@ -60,6 +60,7 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
         self.assertTrue(payload["pass_condition"]["all_required_invariants_indexed"])
         self.assertTrue(payload["pass_condition"]["matter_access_artifacts_attached_to_release_gate"])
         self.assertIn("matter_access_apply_request_plan", payload["required_evidence"])
+        self.assertIn("matter_access_apply_policy_enforcement", payload["required_evidence"])
         self.assertIn("matter_access_apply_policy_smoke", payload["required_evidence"])
         self.assertIn("negative_apply_policy_smoke", payload["required_evidence"])
         self.assertEqual(payload["failure_behavior"]["owner_gate_missing"], "block_live_apply")

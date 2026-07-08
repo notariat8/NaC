@@ -166,6 +166,28 @@
     "automation_may_approve_grant": false,
     "unbounded_team_access_allowed": false
   },
+  "apply_policy": {
+    "negative_case_ids": [
+      "missing_reason",
+      "expired_delegation",
+      "workspace_scope_violation",
+      "missing_cleanup",
+      "audit_readback_missing"
+    ],
+    "fail_closed_before_graph_write": true,
+    "grant_request_policy_shared_with_mcp_runtime": true,
+    "workspace_scope_must_resolve_before_write": true,
+    "cleanup_required_before_write": true,
+    "audit_append_required": true,
+    "audit_reason_must_match_grant_reason": true,
+    "grant_and_audit_readback_exactly_one_each_required": true,
+    "cleanup_readback_zero_each_required": true,
+    "owner_gate_still_required_for_live_apply": true,
+    "uses_graph_rest_only": true,
+    "stores_tokens_or_secrets": false,
+    "stores_matter_payloads": false,
+    "stores_raw_write_payload": false
+  },
   "mcp_tool_contracts": [
     {
       "id": "matter_visibility_get",

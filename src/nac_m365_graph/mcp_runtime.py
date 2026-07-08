@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import urllib.parse
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .matter_access_apply_policy import (
+    MatterAccessApplyPolicyError,
+    enforce_grant_request_policy,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MCP_CONTRACT = REPO_ROOT / "workflows" / "contracts" / "teams-sharepoint-data-mcp.contract.json"
@@ -15,8 +18,6 @@ DEFAULT_NOTARIAL_INTERFACE_INVENTORY_CONTRACT = (
 )
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 WRITE_TOOLS = {"case_create", "case_update_status", "task_create", "grant_request", "audit_append"}
-GRANT_REQUEST_ALLOWED_ROLES = {"NotarVertretung", "SachbearbeitungVertretung", "NurLesen"}
-GRANT_REQUEST_ALLOWED_STATUSES = {"Aktiv", "Abgelaufen", "Widerrufen"}
 READ_ONLY_TOOLS_WITHOUT_PAYLOAD = {
     "case_get",
     "document_list",
@@ -553,31 +554,10 @@ def _validate_required_inputs(tool: dict[str, Any], arguments: dict[str, Any]) -
 def _validate_tool_arguments(tool_name: str, arguments: dict[str, Any]) -> None:
     if tool_name != "grant_request":
         return
-    reason = str(arguments.get("reason", "")).strip()
-    if not reason:
-        raise McpRuntimeError("grant_request reason must be non-empty")
-    granted_role = str(arguments.get("granted_role", ""))
-    if granted_role not in GRANT_REQUEST_ALLOWED_ROLES:
-        raise McpRuntimeError("grant_request granted_role is not allowed")
-    status = str(arguments.get("status", ""))
-    if status not in GRANT_REQUEST_ALLOWED_STATUSES:
-        raise McpRuntimeError("grant_request status is not allowed")
-    valid_from = _parse_utc_timestamp(str(arguments.get("valid_from", "")), "valid_from")
-    valid_until = _parse_utc_timestamp(str(arguments.get("valid_until", "")), "valid_until")
-    if valid_until <= valid_from:
-        raise McpRuntimeError("grant_request valid_until must be after valid_from")
-
-
-def _parse_utc_timestamp(value: str, field_name: str) -> datetime:
-    if not value:
-        raise McpRuntimeError(f"grant_request {field_name} must be set")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise McpRuntimeError(f"grant_request {field_name} must be ISO-8601") from exc
-    if parsed.tzinfo is None:
-        raise McpRuntimeError(f"grant_request {field_name} must include timezone")
-    return parsed.astimezone(UTC)
+        enforce_grant_request_policy(arguments)
+    except MatterAccessApplyPolicyError as exc:
+        raise McpRuntimeError(str(exc)) from exc
 
 
 def _workspace_by_id(provisioned_state: dict[str, Any], workspace_id: str) -> dict[str, Any]:

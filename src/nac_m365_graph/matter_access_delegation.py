@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .matter_access_apply_policy import MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS
 from .schema import load_schema, validate_schema
 
 
@@ -168,6 +169,7 @@ def validate_matter_access_delegation_contract(
         errors.extend(_validate_schema_lists(schema))
     errors.extend(_validate_roles(contract))
     errors.extend(_validate_access_decision(contract))
+    errors.extend(_validate_apply_policy(contract))
     errors.extend(_validate_mcp_tool_contracts(contract))
     errors.extend(_validate_request_templates(contract))
     errors.extend(_validate_evidence_and_blocked_operations(contract))
@@ -364,6 +366,33 @@ def _validate_access_decision(contract: dict[str, Any]) -> list[str]:
     for field in ("Vertretungsfreigaben.Reason", "Vertretungsfreigaben.ValidUntil", "Vertretungsfreigaben.ApprovedBy"):
         if field not in set(_strings(access.get("deputy_grant_fields"))):
             errors.append(f"matter access delegation access_decision.deputy_grant_fields missing {field}")
+    return errors
+
+
+def _validate_apply_policy(contract: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    policy = contract.get("apply_policy")
+    if not isinstance(policy, dict):
+        return ["matter access delegation apply_policy must be an object"]
+    if tuple(_strings(policy.get("negative_case_ids"))) != MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS:
+        errors.append("matter access delegation apply_policy.negative_case_ids must match the runtime policy")
+    for flag in (
+        "fail_closed_before_graph_write",
+        "grant_request_policy_shared_with_mcp_runtime",
+        "workspace_scope_must_resolve_before_write",
+        "cleanup_required_before_write",
+        "audit_append_required",
+        "audit_reason_must_match_grant_reason",
+        "grant_and_audit_readback_exactly_one_each_required",
+        "cleanup_readback_zero_each_required",
+        "owner_gate_still_required_for_live_apply",
+        "uses_graph_rest_only",
+    ):
+        if policy.get(flag) is not True:
+            errors.append(f"matter access delegation apply_policy.{flag} must be true")
+    for flag in ("stores_tokens_or_secrets", "stores_matter_payloads", "stores_raw_write_payload"):
+        if policy.get(flag) is not False:
+            errors.append(f"matter access delegation apply_policy.{flag} must be false")
     return errors
 
 

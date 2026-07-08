@@ -6,6 +6,10 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from .matter_access_apply_policy import (
+    MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS,
+    validate_grant_request_policy,
+)
 from .matter_access_delegation import DEFAULT_MATTER_ACCESS_DELEGATION_CONTRACT
 from .matter_access_apply_readiness import build_matter_access_apply_readiness_from_paths
 from .mcp_runtime import DEFAULT_MCP_CONTRACT, RuntimeContext, load_mcp_contract, plan_tool_request
@@ -130,7 +134,11 @@ def build_matter_access_apply_request_plan(
         "action": "DeputyGrantRequested",
         "object_type": "Vertretungsfreigabe",
         "object_id": grant_id,
+        "reason": reason,
     }
+    policy_errors = validate_grant_request_policy(grant_arguments)
+    if policy_errors:
+        raise ValueError("; ".join(policy_errors))
 
     grant_plan = plan_tool_request(mcp_contract, provisioned_state, context, "grant_request", grant_arguments)
     audit_plan = plan_tool_request(mcp_contract, provisioned_state, context, "audit_append", audit_arguments)
@@ -170,6 +178,9 @@ def build_matter_access_apply_request_plan(
             "planned_write_count": len(request_plans),
             "planned_tools": [plan["tool"] for plan in request_plans],
             "planned_lists": [plan["list_name"] for plan in request_plans],
+            "apply_policy_enforced": True,
+            "policy_negative_case_ids": list(MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS),
+            "audit_reason_matches_grant_reason": True,
             "required_write_approval": True,
             "owner_gate_required": True,
             "role_case_purpose_gate_required": True,

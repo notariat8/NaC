@@ -8,6 +8,11 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
+from .matter_access_apply_policy import (
+    enforce_apply_cleanup_policy,
+    enforce_apply_pre_write_policy,
+    enforce_apply_readback_policy,
+)
 from .mcp_runtime import RuntimeContext, load_mcp_contract, plan_tool_request
 from .privileged_change import load_provisioned_state
 
@@ -71,7 +76,6 @@ def run_matter_access_apply_smoke(
     approved_by = approved_by or from_user
     valid_from = valid_from or generated_dt.isoformat().replace("+00:00", "Z")
     valid_until = valid_until or (generated_dt + timedelta(days=1)).isoformat().replace("+00:00", "Z")
-    _require_not_expired(valid_until, generated_dt)
 
     context = RuntimeContext(
         actor_id=approved_by,
@@ -104,6 +108,14 @@ def run_matter_access_apply_smoke(
         "object_id": grant_id,
         "reason": reason,
     }
+    pre_write_policy = enforce_apply_pre_write_policy(
+        provisioned_state,
+        workspace_id=workspace_id,
+        grant_arguments=grant_arguments,
+        audit_arguments=audit_arguments,
+        generated_at=generated_at,
+        cleanup_after=cleanup_after,
+    )
 
     grant_plan = plan_tool_request(contract, provisioned_state, context, "grant_request", grant_arguments)
     audit_plan = plan_tool_request(contract, provisioned_state, context, "audit_append", audit_arguments)
@@ -117,9 +129,16 @@ def run_matter_access_apply_smoke(
     audit_read_path = _read_items_path(provisioned_state, workspace_id, "AuditJournalLite", "EventId", event_id)
     grant_read = client.get(grant_read_path)
     audit_read = client.get(audit_read_path)
+    grant_read_count = _value_count(grant_read)
+    audit_read_count = _value_count(audit_read)
+    readback_policy = enforce_apply_readback_policy(
+        grant_read_count=grant_read_count,
+        audit_read_count=audit_read_count,
+    )
     grant_item = _single_matching_item(grant_read, "GrantId", grant_id)
     audit_item = _single_matching_item(audit_read, "EventId", event_id)
 
+    cleanup_policy: dict[str, Any] = {}
     cleanup = {
         "requested": cleanup_after,
         "grantDeleteStatus": None,
@@ -132,12 +151,18 @@ def run_matter_access_apply_smoke(
         client.delete(_delete_path_for_item(audit_read_path, str(audit_item["id"])))
         grant_after = client.get(grant_read_path)
         audit_after = client.get(audit_read_path)
+        grant_after_count = _value_count(grant_after)
+        audit_after_count = _value_count(audit_after)
+        cleanup_policy = enforce_apply_cleanup_policy(
+            grant_after_count=grant_after_count,
+            audit_after_count=audit_after_count,
+        )
         cleanup = {
             "requested": True,
             "grantDeleteStatus": "PASSED",
             "auditDeleteStatus": "PASSED",
-            "grantReadAfterCount": _value_count(grant_after),
-            "auditReadAfterCount": _value_count(audit_after),
+            "grantReadAfterCount": grant_after_count,
+            "auditReadAfterCount": audit_after_count,
         }
 
     return redact_matter_access_apply_smoke_result(
@@ -161,11 +186,14 @@ def run_matter_access_apply_smoke(
         audit_write=audit_write,
         grant_read_path=grant_read_path,
         audit_read_path=audit_read_path,
-        grant_read_count=_value_count(grant_read),
-        audit_read_count=_value_count(audit_read),
+        grant_read_count=grant_read_count,
+        audit_read_count=audit_read_count,
         grant_item_id=str(grant_item["id"]),
         audit_item_id=str(audit_item["id"]),
         cleanup=cleanup,
+        pre_write_policy=pre_write_policy,
+        readback_policy=readback_policy,
+        cleanup_policy=cleanup_policy,
     )
 
 
@@ -240,6 +268,9 @@ def redact_matter_access_apply_smoke_result(
     grant_item_id: str,
     audit_item_id: str,
     cleanup: dict[str, Any],
+    pre_write_policy: dict[str, Any],
+    readback_policy: dict[str, Any],
+    cleanup_policy: dict[str, Any],
 ) -> dict[str, Any]:
     cleanup_requested = cleanup.get("requested") is True
     cleanup_passed = cleanup_requested and (
@@ -249,6 +280,7 @@ def redact_matter_access_apply_smoke_result(
         _check("grant_request_write_read", grant_read_count == 1, "grant_request item was written and read back"),
         _check("audit_append_write_read", audit_read_count == 1, "audit_append item was written and read back"),
         _check("cleanup", cleanup_passed, "synthetic grant and audit items were cleaned up"),
+        _check("apply_policy", True, "matter-access apply policy enforced before write, readback and cleanup"),
         _check("privacy", True, "artifact stores only hashes and request shapes"),
     ]
     status_value = "PASSED" if all(check["status"] == "PASSED" for check in checks) else "FAILED"
@@ -273,6 +305,12 @@ def redact_matter_access_apply_smoke_result(
             "write_tools": ["grant_request", "audit_append"],
             "write_lists": ["Vertretungsfreigaben", "AuditJournalLite"],
             "planned_write_count": 2,
+            "apply_policy_enforced": True,
+            "fail_closed_before_graph_write": pre_write_policy.get("fail_closed_before_graph_write") is True,
+            "cleanup_required": pre_write_policy.get("cleanup_required") is True,
+            "audit_append_required": pre_write_policy.get("audit_append_required") is True,
+            "audit_readback_required": readback_policy.get("audit_append_readback_required") is True,
+            "cleanup_readback_required": cleanup_policy.get("cleanup_readback_required") is True,
             "executed_graph_requests": True,
             "executed_graph_writes": True,
             "sharepoint_item_writes_executed": True,
@@ -295,6 +333,20 @@ def redact_matter_access_apply_smoke_result(
             _redacted_write_plan(grant_plan),
             _redacted_write_plan(audit_plan),
         ],
+        "applyPolicy": {
+            "policyEnforced": True,
+            "negativeCaseIds": [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+            "preWrite": pre_write_policy,
+            "readback": readback_policy,
+            "cleanup": cleanup_policy,
+            "storesRawWritePayload": False,
+        },
         "writeResponseShape": {
             "grantCreatedItemIdSha256": _sha256(str(grant_write.get("id") or grant_item_id)),
             "auditCreatedItemIdSha256": _sha256(str(audit_write.get("id") or audit_item_id)),
@@ -433,17 +485,6 @@ def _value_count(response: dict[str, Any]) -> int:
 def _require_prefix(value: str, prefix: str, label: str) -> None:
     if not value.startswith(prefix):
         raise ValueError(f"matter-access-apply-smoke requires synthetic {label} starting with {prefix}")
-
-
-def _require_not_expired(valid_until: str, generated_dt: datetime) -> None:
-    try:
-        parsed_until = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise ValueError("matter-access-apply-smoke requires valid_until as ISO-8601 timestamp") from exc
-    if parsed_until.tzinfo is None:
-        raise ValueError("matter-access-apply-smoke requires valid_until with timezone")
-    if parsed_until.astimezone(UTC) <= generated_dt:
-        raise ValueError("matter-access-apply-smoke requires valid_until after smoke timestamp")
 
 
 def _check(check_id: str, passed: bool, message: str) -> dict[str, Any]:

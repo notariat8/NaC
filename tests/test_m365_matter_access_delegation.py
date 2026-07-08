@@ -35,6 +35,7 @@ from nac_m365_graph.matter_access_apply_policy_smoke import (  # noqa: E402
     run_matter_access_apply_policy_smoke,
     write_matter_access_apply_policy_smoke_artifact,
 )
+from nac_m365_graph.matter_access_apply_policy import MatterAccessApplyPolicyError  # noqa: E402
 from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
     run_matter_access_apply_smoke,
     write_matter_access_apply_smoke_artifact,
@@ -63,6 +64,19 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertFalse(self.contract["scope"]["team_membership_mutation_allowed_now"])
         self.assertFalse(self.contract["scope"]["sharepoint_file_content_read_allowed_now"])
         self.assertFalse(self.contract["scope"]["stores_tokens_or_secrets"])
+        self.assertTrue(self.contract["apply_policy"]["fail_closed_before_graph_write"])
+        self.assertTrue(self.contract["apply_policy"]["cleanup_required_before_write"])
+        self.assertTrue(self.contract["apply_policy"]["audit_reason_must_match_grant_reason"])
+        self.assertEqual(
+            self.contract["apply_policy"]["negative_case_ids"],
+            [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+        )
 
         lists = {item["display_name"]: set(item["required_columns"]) for item in self.contract["sharepoint_lists"]}
         self.assertIn("Reason", lists["Vertretungsfreigaben"])
@@ -212,6 +226,18 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["planned_write_count"], 2)
         self.assertEqual(payload["summary"]["planned_tools"], ["grant_request", "audit_append"])
         self.assertEqual(payload["summary"]["planned_lists"], ["Vertretungsfreigaben", "AuditJournalLite"])
+        self.assertTrue(payload["summary"]["apply_policy_enforced"])
+        self.assertEqual(
+            payload["summary"]["policy_negative_case_ids"],
+            [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+        )
+        self.assertTrue(payload["summary"]["audit_reason_matches_grant_reason"])
         self.assertTrue(payload["summary"]["required_write_approval"])
         self.assertTrue(payload["summary"]["owner_gate_required"])
         self.assertTrue(payload["summary"]["role_case_purpose_gate_required"])
@@ -463,6 +489,12 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.m365-matter-access-apply-smoke/v0.1")
         self.assertEqual(payload["summary"]["write_tools"], ["grant_request", "audit_append"])
         self.assertEqual(payload["summary"]["write_lists"], ["Vertretungsfreigaben", "AuditJournalLite"])
+        self.assertTrue(payload["summary"]["apply_policy_enforced"])
+        self.assertTrue(payload["summary"]["fail_closed_before_graph_write"])
+        self.assertTrue(payload["summary"]["cleanup_required"])
+        self.assertTrue(payload["summary"]["audit_append_required"])
+        self.assertTrue(payload["summary"]["audit_readback_required"])
+        self.assertTrue(payload["summary"]["cleanup_readback_required"])
         self.assertTrue(payload["summary"]["executed_graph_requests"])
         self.assertTrue(payload["summary"]["executed_graph_writes"])
         self.assertTrue(payload["summary"]["sharepoint_item_writes_executed"])
@@ -528,7 +560,7 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
     def test_matter_access_apply_smoke_rejects_expired_delegation_before_graph_calls(self) -> None:
         graph_client = _FakeMatterAccessApplySmokeClient(post_responses=[], get_responses=[], delete_response={})
 
-        with self.assertRaisesRegex(ValueError, "valid_until after smoke timestamp"):
+        with self.assertRaisesRegex(ValueError, "valid_until must be after apply timestamp"):
             run_matter_access_apply_smoke(
                 graph_client,
                 load_mcp_contract(DEFAULT_MCP_CONTRACT),
@@ -546,34 +578,25 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertEqual(graph_client.gets, [])
         self.assertEqual(graph_client.deletes, [])
 
-    def test_matter_access_apply_smoke_marks_missing_cleanup_failed(self) -> None:
+    def test_matter_access_apply_smoke_blocks_missing_cleanup_before_graph_calls(self) -> None:
         grant_id = "NAC-SMOKE-GRANT-20260708T000000Z"
-        event_id = "NAC-SMOKE-AUDIT-20260708T000000Z"
-        graph_client = _FakeMatterAccessApplySmokeClient(
-            post_responses=[{"id": "raw-grant-item"}, {"id": "raw-audit-item"}],
-            get_responses=[
-                {"value": [{"id": "raw-grant-item", "fields": {"GrantId": grant_id}}]},
-                {"value": [{"id": "raw-audit-item", "fields": {"EventId": event_id}}]},
-            ],
-            delete_response={},
-        )
+        graph_client = _FakeMatterAccessApplySmokeClient(post_responses=[], get_responses=[], delete_response={})
 
-        payload = run_matter_access_apply_smoke(
-            graph_client,
-            load_mcp_contract(DEFAULT_MCP_CONTRACT),
-            _provisioned_state(),
-            workspace_id="notary_team_01",
-            correlation_id="apply-smoke-corr",
-            grant_id=grant_id,
-            case_id="NAC-SMOKE-MATTER-20260708T000000Z",
-            cleanup_after=False,
-            timestamp="2026-07-08T00:00:00Z",
-        )
+        with self.assertRaisesRegex(MatterAccessApplyPolicyError, "cleanup_after must be true"):
+            run_matter_access_apply_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                correlation_id="apply-smoke-corr",
+                grant_id=grant_id,
+                case_id="NAC-SMOKE-MATTER-20260708T000000Z",
+                cleanup_after=False,
+                timestamp="2026-07-08T00:00:00Z",
+            )
 
-        self.assertEqual(payload["status"], "FAILED")
-        self.assertFalse(payload["summary"]["cleanup_requested"])
-        self.assertEqual(len(graph_client.posts), 2)
-        self.assertEqual(len(graph_client.gets), 2)
+        self.assertEqual(graph_client.posts, [])
+        self.assertEqual(graph_client.gets, [])
         self.assertEqual(graph_client.deletes, [])
 
     def test_matter_access_apply_policy_smoke_detects_negative_cases_and_redacts(self) -> None:
@@ -605,8 +628,9 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertEqual(payload["cases"][0]["fake_graph_post_count"], 0)
         self.assertEqual(payload["cases"][1]["fake_graph_post_count"], 0)
         self.assertEqual(payload["cases"][2]["fake_graph_post_count"], 0)
-        self.assertEqual(payload["cases"][3]["observed_smoke_status"], "FAILED")
-        self.assertEqual(payload["cases"][4]["observed_error_type"], "RuntimeError")
+        self.assertEqual(payload["cases"][3]["fake_graph_post_count"], 0)
+        self.assertEqual(payload["cases"][3]["observed_error_type"], "MatterAccessApplyPolicyError")
+        self.assertEqual(payload["cases"][4]["observed_error_type"], "MatterAccessApplyPolicyError")
 
         serialized = json.dumps(payload, ensure_ascii=False)
         for raw_value in (

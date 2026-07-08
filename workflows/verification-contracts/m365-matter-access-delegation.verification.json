@@ -43,7 +43,8 @@
       "docs/de/architecture/matter-data-classification-redaction.md",
       "docs/en/architecture/matter-data-classification-redaction.md",
       "workflows/contracts/m365-matter-access-delegation.contract.json",
-      "workflows/contracts/teams-sharepoint-data-mcp.contract.json"
+      "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+      "src/nac_m365_graph/matter_access_apply_policy.py"
     ],
     "runtime": [
       "fresh git diff",
@@ -67,6 +68,8 @@
     "ValidUntil must be after ValidFrom for deputy grants.",
     "Microsoft 365 data-plane access remains Graph REST v1.0 only: no legacy SharePoint API, SDK, PnP or Graph beta.",
     "Agents may plan deputy access but may not approve it.",
+    "Matter-access apply policy must fail closed before Graph writes for missing reason, expired delegation, wrong workspace scope and missing cleanup.",
+    "Matter-access apply policy must require exact grant/audit readback and zero-item cleanup readback for synthetic live writes.",
     "Live write smoke requires explicit owner approval and synthetic cleanup in the same run.",
     "Evidence must remain redacted and must not store matter payloads, tokens, secrets, concrete Graph paths or raw Graph responses."
   ],
@@ -85,6 +88,7 @@
     "matter_access_delegation_smoke",
     "matter_access_apply_readiness",
     "matter_access_apply_request_plan",
+    "matter_access_apply_policy_enforcement",
     "matter_access_apply_policy_smoke",
     "negative_apply_policy_smoke",
     "release_gate_evidence_index"

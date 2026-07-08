@@ -18,6 +18,7 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
     validate_matter_access_delegation_contract,
 )
 from nac_m365_graph.matter_access_delegation_smoke import run_matter_access_delegation_smoke  # noqa: E402
+from nac_m365_graph.matter_access_apply_policy import MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS  # noqa: E402
 from nac_m365_graph.matter_access_apply_readiness import build_matter_access_apply_readiness  # noqa: E402
 from nac_m365_graph.matter_access_apply_policy_smoke import run_matter_access_apply_policy_smoke  # noqa: E402
 from nac_m365_graph.matter_access_apply_request import build_matter_access_apply_request_plan  # noqa: E402
@@ -53,6 +54,8 @@ REQUIRED_DOC_MARKERS = {
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
+        "apply_policy",
+        "fail-closed",
         "Microsoft Graph REST",
         "keine Live-Tenant-Aktion",
     ],
@@ -65,6 +68,8 @@ REQUIRED_DOC_MARKERS = {
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
         "matter-access-smoke",
+        "apply_policy",
+        "fail-closed",
         "Microsoft Graph REST",
         "no live tenant action",
     ],
@@ -231,6 +236,8 @@ def validate() -> list[str]:
                 if apply_request_summary["planned_tools"] != ["grant_request", "audit_append"]:
                     errors.append("matter-access-apply-request-plan must bundle grant_request and audit_append")
                 for flag in (
+                    "apply_policy_enforced",
+                    "audit_reason_matches_grant_reason",
                     "required_write_approval",
                     "owner_gate_required",
                     "role_case_purpose_gate_required",
@@ -238,6 +245,10 @@ def validate() -> list[str]:
                 ):
                     if apply_request_summary.get(flag) is not True:
                         errors.append(f"matter-access-apply-request-plan summary.{flag} must be true")
+                if apply_request_summary.get("policy_negative_case_ids") != list(
+                    MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS
+                ):
+                    errors.append("matter-access-apply-request-plan must reference the apply policy negative cases")
                 for flag in (
                     "executes_graph_requests",
                     "executes_graph_writes",
@@ -308,6 +319,16 @@ def validate() -> list[str]:
                     errors.append("matter-access-apply-smoke must execute grant_request and audit_append")
                 if apply_smoke_summary.get("cleanup_requested") is not True:
                     errors.append("matter-access-apply-smoke cleanup must be requested")
+                for flag in (
+                    "apply_policy_enforced",
+                    "fail_closed_before_graph_write",
+                    "cleanup_required",
+                    "audit_append_required",
+                    "audit_readback_required",
+                    "cleanup_readback_required",
+                ):
+                    if apply_smoke_summary.get(flag) is not True:
+                        errors.append(f"matter-access-apply-smoke summary.{flag} must be true")
                 for flag in ("executed_graph_requests", "executed_graph_writes", "sharepoint_item_writes_executed"):
                     if apply_smoke_summary.get(flag) is not True:
                         errors.append(f"matter-access-apply-smoke summary.{flag} must be true")
@@ -352,14 +373,25 @@ def validate() -> list[str]:
                     errors.append("matter-access-apply-policy-smoke must cover five negative cases")
                 if policy_summary.get("detected_policy_violation_count") != 5:
                     errors.append("matter-access-apply-policy-smoke must detect all policy violations")
-                if set(policy_summary.get("expected_case_ids", [])) != {
-                    "missing_reason",
-                    "expired_delegation",
-                    "workspace_scope_violation",
-                    "missing_cleanup",
-                    "audit_readback_missing",
-                }:
+                if tuple(policy_summary.get("expected_case_ids", [])) != MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS:
                     errors.append("matter-access-apply-policy-smoke negative case set is incomplete")
+                policy_cases = {
+                    str(case.get("id")): case
+                    for case in policy_smoke.get("cases", [])
+                    if isinstance(case, dict)
+                }
+                if policy_cases.get("missing_cleanup", {}).get("fake_graph_post_count") != 0:
+                    errors.append("matter-access-apply-policy-smoke missing_cleanup must fail before fake writes")
+                if (
+                    policy_cases.get("missing_cleanup", {}).get("observed_error_type")
+                    != "MatterAccessApplyPolicyError"
+                ):
+                    errors.append("matter-access-apply-policy-smoke missing_cleanup must raise policy error")
+                if (
+                    policy_cases.get("audit_readback_missing", {}).get("observed_error_type")
+                    != "MatterAccessApplyPolicyError"
+                ):
+                    errors.append("matter-access-apply-policy-smoke audit_readback_missing must raise policy error")
                 for flag in (
                     "executes_graph_requests",
                     "executes_graph_writes",

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from .matter_access_apply_policy import MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS
 from .matter_access_apply_smoke import run_matter_access_apply_smoke
 from .mcp_runtime import DEFAULT_MCP_CONTRACT, McpRuntimeError, load_mcp_contract
 from .privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state
@@ -50,7 +51,7 @@ def run_matter_access_apply_policy_smoke(
         _expected_exception_case(
             case_id="missing_reason",
             expected_failure_mode="pre_write_policy_validation",
-            expected_error_type="McpRuntimeError",
+            expected_error_type="MatterAccessApplyPolicyError",
             client=_FakeMatterAccessApplySmokeClient(),
             action=lambda client: run_matter_access_apply_smoke(
                 client,
@@ -67,7 +68,7 @@ def run_matter_access_apply_policy_smoke(
         _expected_exception_case(
             case_id="expired_delegation",
             expected_failure_mode="pre_write_time_window_validation",
-            expected_error_type="ValueError",
+            expected_error_type="MatterAccessApplyPolicyError",
             client=_FakeMatterAccessApplySmokeClient(),
             action=lambda client: run_matter_access_apply_smoke(
                 client,
@@ -85,7 +86,7 @@ def run_matter_access_apply_policy_smoke(
         _expected_exception_case(
             case_id="workspace_scope_violation",
             expected_failure_mode="workspace_scope_validation",
-            expected_error_type="McpRuntimeError",
+            expected_error_type="MatterAccessApplyPolicyError",
             client=_FakeMatterAccessApplySmokeClient(),
             action=lambda client: run_matter_access_apply_smoke(
                 client,
@@ -98,11 +99,27 @@ def run_matter_access_apply_policy_smoke(
                 timestamp=generated_at,
             ),
         ),
-        _missing_cleanup_case(contract, provisioned_state, workspace_id, correlation_id, generated_at),
+        _expected_exception_case(
+            case_id="missing_cleanup",
+            expected_failure_mode="cleanup_required",
+            expected_error_type="MatterAccessApplyPolicyError",
+            client=_FakeMatterAccessApplySmokeClient(),
+            action=lambda client: run_matter_access_apply_smoke(
+                client,
+                contract,
+                provisioned_state,
+                workspace_id=workspace_id,
+                correlation_id=correlation_id,
+                grant_id="NAC-SMOKE-GRANT-20260708T040000Z",
+                case_id="NAC-SMOKE-MATTER-20260708T040000Z",
+                cleanup_after=False,
+                timestamp=generated_at,
+            ),
+        ),
         _expected_exception_case(
             case_id="audit_readback_missing",
             expected_failure_mode="audit_append_readback_required",
-            expected_error_type="RuntimeError",
+            expected_error_type="MatterAccessApplyPolicyError",
             client=_FakeMatterAccessApplySmokeClient(
                 post_responses=[{"id": "raw-grant-item"}, {"id": "raw-audit-item"}],
                 get_responses=[
@@ -140,7 +157,7 @@ def run_matter_access_apply_policy_smoke(
             "correlation_id": correlation_id,
             "negative_case_count": len(cases),
             "detected_policy_violation_count": detected_count,
-            "expected_case_ids": [case["id"] for case in cases],
+            "expected_case_ids": list(MATTER_ACCESS_APPLY_POLICY_NEGATIVE_CASE_IDS),
             "executes_graph_requests": False,
             "executes_graph_writes": False,
             "tenant_writes_executed": False,
@@ -206,58 +223,6 @@ def _expected_exception_case(
     )
 
 
-def _missing_cleanup_case(
-    contract: dict[str, Any],
-    provisioned_state: dict[str, Any],
-    workspace_id: str,
-    correlation_id: str,
-    generated_at: str,
-) -> dict[str, Any]:
-    event_id = f"NAC-SMOKE-AUDIT-{_timestamp_stamp(generated_at)}"
-    client = _FakeMatterAccessApplySmokeClient(
-        post_responses=[{"id": "raw-grant-item"}, {"id": "raw-audit-item"}],
-        get_responses=[
-            {
-                "value": [
-                    {
-                        "id": "raw-grant-item",
-                        "fields": {"GrantId": "NAC-SMOKE-GRANT-20260708T040000Z"},
-                    }
-                ]
-            },
-            {
-                "value": [
-                    {
-                        "id": "raw-audit-item",
-                        "fields": {"EventId": event_id},
-                    }
-                ]
-            },
-        ],
-    )
-    payload = run_matter_access_apply_smoke(
-        client,
-        contract,
-        provisioned_state,
-        workspace_id=workspace_id,
-        correlation_id=correlation_id,
-        grant_id="NAC-SMOKE-GRANT-20260708T040000Z",
-        case_id="NAC-SMOKE-MATTER-20260708T040000Z",
-        cleanup_after=False,
-        timestamp=generated_at,
-    )
-    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
-    detected = payload.get("status") == "FAILED" and summary.get("cleanup_requested") is False
-    return _case_result(
-        case_id="missing_cleanup",
-        detected=detected,
-        expected_failure_mode="cleanup_required",
-        observed_error_type=None,
-        client=client,
-        observed_smoke_status=str(payload.get("status") or "UNKNOWN"),
-    )
-
-
 def _case_result(
     *,
     case_id: str,
@@ -265,14 +230,12 @@ def _case_result(
     expected_failure_mode: str,
     observed_error_type: str | None,
     client: _FakeMatterAccessApplySmokeClient,
-    observed_smoke_status: str | None = None,
 ) -> dict[str, Any]:
     return {
         "id": case_id,
         "status": "PASSED" if detected else "FAILED",
         "expected_failure_mode": expected_failure_mode,
         "observed_error_type": observed_error_type,
-        "observed_smoke_status": observed_smoke_status,
         "policy_violation_detected": detected,
         "fake_graph_client_used": True,
         "real_graph_requests_executed": False,
@@ -315,7 +278,3 @@ class _FakeMatterAccessApplySmokeClient:
     def delete(self, path: str) -> dict[str, object]:
         self.deletes.append(path)
         return self.delete_response
-
-
-def _timestamp_stamp(timestamp: str) -> str:
-    return "".join(ch for ch in timestamp if ch.isdigit() or ch == "T")[:15] + "Z"

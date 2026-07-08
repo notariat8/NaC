@@ -97,6 +97,12 @@ Graph Requests aus, schreibt keine SharePoint-Items und speichert keine
 konkreten Graph-Pfade, Rohantworten, Nutzerdaten, Gründe, Tokens oder
 Mandats-Payloads.
 
+Dieselben Fälle sind als `apply_policy` im Matter-Access-Contract verankert
+und werden von der Apply-Kante fail-closed geprüft: Workspace-Scope, Grund,
+Gültigkeitsfenster, Cleanup-Pflicht und Audit-Readback müssen vor bzw. direkt
+nach dem synthetischen Write nachweisbar sein. Fehlt die Cleanup-Zusage, wird
+vor jedem Graph-Write geblockt.
+
 `matter-access-apply-smoke` ist die vorbereitete owner-gated Live-Kante für
 eine echte synthetische Vertretungsfreigabe. Der Befehl schreibt nur
 synthetische Items mit `NAC-SMOKE-GRANT-` und `NAC-SMOKE-MATTER-` in

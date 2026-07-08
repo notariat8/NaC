@@ -94,6 +94,12 @@ smoke uses only a fake Graph client, executes no real Graph requests, writes no
 SharePoint items and stores no concrete Graph paths, raw responses, user data,
 reasons, tokens or matter payloads.
 
+The same cases are anchored as `apply_policy` in the matter-access contract and
+are enforced fail-closed by the apply edge: workspace scope, reason, validity
+window, cleanup requirement and audit readback must be proven before or
+directly after the synthetic write. Missing cleanup approval is blocked before
+any Graph write.
+
 `matter-access-apply-smoke` is the prepared owner-gated live edge for a real
 synthetic deputy grant. The command writes only synthetic items with
 `NAC-SMOKE-GRANT-` and `NAC-SMOKE-MATTER-` to `Vertretungsfreigaben` and
