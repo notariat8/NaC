@@ -214,6 +214,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_matter_access_delegation.py"],
                 ),
                 (
+                    "m365_matter_access_decision_replay",
+                    "M365 Matter Access Decision Replay",
+                    [sys.executable, "scripts/validate_m365_matter_access_decision_replay.py"],
+                ),
+                (
                     "m365_matter_access_apply_live_smoke_release_lane",
                     "M365 Matter Access Apply Live-Smoke Release Lane",
                     [

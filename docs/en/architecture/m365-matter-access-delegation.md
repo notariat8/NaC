@@ -42,6 +42,13 @@ The redacted offline evidence for this plan runs through:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
+The local replay for concrete synthetic SharePoint list snapshots also runs
+without live tenant action through:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-decision-replay --format json
+```
+
 The future apply boundary for timeboxed deputy grants is checked separately
 without live apply:
 
@@ -69,6 +76,16 @@ privacy attestations. It stores no raw matter payloads, no tokens, no
 SharePoint file content and no concrete Graph paths. `release-gate-run`
 executes this smoke before the live runtime steps and attaches it as optional
 evidence to `release-gate-evidence` and the artifact index.
+
+`matter-access-decision-replay` writes
+`out/m365/teams-sharepoint/matter-access-decision-replay.redacted.json` by
+default. The artifact evaluates synthetic `Akten`, `Vertretungsfreigaben` and
+`AuditJournalLite` snapshots and only allows the lead notary, the assigned
+clerk or an active matching deputy grant with reason, validity window,
+approver and audit correlation. Wrong workspace, wrong matter, expired deputy
+access, missing reason, missing approver, missing audit correlation and blanket
+visibility fail closed. The artifact stores only hashes, counts, decision
+codes and privacy flags, and executes no Graph requests or Graph writes.
 
 `matter-access-apply-readiness` writes
 `out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json` by

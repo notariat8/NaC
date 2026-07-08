@@ -1,0 +1,259 @@
+{
+  "schema_version": "nac.m365-matter-access-decision-replay-snapshot/v0.1",
+  "snapshot_id": "synthetic-matter-access-decision-replay",
+  "generated_at": "2026-07-08T12:00:00Z",
+  "reference_time": "2026-07-08T12:00:00Z",
+  "workspace_bindings": [
+    {
+      "workspace_id": "notary_team_01",
+      "notary_team": "NaC-Notar-01"
+    },
+    {
+      "workspace_id": "notary_team_02",
+      "notary_team": "NaC-Notar-02"
+    }
+  ],
+  "sharepoint_lists": {
+    "Akten": [
+      {
+        "id": "synthetic-akten-item-001",
+        "fields": {
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "Aktenzeichen": "SYN-001",
+          "NotarTeam": "NaC-Notar-01",
+          "FederfuehrenderNotar": "synthetic-notary-01",
+          "Sachbearbeitung": "synthetic-clerk-01",
+          "Status": "InPrüfung",
+          "Vertraulichkeitsstufe": "Normal",
+          "BlanketVisibility": false
+        }
+      },
+      {
+        "id": "synthetic-akten-item-002",
+        "fields": {
+          "NacCaseId": "NAC-SYN-MATTER-002",
+          "Aktenzeichen": "SYN-002",
+          "NotarTeam": "NaC-Notar-01",
+          "FederfuehrenderNotar": "synthetic-notary-02",
+          "Sachbearbeitung": "synthetic-clerk-02",
+          "Status": "InPrüfung",
+          "Vertraulichkeitsstufe": "Normal",
+          "BlanketVisibility": false
+        }
+      },
+      {
+        "id": "synthetic-akten-item-blanket",
+        "fields": {
+          "NacCaseId": "NAC-SYN-MATTER-BLANKET",
+          "Aktenzeichen": "SYN-BLANKET",
+          "NotarTeam": "NaC-Notar-01",
+          "FederfuehrenderNotar": "synthetic-notary-01",
+          "Sachbearbeitung": "synthetic-clerk-01",
+          "Status": "InPrüfung",
+          "Vertraulichkeitsstufe": "Normal",
+          "BlanketVisibility": true
+        }
+      }
+    ],
+    "Vertretungsfreigaben": [
+      {
+        "id": "synthetic-grant-active",
+        "fields": {
+          "GrantId": "NAC-SYN-GRANT-ACTIVE",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "FromUser": "synthetic-notary-01",
+          "ToUser": "synthetic-deputy-active",
+          "GrantedRole": "SachbearbeitungVertretung",
+          "Reason": "Synthetische Urlaubsvertretung",
+          "ValidFrom": "2026-07-08T09:00:00Z",
+          "ValidUntil": "2026-07-09T09:00:00Z",
+          "ApprovedBy": "synthetic-notary-01",
+          "Status": "Aktiv",
+          "AuditCorrelationId": "NAC-SYN-AUDIT-ACTIVE"
+        }
+      },
+      {
+        "id": "synthetic-grant-expired",
+        "fields": {
+          "GrantId": "NAC-SYN-GRANT-EXPIRED",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "FromUser": "synthetic-notary-01",
+          "ToUser": "synthetic-deputy-expired",
+          "GrantedRole": "SachbearbeitungVertretung",
+          "Reason": "Synthetische Vertretung abgelaufen",
+          "ValidFrom": "2026-07-01T09:00:00Z",
+          "ValidUntil": "2026-07-02T09:00:00Z",
+          "ApprovedBy": "synthetic-notary-01",
+          "Status": "Aktiv",
+          "AuditCorrelationId": "NAC-SYN-AUDIT-EXPIRED"
+        }
+      },
+      {
+        "id": "synthetic-grant-missing-reason",
+        "fields": {
+          "GrantId": "NAC-SYN-GRANT-MISSING-REASON",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "FromUser": "synthetic-notary-01",
+          "ToUser": "synthetic-deputy-missing-reason",
+          "GrantedRole": "SachbearbeitungVertretung",
+          "Reason": " ",
+          "ValidFrom": "2026-07-08T09:00:00Z",
+          "ValidUntil": "2026-07-09T09:00:00Z",
+          "ApprovedBy": "synthetic-notary-01",
+          "Status": "Aktiv",
+          "AuditCorrelationId": "NAC-SYN-AUDIT-MISSING-REASON"
+        }
+      },
+      {
+        "id": "synthetic-grant-missing-approver",
+        "fields": {
+          "GrantId": "NAC-SYN-GRANT-MISSING-APPROVER",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "FromUser": "synthetic-notary-01",
+          "ToUser": "synthetic-deputy-missing-approver",
+          "GrantedRole": "SachbearbeitungVertretung",
+          "Reason": "Synthetische Vertretung ohne Approver",
+          "ValidFrom": "2026-07-08T09:00:00Z",
+          "ValidUntil": "2026-07-09T09:00:00Z",
+          "ApprovedBy": "",
+          "Status": "Aktiv",
+          "AuditCorrelationId": "NAC-SYN-AUDIT-MISSING-APPROVER"
+        }
+      },
+      {
+        "id": "synthetic-grant-missing-audit",
+        "fields": {
+          "GrantId": "NAC-SYN-GRANT-MISSING-AUDIT",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "FromUser": "synthetic-notary-01",
+          "ToUser": "synthetic-deputy-missing-audit",
+          "GrantedRole": "SachbearbeitungVertretung",
+          "Reason": "Synthetische Vertretung ohne Audit-Korrelation",
+          "ValidFrom": "2026-07-08T09:00:00Z",
+          "ValidUntil": "2026-07-09T09:00:00Z",
+          "ApprovedBy": "synthetic-notary-01",
+          "Status": "Aktiv",
+          "AuditCorrelationId": ""
+        }
+      }
+    ],
+    "AuditJournalLite": [
+      {
+        "id": "synthetic-audit-active",
+        "fields": {
+          "EventId": "NAC-SYN-EVENT-ACTIVE",
+          "Timestamp": "2026-07-08T09:00:00Z",
+          "Actor": "synthetic-notary-01",
+          "NacCaseId": "NAC-SYN-MATTER-001",
+          "Action": "DeputyGrantApproved",
+          "ObjectType": "Vertretungsfreigabe",
+          "ObjectId": "NAC-SYN-GRANT-ACTIVE",
+          "Reason": "Synthetische Urlaubsvertretung",
+          "CorrelationId": "NAC-SYN-AUDIT-ACTIVE"
+        }
+      }
+    ]
+  },
+  "decision_requests": [
+    {
+      "id": "allow-lead-notary",
+      "actor_id": "synthetic-notary-01",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-ALLOW-LEAD",
+      "expected_decision": "ALLOW",
+      "expected_decision_code": "ALLOW_LEAD_NOTARY"
+    },
+    {
+      "id": "allow-assigned-clerk",
+      "actor_id": "synthetic-clerk-01",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-ALLOW-CLERK",
+      "expected_decision": "ALLOW",
+      "expected_decision_code": "ALLOW_ASSIGNED_CLERK"
+    },
+    {
+      "id": "allow-active-deputy",
+      "actor_id": "synthetic-deputy-active",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-ALLOW-DEPUTY",
+      "expected_decision": "ALLOW",
+      "expected_decision_code": "ALLOW_ACTIVE_DEPUTY_GRANT"
+    },
+    {
+      "id": "block-wrong-workspace",
+      "actor_id": "synthetic-notary-01",
+      "workspace_id": "notary_team_02",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-WORKSPACE",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_WORKSPACE_SCOPE"
+    },
+    {
+      "id": "block-wrong-case",
+      "actor_id": "synthetic-deputy-active",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-002",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-CASE",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_CASE_SCOPE"
+    },
+    {
+      "id": "block-expired-deputy",
+      "actor_id": "synthetic-deputy-expired",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-EXPIRED",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_DEPUTY_GRANT_EXPIRED"
+    },
+    {
+      "id": "block-missing-reason",
+      "actor_id": "synthetic-deputy-missing-reason",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-REASON",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_DEPUTY_GRANT_MISSING_REASON"
+    },
+    {
+      "id": "block-missing-approver",
+      "actor_id": "synthetic-deputy-missing-approver",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-APPROVER",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_DEPUTY_GRANT_MISSING_APPROVER"
+    },
+    {
+      "id": "block-missing-audit-correlation",
+      "actor_id": "synthetic-deputy-missing-audit",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-001",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-AUDIT",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_DEPUTY_GRANT_MISSING_AUDIT_CORRELATION"
+    },
+    {
+      "id": "block-blanket-visibility",
+      "actor_id": "synthetic-notary-01",
+      "workspace_id": "notary_team_01",
+      "case_id": "NAC-SYN-MATTER-BLANKET",
+      "purpose": "matter_metadata_read",
+      "correlation_id": "NAC-SYN-DECISION-BLOCK-BLANKET",
+      "expected_decision": "BLOCK",
+      "expected_decision_code": "BLOCK_BLANKET_VISIBILITY"
+    }
+  ]
+}

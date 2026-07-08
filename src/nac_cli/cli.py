@@ -29,6 +29,10 @@ from nac_legal_graph.sources import legal_graph_source_status, legal_source_inve
 from nac_m365_graph.mcp_smoke_leftover_cleanup import DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT
 from nac_m365_graph.mcp_smoke_suite import DEFAULT_MCP_SMOKE_SUITE_OUTPUT
 from nac_m365_graph.matter_access_apply_readiness import DEFAULT_MATTER_ACCESS_APPLY_READINESS_OUTPUT
+from nac_m365_graph.matter_access_decision_replay import (
+    DEFAULT_MATTER_ACCESS_DECISION_REPLAY_OUTPUT,
+    DEFAULT_MATTER_ACCESS_DECISION_REPLAY_SNAPSHOT,
+)
 from nac_m365_graph.matter_access_apply_live_smoke_retention import (
     DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
     build_matter_access_apply_live_smoke_retention_index,
@@ -397,6 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-decision-replay",
             "matter-access-apply-policy-smoke",
             "matter-access-apply-smoke",
             "matter-access-apply-live-smoke-retain",
@@ -563,6 +568,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--matter-access-smoke-output",
         type=Path,
         help="Pfad fuer das redigierte Matter-Access-Delegation-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-decision-snapshot",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_DECISION_REPLAY_SNAPSHOT,
+        help="Pfad zum synthetischen SharePoint-Listensnapshot fuer das Offline-Decision-Replay.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-decision-replay-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_DECISION_REPLAY_OUTPUT,
+        help="Pfad fuer das redigierte Matter-Access-Decision-Replay-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-decision-reference-time",
+        help="Optionaler ISO-8601-Zeitpunkt fuer die Auswertung befristeter Vertretungen.",
     )
     teams_sharepoint.add_argument(
         "--matter-access-apply-readiness-output",
@@ -2298,6 +2319,14 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-inventory-smoke-output", str(args.mcp_inventory_smoke_output)])
         if args.matter_access_smoke_output:
             script_args.extend(["--matter-access-smoke-output", str(args.matter_access_smoke_output)])
+        if args.matter_access_decision_snapshot:
+            script_args.extend(["--matter-access-decision-snapshot", str(args.matter_access_decision_snapshot)])
+        if args.matter_access_decision_replay_output:
+            script_args.extend(
+                ["--matter-access-decision-replay-output", str(args.matter_access_decision_replay_output)]
+            )
+        if args.matter_access_decision_reference_time:
+            script_args.extend(["--matter-access-decision-reference-time", args.matter_access_decision_reference_time])
         if args.matter_access_apply_readiness_output:
             script_args.extend(
                 ["--matter-access-apply-readiness-output", str(args.matter_access_apply_readiness_output)]

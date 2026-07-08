@@ -42,6 +42,13 @@ Der redigierte Offline-Nachweis für diesen Plan läuft über:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
+Das lokale Replay konkreter synthetischer SharePoint-Listensnapshots läuft
+ebenfalls ohne Live-Tenant-Aktion über:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-decision-replay --format json
+```
+
 Die spätere Apply-Grenze für zeitbegrenzte Vertretungsfreigaben wird separat
 ohne Live-Apply geprüft:
 
@@ -70,6 +77,17 @@ keine SharePoint-Dateiinhalte und keine konkreten Graph-Pfade. Im
 `release-gate-run` wird der Smoke vor den Live-Runtime-Schritten ausgeführt und
 als optionaler Evidence-Step an `release-gate-evidence` und den Artifact-Index
 angehängt.
+
+`matter-access-decision-replay` schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-decision-replay.redacted.json`. Das
+Artefakt wertet synthetische `Akten`-, `Vertretungsfreigaben`- und
+`AuditJournalLite`-Snapshots aus und erlaubt nur den federführenden Notar, die
+zugeordnete Sachbearbeitung oder eine aktive passende Vertretung mit Grund,
+Zeitfenster, Approver und Audit-Correlation. Falscher Workspace, falsche Akte,
+abgelaufene Vertretung, fehlender Grund, fehlender Approver, fehlende
+Audit-Correlation und Blanket-Visibility werden fail-closed geblockt. Das
+Artefakt speichert nur Hashes, Counts, Decision-Codes und Privacy-Flags und
+führt keine Graph Requests oder Graph Writes aus.
 
 `matter-access-apply-readiness` schreibt standardmäßig
 `out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json`. Das
