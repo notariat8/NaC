@@ -445,6 +445,46 @@ class M365ReleaseGateEvidenceTests(unittest.TestCase):
         self.assertEqual(len(evidence["artifact_index"]["artifacts"][10]["artifact_sha256"]), 64)
         self.assertNotIn("NAC-SMOKE-GRANT-20260708T000000Z", json.dumps(evidence))
 
+    def test_does_not_auto_attach_matter_access_apply_smoke_default_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            suite_artifact = tmp_path / "suite.redacted.json"
+            leftover_artifact = tmp_path / "leftover.redacted.json"
+            missing_artifact = tmp_path / "missing.redacted.json"
+            default_apply_smoke_artifact = (
+                tmp_path / "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json"
+            )
+            default_apply_smoke_artifact.parent.mkdir(parents=True, exist_ok=True)
+            suite_artifact.write_text(json.dumps(_suite_payload()), encoding="utf-8")
+            leftover_artifact.write_text(json.dumps(_leftover_payload()), encoding="utf-8")
+            mismatched_payload = _matter_access_apply_smoke_payload()
+            mismatched_payload["summary"]["correlation_id"] = "live-correlation-from-previous-run"
+            default_apply_smoke_artifact.write_text(json.dumps(mismatched_payload), encoding="utf-8")
+
+            evidence = build_release_gate_evidence(
+                repo_root=tmp_path,
+                mcp_inventory_artifact=missing_artifact,
+                matter_access_artifact=missing_artifact,
+                matter_access_apply_readiness_artifact=missing_artifact,
+                matter_access_apply_request_artifact=missing_artifact,
+                mcp_suite_artifact=suite_artifact,
+                mcp_leftover_artifact=leftover_artifact,
+                runtime_env_bootstrap_artifact=missing_artifact,
+                runtime_certificate_expiry_artifact=missing_artifact,
+                runtime_smoke_artifact=missing_artifact,
+                runtime_metadata_artifact=missing_artifact,
+                expected_workspace_id="notary_team_01",
+                expected_correlation_id="corr-1",
+            )
+
+        self.assertEqual(evidence["status"], "PASSED")
+        self.assertEqual(evidence["summary"]["matter_access_apply_smoke_status"], "NOT_ATTACHED")
+        smoke_step = evidence["steps"][10]
+        self.assertEqual(smoke_step["artifact_path"], str(default_apply_smoke_artifact))
+        self.assertEqual(smoke_step["status"], "NOT_ATTACHED")
+        self.assertFalse(evidence["artifact_index"]["artifacts"][10]["attached"])
+        self.assertNotIn("live-correlation-from-previous-run", json.dumps(evidence))
+
     def test_fails_when_attached_runtime_artifact_is_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

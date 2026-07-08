@@ -64,6 +64,7 @@ def build_release_gate_evidence(
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     generated_at = generated_at or _now()
+    attach_matter_access_apply_smoke = matter_access_apply_smoke_artifact is not None
     paths = {
         "runtime_certificate_expiry": _resolve(
             repo_root,
@@ -113,7 +114,10 @@ def build_release_gate_evidence(
         _matter_access_apply_request_step(paths["matter_access_apply_request_plan"]),
         _mcp_suite_step(paths["mcp_smoke_suite"]),
         _mcp_leftover_step(paths["mcp_leftover_dry_run"]),
-        _matter_access_apply_smoke_step(paths["matter_access_apply_smoke"]),
+        _matter_access_apply_smoke_step(
+            paths["matter_access_apply_smoke"],
+            attach=attach_matter_access_apply_smoke,
+        ),
     ]
     errors: list[str] = []
     for step in steps:
@@ -225,7 +229,7 @@ def build_release_gate_artifact_index(evidence: dict[str, Any]) -> dict[str, Any
             continue
         errors = step.get("errors")
         artifact_path = Path(str(step.get("artifact_path", "")))
-        artifact_exists = artifact_path.exists()
+        artifact_exists = artifact_path.exists() and step.get("status") != "NOT_ATTACHED"
         artifacts.append(
             {
                 "id": step.get("id"),
@@ -799,8 +803,12 @@ def _matter_access_apply_request_step(path: Path) -> dict[str, Any]:
     return step
 
 
-def _matter_access_apply_smoke_step(path: Path) -> dict[str, Any]:
-    artifact, error = _load_optional_json(path)
+def _matter_access_apply_smoke_step(path: Path, *, attach: bool) -> dict[str, Any]:
+    if attach:
+        artifact, error = _load_optional_json(path)
+    else:
+        artifact = None
+        error = f"missing evidence artifact: {path}"
     step = _base_step(
         step_id="matter_access_apply_smoke",
         label="matter-access-apply-smoke --owner-approved",
