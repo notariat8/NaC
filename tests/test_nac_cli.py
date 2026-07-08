@@ -79,6 +79,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("Legal Graph Contracts", output)
         self.assertIn("Teams SharePoint Graph Data Plane", output)
         self.assertIn("M365 Matter Access Delegation", output)
+        self.assertIn("M365 Matter Access Domain Verification Contract", output)
         self.assertIn("Codex Agent Context Verification Contract", output)
         self.assertIn("Spec Traceability", output)
         self.assertIn("STATUS: PASSED", output)

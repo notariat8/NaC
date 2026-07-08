@@ -1,0 +1,99 @@
+{
+  "schema_version": "nac.agent-invariant-index/v0.1",
+  "index_id": "nac_domain_invariants",
+  "status": "active_mvp",
+  "purpose": "Agent-readable guardrail index for domain rules that must not be broken by future NaC changes.",
+  "invariants": [
+    {
+      "id": "invariant.m365_matter_access.no_blanket_visibility",
+      "domain": "m365_matter_access_delegation",
+      "severity": "critical",
+      "statement": "Matter visibility must not be broadened to all notary-office users.",
+      "source_paths": [
+        "workflows/contracts/m365-matter-access-delegation.contract.json",
+        "docs/de/architecture/m365-matter-access-delegation.md",
+        "docs/en/architecture/m365-matter-access-delegation.md"
+      ],
+      "enforced_by": [
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    },
+    {
+      "id": "invariant.m365_matter_access.timeboxed_deputy_access",
+      "domain": "m365_matter_access_delegation",
+      "severity": "critical",
+      "statement": "Deputy grants require ValidFrom and ValidUntil, and ValidUntil must be after ValidFrom.",
+      "source_paths": [
+        "workflows/contracts/m365-matter-access-delegation.contract.json",
+        "src/nac_m365_graph/matter_access_apply_readiness.py",
+        "src/nac_m365_graph/matter_access_apply_policy_smoke.py"
+      ],
+      "enforced_by": [
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    },
+    {
+      "id": "invariant.m365_matter_access.reason_approver_audit_required",
+      "domain": "m365_matter_access_delegation",
+      "severity": "critical",
+      "statement": "Deputy grants require reason, approver and audit correlation evidence.",
+      "source_paths": [
+        "workflows/contracts/m365-matter-access-delegation.contract.json",
+        "src/nac_m365_graph/matter_access_apply_request.py"
+      ],
+      "enforced_by": [
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    },
+    {
+      "id": "invariant.m365_graph.rest_only_no_legacy_sdk",
+      "domain": "m365_graph_data_plane",
+      "severity": "critical",
+      "statement": "M365 data-plane access remains Microsoft Graph REST v1.0 only; legacy SharePoint APIs, SDKs, PnP and Graph beta remain blocked.",
+      "source_paths": [
+        "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
+        "workflows/contracts/m365-matter-access-delegation.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_teams_sharepoint_graph_data_plane.py",
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    },
+    {
+      "id": "invariant.m365_matter_access.owner_gate_before_live_write",
+      "domain": "m365_matter_access_delegation",
+      "severity": "critical",
+      "statement": "Live writes for deputy grants stay blocked without explicit owner approval and synthetic smoke boundaries.",
+      "source_paths": [
+        "workflows/contracts/m365-matter-access-delegation.contract.json",
+        "src/nac_cli/cli.py",
+        "src/nac_m365_graph/matter_access_apply_smoke.py"
+      ],
+      "enforced_by": [
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    },
+    {
+      "id": "invariant.m365_evidence.redacted_only_no_matter_payloads",
+      "domain": "m365_release_gate_evidence",
+      "severity": "critical",
+      "statement": "Matter-access evidence stores only redacted metadata, hashes, counts, field names and status flags; no raw matter payloads, tokens, secrets, concrete Graph paths or raw Graph responses.",
+      "source_paths": [
+        "docs/de/architecture/m365-matter-access-delegation.md",
+        "docs/en/architecture/m365-matter-access-delegation.md",
+        "src/nac_m365_graph/matter_access_delegation_smoke.py",
+        "src/nac_m365_graph/matter_access_apply_request.py",
+        "src/nac_m365_graph/matter_access_apply_smoke.py"
+      ],
+      "enforced_by": [
+        "scripts/validate_m365_matter_access_delegation.py",
+        "scripts/validate_verification_contracts_domain_pilot.py"
+      ]
+    }
+  ]
+}

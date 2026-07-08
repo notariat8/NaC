@@ -156,6 +156,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_agent_context_operating_model.py"],
                 ),
                 (
+                    "verification_contracts_domain_pilot",
+                    "Verification Contracts Domain Pilot",
+                    [sys.executable, "scripts/validate_verification_contracts_domain_pilot.py"],
+                ),
+                (
                     "teams_sharepoint_graph_data_plane",
                     "Teams SharePoint Graph Data Plane",
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],

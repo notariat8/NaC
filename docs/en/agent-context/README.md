@@ -7,6 +7,10 @@ right time, not simply more context.
 
 The machine-readable index is
 [agent-context/index.json](../../../agent-context/index.json).
+Accepted domain decisions are indexed in
+[agent-context/decision-index.json](../../../agent-context/decision-index.json).
+Critical invariants are indexed in
+[agent-context/invariant-index.json](../../../agent-context/invariant-index.json).
 
 ## Layers
 
@@ -33,6 +37,8 @@ They explain architecture, boundaries and evidence.
 New agentic operating surfaces should get a verification contract when their
 definition of done is discussed repeatedly. The first pilot is
 [codex-agent-context.verification.json](../../../workflows/verification-contracts/codex-agent-context.verification.json).
+The first domain pilot is
+[m365-matter-access-delegation.verification.json](../../../workflows/verification-contracts/m365-matter-access-delegation.verification.json).
 
 Required fields:
 

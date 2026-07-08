@@ -1,0 +1,62 @@
+{
+  "schema_version": "nac.agent-decision-index/v0.1",
+  "index_id": "nac_domain_decisions",
+  "status": "active_mvp",
+  "purpose": "Agent-readable index of architecture decisions that explain why current NaC domain guardrails exist.",
+  "decisions": [
+    {
+      "id": "ADR-M365-MATTER-ACCESS-001",
+      "title": "Matter visibility is bound to the assigned notary team",
+      "status": "accepted",
+      "decision_date": "2026-07-08",
+      "domain": "m365_matter_access_delegation",
+      "owner": "ofunk",
+      "summary": "The MVP uses a private Microsoft 365 Team and SharePoint site per notary team. Matters reference the responsible team and assigned people instead of being visible to all notary-office users.",
+      "source_paths": [
+        "docs/de/architecture/m365-matter-access-delegation.md",
+        "docs/en/architecture/m365-matter-access-delegation.md",
+        "workflows/contracts/m365-matter-access-delegation.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+      ]
+    },
+    {
+      "id": "ADR-M365-MATTER-ACCESS-002",
+      "title": "Deputy access is a timeboxed exception with reason and audit correlation",
+      "status": "accepted",
+      "decision_date": "2026-07-08",
+      "domain": "m365_matter_access_delegation",
+      "owner": "ofunk",
+      "summary": "Deputy access is modeled through Vertretungsfreigaben with reason, validity window, approver, status and audit correlation. Permanent or unreasoned deputy grants are outside the MVP boundary.",
+      "source_paths": [
+        "docs/de/architecture/m365-matter-access-delegation.md",
+        "docs/en/architecture/m365-matter-access-delegation.md",
+        "workflows/contracts/m365-matter-access-delegation.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+      ]
+    },
+    {
+      "id": "ADR-M365-MATTER-ACCESS-003",
+      "title": "Graph REST request plans precede owner-gated live writes",
+      "status": "accepted",
+      "decision_date": "2026-07-08",
+      "domain": "m365_matter_access_delegation",
+      "owner": "ofunk",
+      "summary": "The domain flow stays Graph REST v1.0 only. Offline request plans, readiness checks and redacted evidence must pass before any owner-gated live write path is used.",
+      "source_paths": [
+        "docs/de/architecture/teams-sharepoint-graph-data-plane.md",
+        "docs/en/architecture/teams-sharepoint-graph-data-plane.md",
+        "docs/de/architecture/m365-matter-access-delegation.md",
+        "docs/en/architecture/m365-matter-access-delegation.md",
+        "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+        "workflows/contracts/m365-matter-access-delegation.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+      ]
+    }
+  ]
+}

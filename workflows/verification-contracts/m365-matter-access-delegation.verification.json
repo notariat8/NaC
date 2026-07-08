@@ -1,0 +1,107 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_matter_access_delegation",
+  "domain_contract_id": "m365.matter_access_delegation",
+  "title": "M365 Matter Access Delegation Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "workflows/contracts/m365-matter-access-delegation.contract.json",
+      "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+      "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
+      "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
+      "agent-context/decision-index.json",
+      "agent-context/invariant-index.json",
+      "docs/de/architecture/m365-matter-access-delegation.md",
+      "docs/en/architecture/m365-matter-access-delegation.md",
+      "src/nac_m365_graph/matter_access_*.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_m365_matter_access_delegation.py",
+      "scripts/validate_verification_contracts_domain_pilot.py",
+      "tests/test_m365_matter_access_delegation.py",
+      "tests/test_verification_contracts_domain_pilot.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/process-policy.yaml",
+      "policies/access-control-policy.yaml",
+      "policies/data-protection-policy.yaml"
+    ],
+    "scoped": [
+      "workflows/contracts/AGENTS.md",
+      "docs/AGENTS.md"
+    ],
+    "on_demand": [
+      "agent-context/decision-index.json",
+      "agent-context/invariant-index.json",
+      "docs/de/architecture/m365-matter-access-delegation.md",
+      "docs/en/architecture/m365-matter-access-delegation.md",
+      "docs/de/architecture/teams-sharepoint-graph-data-plane.md",
+      "docs/en/architecture/teams-sharepoint-graph-data-plane.md",
+      "docs/de/architecture/matter-data-classification-redaction.md",
+      "docs/en/architecture/matter-data-classification-redaction.md",
+      "workflows/contracts/m365-matter-access-delegation.contract.json",
+      "workflows/contracts/teams-sharepoint-data-mcp.contract.json"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-readiness.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json",
+      "out/m365/teams-sharepoint/release-gates/<correlation-id>/release-gate-evidence.redacted.json"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_m365_matter_access_delegation.py",
+    "python scripts/validate_verification_contracts_domain_pilot.py",
+    "python -m unittest tests.test_verification_contracts_domain_pilot tests.test_m365_matter_access_delegation",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Matter visibility must not be broadened to all notary-office users.",
+    "Deputy grants require a reason, approver, validity window and audit correlation.",
+    "ValidUntil must be after ValidFrom for deputy grants.",
+    "Microsoft 365 data-plane access remains Graph REST v1.0 only: no legacy SharePoint API, SDK, PnP or Graph beta.",
+    "Agents may plan deputy access but may not approve it.",
+    "Live write smoke requires explicit owner approval and synthetic cleanup in the same run.",
+    "Evidence must remain redacted and must not store matter payloads, tokens, secrets, concrete Graph paths or raw Graph responses."
+  ],
+  "thresholds": {
+    "minimum_indexed_decisions": 3,
+    "minimum_indexed_invariants": 6,
+    "required_matter_access_release_gate_artifacts": 3,
+    "max_live_apply_steps_without_owner_gate": 0,
+    "minimum_negative_policy_cases": 5
+  },
+  "required_evidence": [
+    "domain_contract",
+    "domain_verification_contract",
+    "decision_index",
+    "invariant_index",
+    "matter_access_delegation_smoke",
+    "matter_access_apply_readiness",
+    "matter_access_apply_request_plan",
+    "negative_apply_policy_smoke",
+    "release_gate_evidence_index"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_required_invariants_indexed": true,
+    "all_required_decisions_indexed": true,
+    "matter_access_artifacts_attached_to_release_gate": true,
+    "no_live_apply_without_owner_gate": true,
+    "no_secrets": true,
+    "no_mandate_data": true
+  },
+  "failure_behavior": {
+    "missing_decision_index": "fail_closed",
+    "missing_invariant_index": "fail_closed",
+    "missing_release_gate_artifact": "block_readiness",
+    "owner_gate_missing": "block_live_apply",
+    "graph_boundary_broken": "block_completion",
+    "quality_gate_failure": "block_completion"
+  }
+}

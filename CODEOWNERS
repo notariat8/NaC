@@ -12,4 +12,5 @@ workflows/contracts/* @ofunk
 workflows/verification-contracts/* @ofunk
 scripts/validate_governance_sync.py @ofunk
 scripts/validate_codex_*.py @ofunk
+scripts/validate_verification_contracts_*.py @ofunk
 .github/workflows/governance-policy-sync.yml @ofunk
