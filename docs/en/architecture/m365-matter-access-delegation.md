@@ -1,7 +1,7 @@
 # M365 Matter Access Delegation
 
 Status: contract-first, offline, no live tenant action
-Last content update: 2026-07-07
+Last content update: 2026-07-08
 
 ## Purpose
 
@@ -49,6 +49,13 @@ without live apply:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
 ```
 
+A concrete redacted apply request plan for a future owner-gated grant is still
+rendered without live apply:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+```
+
 `matter-access-smoke` writes
 `out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json` by
 default. The artifact contains only counts, action names, a correlation ID and
@@ -64,6 +71,14 @@ ready as future owner-gated Graph REST write edges: explicit write approval,
 role/matter/purpose gate, reason, validity window, approver, audit correlation
 and the privacy boundary. It executes no Graph requests, writes no SharePoint
 items and stores no concrete Graph paths.
+
+`matter-access-apply-request-plan` writes
+`out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json` by
+default. The artifact bundles the planned MCP write edges `grant_request` and
+`audit_append` as a future owner-apply request. It stores only hashes, field
+names, list roles and privacy flags: no concrete Graph paths, no raw Graph
+responses, no tokens, no cleartext user data and no matter payloads. The
+command executes no Graph requests and writes no SharePoint items.
 
 ## MCP Boundary
 

@@ -27,6 +27,10 @@ from nac_m365_graph.matter_access_apply_readiness import (  # noqa: E402
     build_matter_access_apply_readiness,
     write_matter_access_apply_readiness_artifact,
 )
+from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
+    build_matter_access_apply_request_plan,
+    write_matter_access_apply_request_plan_artifact,
+)
 from nac_m365_graph.mcp_runtime import (  # noqa: E402
     DEFAULT_MCP_CONTRACT,
     McpRuntimeError,
@@ -168,6 +172,78 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
                 output.unlink()
         self.assertEqual(artifact["status"], "PASSED")
 
+    def test_matter_access_apply_request_plan_writes_redacted_offline_evidence(self) -> None:
+        readiness = build_matter_access_apply_readiness(
+            self.contract,
+            self.schema,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            workspace_id="notary_team_01",
+            correlation_id="apply-request-corr",
+            timestamp="2026-07-07T00:00:00Z",
+        )
+        payload = build_matter_access_apply_request_plan(
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            readiness,
+            workspace_id="notary_team_01",
+            correlation_id="apply-request-corr",
+            grant_id="grant-1",
+            case_id="case-1",
+            from_user="notary-1",
+            to_user="clerk-2",
+            reason="Urlaubsvertretung",
+            approved_by="notary-1",
+            timestamp="2026-07-07T00:00:00Z",
+        )
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["schema_version"], "nac.m365-matter-access-apply-request-plan/v0.1")
+        self.assertEqual(payload["summary"]["workspace_id"], "notary_team_01")
+        self.assertEqual(payload["summary"]["correlation_id"], "apply-request-corr")
+        self.assertEqual(payload["summary"]["future_apply_mode"], "owner_gated_graph_rest_item_writes")
+        self.assertEqual(payload["summary"]["planned_write_count"], 2)
+        self.assertEqual(payload["summary"]["planned_tools"], ["grant_request", "audit_append"])
+        self.assertEqual(payload["summary"]["planned_lists"], ["Vertretungsfreigaben", "AuditJournalLite"])
+        self.assertTrue(payload["summary"]["required_write_approval"])
+        self.assertTrue(payload["summary"]["owner_gate_required"])
+        self.assertTrue(payload["summary"]["role_case_purpose_gate_required"])
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["executes_graph_writes"])
+        self.assertFalse(payload["summary"]["tenant_mutation_allowed"])
+        self.assertFalse(payload["summary"]["team_membership_mutation_allowed"])
+        self.assertFalse(payload["summary"]["sharepoint_item_permission_mutation_allowed"])
+        self.assertFalse(payload["summary"]["raw_graph_path_stored"])
+        self.assertFalse(payload["summary"]["raw_graph_response_stored"])
+        self.assertFalse(payload["summary"]["stores_tokens_or_secrets"])
+        self.assertFalse(payload["summary"]["stores_matter_payloads"])
+        self.assertTrue(all(plan["writes_items"] for plan in payload["request_plans"]))
+        self.assertTrue(all(plan["owner_gate_required"] for plan in payload["request_plans"]))
+        self.assertTrue(all(plan["role_case_gate_required"] for plan in payload["request_plans"]))
+        self.assertTrue(all(plan["stores_raw_graph_path"] is False for plan in payload["request_plans"]))
+        self.assertTrue(all(plan["stores_raw_graph_response"] is False for plan in payload["request_plans"]))
+        serialized = json.dumps(payload)
+        for raw_value in (
+            "grant-1",
+            "case-1",
+            "notary-1",
+            "clerk-2",
+            "Urlaubsvertretung",
+            "example.sharepoint.com",
+            "list-grants",
+            "list-audit",
+            "BEGIN PRIVATE KEY",
+        ):
+            self.assertNotIn(raw_value, serialized)
+
+        output = REPO_ROOT / "out" / "test" / "matter-access-apply-request-plan.redacted.json"
+        try:
+            write_matter_access_apply_request_plan_artifact(payload, output)
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+        finally:
+            if output.exists():
+                output.unlink()
+        self.assertEqual(artifact["status"], "PASSED")
+
     def test_central_cli_exposes_matter_access_plan_without_credentials(self) -> None:
         result = subprocess.run(
             [
@@ -274,6 +350,63 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
             self.assertTrue(payload["summary"]["audit_append_ready"])
             self.assertFalse(payload["summary"]["executes_graph_requests"])
             self.assertTrue(output.exists())
+        finally:
+            if output.exists():
+                output.unlink()
+
+    def test_central_cli_exposes_matter_access_apply_request_plan_without_credentials(self) -> None:
+        output = REPO_ROOT / "out" / "test" / "matter-access-apply-request-plan-cli.redacted.json"
+        if output.exists():
+            output.unlink()
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "matter-access-apply-request-plan",
+                "--mcp-smoke-workspace-id",
+                "notary_team_01",
+                "--mcp-smoke-correlation-id",
+                "apply-request-corr",
+                "--mcp-smoke-case-id",
+                "case-1",
+                "--matter-access-grant-id",
+                "grant-1",
+                "--matter-access-from-user",
+                "notary-1",
+                "--matter-access-to-user",
+                "clerk-2",
+                "--matter-access-reason",
+                "Urlaubsvertretung",
+                "--matter-access-approved-by",
+                "notary-1",
+                "--matter-access-apply-request-output",
+                str(output),
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["status"], "PASSED")
+            self.assertEqual(payload["summary"]["artifact_path"], str(output))
+            self.assertEqual(payload["summary"]["planned_tools"], ["grant_request", "audit_append"])
+            self.assertFalse(payload["summary"]["executes_graph_requests"])
+            self.assertTrue(output.exists())
+            artifact_text = output.read_text(encoding="utf-8")
+            self.assertNotIn("case-1", artifact_text)
+            self.assertNotIn("grant-1", artifact_text)
+            self.assertNotIn("notary-1", artifact_text)
+            self.assertNotIn("clerk-2", artifact_text)
         finally:
             if output.exists():
                 output.unlink()

@@ -287,6 +287,7 @@ The matter visibility and deputy-access boundary is defined in the separate
 ```bash
 nac m365 teams-sharepoint matter-access-smoke --mcp-smoke-workspace-id notary_team_01 --format json
 nac m365 teams-sharepoint matter-access-apply-readiness --mcp-smoke-workspace-id notary_team_01 --format json
+nac m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
 By default, the smoke writes
@@ -303,6 +304,13 @@ checks offline whether the future apply edge for `grant_request` and
 `audit_append` is owner-gated, write-approved, timeboxed, reasoned and
 auditable. `release-gate-run` also creates this artifact automatically before
 live steps and attaches it optionally to evidence and the artifact index.
+
+`matter-access-apply-request-plan` writes the concrete redacted owner-apply
+request to
+`out/m365/teams-sharepoint/matter-access-apply-request-plan.redacted.json`.
+The plan bundles `grant_request` and `audit_append`, stores only hashes, field
+names, list roles and privacy flags, and executes no Graph requests or
+SharePoint item writes.
 
 The first owner-gated live-read mode starts explicitly:
 
