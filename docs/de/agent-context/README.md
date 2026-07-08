@@ -23,11 +23,15 @@ Kritische Invarianten stehen in
 
 ## Agent-Readable Artifacts
 
-NaC nutzt drei Artefaktarten:
+NaC nutzt mehrere agentenlesbare Artefaktarten:
 
 - Maps: Systemform, Datenebene, Runtime- und Contract-Karten.
 - History: Technologieentscheidungen, Architekturentscheidungen, Operating Models.
 - Guardrails: Policies, CODEOWNERS, PR-Template, Quality Gate und Verification Contracts.
+- Worktree operating model: Branch-Isolation, read-only Hygiene-Audit und
+  owner-gated Cleanup-Grenzen.
+- Subagent operating gate: Subagent-Registry, Einsatzschwellen und Runtime-Limits.
+- Memory/hooks: lokale Recall- und Hook-Grenzen ohne Live-Hook-Aktivierung.
 - Command rules: GREEN/YELLOW/RED-Shell-Command-Profile und repo-lokale
   `.rules`-Guardrails für wiederkehrende Command-Entscheidungen.
 
@@ -44,6 +48,9 @@ Der erste fachliche Domain-Pilot ist
 Command-Permission-Profile werden durch
 [codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json)
 verifiziert.
+Der kompakte Querverweisnachweis für Worktree-, Subagent-, Memory/Hooks- und
+Command-Rules-Gates ist
+[codex-agent-context-index-audit.verification.json](../../../workflows/verification-contracts/codex-agent-context-index-audit.verification.json).
 
 Pflichtfelder:
 

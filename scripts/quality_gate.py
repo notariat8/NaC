@@ -161,6 +161,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_agent_context_operating_model.py"],
                 ),
                 (
+                    "codex_agent_context_index_audit",
+                    "Codex Agent Context Index Audit",
+                    [sys.executable, "scripts/validate_codex_agent_context_index_audit.py"],
+                ),
+                (
                     "codex_memory_hooks_operating_model",
                     "Codex Memory Hooks Operating Model",
                     [sys.executable, "scripts/validate_codex_memory_hooks_operating_model.py"],

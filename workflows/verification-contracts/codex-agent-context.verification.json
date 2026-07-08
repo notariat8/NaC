@@ -36,6 +36,8 @@
       "workflows/verification-contracts/codex-memory-hooks.verification.json",
       "docs/de/operations/codex-worktree-operating-model.md",
       "docs/en/operations/codex-worktree-operating-model.md",
+      "workflows/verification-contracts/codex-worktree-operating-model.verification.json",
+      "workflows/verification-contracts/codex-agent-context-index-audit.verification.json",
       "docs/de/operations/codex-subagent-operating-gate.md",
       "docs/en/operations/codex-subagent-operating-gate.md",
       "agent-context/subagent-registry.json"
@@ -48,6 +50,8 @@
   },
   "checks": [
     "python scripts/validate_codex_agent_context_operating_model.py",
+    "python scripts/validate_codex_agent_context_index_audit.py",
+    "python scripts/validate_codex_worktree_operating_model.py",
     "python scripts/validate_codex_memory_hooks_operating_model.py",
     "python scripts/validate_codex_parallel_review.py",
     "python scripts/validate_codex_subagent_operating_gate.py",
@@ -71,6 +75,8 @@
   "required_evidence": [
     "agent_context_index",
     "verification_contract",
+    "agent_context_index_audit",
+    "worktree_operating_model",
     "memory_hooks_operating_model",
     "memory_hooks_verification_contract",
     "scoped_agents_docs",

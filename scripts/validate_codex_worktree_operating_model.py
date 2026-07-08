@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -24,6 +25,11 @@ REQUIRED_FILES = {
     "cli": REPO_ROOT / "src/nac_cli/cli.py",
     "module": REPO_ROOT / "src/nac_git/worktree_hygiene.py",
     "quality_gate": REPO_ROOT / "scripts/quality_gate.py",
+    "verification_contract": REPO_ROOT
+    / "workflows"
+    / "verification-contracts"
+    / "codex-worktree-operating-model.verification.json",
+    "agent_context_index": REPO_ROOT / "agent-context" / "index.json",
 }
 
 REQUIRED_DOC_MARKERS = {
@@ -87,6 +93,8 @@ def validate_code() -> list[str]:
     module_path = REQUIRED_FILES["module"]
     cli_path = REQUIRED_FILES["cli"]
     quality_gate_path = REQUIRED_FILES["quality_gate"]
+    contract_path = REQUIRED_FILES["verification_contract"]
+    index_path = REQUIRED_FILES["agent_context_index"]
 
     if module_path.is_file():
         text = module_path.read_text(encoding="utf-8")
@@ -116,6 +124,31 @@ def validate_code() -> list[str]:
     for path in (quality_gate_path, REQUIRED_FILES["de_quality"], REQUIRED_FILES["en_quality"]):
         if path.is_file() and "codex_worktree_operating_model" not in path.read_text(encoding="utf-8"):
             errors.append(f"{path.relative_to(REPO_ROOT)} enthaelt codex_worktree_operating_model nicht")
+
+    if contract_path.is_file():
+        contract_text = contract_path.read_text(encoding="utf-8")
+        for marker in (
+            "verification.codex_worktree_operating_model",
+            "scripts/validate_codex_worktree_operating_model.py",
+            "tests/test_codex_worktree_operating_model.py",
+        ):
+            if marker not in contract_text:
+                errors.append(f"{contract_path.relative_to(REPO_ROOT)} fehlt Marker: {marker}")
+
+    if index_path.is_file():
+        try:
+            payload = json.loads(index_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"{index_path.relative_to(REPO_ROOT)} ist kein gueltiges JSON: {exc}")
+        else:
+            index_text = json.dumps(payload, ensure_ascii=False)
+            for marker in (
+                "worktree_operating_model",
+                "workflows/verification-contracts/codex-worktree-operating-model.verification.json",
+                "scripts/validate_codex_worktree_operating_model.py",
+            ):
+                if marker not in index_text:
+                    errors.append(f"{index_path.relative_to(REPO_ROOT)} fehlt Marker: {marker}")
 
     return errors
 
@@ -166,4 +199,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -47,6 +47,16 @@ nac git worktree-audit --format json
 The audit reads only local Git metadata. It does not execute
 `git worktree remove`, `git branch -d` or `git push origin --delete`.
 
+## Agent Context And Verification
+
+This operating model is anchored in the agent context index under
+`agent-context/index.json` as the on-demand category
+`worktree_operating_model`. Its Verification evidence is defined in
+`workflows/verification-contracts/codex-worktree-operating-model.verification.json`.
+Runtime evidence comes only from fresh local command output, for example
+`nac git worktree-audit --format json`, and must not contain mandate data or
+secrets.
+
 ## Cleanup Boundary
 
 The audit may report cleanup candidates, but it must not clean them up. These
@@ -89,4 +99,3 @@ the relevant worktree and reviews the final diff.
 - `nac git worktree-audit` remains read-only and must return exit code 0 even
   when cleanup candidates exist, so it works as diagnostics and not as a
   cleanup mechanism.
-

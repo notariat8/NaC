@@ -25,7 +25,15 @@ class CodexAgentContextOperatingModelTests(unittest.TestCase):
         }
         self.assertGreaterEqual(
             categories,
-            {"maps", "history", "guardrails", "subagent_operating_gate", "command_rules", "memory_hooks"},
+            {
+                "maps",
+                "history",
+                "guardrails",
+                "subagent_operating_gate",
+                "worktree_operating_model",
+                "command_rules",
+                "memory_hooks",
+            },
         )
 
     def test_verification_contract_declares_definition_of_done(self) -> None:

@@ -23,11 +23,15 @@ Critical invariants are indexed in
 
 ## Agent-Readable Artifacts
 
-NaC uses three artifact types:
+NaC uses several agent-readable artifact types:
 
 - Maps: system shape, data plane, runtime and contract maps.
 - History: technology decisions, architecture decisions, operating models.
 - Guardrails: policies, CODEOWNERS, PR template, quality gate and verification contracts.
+- Worktree operating model: branch isolation, read-only hygiene audit and
+  owner-gated cleanup boundaries.
+- Subagent operating gate: subagent registry, usage thresholds and runtime limits.
+- Memory/hooks: local recall and hook boundaries without live hook activation.
 - Command rules: GREEN/YELLOW/RED shell-command profiles and repo-local
   `.rules` guardrails for repeated command decisions.
 
@@ -43,6 +47,9 @@ The first domain pilot is
 [m365-matter-access-delegation.verification.json](../../../workflows/verification-contracts/m365-matter-access-delegation.verification.json).
 Command permission profiles are verified by
 [codex-command-rules.verification.json](../../../workflows/verification-contracts/codex-command-rules.verification.json).
+The compact cross-link proof for worktree, subagent, memory/hooks and command
+rules gates is
+[codex-agent-context-index-audit.verification.json](../../../workflows/verification-contracts/codex-agent-context-index-audit.verification.json).
 
 Required fields:
 

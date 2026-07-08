@@ -1,0 +1,73 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_worktree_operating_model",
+  "title": "Codex Worktree Operating Model Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "agent-context/index.json",
+      "docs/*/operations/codex-worktree-operating-model.md",
+      "src/nac_git/worktree_hygiene.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_codex_worktree_operating_model.py",
+      "tests/test_codex_worktree_operating_model.py",
+      "workflows/verification-contracts/codex-worktree-operating-model.verification.json"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml"
+    ],
+    "scoped": [
+      "agent-context/index.json",
+      "docs/*/operations/codex-worktree-operating-model.md"
+    ],
+    "on_demand": [
+      "workflows/verification-contracts/codex-worktree-operating-model.verification.json",
+      "scripts/validate_codex_worktree_operating_model.py",
+      "tests/test_codex_worktree_operating_model.py"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_codex_worktree_operating_model.py",
+    "python -m unittest tests.test_codex_worktree_operating_model",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Worktree audit is read-only and never performs cleanup.",
+    "Worktree cleanup remains owner-gated.",
+    "Worktrees isolate branch and file state; subagents split review or analysis.",
+    "No mandate data, secrets, certificate material or productive credentials are stored in worktree evidence.",
+    "Remote branch deletion requires a separate open-PR check and owner approval."
+  ],
+  "thresholds": {
+    "destructive_actions_executed": false,
+    "github_api_used": false,
+    "network_used": false
+  },
+  "required_evidence": [
+    "worktree_operating_model_docs",
+    "worktree_audit_cli",
+    "read_only_worktree_audit",
+    "owner_gated_cleanup_boundary",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "no_destructive_cleanup": true,
+    "no_network": true,
+    "owner_gate_required_for_cleanup": true
+  },
+  "failure_behavior": {
+    "cleanup_action_detected": "fail_closed",
+    "network_or_github_api_detected": "fail_closed",
+    "missing_owner_gate_boundary": "fail_closed",
+    "quality_gate_failure": "block_completion"
+  }
+}

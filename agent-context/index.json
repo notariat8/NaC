@@ -66,6 +66,18 @@
           ]
         },
         {
+          "id": "worktree_operating_model",
+          "description": "Read-only worktree hygiene audit, branch isolation and owner-gated cleanup boundaries.",
+          "paths": [
+            "docs/de/operations/codex-worktree-operating-model.md",
+            "docs/en/operations/codex-worktree-operating-model.md",
+            "src/nac_git/worktree_hygiene.py",
+            "scripts/validate_codex_worktree_operating_model.py",
+            "tests/test_codex_worktree_operating_model.py",
+            "workflows/verification-contracts/codex-worktree-operating-model.verification.json"
+          ]
+        },
+        {
           "id": "guardrails",
           "description": "Rules that prevent critical behavior from being broken.",
           "paths": [
@@ -86,6 +98,8 @@
             "docs/de/operations/codex-subagent-operating-gate.md",
             "docs/en/operations/codex-subagent-operating-gate.md",
             "workflows/contracts/codex-parallel-review.contract.json",
+            "scripts/validate_codex_subagent_operating_gate.py",
+            "tests/test_codex_subagent_operating_gate.py",
             "workflows/verification-contracts/codex-subagent-operating-gate.verification.json"
           ]
         },
@@ -98,6 +112,10 @@
             ".codex/rules/default.rules",
             "docs/de/operations/codex-command-rules-operating-model.md",
             "docs/en/operations/codex-command-rules-operating-model.md",
+            "scripts/validate_codex_command_rules_operating_model.py",
+            "scripts/validate_codex_command_rules_adoption.py",
+            "tests/test_codex_command_rules_operating_model.py",
+            "tests/test_codex_command_rules_adoption.py",
             "workflows/verification-contracts/codex-command-rules.verification.json"
           ]
         },
@@ -109,6 +127,8 @@
             "docs/en/operations/codex-memory-hooks-operating-model.md",
             ".codex/hooks/README.md",
             ".codex/hooks/pre_tool_use_policy.example.py",
+            "scripts/validate_codex_memory_hooks_operating_model.py",
+            "tests/test_codex_memory_hooks_operating_model.py",
             "workflows/verification-contracts/codex-memory-hooks.verification.json"
           ]
         }
@@ -127,6 +147,8 @@
   ],
   "verification_contracts": [
     "workflows/verification-contracts/codex-agent-context.verification.json",
+    "workflows/verification-contracts/codex-agent-context-index-audit.verification.json",
+    "workflows/verification-contracts/codex-worktree-operating-model.verification.json",
     "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
     "workflows/verification-contracts/codex-memory-hooks.verification.json",
     "workflows/verification-contracts/codex-command-rules.verification.json",
