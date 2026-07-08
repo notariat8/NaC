@@ -15,6 +15,8 @@ model and repository consolidation.
 - [agile-cadence.md](agile-cadence.md): work method and team cadence.
 - [codex-time-ledger.md](codex-time-ledger.md): local time ledger for Codex work blocks,
   tool time, approvals and repeated waiting time.
+- [codex-worktree-operating-model.md](codex-worktree-operating-model.md): read-only
+  worktree hygiene audit, naming scheme and owner-gated cleanup boundaries.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
   prepared M365 MCP PRs and separately approved live smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index
