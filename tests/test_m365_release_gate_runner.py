@@ -1751,6 +1751,59 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertIn("no Graph requests", comment)
         self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
 
+    def test_release_gate_post_run_report_auto_selects_schema_transition_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            audit_pack_dir = tmp_path / "audit-pack"
+            baseline_dir = retention_root / "old-schema-baseline"
+            _write_readiness_run(
+                baseline_dir,
+                correlation_id="old-schema-baseline",
+                generated_at="2026-07-07T13:00:00Z",
+            )
+            baseline_index_path = baseline_dir / "release-gate-retention-index.redacted.json"
+            baseline_index = json.loads(baseline_index_path.read_text(encoding="utf-8"))
+            baseline_index["artifacts"] = [
+                artifact
+                for artifact in baseline_index["artifacts"]
+                if artifact["id"] != "matter_access_apply_request_plan"
+            ]
+            baseline_index["copied_artifact_count"] = len(baseline_index["artifacts"])
+            baseline_index_path.write_text(json.dumps(baseline_index), encoding="utf-8")
+            _write_readiness_run(
+                retention_root / "current-run",
+                correlation_id="current-run",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+            _write_audit_pack(audit_pack_dir)
+
+            payload, return_code = _invoke_post_run_report(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "current-run",
+                    "--release-gate-audit-pack-dir",
+                    str(audit_pack_dir),
+                    "--release-gate-post-run-report-output",
+                    str(tmp_path / "report.md"),
+                    "--release-gate-post-run-report-json-output",
+                    str(tmp_path / "report.json"),
+                    "--release-gate-github-comment-output",
+                    str(tmp_path / "comment.md"),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["baseline_selection"], "previous_retained_run")
+        self.assertEqual(payload["summary"]["baseline_correlation_id"], "old-schema-baseline")
+        added_artifacts = payload["retention_compare"]["comparison"]["artifacts"]["added_in_right"]
+        self.assertIn("matter_access_apply_request_plan", added_artifacts)
+
     def test_release_gate_post_run_report_uses_explicit_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

@@ -3550,9 +3550,9 @@ def _m365_release_gate_post_run_previous_baseline(
             continue
         if run.get("status") != "PASSED":
             continue
-        if not isinstance(run.get("copied_artifact_count"), int) or run.get("copied_artifact_count") < len(
-            M365_RELEASE_READINESS_REQUIRED_ARTIFACTS
-        ):
+        if not isinstance(run.get("copied_artifact_count"), int) or run.get("copied_artifact_count") <= 0:
+            continue
+        if run.get("not_attached_artifact_count") not in (0, None):
             continue
         run_timestamp = str(run.get("timestamp") or "")
         if target_timestamp and run_timestamp and run_timestamp >= target_timestamp:
