@@ -78,5 +78,12 @@ The machine-readable router is
 ## Verification
 
 Completion for this operating model is checked through
+[codex-memory-hooks.verification.json](../../../workflows/verification-contracts/codex-memory-hooks.verification.json),
 [codex-agent-context.verification.json](../../../workflows/verification-contracts/codex-agent-context.verification.json)
 and `nac contracts verify`.
+
+```bash
+python3 scripts/validate_codex_memory_hooks_operating_model.py
+python3 -m unittest tests.test_codex_memory_hooks_operating_model
+python3 scripts/quality_gate.py --profile strict
+```

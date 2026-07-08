@@ -19,3 +19,8 @@ Out of scope:
 - branch deletion or worktree cleanup,
 - replacing owner gates, permissions or the NaC quality gate.
 
+Validation:
+
+```bash
+python3 scripts/validate_codex_memory_hooks_operating_model.py
+```

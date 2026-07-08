@@ -78,5 +78,12 @@ Der maschinenlesbare Router steht in
 ## Verification
 
 Der Abschluss dieses Operating Models wird über
+[codex-memory-hooks.verification.json](../../../workflows/verification-contracts/codex-memory-hooks.verification.json),
 [codex-agent-context.verification.json](../../../workflows/verification-contracts/codex-agent-context.verification.json)
 und `nac contracts verify` geprüft.
+
+```bash
+python3 scripts/validate_codex_memory_hooks_operating_model.py
+python3 -m unittest tests.test_codex_memory_hooks_operating_model
+python3 scripts/quality_gate.py --profile strict
+```

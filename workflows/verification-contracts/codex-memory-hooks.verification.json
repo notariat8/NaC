@@ -1,0 +1,77 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.codex_memory_hooks",
+  "title": "Codex Memory And Hooks Operating Model Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      ".codex/config.toml",
+      ".codex/hooks/**",
+      "agent-context/index.json",
+      "docs/*/operations/codex-memory-hooks-operating-model.md",
+      "workflows/verification-contracts/codex-memory-hooks.verification.json",
+      "scripts/validate_codex_memory_hooks_operating_model.py",
+      "tests/test_codex_memory_hooks_operating_model.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      ".codex/config.toml"
+    ],
+    "scoped": [
+      ".codex/hooks/",
+      "agent-context/index.json"
+    ],
+    "on_demand": [
+      "docs/de/operations/codex-memory-hooks-operating-model.md",
+      "docs/en/operations/codex-memory-hooks-operating-model.md",
+      "workflows/verification-contracts/codex-memory-hooks.verification.json"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "fresh quality-gate output"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_codex_memory_hooks_operating_model.py",
+    "python -m unittest tests.test_codex_memory_hooks_operating_model",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Codex Memory is only for personal stable recall, not shared truth.",
+    "Auditable or changing facts are read from repository, GitHub, SharePoint/M365 or approved MCP sources.",
+    "Repository hook files are opt-in examples and are not activated by .codex/config.toml.",
+    "Hooks may suggest repeatable local validation but must not replace command rules, permissions, owner gates or the quality gate.",
+    "Hooks must not inspect secrets, real mandate data, tokens, certificate material or productive credentials.",
+    "Hooks must not start GitHub, M365, Entra, SharePoint or productive write actions."
+  ],
+  "thresholds": {
+    "minimum_memory_source_rows": 6,
+    "hook_example_timeout_seconds": 30,
+    "minimum_required_docs": 2
+  },
+  "required_evidence": [
+    "memory_source_matrix",
+    "hook_boundary_docs",
+    "opt_in_hook_examples",
+    "no_live_hook_activation",
+    "compiled_hook_example",
+    "quality_gate_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "no_secrets": true,
+    "no_mandate_data": true,
+    "no_live_hook_activation": true,
+    "no_local_codex_config_mutation": true
+  },
+  "failure_behavior": {
+    "hook_activation_detected": "fail_closed",
+    "secret_or_mandate_data_marker": "fail_closed",
+    "productive_write_hook_detected": "fail_closed",
+    "verification_contract_not_applicable": "report_not_applicable",
+    "quality_gate_failure": "block_completion"
+  }
+}

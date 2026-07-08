@@ -108,7 +108,8 @@
             "docs/de/operations/codex-memory-hooks-operating-model.md",
             "docs/en/operations/codex-memory-hooks-operating-model.md",
             ".codex/hooks/README.md",
-            ".codex/hooks/pre_tool_use_policy.example.py"
+            ".codex/hooks/pre_tool_use_policy.example.py",
+            "workflows/verification-contracts/codex-memory-hooks.verification.json"
           ]
         }
       ]
@@ -127,6 +128,7 @@
   "verification_contracts": [
     "workflows/verification-contracts/codex-agent-context.verification.json",
     "workflows/verification-contracts/codex-subagent-operating-gate.verification.json",
+    "workflows/verification-contracts/codex-memory-hooks.verification.json",
     "workflows/verification-contracts/codex-command-rules.verification.json",
     "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
   ]
