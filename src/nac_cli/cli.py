@@ -365,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-policy-smoke",
             "matter-access-apply-smoke",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
@@ -538,6 +539,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--matter-access-apply-request-output",
         type=Path,
         help="Pfad fuer das redigierte Matter-Access-Apply-Request-Plan-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-policy-smoke-output",
+        type=Path,
+        help="Pfad fuer das redigierte Matter-Access-Apply-Policy-Smoke-Artefakt.",
     )
     teams_sharepoint.add_argument(
         "--matter-access-apply-smoke-output",
@@ -2146,6 +2152,10 @@ def command_m365(args: argparse.Namespace) -> int:
             )
         if args.matter_access_apply_request_output:
             script_args.extend(["--matter-access-apply-request-output", str(args.matter_access_apply_request_output)])
+        if args.matter_access_apply_policy_smoke_output:
+            script_args.extend(
+                ["--matter-access-apply-policy-smoke-output", str(args.matter_access_apply_policy_smoke_output)]
+            )
         if args.matter_access_apply_smoke_output:
             script_args.extend(["--matter-access-apply-smoke-output", str(args.matter_access_apply_smoke_output)])
         if args.matter_access_grant_id:

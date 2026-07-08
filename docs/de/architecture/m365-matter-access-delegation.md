@@ -56,6 +56,12 @@ owner-gated Freigabe wird weiterhin ohne Live-Apply gerendert:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
+Negative Apply-Policy-Fälle werden offline ohne Microsoft-Graph-Aufruf geprüft:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-policy-smoke --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+```
+
 `matter-access-smoke` schreibt standardmäßig
 `out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json`.
 Das Artefakt enthält nur Counts, Aktionsnamen, Correlation-ID und
@@ -81,6 +87,15 @@ Feldnamen, Listenrollen und Privacy-Flags: keine konkreten Graph-Pfade, keine
 Graph-Rohantworten, keine Tokens, keine Nutzerdaten im Klartext und keine
 Mandats-Payloads. Der Befehl führt keine Graph Requests aus und schreibt keine
 SharePoint-Items.
+
+`matter-access-apply-policy-smoke` schreibt standardmäßig
+`out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json`.
+Das Artefakt prüft negative Apply-Fälle: fehlende Begründung, abgelaufene
+Vertretung, falscher Workspace, fehlendes Cleanup und fehlender
+Audit-Readback. Der Smoke nutzt nur einen Fake-Graph-Client, führt keine echten
+Graph Requests aus, schreibt keine SharePoint-Items und speichert keine
+konkreten Graph-Pfade, Rohantworten, Nutzerdaten, Gründe, Tokens oder
+Mandats-Payloads.
 
 `matter-access-apply-smoke` ist die vorbereitete owner-gated Live-Kante für
 eine echte synthetische Vertretungsfreigabe. Der Befehl schreibt nur

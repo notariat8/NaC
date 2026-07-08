@@ -43,6 +43,11 @@ from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
     build_matter_access_apply_request_plan_from_paths,
     write_matter_access_apply_request_plan_artifact,
 )
+from nac_m365_graph.matter_access_apply_policy_smoke import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_APPLY_POLICY_SMOKE_OUTPUT,
+    run_matter_access_apply_policy_smoke_from_paths,
+    write_matter_access_apply_policy_smoke_artifact,
+)
 from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
     DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
     run_matter_access_apply_smoke_from_paths,
@@ -164,6 +169,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness",
             "bpmn-viewer-plan",
             "matter-access-plan",
+            "matter-access-apply-policy-smoke",
             "matter-access-apply-smoke",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
@@ -193,6 +199,7 @@ def parse_args() -> argparse.Namespace:
             "application-owner-readiness is offline evidence for the technical-owner path; "
             "bpmn-viewer-plan prepares the optional read-only BPMN viewer SharePoint surface without live apply; "
             "matter-access-plan renders the offline matter visibility and deputy delegation request plan; "
+            "matter-access-apply-policy-smoke runs negative offline apply policy checks without Graph; "
             "matter-access-apply-smoke executes an owner-gated synthetic grant_request plus audit_append write/read/cleanup; "
             "matter-access-apply-request-plan renders a concrete redacted future grant request bundle without live apply; "
             "matter-access-apply-readiness validates the future owner-gated write boundary without live apply; "
@@ -366,6 +373,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_MATTER_ACCESS_APPLY_REQUEST_OUTPUT,
         help="Path for the redacted matter access apply request plan artifact under out/.",
+    )
+    parser.add_argument(
+        "--matter-access-apply-policy-smoke-output",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_POLICY_SMOKE_OUTPUT,
+        help="Path for the redacted offline matter access apply policy smoke artifact under out/.",
     )
     parser.add_argument(
         "--matter-access-apply-smoke-output",
@@ -625,6 +638,36 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.matter_access_apply_request_output)
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": summary,
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
+    if args.command == "matter-access-apply-policy-smoke":
+        try:
+            result = run_matter_access_apply_policy_smoke_from_paths(
+                contract_path=args.mcp_contract,
+                provisioned_state_path=args.provisioned_state,
+                workspace_id=args.mcp_smoke_workspace_id,
+                correlation_id=mcp_smoke_correlation_id,
+            )
+            write_matter_access_apply_policy_smoke_artifact(result, args.matter_access_apply_policy_smoke_output)
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": [str(exc)],
+                },
+                args.json,
+                return_code=1,
+            )
+        summary = dict(result["summary"])
+        summary["artifact_path"] = str(args.matter_access_apply_policy_smoke_output)
         return _emit(
             {
                 "status": result["status"],

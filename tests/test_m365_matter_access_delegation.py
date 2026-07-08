@@ -31,6 +31,10 @@ from nac_m365_graph.matter_access_apply_request import (  # noqa: E402
     build_matter_access_apply_request_plan,
     write_matter_access_apply_request_plan_artifact,
 )
+from nac_m365_graph.matter_access_apply_policy_smoke import (  # noqa: E402
+    run_matter_access_apply_policy_smoke,
+    write_matter_access_apply_policy_smoke_artifact,
+)
 from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
     run_matter_access_apply_smoke,
     write_matter_access_apply_smoke_artifact,
@@ -520,6 +524,150 @@ class M365MatterAccessDelegationTests(unittest.TestCase):
         self.assertEqual(graph_client.posts, [])
         self.assertEqual(graph_client.gets, [])
         self.assertEqual(graph_client.deletes, [])
+
+    def test_matter_access_apply_smoke_rejects_expired_delegation_before_graph_calls(self) -> None:
+        graph_client = _FakeMatterAccessApplySmokeClient(post_responses=[], get_responses=[], delete_response={})
+
+        with self.assertRaisesRegex(ValueError, "valid_until after smoke timestamp"):
+            run_matter_access_apply_smoke(
+                graph_client,
+                load_mcp_contract(DEFAULT_MCP_CONTRACT),
+                _provisioned_state(),
+                workspace_id="notary_team_01",
+                correlation_id="apply-smoke-corr",
+                grant_id="NAC-SMOKE-GRANT-20260708T000000Z",
+                case_id="NAC-SMOKE-MATTER-20260708T000000Z",
+                valid_from="2026-07-01T00:00:00Z",
+                valid_until="2026-07-02T00:00:00Z",
+                timestamp="2026-07-08T00:00:00Z",
+            )
+
+        self.assertEqual(graph_client.posts, [])
+        self.assertEqual(graph_client.gets, [])
+        self.assertEqual(graph_client.deletes, [])
+
+    def test_matter_access_apply_smoke_marks_missing_cleanup_failed(self) -> None:
+        grant_id = "NAC-SMOKE-GRANT-20260708T000000Z"
+        event_id = "NAC-SMOKE-AUDIT-20260708T000000Z"
+        graph_client = _FakeMatterAccessApplySmokeClient(
+            post_responses=[{"id": "raw-grant-item"}, {"id": "raw-audit-item"}],
+            get_responses=[
+                {"value": [{"id": "raw-grant-item", "fields": {"GrantId": grant_id}}]},
+                {"value": [{"id": "raw-audit-item", "fields": {"EventId": event_id}}]},
+            ],
+            delete_response={},
+        )
+
+        payload = run_matter_access_apply_smoke(
+            graph_client,
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            correlation_id="apply-smoke-corr",
+            grant_id=grant_id,
+            case_id="NAC-SMOKE-MATTER-20260708T000000Z",
+            cleanup_after=False,
+            timestamp="2026-07-08T00:00:00Z",
+        )
+
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertFalse(payload["summary"]["cleanup_requested"])
+        self.assertEqual(len(graph_client.posts), 2)
+        self.assertEqual(len(graph_client.gets), 2)
+        self.assertEqual(graph_client.deletes, [])
+
+    def test_matter_access_apply_policy_smoke_detects_negative_cases_and_redacts(self) -> None:
+        payload = run_matter_access_apply_policy_smoke(
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            workspace_id="notary_team_01",
+            correlation_id="policy-hardening-corr",
+            timestamp="2026-07-08T00:00:00Z",
+        )
+
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(
+            payload["summary"]["expected_case_ids"],
+            [
+                "missing_reason",
+                "expired_delegation",
+                "workspace_scope_violation",
+                "missing_cleanup",
+                "audit_readback_missing",
+            ],
+        )
+        self.assertEqual(payload["summary"]["negative_case_count"], 5)
+        self.assertEqual(payload["summary"]["detected_policy_violation_count"], 5)
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["tenant_writes_executed"])
+        self.assertTrue(payload["summary"]["uses_fake_graph_client"])
+        self.assertTrue(all(case["status"] == "PASSED" for case in payload["cases"]))
+        self.assertEqual(payload["cases"][0]["fake_graph_post_count"], 0)
+        self.assertEqual(payload["cases"][1]["fake_graph_post_count"], 0)
+        self.assertEqual(payload["cases"][2]["fake_graph_post_count"], 0)
+        self.assertEqual(payload["cases"][3]["observed_smoke_status"], "FAILED")
+        self.assertEqual(payload["cases"][4]["observed_error_type"], "RuntimeError")
+
+        serialized = json.dumps(payload, ensure_ascii=False)
+        for raw_value in (
+            "NAC-SMOKE-GRANT-20260708T010000Z",
+            "NAC-SMOKE-MATTER-20260708T050000Z",
+            "raw-grant-item",
+            "raw-audit-item",
+            "wrong_workspace",
+            "example.sharepoint.com",
+        ):
+            self.assertNotIn(raw_value, serialized)
+
+        output = REPO_ROOT / "out" / "test" / "matter-access-apply-policy-smoke.redacted.json"
+        try:
+            write_matter_access_apply_policy_smoke_artifact(payload, output)
+            artifact = json.loads(output.read_text(encoding="utf-8"))
+        finally:
+            if output.exists():
+                output.unlink()
+        self.assertEqual(artifact["status"], "PASSED")
+
+    def test_central_cli_matter_access_apply_policy_smoke_writes_redacted_artifact(self) -> None:
+        output = REPO_ROOT / "out" / "test" / "matter-access-apply-policy-smoke-cli.redacted.json"
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/nac.py",
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "matter-access-apply-policy-smoke",
+                    "--mcp-smoke-workspace-id",
+                    "notary_team_01",
+                    "--mcp-smoke-correlation-id",
+                    "policy-hardening-corr",
+                    "--matter-access-apply-policy-smoke-output",
+                    str(output),
+                    "--format",
+                    "json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=10,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["status"], "PASSED")
+            self.assertEqual(payload["summary"]["artifact_path"], str(output))
+            self.assertFalse(payload["summary"]["executes_graph_requests"])
+            self.assertTrue(output.exists())
+            artifact_text = output.read_text(encoding="utf-8")
+            self.assertNotIn("raw-grant-item", artifact_text)
+            self.assertNotIn("example.sharepoint.com", artifact_text)
+        finally:
+            if output.exists():
+                output.unlink()
 
     def test_central_cli_matter_access_apply_smoke_requires_owner_approval(self) -> None:
         result = subprocess.run(

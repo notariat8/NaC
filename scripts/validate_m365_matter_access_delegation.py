@@ -19,6 +19,7 @@ from nac_m365_graph.matter_access_delegation import (  # noqa: E402
 )
 from nac_m365_graph.matter_access_delegation_smoke import run_matter_access_delegation_smoke  # noqa: E402
 from nac_m365_graph.matter_access_apply_readiness import build_matter_access_apply_readiness  # noqa: E402
+from nac_m365_graph.matter_access_apply_policy_smoke import run_matter_access_apply_policy_smoke  # noqa: E402
 from nac_m365_graph.matter_access_apply_request import build_matter_access_apply_request_plan  # noqa: E402
 from nac_m365_graph.matter_access_apply_smoke import run_matter_access_apply_smoke  # noqa: E402
 from nac_m365_graph.mcp_runtime import DEFAULT_MCP_CONTRACT, load_mcp_contract, validate_mcp_contract  # noqa: E402
@@ -47,6 +48,7 @@ REQUIRED_DOC_MARKERS = {
         "M365-Mandatszugriffsdelegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -58,6 +60,7 @@ REQUIRED_DOC_MARKERS = {
         "M365 Matter Access Delegation",
         "Vertretungsfreigaben",
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -68,6 +71,7 @@ REQUIRED_DOC_MARKERS = {
     DATA_PLANE_DE: [
         "m365-matter-access-delegation.md",
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -76,6 +80,7 @@ REQUIRED_DOC_MARKERS = {
     DATA_PLANE_EN: [
         "m365-matter-access-delegation.md",
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -83,6 +88,7 @@ REQUIRED_DOC_MARKERS = {
     ],
     CLI_DE: [
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -90,6 +96,7 @@ REQUIRED_DOC_MARKERS = {
     ],
     CLI_EN: [
         "matter-access-plan",
+        "matter-access-apply-policy-smoke",
         "matter-access-apply-smoke",
         "matter-access-apply-readiness",
         "matter-access-apply-request-plan",
@@ -331,6 +338,55 @@ def validate() -> list[str]:
                 ):
                     if raw_value in apply_smoke_text:
                         errors.append(f"matter-access-apply-smoke stores raw value {raw_value!r}")
+                policy_smoke = run_matter_access_apply_policy_smoke(
+                    mcp_contract,
+                    load_provisioned_state(DEFAULT_PROVISIONED_STATE),
+                    workspace_id=schema["workspaces"][0]["id"],
+                    correlation_id="validator-apply-policy-smoke",
+                    timestamp="2026-07-08T00:00:00Z",
+                )
+                if policy_smoke["status"] != "PASSED":
+                    errors.append("matter-access-apply-policy-smoke must pass with fake Graph client")
+                policy_summary = policy_smoke["summary"]
+                if policy_summary.get("negative_case_count") != 5:
+                    errors.append("matter-access-apply-policy-smoke must cover five negative cases")
+                if policy_summary.get("detected_policy_violation_count") != 5:
+                    errors.append("matter-access-apply-policy-smoke must detect all policy violations")
+                if set(policy_summary.get("expected_case_ids", [])) != {
+                    "missing_reason",
+                    "expired_delegation",
+                    "workspace_scope_violation",
+                    "missing_cleanup",
+                    "audit_readback_missing",
+                }:
+                    errors.append("matter-access-apply-policy-smoke negative case set is incomplete")
+                for flag in (
+                    "executes_graph_requests",
+                    "executes_graph_writes",
+                    "tenant_writes_executed",
+                    "sharepoint_item_writes_executed",
+                    "stores_tokens_or_secrets",
+                    "stores_raw_graph_path",
+                    "stores_raw_graph_response",
+                    "stores_raw_write_payload",
+                    "stores_matter_payloads",
+                    "reads_sharepoint_file_content",
+                ):
+                    if policy_summary.get(flag) is not False:
+                        errors.append(f"matter-access-apply-policy-smoke summary.{flag} must be false")
+                if policy_summary.get("uses_fake_graph_client") is not True:
+                    errors.append("matter-access-apply-policy-smoke must use a fake Graph client")
+                policy_smoke_text = json.dumps(policy_smoke, ensure_ascii=False)
+                for raw_value in (
+                    "NAC-SMOKE-GRANT-20260708T010000Z",
+                    "NAC-SMOKE-MATTER-20260708T050000Z",
+                    "raw-grant-item",
+                    "raw-audit-item",
+                    "wrong_workspace",
+                    "funktion8.sharepoint.com",
+                ):
+                    if raw_value in policy_smoke_text:
+                        errors.append(f"matter-access-apply-policy-smoke stores raw value {raw_value!r}")
 
     if mcp_contract:
         errors.extend(validate_mcp_contract(mcp_contract))
@@ -408,6 +464,8 @@ def _validate_docs_and_wiring() -> list[str]:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-smoke'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-smoke" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-smoke'")
+        if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-policy-smoke" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-policy-smoke'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-readiness" not in text:
             errors.append(f"{path.relative_to(REPO_ROOT)} missing marker 'matter-access-apply-readiness'")
         if path in {NAC_CLI, PROVISIONER_CLI} and "matter-access-apply-request-plan" not in text:

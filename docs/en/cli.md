@@ -626,6 +626,13 @@ attaches the concrete redacted owner-apply request for `grant_request` and
 run copy. For `release-readiness`, `matter_access_apply_request_plan` is
 required evidence. A manual `release-gate-evidence` export can reference the
 same artifact with `--release-gate-matter-access-apply-request-artifact`.
+`matter-access-apply-policy-smoke` checks negative apply cases offline:
+missing reason, expired deputy access, wrong workspace, missing cleanup and
+missing audit readback. The command writes
+`out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json`,
+uses only a fake Graph client, performs no Graph request, writes no SharePoint
+items and stores no concrete Graph paths, raw responses, user data, reasons,
+tokens or matter payloads.
 `matter-access-apply-smoke` does not run automatically in the one-shot runner
 because it performs real synthetic SharePoint item writes. An already
 owner-gated `matter-access-apply-smoke.redacted.json` can still be attached to

@@ -647,6 +647,13 @@ Retention-Kopie an. Für `release-readiness` ist
 `matter_access_apply_request_plan` ein Pflichtnachweis. Bei manuellem
 `release-gate-evidence` kann dasselbe Artefakt mit
 `--release-gate-matter-access-apply-request-artifact` referenziert werden.
+`matter-access-apply-policy-smoke` prüft negative Apply-Fälle offline:
+fehlende Begründung, abgelaufene Vertretung, falscher Workspace, fehlendes
+Cleanup und fehlender Audit-Readback. Der Befehl schreibt
+`out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json`,
+nutzt nur einen Fake-Graph-Client, führt keine Graph-Anfrage aus, schreibt
+keine SharePoint-Items und speichert keine konkreten Graph-Pfade,
+Rohantworten, Nutzerdaten, Gründe, Tokens oder Mandats-Payloads.
 `matter-access-apply-smoke` läuft nicht automatisch im One-Shot-Runner, weil
 es echte synthetische SharePoint-Item-Writes ausführt. Ein bereits owner-gated
 erzeugtes `matter-access-apply-smoke.redacted.json` kann aber mit

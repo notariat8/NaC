@@ -207,6 +207,7 @@ The CLI supports this workflow:
 python3 scripts/nac.py m365 teams-sharepoint plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-plan --format json
 python3 scripts/nac.py m365 teams-sharepoint privileged-apply --owner-approved --format json
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-policy-smoke --format json
 python3 scripts/nac.py m365 teams-sharepoint drift --format json
 python3 scripts/nac.py m365 teams-sharepoint export --format json
 ```
@@ -218,6 +219,9 @@ and the non-secret provisioned state to expose the next iteration as a Graph
 REST operation list before any live apply. `privileged-apply`, `drift` and
 `export` need environment variables for tenant, app and credential. The M365
 layer does not store tokens, secret values or raw data in the repository.
+`matter-access-apply-policy-smoke` stays offline, uses only a fake Graph
+client and checks negative deputy-grant cases such as missing reason, expired
+deputy access, wrong workspace, missing cleanup and missing audit readback.
 
 `runtime-smoke` and `runtime-metadata` use the declarative MVP schema as the
 expectation source. The smoke reads only site, list and library metadata with

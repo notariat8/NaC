@@ -71,6 +71,7 @@ def run_matter_access_apply_smoke(
     approved_by = approved_by or from_user
     valid_from = valid_from or generated_dt.isoformat().replace("+00:00", "Z")
     valid_until = valid_until or (generated_dt + timedelta(days=1)).isoformat().replace("+00:00", "Z")
+    _require_not_expired(valid_until, generated_dt)
 
     context = RuntimeContext(
         actor_id=approved_by,
@@ -241,7 +242,7 @@ def redact_matter_access_apply_smoke_result(
     cleanup: dict[str, Any],
 ) -> dict[str, Any]:
     cleanup_requested = cleanup.get("requested") is True
-    cleanup_passed = (not cleanup_requested) or (
+    cleanup_passed = cleanup_requested and (
         cleanup.get("grantReadAfterCount") == 0 and cleanup.get("auditReadAfterCount") == 0
     )
     checks = [
@@ -432,6 +433,17 @@ def _value_count(response: dict[str, Any]) -> int:
 def _require_prefix(value: str, prefix: str, label: str) -> None:
     if not value.startswith(prefix):
         raise ValueError(f"matter-access-apply-smoke requires synthetic {label} starting with {prefix}")
+
+
+def _require_not_expired(valid_until: str, generated_dt: datetime) -> None:
+    try:
+        parsed_until = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("matter-access-apply-smoke requires valid_until as ISO-8601 timestamp") from exc
+    if parsed_until.tzinfo is None:
+        raise ValueError("matter-access-apply-smoke requires valid_until with timezone")
+    if parsed_until.astimezone(UTC) <= generated_dt:
+        raise ValueError("matter-access-apply-smoke requires valid_until after smoke timestamp")
 
 
 def _check(check_id: str, passed: bool, message: str) -> dict[str, Any]:

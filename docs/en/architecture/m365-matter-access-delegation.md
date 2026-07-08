@@ -56,6 +56,12 @@ rendered without live apply:
 python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-request-plan --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
 ```
 
+Negative apply policy cases are checked offline without a Microsoft Graph call:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-policy-smoke --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --format json
+```
+
 `matter-access-smoke` writes
 `out/m365/teams-sharepoint/matter-access-delegation-smoke.redacted.json` by
 default. The artifact contains only counts, action names, a correlation ID and
@@ -79,6 +85,14 @@ default. The artifact bundles the planned MCP write edges `grant_request` and
 names, list roles and privacy flags: no concrete Graph paths, no raw Graph
 responses, no tokens, no cleartext user data and no matter payloads. The
 command executes no Graph requests and writes no SharePoint items.
+
+`matter-access-apply-policy-smoke` writes
+`out/m365/teams-sharepoint/matter-access-apply-policy-smoke.redacted.json` by
+default. The artifact checks negative apply cases: missing reason, expired
+deputy access, wrong workspace, missing cleanup and missing audit readback. The
+smoke uses only a fake Graph client, executes no real Graph requests, writes no
+SharePoint items and stores no concrete Graph paths, raw responses, user data,
+reasons, tokens or matter payloads.
 
 `matter-access-apply-smoke` is the prepared owner-gated live edge for a real
 synthetic deputy grant. The command writes only synthetic items with
