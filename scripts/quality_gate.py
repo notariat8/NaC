@@ -245,6 +245,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_notarial_application_interface_inventory.py"],
                 ),
                 (
+                    "xnotar_xjustiz_package_boundary",
+                    "XNotar XJustiz Package Boundary",
+                    [sys.executable, "scripts/validate_xnotar_xjustiz_package_boundary.py"],
+                ),
+                (
                     "matter_data_classification_redaction",
                     "Matter Data Classification And Redaction",
                     [sys.executable, "scripts/validate_matter_data_classification_redaction.py"],

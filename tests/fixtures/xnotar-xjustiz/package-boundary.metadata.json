@@ -1,0 +1,69 @@
+{
+  "schema_version": "nac.xnotar-xjustiz-package-boundary/v0.1",
+  "status": "READY_METADATA_ONLY",
+  "interface_id": "xnotar_xjustiz_package_boundary",
+  "module_target": "xnotar_exchange_folder_readiness",
+  "version_pin": "xjustiz_331",
+  "root_pointer": "synthetic-exchange-folder",
+  "folders": [
+    {
+      "path": "attachments/",
+      "kind": "directory",
+      "content_status": "not_stored"
+    }
+  ],
+  "message_file": {
+    "name": "xjustiz_nachricht.xml",
+    "pointer": "xjustiz_nachricht.xml",
+    "hash_status": "not_available_metadata_only",
+    "content_status": "not_stored"
+  },
+  "attachments": [
+    {
+      "id": "ATT-001",
+      "name": "anlage-001.pdf",
+      "pointer": "attachments/anlage-001.pdf",
+      "media_type": "application/pdf",
+      "hash_status": "provided",
+      "hash_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "content_status": "not_stored"
+    },
+    {
+      "id": "ATT-002",
+      "name": "signatur-001.p7s",
+      "pointer": "attachments/signatur-001.p7s",
+      "media_type": "application/pkcs7-signature",
+      "hash_status": "not_available_metadata_only",
+      "content_status": "not_stored"
+    }
+  ],
+  "referenced_attachments": [
+    {
+      "name": "anlage-001.pdf",
+      "pointer": "attachments/anlage-001.pdf"
+    },
+    {
+      "name": "signatur-001.p7s",
+      "pointer": "attachments/signatur-001.p7s"
+    }
+  ],
+  "counts": {
+    "message_file_count": 1,
+    "attachment_file_count": 2,
+    "referenced_attachment_count": 2,
+    "total_file_count": 3
+  },
+  "evidence": {
+    "status": "READY_METADATA_ONLY",
+    "interface_id": "xnotar_xjustiz_package_boundary",
+    "module_target": "xnotar_exchange_folder_readiness",
+    "version_pin": "xjustiz_331",
+    "message_file_count": 1,
+    "attachment_file_count": 2,
+    "referenced_attachment_count": 2,
+    "hash_status": "partial_metadata_only",
+    "pointer_status": "relative_pointers_only",
+    "no_secret_attestation": true,
+    "no_matter_data_attestation": true
+  }
+}

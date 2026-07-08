@@ -78,20 +78,21 @@ CI:
 32. `m365_matter_access_apply_live_smoke_release_lane` only in `strict`
 33. `m365_matter_access_apply_live_smoke_retention` only in `strict`
 34. `notarial_application_interface_inventory` only in `strict`
-35. `matter_data_classification_redaction` only in `strict`
-36. `private_operating_frame_gate` only in `strict`
-37. `private_payload_target_design` only in `strict`
-38. `private_payload_access_policy` only in `strict`
-39. `gnotkg_costs` only in `strict`
-40. `secure_document_links` only in `strict`
-41. `legal_research_connectors` only in `strict`
-42. `legal_source_inventory_license_tdm` only in `strict`
-43. `legal_model_customization_readiness` only in `strict`
-44. `legal_model_card_ai_sbom_delta` only in `strict`
-45. `legal_model_card_proposal` only in `strict`
-46. `legal_ai_sbom_delta_proposal` only in `strict`
-47. `legal_model_evaluation_benchmark` only in `strict`
-48. `legal_graph_contracts` only in `strict`
+35. `xnotar_xjustiz_package_boundary` only in `strict`
+36. `matter_data_classification_redaction` only in `strict`
+37. `private_operating_frame_gate` only in `strict`
+38. `private_payload_target_design` only in `strict`
+39. `private_payload_access_policy` only in `strict`
+40. `gnotkg_costs` only in `strict`
+41. `secure_document_links` only in `strict`
+42. `legal_research_connectors` only in `strict`
+43. `legal_source_inventory_license_tdm` only in `strict`
+44. `legal_model_customization_readiness` only in `strict`
+45. `legal_model_card_ai_sbom_delta` only in `strict`
+46. `legal_model_card_proposal` only in `strict`
+47. `legal_ai_sbom_delta_proposal` only in `strict`
+48. `legal_model_evaluation_benchmark` only in `strict`
+49. `legal_graph_contracts` only in `strict`
 
 ## Artifacts
 

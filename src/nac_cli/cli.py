@@ -1616,6 +1616,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Legal Graph Contracts", "validate_legal_graph_contracts.py"),
             ("Teams SharePoint Graph Data Plane", "validate_teams_sharepoint_graph_data_plane.py"),
             ("M365 Matter Access Delegation", "validate_m365_matter_access_delegation.py"),
+            ("XNotar/XJustiz Package Boundary", "validate_xnotar_xjustiz_package_boundary.py"),
             ("M365 Matter Access Domain Verification Contract", "validate_verification_contracts_domain_pilot.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
             ("Codex Worktree Operating Model", "validate_codex_worktree_operating_model.py"),

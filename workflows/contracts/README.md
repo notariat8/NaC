@@ -135,6 +135,12 @@ machen die Abnahmeharness agentisch lesbar.
   Metadaten-Inventar für owner-provided BNotK-Anwendungsschnittstellen, beN
   und XJustiz 3.3.1 mit read-only MCP-Zielgrenze, ohne Volltext-Ingestion,
   XSD-Rohkopie, Credentials, Mandatsdaten oder Live-Apply.
+- [workflows/contracts/xnotar-xjustiz-package-boundary.contract.json](xnotar-xjustiz-package-boundary.contract.json):
+  Offline-Paketgrenze für XNotar/XJustiz-Exchange-Folder-Readiness mit
+  `attachments/`, erwartetem `xjustiz_nachricht.xml`-Pointer,
+  referenzierten Anlagen, relativen Pfaden, Counts, Hash-/Pointer-Status und
+  redigierter Evidence, ohne XNotar-Import, beN-Versand, XSD-/WSDL-Kopie,
+  XML-Payloads, echte Pakete, Urkunden-, Register- oder Grundbuchdaten.
 - [workflows/contracts/matter-data-classification-redaction.contract.json](matter-data-classification-redaction.contract.json):
   Vertrag für Mandatsdaten-Klassifikation, Redaktionsnachweise und
   Speichergrenzen zwischen GitHub, Webapp-Status, M365/SharePoint-Metadaten,

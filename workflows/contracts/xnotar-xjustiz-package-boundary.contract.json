@@ -1,0 +1,181 @@
+{
+  "schema_version": "nac.workflow-contract/v0.1",
+  "contract_id": "workflow.xnotar_xjustiz_package_boundary",
+  "title": "XNotar/XJustiz-Paketgrenze",
+  "status": "offline_metadata_only_readiness",
+  "last_update": "2026-07-08",
+  "purpose": "Metadata-only readiness boundary for an XNotar/XJustiz exchange folder. It checks only declared package-structure metadata and redacted evidence fields. It does not import into XNotar, send via beN, ingest XSD, parse XML payloads or store real packages.",
+  "source_documents": {
+    "architecture_de": "docs/de/architecture/xnotar-xjustiz-package-boundary.md",
+    "architecture_en": "docs/en/architecture/xnotar-xjustiz-package-boundary.md",
+    "notarial_application_interface_inventory": "workflows/contracts/notarial-application-interface-inventory.contract.json",
+    "notarial_onprem_connector_boundaries": "workflows/contracts/notarial-onprem-connector-boundaries.contract.json",
+    "matter_data_classification_redaction": "workflows/contracts/matter-data-classification-redaction.contract.json"
+  },
+  "scope": {
+    "interface_id": "xnotar_xjustiz_package_boundary",
+    "module_target": "xnotar_exchange_folder_readiness",
+    "version_pin": "xjustiz_331",
+    "xjustiz_package_version": "3.3.1",
+    "runtime_mode": "offline_metadata_only",
+    "offline_only": true
+  },
+  "repository_policy": {
+    "metadata_only": true,
+    "redacted_evidence_only": true,
+    "no_secret_attestation_required": true,
+    "no_matter_data_attestation_required": true,
+    "xnotar_import_allowed": false,
+    "ben_dispatch_allowed": false,
+    "xsd_ingestion_allowed": false,
+    "wsdl_ingestion_allowed": false,
+    "xml_payload_ingestion_allowed": false,
+    "package_archive_storage_allowed": false,
+    "raw_package_storage_allowed": false,
+    "matter_data_storage_allowed": false,
+    "document_fulltext_storage_allowed": false,
+    "absolute_paths_allowed": false,
+    "live_connector_apply_allowed": false,
+    "external_system_call_allowed": false
+  },
+  "package_structure": {
+    "root_kind": "xnotar_exchange_folder_metadata",
+    "required_folder_pointers": [
+      "attachments/"
+    ],
+    "message_file": {
+      "expected_name": "xjustiz_nachricht.xml",
+      "expected_pointer": "xjustiz_nachricht.xml",
+      "content_storage": "forbidden",
+      "required_metadata_fields": [
+        "name",
+        "pointer",
+        "hash_status",
+        "content_status"
+      ]
+    },
+    "attachment_rules": {
+      "folder_pointer": "attachments/",
+      "references_must_match_declared_attachments": true,
+      "allowed_extensions": [
+        ".pdf",
+        ".tif",
+        ".tiff",
+        ".p7s",
+        ".p7m"
+      ],
+      "allowed_media_types": [
+        "application/pdf",
+        "image/tiff",
+        "application/pkcs7-signature",
+        "application/pkcs7-mime"
+      ],
+      "required_metadata_fields": [
+        "id",
+        "name",
+        "pointer",
+        "media_type",
+        "hash_status",
+        "content_status"
+      ]
+    },
+    "count_fields": [
+      "message_file_count",
+      "attachment_file_count",
+      "referenced_attachment_count",
+      "total_file_count"
+    ],
+    "path_policy": {
+      "absolute_paths_allowed": false,
+      "parent_directory_segments_allowed": false,
+      "backslash_paths_allowed": false,
+      "url_paths_allowed": false
+    }
+  },
+  "manifest_schema": {
+    "schema_version": "nac.xnotar-xjustiz-package-boundary/v0.1",
+    "synthetic_fixture": "tests/fixtures/xnotar-xjustiz/package-boundary.metadata.json",
+    "content_status_required_value": "not_stored",
+    "hash_status_values": [
+      "provided",
+      "not_available_metadata_only"
+    ],
+    "forbidden_manifest_fields": [
+      "body",
+      "payload",
+      "content",
+      "raw_content",
+      "xml_payload",
+      "xsd_body",
+      "wsdl_body",
+      "document_full_text",
+      "deed_content",
+      "register_data",
+      "land_register_data",
+      "ben_message_content",
+      "secret",
+      "token",
+      "private_key",
+      "password",
+      "pin"
+    ]
+  },
+  "evidence_shape": {
+    "allowed_fields": [
+      "status",
+      "interface_id",
+      "module_target",
+      "version_pin",
+      "message_file_count",
+      "attachment_file_count",
+      "referenced_attachment_count",
+      "hash_status",
+      "pointer_status",
+      "no_secret_attestation",
+      "no_matter_data_attestation"
+    ],
+    "blocked_fields": [
+      "xml_payload",
+      "xsd_body",
+      "wsdl_body",
+      "package_bytes",
+      "document_full_text",
+      "deed_content",
+      "register_data",
+      "land_register_data",
+      "ben_message_content",
+      "secret",
+      "token",
+      "private_key",
+      "password",
+      "pin"
+    ]
+  },
+  "non_goals": [
+    "xnotar_import",
+    "ben_dispatch",
+    "xsd_or_wsdl_ingestion",
+    "xml_payload_parsing",
+    "real_package_storage",
+    "deed_or_document_fulltext_storage",
+    "register_or_land_register_raw_data_storage",
+    "live_external_system_action"
+  ],
+  "owner_gates": [
+    "xnotar_import",
+    "productive_ben_send",
+    "xml_payload_processing",
+    "xsd_or_wsdl_raw_copy",
+    "matter_payload_mapping",
+    "real_document_storage",
+    "register_or_land_register_raw_data_processing",
+    "external_system_call",
+    "credential_introduction"
+  ],
+  "validation_commands": [
+    "python scripts/validate_xnotar_xjustiz_package_boundary.py",
+    "python -m unittest tests/test_xnotar_xjustiz_package_boundary.py",
+    "python scripts/nac.py contracts validate",
+    "python scripts/quality_gate.py --profile strict"
+  ]
+}
