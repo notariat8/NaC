@@ -6,11 +6,16 @@
   "applies_when": {
     "paths": [
       ".codex/rules/**",
+      ".codex/agents/**",
       "policies/codex-command-rules-policy.json",
       "docs/*/operations/codex-command-rules-operating-model.md",
+      "docs/*/operations/m365-mcp-batch-approval.md",
+      "docs/*/runbooks/m365-cli-admin-accelerator.md",
       "agent-context/index.json",
       "scripts/validate_codex_command_rules_operating_model.py",
+      "scripts/validate_codex_command_rules_adoption.py",
       "tests/test_codex_command_rules_operating_model.py",
+      "tests/test_codex_command_rules_adoption.py",
       "scripts/quality_gate.py"
     ]
   },
@@ -39,7 +44,9 @@
   },
   "checks": [
     "python scripts/validate_codex_command_rules_operating_model.py",
+    "python scripts/validate_codex_command_rules_adoption.py",
     "python -m unittest tests.test_codex_command_rules_operating_model",
+    "python -m unittest tests.test_codex_command_rules_adoption",
     "python scripts/quality_gate.py --profile strict"
   ],
   "invariants": [
@@ -59,6 +66,9 @@
   "required_evidence": [
     "command_rules_policy",
     "repo_rules_file",
+    "command_rules_adoption_smoke",
+    "agent_profiles_reference_command_rules",
+    "batch_runbooks_reference_command_rules",
     "command_rules_docs_de",
     "command_rules_docs_en",
     "command_rules_validator",

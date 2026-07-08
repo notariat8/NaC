@@ -13,6 +13,13 @@ The product rule remains unchanged: data operations for the Teams SharePoint
 data plane run only through Microsoft Graph REST v1.0 or through MCP servers
 that also use Microsoft Graph REST v1.0 internally.
 
+Operator commands also follow the Codex command rules in
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+and [.codex/rules/default.rules](../../../.codex/rules/default.rules): GREEN is
+read-only/local validation, YELLOW is prompt or batch-approved owner-gated work,
+and RED is blocked for secrets, credentials, certificates, destructive git,
+deploys, migrations and productive tenant apply.
+
 ## Installation
 
 ```bash

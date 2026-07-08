@@ -21,6 +21,7 @@ POLICY_FILES = {
     "policies/data-protection-policy.yaml",
     "policies/sbom-policy.yaml",
     "policies/technology-policy.yaml",
+    "policies/codex-command-rules-policy.json",
 }
 
 MIRROR_FILES = {

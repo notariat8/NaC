@@ -1509,6 +1509,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("M365 Matter Access Domain Verification Contract", "validate_verification_contracts_domain_pilot.py"),
             ("Spec Traceability Contract", "validate_spec_traceability.py"),
             ("Codex Command Rules Verification Contract", "validate_codex_command_rules_operating_model.py"),
+            ("Codex Command Rules Adoption Smoke", "validate_codex_command_rules_adoption.py"),
             ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
         ]
         overall_rc = 0
@@ -1533,6 +1534,7 @@ def command_contracts(args: argparse.Namespace) -> int:
         validators = [
             "scripts/validate_codex_agent_context_operating_model.py",
             "scripts/validate_codex_command_rules_operating_model.py",
+            "scripts/validate_codex_command_rules_adoption.py",
             "scripts/validate_verification_contracts_domain_pilot.py",
         ]
         overall_rc = 0

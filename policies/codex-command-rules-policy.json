@@ -281,9 +281,36 @@
     "yellow_profiles_must_prompt_or_require_batch_approval": true,
     "green_profiles_must_be_read_only_or_local_validation": true
   },
+  "adoption_smoke": {
+    "required_markers": [
+      "GREEN",
+      "YELLOW",
+      "RED",
+      "codex-command-rules-policy.json",
+      ".codex/rules/default.rules"
+    ],
+    "required_docs": [
+      "docs/de/operations/m365-mcp-batch-approval.md",
+      "docs/en/operations/m365-mcp-batch-approval.md",
+      "docs/de/runbooks/m365-cli-admin-accelerator.md",
+      "docs/en/runbooks/m365-cli-admin-accelerator.md",
+      "docs/de/operations/README.md",
+      "docs/en/operations/README.md"
+    ],
+    "required_agent_profiles": [
+      ".codex/agents/nac-scope-mapper.toml",
+      ".codex/agents/nac-policy-reviewer.toml",
+      ".codex/agents/nac-validation-reviewer.toml",
+      ".codex/agents/nac-docs-parity-reviewer.toml",
+      ".codex/agents/nac-kg-reviewer.toml",
+      ".codex/agents/nac-bpmn-reviewer.toml"
+    ]
+  },
   "validation_commands": [
     "python3 scripts/validate_codex_command_rules_operating_model.py",
+    "python3 scripts/validate_codex_command_rules_adoption.py",
     "python3 -m unittest tests.test_codex_command_rules_operating_model",
+    "python3 -m unittest tests.test_codex_command_rules_adoption",
     "python3 scripts/quality_gate.py --profile strict"
   ]
 }

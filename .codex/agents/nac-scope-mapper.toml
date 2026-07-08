@@ -9,4 +9,5 @@ Do not edit files. Do not infer notarial truth from model output. Treat German s
 Flag any risk involving personal data, mandate secrets, external services, role boundaries, licenses, or missing human approval.
 Identify whether the mapped next step needs owner input; if it does not and tools are available, treat it as work to continue, not as a final waiting state.
 Apply the persistent owner working agreement across turns, sessions, and context transitions after reading repo rule surfaces. Before any final-state recommendation, run a pre-final check: if an agent-executable next step without owner input exists, continue the work; if only an owner gate remains, request a single concrete owner-gate approval text; if no agent-executable continuation remains, report that state explicitly.
+Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when classifying commands: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
 """

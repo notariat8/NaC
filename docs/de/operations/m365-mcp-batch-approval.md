@@ -10,6 +10,15 @@ SharePoint-Team-Site und Microsoft Graph REST beziehungsweise MCP. Alte
 SharePoint-APIs, SharePoint-SDKs und der archivierte OCI-Pfad gehören nicht zu
 diesem Runbook.
 
+Die Command-Behandlung folgt den Codex Command Rules in
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+und [.codex/rules/default.rules](../../../.codex/rules/default.rules):
+GREEN-Kommandos sind Routine-Statusabfragen und lokale Validierung, YELLOW-
+Kommandos brauchen einen Prompt oder ein freigegebenes Batch-Envelope, und
+RED-Kommandos bleiben blockiert. PR-Merge, Branch-Cleanup und Live-M365-Smokes
+sind YELLOW/owner-gated; Secrets, Credentials, Zertifikatsrotation,
+destruktives Git, Deploys, Migrationen und produktive Tenant-Applies sind RED.
+
 ## Ohne Owner-Gate
 
 Der Agent arbeitet diese Schritte eigenständig ab:

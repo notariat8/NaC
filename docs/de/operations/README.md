@@ -3,6 +3,13 @@
 Dieser Ordner bündelt Betriebsmodell, Upstream-Sync, Version-Binding,
 Arbeitsmodell und Repo-Konsolidierung.
 
+Die Command-Ausführung in diesem Ordner folgt
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+und [.codex/rules/default.rules](../../../.codex/rules/default.rules):
+GREEN ist read-only/lokale Validierung, YELLOW ist Prompt- oder owner-gated
+Batch-Arbeit, und RED ist für destruktive, Secret-, Credential-, Deploy- oder
+produktive Apply-Kommandos blockiert.
+
 ## Dokumente
 
 - [fork-and-release-operating-model.md](fork-and-release-operating-model.md): Unternehmensbetrieb mit zentralem
@@ -19,6 +26,9 @@ Arbeitsmodell und Repo-Konsolidierung.
   Worktree-Hygiene-Audit, Namensschema und owner-gated Cleanup-Grenzen.
 - [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): Memory-Quellen,
   Hook-Grenzen und progressive Context-Layer ohne Live-Hook-Aktivierung.
+- [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):
+  GREEN/YELLOW/RED-Command-Governance, repo-lokale `.rules` und owner-gated
+  Command-Grenzen.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): Batch-Freigabe für
   vorbereitete M365-MCP-PRs und getrennt freizugebende Live-Smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optionaler lokaler qmd-Suchindex

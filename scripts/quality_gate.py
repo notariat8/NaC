@@ -161,6 +161,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_codex_command_rules_operating_model.py"],
                 ),
                 (
+                    "codex_command_rules_adoption_smoke",
+                    "Codex Command Rules Adoption Smoke",
+                    [sys.executable, "scripts/validate_codex_command_rules_adoption.py"],
+                ),
+                (
                     "verification_contracts_domain_pilot",
                     "Verification Contracts Domain Pilot",
                     [sys.executable, "scripts/validate_verification_contracts_domain_pilot.py"],

@@ -3,6 +3,13 @@
 This folder groups the operating model, upstream sync, version binding, work
 model and repository consolidation.
 
+Command execution guidance in this folder follows
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+and [.codex/rules/default.rules](../../../.codex/rules/default.rules):
+GREEN is read-only/local validation, YELLOW is prompt or owner-gated batch work,
+and RED is blocked for destructive, secret, credential, deploy or productive
+apply commands.
+
 ## Documents
 
 - [fork-and-release-operating-model.md](fork-and-release-operating-model.md): company operation with a central
@@ -19,6 +26,9 @@ model and repository consolidation.
   worktree hygiene audit, naming scheme and owner-gated cleanup boundaries.
 - [codex-memory-hooks-operating-model.md](codex-memory-hooks-operating-model.md): memory sources,
   hook boundaries and progressive context layers without live hook activation.
+- [codex-command-rules-operating-model.md](codex-command-rules-operating-model.md):
+  GREEN/YELLOW/RED command governance, repo-local `.rules` and owner-gated
+  command boundaries.
 - [m365-mcp-batch-approval.md](m365-mcp-batch-approval.md): batch approval for
   prepared M365 MCP PRs and separately approved live smokes.
 - [agent-memory-search-qmd.md](agent-memory-search-qmd.md): optional local qmd search index

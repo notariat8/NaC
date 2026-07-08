@@ -81,6 +81,7 @@ class NaCCliTests(unittest.TestCase):
         self.assertIn("M365 Matter Access Delegation", output)
         self.assertIn("M365 Matter Access Domain Verification Contract", output)
         self.assertIn("Codex Command Rules Verification Contract", output)
+        self.assertIn("Codex Command Rules Adoption Smoke", output)
         self.assertIn("Codex Agent Context Verification Contract", output)
         self.assertIn("Spec Traceability", output)
         self.assertIn("STATUS: PASSED", output)

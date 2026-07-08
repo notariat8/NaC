@@ -8,6 +8,15 @@ The active MVP lane remains Entra ID, Microsoft Teams, Microsoft 365 group,
 SharePoint team site and Microsoft Graph REST or MCP. Legacy SharePoint APIs,
 SharePoint SDKs and the archived OCI path are outside this runbook.
 
+Command handling follows the Codex command rules in
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+and [.codex/rules/default.rules](../../../.codex/rules/default.rules):
+GREEN commands are routine read-only status and local validation, YELLOW
+commands require a prompt or an approved batch envelope, and RED commands stay
+blocked. PR merge, branch cleanup and live M365 smokes are YELLOW/owner-gated;
+secrets, credentials, certificate rotation, destructive git, deploys,
+migrations and productive tenant applies are RED.
+
 ## No Owner Gate
 
 The agent executes these steps autonomously:

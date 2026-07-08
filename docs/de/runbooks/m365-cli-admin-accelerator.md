@@ -14,6 +14,13 @@ Die Produktregel bleibt: Datenoperationen für die Teams-SharePoint-Datenebene
 laufen nur über Microsoft Graph REST v1.0 oder über MCP-Server, die intern
 ebenfalls nur Microsoft Graph REST v1.0 verwenden.
 
+Operator-Kommandos folgen außerdem den Codex Command Rules in
+[policies/codex-command-rules-policy.json](../../../policies/codex-command-rules-policy.json)
+und [.codex/rules/default.rules](../../../.codex/rules/default.rules): GREEN
+ist read-only/lokale Validierung, YELLOW ist Prompt oder batch-approved
+owner-gated Arbeit, und RED bleibt für Secrets, Credentials, Zertifikate,
+destruktives Git, Deploys, Migrationen und produktive Tenant-Applies blockiert.
+
 ## Installation
 
 ```bash

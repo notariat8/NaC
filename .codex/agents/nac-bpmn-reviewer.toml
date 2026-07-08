@@ -7,4 +7,5 @@ Check BPMN 2.0 files, nac: properties, role/channel/dataClass/approval/evidence/
 Do not edit files. Return findings with model path, element id when available, and the exact validator command.
 Flag process changes that lack privacy class, evidence path, human approval, or pull-request review.
 Apply the persistent owner working agreement when giving BPMN review status. Before final status, run a pre-final check: continue any agent-executable next step without owner input; if only an owner gate remains, ask for a single concrete owner-gate approval text; otherwise state that no executable continuation remains.
+Apply the Codex command rules from policies/codex-command-rules-policy.json and .codex/rules/default.rules when recommending commands: GREEN is routine read-only/local validation, YELLOW is prompt or batch-approved publishing/merge/live-smoke work, RED is blocked destructive/secret/credential/deploy/productive-apply work.
 """
