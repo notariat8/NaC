@@ -74,6 +74,44 @@ Das Standardartefakt liegt unter:
 out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json
 ```
 
+Nach einem erfolgreichen Lauf archiviert der Befehl das redigierte
+Live-Smoke-Artefakt zusätzlich automatisch in einem correlation-basierten
+Retention-Ordner:
+
+```text
+out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/
+```
+
+Dort liegen mindestens:
+
+```text
+matter-access-apply-smoke.redacted.json
+matter-access-apply-live-smoke-retention.redacted.json
+matter-access-apply-live-smoke-retention.redacted.md
+```
+
+Der Root-Index liegt unter:
+
+```text
+out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-index.redacted.json
+```
+
+Vorhandene redigierte Artefakte können offline nacharchiviert werden:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retain \
+  --matter-access-apply-live-smoke-artifact out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json \
+  --format json
+```
+
+Der Offline-Index ist lokal filterbar und führt keine Graph-Anfrage aus:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retention-index \
+  --matter-access-apply-live-smoke-correlation-id <correlation-id> \
+  --format json
+```
+
 Ein vorhandenes, owner-gated erzeugtes Artefakt kann danach explizit an die
 Release-Gate-Evidence angehängt werden:
 
@@ -110,14 +148,19 @@ werden nicht automatisch übernommen.
 - `raw_graph_response_stored=false`
 - `raw_write_payload_stored=false`
 - `reads_sharepoint_file_content=false`
+- Retention: `retention_executes_graph_requests=false`
+- Retention: `retention_tenant_writes_executed=false`
+- Retention: correlation-basierter Ordner und Root-Index vorhanden
 
 ## Fehlerverhalten
 
 Wenn der Smoke nicht `PASSED` ist, gilt die Release Lane als blockiert. Wenn
-Cleanup oder Cleanup-Readback fehlschlägt, wird nicht weiter freigegeben. Der
-nächste Schritt ist dann ein separater owner-gated Cleanup-Auftrag mit
-redigierter Leftover-Evidence; produktive Mandats-IDs dürfen nicht als
-Fallback-Ziel verwendet werden.
+Cleanup oder Cleanup-Readback fehlschlägt, wird nicht weiter freigegeben. Wenn
+der Smoke zwar bestanden hat, die correlation-basierte Retention aber nicht
+`PASSED` ist, gibt der Befehl ebenfalls keinen erfolgreichen Abschluss zurück.
+Der nächste Schritt ist dann ein separater owner-gated Cleanup-Auftrag mit
+redigierter Leftover-Evidence bzw. ein Offline-Retention-Fix; produktive
+Mandats-IDs dürfen nicht als Fallback-Ziel verwendet werden.
 
 ## Grenzen
 

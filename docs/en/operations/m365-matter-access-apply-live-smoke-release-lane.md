@@ -71,6 +71,43 @@ The default artifact path is:
 out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json
 ```
 
+After a successful run, the command also automatically archives the redacted
+live-smoke artifact in a correlation-based retention folder:
+
+```text
+out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/
+```
+
+That folder contains at least:
+
+```text
+matter-access-apply-smoke.redacted.json
+matter-access-apply-live-smoke-retention.redacted.json
+matter-access-apply-live-smoke-retention.redacted.md
+```
+
+The root index is stored at:
+
+```text
+out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-index.redacted.json
+```
+
+Existing redacted artifacts can be retained offline:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retain \
+  --matter-access-apply-live-smoke-artifact out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json \
+  --format json
+```
+
+The offline index is locally filterable and performs no Graph request:
+
+```bash
+python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-live-smoke-retention-index \
+  --matter-access-apply-live-smoke-correlation-id <correlation-id> \
+  --format json
+```
+
 An existing owner-gated artifact can then be explicitly attached to release
 gate evidence:
 
@@ -107,12 +144,17 @@ picked up automatically.
 - `raw_graph_response_stored=false`
 - `raw_write_payload_stored=false`
 - `reads_sharepoint_file_content=false`
+- Retention: `retention_executes_graph_requests=false`
+- Retention: `retention_tenant_writes_executed=false`
+- Retention: correlation-based folder and root index exist
 
 ## Failure Behavior
 
 If the smoke is not `PASSED`, the release lane is blocked. If cleanup or
-cleanup readback fails, no approval continues. The next step is a separate
-owner-gated cleanup action with redacted leftover evidence; productive matter
+cleanup readback fails, no approval continues. If the smoke passed but the
+correlation-based retention is not `PASSED`, the command also does not return a
+successful completion. The next step is a separate owner-gated cleanup action
+with redacted leftover evidence or an offline retention fix; productive matter
 IDs must not be used as fallback targets.
 
 ## Boundaries

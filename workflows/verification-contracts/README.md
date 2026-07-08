@@ -26,6 +26,9 @@ can prove that a slice is complete.
 - [m365-matter-access-apply-live-smoke-release-lane.verification.json](m365-matter-access-apply-live-smoke-release-lane.verification.json):
   release-lane verification for the separately approved synthetic SharePoint
   write/read/cleanup smoke and its explicit evidence attachment boundary.
+- [m365-matter-access-apply-live-smoke-retention.verification.json](m365-matter-access-apply-live-smoke-retention.verification.json):
+  retention verification for correlation-based local archives and indexes of
+  redacted owner-gated apply live-smoke evidence.
 
 ## Agent Indexes
 

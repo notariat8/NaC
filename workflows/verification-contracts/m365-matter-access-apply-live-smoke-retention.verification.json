@@ -1,0 +1,93 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_matter_access_apply_live_smoke_retention",
+  "domain_contract_id": "m365.matter_access_delegation",
+  "title": "M365 Matter Access Apply Live-Smoke Retention Verification",
+  "status": "active_mvp",
+  "applies_when": {
+    "paths": [
+      "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/de/cli.md",
+      "docs/en/cli.md",
+      "docs/de/quality-gate.md",
+      "docs/en/quality-gate.md",
+      "src/nac_m365_graph/matter_access_apply_live_smoke_retention.py",
+      "scripts/provision_teams_sharepoint_graph.py",
+      "src/nac_cli/cli.py",
+      "tests/test_m365_matter_access_apply_live_smoke_retention.py",
+      "scripts/validate_m365_matter_access_apply_live_smoke_retention.py"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/process-policy.yaml",
+      "policies/access-control-policy.yaml",
+      "policies/data-protection-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+      "src/nac_m365_graph/matter_access_apply_smoke.py",
+      "src/nac_m365_graph/matter_access_apply_live_smoke_retention.py",
+      "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json",
+      "workflows/verification-contracts/m365-matter-access-delegation.verification.json"
+    ],
+    "runtime": [
+      "fresh git diff",
+      "fresh validator output",
+      "out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/matter-access-apply-live-smoke-retention.redacted.json",
+      "out/m365/teams-sharepoint/matter-access-apply-live-smokes/matter-access-apply-live-smoke-retention-index.redacted.json"
+    ]
+  },
+  "checks": [
+    "python scripts/validate_m365_matter_access_apply_live_smoke_retention.py",
+    "python -m unittest tests.test_m365_matter_access_apply_live_smoke_retention",
+    "python scripts/quality_gate.py --profile strict"
+  ],
+  "invariants": [
+    "Every PASSED owner-gated matter-access apply live smoke must create a correlation-based local retention copy before the command returns PASSED.",
+    "Retention reads only the redacted local live-smoke artifact and must not execute Graph requests, tenant writes or tenant deletes.",
+    "Retention must reject a source artifact that is not PASSED, lacks readback or cleanup counts, or stores raw Graph paths, raw Graph responses, raw write payloads, tokens, secrets or matter payloads.",
+    "The retention index is local, redacted and filterable by correlation ID, workspace, status and query.",
+    "The retained artifact path, retention report path and root index path must be visible in the live-smoke command summary."
+  ],
+  "thresholds": {
+    "required_retained_artifact_count_per_live_smoke": 1,
+    "required_root_index_count_per_retention_root": 1,
+    "required_retention_graph_request_count": 0,
+    "required_retention_tenant_write_count": 0,
+    "required_retention_tenant_delete_count": 0
+  },
+  "required_evidence": [
+    "matter_access_apply_live_smoke_retention_module",
+    "matter_access_apply_live_smoke_retention_cli_commands",
+    "matter_access_apply_live_smoke_retention_index_command",
+    "live_smoke_command_fail_closed_on_retention_failure",
+    "retention_validator",
+    "quality_gate_check",
+    "agent_context_index_link"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "correlation_based_retention_present": true,
+    "root_index_present": true,
+    "retention_offline_only": true,
+    "source_artifact_validation_fail_closed": true,
+    "no_secrets": true,
+    "no_mandate_data": true
+  },
+  "failure_behavior": {
+    "retention_write_missing": "block_live_smoke_pass_status",
+    "invalid_source_artifact": "block_retention",
+    "graph_boundary_broken": "block_completion",
+    "redaction_broken": "block_completion",
+    "quality_gate_failure": "block_completion"
+  }
+}

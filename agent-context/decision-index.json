@@ -77,6 +77,27 @@
         "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
         "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json"
       ]
+    },
+    {
+      "id": "ADR-M365-MATTER-ACCESS-005",
+      "title": "Apply live-smoke evidence is retained by correlation ID",
+      "status": "accepted",
+      "decision_date": "2026-07-08",
+      "domain": "m365_matter_access_delegation",
+      "context_key": "m365_matter_access_apply_live_smoke_retention",
+      "owner": "ofunk",
+      "summary": "A PASSED owner-gated matter-access apply live smoke must archive its redacted artifact into a correlation-based local retention folder and update a local searchable retention index before the command itself returns PASSED.",
+      "source_paths": [
+        "docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md",
+        "src/nac_m365_graph/matter_access_apply_live_smoke_retention.py",
+        "scripts/provision_teams_sharepoint_graph.py"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/m365-matter-access-delegation.verification.json",
+        "workflows/verification-contracts/m365-matter-access-apply-live-smoke-release-lane.verification.json",
+        "workflows/verification-contracts/m365-matter-access-apply-live-smoke-retention.verification.json"
+      ]
     }
   ]
 }

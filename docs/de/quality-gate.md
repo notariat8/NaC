@@ -73,21 +73,22 @@ CI:
 28. `m365_sharepoint_bpmn_viewer_adapter` (nur `strict`)
 29. `m365_matter_access_delegation` (nur `strict`)
 30. `m365_matter_access_apply_live_smoke_release_lane` (nur `strict`)
-31. `notarial_application_interface_inventory` (nur `strict`)
-32. `matter_data_classification_redaction` (nur `strict`)
-33. `private_operating_frame_gate` (nur `strict`)
-34. `private_payload_target_design` (nur `strict`)
-35. `private_payload_access_policy` (nur `strict`)
-36. `gnotkg_costs` (nur `strict`)
-37. `secure_document_links` (nur `strict`)
-38. `legal_research_connectors` (nur `strict`)
-39. `legal_source_inventory_license_tdm` (nur `strict`)
-40. `legal_model_customization_readiness` (nur `strict`)
-41. `legal_model_card_ai_sbom_delta` (nur `strict`)
-42. `legal_model_card_proposal` (nur `strict`)
-43. `legal_ai_sbom_delta_proposal` (nur `strict`)
-44. `legal_model_evaluation_benchmark` (nur `strict`)
-45. `legal_graph_contracts` (nur `strict`)
+31. `m365_matter_access_apply_live_smoke_retention` (nur `strict`)
+32. `notarial_application_interface_inventory` (nur `strict`)
+33. `matter_data_classification_redaction` (nur `strict`)
+34. `private_operating_frame_gate` (nur `strict`)
+35. `private_payload_target_design` (nur `strict`)
+36. `private_payload_access_policy` (nur `strict`)
+37. `gnotkg_costs` (nur `strict`)
+38. `secure_document_links` (nur `strict`)
+39. `legal_research_connectors` (nur `strict`)
+40. `legal_source_inventory_license_tdm` (nur `strict`)
+41. `legal_model_customization_readiness` (nur `strict`)
+42. `legal_model_card_ai_sbom_delta` (nur `strict`)
+43. `legal_model_card_proposal` (nur `strict`)
+44. `legal_ai_sbom_delta_proposal` (nur `strict`)
+45. `legal_model_evaluation_benchmark` (nur `strict`)
+46. `legal_graph_contracts` (nur `strict`)
 
 ## Artefakte
 
@@ -116,6 +117,11 @@ Standardausgabe:
   Live-Smoke-Artefakt darf nur explizit mit
   `--release-gate-matter-access-apply-smoke-artifact` an Evidence angehängt
   werden.
+- Erfolgreiche `matter-access-apply-smoke`-Artefakte müssen zusätzlich in den
+  eigenen Live-Smoke-Retention-Index unter
+  `out/m365/teams-sharepoint/matter-access-apply-live-smokes/` aufgenommen
+  werden; die Retention selbst bleibt offline und führt keine Graph- oder
+  Tenant-Aktion aus. Kurzflag: keine Graph- oder Tenant-Aktion.
 
 Diese Artefakte werden im CI-Lauf hochgeladen.
 

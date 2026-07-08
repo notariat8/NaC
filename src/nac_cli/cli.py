@@ -29,6 +29,13 @@ from nac_legal_graph.sources import legal_graph_source_status, legal_source_inve
 from nac_m365_graph.mcp_smoke_leftover_cleanup import DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT
 from nac_m365_graph.mcp_smoke_suite import DEFAULT_MCP_SMOKE_SUITE_OUTPUT
 from nac_m365_graph.matter_access_apply_readiness import DEFAULT_MATTER_ACCESS_APPLY_READINESS_OUTPUT
+from nac_m365_graph.matter_access_apply_live_smoke_retention import (
+    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+    build_matter_access_apply_live_smoke_retention_index,
+    format_matter_access_apply_live_smoke_retention,
+    format_matter_access_apply_live_smoke_retention_index,
+    retain_matter_access_apply_live_smoke_artifact,
+)
 from nac_m365_graph.release_gate_evidence import (
     DEFAULT_ARTIFACT_INDEX_OUTPUT,
     DEFAULT_EVIDENCE_JSON_OUTPUT,
@@ -392,6 +399,8 @@ def build_parser() -> argparse.ArgumentParser:
             "matter-access-plan",
             "matter-access-apply-policy-smoke",
             "matter-access-apply-smoke",
+            "matter-access-apply-live-smoke-retain",
+            "matter-access-apply-live-smoke-retention-index",
             "matter-access-apply-request-plan",
             "matter-access-apply-readiness",
             "matter-access-smoke",
@@ -575,6 +584,33 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
         help="Pfad fuer das redigierte owner-gated Matter-Access-Apply-Smoke-Artefakt.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-retention-root",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+        help="Root fuer correlation-basierte Retention redigierter Matter-Access-Apply-Live-Smoke-Artefakte.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-artifact",
+        type=Path,
+        help="Optionaler Pfad zu einem redigierten Matter-Access-Apply-Live-Smoke-Artefakt fuer Retention.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-correlation-id",
+        help="Optionaler Correlation-ID-Filter fuer den Matter-Access-Apply-Live-Smoke-Retention-Index.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-workspace-id",
+        help="Optionaler Workspace-ID-Filter fuer den Matter-Access-Apply-Live-Smoke-Retention-Index.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-status",
+        help="Optionaler Statusfilter fuer den Matter-Access-Apply-Live-Smoke-Retention-Index.",
+    )
+    teams_sharepoint.add_argument(
+        "--matter-access-apply-live-smoke-query",
+        help="Optionaler Suchtext fuer den Matter-Access-Apply-Live-Smoke-Retention-Index.",
     )
     teams_sharepoint.add_argument(
         "--matter-access-grant-id",
@@ -2037,6 +2073,44 @@ def command_m365(args: argparse.Namespace) -> int:
                 _print_m365_release_gate_run(payload)
             return return_code
 
+        if args.teams_sharepoint_command == "matter-access-apply-live-smoke-retain":
+            artifact_path = _resolve_m365_release_gate_path(
+                repo_root,
+                args.matter_access_apply_live_smoke_artifact,
+                args.matter_access_apply_smoke_output,
+            )
+            retention = retain_matter_access_apply_live_smoke_artifact(
+                artifact_path,
+                retention_root=_resolve_m365_release_gate_path(
+                    repo_root,
+                    args.matter_access_apply_live_smoke_retention_root,
+                    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+                ),
+            )
+            if args.format == "json":
+                print_json(retention)
+            else:
+                print(format_matter_access_apply_live_smoke_retention(retention).rstrip())
+            return 0 if retention["status"] == "PASSED" else 2
+
+        if args.teams_sharepoint_command == "matter-access-apply-live-smoke-retention-index":
+            index = build_matter_access_apply_live_smoke_retention_index(
+                retention_root=_resolve_m365_release_gate_path(
+                    repo_root,
+                    args.matter_access_apply_live_smoke_retention_root,
+                    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+                ),
+                correlation_id=args.matter_access_apply_live_smoke_correlation_id,
+                workspace_id=args.matter_access_apply_live_smoke_workspace_id,
+                status=args.matter_access_apply_live_smoke_status,
+                query=args.matter_access_apply_live_smoke_query,
+            )
+            if args.format == "json":
+                print_json(index)
+            else:
+                print(format_matter_access_apply_live_smoke_retention_index(index).rstrip())
+            return 0 if index["status"] == "PASSED" else 2
+
         if args.teams_sharepoint_command == "release-gate-retention-list":
             payload = _list_m365_release_gate_retention(repo_root, args)
             if args.format == "json":
@@ -2236,6 +2310,13 @@ def command_m365(args: argparse.Namespace) -> int:
             )
         if args.matter_access_apply_smoke_output:
             script_args.extend(["--matter-access-apply-smoke-output", str(args.matter_access_apply_smoke_output)])
+        if args.matter_access_apply_live_smoke_retention_root:
+            script_args.extend(
+                [
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(args.matter_access_apply_live_smoke_retention_root),
+                ]
+            )
         if args.matter_access_grant_id:
             script_args.extend(["--matter-access-grant-id", args.matter_access_grant_id])
         if args.matter_access_from_user:

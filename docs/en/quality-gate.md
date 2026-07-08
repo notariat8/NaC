@@ -74,21 +74,22 @@ CI:
 28. `m365_sharepoint_bpmn_viewer_adapter` only in `strict`
 29. `m365_matter_access_delegation` only in `strict`
 30. `m365_matter_access_apply_live_smoke_release_lane` only in `strict`
-31. `notarial_application_interface_inventory` only in `strict`
-32. `matter_data_classification_redaction` only in `strict`
-33. `private_operating_frame_gate` only in `strict`
-34. `private_payload_target_design` only in `strict`
-35. `private_payload_access_policy` only in `strict`
-36. `gnotkg_costs` only in `strict`
-37. `secure_document_links` only in `strict`
-38. `legal_research_connectors` only in `strict`
-39. `legal_source_inventory_license_tdm` only in `strict`
-40. `legal_model_customization_readiness` only in `strict`
-41. `legal_model_card_ai_sbom_delta` only in `strict`
-42. `legal_model_card_proposal` only in `strict`
-43. `legal_ai_sbom_delta_proposal` only in `strict`
-44. `legal_model_evaluation_benchmark` only in `strict`
-45. `legal_graph_contracts` only in `strict`
+31. `m365_matter_access_apply_live_smoke_retention` only in `strict`
+32. `notarial_application_interface_inventory` only in `strict`
+33. `matter_data_classification_redaction` only in `strict`
+34. `private_operating_frame_gate` only in `strict`
+35. `private_payload_target_design` only in `strict`
+36. `private_payload_access_policy` only in `strict`
+37. `gnotkg_costs` only in `strict`
+38. `secure_document_links` only in `strict`
+39. `legal_research_connectors` only in `strict`
+40. `legal_source_inventory_license_tdm` only in `strict`
+41. `legal_model_customization_readiness` only in `strict`
+42. `legal_model_card_ai_sbom_delta` only in `strict`
+43. `legal_model_card_proposal` only in `strict`
+44. `legal_ai_sbom_delta_proposal` only in `strict`
+45. `legal_model_evaluation_benchmark` only in `strict`
+46. `legal_graph_contracts` only in `strict`
 
 ## Artifacts
 
@@ -115,6 +116,10 @@ Default output:
   standard. It is not a default step in the one-shot gate; a live-smoke
   artifact may only be attached to evidence explicitly with
   `--release-gate-matter-access-apply-smoke-artifact`.
+- Successful `matter-access-apply-smoke` artifacts must also be retained in the
+  dedicated live-smoke retention index under
+  `out/m365/teams-sharepoint/matter-access-apply-live-smokes/`; retention
+  itself remains offline and performs no Graph or tenant action.
 
 These artifacts are uploaded during CI runs.
 

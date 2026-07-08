@@ -53,6 +53,10 @@ from nac_m365_graph.matter_access_apply_smoke import (  # noqa: E402
     run_matter_access_apply_smoke_from_paths,
     write_matter_access_apply_smoke_artifact,
 )
+from nac_m365_graph.matter_access_apply_live_smoke_retention import (  # noqa: E402
+    DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+    retain_matter_access_apply_live_smoke_artifact,
+)
 from nac_m365_graph.privileged_apply import apply_privileged_change_path  # noqa: E402
 from nac_m365_graph.privileged_change import (  # noqa: E402
     DEFAULT_PRIVILEGED_APPLIED_STATE,
@@ -386,6 +390,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT,
         help="Path for the redacted owner-gated matter access apply smoke artifact under out/.",
     )
+    parser.add_argument(
+        "--matter-access-apply-live-smoke-retention-root",
+        type=Path,
+        default=DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+        help="Root for correlation-based retention of redacted matter-access apply live-smoke artifacts.",
+    )
     parser.add_argument("--matter-access-grant-id", help="Synthetic grant id seed; redacted artifacts store only a hash.")
     parser.add_argument(
         "--matter-access-from-user",
@@ -717,6 +727,10 @@ def main() -> int:
                 cleanup_after=True,
             )
             write_matter_access_apply_smoke_artifact(result, args.matter_access_apply_smoke_output)
+            retention = retain_matter_access_apply_live_smoke_artifact(
+                args.matter_access_apply_smoke_output,
+                retention_root=args.matter_access_apply_live_smoke_retention_root,
+            )
         except GraphConfigError as exc:
             return _emit(
                 {
@@ -750,14 +764,23 @@ def main() -> int:
             )
         summary = dict(result["summary"])
         summary["artifact_path"] = str(args.matter_access_apply_smoke_output)
+        summary["retention_status"] = retention["status"]
+        summary["retention_artifact_dir"] = retention["summary"].get("artifact_dir")
+        summary["retention_json_path"] = retention["summary"].get("retention_json_path")
+        summary["retention_report_path"] = retention["summary"].get("retention_report_path")
+        summary["retention_index_path"] = retention["summary"].get("retention_json_path")
+        summary["retention_root_index_path"] = retention["summary"].get("retention_index_json_path")
+        summary["retention_root_index_report_path"] = retention["summary"].get("retention_index_report_path")
+        command_status = "PASSED" if result["status"] == "PASSED" and retention["status"] == "PASSED" else "FAILED"
         return _emit(
             {
-                "status": result["status"],
+                "status": command_status,
                 "summary": summary,
                 "result": result,
+                "retention": retention,
             },
             args.json,
-            return_code=0 if result["status"] == "PASSED" else 1,
+            return_code=0 if command_status == "PASSED" else 1,
         )
 
     if args.command == "mcp-smoke-suite":

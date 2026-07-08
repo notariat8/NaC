@@ -409,7 +409,17 @@ real synthetic deputy grant. Through Graph REST v1.0, the command writes only
 reads both back, deletes them in the same run and writes
 `out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json`. The
 artifact stores no raw paths, raw responses, user data, reasons, tokens or
-secrets.
+secrets. After `PASSED`, the command also automatically writes a redacted
+retention copy under
+`out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/`
+and updates `matter-access-apply-live-smoke-retention-index.redacted.json`.
+Existing artifacts can be retained offline with
+`matter-access-apply-live-smoke-retain`; the local index is read with
+`matter-access-apply-live-smoke-retention-index` filtered by correlation ID,
+workspace, status or query. These retention and index commands perform no
+Graph request, tenant write or delete. The retention evidence sets
+`retention_executes_graph_requests=false` and
+`retention_tenant_writes_executed=false`.
 `nac batch-approval m365` is offline as well. The command renders copyable
 owner approval texts for prepared PR batches, synthetic live-smoke batches and
 the M365 Runtime Release Gate and M365 runtime certificate lifecycle, but
@@ -645,6 +655,9 @@ owner-gated `matter-access-apply-smoke.redacted.json` can still be attached to
 `--release-gate-matter-access-apply-smoke-artifact`. The binding release-lane
 standard is documented in
 `docs/en/operations/m365-matter-access-apply-live-smoke-release-lane.md`.
+The related live-smoke retention index lives separately under
+`out/m365/teams-sharepoint/matter-access-apply-live-smokes/` and is searched
+offline with `matter-access-apply-live-smoke-retention-index`.
 
 `release-gate-evidence` reads only local redacted JSON artifacts under
 `out/m365/teams-sharepoint/` and creates

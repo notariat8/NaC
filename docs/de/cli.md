@@ -417,7 +417,19 @@ Graph REST v1.0 nur `NAC-SMOKE-`-begrenzte Items in `Vertretungsfreigaben` und
 schreibt
 `out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json`. Das
 Artefakt speichert keine Rohpfade, Rohantworten, Nutzerdaten, Gründe, Tokens
-oder Secrets.
+oder Secrets. Nach `PASSED` schreibt der Befehl zusätzlich automatisch eine
+redigierte Retention-Kopie unter
+`out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/`
+und aktualisiert
+`matter-access-apply-live-smoke-retention-index.redacted.json`. Bereits
+vorhandene Artefakte können offline mit
+`matter-access-apply-live-smoke-retain` nacharchiviert werden; der lokale
+Index wird mit `matter-access-apply-live-smoke-retention-index` nach
+Correlation-ID, Workspace, Status oder Suchtext gelesen. Diese Retention- und
+Indexbefehle führen keine Graph-Anfrage, keinen Tenant-Write und keine
+Löschung aus. Die Retention-Evidence setzt
+`retention_executes_graph_requests=false` und
+`retention_tenant_writes_executed=false`.
 `nac batch-approval m365` ist ebenfalls offline. Der Befehl rendert kopierbare
 Owner-Freigabetexte für vorbereitete PR-Batches, synthetische Live-Smoke-Batches
 das M365 Runtime Release-Gate und den M365 Runtime-Zertifikatslebenszyklus,
@@ -666,6 +678,9 @@ erzeugtes `matter-access-apply-smoke.redacted.json` kann aber mit
 `release-gate-evidence`, den Artifact-Index und die Retention-Kopie angehängt
 werden. Der verbindliche Release-Lane-Standard steht unter
 `docs/de/operations/m365-matter-access-apply-live-smoke-release-lane.md`.
+Der zugehörige Live-Smoke-Retention-Index liegt separat unter
+`out/m365/teams-sharepoint/matter-access-apply-live-smokes/` und wird mit
+`matter-access-apply-live-smoke-retention-index` offline durchsucht.
 
 `release-gate-evidence` liest nur lokale redigierte JSON-Artefakte unter
 `out/m365/teams-sharepoint/` und erzeugt
