@@ -1,7 +1,7 @@
 # Teams SharePoint Graph Data Plane
 
-Status: final MVP data-plane decision
-Last content update: 2026-07-06
+Status: final MVP data-plane decision; MVP infrastructure baseline closed
+Last content update: 2026-07-09
 
 ## Purpose
 
@@ -26,6 +26,24 @@ accelerator for setup, login, Entra app bootstrap and Graph smoke tests. It is
 not a runtime dependency and may only use `m365 request` against `@graph` or
 Microsoft Graph v1.0 in the data path. The concrete runbook lives at
 [docs/en/runbooks/m365-cli-admin-accelerator.md](../runbooks/m365-cli-admin-accelerator.md).
+
+## MVP Baseline Status
+
+As of 2026-07-09, the Microsoft 365 / SharePoint infrastructure baseline for
+the NaC MVP is closed. The final runtime release gate ran on current `main` in
+workspace `notary_team_01` with correlation ID
+`nac-matter-access-live-20260709-bootstrap` and status `PASSED`. The gate
+included runtime-env bootstrap, runtime smoke, runtime metadata, MCP inventory
+smoke, MCP smoke suite with cleanup, leftover dry-run, matter-access readiness,
+apply-request plan, policy smoke, the bootstrap-validated Matter-Access Apply
+Live-Smoke as attached evidence, release-gate evidence, audit pack, readiness
+`READY`, post-run report and post-run index.
+
+SharePoint is therefore no longer the open MVP critical path. Further M365 /
+SharePoint work should address only real defects, explicit product gaps or
+productive rollout decisions. The normal next work block is domain work:
+`notarial-workflow-ontology-mvp` with business cases, ontology, BPMN/process
+state, role/matter access and user workflow.
 
 ## Decision
 

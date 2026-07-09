@@ -152,8 +152,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Decision-Note zu Omnigraph als späterer optionaler Ontologie-Projektion,
   nicht als MVP-Datenhaltung und nicht als BPMN-Engine.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
-  MVP-Datenhaltung über Teams, Microsoft-365-Gruppe, SharePoint-Team-Site und
-  Microsoft Graph REST ohne alte SharePoint-APIs oder SDKs.
+  geschlossene M365-/SharePoint-MVP-Infrastruktur-Baseline über Teams,
+  Microsoft-365-Gruppe, SharePoint-Team-Site und Microsoft Graph REST ohne alte
+  SharePoint-APIs oder SDKs.
 - [docs/de/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md):
   M365-Mandatszugriffsdelegation für Aktenzuständigkeit,
   Vertretungsfreigaben, Audit und `matter-access-plan` ohne Live-Tenant-Aktion.

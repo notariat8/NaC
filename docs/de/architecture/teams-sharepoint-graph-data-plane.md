@@ -1,7 +1,7 @@
 # Teams-SharePoint-Graph-Datenebene
 
-Status: finale MVP-Datenebenenentscheidung
-Letzte inhaltliche Anpassung: 2026-07-06
+Status: finale MVP-Datenebenenentscheidung; MVP-Infrastruktur-Baseline geschlossen
+Letzte inhaltliche Anpassung: 2026-07-09
 
 ## Zweck
 
@@ -27,6 +27,26 @@ ist keine Runtime-Abhängigkeit und darf im Datenpfad nur `m365 request` gegen
 `@graph` beziehungsweise Microsoft Graph v1.0 verwenden. Das konkrete Runbook
 liegt unter
 [docs/de/runbooks/m365-cli-admin-accelerator.md](../runbooks/m365-cli-admin-accelerator.md).
+
+## MVP-Baseline-Status
+
+Stand 2026-07-09 ist die Microsoft-365-/SharePoint-Infrastruktur-Baseline für
+den NaC-MVP geschlossen. Das finale Runtime Release-Gate lief auf aktuellem
+`main` im Workspace `notary_team_01` mit der Correlation-ID
+`nac-matter-access-live-20260709-bootstrap` und Status `PASSED`. Das Gate
+enthielt Runtime-Env-Bootstrap, Runtime-Smoke, Runtime-Metadata,
+MCP-Inventar-Smoke, MCP-Smoke-Suite mit Cleanup, Leftover-Dry-Run,
+Matter-Access-Readiness, Apply-Request-Plan, Policy-Smoke, den
+bootstrap-validierten Matter-Access Apply Live-Smoke als angehängte Evidence,
+Release-Gate-Evidence, Audit-Pack, Readiness `READY`, Post-Run-Report und
+Post-Run-Index.
+
+Damit ist SharePoint für den MVP nicht mehr der offene kritische Pfad. Weitere
+M365-/SharePoint-Arbeit soll nur noch echte Fehler, explizite Produktlücken
+oder produktive Rollout-Entscheidungen adressieren. Der normale nächste
+Arbeitsblock ist fachlich: `notarial-workflow-ontology-mvp` mit
+Geschäftsvorfällen, Ontologie, BPMN-/Prozessstatus, Rollen-/Aktenzugriff und
+Nutzerworkflow.
 
 ## Entscheidung
 

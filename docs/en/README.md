@@ -118,8 +118,9 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the productive agentic runtime decision for NVIDIA NeMo Agent
   Toolkit / AI-Q, Microsoft 365 MCP servers and local workstation sidecars.
 - [docs/en/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md)
-  defines MVP storage through Teams, Microsoft 365 group, SharePoint team site
-  and Microsoft Graph REST without legacy SharePoint APIs or SDKs.
+  defines the closed M365 / SharePoint MVP infrastructure baseline through
+  Teams, Microsoft 365 group, SharePoint team site and Microsoft Graph REST
+  without legacy SharePoint APIs or SDKs.
 - [docs/en/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md)
   defines M365 Matter Access Delegation for matter assignment, deputy grants,
   audit and `matter-access-plan` without live tenant action.
