@@ -313,6 +313,13 @@ def build_parser() -> argparse.ArgumentParser:
     kg_process_ontology_schema_apply_readiness.add_argument(
         "--format", choices=["text", "json"], default=argparse.SUPPRESS
     )
+    kg_process_ontology_schema_apply_execution_contract = kg_sub.add_parser(
+        "process-ontology-schema-apply-execution-contract",
+        help="Erzeugt den Offline-Owner-Gate-Ausführungsvertrag für einen späteren Graph-REST-Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_execution_contract.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
