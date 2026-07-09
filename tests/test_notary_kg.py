@@ -64,6 +64,10 @@ from notary_kg.process_ontology_schema_apply_readiness import (
     build_process_ontology_sharepoint_schema_apply_readiness,
     validate_process_ontology_sharepoint_schema_apply_readiness,
 )
+from notary_kg.process_ontology_schema_apply_runner_dry_run import (
+    build_process_ontology_sharepoint_schema_apply_runner_dry_run,
+    validate_process_ontology_sharepoint_schema_apply_runner_dry_run,
+)
 from notary_kg.process_ontology_schema_gap import (
     build_process_ontology_sharepoint_schema_gap,
     validate_process_ontology_sharepoint_schema_gap,
@@ -578,6 +582,85 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(
             payload["schema_version"],
             "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_runner_dry_run_exposes_planned_requests(self) -> None:
+        payload = build_process_ontology_sharepoint_schema_apply_runner_dry_run(REPO_ROOT)
+        validation = validate_process_ontology_sharepoint_schema_apply_runner_dry_run(payload)
+        summary = payload["summary"]
+        first_step = payload["dry_run_steps"][0]
+
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(summary["workspace_count"], 2)
+        self.assertEqual(summary["dry_run_step_count"], 68)
+        self.assertEqual(summary["preflight_request_count"], 68)
+        self.assertEqual(summary["future_mutation_request_count"], 68)
+        self.assertEqual(summary["readback_request_count"], 68)
+        self.assertFalse(summary["executes_graph_requests"])
+        self.assertFalse(summary["writes_sharepoint"])
+        self.assertFalse(summary["changes_sharepoint_schema"])
+        self.assertEqual(first_step["mode"], "dry_run_only")
+        self.assertFalse(first_step["executes_graph_requests"])
+        self.assertIn("path_template", first_step["preflight_request"])
+        self.assertIn("body_shape", first_step["future_mutation_request"])
+        self.assertFalse(payload["evidence_plan"]["raw_graph_response_allowed"])
+
+    def test_cli_process_ontology_schema_apply_runner_dry_run_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--format",
+                    "json",
+                    "process-ontology-schema-apply-runner-dry-run",
+                ]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
+        for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_process_ontology_schema_apply_runner_dry_run_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "process-ontology-schema-apply-runner-dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
         )
         self.assertEqual(payload["status"], "PASSED")
 

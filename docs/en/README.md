@@ -138,6 +138,9 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/process-ontology-sharepoint-schema-apply-execution-contract.md](architecture/process-ontology-sharepoint-schema-apply-execution-contract.md)
   defines the owner-gated offline execution edge before a later SharePoint
   schema apply through Microsoft Graph REST.
+- [docs/en/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md)
+  defines the offline dry-run for planned preflight, mutation and readback
+  steps before a later SharePoint schema apply.
 - [docs/en/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md)
   defines the offline scale smoke across all business cases, BPMN sources and
   ontology projection budgets so deep modeling does not run into performance

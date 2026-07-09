@@ -158,6 +158,9 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/process-ontology-sharepoint-schema-apply-execution-contract.md](architecture/process-ontology-sharepoint-schema-apply-execution-contract.md):
   owner-gated Offline-Ausführungskante vor einem späteren
   SharePoint-Schema-Apply über Microsoft Graph REST.
+- [docs/de/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md):
+  Offline-Dry-Run für geplante Preflight-, Mutations- und Readback-Schritte vor
+  einem späteren SharePoint-Schema-Apply.
 - [docs/de/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md):
   Offline-Scale-Smoke über alle Geschäftsvorfälle, BPMN-Quellen und
   Ontologie-Projektionsbudgets, damit Deep Modeling nicht ohne Sizing in eine
