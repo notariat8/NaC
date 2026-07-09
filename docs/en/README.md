@@ -131,6 +131,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/omnigraph-ontology-projection.md](architecture/omnigraph-ontology-projection.md)
   records the decision note for Omnigraph as a later optional ontology
   projection, not as MVP storage and not as a BPMN engine.
+- [docs/en/architecture/notarial-ontology-sizing-storage.md](architecture/notarial-ontology-sizing-storage.md)
+  defines the ontology sizing and storage boundary from the business-case
+  inventory with SharePoint as operative MVP storage, ontology as a versioned
+  projection and Graph REST as the only M365 data plane.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.

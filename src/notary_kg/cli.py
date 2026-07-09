@@ -9,6 +9,7 @@ from nac_gnotkg.views import build_cost_review_view
 from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .editor import build_editor_view
+from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
 from .workflow_contract import build_workflow_contract_draft
 
@@ -64,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "business-case-inventory",
         help="Build the thin notarial business-case inventory for ontology sizing.",
+    )
+
+    subparsers.add_parser(
+        "ontology-storage-contract",
+        help="Evaluate the notarial ontology sizing and storage contract.",
     )
 
     return parser
@@ -129,6 +135,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "business-case-inventory":
         payload = build_business_case_inventory(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "ontology-storage-contract":
+        payload = build_ontology_storage_contract(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -269,6 +280,29 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Recommended deep-process slices")
         for slug in summary["deep_process_slices_recommended"]:
             print(f"- {slug}")
+        return
+
+    if payload.get("schema_version") == "nac.notarial-ontology-sizing-storage/v0.1":
+        evaluation = payload["evaluation"]
+        current = evaluation["current_sizing"]
+        print("Notarial ontology sizing and storage contract")
+        print(f"- status: {payload['status']}")
+        print(f"- contract: {payload['contract_path']}")
+        print(f"- business cases: {current['business_case_count']}/{current['max_supported_business_cases_without_store_migration']}")
+        print(f"- canonical coverage: {current['canonical_covered_count']}/{current['canonical_required']}")
+        print(
+            "- max complexity score: "
+            f"{current['max_complexity_score']}/{current['max_complexity_score_without_architecture_review']}"
+        )
+        print("")
+        print("Derived decision")
+        for key, value in evaluation["derived_decision"].items():
+            print(f"- {key}: {value}")
+        if evaluation["warnings"]:
+            print("")
+            print("Warnings")
+            for warning in evaluation["warnings"]:
+                print(f"- {warning}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")

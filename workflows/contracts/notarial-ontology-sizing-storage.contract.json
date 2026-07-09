@@ -1,0 +1,211 @@
+{
+  "schema_version": "nac.notarial-ontology-sizing-storage/v0.1",
+  "contract_id": "notarial.ontology_sizing_storage",
+  "title": "Notarial ontology sizing and storage boundary",
+  "status": "offline_contract_no_live_apply",
+  "last_update": "2026-07-09",
+  "purpose": "Bind the all-business-case inventory to a bounded ontology projection, SharePoint MVP storage roles and Graph REST-only runtime access without making the ontology a runtime database.",
+  "source_documents": {
+    "business_case_inventory_command": "nac kg business-case-inventory --format json",
+    "business_case_inventory_module": "src/notary_kg/business_case_inventory.py",
+    "usecase_local_knowledge_graph_glob": "usecases/*/knowledge-graph.graph.json",
+    "teams_sharepoint_graph_data_plane": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
+    "teams_sharepoint_data_mcp": "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+    "matter_access_delegation": "workflows/contracts/m365-matter-access-delegation.contract.json",
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json"
+  },
+  "scope": {
+    "offline_contract_only": true,
+    "executes_graph_requests_now": false,
+    "changes_sharepoint_schema_now": false,
+    "stores_tokens_or_secrets": false,
+    "stores_matter_instance_values": false,
+    "stores_document_full_text": false,
+    "creates_central_knowledge_graph_folder": false,
+    "owner_gate_required_before_future_apply": true
+  },
+  "graph": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rest_only": true,
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "graph_beta_allowed": false
+  },
+  "storage_roles": {
+    "sharepoint": {
+      "role": "operative_mvp_data_store",
+      "stores": [
+        "matter_metadata",
+        "participant_role_bindings_without_raw_identity_values",
+        "task_and_deadline_state",
+        "document_pointers",
+        "timeboxed_deputy_grants",
+        "redacted_audit_events"
+      ],
+      "does_not_store": [
+        "ontology_schema_truth",
+        "bpmn_source_of_truth",
+        "agent_memory",
+        "secrets"
+      ]
+    },
+    "ontology": {
+      "role": "versioned_repo_catalog_and_projection_contract",
+      "stores": [
+        "business_case_type_catalog",
+        "entity_class_catalog",
+        "field_to_list_mapping",
+        "allowed_relationship_templates",
+        "sizing_metadata",
+        "process_model_pointers"
+      ],
+      "does_not_store": [
+        "matter_instance_values",
+        "document_full_text",
+        "raw_sharepoint_items",
+        "raw_graph_responses",
+        "tokens_or_secrets",
+        "personal_data_values"
+      ]
+    },
+    "bpmn": {
+      "role": "process_model_not_runtime_engine",
+      "stores": [
+        "approved_process_model",
+        "task_and_gate_shape",
+        "reviewable_process_version"
+      ],
+      "does_not_execute": [
+        "sharepoint_writes",
+        "matter_access_decisions",
+        "document_content_reads"
+      ]
+    }
+  },
+  "sizing_thresholds": {
+    "canonical_business_cases_required": 20,
+    "max_supported_business_cases_without_store_migration": 100,
+    "max_complexity_score_without_architecture_review": 64,
+    "max_projection_entities_per_business_case": 32,
+    "max_projection_edges_per_business_case": 128,
+    "max_runtime_graph_reads_per_user_action": 3,
+    "max_runtime_sharepoint_lists_per_user_action": 2,
+    "deep_process_candidate_complexity_bands": [
+      "high",
+      "medium"
+    ],
+    "hard_stop_conditions": [
+      "ontology_required_on_request_path",
+      "document_full_text_added_to_ontology",
+      "matter_instance_values_added_to_repo",
+      "central_knowledge_graph_folder_added",
+      "graph_beta_or_legacy_sharepoint_api_required"
+    ]
+  },
+  "projection_rules": {
+    "projection_mode": "thin_catalog_and_materialized_metadata_projection",
+    "source_of_truth": "usecase_local_knowledge_graphs",
+    "central_knowledge_graph_folder_allowed": false,
+    "runtime_reasoning_required": false,
+    "runtime_database_role_allowed": false,
+    "allowed_projection_targets": [
+      "json_contract_evidence",
+      "rdf_or_property_graph_export_later",
+      "shacl_validation_later",
+      "metadata_vector_index_later"
+    ],
+    "blocked_projection_targets": [
+      "sharepoint_file_content_index",
+      "matter_payload_index",
+      "agent_memory_bulk_copy",
+      "runtime_owl_reasoner_on_user_request_path"
+    ]
+  },
+  "sharepoint_projection_mapping": [
+    {
+      "list_or_library": "Akten",
+      "ontology_entities": [
+        "Matter",
+        "BusinessCaseType",
+        "MatterStatus"
+      ],
+      "runtime_role": "metadata_runtime",
+      "graph_access": "read_write_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "type_and_pointer_metadata_only"
+    },
+    {
+      "list_or_library": "Beteiligte",
+      "ontology_entities": [
+        "Participant",
+        "RoleBinding"
+      ],
+      "runtime_role": "metadata_runtime_without_raw_identity_data",
+      "graph_access": "read_write_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "role_template_and_field_mapping_only"
+    },
+    {
+      "list_or_library": "AufgabenFristen",
+      "ontology_entities": [
+        "ProcessStep",
+        "Task",
+        "Deadline",
+        "Gate"
+      ],
+      "runtime_role": "workflow_state_runtime",
+      "graph_access": "read_write_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "task_type_gate_and_status_shape_only"
+    },
+    {
+      "list_or_library": "DokumentRegister",
+      "ontology_entities": [
+        "DocumentPointer",
+        "DocumentType",
+        "DocumentVersion"
+      ],
+      "runtime_role": "document_pointer_runtime",
+      "graph_access": "read_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "document_type_and_pointer_shape_only"
+    },
+    {
+      "list_or_library": "Vertretungsfreigaben",
+      "ontology_entities": [
+        "DeputyGrant",
+        "AccessPurpose",
+        "ValidityWindow"
+      ],
+      "runtime_role": "access_delegation_runtime",
+      "graph_access": "read_write_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "grant_policy_shape_only"
+    },
+    {
+      "list_or_library": "AuditJournalLite",
+      "ontology_entities": [
+        "AuditEvent",
+        "EvidencePointer"
+      ],
+      "runtime_role": "starter_audit_runtime_without_worm_claim",
+      "graph_access": "append_owner_gated",
+      "stores_matter_values": true,
+      "ontology_projection": "audit_event_type_and_evidence_pointer_shape_only"
+    }
+  ],
+  "performance_guardrails": {
+    "all_business_cases_must_be_counted_for_sizing": true,
+    "deep_process_modeling_is_selective": true,
+    "request_path_must_not_depend_on_global_ontology_reasoning": true,
+    "sharepoint_reads_must_be_bounded_by_role_case_purpose_gate": true,
+    "graph_projection_must_be_paged_and_redacted": true,
+    "agent_memory_must_not_hold_bulk_office_content": true,
+    "evidence_must_be_redacted_before_persisting_in_repo": true
+  },
+  "required_validation": {
+    "validator": "scripts/validate_notarial_ontology_storage_contract.py",
+    "cli_smoke": "nac kg ontology-storage-contract --format json",
+    "quality_gate_check": "notarial_ontology_storage_contract"
+  }
+}

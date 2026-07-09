@@ -121,6 +121,13 @@ machen die Abnahmeharness agentisch lesbar.
   `matter-access-decision-replay` synthetische SharePoint-Listensnapshots für
   Zugriffentscheidungen lokal nach, ohne Dateiinhalt, Secrets,
   Graph-Requests oder Mandats-Rohdaten.
+- [workflows/contracts/notarial-ontology-sizing-storage.contract.json](notarial-ontology-sizing-storage.contract.json):
+  Vertrag für Ontologie-Sizing und Storage-Grenzen aus dem
+  Geschäftsvorfall-Inventar; SharePoint bleibt operative M365-MVP-Datenhaltung,
+  die Ontologie bleibt versionierter Projektionsvertrag über usecase-lokalen
+  KGs, Microsoft Graph REST v1.0 bleibt einzige M365-Datenebene und globale
+  Runtime-Reasoning-, Dokumentvolltext-, Mandatswert- oder zentrale KG-Ablage
+  bleiben blockiert.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

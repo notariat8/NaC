@@ -286,6 +286,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt das dünne Geschäftsvorfall-Inventar für Ontologie-Sizing.",
     )
     kg_business_case_inventory.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_ontology_storage_contract = kg_sub.add_parser(
+        "ontology-storage-contract",
+        help="Prüft den Ontologie-Sizing- und Storage-Vertrag gegen das Geschäftsvorfall-Inventar.",
+    )
+    kg_ontology_storage_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

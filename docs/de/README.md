@@ -151,6 +151,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/omnigraph-ontology-projection.md](architecture/omnigraph-ontology-projection.md):
   Decision-Note zu Omnigraph als späterer optionaler Ontologie-Projektion,
   nicht als MVP-Datenhaltung und nicht als BPMN-Engine.
+- [docs/de/architecture/notarial-ontology-sizing-storage.md](architecture/notarial-ontology-sizing-storage.md):
+  Ontologie-Sizing- und Storage-Grenze aus dem Geschäftsvorfall-Inventar mit
+  SharePoint als operativer MVP-Datenhaltung, Ontologie als versionierter
+  Projektion und Graph REST als einziger M365-Datenebene.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   geschlossene M365-/SharePoint-MVP-Infrastruktur-Baseline über Teams,
   Microsoft-365-Gruppe, SharePoint-Team-Site und Microsoft Graph REST ohne alte

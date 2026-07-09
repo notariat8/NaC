@@ -58,19 +58,21 @@ flowchart TD
 ## Data Sovereignty
 
 Git is the control and template plane for code, IaC, governance, BPMN process
-definitions and synthetic demo data. ATP is the runtime data plane for tenants,
-user bindings, sessions, matter/case metadata, process instances, process
-events and audit metadata.
+definitions and synthetic demo data. The active M365 MVP data store is
+SharePoint team sites, connected through Microsoft Graph REST v1.0 and MCP
+boundaries.
 
-Productive mandate data is not stored in Git. Concrete process instances
-reference approved Git template versions, but run in ATP. ATP is not treated as
-a SQL-only subject-matter model: relational anchors, JSON payloads and graph or
-ontology projections are kept separate. The detailed decisions are documented in
-[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
+Productive mandate data is not stored in Git. The ontology is not a runtime
+store. It is a versioned projection and verification contract over the
+usecase-local knowledge graphs. The active storage decision is documented in
+[notarial-ontology-sizing-storage.md](architecture/notarial-ontology-sizing-storage.md)
 and
-[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md). The
-first runtime storage contract is documented in
-[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md).
+[teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md).
+Earlier ATP decisions under
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md),
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md) and
+[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md)
+remain legacy references, but they are not the active M365 MVP data store.
 
 ## Subject-Matter State Machine
 

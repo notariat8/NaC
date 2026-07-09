@@ -111,6 +111,7 @@ nac git worktree-audit --format json
 nac web
 nac kg status
 nac kg business-case-inventory --format json
+nac kg ontology-storage-contract --format json
 nac kg cost-view immobilienkaufvertrag
 nac kg workflow-contract immobilienkaufvertrag
 nac kg pilot-checklist online-gmbh-gruendung
@@ -167,7 +168,7 @@ nac time-ledger summary
 | Git-Hygiene | `nac git worktree-audit` | Prüft lokale Worktrees, Branches und Cleanup-Kandidaten read-only; Löschaktionen bleiben owner-gated. |
 | Bürooberfläche | `nac operator --open` | Startet die lokale Operator-Webapp mit Vorgängen, Checklisten, BPMN, Editor und Arbeitsplatztests. |
 | Grafische Modellansicht | `nac web` | Startet den lokalen Webserver für BPMN- und KG-Ansichten. |
-| Knowledge Graphs | `nac kg status`, `nac kg business-case-inventory`, `nac kg workflow-contract <slug>` und `nac kg pilot-checklist <slug>` | Zeigt den Stand der usecase-lokalen Wissensgraphen, erzeugt ein dünnes Geschäftsvorfall-Inventar für Ontologie-Sizing ohne zentralen Knowledge Graph, erzeugt mandatsdatenfreie Workflow-Vertragsentwürfe und baut deterministische Pilot-Aufnahmechecklisten aus einem Usecase-KG. |
+| Knowledge Graphs | `nac kg status`, `nac kg business-case-inventory`, `nac kg ontology-storage-contract`, `nac kg workflow-contract <slug>` und `nac kg pilot-checklist <slug>` | Zeigt den Stand der usecase-lokalen Wissensgraphen, erzeugt ein dünnes Geschäftsvorfall-Inventar für Ontologie-Sizing ohne zentralen Knowledge Graph, prüft die Ontologie-/Storage-Grenze gegen SharePoint-MVP- und Graph-REST-Regeln, erzeugt mandatsdatenfreie Workflow-Vertragsentwürfe und baut deterministische Pilot-Aufnahmechecklisten aus einem Usecase-KG. |
 | Legal Graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph model-card-proposal`, `nac legal-graph ai-sbom-delta-proposal`, `nac legal-graph review erbrecht` und `nac legal-graph update-dry-run erbrecht` | Zeigt den mandatsdatenfreien Rechtsgraphen, Primärquellen, Quelleninventar-/Lizenz-/TDM-Gates, Model-Card- und AI-SBOM-Delta-Vorschlag, Reviewpunkte und Update-Patches ohne Auto-Merge. |
 | AI-SBOM | `nac ai-sbom export-mapping` | Zeigt das gewählte CycloneDX-/SPDX-Export-Mapping, ohne Release-Export, externe Toolausführung, Mandatsdaten oder Secrets freizugeben. |
 | GNotKG-Kostenprüfung | `nac kg cost-view <slug>` und `nac gnotkg quote` | Zeigt die mandatsdatenfreie Kosten-Reviewansicht und berechnet lokale technische Kostenentwürfe. |

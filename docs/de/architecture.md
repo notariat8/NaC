@@ -52,20 +52,21 @@ flowchart TD
 ## Datenhoheit
 
 Git ist die Steuerungs- und Template-Ebene für Code, IaC, Governance,
-BPMN-Prozessdefinitionen und synthetische Demo-Daten. ATP ist die
-Laufzeit-Datenebene für Mandanten, Benutzerbindungen, Sessions, Vorgangs- und
-Akten-Metadaten, Prozessinstanzen, Prozessereignisse und Audit-Metadaten.
+BPMN-Prozessdefinitionen und synthetische Demo-Daten. Die aktive
+M365-MVP-Datenhaltung liegt in SharePoint-Team-Sites, angebunden über
+Microsoft Graph REST v1.0 und MCP-Grenzen.
 
-Produktive Mandatsdaten werden nicht in Git gespeichert. Konkrete
-Prozessinstanzen referenzieren freigegebene Git-Template-Versionen, laufen aber
-in ATP. ATP wird dabei nicht als SQL-only-Fachmodell verstanden: relationale
-Anker, JSON-Payloads und Graph-/Ontologie-Projektionen werden getrennt. Die
-Detailentscheidungen stehen in
-[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md)
+Produktive Mandatsdaten werden nicht in Git gespeichert. Die Ontologie ist kein
+Runtime-Store, sondern ein versionierter Projektions- und Prüfvertrag über den
+usecase-lokalen Knowledge Graphs. Die aktive Storage-Entscheidung steht in
+[notarial-ontology-sizing-storage.md](architecture/notarial-ontology-sizing-storage.md)
 und
-[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md). Der
-erste Runtime-Storage-Vertrag steht in
-[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md).
+[teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md).
+Frühere ATP-Entscheidungen unter
+[data-sovereignty-git-vs-atp.md](architecture/data-sovereignty-git-vs-atp.md),
+[atp-graph-runtime-model.md](architecture/atp-graph-runtime-model.md) und
+[atp-runtime-storage-contract.md](architecture/atp-runtime-storage-contract.md)
+bleiben Legacy-Referenzen, sind aber nicht die aktive M365-MVP-Datenhaltung.
 
 ## Fachlicher Zustandsautomat
 

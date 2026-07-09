@@ -20,6 +20,10 @@ from notary_kg.business_case_inventory import (
 )
 from notary_kg.cli import main as kg_main
 from notary_kg.editor import build_editor_view
+from notary_kg.ontology_storage_contract import (
+    build_ontology_storage_contract,
+    validate_ontology_storage_contract,
+)
 from notary_kg.pilot_checklist import build_pilot_intake_checklist
 from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
@@ -133,6 +137,72 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_ontology_storage_contract_bounds_inventory_and_m365_store(self) -> None:
+        payload = build_ontology_storage_contract(REPO_ROOT)
+        validation = validate_ontology_storage_contract(payload)
+        contract = payload["contract"]
+        evaluation = payload["evaluation"]
+
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-sizing-storage/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertTrue(contract["scope"]["offline_contract_only"])
+        self.assertFalse(contract["scope"]["executes_graph_requests_now"])
+        self.assertFalse(contract["scope"]["changes_sharepoint_schema_now"])
+        self.assertFalse(contract["scope"]["creates_central_knowledge_graph_folder"])
+        self.assertTrue(contract["graph"]["rest_only"])
+        self.assertFalse(contract["graph"]["legacy_sharepoint_api_allowed"])
+        self.assertEqual(contract["storage_roles"]["sharepoint"]["role"], "operative_mvp_data_store")
+        self.assertEqual(contract["storage_roles"]["ontology"]["role"], "versioned_repo_catalog_and_projection_contract")
+        self.assertFalse(contract["projection_rules"]["runtime_reasoning_required"])
+        self.assertFalse(contract["projection_rules"]["runtime_database_role_allowed"])
+        self.assertTrue(evaluation["derived_decision"]["sharepoint_remains_mvp_store"])
+        self.assertFalse(evaluation["derived_decision"]["runtime_reasoning_on_request_path_allowed"])
+        self.assertGreaterEqual(
+            evaluation["current_sizing"]["max_supported_business_cases_without_store_migration"],
+            evaluation["current_sizing"]["business_case_count"],
+        )
+
+    def test_cli_ontology_storage_contract_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "ontology-storage-contract"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-sizing-storage/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["inventory_snapshot"]["status"], "PASSED")
+        self.assertEqual(payload["contract"]["graph"]["base_url"], "https://graph.microsoft.com/v1.0")
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_ontology_storage_contract_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "ontology-storage-contract",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-sizing-storage/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_cli_unknown_case_fails(self) -> None:
