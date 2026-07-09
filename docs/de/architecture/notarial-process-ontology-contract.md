@@ -98,3 +98,25 @@ Der Validator
 [scripts/validate_process_ontology_sharepoint_schema_apply_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_plan.py)
 prüft den Plan im strikten Quality Gate als
 `process_ontology_sharepoint_schema_apply_plan`.
+
+## SharePoint-Schema-Apply-Readiness
+
+`nac kg process-ontology-schema-apply-readiness --format json` prüft als
+letzter Offline-Sicherheitscheck vor einem späteren Live-Apply:
+
+- welche Workspaces und Site-IDs aus dem provisionierten M365-State bekannt sind
+- welche Pflichtlisten bereits eine List-ID haben
+- welche optionalen Listen/Bibliotheken und Choice-Spalten erst während eines
+  owner-gated Apply dynamisch aufgelöst werden müssen
+- welche Application Permission (`Sites.Manage.All`) erforderlich ist
+- welche Reihenfolge und Idempotenzprüfung für einen späteren Apply gelten
+
+Der Readiness-Lauf expandiert den Apply-Plan pro Workspace, führt aber weiterhin
+keine Graph-Requests aus und schreibt nichts nach SharePoint. Das Ergebnis ist
+deshalb nicht "Live-Apply darf automatisch laufen", sondern
+`OWNER_GATE_REQUIRED`.
+
+Der Validator
+[scripts/validate_process_ontology_sharepoint_schema_apply_readiness.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_readiness.py)
+prüft diese Grenze im strikten Quality Gate als
+`process_ontology_sharepoint_schema_apply_readiness`.

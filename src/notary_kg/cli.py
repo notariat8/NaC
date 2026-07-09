@@ -21,6 +21,7 @@ from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
 from .process_ontology_contract import build_process_ontology_contract
 from .process_ontology_schema_apply_plan import build_process_ontology_sharepoint_schema_apply_plan
+from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 from .process_ontology_schema_gap import build_process_ontology_sharepoint_schema_gap
 from .workflow_contract import build_workflow_contract_draft
 
@@ -96,6 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "process-ontology-schema-apply-plan",
         help="Build an offline Graph REST apply plan from the process ontology SharePoint schema gaps.",
+    )
+
+    subparsers.add_parser(
+        "process-ontology-schema-apply-readiness",
+        help="Check offline workspace, ID, permission and ordering readiness for a future schema apply.",
     )
 
     subparsers.add_parser(
@@ -218,6 +224,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "process-ontology-schema-apply-plan":
         payload = build_process_ontology_sharepoint_schema_apply_plan(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-schema-apply-readiness":
+        payload = build_process_ontology_sharepoint_schema_apply_readiness(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -455,6 +466,21 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- extend choice steps: {summary['extend_choice_step_count']}")
         print(f"- total steps: {summary['total_step_count']}")
         print(f"- owner gate before apply: {summary['owner_gate_required_before_apply']}")
+        return
+
+    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1":
+        summary = payload["summary"]
+        print("Process ontology SharePoint schema apply readiness")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- workspaces: {summary['workspace_count']}")
+        print(f"- apply-plan steps: {summary['apply_plan_step_count']}")
+        print(f"- workspace apply units: {summary['workspace_apply_unit_count']}")
+        print(f"- known site IDs: {summary['known_site_id_count']}")
+        print(f"- known required list IDs: {summary['known_required_list_id_count']}")
+        print(f"- missing required list IDs: {summary['missing_required_list_id_count']}")
+        print(f"- dynamic ID resolutions: {summary['dynamic_resource_resolution_count']}")
+        print(f"- live apply readiness: {summary['live_apply_readiness']}")
         return
 
     if payload.get("schema_version") == "nac.notarial-deep-process-candidate-routing/v0.1":

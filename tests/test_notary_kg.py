@@ -52,6 +52,10 @@ from notary_kg.process_ontology_schema_apply_plan import (
     build_process_ontology_sharepoint_schema_apply_plan,
     validate_process_ontology_sharepoint_schema_apply_plan,
 )
+from notary_kg.process_ontology_schema_apply_readiness import (
+    build_process_ontology_sharepoint_schema_apply_readiness,
+    validate_process_ontology_sharepoint_schema_apply_readiness,
+)
 from notary_kg.process_ontology_schema_gap import (
     build_process_ontology_sharepoint_schema_gap,
     validate_process_ontology_sharepoint_schema_gap,
@@ -423,6 +427,68 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_readiness_expands_plan_per_workspace(self) -> None:
+        payload = build_process_ontology_sharepoint_schema_apply_readiness(REPO_ROOT)
+        validation = validate_process_ontology_sharepoint_schema_apply_readiness(payload)
+
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["workspace_count"], 2)
+        self.assertEqual(payload["summary"]["apply_plan_step_count"], 34)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        self.assertEqual(payload["summary"]["known_site_id_count"], 2)
+        self.assertEqual(payload["summary"]["missing_required_list_id_count"], 0)
+        self.assertEqual(payload["summary"]["dynamic_resource_resolution_count"], 12)
+        self.assertEqual(payload["summary"]["live_apply_readiness"], "OWNER_GATE_REQUIRED")
+        self.assertEqual(payload["permission_readiness"]["required_application_permission"], "Sites.Manage.All")
+        self.assertTrue(payload["permission_readiness"]["permission_present_in_provisioned_state"])
+        self.assertFalse(payload["permission_readiness"]["delegated_user_context_allowed_for_live_apply"])
+        self.assertFalse(payload["apply_boundary"]["executes_graph_requests"])
+        self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
+        self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_live_apply"])
+
+    def test_cli_process_ontology_schema_apply_readiness_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(
+                ["--repo-root", str(REPO_ROOT), "--format", "json", "process-ontology-schema-apply-readiness"]
+            )
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_process_ontology_schema_apply_readiness_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "process-ontology-schema-apply-readiness",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:

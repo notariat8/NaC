@@ -306,6 +306,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt einen Offline-Graph-REST-Apply-Plan aus den Prozess-/Ontologie-SharePoint-Schema-Gaps.",
     )
     kg_process_ontology_schema_apply_plan.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_process_ontology_schema_apply_readiness = kg_sub.add_parser(
+        "process-ontology-schema-apply-readiness",
+        help="Prüft offline Workspace-, ID-, Rechte- und Reihenfolge-Readiness vor einem späteren Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_readiness.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
