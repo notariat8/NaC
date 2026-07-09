@@ -77,3 +77,24 @@ Der Validator
 [scripts/validate_process_ontology_sharepoint_schema_gap.py](../../../scripts/validate_process_ontology_sharepoint_schema_gap.py)
 prüft diese Gap-Liste im strikten Quality Gate als
 `process_ontology_sharepoint_schema_gap`.
+
+## SharePoint-Schema-Apply-Plan
+
+`nac kg process-ontology-schema-apply-plan --format json` leitet aus dem
+Schema-Gap-Review eine konkrete, aber weiterhin rein lokale Graph-REST-
+Schrittfolge ab. Der Plan enthält je Gap genau einen Schritt:
+
+- optionale Listen-/Bibliotheksanlage über `POST /sites/{site-id}/lists`
+- fehlende Spalten über `POST /sites/{site-id}/lists/{list-id}/columns`
+- Choice-Erweiterungen über
+  `PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}`
+
+Der Apply-Plan enthält nur Request-Templates, Idempotenzprüfungen,
+Preconditions und erwartete Erfolgsstatus. Er führt keine Graph-Requests aus,
+schreibt nichts nach SharePoint und ändert kein Schema. Ein späterer Live-Apply
+bleibt owner-gated und darf nur über Microsoft Graph REST erfolgen.
+
+Der Validator
+[scripts/validate_process_ontology_sharepoint_schema_apply_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_plan.py)
+prüft den Plan im strikten Quality Gate als
+`process_ontology_sharepoint_schema_apply_plan`.

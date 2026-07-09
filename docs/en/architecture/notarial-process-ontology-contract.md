@@ -75,3 +75,24 @@ The validator
 [scripts/validate_process_ontology_sharepoint_schema_gap.py](../../../scripts/validate_process_ontology_sharepoint_schema_gap.py)
 checks this gap list in the strict quality gate as
 `process_ontology_sharepoint_schema_gap`.
+
+## SharePoint Schema Apply Plan
+
+`nac kg process-ontology-schema-apply-plan --format json` derives a concrete,
+but still fully local, Graph REST step sequence from the schema gap review. The
+plan contains exactly one step per gap:
+
+- optional list/library creation through `POST /sites/{site-id}/lists`
+- missing columns through `POST /sites/{site-id}/lists/{list-id}/columns`
+- choice extensions through
+  `PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}`
+
+The apply plan only contains request templates, idempotency checks,
+preconditions and expected success statuses. It executes no Graph requests,
+writes nothing to SharePoint and changes no schema. A later live apply remains
+owner-gated and may only use Microsoft Graph REST.
+
+The validator
+[scripts/validate_process_ontology_sharepoint_schema_apply_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_plan.py)
+checks this plan in the strict quality gate as
+`process_ontology_sharepoint_schema_apply_plan`.

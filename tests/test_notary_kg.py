@@ -48,6 +48,10 @@ from notary_kg.process_ontology_contract import (
     build_process_ontology_contract,
     validate_process_ontology_contract,
 )
+from notary_kg.process_ontology_schema_apply_plan import (
+    build_process_ontology_sharepoint_schema_apply_plan,
+    validate_process_ontology_sharepoint_schema_apply_plan,
+)
 from notary_kg.process_ontology_schema_gap import (
     build_process_ontology_sharepoint_schema_gap,
     validate_process_ontology_sharepoint_schema_gap,
@@ -353,6 +357,72 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_plan_builds_graph_rest_steps_from_gaps(self) -> None:
+        payload = build_process_ontology_sharepoint_schema_apply_plan(REPO_ROOT)
+        validation = validate_process_ontology_sharepoint_schema_apply_plan(payload)
+        operations = {step["operation"] for step in payload["steps"]}
+        endpoints = payload["apply_boundary"]["future_apply_endpoint_families"]
+
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["source_total_gap_count"], 34)
+        self.assertEqual(payload["summary"]["total_step_count"], 34)
+        self.assertEqual(payload["summary"]["create_column_step_count"], 28)
+        self.assertEqual(payload["summary"]["extend_choice_step_count"], 4)
+        self.assertEqual(payload["summary"]["create_list_step_count"], 1)
+        self.assertEqual(payload["summary"]["create_document_library_step_count"], 1)
+        self.assertIn("create_list", operations)
+        self.assertIn("create_document_library", operations)
+        self.assertIn("create_column", operations)
+        self.assertIn("extend_choice_column", operations)
+        self.assertIn("POST /sites/{site-id}/lists", endpoints)
+        self.assertIn("POST /sites/{site-id}/lists/{list-id}/columns", endpoints)
+        self.assertIn("PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}", endpoints)
+        self.assertFalse(payload["apply_boundary"]["executes_graph_requests"])
+        self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
+        self.assertFalse(payload["apply_boundary"]["changes_sharepoint_schema"])
+        self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
+
+    def test_cli_process_ontology_schema_apply_plan_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "process-ontology-schema-apply-plan"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["total_step_count"], 34)
+        for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_process_ontology_schema_apply_plan_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "process-ontology-schema-apply-plan",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:
