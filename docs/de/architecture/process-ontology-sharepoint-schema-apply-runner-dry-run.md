@@ -26,6 +26,14 @@ Das Artefakt enthält die 68 Dry-Run-Schritte als redigierten Index. Site-IDs
 werden auf `{site-id}` zurückgeführt, Request-Header werden nicht gespeichert
 und geplante Mutationsbodies werden nur als Body-Shape-Key-Liste ausgegeben.
 
+`nac kg process-ontology-schema-apply-artifact-index --format json` schreibt
+einen zweiten, ebenfalls redigierten Index über vorhandene Dry-Run-Artefakte.
+Der Index ist metadata-only: Er enthält Pfade, Schema-/Statuswerte,
+Schrittzahlen, Redaktionsflags und die Markierung
+`required_for_live_apply_readiness`, aber keine Requestdetails. Wenn im
+Standardordner noch kein Dry-Run-Artefakt liegt, erzeugt der Befehl dieses
+Standardartefakt offline nach.
+
 ## Grenzen
 
 Der Dry-Run ist offline-only:
@@ -42,6 +50,8 @@ Live-Apply bleibt ein separater Owner-Gate.
 
 Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
-und
+,
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py)
 prüfen diese Grenze im strikten Quality Gate.

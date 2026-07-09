@@ -16,9 +16,13 @@ from .process_ontology_schema_apply_readiness import (
 
 SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1"
 ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
+ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_runner_dry_run"
 DEFAULT_DRY_RUN_ARTIFACT_JSON = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json")
 DEFAULT_DRY_RUN_ARTIFACT_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md")
+DEFAULT_APPLY_ARTIFACT_INDEX_ROOT = Path("out/notary-kg")
+DEFAULT_APPLY_ARTIFACT_INDEX_JSON = Path("out/notary-kg/process-ontology-schema-apply-artifact-index.redacted.json")
+DEFAULT_APPLY_ARTIFACT_INDEX_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-artifact-index.redacted.md")
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +33,12 @@ class ProcessOntologySchemaApplyRunnerDryRunValidation:
 
 @dataclass(frozen=True, slots=True)
 class ProcessOntologySchemaApplyRunnerDryRunArtifactValidation:
+    status: str
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessOntologySchemaApplyArtifactIndexValidation:
     status: str
     errors: tuple[str, ...]
 
@@ -136,6 +146,118 @@ def write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     markdown_path.write_text(_artifact_markdown(payload), encoding="utf-8")
+    return payload
+
+
+def build_process_ontology_sharepoint_schema_apply_artifact_index(
+    repo_root: Path,
+    artifact_root: Path | None = None,
+    query: str | None = None,
+    *,
+    ensure_default_artifact: bool = True,
+) -> dict[str, Any]:
+    root = _resolve_output_path(repo_root, artifact_root or DEFAULT_APPLY_ARTIFACT_INDEX_ROOT)
+    default_artifact_path = _resolve_output_path(repo_root, DEFAULT_DRY_RUN_ARTIFACT_JSON)
+    generated_default_artifact = False
+    if ensure_default_artifact and root == default_artifact_path.parent and not default_artifact_path.exists():
+        write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(repo_root)
+        generated_default_artifact = True
+
+    artifact_rows = [
+        row
+        for artifact_path in sorted(root.rglob("process-ontology-schema-apply-runner-dry-run*.redacted.json"))
+        if artifact_path.name != DEFAULT_APPLY_ARTIFACT_INDEX_JSON.name
+        for row in [_artifact_index_row(repo_root, artifact_path)]
+        if _artifact_index_row_matches(row, query)
+    ]
+    payload = {
+        "schema_version": ARTIFACT_INDEX_SCHEMA_VERSION,
+        "contract_id": f"{CONTRACT_ID}.artifact_index",
+        "status": "PASSED" if artifact_rows else "BLOCKED",
+        "mode": "redacted_offline_artifact_index",
+        "source": {
+            "artifact_schema": ARTIFACT_SCHEMA_VERSION,
+            "artifact_root": _relative_path(repo_root, root),
+            "query": query or "",
+            "generated_default_artifact": generated_default_artifact,
+        },
+        "summary": {
+            "artifact_count": len(artifact_rows),
+            "passed_artifact_count": sum(1 for row in artifact_rows if row["status"] == "PASSED"),
+            "blocked_artifact_count": sum(1 for row in artifact_rows if row["status"] != "PASSED"),
+            "required_for_live_apply_readiness_count": sum(
+                1 for row in artifact_rows if row["required_for_live_apply_readiness"] is True
+            ),
+            "total_dry_run_step_count": sum(int(row["dry_run_step_count"]) for row in artifact_rows),
+            "executes_graph_requests": False,
+            "writes_sharepoint": False,
+            "changes_sharepoint_schema": False,
+        },
+        "artifacts": artifact_rows,
+        "redaction": {
+            "redacted": True,
+            "contains_site_ids": False,
+            "contains_tokens_or_secrets": False,
+            "contains_request_headers": False,
+            "contains_raw_graph_response": False,
+            "contains_matter_values": False,
+        },
+        "guardrails": {
+            "offline_only": True,
+            "redacted_artifact_index": True,
+            "executes_graph_requests": False,
+            "writes_sharepoint": False,
+            "changes_sharepoint_schema": False,
+            "stores_tokens_or_secrets": False,
+            "stores_matter_instance_values": False,
+            "stores_document_full_text": False,
+            "legacy_sharepoint_api_allowed": False,
+            "graph_sdk_allowed": False,
+        },
+        "next_batch": {
+            "recommended_slice": "process_ontology_sharepoint_schema_apply_live_readiness_gate",
+            "owner_gate_required_now": False,
+            "owner_gate_required_before": [
+                "graph_live_write",
+                "sharepoint_schema_apply",
+                "runner_live_execution",
+            ],
+        },
+        "errors": [],
+    }
+    validation = validate_process_ontology_sharepoint_schema_apply_artifact_index(payload)
+    if validation.errors:
+        payload["status"] = "FAILED"
+        payload["errors"] = list(validation.errors)
+    return payload
+
+
+def write_process_ontology_sharepoint_schema_apply_artifact_index(
+    repo_root: Path,
+    artifact_root: Path | None = None,
+    json_output: Path | None = None,
+    markdown_output: Path | None = None,
+    query: str | None = None,
+    *,
+    ensure_default_artifact: bool = True,
+) -> dict[str, Any]:
+    payload = build_process_ontology_sharepoint_schema_apply_artifact_index(
+        repo_root,
+        artifact_root,
+        query,
+        ensure_default_artifact=ensure_default_artifact,
+    )
+    json_path = _resolve_output_path(repo_root, json_output or DEFAULT_APPLY_ARTIFACT_INDEX_JSON)
+    markdown_path = _resolve_output_path(repo_root, markdown_output or DEFAULT_APPLY_ARTIFACT_INDEX_MARKDOWN)
+    payload["artifact_paths"] = {
+        "json": _relative_path(repo_root, json_path),
+        "markdown": _relative_path(repo_root, markdown_path),
+    }
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    markdown_path.write_text(_artifact_index_markdown(payload), encoding="utf-8")
     return payload
 
 
@@ -306,6 +428,78 @@ def validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
             errors.append(f"guardrail must be false: {key}")
 
     return ProcessOntologySchemaApplyRunnerDryRunArtifactValidation(
+        status="PASSED" if not errors else "FAILED",
+        errors=tuple(errors),
+    )
+
+
+def validate_process_ontology_sharepoint_schema_apply_artifact_index(
+    payload: dict[str, Any],
+) -> ProcessOntologySchemaApplyArtifactIndexValidation:
+    errors: list[str] = []
+    if payload.get("schema_version") != ARTIFACT_INDEX_SCHEMA_VERSION:
+        errors.append("unexpected artifact index schema_version")
+    if payload.get("contract_id") != f"{CONTRACT_ID}.artifact_index":
+        errors.append("unexpected artifact index contract_id")
+    if payload.get("mode") != "redacted_offline_artifact_index":
+        errors.append("artifact index must remain redacted_offline_artifact_index")
+
+    summary = payload.get("summary", {})
+    artifacts = payload.get("artifacts", [])
+    if summary.get("artifact_count") != len(artifacts):
+        errors.append("artifact_count must match artifacts")
+    if payload.get("status") == "PASSED" and not artifacts:
+        errors.append("passed artifact index must contain at least one artifact")
+    for key in ("executes_graph_requests", "writes_sharepoint", "changes_sharepoint_schema"):
+        if summary.get(key) is not False:
+            errors.append(f"summary must keep {key} false")
+
+    for artifact in artifacts:
+        artifact_id = artifact.get("id", "<unknown>")
+        if artifact.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
+            errors.append(f"{artifact_id}: unexpected artifact schema")
+        if artifact.get("redacted") is not True:
+            errors.append(f"{artifact_id}: artifact must be redacted")
+        if artifact.get("contains_request_headers") is not False:
+            errors.append(f"{artifact_id}: artifact index must reject request headers")
+        if artifact.get("contains_tokens_or_secrets") is not False:
+            errors.append(f"{artifact_id}: artifact index must reject tokens or secrets")
+        if artifact.get("required_for_live_apply_readiness") is not True:
+            errors.append(f"{artifact_id}: artifact must be live-apply readiness evidence")
+        if int(artifact.get("dry_run_step_count", 0)) != 68:
+            errors.append(f"{artifact_id}: artifact must cover 68 dry-run steps")
+
+    redaction = payload.get("redaction", {})
+    for key in (
+        "redacted",
+        "contains_site_ids",
+        "contains_tokens_or_secrets",
+        "contains_request_headers",
+        "contains_raw_graph_response",
+        "contains_matter_values",
+    ):
+        expected = True if key == "redacted" else False
+        if redaction.get(key) is not expected:
+            errors.append(f"redaction flag mismatch: {key}")
+
+    guardrails = payload.get("guardrails", {})
+    for key in ("offline_only", "redacted_artifact_index"):
+        if guardrails.get(key) is not True:
+            errors.append(f"guardrail must be true: {key}")
+    for key in (
+        "executes_graph_requests",
+        "writes_sharepoint",
+        "changes_sharepoint_schema",
+        "stores_tokens_or_secrets",
+        "stores_matter_instance_values",
+        "stores_document_full_text",
+        "legacy_sharepoint_api_allowed",
+        "graph_sdk_allowed",
+    ):
+        if guardrails.get(key) is not False:
+            errors.append(f"guardrail must be false: {key}")
+
+    return ProcessOntologySchemaApplyArtifactIndexValidation(
         status="PASSED" if not errors else "FAILED",
         errors=tuple(errors),
     )
@@ -536,3 +730,115 @@ def _artifact_markdown(payload: dict[str, Any]) -> str:
 
 def _resolve_output_path(repo_root: Path, path: Path) -> Path:
     return path if path.is_absolute() else repo_root / path
+
+
+def _artifact_index_row(repo_root: Path, artifact_path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "id": artifact_path.stem,
+            "path": _relative_path(repo_root, artifact_path),
+            "markdown_path": "",
+            "schema_version": "",
+            "status": "FAILED",
+            "validation_status": "FAILED",
+            "validation_errors": [str(exc)],
+            "dry_run_step_count": 0,
+            "workspace_count": 0,
+            "future_mutation_request_count": 0,
+            "required_for_live_apply_readiness": False,
+            "redacted": False,
+            "contains_request_headers": True,
+            "contains_tokens_or_secrets": True,
+        }
+
+    validation = validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(payload)
+    summary = payload.get("summary", {})
+    redaction = payload.get("redaction", {})
+    attachments = payload.get("evidence_attachments", [])
+    markdown_path = _first_attachment_path(attachments, "text/markdown")
+    return {
+        "id": artifact_path.stem,
+        "path": _relative_path(repo_root, artifact_path),
+        "markdown_path": markdown_path,
+        "schema_version": payload.get("schema_version", ""),
+        "status": payload.get("status", "UNKNOWN"),
+        "validation_status": validation.status,
+        "validation_errors": list(validation.errors),
+        "dry_run_step_count": int(summary.get("dry_run_step_count", 0)),
+        "workspace_count": int(summary.get("workspace_count", 0)),
+        "future_mutation_request_count": int(summary.get("future_mutation_request_count", 0)),
+        "owner_gate_required_before_live_apply": bool(summary.get("owner_gate_required_before_live_apply", False)),
+        "required_for_live_apply_readiness": any(
+            attachment.get("required_for_live_apply_readiness") is True for attachment in attachments
+        ),
+        "redacted": redaction.get("redacted") is True,
+        "contains_request_headers": redaction.get("contains_request_headers") is not False,
+        "contains_tokens_or_secrets": redaction.get("contains_tokens_or_secrets") is not False,
+    }
+
+
+def _artifact_index_row_matches(row: dict[str, Any], query: str | None) -> bool:
+    if not query:
+        return True
+    needle = query.lower()
+    haystack = " ".join(
+        str(row.get(key, ""))
+        for key in (
+            "id",
+            "path",
+            "markdown_path",
+            "schema_version",
+            "status",
+            "validation_status",
+        )
+    ).lower()
+    return needle in haystack
+
+
+def _first_attachment_path(attachments: list[dict[str, Any]], media_type: str) -> str:
+    for attachment in attachments:
+        if attachment.get("media_type") == media_type:
+            return str(attachment.get("path", ""))
+    return ""
+
+
+def _artifact_index_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# Process Ontology SharePoint Schema Apply Artifact Index",
+        "",
+        f"- Status: `{payload['status']}`",
+        f"- Schema: `{payload['schema_version']}`",
+        f"- Artifact root: `{payload['source']['artifact_root']}`",
+        f"- Query: `{payload['source']['query']}`",
+        f"- Artifacts: `{payload['summary']['artifact_count']}`",
+        f"- Required for live apply readiness: `{payload['summary']['required_for_live_apply_readiness_count']}`",
+        f"- Executes Graph requests: `{payload['summary']['executes_graph_requests']}`",
+        f"- Writes SharePoint: `{payload['summary']['writes_sharepoint']}`",
+        "",
+        "## Artifacts",
+        "",
+    ]
+    if payload["artifacts"]:
+        lines.append("| Artifact | Status | Steps | JSON | Markdown |")
+        lines.append("| --- | --- | ---: | --- | --- |")
+        for artifact in payload["artifacts"]:
+            lines.append(
+                "| "
+                f"`{artifact['id']}` | "
+                f"`{artifact['status']}` | "
+                f"`{artifact['dry_run_step_count']}` | "
+                f"`{artifact['path']}` | "
+                f"`{artifact['markdown_path']}` |"
+            )
+    else:
+        lines.append("No matching redacted dry-run artifacts found.")
+    lines.extend(["", "## Guardrails", ""])
+    for key, value in payload["guardrails"].items():
+        lines.append(f"- `{key}`: `{value}`")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _relative_path(repo_root: Path, path: Path) -> str:
+    return str(path.relative_to(repo_root) if path.is_relative_to(repo_root) else path)

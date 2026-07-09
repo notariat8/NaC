@@ -66,8 +66,10 @@ from notary_kg.process_ontology_schema_apply_readiness import (
 )
 from notary_kg.process_ontology_schema_apply_runner_dry_run import (
     build_process_ontology_sharepoint_schema_apply_runner_dry_run,
+    validate_process_ontology_sharepoint_schema_apply_artifact_index,
     validate_process_ontology_sharepoint_schema_apply_runner_dry_run,
     validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
+    write_process_ontology_sharepoint_schema_apply_artifact_index,
     write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
 )
 from notary_kg.process_ontology_schema_gap import (
@@ -774,6 +776,129 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
         )
         self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_artifact_index_lists_redacted_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            index_json = temp_root / "process-ontology-schema-apply-artifact-index.redacted.json"
+            index_md = temp_root / "process-ontology-schema-apply-artifact-index.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            payload = write_process_ontology_sharepoint_schema_apply_artifact_index(
+                REPO_ROOT,
+                artifact_root,
+                index_json,
+                index_md,
+                ensure_default_artifact=False,
+            )
+            validation = validate_process_ontology_sharepoint_schema_apply_artifact_index(payload)
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+            json_exists = index_json.is_file()
+            markdown_exists = index_md.is_file()
+
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["artifact_count"], 1)
+        self.assertEqual(payload["summary"]["total_dry_run_step_count"], 68)
+        self.assertEqual(payload["artifacts"][0]["dry_run_step_count"], 68)
+        self.assertTrue(payload["artifacts"][0]["required_for_live_apply_readiness"])
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertNotIn("funktion8.sharepoint.com", serialized)
+        self.assertNotIn('"headers"', serialized)
+
+    def test_cli_process_ontology_schema_apply_artifact_index_writes_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            index_json = temp_root / "process-ontology-schema-apply-artifact-index.redacted.json"
+            index_md = temp_root / "process-ontology-schema-apply-artifact-index.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = kg_main(
+                    [
+                        "--repo-root",
+                        str(REPO_ROOT),
+                        "--format",
+                        "json",
+                        "process-ontology-schema-apply-artifact-index",
+                        "--artifact-root",
+                        str(artifact_root),
+                        "--output",
+                        str(index_json),
+                        "--markdown-output",
+                        str(index_md),
+                        "--no-ensure-default-artifact",
+                    ]
+                )
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["artifact_count"], 1)
+
+    def test_nac_cli_process_ontology_schema_apply_artifact_index_accepts_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            index_json = temp_root / "process-ontology-schema-apply-artifact-index.redacted.json"
+            index_md = temp_root / "process-ontology-schema-apply-artifact-index.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            parser = nac_cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "kg",
+                    "process-ontology-schema-apply-artifact-index",
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--output",
+                    str(index_json),
+                    "--markdown-output",
+                    str(index_md),
+                    "--no-ensure-default-artifact",
+                    "--format",
+                    "json",
+                ]
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = args.func(args)
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["artifact_count"], 1)
 
     def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:
         payload = build_deep_process_candidate_routing(REPO_ROOT)

@@ -141,7 +141,7 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md)
   defines the offline dry-run for planned preflight, mutation and readback
   steps before a later SharePoint schema apply including redacted JSON/Markdown
-  evidence.
+  evidence and a metadata-only artifact index.
 - [docs/en/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md)
   defines the offline scale smoke across all business cases, BPMN sources and
   ontology projection budgets so deep modeling does not run into performance

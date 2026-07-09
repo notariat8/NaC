@@ -27,6 +27,13 @@ The artifact includes all 68 dry-run steps as a redacted index. Site IDs are
 collapsed back to `{site-id}`, request headers are not stored, and planned
 mutation bodies are represented only as body-shape key lists.
 
+`nac kg process-ontology-schema-apply-artifact-index --format json` writes a
+second redacted index over existing dry-run artifacts. The index is
+metadata-only: it contains paths, schema/status values, step counts, redaction
+flags and the `required_for_live_apply_readiness` marker, but no request
+details. If the default folder does not yet contain a dry-run artifact, the
+command creates that default artifact offline first.
+
 ## Boundaries
 
 The dry-run is offline-only:
@@ -43,6 +50,8 @@ separate owner gate.
 
 The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
-and
+,
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py)
 check this boundary in the strict quality gate.

@@ -340,6 +340,21 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
     )
+    kg_process_ontology_schema_apply_artifact_index = kg_sub.add_parser(
+        "process-ontology-schema-apply-artifact-index",
+        help="Schreibt einen redigierten Offline-Index über Schema-Apply-Dry-Run-Artefakte.",
+    )
+    kg_process_ontology_schema_apply_artifact_index.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
+    kg_process_ontology_schema_apply_artifact_index.add_argument("--artifact-root", type=Path, default=None)
+    kg_process_ontology_schema_apply_artifact_index.add_argument("--query", default=None)
+    kg_process_ontology_schema_apply_artifact_index.add_argument("--output", type=Path, default=None)
+    kg_process_ontology_schema_apply_artifact_index.add_argument("--markdown-output", type=Path, default=None)
+    kg_process_ontology_schema_apply_artifact_index.add_argument(
+        "--no-ensure-default-artifact",
+        action="store_true",
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
@@ -1460,10 +1475,16 @@ def command_kg(args: argparse.Namespace) -> int:
     argv = ["--repo-root", str(resolve_repo_root(args.repo_root)), "--format", args.format, args.kg_command]
     if getattr(args, "slug", None):
         argv.append(args.slug)
+    if getattr(args, "artifact_root", None) is not None:
+        argv.extend(["--artifact-root", str(args.artifact_root)])
+    if getattr(args, "query", None) is not None:
+        argv.extend(["--query", str(args.query)])
     if getattr(args, "output", None) is not None:
         argv.extend(["--output", str(args.output)])
     if getattr(args, "markdown_output", None) is not None:
         argv.extend(["--markdown-output", str(args.markdown_output)])
+    if getattr(args, "no_ensure_default_artifact", False):
+        argv.append("--no-ensure-default-artifact")
     return notary_kg_main(argv)
 
 
