@@ -54,3 +54,26 @@ Der Validator
 [scripts/validate_notarial_process_ontology_contract.py](../../../scripts/validate_notarial_process_ontology_contract.py)
 prüft diese Grenzen im strikten Quality Gate als
 `notarial_process_ontology_contract`.
+
+## SharePoint-Schema-Gap-Review
+
+`nac kg process-ontology-schema-gap --format json` vergleicht diesen Vertrag mit
+dem aktuellen SharePoint-MVP-Schema
+[deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json](../../../deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json).
+
+Der Review erzeugt nur Plan-Daten. Er führt keine Graph-Requests aus, schreibt
+nichts nach SharePoint und ändert kein Schema. Der aktuelle erwartete Befund ist:
+
+- alle sechs erforderlichen MVP-Listen sind vorhanden
+- konkrete Prozessinstanz-Feldlücken bleiben offen, z.B.
+  `ProcessInstanceId`, `CurrentPhase`, `BpmnModelRef`,
+  `EvidencePointerId` und `RoleBindingId`
+- `Akten.Vorgangstyp` deckt noch nicht alle Geschäftsvorfälle aus dem Inventar
+  als Choice-Werte ab
+- `Prozessregister` und `BPMN Models` sind optionale spätere Projektionen und
+  fehlen im aktuellen MVP-Schema bewusst noch
+
+Der Validator
+[scripts/validate_process_ontology_sharepoint_schema_gap.py](../../../scripts/validate_process_ontology_sharepoint_schema_gap.py)
+prüft diese Gap-Liste im strikten Quality Gate als
+`process_ontology_sharepoint_schema_gap`.

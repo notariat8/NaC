@@ -296,6 +296,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prüft den Prozess-/Ontologie-Produktmodell-Vertrag gegen Inventar und SharePoint-MVP-Grenze.",
     )
     kg_process_ontology_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_process_ontology_schema_gap = kg_sub.add_parser(
+        "process-ontology-schema-gap",
+        help="Prüft den Prozess-/Ontologie-Vertrag gegen das aktuelle SharePoint-MVP-Listenmodell.",
+    )
+    kg_process_ontology_schema_gap.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",

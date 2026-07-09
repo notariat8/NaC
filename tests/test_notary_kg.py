@@ -48,6 +48,10 @@ from notary_kg.process_ontology_contract import (
     build_process_ontology_contract,
     validate_process_ontology_contract,
 )
+from notary_kg.process_ontology_schema_gap import (
+    build_process_ontology_sharepoint_schema_gap,
+    validate_process_ontology_sharepoint_schema_gap,
+)
 from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
 
@@ -288,6 +292,67 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_gap_surfaces_concrete_sharepoint_gaps(self) -> None:
+        payload = build_process_ontology_sharepoint_schema_gap(REPO_ROOT)
+        validation = validate_process_ontology_sharepoint_schema_gap(payload)
+        field_gap_ids = {gap["id"] for gap in payload["field_gaps"]}
+        optional_gap_ids = {gap["id"] for gap in payload["optional_projection_gaps"]}
+        choice_gap_ids = {gap["id"] for gap in payload["choice_gaps"]}
+
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["missing_required_list_count"], 0)
+        self.assertGreaterEqual(payload["summary"]["business_case_count"], 20)
+        self.assertGreaterEqual(payload["summary"]["field_gap_count"], 10)
+        self.assertGreaterEqual(payload["summary"]["choice_gap_count"], 1)
+        self.assertIn("Akten.ProcessInstanceId.missing", field_gap_ids)
+        self.assertIn("AufgabenFristen.ProcessPhase.missing", field_gap_ids)
+        self.assertIn("optional-list.Prozessregister", optional_gap_ids)
+        self.assertIn("optional-library.BPMN Models", optional_gap_ids)
+        self.assertIn("Akten.Vorgangstyp.choices", choice_gap_ids)
+        self.assertFalse(payload["apply_boundary"]["executes_graph_requests"])
+        self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
+        self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
+
+    def test_cli_process_ontology_schema_gap_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "process-ontology-schema-gap"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_process_ontology_schema_gap_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "process-ontology-schema-gap",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:

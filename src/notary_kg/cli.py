@@ -20,6 +20,7 @@ from .ontology_scale_budget import build_ontology_scale_budget_smoke
 from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
 from .process_ontology_contract import build_process_ontology_contract
+from .process_ontology_schema_gap import build_process_ontology_sharepoint_schema_gap
 from .workflow_contract import build_workflow_contract_draft
 
 
@@ -84,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "process-ontology-contract",
         help="Evaluate the notarial process ontology product-model contract.",
+    )
+
+    subparsers.add_parser(
+        "process-ontology-schema-gap",
+        help="Compare the process ontology contract with the current SharePoint MVP schema.",
     )
 
     subparsers.add_parser(
@@ -196,6 +202,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "process-ontology-contract":
         payload = build_process_ontology_contract(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-schema-gap":
+        payload = build_process_ontology_sharepoint_schema_gap(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -406,6 +417,19 @@ def _print_payload(payload: dict, output_format: str) -> None:
             print("Warnings")
             for warning in evaluation["warnings"]:
                 print(f"- {warning}")
+        return
+
+    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-gap/v0.1":
+        summary = payload["summary"]
+        print("Process ontology to SharePoint schema gap review")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- business cases: {summary['business_case_count']}")
+        print(f"- missing required lists: {summary['missing_required_list_count']}")
+        print(f"- optional projection gaps: {summary['optional_projection_gap_count']}")
+        print(f"- field gaps: {summary['field_gap_count']}")
+        print(f"- choice gaps: {summary['choice_gap_count']}")
+        print(f"- total gaps: {summary['total_gap_count']}")
         return
 
     if payload.get("schema_version") == "nac.notarial-deep-process-candidate-routing/v0.1":
