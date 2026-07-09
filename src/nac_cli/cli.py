@@ -328,6 +328,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prüft First-Wave-Outlines auf SharePoint-, BPMN- und Ontologie-Projektionslücken.",
     )
     kg_first_wave_gap_review.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_first_wave_process_deep_model = kg_sub.add_parser(
+        "first-wave-process-deep-model",
+        help="Erzeugt den Offline-Deep-Process-Model-Vertrag für First-Wave-Fälle.",
+    )
+    kg_first_wave_process_deep_model.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_first_wave_gap_review_artifact = kg_sub.add_parser(
         "first-wave-gap-review-artifact",
         help="Schreibt einen redigierten First-Wave-Gap-Review-Nachweis als Offline-Artefakt.",

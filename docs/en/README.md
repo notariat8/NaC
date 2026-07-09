@@ -150,6 +150,10 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/first-wave-bpmn-outline-gap-review.md](architecture/first-wave-bpmn-outline-gap-review.md)
   defines the offline gap review for first-wave outlines against SharePoint
   field gaps, BPMN gaps and ontology projection patch plans without live apply.
+- [docs/en/architecture/first-wave-process-deep-model.md](architecture/first-wave-process-deep-model.md)
+  defines the mandate-data-free deep process model contract for the four
+  first-wave cases with phases, roles, BPMN bindings, evidence and SharePoint
+  projections.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.

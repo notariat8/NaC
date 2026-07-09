@@ -35,6 +35,10 @@ from notary_kg.first_wave_outline import (
     build_first_wave_bpmn_outline,
     validate_first_wave_bpmn_outline,
 )
+from notary_kg.first_wave_process_deep_model import (
+    build_first_wave_process_deep_model,
+    validate_first_wave_process_deep_model,
+)
 from notary_kg.ontology_scale_budget import (
     build_ontology_scale_budget_smoke,
     validate_ontology_scale_budget_smoke,
@@ -769,6 +773,69 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review-artifact/v0.1")
         self.assertEqual(payload["status"], "PASSED")
         self.assertTrue(payload["artifact_paths"]["json"].endswith(".redacted.json"))
+
+    def test_first_wave_process_deep_model_binds_phases_roles_and_projections(self) -> None:
+        payload = build_first_wave_process_deep_model(REPO_ROOT)
+        validation = validate_first_wave_process_deep_model(payload)
+        case_models = {item["slug"]: item for item in payload["case_models"]}
+
+        self.assertEqual(payload["schema_version"], "nac.first-wave-process-deep-model/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(len(case_models), 4)
+        self.assertEqual(payload["summary"]["phase_template_count"], 32)
+        self.assertGreaterEqual(payload["summary"]["bpmn_flow_node_binding_count"], 40)
+        self.assertGreaterEqual(payload["summary"]["sharepoint_projection_count"], 20)
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertFalse(payload["guardrails"]["mutates_bpmn_sources"])
+        self.assertTrue(payload["guardrails"]["bpmn_remains_process_model_not_runtime_engine"])
+        for case_model in case_models.values():
+            self.assertEqual(len(case_model["phase_plan"]), 8)
+            self.assertEqual(len(case_model["role_binding_plan"]), 7)
+            self.assertFalse(case_model["bpmn_binding_plan"]["is_executable"])
+            self.assertFalse(case_model["kg_binding_plan"]["stores_matter_values"])
+            self.assertFalse(case_model["sharepoint_projection_plan"]["writes_sharepoint"])
+            self.assertTrue(case_model["gap_closure_plan"]["owner_gate_required_before_apply"])
+
+    def test_cli_first_wave_process_deep_model_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "first-wave-process-deep-model"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-process-deep-model/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["first_wave_count"], 4)
+        for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_first_wave_process_deep_model_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "first-wave-process-deep-model",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-process-deep-model/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
 
     def test_ontology_scale_budget_covers_full_inventory(self) -> None:
         payload = build_ontology_scale_budget_smoke(REPO_ROOT)

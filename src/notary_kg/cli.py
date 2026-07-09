@@ -16,6 +16,7 @@ from .first_wave_gap_review import (
     write_first_wave_bpmn_outline_gap_review_artifact,
 )
 from .first_wave_outline import build_first_wave_bpmn_outline
+from .first_wave_process_deep_model import build_first_wave_process_deep_model
 from .ontology_scale_budget import build_ontology_scale_budget_smoke
 from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
@@ -117,6 +118,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "first-wave-gap-review",
         help="Review first-wave BPMN outlines for SharePoint, BPMN and ontology projection gaps.",
+    )
+
+    subparsers.add_parser(
+        "first-wave-process-deep-model",
+        help="Build the offline deep process model contract for first-wave notarial cases.",
     )
 
     first_wave_gap_review_artifact = subparsers.add_parser(
@@ -244,6 +250,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "first-wave-gap-review":
         payload = build_first_wave_bpmn_outline_gap_review(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "first-wave-process-deep-model":
+        payload = build_first_wave_process_deep_model(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -516,6 +527,28 @@ def _print_payload(payload: dict, output_format: str) -> None:
                 f"- {outline['slug']}: "
                 f"{outline['bpmn_outline']['flow_node_count']} BPMN nodes, "
                 f"{outline['kg_outline']['required_information_nodes']} KG info nodes"
+            )
+        return
+
+    if payload.get("schema_version") == "nac.first-wave-process-deep-model/v0.1":
+        summary = payload["summary"]
+        print("First-wave process deep model contract")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- first-wave cases: {summary['first_wave_count']}")
+        print(f"- phase templates: {summary['phase_template_count']}")
+        print(f"- BPMN flow-node bindings: {summary['bpmn_flow_node_binding_count']}")
+        print(f"- required-information bindings: {summary['required_information_binding_count']}")
+        print(f"- evidence bindings: {summary['evidence_binding_count']}")
+        print(f"- open gaps carried forward: {summary['open_gap_count']}")
+        print("")
+        print("Case models")
+        for case_model in payload["case_models"]:
+            print(
+                f"- {case_model['slug']}: "
+                f"{len(case_model['phase_plan'])} phases, "
+                f"{case_model['bpmn_binding_plan']['flow_node_count']} BPMN nodes, "
+                f"{case_model['kg_binding_plan']['required_information_count']} KG info nodes"
             )
         return
 

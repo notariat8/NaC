@@ -170,6 +170,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/first-wave-bpmn-outline-gap-review.md](architecture/first-wave-bpmn-outline-gap-review.md):
   Offline-Gap-Review für First-Wave-Outlines gegen SharePoint-Feldlücken,
   BPMN-Gaps und Ontologie-Projektionspatch-Pläne ohne Live-Apply.
+- [docs/de/architecture/first-wave-process-deep-model.md](architecture/first-wave-process-deep-model.md):
+  Mandatsdatenfreier Deep-Process-Model-Vertrag für die vier
+  First-Wave-Fälle mit Phasen, Rollen, BPMN-Bindings, Evidence und
+  SharePoint-Projektionen.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   geschlossene M365-/SharePoint-MVP-Infrastruktur-Baseline über Teams,
   Microsoft-365-Gruppe, SharePoint-Team-Site und Microsoft Graph REST ohne alte
