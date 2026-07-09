@@ -301,6 +301,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt Offline-BPMN-/Ontologie-Outline-Pläne für First-Wave-Fälle.",
     )
     kg_first_wave_outline.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_first_wave_gap_review = kg_sub.add_parser(
+        "first-wave-gap-review",
+        help="Prüft First-Wave-Outlines auf SharePoint-, BPMN- und Ontologie-Projektionslücken.",
+    )
+    kg_first_wave_gap_review.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_ontology_scale_budget = kg_sub.add_parser(
         "ontology-scale-budget",
         help="Prüft Offline-Sizing-Budgets für Ontologie-Projektionen über alle Geschäftsvorfälle.",

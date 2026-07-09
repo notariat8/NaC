@@ -10,6 +10,7 @@ from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
+from .first_wave_gap_review import build_first_wave_bpmn_outline_gap_review
 from .first_wave_outline import build_first_wave_bpmn_outline
 from .ontology_scale_budget import build_ontology_scale_budget_smoke
 from .ontology_storage_contract import build_ontology_storage_contract
@@ -83,6 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "first-wave-bpmn-outline",
         help="Build offline BPMN/ontology outline plans for first-wave deep-process cases.",
+    )
+
+    subparsers.add_parser(
+        "first-wave-gap-review",
+        help="Review first-wave BPMN outlines for SharePoint, BPMN and ontology projection gaps.",
     )
 
     subparsers.add_parser(
@@ -168,6 +174,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "first-wave-bpmn-outline":
         payload = build_first_wave_bpmn_outline(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "first-wave-gap-review":
+        payload = build_first_wave_bpmn_outline_gap_review(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -371,6 +382,26 @@ def _print_payload(payload: dict, output_format: str) -> None:
                 f"- {outline['slug']}: "
                 f"{outline['bpmn_outline']['flow_node_count']} BPMN nodes, "
                 f"{outline['kg_outline']['required_information_nodes']} KG info nodes"
+            )
+        return
+
+    if payload.get("schema_version") == "nac.first-wave-bpmn-outline-gap-review/v0.1":
+        summary = payload["summary"]
+        print("First-wave BPMN outline gap review")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- first-wave cases: {summary['first_wave_count']}")
+        print(f"- SharePoint field gaps: {summary['sharepoint_field_gap_count']}")
+        print(f"- BPMN gaps: {summary['bpmn_gap_count']}")
+        print(f"- ontology patches: {summary['ontology_patch_count']}")
+        print("")
+        print("Review items")
+        for item in payload["review_items"]:
+            print(
+                f"- {item['slug']}: "
+                f"{len(item['sharepoint_field_gap_plan']['gaps'])} SharePoint gaps, "
+                f"{len(item['bpmn_gap_plan']['gaps'])} BPMN gaps, "
+                f"{len(item['ontology_projection_patch_plan']['patches'])} ontology patches"
             )
         return
 

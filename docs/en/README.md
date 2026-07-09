@@ -147,6 +147,9 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the offline outline contract for the four first-wave cases with BPMN
   source, usecase-local KG, ontology projection plan and SharePoint field-gap
   plan without live apply.
+- [docs/en/architecture/first-wave-bpmn-outline-gap-review.md](architecture/first-wave-bpmn-outline-gap-review.md)
+  defines the offline gap review for first-wave outlines against SharePoint
+  field gaps, BPMN gaps and ontology projection patch plans without live apply.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.

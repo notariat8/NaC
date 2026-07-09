@@ -174,6 +174,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_first_wave_bpmn_outline.py"],
                 ),
                 (
+                    "first_wave_bpmn_outline_gap_review",
+                    "First Wave BPMN Outline Gap Review",
+                    [sys.executable, "scripts/validate_first_wave_bpmn_outline_gap_review.py"],
+                ),
+                (
                     "codex_parallel_review",
                     "Codex Parallel Review Contract",
                     [sys.executable, "scripts/validate_codex_parallel_review.py"],

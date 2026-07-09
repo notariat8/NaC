@@ -24,6 +24,10 @@ from notary_kg.deep_process_routing import (
     validate_deep_process_candidate_routing,
 )
 from notary_kg.editor import build_editor_view
+from notary_kg.first_wave_gap_review import (
+    build_first_wave_bpmn_outline_gap_review,
+    validate_first_wave_bpmn_outline_gap_review,
+)
 from notary_kg.first_wave_outline import (
     build_first_wave_bpmn_outline,
     validate_first_wave_bpmn_outline,
@@ -332,6 +336,72 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_first_wave_bpmn_outline_gap_review_surfaces_offline_plans(self) -> None:
+        payload = build_first_wave_bpmn_outline_gap_review(REPO_ROOT)
+        validation = validate_first_wave_bpmn_outline_gap_review(payload)
+        review_items = {item["slug"]: item for item in payload["review_items"]}
+
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(len(review_items), 4)
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertFalse(payload["guardrails"]["changes_sharepoint_schema"])
+        self.assertIn("vorsorgevollmacht-patientenverfuegung", review_items)
+        vorsorge_gaps = review_items["vorsorgevollmacht-patientenverfuegung"]["sharepoint_field_gap_plan"]["gaps"]
+        self.assertIn("choice_extension_plan", {gap["gap_type"] for gap in vorsorge_gaps})
+        for item in review_items.values():
+            self.assertEqual(item["sharepoint_field_gap_plan"]["mode"], "plan_only")
+            self.assertEqual(item["bpmn_gap_plan"]["mode"], "plan_only")
+            self.assertEqual(item["ontology_projection_patch_plan"]["mode"], "plan_only")
+            self.assertTrue(item["sharepoint_field_gap_plan"]["owner_gate_required_before_apply"])
+            self.assertTrue(item["bpmn_gap_plan"]["owner_gate_required_before_apply"])
+            self.assertTrue(item["ontology_projection_patch_plan"]["owner_gate_required_before_apply"])
+            self.assertFalse(item["sharepoint_field_gap_plan"]["writes_sharepoint"])
+            self.assertFalse(item["ontology_projection_patch_plan"]["stores_document_full_text"])
+            self.assertEqual(len(item["ontology_projection_patch_plan"]["patches"]), 3)
+
+    def test_cli_first_wave_gap_review_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "first-wave-gap-review"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["first_wave_count"], 4)
+        self.assertGreaterEqual(payload["summary"]["sharepoint_field_gap_count"], 4)
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_first_wave_gap_review_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "first-wave-gap-review",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_ontology_scale_budget_covers_full_inventory(self) -> None:
