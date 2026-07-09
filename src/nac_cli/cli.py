@@ -369,6 +369,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-ensure-default-artifacts",
         action="store_true",
     )
+    kg_process_ontology_schema_apply_owner_gated_live_plan = kg_sub.add_parser(
+        "process-ontology-schema-apply-owner-gated-live-plan",
+        help="Schreibt einen Offline-Live-Plan für einen späteren owner-gated Graph-REST-Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_owner_gated_live_plan.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
+    kg_process_ontology_schema_apply_owner_gated_live_plan.add_argument("--artifact-root", type=Path, default=None)
+    kg_process_ontology_schema_apply_owner_gated_live_plan.add_argument("--output", type=Path, default=None)
+    kg_process_ontology_schema_apply_owner_gated_live_plan.add_argument("--markdown-output", type=Path, default=None)
+    kg_process_ontology_schema_apply_owner_gated_live_plan.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",

@@ -41,6 +41,12 @@ redacted artifact index, redaction boundary and owner gate are complete. The
 command also writes the redacted artifact index when it is not yet present in
 the selected artifact folder.
 
+`nac kg process-ontology-schema-apply-owner-gated-live-plan --format json`
+writes the next offline contract for the later live execution. The plan contains
+the concrete approval text, required flags, forbidden flags, stop rules, phase
+plan and minimum evidence set. It explicitly declares the future live runner as
+not implemented yet and remains `offline_only`.
+
 ## Boundaries
 
 The dry-run is offline-only:
@@ -55,7 +61,8 @@ The dry-run is offline-only:
 The next step can be a redacted dry-run artifact. A real live apply remains a
 separate owner gate. The live-readiness gate also executes no Graph requests,
 writes no SharePoint data and changes no schema; it only proves that the later
-offline evidence is complete and redacted.
+offline evidence is complete and redacted. The owner-gated live plan also
+executes no Graph requests; it only makes the later execution edge reviewable.
 
 The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -65,4 +72,6 @@ and
 [scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py)
 and
 [scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py)
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py)
 check this boundary in the strict quality gate.

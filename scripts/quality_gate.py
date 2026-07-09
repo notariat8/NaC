@@ -219,6 +219,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "process_ontology_sharepoint_schema_apply_owner_gated_live_plan",
+                    "Process Ontology SharePoint Schema Apply Owner-Gated Live Plan",
+                    [
+                        sys.executable,
+                        "scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py",
+                    ],
+                ),
+                (
                     "notarial_ontology_scale_budget",
                     "Notarial Ontology Scale Budget",
                     [sys.executable, "scripts/validate_notarial_ontology_scale_budget.py"],
