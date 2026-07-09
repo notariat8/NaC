@@ -58,6 +58,8 @@ REQUIRED_DE_MARKERS = [
     "redigierte Evidence",
     "stores_tokens_or_secrets=false",
     "raw_graph_response_stored=false",
+    "runtime-env-bootstrap",
+    "explizit gesetzte Runtime-Credentials",
 ]
 
 REQUIRED_EN_MARKERS = [
@@ -78,6 +80,8 @@ REQUIRED_EN_MARKERS = [
     "redacted evidence",
     "stores_tokens_or_secrets=false",
     "raw_graph_response_stored=false",
+    "runtime-env-bootstrap",
+    "explicitly set runtime credentials",
 ]
 
 PROHIBITED_MARKERS = {
@@ -199,7 +203,13 @@ def _validate_code_boundaries() -> list[str]:
 
     if cli_path.is_file():
         text = cli_path.read_text(encoding="utf-8")
-        for marker in ("matter-access-apply-smoke", "--owner-approved", "DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT"):
+        for marker in (
+            "matter-access-apply-smoke",
+            "--owner-approved",
+            "DEFAULT_MATTER_ACCESS_APPLY_SMOKE_OUTPUT",
+            "_m365_teams_sharepoint_child_env",
+            "_m365_runtime_env_overlay_for_child",
+        ):
             if marker not in text:
                 errors.append(f"{cli_path.relative_to(REPO_ROOT)} missing CLI live-smoke marker: {marker}")
 
@@ -212,6 +222,18 @@ def _validate_code_boundaries() -> list[str]:
         ):
             if marker not in text:
                 errors.append(f"{test_path.relative_to(REPO_ROOT)} missing live-smoke safety test: {marker}")
+
+    runtime_env_test_path = REPO_ROOT / "tests/test_m365_runtime_env_bootstrap.py"
+    if runtime_env_test_path.is_file():
+        text = runtime_env_test_path.read_text(encoding="utf-8")
+        for marker in (
+            "test_matter_access_apply_smoke_child_receives_runtime_env_overlay",
+            "test_matter_access_apply_smoke_child_preserves_explicit_runtime_env",
+        ):
+            if marker not in text:
+                errors.append(
+                    f"{runtime_env_test_path.relative_to(REPO_ROOT)} missing live-smoke runtime-env test: {marker}"
+                )
 
     if evidence_test_path.is_file():
         text = evidence_test_path.read_text(encoding="utf-8")

@@ -427,7 +427,13 @@ Graph REST v1.0 nur `NAC-SMOKE-`-begrenzte Items in `Vertretungsfreigaben` und
 schreibt
 `out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json`. Das
 Artefakt speichert keine Rohpfade, Rohantworten, Nutzerdaten, Gründe, Tokens
-oder Secrets. Nach `PASSED` schreibt der Befehl zusätzlich automatisch eine
+oder Secrets. Beim Aufruf über die zentrale `nac`-CLI nutzt der Befehl die
+vorhandene `runtime-env-bootstrap`-Overlay-Logik automatisch, wenn explizite
+Runtime-Env fehlt: Tenant-ID und Runtime-Client-ID kommen aus dem
+nicht-geheimen Runtime-Smoke-State, Zertifikats- und Key-Pfade aus den
+Bootstrap-Defaults oder den CLI-Optionen. Explizit gesetzte Runtime-Credentials
+werden nicht überschrieben; der Bootstrap liest keine Zertifikats-, Key- oder
+Secret-Inhalte. Nach `PASSED` schreibt der Befehl zusätzlich automatisch eine
 redigierte Retention-Kopie unter
 `out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/`
 und aktualisiert

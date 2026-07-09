@@ -68,6 +68,13 @@ python3 scripts/nac.py m365 teams-sharepoint matter-access-apply-smoke \
   --format json
 ```
 
+Beim Aufruf über `scripts/nac.py` ergänzt die CLI fehlende Runtime-Env
+automatisch aus der vorhandenen `runtime-env-bootstrap`-Overlay-Logik. Dafür
+nutzt sie den nicht-geheimen Runtime-Smoke-State sowie die konfigurierten
+Runtime-Zertifikats- und Key-Pfade; explizit gesetzte Runtime-Credentials
+bleiben vorrangig und werden nicht überschrieben. Der Bootstrap liest keine
+Zertifikats-, Key- oder Secret-Inhalte.
+
 Das Standardartefakt liegt unter:
 
 ```text

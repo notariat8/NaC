@@ -3,10 +3,12 @@ from __future__ import annotations
 from contextlib import redirect_stdout
 from io import StringIO
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -143,6 +145,116 @@ class M365RuntimeEnvBootstrapTests(unittest.TestCase):
         self.assertNotIn("tenant-guid", serialized)
         self.assertNotIn("runtime-client-guid", serialized)
         self.assertNotIn("ABCDEF123456", serialized)
+
+    def test_matter_access_apply_smoke_child_receives_runtime_env_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            state_path = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            state_path.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+
+            parser = cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "matter-access-apply-smoke",
+                    "--owner-approved",
+                    "--runtime-smoke-state",
+                    str(state_path),
+                    "--runtime-certificate-path",
+                    str(certificate_path),
+                    "--runtime-private-key-path",
+                    str(private_key_path),
+                    "--mcp-smoke-workspace-id",
+                    "notary_team_01",
+                    "--mcp-smoke-correlation-id",
+                    "nac-test",
+                    "--format",
+                    "json",
+                ]
+            )
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps({"status": "PASSED"}) + "\n",
+                stderr="",
+            )
+            with patch("nac_cli.cli.subprocess.run", return_value=completed) as run_mock:
+                stdout = StringIO()
+                with redirect_stdout(stdout):
+                    return_code = args.func(args)
+
+            child_env = run_mock.call_args.kwargs["env"]
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(json.loads(stdout.getvalue())["status"], "PASSED")
+        self.assertEqual(child_env["M365_TENANT_ID"], "tenant-guid")
+        self.assertEqual(child_env["M365_RUNTIME_CLIENT_ID"], "runtime-client-guid")
+        self.assertEqual(child_env["M365_RUNTIME_CLIENT_CERTIFICATE_PATH"], str(certificate_path))
+        self.assertEqual(child_env["M365_RUNTIME_CLIENT_KEY_PATH"], str(private_key_path))
+
+    def test_matter_access_apply_smoke_child_preserves_explicit_runtime_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            state_path = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            state_path.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+
+            parser = cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "matter-access-apply-smoke",
+                    "--owner-approved",
+                    "--runtime-smoke-state",
+                    str(state_path),
+                    "--runtime-certificate-path",
+                    str(certificate_path),
+                    "--runtime-private-key-path",
+                    str(private_key_path),
+                    "--mcp-smoke-workspace-id",
+                    "notary_team_01",
+                    "--mcp-smoke-correlation-id",
+                    "nac-test",
+                    "--format",
+                    "json",
+                ]
+            )
+            explicit_env = {
+                "M365_TENANT_ID": "explicit-tenant",
+                "M365_RUNTIME_CLIENT_ID": "explicit-client",
+                "M365_RUNTIME_CLIENT_CERTIFICATE_PATH": "/explicit/runtime.cert.pem",
+                "M365_RUNTIME_CLIENT_KEY_PATH": "/explicit/runtime.key.pem",
+            }
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps({"status": "PASSED"}) + "\n",
+                stderr="",
+            )
+            with patch.dict(cli.os.environ, explicit_env, clear=True):
+                with patch("nac_cli.cli.subprocess.run", return_value=completed) as run_mock:
+                    stdout = StringIO()
+                    with redirect_stdout(stdout):
+                        return_code = args.func(args)
+
+                child_env = run_mock.call_args.kwargs.get("env")
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(json.loads(stdout.getvalue())["status"], "PASSED")
+        self.assertIsNone(child_env)
 
 
 def _runtime_state() -> dict:

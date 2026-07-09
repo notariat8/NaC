@@ -2491,6 +2491,7 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.append("--owner-approved")
         if args.format == "json":
             script_args.append("--json")
+        child_env = _m365_teams_sharepoint_child_env(repo_root, args)
         if args.teams_sharepoint_command == "mcp-stdio":
             result = subprocess.run(
                 [sys.executable, str(repo_root / "scripts" / "provision_teams_sharepoint_graph.py"), *script_args],
@@ -2498,12 +2499,17 @@ def command_m365(args: argparse.Namespace) -> int:
                 check=False,
             )
             return result.returncode
+        run_kwargs: dict[str, Any] = {
+            "cwd": repo_root,
+            "text": True,
+            "capture_output": True,
+            "check": False,
+        }
+        if child_env is not None:
+            run_kwargs["env"] = child_env
         result = subprocess.run(
             [sys.executable, str(repo_root / "scripts" / "provision_teams_sharepoint_graph.py"), *script_args],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            check=False,
+            **run_kwargs,
         )
         if result.stdout:
             print(result.stdout.rstrip())
@@ -6417,6 +6423,39 @@ def _runtime_env_bootstrap_messages(readiness: dict[str, Any]) -> list[str]:
         if isinstance(check, dict) and check.get("status") == "REVIEW_REQUIRED":
             messages.append(str(check.get("message", "runtime env bootstrap requires review")))
     return messages or ["runtime env bootstrap did not pass"]
+
+
+def _m365_teams_sharepoint_child_env(repo_root: Path, args: argparse.Namespace) -> dict[str, str] | None:
+    if getattr(args, "teams_sharepoint_command", None) != "matter-access-apply-smoke":
+        return None
+    overlay, readiness = _m365_runtime_env_overlay_for_child(repo_root, args)
+    if readiness.get("status") != "PASSED" or not overlay:
+        return None
+    child_env = dict(os.environ)
+    child_env.update(overlay)
+    return child_env
+
+
+def _m365_runtime_env_overlay_for_child(
+    repo_root: Path,
+    args: argparse.Namespace,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    runtime_state_path = _resolve_m365_release_gate_path(repo_root, args.runtime_smoke_state, DEFAULT_RUNTIME_SMOKE_STATE)
+    certificate_path = args.runtime_certificate_path or DEFAULT_RUNTIME_CERTIFICATE_PATH
+    private_key_path = args.runtime_private_key_path or DEFAULT_RUNTIME_PRIVATE_KEY_PATH
+    try:
+        runtime_state = load_runtime_env_state(runtime_state_path)
+        bootstrap = build_runtime_env_bootstrap(
+            runtime_state,
+            certificate_path=certificate_path,
+            private_key_path=private_key_path,
+        )
+        return bootstrap.env_overlay, bootstrap.readiness
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {}, {
+            "status": "BLOCKED",
+            "errors": [str(exc)],
+        }
 
 
 def _run_nac_json_step(

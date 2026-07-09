@@ -419,7 +419,13 @@ real synthetic deputy grant. Through Graph REST v1.0, the command writes only
 reads both back, deletes them in the same run and writes
 `out/m365/teams-sharepoint/matter-access-apply-smoke.redacted.json`. The
 artifact stores no raw paths, raw responses, user data, reasons, tokens or
-secrets. After `PASSED`, the command also automatically writes a redacted
+secrets. When invoked through the central `nac` CLI, the command automatically
+uses the existing `runtime-env-bootstrap` overlay when explicit runtime env is
+missing: tenant ID and runtime client ID come from the non-secret runtime smoke
+state, while certificate and key paths come from bootstrap defaults or CLI
+options. Explicit runtime credentials are not overwritten; the bootstrap does
+not read certificate, key or secret contents. After `PASSED`, the command also
+automatically writes a redacted
 retention copy under
 `out/m365/teams-sharepoint/matter-access-apply-live-smokes/<correlation-id>/`
 and updates `matter-access-apply-live-smoke-retention-index.redacted.json`.
