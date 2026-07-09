@@ -3777,6 +3777,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             readiness_payload=None,
             compare_payload=None,
             policy_review=None,
+            matter_access_retention_upgrade_plan=None,
             checks=[
                 _m365_release_gate_post_run_check(
                     "target_correlation_id",
@@ -3804,6 +3805,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             readiness_payload=None,
             compare_payload=None,
             policy_review=None,
+            matter_access_retention_upgrade_plan=None,
             checks=[
                 _m365_release_gate_post_run_check("target_retention_index", "BLOCKED", str(exc)),
             ],
@@ -3857,6 +3859,12 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
     errors.extend(readiness_payload.get("errors", []))
     policy_review = _m365_release_gate_policy_review_summary(repo_root, target_index, readiness_payload)
     errors.extend(policy_review.get("errors", []))
+    matter_access_retention_upgrade_plan = _m365_matter_access_retention_upgrade_plan(
+        repo_root,
+        args,
+        workspace_id=target_run.get("workspace_id"),
+    )
+    errors.extend(matter_access_retention_upgrade_plan.get("errors", []))
 
     checks = [
         _m365_release_gate_post_run_check(
@@ -3885,6 +3893,11 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
             f"release-gate-retention-compare status is {compare_payload.get('status')}",
         ),
         _m365_release_gate_post_run_check(
+            "matter_access_retention_upgrade_plan",
+            "BLOCKED" if matter_access_retention_upgrade_plan.get("status") == "BLOCKED" else "PASSED",
+            _m365_matter_access_retention_upgrade_message(matter_access_retention_upgrade_plan),
+        ),
+        _m365_release_gate_post_run_check(
             "offline_only",
             "PASSED",
             "post-gate reporter writes local redacted artifacts and performs no Graph or GitHub writes",
@@ -3901,6 +3914,7 @@ def _build_m365_release_gate_post_run_report(repo_root: Path, args: argparse.Nam
         readiness_payload=readiness_payload,
         compare_payload=compare_payload,
         policy_review=policy_review,
+        matter_access_retention_upgrade_plan=matter_access_retention_upgrade_plan,
         checks=checks,
         errors=errors,
     )
@@ -4137,6 +4151,93 @@ def _m365_release_gate_policy_review_privacy() -> dict[str, bool]:
     }
 
 
+def _m365_matter_access_retention_upgrade_plan(
+    repo_root: Path,
+    args: argparse.Namespace,
+    *,
+    workspace_id: str | None = None,
+) -> dict[str, Any]:
+    retention_root = _resolve_m365_release_gate_path(
+        repo_root,
+        args.matter_access_apply_live_smoke_retention_root,
+        DEFAULT_MATTER_ACCESS_APPLY_LIVE_SMOKE_RETENTION_ROOT,
+    )
+    return build_matter_access_apply_live_smoke_retention_upgrade_plan(
+        retention_root=retention_root,
+        workspace_id=workspace_id,
+    )
+
+
+def _m365_matter_access_retention_upgrade_summary(plan: dict[str, Any] | None) -> dict[str, Any]:
+    plan = plan if isinstance(plan, dict) else {}
+    summary = plan.get("summary", {}) if isinstance(plan.get("summary"), dict) else {}
+    privacy = plan.get("privacy", {}) if isinstance(plan.get("privacy"), dict) else {}
+    return {
+        "matter_access_retention_upgrade_plan_status": plan.get("status"),
+        "matter_access_retention_upgrade_command_count": summary.get("upgrade_command_count"),
+        "matter_access_retention_upgrade_plan_root": summary.get("retention_root"),
+        "matter_access_retention_upgrade_plan_dry_run": summary.get("dry_run"),
+        "matter_access_retention_upgrade_plan_mutates_artifacts": summary.get("mutates_artifacts"),
+        "matter_access_retention_upgrade_plan_would_execute_commands": summary.get("would_execute_commands"),
+        "matter_access_retention_upgrade_plan_executes_graph_requests": summary.get("executes_graph_requests"),
+        "matter_access_retention_upgrade_plan_tenant_writes_executed": summary.get("tenant_writes_executed"),
+        "matter_access_retention_upgrade_plan_stores_tokens_or_secrets": privacy.get("storesTokensOrSecrets"),
+    }
+
+
+def _m365_matter_access_retention_upgrade_message(plan: dict[str, Any]) -> str:
+    status = plan.get("status")
+    summary = plan.get("summary", {}) if isinstance(plan.get("summary"), dict) else {}
+    command_count = summary.get("upgrade_command_count")
+    if status == "CURRENT":
+        return "matter-access live-smoke retention is current; no upgrade command is required"
+    if status == "UPGRADE_REQUIRED":
+        return f"matter-access live-smoke retention has {command_count} dry-run upgrade command(s)"
+    errors = plan.get("errors")
+    if isinstance(errors, list) and errors:
+        return "; ".join(str(error) for error in errors)
+    return f"matter-access live-smoke retention upgrade plan status is {status}"
+
+
+def _write_m365_matter_access_retention_upgrade_plan_artifact(
+    pack_dir: Path,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    report_path = pack_dir / "matter-access-live-smoke-retention-upgrade-plan.redacted.md"
+    json_path = pack_dir / "matter-access-live-smoke-retention-upgrade-plan.redacted.json"
+    payload = {
+        **plan,
+        "summary": {
+            **(plan.get("summary", {}) if isinstance(plan.get("summary"), dict) else {}),
+            "artifact_directory": str(pack_dir),
+            "report_path": str(report_path),
+            "json_path": str(json_path),
+            "source_artifacts_must_be_redacted": True,
+        },
+    }
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    report_path.write_text(format_matter_access_apply_live_smoke_retention_upgrade_plan(payload), encoding="utf-8")
+    return payload
+
+
+def _render_m365_matter_access_retention_upgrade_plan_markdown(plan: Any) -> list[str]:
+    plan = plan if isinstance(plan, dict) else {}
+    summary = plan.get("summary", {}) if isinstance(plan.get("summary"), dict) else {}
+    return [
+        "",
+        "## Matter-Access Live-Smoke Retention Upgrade Plan",
+        "",
+        f"- Status: `{_md_cell(plan.get('status'))}`",
+        f"- Upgrade command count: `{_md_cell(summary.get('upgrade_command_count'))}`",
+        f"- Dry run: `{_md_cell(summary.get('dry_run'))}`",
+        f"- Mutates artifacts: `{_md_cell(summary.get('mutates_artifacts'))}`",
+        f"- Would execute commands: `{_md_cell(summary.get('would_execute_commands'))}`",
+        f"- Executes Graph requests: `{_md_cell(summary.get('executes_graph_requests'))}`",
+        f"- Tenant writes executed: `{_md_cell(summary.get('tenant_writes_executed'))}`",
+        f"- Retention root: `{_md_cell(summary.get('retention_root'))}`",
+    ]
+
+
 def _m365_release_gate_post_run_payload(
     *,
     status: str,
@@ -4148,6 +4249,7 @@ def _m365_release_gate_post_run_payload(
     readiness_payload: dict[str, Any] | None,
     compare_payload: dict[str, Any] | None,
     policy_review: dict[str, Any] | None,
+    matter_access_retention_upgrade_plan: dict[str, Any] | None,
     checks: list[dict[str, Any]],
     errors: list[str],
 ) -> dict[str, Any]:
@@ -4155,6 +4257,7 @@ def _m365_release_gate_post_run_payload(
     readiness_summary = readiness_payload.get("summary", {}) if isinstance(readiness_payload, dict) else {}
     compare_summary = compare_payload.get("summary", {}) if isinstance(compare_payload, dict) else {}
     policy_review = policy_review or _m365_release_gate_policy_review_missing()
+    upgrade_summary = _m365_matter_access_retention_upgrade_summary(matter_access_retention_upgrade_plan)
     return {
         "schema_version": "nac.m365-release-gate-post-run-report/v0.1",
         "status": status,
@@ -4178,6 +4281,7 @@ def _m365_release_gate_post_run_payload(
             "matter_access_apply_policy_detected_violation_count": policy_review.get(
                 "detected_policy_violation_count"
             ),
+            **upgrade_summary,
             "difference_count": compare_summary.get("difference_count"),
             "artifact_difference_count": compare_summary.get("artifact_difference_count"),
             "missing_attachment_difference_count": compare_summary.get("missing_attachment_difference_count"),
@@ -4194,6 +4298,7 @@ def _m365_release_gate_post_run_payload(
         },
         "checks": checks,
         "matter_access_apply_policy_review": policy_review,
+        "matter_access_retention_upgrade_plan": matter_access_retention_upgrade_plan,
         "readiness": readiness_payload,
         "retention_compare": compare_payload,
         "errors": errors,
@@ -4303,6 +4408,8 @@ def _render_m365_release_gate_post_run_report(payload: dict[str, Any]) -> str:
         f"Difference count: {summary.get('difference_count')}",
         f"Audit pack status: {summary.get('audit_pack_status')}",
         f"Audit pack path: {summary.get('audit_pack_path')}",
+        f"Matter-Access retention upgrade plan: {summary.get('matter_access_retention_upgrade_plan_status')}",
+        f"Matter-Access retention upgrade commands: {summary.get('matter_access_retention_upgrade_command_count')}",
         "",
         "## Local Artifacts",
         "",
@@ -4320,6 +4427,11 @@ def _render_m365_release_gate_post_run_report(payload: dict[str, Any]) -> str:
             f"| {_md_cell(check.get('id'))} | {_md_cell(check.get('status'))} | {_md_cell(check.get('message'))} |"
         )
     lines.extend(_render_m365_release_gate_policy_review_markdown(payload.get("matter_access_apply_policy_review")))
+    lines.extend(
+        _render_m365_matter_access_retention_upgrade_plan_markdown(
+            payload.get("matter_access_retention_upgrade_plan")
+        )
+    )
     lines.extend(
         [
             "",
@@ -4360,10 +4472,17 @@ def _render_m365_release_gate_github_comment(payload: dict[str, Any]) -> str:
         f"- Retention compare: `{_md_cell(summary.get('retention_compare_status'))}`",
         f"- Difference count: `{_md_cell(summary.get('difference_count'))}`",
         f"- Missing attachment differences: `{_md_cell(summary.get('missing_attachment_difference_count'))}`",
+        f"- Matter-Access retention upgrade plan: `{_md_cell(summary.get('matter_access_retention_upgrade_plan_status'))}`",
+        f"- Matter-Access retention upgrade commands: `{_md_cell(summary.get('matter_access_retention_upgrade_command_count'))}`",
         f"- Report: `{_md_cell(summary.get('report_path'))}`",
         f"- JSON: `{_md_cell(summary.get('json_path'))}`",
     ]
     lines.extend(_render_m365_release_gate_policy_review_markdown(payload.get("matter_access_apply_policy_review")))
+    lines.extend(
+        _render_m365_matter_access_retention_upgrade_plan_markdown(
+            payload.get("matter_access_retention_upgrade_plan")
+        )
+    )
     lines.extend(
         [
             "",
@@ -4507,6 +4626,12 @@ def _m365_release_gate_post_run_report_index_row(json_path: Path, payload: dict[
         "release_gate_status": summary.get("release_gate_status"),
         "audit_pack_status": summary.get("audit_pack_status"),
         "retention_compare_status": summary.get("retention_compare_status"),
+        "matter_access_retention_upgrade_plan_status": summary.get(
+            "matter_access_retention_upgrade_plan_status"
+        ),
+        "matter_access_retention_upgrade_command_count": summary.get(
+            "matter_access_retention_upgrade_command_count"
+        ),
         "difference_count": summary.get("difference_count"),
         "artifact_directory": summary.get("artifact_directory") or str(json_path.parent),
         "report_path": report_path,
@@ -4520,6 +4645,12 @@ def _m365_release_gate_post_run_report_index_row(json_path: Path, payload: dict[
             "workspace_id": summary.get("workspace_id"),
             "mvp_release_readiness": summary.get("mvp_release_readiness"),
             "release_readiness_status": summary.get("release_readiness_status"),
+            "matter_access_retention_upgrade_plan_status": summary.get(
+                "matter_access_retention_upgrade_plan_status"
+            ),
+            "matter_access_retention_upgrade_command_count": summary.get(
+                "matter_access_retention_upgrade_command_count"
+            ),
             "status": payload.get("status"),
             "generated_at": payload.get("generated_at"),
             "report_path": report_path,
@@ -4624,8 +4755,8 @@ def _render_m365_release_gate_post_run_report_index_report(payload: dict[str, An
     if reports:
         lines.extend(
             [
-                "| Generated at | Correlation ID | Baseline | Status | MVP readiness | Report | JSON | Comment |",
-                "| --- | --- | --- | --- | --- | --- | --- | --- |",
+                "| Generated at | Correlation ID | Baseline | Status | MVP readiness | Upgrade plan | Upgrade commands | Report | JSON | Comment |",
+                "| --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- |",
             ]
         )
         lines.extend(_m365_release_gate_post_run_report_index_markdown_row(row) for row in reports)
@@ -4643,7 +4774,10 @@ def _m365_release_gate_post_run_report_index_markdown_row(row: dict[str, Any]) -
     return (
         f"| {_md_cell(row.get('generated_at'))} | {_md_cell(row.get('correlation_id'))} | "
         f"{_md_cell(row.get('baseline_correlation_id')) or 'none'} | {_md_cell(row.get('status'))} | "
-        f"{_md_cell(row.get('mvp_release_readiness'))} | `{_md_cell(row.get('report_path'))}` | "
+        f"{_md_cell(row.get('mvp_release_readiness'))} | "
+        f"{_md_cell(row.get('matter_access_retention_upgrade_plan_status'))} | "
+        f"{_md_cell(row.get('matter_access_retention_upgrade_command_count'))} | "
+        f"`{_md_cell(row.get('report_path'))}` | "
         f"`{_md_cell(row.get('json_path'))}` | `{_md_cell(row.get('github_comment_path'))}` |"
     )
 
@@ -4658,7 +4792,10 @@ def _print_m365_release_gate_post_run_report_index(payload: dict[str, Any]) -> N
         print(
             f"- {row.get('generated_at')}: {row.get('correlation_id')} "
             f"baseline={row.get('baseline_correlation_id') or 'none'} status={row.get('status')} "
-            f"readiness={row.get('mvp_release_readiness')} report={row.get('report_path')}"
+            f"readiness={row.get('mvp_release_readiness')} "
+            f"matter_access_upgrade={row.get('matter_access_retention_upgrade_plan_status')} "
+            f"upgrade_commands={row.get('matter_access_retention_upgrade_command_count')} "
+            f"report={row.get('report_path')}"
         )
     for error in payload.get("errors", []):
         print(f"ERROR: {error}", file=sys.stderr)
@@ -4718,9 +4855,25 @@ def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argpars
             }
         )
 
-    status = _m365_release_gate_audit_pack_status(retention_payload, compare_payload, compare_index_payload)
+    upgrade_plan = _m365_matter_access_retention_upgrade_plan(repo_root, args)
+    upgrade_plan_payload = _write_m365_matter_access_retention_upgrade_plan_artifact(pack_dir, upgrade_plan)
+    artifacts.append(
+        _m365_release_gate_audit_pack_artifact(
+            "matter_access_retention_upgrade_plan",
+            upgrade_plan_payload,
+        )
+    )
+    errors.extend(upgrade_plan_payload.get("errors", []))
+
+    status = _m365_release_gate_audit_pack_status(
+        retention_payload,
+        compare_payload,
+        compare_index_payload,
+        upgrade_plan_payload,
+    )
     manifest_report_path = pack_dir / "release-gate-retention-audit-pack.redacted.md"
     manifest_json_path = pack_dir / "release-gate-retention-audit-pack.redacted.json"
+    upgrade_summary = _m365_matter_access_retention_upgrade_summary(upgrade_plan_payload)
     payload = {
         "schema_version": "nac.m365-release-gate-retention-audit-pack/v0.1",
         "status": status,
@@ -4738,6 +4891,7 @@ def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argpars
             "status_filter": args.release_gate_compare_status,
             "query": args.release_gate_compare_query,
             "artifact_count": len(artifacts),
+            **upgrade_summary,
             "report_path": str(manifest_report_path),
             "json_path": str(manifest_json_path),
             "graph_requests_executed": False,
@@ -4752,6 +4906,7 @@ def _write_m365_release_gate_retention_audit_pack(repo_root: Path, args: argpars
             _m365_release_gate_audit_pack_step("retention_list", retention_payload),
             _m365_release_gate_audit_pack_step("retention_compare", compare_payload),
             _m365_release_gate_audit_pack_step("retention_compare_index", compare_index_payload),
+            _m365_release_gate_audit_pack_step("matter_access_retention_upgrade_plan", upgrade_plan_payload),
         ],
         "errors": errors,
         "privacy": {
@@ -5186,10 +5341,16 @@ def _m365_release_gate_audit_pack_status(
     retention_payload: dict[str, Any],
     compare_payload: dict[str, Any],
     compare_index_payload: dict[str, Any] | None,
+    matter_access_retention_upgrade_plan: dict[str, Any] | None = None,
 ) -> str:
     statuses = [retention_payload.get("status"), compare_payload.get("status")]
     if compare_index_payload is not None:
         statuses.append(compare_index_payload.get("status"))
+    if (
+        isinstance(matter_access_retention_upgrade_plan, dict)
+        and matter_access_retention_upgrade_plan.get("status") == "BLOCKED"
+    ):
+        statuses.append("BLOCKED")
     if "BLOCKED" in statuses:
         return "BLOCKED"
     if any(status != "PASSED" for status in statuses):
@@ -5673,6 +5834,8 @@ def _render_m365_release_gate_retention_audit_pack_report(payload: dict[str, Any
         f"Pack directory: {summary.get('pack_dir')}",
         f"Retention root: {summary.get('retention_root')}",
         f"Compare root: {summary.get('compare_root')}",
+        f"Matter-Access retention upgrade plan: {summary.get('matter_access_retention_upgrade_plan_status')}",
+        f"Matter-Access retention upgrade commands: {summary.get('matter_access_retention_upgrade_command_count')}",
         "",
         "## Scope",
         "",

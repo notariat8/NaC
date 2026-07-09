@@ -556,6 +556,13 @@ archivierte Abschlussbericht-Kopie auf ihren
 redigiertes Offline-Audit-Pack. `--release-gate-compare-left` ist dabei die
 Baseline, `--release-gate-compare-right` ist standardmäßig die aktuelle
 Correlation-ID, und `--release-gate-audit-pack-dir` kann den Zielordner setzen.
+Das Audit-Pack bündelt zusätzlich den lokalen
+`matter-access-apply-live-smoke-retention-upgrade-plan` als redigiertes JSON-
+und Markdown-Artefakt und übernimmt
+`matter_access_retention_upgrade_plan_status` sowie
+`matter_access_retention_upgrade_command_count` in das Manifest.
+`UPGRADE_REQUIRED` bleibt dabei ein Nacharchivierungshinweis und macht das
+Audit-Pack nicht fehlerhaft; `BLOCKED` bleibt ein echter Blocker.
 Fehlt eine ausdrücklich angeforderte Baseline, schlägt nur dieser
 Post-Retention-Schritt fehl; Graph-Anfragen, Tenant-Schreiboperationen,
 Löschungen und SharePoint-Content-Reads bleiben ausgeschlossen.
@@ -592,6 +599,12 @@ Tenant-Write, keine Löschung und keinen SharePoint-Content-Read aus. Die
 Zielpfade können mit `--release-gate-post-run-report-output`,
 `--release-gate-post-run-report-json-output` und
 `--release-gate-github-comment-output` gesetzt werden.
+Der Report und der GitHub-Kommentarentwurf zeigen außerdem den lokalen
+Matter-Access-Retention-Nacharchivierungsplan mit
+`matter_access_retention_upgrade_plan_status`,
+`matter_access_retention_upgrade_command_count`, `dry_run=true`,
+`mutates_artifacts=false` und `would_execute_commands=false`; auch dieser
+Nachweis liest nur redigierte lokale Retention-Artefakte.
 Mit `--release-gate-write-post-run-report` kann `release-gate-run` diesen
 Post-Gate-Report direkt nach Audit-Pack und Readiness schreiben. Der Schalter
 impliziert `--release-gate-write-audit-pack`, `--release-gate-write-readiness`
@@ -607,7 +620,9 @@ können mit `--release-gate-post-run-report-index-output` und
 offline. Der Befehl liest nur
 `release-gate-post-run-report.redacted.json` unter
 `out/m365/teams-sharepoint/release-gate-post-run-reports/`, liefert
-Correlation-ID, Baseline, Status, MVP-Readiness sowie Report-, JSON- und
+Correlation-ID, Baseline, Status, MVP-Readiness,
+`matter_access_retention_upgrade_plan_status`,
+`matter_access_retention_upgrade_command_count` sowie Report-, JSON- und
 Kommentar-Pfade und unterstützt Filter über
 `--release-gate-post-run-report-correlation-id`,
 `--release-gate-post-run-report-baseline`,

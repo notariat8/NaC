@@ -1500,6 +1500,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             retention_root = tmp_path / "release-gates"
+            matter_access_retention_root = tmp_path / "matter-access-live-smokes"
             pack_dir = tmp_path / "audit-pack"
             _write_retention_run(
                 retention_root / "corr-left",
@@ -1521,6 +1522,11 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                     {"id": "mcp_inventory_smoke", "status": "COPIED", "artifact_sha256": "inventory"},
                 ],
             )
+            _write_matter_access_live_smoke_retention(
+                matter_access_retention_root / "matter-live-legacy",
+                correlation_id="matter-live-legacy",
+                legacy_redaction_shape=True,
+            )
 
             payload, return_code = _invoke_retention_audit_pack(
                 [
@@ -1532,6 +1538,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                     "corr-right",
                     "--release-gate-audit-pack-dir",
                     str(pack_dir),
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(matter_access_retention_root),
                     "--format",
                     "json",
                 ]
@@ -1548,24 +1556,39 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 ).read_text(encoding="utf-8")
             )
             compare_index = json.loads((pack_dir / "release-gate-retention-compare-index.redacted.json").read_text(encoding="utf-8"))
+            upgrade_plan = json.loads(
+                (pack_dir / "matter-access-live-smoke-retention-upgrade-plan.redacted.json").read_text(
+                    encoding="utf-8"
+                )
+            )
 
         self.assertEqual(return_code, 0)
         self.assertEqual(payload["schema_version"], "nac.m365-release-gate-retention-audit-pack/v0.1")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["pack_dir"], str(pack_dir))
-        self.assertEqual(payload["summary"]["artifact_count"], 3)
+        self.assertEqual(payload["summary"]["artifact_count"], 4)
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_plan_status"], "UPGRADE_REQUIRED")
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_command_count"], 1)
         self.assertFalse(payload["summary"]["graph_requests_executed"])
         self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
         self.assertTrue(manifest_report.startswith("# M365 Release Gate Retention Audit Pack"))
+        self.assertIn("Matter-Access retention upgrade plan: UPGRADE_REQUIRED", manifest_report)
         self.assertEqual(manifest["summary"]["left_correlation_id"], "corr-left")
         self.assertEqual(retention_list["summary"]["run_count"], 2)
         self.assertEqual(compare["summary"]["left_correlation_id"], "corr-left")
         self.assertEqual(compare["summary"]["right_correlation_id"], "corr-right")
         self.assertEqual(compare_index["summary"]["comparison_count"], 1)
         self.assertEqual(compare_index["comparisons"][0]["left_correlation_id"], "corr-left")
+        self.assertEqual(upgrade_plan["status"], "UPGRADE_REQUIRED")
+        self.assertEqual(upgrade_plan["summary"]["upgrade_command_count"], 1)
         self.assertEqual(
             {artifact["id"] for artifact in payload["artifacts"]},
-            {"retention_list", "retention_compare", "retention_compare_index"},
+            {
+                "retention_list",
+                "retention_compare",
+                "retention_compare_index",
+                "matter_access_retention_upgrade_plan",
+            },
         )
 
     def test_release_gate_retention_audit_pack_blocks_without_compare_refs(self) -> None:
@@ -1738,6 +1761,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             retention_root = tmp_path / "release-gates"
+            matter_access_retention_root = tmp_path / "matter-access-live-smokes"
             report_path = tmp_path / "post-run" / "report.md"
             json_path = tmp_path / "post-run" / "report.json"
             comment_path = tmp_path / "post-run" / "comment.md"
@@ -1753,6 +1777,11 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 generated_at="2026-07-07T14:00:00Z",
             )
             _write_audit_pack(audit_pack_dir)
+            _write_matter_access_live_smoke_retention(
+                matter_access_retention_root / "matter-live-legacy",
+                correlation_id="matter-live-legacy",
+                legacy_redaction_shape=True,
+            )
 
             payload, return_code = _invoke_post_run_report(
                 [
@@ -1768,6 +1797,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                     str(json_path),
                     "--release-gate-github-comment-output",
                     str(comment_path),
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(matter_access_retention_root),
                     "--format",
                     "json",
                 ]
@@ -1775,6 +1806,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             report_exists = report_path.exists()
             json_exists = json_path.exists()
             comment_exists = comment_path.exists()
+            report = report_path.read_text(encoding="utf-8")
             comment = comment_path.read_text(encoding="utf-8")
 
         self.assertEqual(return_code, 0)
@@ -1785,13 +1817,19 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["baseline_selection"], "previous_retained_run")
         self.assertEqual(payload["summary"]["mvp_release_readiness"], "READY")
         self.assertEqual(payload["summary"]["retention_compare_status"], "PASSED")
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_plan_status"], "UPGRADE_REQUIRED")
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_command_count"], 1)
+        self.assertTrue(payload["summary"]["matter_access_retention_upgrade_plan_dry_run"])
+        self.assertFalse(payload["summary"]["matter_access_retention_upgrade_plan_mutates_artifacts"])
         self.assertFalse(payload["summary"]["github_comment_posted"])
         self.assertTrue(report_exists)
         self.assertTrue(json_exists)
         self.assertTrue(comment_exists)
+        self.assertIn("Matter-Access retention upgrade plan: UPGRADE_REQUIRED", report)
         self.assertIn("Draft only", comment)
         self.assertIn("current-run", comment)
         self.assertIn("baseline-run", comment)
+        self.assertIn("Matter-Access retention upgrade plan: `UPGRADE_REQUIRED`", comment)
         self.assertIn("no Graph requests", comment)
         self.assertFalse(payload["privacy"]["storesTokensOrSecrets"])
 
@@ -1847,6 +1885,50 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["baseline_correlation_id"], "old-schema-baseline")
         added_artifacts = payload["retention_compare"]["comparison"]["artifacts"]["added_in_right"]
         self.assertIn("matter_access_apply_request_plan", added_artifacts)
+
+    def test_release_gate_post_run_report_surfaces_current_matter_access_upgrade_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            retention_root = tmp_path / "release-gates"
+            matter_access_retention_root = tmp_path / "matter-access-live-smokes"
+            audit_pack_dir = tmp_path / "audit-pack"
+            _write_readiness_run(
+                retention_root / "baseline-run",
+                correlation_id="baseline-run",
+                generated_at="2026-07-07T13:00:00Z",
+            )
+            _write_readiness_run(
+                retention_root / "current-run",
+                correlation_id="current-run",
+                generated_at="2026-07-07T14:00:00Z",
+            )
+            _write_audit_pack(audit_pack_dir)
+            _write_matter_access_live_smoke_retention(
+                matter_access_retention_root / "matter-live-current",
+                correlation_id="matter-live-current",
+                legacy_redaction_shape=False,
+            )
+
+            payload, return_code = _invoke_post_run_report(
+                [
+                    "--release-gate-retention-root",
+                    str(retention_root),
+                    "--release-gate-readiness-correlation-id",
+                    "current-run",
+                    "--release-gate-audit-pack-dir",
+                    str(audit_pack_dir),
+                    "--matter-access-apply-live-smoke-retention-root",
+                    str(matter_access_retention_root),
+                    "--format",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_plan_status"], "CURRENT")
+        self.assertEqual(payload["summary"]["matter_access_retention_upgrade_command_count"], 0)
+        self.assertTrue(payload["summary"]["matter_access_retention_upgrade_plan_dry_run"])
+        self.assertFalse(payload["summary"]["matter_access_retention_upgrade_plan_would_execute_commands"])
 
     def test_release_gate_post_run_report_uses_explicit_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1957,6 +2039,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                 status="BLOCKED",
                 generated_at="2026-07-07T13:00:00Z",
                 mvp_release_readiness="NOT_READY",
+                matter_access_upgrade_status="UPGRADE_REQUIRED",
+                matter_access_upgrade_command_count=1,
             )
 
             payload, return_code = _invoke_post_run_report_index(
@@ -1982,7 +2066,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                     "--release-gate-post-run-report-root",
                     str(report_root),
                     "--release-gate-post-run-report-query",
-                    "current-b",
+                    "UPGRADE_REQUIRED",
                     "--release-gate-post-run-report-status",
                     "BLOCKED",
                     "--format",
@@ -1999,6 +2083,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["post_run_reports"][0]["baseline_correlation_id"], "baseline-b")
         self.assertEqual(payload["post_run_reports"][0]["status"], "BLOCKED")
         self.assertEqual(payload["post_run_reports"][0]["mvp_release_readiness"], "NOT_READY")
+        self.assertEqual(payload["post_run_reports"][0]["matter_access_retention_upgrade_plan_status"], "UPGRADE_REQUIRED")
+        self.assertEqual(payload["post_run_reports"][0]["matter_access_retention_upgrade_command_count"], 1)
         self.assertTrue(payload["post_run_reports"][0]["report_path"].endswith("release-gate-post-run-report.redacted.md"))
         self.assertFalse(payload["post_run_reports"][0]["privacy"]["storesTokensOrSecrets"])
         self.assertEqual(baseline_return_code, 0)
@@ -2418,6 +2504,93 @@ def _write_readiness_run(
     )
 
 
+def _write_matter_access_live_smoke_retention(
+    run_dir: Path,
+    *,
+    correlation_id: str,
+    workspace_id: str = "notary_team_01",
+    legacy_redaction_shape: bool,
+) -> None:
+    run_dir.mkdir(parents=True)
+    retained_artifact_path = run_dir / "matter-access-apply-smoke.redacted.json"
+    retention_json_path = run_dir / "matter-access-apply-live-smoke-retention.redacted.json"
+    retention_report_path = run_dir / "matter-access-apply-live-smoke-retention.redacted.md"
+    retained_artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "nac.m365-matter-access-apply-smoke/v0.1",
+                "status": "PASSED",
+                "summary": {
+                    "workspace_id": workspace_id,
+                    "correlation_id": correlation_id,
+                    "stores_tokens_or_secrets": False,
+                    "reads_sharepoint_file_content": False,
+                },
+                "privacy": {"storesTokensOrSecrets": False},
+            }
+        ),
+        encoding="utf-8",
+    )
+    summary = {
+        "workspace_id": workspace_id,
+        "correlation_id": correlation_id,
+        "retained_artifact_path": str(retained_artifact_path),
+        "retention_json_path": str(retention_json_path),
+        "retention_report_path": str(retention_report_path),
+        "retained_artifact_sha256": "a" * 64,
+        "retention_executes_graph_requests": False,
+        "retention_executes_graph_writes": False,
+        "retention_tenant_writes_executed": False,
+        "retention_tenant_deletes_executed": False,
+        "stores_tokens_or_secrets": False,
+        "reads_sharepoint_file_content": False,
+    }
+    payload = {
+        "schema_version": "nac.m365-matter-access-apply-live-smoke-retention/v0.1",
+        "status": "PASSED",
+        "generated_at": "2026-07-07T15:00:00Z",
+        "summary": summary,
+        "errors": [],
+        "privacy": {
+            "retentionReadsLocalRedactedArtifactOnly": True,
+            "retentionExecutesGraphRequests": False,
+            "retentionTenantWritesExecuted": False,
+            "storesTokensOrSecrets": False,
+            "readsSharePointFileContent": False,
+        },
+    }
+    if not legacy_redaction_shape:
+        payload["summary"] = {
+            **summary,
+            "redaction_shape_status": "PASSED",
+            "redaction_shape_violation_count": 0,
+            "redaction_shape_checked_node_count": 7,
+        }
+        payload["redaction_shape"] = {
+            "schema_version": "nac.m365-matter-access-apply-live-smoke-redaction-shape/v0.1",
+            "status": "PASSED",
+            "summary": {
+                "checked_node_count": 7,
+                "violation_count": 0,
+                "executes_graph_requests": False,
+                "tenant_writes_executed": False,
+                "stores_tokens_or_secrets": False,
+                "reads_sharepoint_file_content": False,
+            },
+            "violations": [],
+            "errors": [],
+            "privacy": {
+                "checksLocalArtifactOnly": True,
+                "executesGraphRequests": False,
+                "tenantWritesExecuted": False,
+                "storesTokensOrSecrets": False,
+                "readsSharePointFileContent": False,
+            },
+        }
+    retention_json_path.write_text(json.dumps(payload), encoding="utf-8")
+    retention_report_path.write_text("# Matter-Access Apply Live-Smoke Retention\n", encoding="utf-8")
+
+
 def _write_audit_pack(pack_dir: Path) -> None:
     pack_dir.mkdir(parents=True)
     (pack_dir / "release-gate-retention-audit-pack.redacted.json").write_text(
@@ -2492,6 +2665,8 @@ def _write_post_run_report(
     status: str,
     generated_at: str,
     mvp_release_readiness: str,
+    matter_access_upgrade_status: str = "CURRENT",
+    matter_access_upgrade_command_count: int = 0,
 ) -> None:
     artifact_dir.mkdir(parents=True)
     report_path = artifact_dir / "release-gate-post-run-report.redacted.md"
@@ -2515,6 +2690,8 @@ def _write_post_run_report(
                     "release_gate_status": "PASSED",
                     "audit_pack_status": "PASSED",
                     "retention_compare_status": "PASSED",
+                    "matter_access_retention_upgrade_plan_status": matter_access_upgrade_status,
+                    "matter_access_retention_upgrade_command_count": matter_access_upgrade_command_count,
                     "difference_count": 0,
                     "artifact_directory": str(artifact_dir),
                     "report_path": str(report_path),

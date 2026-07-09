@@ -541,7 +541,13 @@ report copy therefore points to its own
 `--release-gate-write-audit-pack`, the runner then writes a redacted offline
 audit pack directly. `--release-gate-compare-left` is the baseline,
 `--release-gate-compare-right` defaults to the current correlation ID, and
-`--release-gate-audit-pack-dir` can set the target directory. If an explicitly
+`--release-gate-audit-pack-dir` can set the target directory.
+The audit pack also bundles the local
+`matter-access-apply-live-smoke-retention-upgrade-plan` as redacted JSON and
+Markdown artifacts and copies `matter_access_retention_upgrade_plan_status`
+and `matter_access_retention_upgrade_command_count` into the manifest.
+`UPGRADE_REQUIRED` remains a retention upgrade hint and does not fail the audit
+pack; `BLOCKED` remains a real blocker. If an explicitly
 requested baseline is missing, only this post-retention step fails; Graph
 requests, tenant writes, deletes and SharePoint content reads remain excluded.
 With `--release-gate-write-readiness`, the runner then writes the redacted
@@ -576,6 +582,11 @@ SharePoint content read. The output paths can be set with
 `--release-gate-post-run-report-output`,
 `--release-gate-post-run-report-json-output` and
 `--release-gate-github-comment-output`.
+The report and GitHub comment draft also surface the local Matter-Access
+retention upgrade plan through `matter_access_retention_upgrade_plan_status`,
+`matter_access_retention_upgrade_command_count`, `dry_run=true`,
+`mutates_artifacts=false` and `would_execute_commands=false`; this evidence
+reads only local redacted retention artifacts.
 With `--release-gate-write-post-run-report`, `release-gate-run` can write this
 post-gate report directly after the audit pack and readiness steps. The switch
 implies `--release-gate-write-audit-pack`, `--release-gate-write-readiness` and
@@ -590,8 +601,10 @@ set with `--release-gate-post-run-report-index-output` and
 offline. The command reads only
 `release-gate-post-run-report.redacted.json` under
 `out/m365/teams-sharepoint/release-gate-post-run-reports/`, emits correlation
-ID, baseline, status, MVP readiness and report, JSON and comment paths, and
-supports filters through `--release-gate-post-run-report-correlation-id`,
+ID, baseline, status, MVP readiness,
+`matter_access_retention_upgrade_plan_status`,
+`matter_access_retention_upgrade_command_count` and report, JSON and comment
+paths, and supports filters through `--release-gate-post-run-report-correlation-id`,
 `--release-gate-post-run-report-baseline`,
 `--release-gate-post-run-report-status` and
 `--release-gate-post-run-report-query`. Graph requests, GitHub posts, tenant
