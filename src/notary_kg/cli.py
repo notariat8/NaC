@@ -33,6 +33,10 @@ from .process_ontology_schema_apply_owner_gated_runner_contract import (
     SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_OWNER_GATED_RUNNER_CONTRACT_SCHEMA_VERSION,
     write_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract,
 )
+from .process_ontology_schema_apply_live_runner import (
+    SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_LIVE_RUNNER_SCHEMA_VERSION,
+    write_process_ontology_sharepoint_schema_apply_live_runner,
+)
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 from .process_ontology_schema_apply_runner_dry_run import (
     ARTIFACT_INDEX_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_ARTIFACT_INDEX_SCHEMA_VERSION,
@@ -293,6 +297,60 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not create default redacted readiness artifacts before evaluating the runner contract.",
     )
 
+    process_ontology_schema_apply_live = subparsers.add_parser(
+        "process-ontology-schema-apply-live",
+        help="Write the owner-gated live runner envelope for the Graph REST schema apply.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=None,
+        help="Artifact root to scan and write supporting readiness artifacts. Default: out/notary-kg.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--live-readiness-gate",
+        type=Path,
+        default=None,
+        help="Path to a passed live-readiness gate JSON artifact.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--correlation-id",
+        default=None,
+        help="Non-secret correlation ID for the owner-gated run.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--owner-approved",
+        action="store_true",
+        help="Owner approval for the live schema apply runner gate.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--execute-live-schema-apply",
+        action="store_true",
+        help="Explicitly acknowledge that this runner is the live schema apply path.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--write-redacted-evidence",
+        action="store_true",
+        help="Require redacted evidence before the first Graph REST mutation.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="JSON live-runner path. Default: out/notary-kg/process-ontology-schema-apply-live.redacted.json.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+        help="Markdown live-runner path. Default: out/notary-kg/process-ontology-schema-apply-live.redacted.md.",
+    )
+    process_ontology_schema_apply_live.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+        help="Do not create default redacted readiness artifacts before evaluating the live runner.",
+    )
+
     subparsers.add_parser(
         "deep-process-candidates",
         help="Route notarial business cases into deep BPMN/ontology modeling candidates.",
@@ -489,6 +547,22 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-schema-apply-live":
+        payload = write_process_ontology_sharepoint_schema_apply_live_runner(
+            repo_root,
+            args.artifact_root,
+            args.output,
+            args.markdown_output,
+            live_readiness_gate=args.live_readiness_gate,
+            correlation_id=args.correlation_id,
+            owner_approved=args.owner_approved,
+            execute_live_schema_apply=args.execute_live_schema_apply,
+            write_redacted_evidence=args.write_redacted_evidence,
+            ensure_default_artifacts=not args.no_ensure_default_artifacts,
+        )
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "READY_FOR_GRAPH_REST_DISPATCH" else 1
 
     if args.command == "deep-process-candidates":
         payload = build_deep_process_candidate_routing(repo_root)
@@ -841,6 +915,26 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- owner gate before execution: {summary['owner_gate_required_before_execution']}")
         print(f"- executes Graph requests: {summary['executes_graph_requests']}")
         print(f"- writes SharePoint: {summary['writes_sharepoint']}")
+        if payload.get("artifact_paths"):
+            print(f"- JSON: {payload['artifact_paths']['json']}")
+            print(f"- Markdown: {payload['artifact_paths']['markdown']}")
+        return
+
+    if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_LIVE_RUNNER_SCHEMA_VERSION:
+        summary = payload["summary"]
+        print("Process ontology SharePoint schema apply live runner")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- correlation ID: {payload['owner_gate']['correlation_id']}")
+        print(f"- runner steps: {summary['runner_step_count']}")
+        print(f"- owner gate satisfied: {summary['owner_gate_satisfied']}")
+        print(f"- ready for Graph REST dispatch: {summary['ready_for_graph_rest_dispatch']}")
+        print(f"- executes Graph requests: {summary['executes_graph_requests']}")
+        print(f"- writes SharePoint: {summary['writes_sharepoint']}")
+        if payload["owner_gate"]["missing_or_blocking"]:
+            print("- blockers:")
+            for reason in payload["owner_gate"]["missing_or_blocking"]:
+                print(f"  - {reason}")
         if payload.get("artifact_paths"):
             print(f"- JSON: {payload['artifact_paths']['json']}")
             print(f"- Markdown: {payload['artifact_paths']['markdown']}")

@@ -45,16 +45,24 @@ Artefaktverzeichnis noch nicht vorhanden ist.
 `nac kg process-ontology-schema-apply-owner-gated-live-plan --format json`
 schreibt den nächsten Offline-Vertrag für die spätere Live-Ausführung. Der
 Plan enthält den konkreten Freigabetext, Pflichtflags, verbotene Flags,
-Stop-Regeln, Phasenplan und Evidence-Mindestumfang. Er deklariert den
-zukünftigen Live-Runner ausdrücklich als noch nicht implementiert und bleibt
-selbst `offline_only`.
+Stop-Regeln, Phasenplan und Evidence-Mindestumfang. Der Live-Runner-Befehl
+existiert, der Plan bleibt aber selbst `offline_only` und führt keine
+Graph-Requests aus.
 
 `nac kg process-ontology-schema-apply-owner-gated-runner-contract --format json`
 schreibt anschließend den ausführungsnahen Runner-Vertrag. Er bindet den
 späteren Befehl `nac kg process-ontology-schema-apply-live` an 68 geplante
 Runner-Schritte, Owner-Gate, Pflichtflags, Stop-before-mutation-Regeln und
-redigierte Evidence. Auch dieser Vertrag implementiert den Live-Runner noch
-nicht und führt keine Graph-Requests aus.
+redigierte Evidence. Der Vertrag markiert den Live-Runner-Befehl als
+implementiert, führt aber selbst keine Graph-Requests aus.
+
+`nac kg process-ontology-schema-apply-live --format json --owner-approved
+--execute-live-schema-apply --live-readiness-gate <gate.json>
+--correlation-id <id> --write-redacted-evidence` schreibt den owner-gated
+Live-Runner-Envelope. Der Befehl blockt ohne vollständige Pflichtflags oder
+ohne bestandenes Live-Readiness-Gate. Mit vollständigem Gate erzeugt er die
+redigierte Start-Evidence für den Graph-REST-Dispatch, führt in diesem Slice
+aber noch keine Graph-Requests aus und ändert kein SharePoint-Schema.
 
 ## Grenzen
 
@@ -74,7 +82,9 @@ Schema; es belegt nur, dass die später dafür nötigen Offline-Nachweise
 vollständig und redigiert sind. Der Owner-gated Live-Plan führt ebenfalls keine
 Graph-Requests aus; er macht nur die spätere Ausführungskante prüfbar. Der
 Runner-Vertrag bleibt ebenfalls offline und ist die letzte Schnittstellenkante
-vor der tatsächlichen Runner-Implementierung.
+vor der tatsächlichen Runner-Implementierung. Der Live-Runner-Envelope ist die
+erste implementierte Befehlsfläche dieser Runner-Kante; der eigentliche
+Graph-REST-Dispatcher bleibt der nächste owner-gated Live-Slice.
 
 Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -88,4 +98,6 @@ und
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py)
 und
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py)
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py)
 prüfen diese Grenze im strikten Quality Gate.

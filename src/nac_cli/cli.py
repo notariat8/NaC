@@ -397,6 +397,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-ensure-default-artifacts",
         action="store_true",
     )
+    kg_process_ontology_schema_apply_live = kg_sub.add_parser(
+        "process-ontology-schema-apply-live",
+        help="Schreibt den owner-gated Live-Runner-Envelope fuer den Graph-REST-Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_live.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_process_ontology_schema_apply_live.add_argument("--artifact-root", type=Path, default=None)
+    kg_process_ontology_schema_apply_live.add_argument("--live-readiness-gate", type=Path, default=None)
+    kg_process_ontology_schema_apply_live.add_argument("--correlation-id", default=None)
+    kg_process_ontology_schema_apply_live.add_argument("--owner-approved", action="store_true")
+    kg_process_ontology_schema_apply_live.add_argument("--execute-live-schema-apply", action="store_true")
+    kg_process_ontology_schema_apply_live.add_argument("--write-redacted-evidence", action="store_true")
+    kg_process_ontology_schema_apply_live.add_argument("--output", type=Path, default=None)
+    kg_process_ontology_schema_apply_live.add_argument("--markdown-output", type=Path, default=None)
+    kg_process_ontology_schema_apply_live.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
@@ -1529,6 +1546,16 @@ def command_kg(args: argparse.Namespace) -> int:
         argv.append("--no-ensure-default-artifact")
     if getattr(args, "no_ensure_default_artifacts", False):
         argv.append("--no-ensure-default-artifacts")
+    if getattr(args, "live_readiness_gate", None) is not None:
+        argv.extend(["--live-readiness-gate", str(args.live_readiness_gate)])
+    if getattr(args, "correlation_id", None):
+        argv.extend(["--correlation-id", str(args.correlation_id)])
+    if getattr(args, "owner_approved", False):
+        argv.append("--owner-approved")
+    if getattr(args, "execute_live_schema_apply", False):
+        argv.append("--execute-live-schema-apply")
+    if getattr(args, "write_redacted_evidence", False):
+        argv.append("--write-redacted-evidence")
     return notary_kg_main(argv)
 
 

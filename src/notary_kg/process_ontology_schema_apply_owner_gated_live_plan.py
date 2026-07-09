@@ -113,7 +113,7 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
                 "--live-readiness-gate <redacted-live-readiness-gate.json> "
                 "--correlation-id <correlation-id> --write-redacted-evidence"
             ),
-            "command_exists_now": False,
+            "command_exists_now": True,
             "runtime_permission_required": REQUIRED_PERMISSION,
             "application_owner_path_required": True,
             "graph_rest_only": True,
@@ -286,8 +286,8 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
         errors.append("delegated user context must remain blocked")
 
     runner = payload.get("future_runner_contract", {})
-    if runner.get("command_exists_now") is not False:
-        errors.append("future live runner command must not be claimed as implemented")
+    if runner.get("command_exists_now") is not True:
+        errors.append("live runner command must exist once the owner-gated live surface is implemented")
     if runner.get("runtime_permission_required") != REQUIRED_PERMISSION:
         errors.append("unexpected runtime permission")
     if runner.get("application_owner_path_required") is not True:

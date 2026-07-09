@@ -73,7 +73,7 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract(
         },
         "runner_interface": {
             "command": "nac kg process-ontology-schema-apply-live",
-            "command_implemented_now": False,
+            "command_implemented_now": True,
             "required_flags": live_plan["owner_gate"]["required_flags"],
             "required_inputs": live_plan["owner_gate"]["required_fields"],
             "required_permission": live_plan["future_runner_contract"]["runtime_permission_required"],
@@ -190,8 +190,8 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contrac
     interface = payload.get("runner_interface", {})
     if interface.get("command") != "nac kg process-ontology-schema-apply-live":
         errors.append("unexpected runner command")
-    if interface.get("command_implemented_now") is not False:
-        errors.append("runner command must not be claimed as implemented in this contract")
+    if interface.get("command_implemented_now") is not True:
+        errors.append("runner command must be marked implemented once the owner-gated surface exists")
     for flag in ("--owner-approved", "--execute-live-schema-apply", "--live-readiness-gate", "--correlation-id"):
         if flag not in interface.get("required_flags", []):
             errors.append(f"missing required runner flag: {flag}")

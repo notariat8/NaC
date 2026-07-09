@@ -44,15 +44,23 @@ the selected artifact folder.
 `nac kg process-ontology-schema-apply-owner-gated-live-plan --format json`
 writes the next offline contract for the later live execution. The plan contains
 the concrete approval text, required flags, forbidden flags, stop rules, phase
-plan and minimum evidence set. It explicitly declares the future live runner as
-not implemented yet and remains `offline_only`.
+plan and minimum evidence set. The live runner command exists, but the plan
+itself remains `offline_only` and executes no Graph requests.
 
 `nac kg process-ontology-schema-apply-owner-gated-runner-contract --format json`
 then writes the execution-near runner contract. It binds the later
 `nac kg process-ontology-schema-apply-live` command to 68 planned runner steps,
 owner gate, required flags, stop-before-mutation rules and redacted evidence.
-This contract also does not implement the live runner yet and executes no Graph
-requests.
+The contract marks the live runner command as implemented, but itself executes
+no Graph requests.
+
+`nac kg process-ontology-schema-apply-live --format json --owner-approved
+--execute-live-schema-apply --live-readiness-gate <gate.json>
+--correlation-id <id> --write-redacted-evidence` writes the owner-gated live
+runner envelope. The command blocks without the full required flags or without a
+passed live-readiness gate. With the full gate it creates the redacted start
+evidence for Graph REST dispatch, but this slice still executes no Graph
+requests and changes no SharePoint schema.
 
 ## Boundaries
 
@@ -71,7 +79,9 @@ writes no SharePoint data and changes no schema; it only proves that the later
 offline evidence is complete and redacted. The owner-gated live plan also
 executes no Graph requests; it only makes the later execution edge reviewable.
 The runner contract also remains offline and is the last interface boundary
-before the actual runner implementation.
+before the actual runner implementation. The live runner envelope is the first
+implemented command surface of this runner edge; the actual Graph REST
+dispatcher remains the next owner-gated live slice.
 
 The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -85,4 +95,6 @@ and
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py)
 and
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py)
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py)
 check this boundary in the strict quality gate.
