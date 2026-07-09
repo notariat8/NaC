@@ -8,6 +8,7 @@ from nac_gnotkg.views import build_cost_review_view
 
 from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
+from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
 from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
@@ -70,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "ontology-storage-contract",
         help="Evaluate the notarial ontology sizing and storage contract.",
+    )
+
+    subparsers.add_parser(
+        "deep-process-candidates",
+        help="Route notarial business cases into deep BPMN/ontology modeling candidates.",
     )
 
     return parser
@@ -140,6 +146,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "deep-process-candidates":
+        payload = build_deep_process_candidate_routing(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -303,6 +314,24 @@ def _print_payload(payload: dict, output_format: str) -> None:
             print("Warnings")
             for warning in evaluation["warnings"]:
                 print(f"- {warning}")
+        return
+
+    if payload.get("schema_version") == "nac.notarial-deep-process-candidate-routing/v0.1":
+        summary = payload["summary"]
+        print("Notarial deep-process candidate routing")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- candidates: {summary['candidate_count']}/{summary['business_case_count']}")
+        print(f"- first wave: {summary['first_wave_count']}")
+        print(f"- max complexity score: {summary['max_complexity_score']}")
+        print("")
+        print("Lane counts")
+        for lane, count in sorted(summary["lane_counts"].items()):
+            print(f"- {lane}: {count}")
+        print("")
+        print("Recommended batch")
+        for slug in payload["recommended_batch"]:
+            print(f"- {slug}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")

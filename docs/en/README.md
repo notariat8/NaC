@@ -135,6 +135,10 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the ontology sizing and storage boundary from the business-case
   inventory with SharePoint as operative MVP storage, ontology as a versioned
   projection and Graph REST as the only M365 data plane.
+- [docs/en/architecture/notarial-deep-process-candidate-routing.md](architecture/notarial-deep-process-candidate-routing.md)
+  routes high/medium complexity cases from the sizing contract into first-wave,
+  archetype, backlog and legacy-dedupe lanes for deep BPMN and ontology
+  modeling.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.

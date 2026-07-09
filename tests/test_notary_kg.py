@@ -19,6 +19,10 @@ from notary_kg.business_case_inventory import (
     validate_business_case_inventory,
 )
 from notary_kg.cli import main as kg_main
+from notary_kg.deep_process_routing import (
+    build_deep_process_candidate_routing,
+    validate_deep_process_candidate_routing,
+)
 from notary_kg.editor import build_editor_view
 from notary_kg.ontology_storage_contract import (
     build_ontology_storage_contract,
@@ -203,6 +207,63 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.notarial-ontology-sizing-storage/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:
+        payload = build_deep_process_candidate_routing(REPO_ROOT)
+        validation = validate_deep_process_candidate_routing(payload)
+        routes = {route["slug"]: route for route in payload["routes"]}
+
+        self.assertEqual(payload["schema_version"], "nac.notarial-deep-process-candidate-routing/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertFalse(payload["routing_policy"]["deep_modeling_required_for_all_candidates"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertEqual(routes["online-gmbh-gruendung"]["routing_lane"], "first_wave_deep_process")
+        self.assertIn("complexity_band:high", routes["online-gmbh-gruendung"]["routing_reasons"])
+        self.assertEqual(routes["immobilienkaufvertrag"]["routing_lane"], "first_wave_deep_process")
+        self.assertEqual(routes["handelsregisteranmeldung"]["routing_lane"], "first_wave_deep_process")
+        self.assertEqual(routes["grundstueckskaufvertrag"]["routing_lane"], "legacy_alias_dedupe")
+        self.assertGreaterEqual(payload["summary"]["candidate_count"], payload["summary"]["first_wave_count"])
+
+    def test_cli_deep_process_candidates_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "deep-process-candidates"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-deep-process-candidate-routing/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertIn("online-gmbh-gruendung", payload["recommended_batch"])
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_deep_process_candidates_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "deep-process-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-deep-process-candidate-routing/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_cli_unknown_case_fails(self) -> None:
