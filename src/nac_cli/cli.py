@@ -291,6 +291,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prüft den Ontologie-Sizing- und Storage-Vertrag gegen das Geschäftsvorfall-Inventar.",
     )
     kg_ontology_storage_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_process_ontology_contract = kg_sub.add_parser(
+        "process-ontology-contract",
+        help="Prüft den Prozess-/Ontologie-Produktmodell-Vertrag gegen Inventar und SharePoint-MVP-Grenze.",
+    )
+    kg_process_ontology_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",

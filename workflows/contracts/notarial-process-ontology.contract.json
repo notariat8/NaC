@@ -1,0 +1,197 @@
+{
+  "schema_version": "nac.notarial-process-ontology/v1",
+  "contract_id": "notarial.process_ontology",
+  "title": "Notarial process ontology contract",
+  "status": "offline_contract_no_live_apply",
+  "last_update": "2026-07-09",
+  "purpose": "Define the product-model boundary for notarial workflows: business-case types, process phases, roles, documents, evidence, access delegation and SharePoint MVP projections without making the ontology a runtime database.",
+  "source_documents": {
+    "business_case_inventory_command": "nac kg business-case-inventory --format json",
+    "business_case_inventory_module": "src/notary_kg/business_case_inventory.py",
+    "ontology_storage_contract": "workflows/contracts/notarial-ontology-sizing-storage.contract.json",
+    "teams_sharepoint_graph_data_plane": "workflows/contracts/teams-sharepoint-graph-data-plane.contract.json",
+    "teams_sharepoint_data_mcp": "workflows/contracts/teams-sharepoint-data-mcp.contract.json",
+    "matter_access_delegation": "workflows/contracts/m365-matter-access-delegation.contract.json",
+    "matter_data_boundary": "workflows/contracts/matter-data-classification-redaction.contract.json"
+  },
+  "scope": {
+    "offline_contract_only": true,
+    "executes_graph_requests_now": false,
+    "changes_sharepoint_schema_now": false,
+    "writes_sharepoint_now": false,
+    "stores_tokens_or_secrets": false,
+    "stores_matter_instance_values_in_repo": false,
+    "stores_document_full_text": false,
+    "creates_central_knowledge_graph_folder": false,
+    "owner_gate_required_before_future_apply": true
+  },
+  "source_of_truth": {
+    "business_case_catalog": "usecase_local_knowledge_graphs",
+    "process_model": "bpmn_files_and_usecase_local_kg_pointers",
+    "runtime_store": "sharepoint_metadata_lists_and_document_pointers",
+    "access_decisions": "m365_matter_access_delegation_contract",
+    "audit": "sharepoint_audit_journal_lite_with_redacted_evidence",
+    "ontology_role": "versioned_product_model_contract_and_projection_shape"
+  },
+  "graph_boundary": {
+    "m365_data_plane": "microsoft_graph_rest_v1",
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "sdk_allowed": false,
+    "legacy_sharepoint_api_allowed": false,
+    "graph_beta_allowed": false
+  },
+  "canonical_entity_classes": [
+    "BusinessCaseType",
+    "Matter",
+    "MatterStatus",
+    "Participant",
+    "Role",
+    "RoleBinding",
+    "ProcessPhase",
+    "ProcessStep",
+    "Task",
+    "Deadline",
+    "Gate",
+    "DecisionPoint",
+    "DocumentType",
+    "DocumentPointer",
+    "DocumentVersion",
+    "EvidencePointer",
+    "DeputyGrant",
+    "AccessPurpose",
+    "ValidityWindow",
+    "AuditEvent",
+    "BpmnModelPointer",
+    "OntologyProjection"
+  ],
+  "required_process_phases": [
+    "intake",
+    "identity_and_role_check",
+    "drafting",
+    "review_and_approval",
+    "appointment_or_signature",
+    "register_or_external_submission",
+    "completion",
+    "archive"
+  ],
+  "required_role_templates": [
+    "notary",
+    "notarial_assistant",
+    "deputy_notary",
+    "deputy_assistant",
+    "participant",
+    "external_authority",
+    "system_runtime"
+  ],
+  "relationship_templates": [
+    {
+      "id": "business_case_has_phase",
+      "from": "BusinessCaseType",
+      "to": "ProcessPhase",
+      "cardinality": "one_to_many",
+      "sharepoint_projection": "Prozessregister"
+    },
+    {
+      "id": "matter_has_business_case_type",
+      "from": "Matter",
+      "to": "BusinessCaseType",
+      "cardinality": "many_to_one",
+      "sharepoint_projection": "Akten"
+    },
+    {
+      "id": "matter_has_participant_role",
+      "from": "Matter",
+      "to": "RoleBinding",
+      "cardinality": "one_to_many",
+      "sharepoint_projection": "Beteiligte"
+    },
+    {
+      "id": "phase_has_task",
+      "from": "ProcessPhase",
+      "to": "Task",
+      "cardinality": "one_to_many",
+      "sharepoint_projection": "AufgabenFristen"
+    },
+    {
+      "id": "task_requires_evidence",
+      "from": "Task",
+      "to": "EvidencePointer",
+      "cardinality": "zero_to_many",
+      "sharepoint_projection": "AuditJournalLite"
+    },
+    {
+      "id": "matter_has_document_pointer",
+      "from": "Matter",
+      "to": "DocumentPointer",
+      "cardinality": "one_to_many",
+      "sharepoint_projection": "DokumentRegister"
+    },
+    {
+      "id": "matter_has_deputy_grant",
+      "from": "Matter",
+      "to": "DeputyGrant",
+      "cardinality": "zero_to_many",
+      "sharepoint_projection": "Vertretungsfreigaben"
+    },
+    {
+      "id": "process_model_points_to_bpmn",
+      "from": "BusinessCaseType",
+      "to": "BpmnModelPointer",
+      "cardinality": "zero_to_one",
+      "sharepoint_projection": "Prozessregister"
+    }
+  ],
+  "sharepoint_projection_rules": {
+    "store": "sharepoint_mvp_metadata_lists",
+    "graph_access": "microsoft_graph_rest_v1_only",
+    "schema_apply": "owner_gated_future_apply",
+    "required_lists_or_libraries": [
+      "Akten",
+      "Beteiligte",
+      "AufgabenFristen",
+      "DokumentRegister",
+      "Vertretungsfreigaben",
+      "AuditJournalLite"
+    ],
+    "optional_future_lists_or_libraries": [
+      "Prozessregister",
+      "BPMN Models"
+    ],
+    "blocked_storage": [
+      "document_full_text",
+      "raw_graph_response",
+      "tokens_or_secrets",
+      "bulk_agent_memory_copy",
+      "central_knowledge_graph_folder"
+    ]
+  },
+  "bpmn_alignment": {
+    "role": "process_shape_and_reviewable_model",
+    "runtime_engine": false,
+    "bpmn_js_sharepoint_viewer": "optional_spfx_viewer_only",
+    "modeler_live_apply": "blocked_until_owner_gated_contract",
+    "required_pointer_entity": "BpmnModelPointer"
+  },
+  "agent_runtime_boundary": {
+    "agentic_toolkit": "nvidia_nemo_agent_toolkit",
+    "m365_connectivity": "nvidia_aiq_mcp_or_graph_rest_tooling",
+    "personal_agent_role": "user_interface_and_work_assistance",
+    "workflow_runtime_role": "bounded_process_state_tools",
+    "office_plugin_role": "optional_surface_not_source_of_truth",
+    "bulk_content_memory_allowed": false,
+    "runtime_reasoning_on_request_path_allowed": false
+  },
+  "sizing_policy": {
+    "all_business_cases_must_be_included": true,
+    "deep_modeling_can_be_selective": true,
+    "minimum_canonical_business_cases": 20,
+    "max_entity_classes_without_architecture_review": 64,
+    "max_relationship_templates_without_architecture_review": 128,
+    "max_required_process_phases_without_architecture_review": 16
+  },
+  "required_validation": {
+    "validator": "scripts/validate_notarial_process_ontology_contract.py",
+    "cli_smoke": "nac kg process-ontology-contract --format json",
+    "quality_gate_check": "notarial_process_ontology_contract"
+  }
+}

@@ -19,6 +19,7 @@ from .first_wave_outline import build_first_wave_bpmn_outline
 from .ontology_scale_budget import build_ontology_scale_budget_smoke
 from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
+from .process_ontology_contract import build_process_ontology_contract
 from .workflow_contract import build_workflow_contract_draft
 
 
@@ -78,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "ontology-storage-contract",
         help="Evaluate the notarial ontology sizing and storage contract.",
+    )
+
+    subparsers.add_parser(
+        "process-ontology-contract",
+        help="Evaluate the notarial process ontology product-model contract.",
     )
 
     subparsers.add_parser(
@@ -185,6 +191,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-contract":
+        payload = build_process_ontology_contract(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -364,6 +375,28 @@ def _print_payload(payload: dict, output_format: str) -> None:
             "- max complexity score: "
             f"{current['max_complexity_score']}/{current['max_complexity_score_without_architecture_review']}"
         )
+        print("")
+        print("Derived decision")
+        for key, value in evaluation["derived_decision"].items():
+            print(f"- {key}: {value}")
+        if evaluation["warnings"]:
+            print("")
+            print("Warnings")
+            for warning in evaluation["warnings"]:
+                print(f"- {warning}")
+        return
+
+    if payload.get("schema_version") == "nac.notarial-process-ontology/v1":
+        evaluation = payload["evaluation"]
+        summary = evaluation["summary"]
+        print("Notarial process ontology contract")
+        print(f"- status: {payload['status']}")
+        print(f"- contract: {payload['contract_path']}")
+        print(f"- business cases: {summary['business_case_count']}")
+        print(f"- canonical coverage: {summary['canonical_covered_count']}/{summary['canonical_required']}")
+        print(f"- entity classes: {summary['entity_class_count']}")
+        print(f"- relationship templates: {summary['relationship_template_count']}")
+        print(f"- process phases: {summary['process_phase_count']}")
         print("")
         print("Derived decision")
         for key, value in evaluation["derived_decision"].items():

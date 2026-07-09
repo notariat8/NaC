@@ -128,6 +128,12 @@ machen die Abnahmeharness agentisch lesbar.
   KGs, Microsoft Graph REST v1.0 bleibt einzige M365-Datenebene und globale
   Runtime-Reasoning-, Dokumentvolltext-, Mandatswert- oder zentrale KG-Ablage
   bleiben blockiert.
+- [workflows/contracts/notarial-process-ontology.contract.json](notarial-process-ontology.contract.json):
+  Vertrag für das fachliche Prozess-/Ontologie-Produktmodell über alle
+  Geschäftsvorfälle; definiert Geschäftsvorfalltypen, Prozessphasen, Rollen,
+  Aufgaben, Dokumentzeiger, Evidence, Audit, Vertretungsfreigaben,
+  BPMN-Zeiger und SharePoint-MVP-Projektionen, ohne Live-Apply, Mandatswerte,
+  Dokumentvolltexte, Runtime-Reasoning oder zentrale KG-Ablage.
 - [workflows/contracts/agent-runtime-registry.contract.json](agent-runtime-registry.contract.json):
   archivierter Legacy-Vertrag für die ATP-gestützte Agent-Registry; nicht
   aktive MVP-Datenhaltung.

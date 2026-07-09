@@ -159,6 +159,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_notarial_ontology_storage_contract.py"],
                 ),
                 (
+                    "notarial_process_ontology_contract",
+                    "Notarial Process Ontology Contract",
+                    [sys.executable, "scripts/validate_notarial_process_ontology_contract.py"],
+                ),
+                (
                     "notarial_ontology_scale_budget",
                     "Notarial Ontology Scale Budget",
                     [sys.executable, "scripts/validate_notarial_ontology_scale_budget.py"],

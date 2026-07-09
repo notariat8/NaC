@@ -44,6 +44,10 @@ from notary_kg.ontology_storage_contract import (
     validate_ontology_storage_contract,
 )
 from notary_kg.pilot_checklist import build_pilot_intake_checklist
+from notary_kg.process_ontology_contract import (
+    build_process_ontology_contract,
+    validate_process_ontology_contract,
+)
 from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
 
@@ -222,6 +226,68 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.notarial-ontology-sizing-storage/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_contract_binds_inventory_to_product_model(self) -> None:
+        payload = build_process_ontology_contract(REPO_ROOT)
+        validation = validate_process_ontology_contract(payload)
+        contract = payload["contract"]
+        summary = payload["evaluation"]["summary"]
+        derived = payload["evaluation"]["derived_decision"]
+
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(contract["source_of_truth"]["runtime_store"], "sharepoint_metadata_lists_and_document_pointers")
+        self.assertEqual(contract["graph_boundary"]["m365_data_plane"], "microsoft_graph_rest_v1")
+        self.assertFalse(contract["graph_boundary"]["sdk_allowed"])
+        self.assertFalse(contract["graph_boundary"]["legacy_sharepoint_api_allowed"])
+        self.assertTrue(contract["sizing_policy"]["all_business_cases_must_be_included"])
+        self.assertGreaterEqual(summary["business_case_count"], 20)
+        self.assertEqual(summary["case_contract_index_count"], summary["business_case_count"])
+        self.assertTrue(derived["ontology_is_product_model_contract"])
+        self.assertFalse(derived["runtime_reasoning_on_request_path_allowed"])
+        self.assertFalse(derived["live_apply_required_now"])
+        self.assertIn("Matter", contract["canonical_entity_classes"])
+        self.assertIn("archive", contract["required_process_phases"])
+        self.assertIn("Akten", contract["sharepoint_projection_rules"]["required_lists_or_libraries"])
+
+    def test_cli_process_ontology_contract_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "process-ontology-contract"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["status"], "PASSED")
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_process_ontology_contract_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "process-ontology-contract",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_deep_process_candidate_routing_prioritizes_high_and_explicit_cases(self) -> None:
