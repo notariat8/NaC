@@ -6,6 +6,7 @@ from pathlib import Path
 
 from nac_gnotkg.views import build_cost_review_view
 
+from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .editor import build_editor_view
 from .pilot_checklist import build_pilot_intake_checklist
@@ -59,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generate a deterministic pilot intake checklist from one KG case.",
     )
     pilot_checklist_parser.add_argument("slug")
+
+    subparsers.add_parser(
+        "business-case-inventory",
+        help="Build the thin notarial business-case inventory for ontology sizing.",
+    )
 
     return parser
 
@@ -120,6 +126,11 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         _print_payload(payload, args.format)
         return 0
+
+    if args.command == "business-case-inventory":
+        payload = build_business_case_inventory(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
 
     parser.error(f"Unknown command: {args.command}")
     return 2
@@ -235,6 +246,29 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Guardrails")
         print(f"- echte Mandatsdaten in Git: {payload['guardrails']['real_mandate_data_in_git']}")
         print(f"- produktive Register-/XNP-Aktion: {payload['guardrails']['productive_register_or_xnp_action']}")
+        return
+
+    if payload.get("schema_version") == "nac.notarial-business-case-inventory/v0.1":
+        summary = payload["summary"]
+        print("Notarial business-case inventory")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- business cases: {summary['business_case_count']}")
+        print(f"- canonical coverage: {summary['canonical_covered_count']}/{summary['canonical_target_count']}")
+        print(f"- backlog candidates: {summary['backlog_candidate_count']}")
+        print(f"- max complexity score: {summary['max_complexity_score']}")
+        print("")
+        print("Storage strategy")
+        for key, value in payload["storage_strategy"].items():
+            print(f"- {key}: {value}")
+        print("")
+        print("Domain counts")
+        for domain, count in sorted(summary["domain_counts"].items()):
+            print(f"- {domain}: {count}")
+        print("")
+        print("Recommended deep-process slices")
+        for slug in summary["deep_process_slices_recommended"]:
+            print(f"- {slug}")
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")

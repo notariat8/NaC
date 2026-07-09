@@ -149,6 +149,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_kg_editor.py"],
                 ),
                 (
+                    "notarial_business_case_inventory",
+                    "Notarial Business Case Inventory",
+                    [sys.executable, "scripts/validate_notarial_business_case_inventory.py"],
+                ),
+                (
                     "codex_parallel_review",
                     "Codex Parallel Review Contract",
                     [sys.executable, "scripts/validate_codex_parallel_review.py"],

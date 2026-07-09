@@ -259,23 +259,33 @@ def build_parser() -> argparse.ArgumentParser:
     kg = subparsers.add_parser("kg", help="Steuert usecase-lokale Knowledge Graphs.")
     kg.add_argument("--format", choices=["text", "json"], default="text")
     kg_sub = kg.add_subparsers(dest="kg_command", required=True)
-    kg_sub.add_parser("status", help="Zeigt KG-Status und Entwicklungskandidaten.")
+    kg_status = kg_sub.add_parser("status", help="Zeigt KG-Status und Entwicklungskandidaten.")
+    kg_status.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_case = kg_sub.add_parser("case", help="Zeigt einen KG-Usecase.")
     kg_case.add_argument("slug")
+    kg_case.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_editor = kg_sub.add_parser("editor-view", help="Zeigt die sichere KG-Editor-Ansicht.")
     kg_editor.add_argument("slug")
+    kg_editor.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_cost = kg_sub.add_parser("cost-view", help="Zeigt die sichere GNotKG-Kostenansicht.")
     kg_cost.add_argument("slug")
+    kg_cost.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_workflow_contract = kg_sub.add_parser(
         "workflow-contract",
         help="Erzeugt einen sicheren Workflow-Vertragsentwurf aus einem KG-Usecase.",
     )
     kg_workflow_contract.add_argument("slug")
+    kg_workflow_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_pilot_checklist = kg_sub.add_parser(
         "pilot-checklist",
         help="Erzeugt eine deterministische Pilot-Aufnahmecheckliste aus einem KG-Usecase.",
     )
     kg_pilot_checklist.add_argument("slug")
+    kg_business_case_inventory = kg_sub.add_parser(
+        "business-case-inventory",
+        help="Erzeugt das dünne Geschäftsvorfall-Inventar für Ontologie-Sizing.",
+    )
+    kg_business_case_inventory.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

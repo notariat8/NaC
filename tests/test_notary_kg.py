@@ -12,7 +12,12 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_cli import cli as nac_cli  # noqa: E402
 from notary_kg.catalog import all_case_summaries, find_case, load_catalogs
+from notary_kg.business_case_inventory import (
+    build_business_case_inventory,
+    validate_business_case_inventory,
+)
 from notary_kg.cli import main as kg_main
 from notary_kg.editor import build_editor_view
 from notary_kg.pilot_checklist import build_pilot_intake_checklist
@@ -61,6 +66,74 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["totals"]["catalogs"], expected_count)
         self.assertEqual(payload["totals"]["cases"], expected_count)
         self.assertEqual(payload["totals"]["cases_ready_for_development"], expected_count)
+
+    def test_business_case_inventory_covers_canonical_sizing_scope(self) -> None:
+        payload = build_business_case_inventory(REPO_ROOT)
+        validation = validate_business_case_inventory(payload)
+        cases = {entry["slug"]: entry for entry in payload["business_cases"]}
+
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["mode"], "thin_catalog_for_sizing")
+        self.assertEqual(
+            payload["storage_strategy"]["sharepoint_role"],
+            "operative_mvp_data_store",
+        )
+        self.assertEqual(
+            payload["storage_strategy"]["ontology_role"],
+            "versioned_repo_catalog_and_projection_contract",
+        )
+        self.assertFalse(payload["generated_from"]["central_knowledge_graph_folder_allowed"])
+        self.assertTrue(payload["generated_from"]["usecase_local_knowledge_graphs_remain_authoritative"])
+        self.assertFalse(payload["privacy"]["contains_real_matter_data"])
+        self.assertIn("immobilienkaufvertrag", cases)
+        self.assertEqual(cases["immobilienkaufvertrag"]["implementation_depth"], "candidate_deep_process")
+        self.assertIn("complexity_score", cases["handelsregisteranmeldung"]["sizing"])
+        self.assertGreaterEqual(payload["summary"]["business_case_count"], 20)
+        self.assertEqual(
+            payload["summary"]["canonical_covered_count"],
+            payload["summary"]["canonical_target_count"],
+        )
+
+    def test_cli_business_case_inventory_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "business-case-inventory"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["storage_strategy"]["document_content_role"], "outside_ontology_and_outside_git")
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_business_case_inventory_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "business-case-inventory",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
 
     def test_cli_unknown_case_fails(self) -> None:
         buffer = io.StringIO()
