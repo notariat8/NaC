@@ -10,7 +10,11 @@ from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
-from .first_wave_gap_review import build_first_wave_bpmn_outline_gap_review
+from .first_wave_gap_review import (
+    ARTIFACT_SCHEMA_VERSION as FIRST_WAVE_GAP_REVIEW_ARTIFACT_SCHEMA_VERSION,
+    build_first_wave_bpmn_outline_gap_review,
+    write_first_wave_bpmn_outline_gap_review_artifact,
+)
 from .first_wave_outline import build_first_wave_bpmn_outline
 from .ontology_scale_budget import build_ontology_scale_budget_smoke
 from .ontology_storage_contract import build_ontology_storage_contract
@@ -89,6 +93,23 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "first-wave-gap-review",
         help="Review first-wave BPMN outlines for SharePoint, BPMN and ontology projection gaps.",
+    )
+
+    first_wave_gap_review_artifact = subparsers.add_parser(
+        "first-wave-gap-review-artifact",
+        help="Write a redacted offline first-wave gap-review artifact for release/readiness evidence.",
+    )
+    first_wave_gap_review_artifact.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="JSON artifact path. Default: out/notary-kg/first-wave-gap-review.redacted.json.",
+    )
+    first_wave_gap_review_artifact.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+        help="Markdown artifact path. Default: out/notary-kg/first-wave-gap-review.redacted.md.",
     )
 
     subparsers.add_parser(
@@ -179,6 +200,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "first-wave-gap-review":
         payload = build_first_wave_bpmn_outline_gap_review(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "first-wave-gap-review-artifact":
+        payload = write_first_wave_bpmn_outline_gap_review_artifact(repo_root, args.output, args.markdown_output)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -403,6 +429,19 @@ def _print_payload(payload: dict, output_format: str) -> None:
                 f"{len(item['bpmn_gap_plan']['gaps'])} BPMN gaps, "
                 f"{len(item['ontology_projection_patch_plan']['patches'])} ontology patches"
             )
+        return
+
+    if payload.get("schema_version") == FIRST_WAVE_GAP_REVIEW_ARTIFACT_SCHEMA_VERSION:
+        summary = payload["summary"]
+        print("First-wave BPMN outline gap review artifact")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- JSON: {payload['artifact_paths']['json']}")
+        print(f"- Markdown: {payload['artifact_paths']['markdown']}")
+        print(f"- first-wave cases: {summary['first_wave_count']}")
+        print(f"- SharePoint field gaps: {summary['sharepoint_field_gap_count']}")
+        print(f"- BPMN gaps: {summary['bpmn_gap_count']}")
+        print(f"- ontology patches: {summary['ontology_patch_count']}")
         return
 
     if payload.get("schema_version") == "nac.notarial-ontology-scale-budget/v0.1":

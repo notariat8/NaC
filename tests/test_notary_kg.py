@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -27,6 +28,8 @@ from notary_kg.editor import build_editor_view
 from notary_kg.first_wave_gap_review import (
     build_first_wave_bpmn_outline_gap_review,
     validate_first_wave_bpmn_outline_gap_review,
+    validate_first_wave_bpmn_outline_gap_review_artifact,
+    write_first_wave_bpmn_outline_gap_review_artifact,
 )
 from notary_kg.first_wave_outline import (
     build_first_wave_bpmn_outline,
@@ -403,6 +406,102 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review/v0.1")
         self.assertEqual(payload["status"], "PASSED")
+
+    def test_first_wave_gap_review_artifact_writes_redacted_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "first-wave-gap-review.redacted.json"
+            markdown_output = temp_root / "first-wave-gap-review.redacted.md"
+            payload = write_first_wave_bpmn_outline_gap_review_artifact(REPO_ROOT, json_output, markdown_output)
+            validation = validate_first_wave_bpmn_outline_gap_review_artifact(payload)
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+            json_exists = json_output.is_file()
+            markdown_exists = markdown_output.is_file()
+            artifact_text = json_output.read_text(encoding="utf-8").lower()
+            markdown_text = markdown_output.read_text(encoding="utf-8").lower()
+
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["first_wave_count"], 4)
+        self.assertEqual(len(payload["review_index"]), 4)
+        self.assertTrue(payload["redaction"]["redacted"])
+        self.assertFalse(payload["redaction"]["contains_real_matter_data"])
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertNotIn("planned_value", serialized)
+        self.assertNotIn("planned_value", artifact_text)
+        self.assertIn("first-wave bpmn outline gap review artifact", markdown_text)
+        for attachment in payload["evidence_attachments"]:
+            self.assertTrue(attachment["redacted"])
+            self.assertFalse(attachment["required_for_release_readiness"])
+
+    def test_cli_first_wave_gap_review_artifact_writes_redacted_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "first-wave-gap-review.redacted.json"
+            markdown_output = temp_root / "first-wave-gap-review.redacted.md"
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = kg_main(
+                    [
+                        "--repo-root",
+                        str(REPO_ROOT),
+                        "--format",
+                        "json",
+                        "first-wave-gap-review-artifact",
+                        "--output",
+                        str(json_output),
+                        "--markdown-output",
+                        str(markdown_output),
+                    ]
+                )
+
+            payload = json.loads(buffer.getvalue())
+            json_exists = json_output.is_file()
+            markdown_exists = markdown_output.is_file()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+
+    def test_nac_cli_first_wave_gap_review_artifact_accepts_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "first-wave-gap-review.redacted.json"
+            markdown_output = temp_root / "first-wave-gap-review.redacted.md"
+            parser = nac_cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "kg",
+                    "first-wave-gap-review-artifact",
+                    "--output",
+                    str(json_output),
+                    "--markdown-output",
+                    str(markdown_output),
+                    "--format",
+                    "json",
+                ]
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = args.func(args)
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline-gap-review-artifact/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(payload["artifact_paths"]["json"].endswith(".redacted.json"))
 
     def test_ontology_scale_budget_covers_full_inventory(self) -> None:
         payload = build_ontology_scale_budget_smoke(REPO_ROOT)

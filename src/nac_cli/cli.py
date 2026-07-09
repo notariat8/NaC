@@ -306,6 +306,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prüft First-Wave-Outlines auf SharePoint-, BPMN- und Ontologie-Projektionslücken.",
     )
     kg_first_wave_gap_review.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_first_wave_gap_review_artifact = kg_sub.add_parser(
+        "first-wave-gap-review-artifact",
+        help="Schreibt einen redigierten First-Wave-Gap-Review-Nachweis als Offline-Artefakt.",
+    )
+    kg_first_wave_gap_review_artifact.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_first_wave_gap_review_artifact.add_argument("--output", type=Path, default=None)
+    kg_first_wave_gap_review_artifact.add_argument("--markdown-output", type=Path, default=None)
     kg_ontology_scale_budget = kg_sub.add_parser(
         "ontology-scale-budget",
         help="Prüft Offline-Sizing-Budgets für Ontologie-Projektionen über alle Geschäftsvorfälle.",
@@ -1399,6 +1406,10 @@ def command_kg(args: argparse.Namespace) -> int:
     argv = ["--repo-root", str(resolve_repo_root(args.repo_root)), "--format", args.format, args.kg_command]
     if getattr(args, "slug", None):
         argv.append(args.slug)
+    if getattr(args, "output", None) is not None:
+        argv.extend(["--output", str(args.output)])
+    if getattr(args, "markdown_output", None) is not None:
+        argv.extend(["--markdown-output", str(args.markdown_output)])
     return notary_kg_main(argv)
 
 

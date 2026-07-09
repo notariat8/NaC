@@ -16,6 +16,20 @@ Der Review erzeugt planbare Artefakte für:
 - Ontologie-Projektionspatches ohne Werte
 - spätere Verification Contracts vor jeder Apply-Aktion
 
+## Redigierter Nachweis
+
+`nac kg first-wave-gap-review-artifact --format json` schreibt zusätzlich
+redigierte Evidence-Artefakte:
+
+- `out/notary-kg/first-wave-gap-review.redacted.json`
+- `out/notary-kg/first-wave-gap-review.redacted.md`
+
+Der Artefaktmodus enthält nur Zähler, Slugs, Quellreferenzen und Gap-/Patch-Typen.
+Er enthält keine Roh-Review-Items, keine `planned_value`-Felder, keine
+Mandatswerte, keine Dokumentvolltexte, keine Graph-Rohantworten und keine
+Secrets. Das Artefakt ist release-readiness-fähig, aber noch optional; eine
+Pflichtaufnahme in Release-/Readiness-Gates bleibt eine eigene Entscheidung.
+
 ## Aktueller Befund
 
 Der aktuelle Offline-Smoke meldet:
@@ -45,3 +59,8 @@ Der Gap-Review ist offline-only:
 Der Validator
 [scripts/validate_first_wave_bpmn_outline_gap_review.py](../../../scripts/validate_first_wave_bpmn_outline_gap_review.py)
 prüft diese Grenzen im strikten Quality Gate.
+
+Der Artefakt-Validator
+[scripts/validate_first_wave_bpmn_outline_gap_review_artifact.py](../../../scripts/validate_first_wave_bpmn_outline_gap_review_artifact.py)
+prüft zusätzlich Redaktionsform, Dateiendungen und optionale
+Evidence-Anhängbarkeit.
