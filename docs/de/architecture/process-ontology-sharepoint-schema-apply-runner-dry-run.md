@@ -49,6 +49,13 @@ Stop-Regeln, Phasenplan und Evidence-Mindestumfang. Er deklariert den
 zukünftigen Live-Runner ausdrücklich als noch nicht implementiert und bleibt
 selbst `offline_only`.
 
+`nac kg process-ontology-schema-apply-owner-gated-runner-contract --format json`
+schreibt anschließend den ausführungsnahen Runner-Vertrag. Er bindet den
+späteren Befehl `nac kg process-ontology-schema-apply-live` an 68 geplante
+Runner-Schritte, Owner-Gate, Pflichtflags, Stop-before-mutation-Regeln und
+redigierte Evidence. Auch dieser Vertrag implementiert den Live-Runner noch
+nicht und führt keine Graph-Requests aus.
+
 ## Grenzen
 
 Der Dry-Run ist offline-only:
@@ -65,7 +72,9 @@ Live-Apply bleibt ein separater Owner-Gate. Auch das Live-Readiness-Gate führt
 keine Graph-Requests aus, schreibt keine SharePoint-Daten und verändert kein
 Schema; es belegt nur, dass die später dafür nötigen Offline-Nachweise
 vollständig und redigiert sind. Der Owner-gated Live-Plan führt ebenfalls keine
-Graph-Requests aus; er macht nur die spätere Ausführungskante prüfbar.
+Graph-Requests aus; er macht nur die spätere Ausführungskante prüfbar. Der
+Runner-Vertrag bleibt ebenfalls offline und ist die letzte Schnittstellenkante
+vor der tatsächlichen Runner-Implementierung.
 
 Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -77,4 +86,6 @@ und
 [scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py)
 und
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan.py)
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py)
 prüfen diese Grenze im strikten Quality Gate.

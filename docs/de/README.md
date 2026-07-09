@@ -162,7 +162,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Offline-Dry-Run für geplante Preflight-, Mutations- und Readback-Schritte vor
   einem späteren SharePoint-Schema-Apply inklusive redigiertem JSON-/Markdown-
   Nachweis, metadata-only Artefaktindex, Offline-Live-Readiness-Gate und
-  owner-gated Live-Plan.
+  owner-gated Live-Plan sowie Runner-Vertrag.
 - [docs/de/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md):
   Offline-Scale-Smoke über alle Geschäftsvorfälle, BPMN-Quellen und
   Ontologie-Projektionsbudgets, damit Deep Modeling nicht ohne Sizing in eine

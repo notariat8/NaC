@@ -29,6 +29,10 @@ from .process_ontology_schema_apply_owner_gated_live_plan import (
     SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_OWNER_GATED_LIVE_PLAN_SCHEMA_VERSION,
     write_process_ontology_sharepoint_schema_apply_owner_gated_live_plan,
 )
+from .process_ontology_schema_apply_owner_gated_runner_contract import (
+    SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_OWNER_GATED_RUNNER_CONTRACT_SCHEMA_VERSION,
+    write_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract,
+)
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 from .process_ontology_schema_apply_runner_dry_run import (
     ARTIFACT_INDEX_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_ARTIFACT_INDEX_SCHEMA_VERSION,
@@ -255,6 +259,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not create default redacted readiness artifacts before evaluating the live plan.",
     )
 
+    process_ontology_schema_apply_owner_gated_runner_contract = subparsers.add_parser(
+        "process-ontology-schema-apply-owner-gated-runner-contract",
+        help="Write an offline owner-gated runner contract for the later Graph REST schema apply.",
+    )
+    process_ontology_schema_apply_owner_gated_runner_contract.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=None,
+        help="Artifact root to scan and write supporting readiness artifacts. Default: out/notary-kg.",
+    )
+    process_ontology_schema_apply_owner_gated_runner_contract.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "JSON runner-contract path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-owner-gated-runner-contract.redacted.json."
+        ),
+    )
+    process_ontology_schema_apply_owner_gated_runner_contract.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+        help=(
+            "Markdown runner-contract path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-owner-gated-runner-contract.redacted.md."
+        ),
+    )
+    process_ontology_schema_apply_owner_gated_runner_contract.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+        help="Do not create default redacted readiness artifacts before evaluating the runner contract.",
+    )
+
     subparsers.add_parser(
         "deep-process-candidates",
         help="Route notarial business cases into deep BPMN/ontology modeling candidates.",
@@ -440,6 +478,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "READY_FOR_OWNER_APPROVAL" else 1
+
+    if args.command == "process-ontology-schema-apply-owner-gated-runner-contract":
+        payload = write_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract(
+            repo_root,
+            args.artifact_root,
+            args.output,
+            args.markdown_output,
+            ensure_default_artifacts=not args.no_ensure_default_artifacts,
+        )
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
 
     if args.command == "deep-process-candidates":
         payload = build_deep_process_candidate_routing(repo_root)
@@ -775,6 +824,21 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- workspaces: {summary['workspace_count']}")
         print(f"- planned live steps: {summary['planned_live_step_count']}")
         print(f"- owner gate required now: {summary['owner_gate_required_now']}")
+        print(f"- executes Graph requests: {summary['executes_graph_requests']}")
+        print(f"- writes SharePoint: {summary['writes_sharepoint']}")
+        if payload.get("artifact_paths"):
+            print(f"- JSON: {payload['artifact_paths']['json']}")
+            print(f"- Markdown: {payload['artifact_paths']['markdown']}")
+        return
+
+    if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_OWNER_GATED_RUNNER_CONTRACT_SCHEMA_VERSION:
+        summary = payload["summary"]
+        print("Process ontology SharePoint schema apply owner-gated runner contract")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- runner command: {payload['runner_interface']['command']}")
+        print(f"- runner steps: {summary['runner_step_count']}")
+        print(f"- owner gate before execution: {summary['owner_gate_required_before_execution']}")
         print(f"- executes Graph requests: {summary['executes_graph_requests']}")
         print(f"- writes SharePoint: {summary['writes_sharepoint']}")
         if payload.get("artifact_paths"):
