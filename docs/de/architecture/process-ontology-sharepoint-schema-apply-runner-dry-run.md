@@ -16,6 +16,16 @@ Apply-Plan, Apply-Readiness und Execution Contract konkrete geplante Schritte:
 
 Der Dry-Run macht die spätere Live-Sequenz prüfbar, ohne den Tenant zu ändern.
 
+`nac kg process-ontology-schema-apply-runner-dry-run-artifact --format json`
+schreibt daraus zusätzlich redigierte Evidence-Dateien:
+
+- `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json`
+- `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md`
+
+Das Artefakt enthält die 68 Dry-Run-Schritte als redigierten Index. Site-IDs
+werden auf `{site-id}` zurückgeführt, Request-Header werden nicht gespeichert
+und geplante Mutationsbodies werden nur als Body-Shape-Key-Liste ausgegeben.
+
 ## Grenzen
 
 Der Dry-Run ist offline-only:
@@ -30,6 +40,8 @@ Der Dry-Run ist offline-only:
 Der nächste Schritt kann ein redigiertes Dry-Run-Artefakt sein. Ein echter
 Live-Apply bleibt ein separater Owner-Gate.
 
-Der Validator
+Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
-prüft diese Grenze im strikten Quality Gate.
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
+prüfen diese Grenze im strikten Quality Gate.

@@ -27,7 +27,9 @@ from .process_ontology_schema_apply_execution_contract import (
 )
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 from .process_ontology_schema_apply_runner_dry_run import (
+    ARTIFACT_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_ARTIFACT_SCHEMA_VERSION,
     build_process_ontology_sharepoint_schema_apply_runner_dry_run,
+    write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
 )
 from .process_ontology_schema_gap import build_process_ontology_sharepoint_schema_gap
 from .workflow_contract import build_workflow_contract_draft
@@ -119,6 +121,29 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "process-ontology-schema-apply-runner-dry-run",
         help="Build the offline dry-run runner plan for a future Graph REST schema apply.",
+    )
+
+    process_ontology_schema_apply_runner_dry_run_artifact = subparsers.add_parser(
+        "process-ontology-schema-apply-runner-dry-run-artifact",
+        help="Write a redacted offline dry-run artifact for a future Graph REST schema apply.",
+    )
+    process_ontology_schema_apply_runner_dry_run_artifact.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "JSON artifact path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json."
+        ),
+    )
+    process_ontology_schema_apply_runner_dry_run_artifact.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+        help=(
+            "Markdown artifact path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md."
+        ),
     )
 
     subparsers.add_parser(
@@ -261,6 +286,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "process-ontology-schema-apply-runner-dry-run":
         payload = build_process_ontology_sharepoint_schema_apply_runner_dry_run(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-schema-apply-runner-dry-run-artifact":
+        payload = write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+            repo_root,
+            args.output,
+            args.markdown_output,
+        )
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -544,6 +578,19 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- preflight requests: {summary['preflight_request_count']}")
         print(f"- future mutation requests: {summary['future_mutation_request_count']}")
         print(f"- readback requests: {summary['readback_request_count']}")
+        print(f"- owner gate before live apply: {summary['owner_gate_required_before_live_apply']}")
+        return
+
+    if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_ARTIFACT_SCHEMA_VERSION:
+        summary = payload["summary"]
+        print("Process ontology SharePoint schema apply runner dry-run artifact")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- JSON: {payload['artifact_paths']['json']}")
+        print(f"- Markdown: {payload['artifact_paths']['markdown']}")
+        print(f"- workspaces: {summary['workspace_count']}")
+        print(f"- dry-run steps: {summary['dry_run_step_count']}")
+        print(f"- future mutation requests: {summary['future_mutation_request_count']}")
         print(f"- owner gate before live apply: {summary['owner_gate_required_before_live_apply']}")
         return
 

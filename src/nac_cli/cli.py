@@ -327,6 +327,19 @@ def build_parser() -> argparse.ArgumentParser:
     kg_process_ontology_schema_apply_runner_dry_run.add_argument(
         "--format", choices=["text", "json"], default=argparse.SUPPRESS
     )
+    kg_process_ontology_schema_apply_runner_dry_run_artifact = kg_sub.add_parser(
+        "process-ontology-schema-apply-runner-dry-run-artifact",
+        help="Schreibt einen redigierten Dry-Run-Nachweis für einen späteren Graph-REST-Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_runner_dry_run_artifact.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
+    kg_process_ontology_schema_apply_runner_dry_run_artifact.add_argument("--output", type=Path, default=None)
+    kg_process_ontology_schema_apply_runner_dry_run_artifact.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",

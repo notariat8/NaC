@@ -67,6 +67,8 @@ from notary_kg.process_ontology_schema_apply_readiness import (
 from notary_kg.process_ontology_schema_apply_runner_dry_run import (
     build_process_ontology_sharepoint_schema_apply_runner_dry_run,
     validate_process_ontology_sharepoint_schema_apply_runner_dry_run,
+    validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
+    write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
 )
 from notary_kg.process_ontology_schema_gap import (
     build_process_ontology_sharepoint_schema_gap,
@@ -661,6 +663,115 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(
             payload["schema_version"],
             "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_runner_dry_run_artifact_writes_redacted_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            markdown_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            payload = write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                json_output,
+                markdown_output,
+            )
+            validation = validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(payload)
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+            json_exists = json_output.is_file()
+            markdown_exists = markdown_output.is_file()
+            artifact_text = json_output.read_text(encoding="utf-8").lower()
+            markdown_text = markdown_output.read_text(encoding="utf-8").lower()
+
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
+        self.assertEqual(len(payload["dry_run_step_index"]), 68)
+        self.assertTrue(payload["redaction"]["redacted"])
+        self.assertFalse(payload["redaction"]["contains_site_ids"])
+        self.assertFalse(payload["redaction"]["contains_request_headers"])
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertNotIn("funktion8.sharepoint.com", serialized)
+        self.assertNotIn('"headers"', artifact_text)
+        self.assertIn("process ontology sharepoint schema apply runner dry-run artifact", markdown_text)
+        for attachment in payload["evidence_attachments"]:
+            self.assertTrue(attachment["redacted"])
+            self.assertTrue(attachment["required_for_live_apply_readiness"])
+
+    def test_cli_process_ontology_schema_apply_runner_dry_run_artifact_writes_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            markdown_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = kg_main(
+                    [
+                        "--repo-root",
+                        str(REPO_ROOT),
+                        "--format",
+                        "json",
+                        "process-ontology-schema-apply-runner-dry-run-artifact",
+                        "--output",
+                        str(json_output),
+                        "--markdown-output",
+                        str(markdown_output),
+                    ]
+                )
+
+            payload = json.loads(buffer.getvalue())
+            json_exists = json_output.is_file()
+            markdown_exists = markdown_output.is_file()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+
+    def test_nac_cli_process_ontology_schema_apply_runner_dry_run_artifact_accepts_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            json_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            markdown_output = temp_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            parser = nac_cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "kg",
+                    "process-ontology-schema-apply-runner-dry-run-artifact",
+                    "--output",
+                    str(json_output),
+                    "--markdown-output",
+                    str(markdown_output),
+                    "--format",
+                    "json",
+                ]
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = args.func(args)
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
         )
         self.assertEqual(payload["status"], "PASSED")
 

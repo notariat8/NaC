@@ -160,7 +160,8 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   SharePoint-Schema-Apply über Microsoft Graph REST.
 - [docs/de/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md):
   Offline-Dry-Run für geplante Preflight-, Mutations- und Readback-Schritte vor
-  einem späteren SharePoint-Schema-Apply.
+  einem späteren SharePoint-Schema-Apply inklusive redigiertem JSON-/Markdown-
+  Nachweis.
 - [docs/de/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md):
   Offline-Scale-Smoke über alle Geschäftsvorfälle, BPMN-Quellen und
   Ontologie-Projektionsbudgets, damit Deep Modeling nicht ohne Sizing in eine

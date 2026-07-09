@@ -17,6 +17,16 @@ apply plan, apply readiness and execution contract into concrete planned steps:
 The dry-run makes the later live sequence reviewable without changing the
 tenant.
 
+`nac kg process-ontology-schema-apply-runner-dry-run-artifact --format json`
+also writes redacted evidence files:
+
+- `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json`
+- `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md`
+
+The artifact includes all 68 dry-run steps as a redacted index. Site IDs are
+collapsed back to `{site-id}`, request headers are not stored, and planned
+mutation bodies are represented only as body-shape key lists.
+
 ## Boundaries
 
 The dry-run is offline-only:
@@ -31,6 +41,8 @@ The dry-run is offline-only:
 The next step can be a redacted dry-run artifact. A real live apply remains a
 separate owner gate.
 
-The validator
+The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
-checks this boundary in the strict quality gate.
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
+check this boundary in the strict quality gate.
