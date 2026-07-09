@@ -159,6 +159,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Routing der High-/Medium-Komplexitätsfälle aus dem Sizing-Vertrag in
   First-Wave-, Archetypen-, Backlog- und Legacy-Dedupe-Lanes für tiefe BPMN- und
   Ontologie-Modellierung.
+- [docs/de/architecture/first-wave-bpmn-outline.md](architecture/first-wave-bpmn-outline.md):
+  Offline-Outline-Vertrag für die vier First-Wave-Fälle mit BPMN-Quelle,
+  usecase-lokalem KG, Ontologie-Projektionsplan und SharePoint-Field-Gap-Plan
+  ohne Live-Apply.
 - [docs/de/architecture/teams-sharepoint-graph-data-plane.md](architecture/teams-sharepoint-graph-data-plane.md):
   geschlossene M365-/SharePoint-MVP-Infrastruktur-Baseline über Teams,
   Microsoft-365-Gruppe, SharePoint-Team-Site und Microsoft Graph REST ohne alte

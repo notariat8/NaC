@@ -296,6 +296,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
     )
     kg_deep_process_candidates.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_first_wave_outline = kg_sub.add_parser(
+        "first-wave-bpmn-outline",
+        help="Erzeugt Offline-BPMN-/Ontologie-Outline-Pläne für First-Wave-Fälle.",
+    )
+    kg_first_wave_outline.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

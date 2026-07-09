@@ -10,6 +10,7 @@ from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
+from .first_wave_outline import build_first_wave_bpmn_outline
 from .ontology_storage_contract import build_ontology_storage_contract
 from .pilot_checklist import build_pilot_intake_checklist
 from .workflow_contract import build_workflow_contract_draft
@@ -76,6 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "deep-process-candidates",
         help="Route notarial business cases into deep BPMN/ontology modeling candidates.",
+    )
+
+    subparsers.add_parser(
+        "first-wave-bpmn-outline",
+        help="Build offline BPMN/ontology outline plans for first-wave deep-process cases.",
     )
 
     return parser
@@ -151,6 +157,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "deep-process-candidates":
         payload = build_deep_process_candidate_routing(repo_root)
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "first-wave-bpmn-outline":
+        payload = build_first_wave_bpmn_outline(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
 
@@ -332,6 +343,24 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Recommended batch")
         for slug in payload["recommended_batch"]:
             print(f"- {slug}")
+        return
+
+    if payload.get("schema_version") == "nac.first-wave-bpmn-outline/v0.1":
+        summary = payload["summary"]
+        print("First-wave BPMN outline contract")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- first-wave cases: {summary['first_wave_count']}")
+        print(f"- total BPMN flow nodes: {summary['total_bpmn_flow_nodes']}")
+        print(f"- total required-information nodes: {summary['total_required_information_nodes']}")
+        print("")
+        print("Outlines")
+        for outline in payload["outlines"]:
+            print(
+                f"- {outline['slug']}: "
+                f"{outline['bpmn_outline']['flow_node_count']} BPMN nodes, "
+                f"{outline['kg_outline']['required_information_nodes']} KG info nodes"
+            )
         return
 
     print(f"{payload['slug']} ({payload['catalog_id']})")

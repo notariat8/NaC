@@ -24,6 +24,10 @@ from notary_kg.deep_process_routing import (
     validate_deep_process_candidate_routing,
 )
 from notary_kg.editor import build_editor_view
+from notary_kg.first_wave_outline import (
+    build_first_wave_bpmn_outline,
+    validate_first_wave_bpmn_outline,
+)
 from notary_kg.ontology_storage_contract import (
     build_ontology_storage_contract,
     validate_ontology_storage_contract,
@@ -264,6 +268,66 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.notarial-deep-process-candidate-routing/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_first_wave_bpmn_outline_binds_existing_sources(self) -> None:
+        payload = build_first_wave_bpmn_outline(REPO_ROOT)
+        validation = validate_first_wave_bpmn_outline(payload)
+        outlines = {outline["slug"]: outline for outline in payload["outlines"]}
+
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(set(outlines), set(payload["source"]["recommended_batch"]))
+        self.assertIn("online-gmbh-gruendung", outlines)
+        for outline in outlines.values():
+            self.assertTrue(outline["sources"]["knowledge_graph_exists"])
+            self.assertTrue(outline["sources"]["bpmn_exists"])
+            self.assertFalse(outline["bpmn_outline"]["is_executable"])
+            self.assertGreater(outline["bpmn_outline"]["flow_node_count"], 0)
+            self.assertGreater(outline["kg_outline"]["required_information_nodes"], 0)
+            self.assertFalse(outline["projection_plan"]["stores_matter_values"])
+            self.assertFalse(outline["projection_plan"]["writes_sharepoint"])
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertTrue(payload["guardrails"]["bpmn_remains_process_model_not_runtime_engine"])
+
+    def test_cli_first_wave_bpmn_outline_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "first-wave-bpmn-outline"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["first_wave_count"], 4)
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_first_wave_bpmn_outline_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "first-wave-bpmn-outline",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_cli_unknown_case_fails(self) -> None:
