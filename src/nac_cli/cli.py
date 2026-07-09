@@ -301,6 +301,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt Offline-BPMN-/Ontologie-Outline-Pläne für First-Wave-Fälle.",
     )
     kg_first_wave_outline.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_ontology_scale_budget = kg_sub.add_parser(
+        "ontology-scale-budget",
+        help="Prüft Offline-Sizing-Budgets für Ontologie-Projektionen über alle Geschäftsvorfälle.",
+    )
+    kg_ontology_scale_budget.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg.set_defaults(func=command_kg)
 
     gnotkg = subparsers.add_parser("gnotkg", help="Berechnet technische GNotKG-Kostenentwürfe.")

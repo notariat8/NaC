@@ -28,6 +28,10 @@ from notary_kg.first_wave_outline import (
     build_first_wave_bpmn_outline,
     validate_first_wave_bpmn_outline,
 )
+from notary_kg.ontology_scale_budget import (
+    build_ontology_scale_budget_smoke,
+    validate_ontology_scale_budget_smoke,
+)
 from notary_kg.ontology_storage_contract import (
     build_ontology_storage_contract,
     validate_ontology_storage_contract,
@@ -328,6 +332,73 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.first-wave-bpmn-outline/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_ontology_scale_budget_covers_full_inventory(self) -> None:
+        payload = build_ontology_scale_budget_smoke(REPO_ROOT)
+        validation = validate_ontology_scale_budget_smoke(payload)
+        summary = payload["summary"]
+        thresholds = payload["thresholds"]
+
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-scale-budget/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(summary["business_case_count"], summary["bpmn_source_count"])
+        self.assertGreaterEqual(summary["business_case_count"], 20)
+        self.assertLessEqual(
+            summary["max_projection_entities_estimate"],
+            thresholds["max_projection_entities_per_business_case"],
+        )
+        self.assertLessEqual(
+            summary["max_projection_edges_estimate"],
+            thresholds["max_projection_edges_per_business_case"],
+        )
+        self.assertFalse(payload["guardrails"]["executes_graph_requests"])
+        self.assertFalse(payload["guardrails"]["writes_sharepoint"])
+        self.assertFalse(payload["guardrails"]["runtime_ontology_reasoning_on_request_path_allowed"])
+        for item in payload["budget_cases"]:
+            self.assertNotEqual(item["projection_entities_pressure"], "over_budget")
+            self.assertNotEqual(item["projection_edges_pressure"], "over_budget")
+            self.assertTrue(item["bpmn_exists"])
+            self.assertGreater(item["bpmn_flow_nodes"], 0)
+
+    def test_cli_ontology_scale_budget_returns_safe_json(self) -> None:
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = kg_main(["--repo-root", str(REPO_ROOT), "--format", "json", "ontology-scale-budget"])
+
+        payload = json.loads(buffer.getvalue())
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-scale-budget/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertGreaterEqual(payload["summary"]["business_case_count"], 20)
+        for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_nac_cli_ontology_scale_budget_accepts_tail_format_json(self) -> None:
+        parser = nac_cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "kg",
+                "ontology-scale-budget",
+                "--format",
+                "json",
+            ]
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            exit_code = args.func(args)
+
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["schema_version"], "nac.notarial-ontology-scale-budget/v0.1")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_cli_unknown_case_fails(self) -> None:

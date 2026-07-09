@@ -135,6 +135,10 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the ontology sizing and storage boundary from the business-case
   inventory with SharePoint as operative MVP storage, ontology as a versioned
   projection and Graph REST as the only M365 data plane.
+- [docs/en/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md)
+  defines the offline scale smoke across all business cases, BPMN sources and
+  ontology projection budgets so deep modeling does not run into performance
+  limits without sizing.
 - [docs/en/architecture/notarial-deep-process-candidate-routing.md](architecture/notarial-deep-process-candidate-routing.md)
   routes high/medium complexity cases from the sizing contract into first-wave,
   archetype, backlog and legacy-dedupe lanes for deep BPMN and ontology

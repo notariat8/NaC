@@ -111,6 +111,7 @@ nac web
 nac kg status
 nac kg business-case-inventory --format json
 nac kg ontology-storage-contract --format json
+nac kg ontology-scale-budget --format json
 nac kg deep-process-candidates --format json
 nac kg first-wave-bpmn-outline --format json
 nac kg cost-view immobilienkaufvertrag
@@ -169,7 +170,7 @@ nac time-ledger summary
 | Git hygiene | `nac git worktree-audit` | Checks local worktrees, branches and cleanup candidates read-only; deletion actions remain owner-gated. |
 | Office UI | `nac operator --open` | Starts the local operator web app with cases, checklists, BPMN, editor and workstation tests. |
 | Graphical model view | `nac web` | Starts the local web server for BPMN and KG views. |
-| Knowledge graphs | `nac kg status`, `nac kg business-case-inventory`, `nac kg ontology-storage-contract`, `nac kg deep-process-candidates`, `nac kg first-wave-bpmn-outline`, `nac kg workflow-contract <slug>` and `nac kg pilot-checklist <slug>` | Shows the state of usecase-local knowledge graphs, creates a thin business-case inventory for ontology sizing without a central knowledge graph, checks the ontology/storage boundary against SharePoint MVP and Graph REST rules, routes candidates for deep BPMN/ontology modeling, creates first-wave BPMN/ontology outline plans, creates mandate-data-free workflow contract drafts and builds deterministic pilot intake checklists from a usecase KG. |
+| Knowledge graphs | `nac kg status`, `nac kg business-case-inventory`, `nac kg ontology-storage-contract`, `nac kg ontology-scale-budget`, `nac kg deep-process-candidates`, `nac kg first-wave-bpmn-outline`, `nac kg workflow-contract <slug>` and `nac kg pilot-checklist <slug>` | Shows the state of usecase-local knowledge graphs, creates a thin business-case inventory for ontology sizing without a central knowledge graph, checks the ontology/storage boundary against SharePoint MVP and Graph REST rules, measures offline scale budgets across all business cases, routes candidates for deep BPMN/ontology modeling, creates first-wave BPMN/ontology outline plans, creates mandate-data-free workflow contract drafts and builds deterministic pilot intake checklists from a usecase KG. |
 | Legal graph | `nac legal-graph status`, `nac legal-graph sources`, `nac legal-graph source-inventory`, `nac legal-graph model-card-proposal`, `nac legal-graph ai-sbom-delta-proposal`, `nac legal-graph review erbrecht` and `nac legal-graph update-dry-run erbrecht` | Shows the mandate-data-free legal graph, primary sources, source-inventory/license/TDM gates, model-card and AI-SBOM delta proposals, review points and update patches without auto-merge. |
 | AI-SBOM | `nac ai-sbom export-mapping` | Shows the selected CycloneDX/SPDX export mapping without enabling release export, external tool execution, mandate data or secrets. |
 | GNotKG cost review | `nac kg cost-view <slug>` and `nac gnotkg quote` | Shows the mandate-data-free cost review view and calculates local technical cost drafts. |

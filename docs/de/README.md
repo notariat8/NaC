@@ -155,6 +155,10 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
   Ontologie-Sizing- und Storage-Grenze aus dem Geschäftsvorfall-Inventar mit
   SharePoint als operativer MVP-Datenhaltung, Ontologie als versionierter
   Projektion und Graph REST als einziger M365-Datenebene.
+- [docs/de/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md):
+  Offline-Scale-Smoke über alle Geschäftsvorfälle, BPMN-Quellen und
+  Ontologie-Projektionsbudgets, damit Deep Modeling nicht ohne Sizing in eine
+  Performance-Grenze läuft.
 - [docs/de/architecture/notarial-deep-process-candidate-routing.md](architecture/notarial-deep-process-candidate-routing.md):
   Routing der High-/Medium-Komplexitätsfälle aus dem Sizing-Vertrag in
   First-Wave-, Archetypen-, Backlog- und Legacy-Dedupe-Lanes für tiefe BPMN- und
