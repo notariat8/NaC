@@ -29,8 +29,10 @@ from .process_ontology_schema_apply_readiness import build_process_ontology_shar
 from .process_ontology_schema_apply_runner_dry_run import (
     ARTIFACT_INDEX_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_ARTIFACT_INDEX_SCHEMA_VERSION,
     ARTIFACT_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_ARTIFACT_SCHEMA_VERSION,
+    LIVE_READINESS_GATE_SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_LIVE_READINESS_GATE_SCHEMA_VERSION,
     build_process_ontology_sharepoint_schema_apply_runner_dry_run,
     write_process_ontology_sharepoint_schema_apply_artifact_index,
+    write_process_ontology_sharepoint_schema_apply_live_readiness_gate,
     write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
 )
 from .process_ontology_schema_gap import build_process_ontology_sharepoint_schema_gap
@@ -179,6 +181,40 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-ensure-default-artifact",
         action="store_true",
         help="Do not create the default redacted dry-run artifact before indexing.",
+    )
+
+    process_ontology_schema_apply_live_readiness_gate = subparsers.add_parser(
+        "process-ontology-schema-apply-live-readiness-gate",
+        help="Write an offline readiness gate before a future owner-gated Graph REST schema apply.",
+    )
+    process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--artifact-root",
+        type=Path,
+        default=None,
+        help="Artifact root to scan. Default: out/notary-kg.",
+    )
+    process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "JSON gate path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-live-readiness-gate.redacted.json."
+        ),
+    )
+    process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--markdown-output",
+        type=Path,
+        default=None,
+        help=(
+            "Markdown gate path. Default: "
+            "out/notary-kg/process-ontology-schema-apply-live-readiness-gate.redacted.md."
+        ),
+    )
+    process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+        help="Do not create default redacted dry-run/index artifacts before evaluating readiness.",
     )
 
     subparsers.add_parser(
@@ -341,6 +377,17 @@ def main(argv: list[str] | None = None) -> int:
             args.markdown_output,
             args.query,
             ensure_default_artifact=not args.no_ensure_default_artifact,
+        )
+        _print_payload(payload, args.format)
+        return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "process-ontology-schema-apply-live-readiness-gate":
+        payload = write_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+            repo_root,
+            args.artifact_root,
+            args.output,
+            args.markdown_output,
+            ensure_default_artifacts=not args.no_ensure_default_artifacts,
         )
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
@@ -650,6 +697,22 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- artifacts: {summary['artifact_count']}")
         print(f"- required for live apply readiness: {summary['required_for_live_apply_readiness_count']}")
         print(f"- total dry-run steps: {summary['total_dry_run_step_count']}")
+        if payload.get("artifact_paths"):
+            print(f"- JSON: {payload['artifact_paths']['json']}")
+            print(f"- Markdown: {payload['artifact_paths']['markdown']}")
+        return
+
+    if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_LIVE_READINESS_GATE_SCHEMA_VERSION:
+        summary = payload["summary"]
+        print("Process ontology SharePoint schema apply live readiness gate")
+        print(f"- status: {payload['status']}")
+        print(f"- mode: {payload['mode']}")
+        print(f"- checks: {summary['passed_check_count']}/{summary['check_count']}")
+        print(f"- workspaces: {summary['workspace_count']}")
+        print(f"- workspace apply units: {summary['workspace_apply_unit_count']}")
+        print(f"- dry-run steps: {summary['dry_run_step_count']}")
+        print(f"- indexed artifacts: {summary['artifact_count']}")
+        print(f"- owner gate before live apply: {summary['owner_gate_required_before_live_apply']}")
         if payload.get("artifact_paths"):
             print(f"- JSON: {payload['artifact_paths']['json']}")
             print(f"- Markdown: {payload['artifact_paths']['markdown']}")

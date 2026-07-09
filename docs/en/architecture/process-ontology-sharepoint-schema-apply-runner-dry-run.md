@@ -34,6 +34,13 @@ flags and the `required_for_live_apply_readiness` marker, but no request
 details. If the default folder does not yet contain a dry-run artifact, the
 command creates that default artifact offline first.
 
+`nac kg process-ontology-schema-apply-live-readiness-gate --format json`
+writes a final offline gate before a later real SharePoint schema apply. The
+gate checks that the execution contract, workspace readiness, runner dry-run,
+redacted artifact index, redaction boundary and owner gate are complete. The
+command also writes the redacted artifact index when it is not yet present in
+the selected artifact folder.
+
 ## Boundaries
 
 The dry-run is offline-only:
@@ -46,7 +53,9 @@ The dry-run is offline-only:
 - no raw Graph responses
 
 The next step can be a redacted dry-run artifact. A real live apply remains a
-separate owner gate.
+separate owner gate. The live-readiness gate also executes no Graph requests,
+writes no SharePoint data and changes no schema; it only proves that the later
+offline evidence is complete and redacted.
 
 The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -54,4 +63,6 @@ The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
 and
 [scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py)
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py)
 check this boundary in the strict quality gate.

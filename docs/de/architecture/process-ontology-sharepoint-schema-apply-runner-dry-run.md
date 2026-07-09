@@ -34,6 +34,14 @@ Schrittzahlen, Redaktionsflags und die Markierung
 Standardordner noch kein Dry-Run-Artefakt liegt, erzeugt der Befehl dieses
 Standardartefakt offline nach.
 
+`nac kg process-ontology-schema-apply-live-readiness-gate --format json`
+schreibt daraus ein letztes Offline-Gate vor einem späteren echten
+SharePoint-Schema-Apply. Das Gate prüft, ob Execution Contract,
+Workspace-Readiness, Runner-Dry-Run, redigierter Artefaktindex,
+Redaktionsgrenze und Owner-Gate vollständig vorliegen. Der Befehl schreibt
+zusätzlich den redigierten Artefaktindex, falls er im gewählten
+Artefaktverzeichnis noch nicht vorhanden ist.
+
 ## Grenzen
 
 Der Dry-Run ist offline-only:
@@ -46,7 +54,10 @@ Der Dry-Run ist offline-only:
 - keine Roh-Graph-Antworten
 
 Der nächste Schritt kann ein redigiertes Dry-Run-Artefakt sein. Ein echter
-Live-Apply bleibt ein separater Owner-Gate.
+Live-Apply bleibt ein separater Owner-Gate. Auch das Live-Readiness-Gate führt
+keine Graph-Requests aus, schreibt keine SharePoint-Daten und verändert kein
+Schema; es belegt nur, dass die später dafür nötigen Offline-Nachweise
+vollständig und redigiert sind.
 
 Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -54,4 +65,6 @@ Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact.py)
 und
 [scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_artifact_index.py)
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_readiness_gate.py)
 prüfen diese Grenze im strikten Quality Gate.

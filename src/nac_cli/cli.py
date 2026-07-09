@@ -355,6 +355,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-ensure-default-artifact",
         action="store_true",
     )
+    kg_process_ontology_schema_apply_live_readiness_gate = kg_sub.add_parser(
+        "process-ontology-schema-apply-live-readiness-gate",
+        help="Schreibt ein Offline-Readiness-Gate vor einem späteren owner-gated Graph-REST-Schema-Apply.",
+    )
+    kg_process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
+    kg_process_ontology_schema_apply_live_readiness_gate.add_argument("--artifact-root", type=Path, default=None)
+    kg_process_ontology_schema_apply_live_readiness_gate.add_argument("--output", type=Path, default=None)
+    kg_process_ontology_schema_apply_live_readiness_gate.add_argument("--markdown-output", type=Path, default=None)
+    kg_process_ontology_schema_apply_live_readiness_gate.add_argument(
+        "--no-ensure-default-artifacts",
+        action="store_true",
+    )
     kg_deep_process_candidates = kg_sub.add_parser(
         "deep-process-candidates",
         help="Routet Geschäftsvorfälle in Kandidaten für tiefe BPMN-/Ontologie-Modellierung.",
@@ -1485,6 +1499,8 @@ def command_kg(args: argparse.Namespace) -> int:
         argv.extend(["--markdown-output", str(args.markdown_output)])
     if getattr(args, "no_ensure_default_artifact", False):
         argv.append("--no-ensure-default-artifact")
+    if getattr(args, "no_ensure_default_artifacts", False):
+        argv.append("--no-ensure-default-artifacts")
     return notary_kg_main(argv)
 
 

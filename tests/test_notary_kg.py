@@ -67,9 +67,11 @@ from notary_kg.process_ontology_schema_apply_readiness import (
 from notary_kg.process_ontology_schema_apply_runner_dry_run import (
     build_process_ontology_sharepoint_schema_apply_runner_dry_run,
     validate_process_ontology_sharepoint_schema_apply_artifact_index,
+    validate_process_ontology_sharepoint_schema_apply_live_readiness_gate,
     validate_process_ontology_sharepoint_schema_apply_runner_dry_run,
     validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
     write_process_ontology_sharepoint_schema_apply_artifact_index,
+    write_process_ontology_sharepoint_schema_apply_live_readiness_gate,
     write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact,
 )
 from notary_kg.process_ontology_schema_gap import (
@@ -897,6 +899,152 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["status"], "PASSED")
+
+    def test_process_ontology_schema_apply_live_readiness_gate_requires_artifacts_and_owner_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            gate_json = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.json"
+            gate_md = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.md"
+            index_json = artifact_root / "process-ontology-schema-apply-artifact-index.redacted.json"
+            index_md = artifact_root / "process-ontology-schema-apply-artifact-index.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            payload = write_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+                REPO_ROOT,
+                artifact_root,
+                gate_json,
+                gate_md,
+                ensure_default_artifacts=False,
+            )
+            validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(payload)
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
+            json_exists = gate_json.is_file()
+            markdown_exists = gate_md.is_file()
+            index_json_exists = index_json.is_file()
+            index_md_exists = index_md.is_file()
+
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(validation.status, "PASSED")
+        self.assertEqual(validation.errors, ())
+        self.assertEqual(payload["summary"]["check_count"], 6)
+        self.assertEqual(payload["summary"]["blocked_check_count"], 0)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
+        self.assertEqual(payload["summary"]["artifact_count"], 1)
+        self.assertTrue(payload["summary"]["owner_gate_required_before_live_apply"])
+        self.assertFalse(payload["summary"]["executes_graph_requests"])
+        self.assertFalse(payload["summary"]["writes_sharepoint"])
+        self.assertFalse(payload["summary"]["changes_sharepoint_schema"])
+        self.assertEqual(
+            payload["next_batch"]["owner_gate_required_before"],
+            ["graph_live_write", "sharepoint_schema_apply", "runner_live_execution"],
+        )
+        self.assertTrue(json_exists)
+        self.assertTrue(markdown_exists)
+        self.assertTrue(index_json_exists)
+        self.assertTrue(index_md_exists)
+        self.assertIn("dry_run_artifact_index", payload["evidence"])
+        self.assertEqual(len(payload["evidence"]["indexed_artifacts"]), 1)
+        self.assertNotIn("funktion8.sharepoint.com", serialized)
+        self.assertNotIn('"headers"', serialized)
+
+    def test_cli_process_ontology_schema_apply_live_readiness_gate_writes_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            gate_json = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.json"
+            gate_md = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = kg_main(
+                    [
+                        "--repo-root",
+                        str(REPO_ROOT),
+                        "--format",
+                        "json",
+                        "process-ontology-schema-apply-live-readiness-gate",
+                        "--artifact-root",
+                        str(artifact_root),
+                        "--output",
+                        str(gate_json),
+                        "--markdown-output",
+                        str(gate_md),
+                        "--no-ensure-default-artifacts",
+                    ]
+                )
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+        )
+        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["summary"]["artifact_count"], 1)
+
+    def test_nac_cli_process_ontology_schema_apply_live_readiness_gate_accepts_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            artifact_root = temp_root / "artifacts"
+            artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
+            artifact_md = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.md"
+            gate_json = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.json"
+            gate_md = temp_root / "process-ontology-schema-apply-live-readiness-gate.redacted.md"
+            write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
+                REPO_ROOT,
+                artifact_json,
+                artifact_md,
+            )
+            parser = nac_cli.build_parser()
+            args = parser.parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "kg",
+                    "process-ontology-schema-apply-live-readiness-gate",
+                    "--artifact-root",
+                    str(artifact_root),
+                    "--output",
+                    str(gate_json),
+                    "--markdown-output",
+                    str(gate_md),
+                    "--no-ensure-default-artifacts",
+                    "--format",
+                    "json",
+                ]
+            )
+            buffer = io.StringIO()
+
+            with redirect_stdout(buffer):
+                exit_code = args.func(args)
+
+            payload = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+        )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
 

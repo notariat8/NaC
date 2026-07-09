@@ -17,12 +17,19 @@ from .process_ontology_schema_apply_readiness import (
 SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1"
 ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
 ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1"
+LIVE_READINESS_GATE_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_runner_dry_run"
 DEFAULT_DRY_RUN_ARTIFACT_JSON = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json")
 DEFAULT_DRY_RUN_ARTIFACT_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md")
 DEFAULT_APPLY_ARTIFACT_INDEX_ROOT = Path("out/notary-kg")
 DEFAULT_APPLY_ARTIFACT_INDEX_JSON = Path("out/notary-kg/process-ontology-schema-apply-artifact-index.redacted.json")
 DEFAULT_APPLY_ARTIFACT_INDEX_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-artifact-index.redacted.md")
+DEFAULT_LIVE_READINESS_GATE_JSON = Path(
+    "out/notary-kg/process-ontology-schema-apply-live-readiness-gate.redacted.json"
+)
+DEFAULT_LIVE_READINESS_GATE_MARKDOWN = Path(
+    "out/notary-kg/process-ontology-schema-apply-live-readiness-gate.redacted.md"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +46,12 @@ class ProcessOntologySchemaApplyRunnerDryRunArtifactValidation:
 
 @dataclass(frozen=True, slots=True)
 class ProcessOntologySchemaApplyArtifactIndexValidation:
+    status: str
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessOntologySchemaApplyLiveReadinessGateValidation:
     status: str
     errors: tuple[str, ...]
 
@@ -258,6 +271,177 @@ def write_process_ontology_sharepoint_schema_apply_artifact_index(
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     markdown_path.write_text(_artifact_index_markdown(payload), encoding="utf-8")
+    return payload
+
+
+def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+    repo_root: Path,
+    artifact_root: Path | None = None,
+    artifact_index: dict[str, Any] | None = None,
+    *,
+    ensure_default_artifacts: bool = True,
+) -> dict[str, Any]:
+    execution_contract = build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root)
+    readiness = build_process_ontology_sharepoint_schema_apply_readiness(repo_root)
+    dry_run = build_process_ontology_sharepoint_schema_apply_runner_dry_run(repo_root)
+    if artifact_index is None:
+        artifact_index = build_process_ontology_sharepoint_schema_apply_artifact_index(
+            repo_root,
+            artifact_root,
+            ensure_default_artifact=ensure_default_artifacts,
+        )
+    checks = [
+        _live_readiness_check(
+            "execution_contract",
+            execution_contract["status"] == "PASSED"
+            and execution_contract["summary"]["owner_gate_required_before_live_apply"] is True
+            and execution_contract["guardrails"]["legacy_sharepoint_api_allowed"] is False
+            and execution_contract["guardrails"]["graph_sdk_allowed"] is False,
+            "execution contract passed with owner gate and Graph REST boundary",
+            "execution contract must pass, require owner gate, and block legacy SharePoint APIs/SDKs",
+        ),
+        _live_readiness_check(
+            "workspace_readiness",
+            readiness["status"] == "PASSED" and readiness["summary"]["workspace_apply_unit_count"] == 68,
+            "workspace readiness passed for all 68 apply units",
+            "workspace readiness must resolve both workspaces and all apply units",
+        ),
+        _live_readiness_check(
+            "runner_dry_run",
+            dry_run["status"] == "PASSED"
+            and dry_run["summary"]["dry_run_step_count"] == 68
+            and dry_run["summary"]["owner_gate_required_before_live_apply"] is True,
+            "runner dry-run passed with 68 planned steps and owner gate",
+            "runner dry-run must pass and remain owner-gated",
+        ),
+        _live_readiness_check(
+            "dry_run_artifact_index",
+            artifact_index["status"] == "PASSED"
+            and artifact_index["summary"]["artifact_count"] >= 1
+            and artifact_index["summary"]["required_for_live_apply_readiness_count"] >= 1,
+            "redacted dry-run artifact index is present and live-readiness relevant",
+            "redacted artifact index must include at least one live-readiness artifact",
+        ),
+        _live_readiness_check(
+            "redaction_boundary",
+            artifact_index["redaction"]["redacted"] is True
+            and artifact_index["redaction"]["contains_tokens_or_secrets"] is False
+            and artifact_index["redaction"]["contains_request_headers"] is False
+            and artifact_index["redaction"]["contains_matter_values"] is False,
+            "artifact index redaction boundary excludes secrets, headers and matter values",
+            "artifact index must remain redacted and exclude secrets, headers and matter values",
+        ),
+        _live_readiness_check(
+            "live_apply_owner_gate",
+            dry_run["summary"]["owner_gate_required_before_live_apply"] is True
+            and artifact_index["next_batch"]["owner_gate_required_before"] == [
+                "graph_live_write",
+                "sharepoint_schema_apply",
+                "runner_live_execution",
+            ],
+            "live apply remains explicitly owner-gated",
+            "future live write/schema apply/runner execution must remain owner-gated",
+        ),
+    ]
+    blockers = [check for check in checks if check["status"] != "PASSED"]
+    payload = {
+        "schema_version": LIVE_READINESS_GATE_SCHEMA_VERSION,
+        "contract_id": f"{CONTRACT_ID}.live_readiness_gate",
+        "status": "PASSED" if not blockers else "BLOCKED",
+        "mode": "offline_live_readiness_gate",
+        "source": {
+            "execution_contract_schema": execution_contract["schema_version"],
+            "apply_readiness_schema": readiness["schema_version"],
+            "dry_run_schema": dry_run["schema_version"],
+            "artifact_index_schema": artifact_index["schema_version"],
+            "artifact_root": artifact_index["source"]["artifact_root"],
+        },
+        "summary": {
+            "check_count": len(checks),
+            "passed_check_count": sum(1 for check in checks if check["status"] == "PASSED"),
+            "blocked_check_count": len(blockers),
+            "workspace_count": readiness["summary"]["workspace_count"],
+            "workspace_apply_unit_count": readiness["summary"]["workspace_apply_unit_count"],
+            "dry_run_step_count": dry_run["summary"]["dry_run_step_count"],
+            "artifact_count": artifact_index["summary"]["artifact_count"],
+            "required_for_live_apply_readiness_count": artifact_index["summary"][
+                "required_for_live_apply_readiness_count"
+            ],
+            "owner_gate_required_before_live_apply": True,
+            "executes_graph_requests": False,
+            "writes_sharepoint": False,
+            "changes_sharepoint_schema": False,
+        },
+        "checks": checks,
+        "blockers": blockers,
+        "evidence": {
+            "dry_run_artifact_index": artifact_index.get("artifact_paths", {}),
+            "indexed_artifacts": artifact_index["artifacts"],
+        },
+        "guardrails": {
+            "offline_only": True,
+            "live_apply_readiness_only": True,
+            "owner_gate_required_before_live_apply": True,
+            "executes_graph_requests": False,
+            "writes_sharepoint": False,
+            "changes_sharepoint_schema": False,
+            "stores_tokens_or_secrets": False,
+            "stores_matter_instance_values": False,
+            "stores_document_full_text": False,
+            "legacy_sharepoint_api_allowed": False,
+            "graph_sdk_allowed": False,
+        },
+        "next_batch": {
+            "recommended_slice": "process_ontology_sharepoint_schema_apply_owner_gated_live_plan",
+            "owner_gate_required_now": False,
+            "owner_gate_required_before": [
+                "graph_live_write",
+                "sharepoint_schema_apply",
+                "runner_live_execution",
+            ],
+        },
+        "errors": [],
+    }
+    validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(payload)
+    if validation.errors:
+        payload["status"] = "FAILED"
+        payload["errors"] = list(validation.errors)
+    return payload
+
+
+def write_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+    repo_root: Path,
+    artifact_root: Path | None = None,
+    json_output: Path | None = None,
+    markdown_output: Path | None = None,
+    *,
+    ensure_default_artifacts: bool = True,
+) -> dict[str, Any]:
+    index_root = _resolve_output_path(repo_root, artifact_root or DEFAULT_APPLY_ARTIFACT_INDEX_ROOT)
+    artifact_index = write_process_ontology_sharepoint_schema_apply_artifact_index(
+        repo_root,
+        artifact_root,
+        index_root / DEFAULT_APPLY_ARTIFACT_INDEX_JSON.name,
+        index_root / DEFAULT_APPLY_ARTIFACT_INDEX_MARKDOWN.name,
+        ensure_default_artifact=ensure_default_artifacts,
+    )
+    payload = build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+        repo_root,
+        artifact_root,
+        artifact_index,
+        ensure_default_artifacts=ensure_default_artifacts,
+    )
+    json_path = _resolve_output_path(repo_root, json_output or DEFAULT_LIVE_READINESS_GATE_JSON)
+    markdown_path = _resolve_output_path(repo_root, markdown_output or DEFAULT_LIVE_READINESS_GATE_MARKDOWN)
+    payload["artifact_paths"] = {
+        "json": _relative_path(repo_root, json_path),
+        "markdown": _relative_path(repo_root, markdown_path),
+    }
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    markdown_path.write_text(_live_readiness_gate_markdown(payload), encoding="utf-8")
     return payload
 
 
@@ -500,6 +684,63 @@ def validate_process_ontology_sharepoint_schema_apply_artifact_index(
             errors.append(f"guardrail must be false: {key}")
 
     return ProcessOntologySchemaApplyArtifactIndexValidation(
+        status="PASSED" if not errors else "FAILED",
+        errors=tuple(errors),
+    )
+
+
+def validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+    payload: dict[str, Any],
+) -> ProcessOntologySchemaApplyLiveReadinessGateValidation:
+    errors: list[str] = []
+    if payload.get("schema_version") != LIVE_READINESS_GATE_SCHEMA_VERSION:
+        errors.append("unexpected live readiness gate schema_version")
+    if payload.get("contract_id") != f"{CONTRACT_ID}.live_readiness_gate":
+        errors.append("unexpected live readiness gate contract_id")
+    if payload.get("mode") != "offline_live_readiness_gate":
+        errors.append("live readiness gate must remain offline_live_readiness_gate")
+
+    summary = payload.get("summary", {})
+    checks = payload.get("checks", [])
+    blockers = payload.get("blockers", [])
+    if summary.get("check_count") != len(checks):
+        errors.append("check_count must match checks")
+    if summary.get("passed_check_count") != sum(1 for check in checks if check.get("status") == "PASSED"):
+        errors.append("passed_check_count must match checks")
+    if summary.get("blocked_check_count") != len(blockers):
+        errors.append("blocked_check_count must match blockers")
+    if payload.get("status") == "PASSED" and blockers:
+        errors.append("passed live readiness gate must not include blockers")
+    if summary.get("workspace_apply_unit_count") != 68:
+        errors.append("live readiness gate must cover 68 workspace apply units")
+    if summary.get("dry_run_step_count") != 68:
+        errors.append("live readiness gate must cover 68 dry-run steps")
+    if summary.get("artifact_count", 0) < 1:
+        errors.append("live readiness gate must reference at least one dry-run artifact")
+    if summary.get("required_for_live_apply_readiness_count", 0) < 1:
+        errors.append("live readiness gate must reference live-readiness evidence")
+    for key in ("executes_graph_requests", "writes_sharepoint", "changes_sharepoint_schema"):
+        if summary.get(key) is not False:
+            errors.append(f"summary must keep {key} false")
+
+    guardrails = payload.get("guardrails", {})
+    for key in ("offline_only", "live_apply_readiness_only", "owner_gate_required_before_live_apply"):
+        if guardrails.get(key) is not True:
+            errors.append(f"guardrail must be true: {key}")
+    for key in (
+        "executes_graph_requests",
+        "writes_sharepoint",
+        "changes_sharepoint_schema",
+        "stores_tokens_or_secrets",
+        "stores_matter_instance_values",
+        "stores_document_full_text",
+        "legacy_sharepoint_api_allowed",
+        "graph_sdk_allowed",
+    ):
+        if guardrails.get(key) is not False:
+            errors.append(f"guardrail must be false: {key}")
+
+    return ProcessOntologySchemaApplyLiveReadinessGateValidation(
         status="PASSED" if not errors else "FAILED",
         errors=tuple(errors),
     )
@@ -834,6 +1075,47 @@ def _artifact_index_markdown(payload: dict[str, Any]) -> str:
             )
     else:
         lines.append("No matching redacted dry-run artifacts found.")
+    lines.extend(["", "## Guardrails", ""])
+    for key, value in payload["guardrails"].items():
+        lines.append(f"- `{key}`: `{value}`")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _live_readiness_check(id_: str, passed: bool, passed_detail: str, blocked_detail: str) -> dict[str, Any]:
+    return {
+        "id": id_,
+        "status": "PASSED" if passed else "BLOCKED",
+        "detail": passed_detail if passed else blocked_detail,
+        "owner_gate_required_before_live_apply": True,
+    }
+
+
+def _live_readiness_gate_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# Process Ontology SharePoint Schema Apply Live Readiness Gate",
+        "",
+        f"- Status: `{payload['status']}`",
+        f"- Schema: `{payload['schema_version']}`",
+        f"- Checks: `{payload['summary']['passed_check_count']}/{payload['summary']['check_count']}` passed",
+        f"- Workspaces: `{payload['summary']['workspace_count']}`",
+        f"- Workspace apply units: `{payload['summary']['workspace_apply_unit_count']}`",
+        f"- Dry-run steps: `{payload['summary']['dry_run_step_count']}`",
+        f"- Indexed artifacts: `{payload['summary']['artifact_count']}`",
+        f"- Owner gate before live apply: `{payload['summary']['owner_gate_required_before_live_apply']}`",
+        f"- Executes Graph requests: `{payload['summary']['executes_graph_requests']}`",
+        f"- Writes SharePoint: `{payload['summary']['writes_sharepoint']}`",
+        "",
+        "## Checks",
+        "",
+        "| Check | Status | Detail |",
+        "| --- | --- | --- |",
+    ]
+    for check in payload["checks"]:
+        lines.append(f"| `{check['id']}` | `{check['status']}` | {check['detail']} |")
+    if payload["blockers"]:
+        lines.extend(["", "## Blockers", ""])
+        for blocker in payload["blockers"]:
+            lines.append(f"- `{blocker['id']}`: {blocker['detail']}")
     lines.extend(["", "## Guardrails", ""])
     for key, value in payload["guardrails"].items():
         lines.append(f"- `{key}`: `{value}`")

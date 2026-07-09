@@ -161,6 +161,10 @@ regardless of the language used in the prompt. The binding rule is defined in
   defines the mandate-data-free deep process model contract for the four
   first-wave cases with phases, roles, BPMN bindings, evidence and SharePoint
   projections.
+- [docs/en/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md)
+  defines the offline dry-run, redacted evidence artifact, metadata-only
+  artifact index and live-readiness gate before a later owner-gated SharePoint
+  schema apply over Microsoft Graph REST.
 - [docs/en/runbooks/m365-cli-admin-accelerator.md](runbooks/m365-cli-admin-accelerator.md)
   defines the owner-gated CLI for Microsoft 365 admin runbook for Graph-only
   setup and smoke tests.

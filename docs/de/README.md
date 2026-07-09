@@ -161,7 +161,7 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md](architecture/process-ontology-sharepoint-schema-apply-runner-dry-run.md):
   Offline-Dry-Run für geplante Preflight-, Mutations- und Readback-Schritte vor
   einem späteren SharePoint-Schema-Apply inklusive redigiertem JSON-/Markdown-
-  Nachweis und metadata-only Artefaktindex.
+  Nachweis, metadata-only Artefaktindex und Offline-Live-Readiness-Gate.
 - [docs/de/architecture/notarial-ontology-scale-budget.md](architecture/notarial-ontology-scale-budget.md):
   Offline-Scale-Smoke über alle Geschäftsvorfälle, BPMN-Quellen und
   Ontologie-Projektionsbudgets, damit Deep Modeling nicht ohne Sizing in eine
