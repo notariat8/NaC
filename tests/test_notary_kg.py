@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -1752,9 +1753,31 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             gate_json = temp_root / "gate.redacted.json"
             output_json = temp_root / "dispatch.redacted.json"
             output_md = temp_root / "dispatch.redacted.md"
+            bootstrap_json = temp_root / "provisioner-env-bootstrap.redacted.json"
+            state_json = temp_root / "privileged-apply-state.json"
+            certificate_path = temp_root / "provisioner.cert.pem"
+            private_key_path = temp_root / "provisioner.key.pem"
+            state_json.write_text(
+                json.dumps(
+                    {
+                        "status": "PASSED",
+                        "tenantId": "tenant-guid",
+                        "applications": {
+                            "m365_provisioning_app": {
+                                "displayName": "NaC M365 Provisioning",
+                                "clientId": "provisioner-client-guid",
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            certificate_path.touch()
+            private_key_path.touch()
             buffer = io.StringIO()
             provisioner_token_provider = object()
             with (
+                patch.dict(os.environ, {}, clear=True),
                 patch(
                     "notary_kg.cli.token_provider_from_env",
                     return_value=provisioner_token_provider,
@@ -1777,6 +1800,14 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                         "notary_team_01",
                         "--live-readiness-gate",
                         str(gate_json),
+                        "--provisioner-state",
+                        str(state_json),
+                        "--provisioner-certificate-path",
+                        str(certificate_path),
+                        "--provisioner-private-key-path",
+                        str(private_key_path),
+                        "--provisioner-env-bootstrap-output",
+                        str(bootstrap_json),
                         "--correlation-id",
                         "dispatch-cli-forwarding",
                         "--owner-approval-reference",
@@ -1794,7 +1825,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 )
 
         self.assertEqual(exit_code, 0)
-        token_provider.assert_called_once_with()
+        token_provider.assert_called_once()
+        effective_env = token_provider.call_args.args[0]
+        self.assertEqual(effective_env["M365_TENANT_ID"], "tenant-guid")
+        self.assertEqual(effective_env["M365_PROVISIONER_CLIENT_ID"], "provisioner-client-guid")
         graph_client.assert_called_once_with(provisioner_token_provider)
         call = writer.call_args
         self.assertEqual(call.kwargs["workspace_id"], "notary_team_01")
@@ -1814,6 +1848,14 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 "notary_team_01",
                 "--live-readiness-gate",
                 "gate.redacted.json",
+                "--provisioner-state",
+                "privileged-apply-state.json",
+                "--provisioner-certificate-path",
+                "provisioner.cert.pem",
+                "--provisioner-private-key-path",
+                "provisioner.key.pem",
+                "--provisioner-env-bootstrap-output",
+                "provisioner-env-bootstrap.redacted.json",
                 "--correlation-id",
                 "nac-dispatch-cli-forwarding",
                 "--owner-approval-reference",
@@ -1834,6 +1876,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         argv = forwarded.call_args.args[0]
         self.assertEqual(argv[argv.index("--workspace-id") + 1], "notary_team_01")
+        self.assertEqual(argv[argv.index("--provisioner-state") + 1], "privileged-apply-state.json")
         self.assertEqual(argv[argv.index("--owner-approval-reference") + 1], "nac-approval-cli-forwarding")
         self.assertEqual(argv[argv.index("--reason") + 1], "Central NaC dispatch forwarding test")
         self.assertIn("--owner-approved", argv)

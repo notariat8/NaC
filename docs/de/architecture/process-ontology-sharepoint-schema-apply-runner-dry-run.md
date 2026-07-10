@@ -72,12 +72,19 @@ und ändert kein SharePoint-Schema.
 --workspace-id notary_team_01 --owner-approval-reference <approval-reference>
 --reason "Freigegebener Schema-Apply für Workspace-Rollout"
 --execute-live-schema-apply --live-readiness-gate <gate.json>
+--provisioner-state <privileged-apply-state.json>
+--provisioner-certificate-path <provisioner.cert.pem>
+--provisioner-private-key-path <provisioner.key.pem>
 --correlation-id <id> --write-redacted-evidence` ist der owner-gated
 Graph-REST-Dispatcher hinter diesem Envelope. Er nutzt nur Microsoft Graph
 v1.0, sequenziert Preflight, Mutation und Readback, stoppt beim ersten Fehler
 und schreibt redigierte Evidence. Der Befehl ist der erste Pfad, der echte
 SharePoint-Schemaänderungen ausführen kann; deshalb bleibt jede Nutzung
 separat owner-approved.
+
+Vor der Token-Erzeugung löst der verpflichtende Provisioner-Bootstrap Tenant
+und Client-ID der dedizierten Provisioning-App aus dem lokalen State auf. Eine
+abweichende explizite Client-ID blockiert den Lauf vor jedem Graph-Request.
 
 Der Dispatcher authentisiert ausschließlich über die getrennte Provisioning-App
 mit `M365_PROVISIONER_*`. Runtime-Credentials mit `M365_RUNTIME_*` sind für

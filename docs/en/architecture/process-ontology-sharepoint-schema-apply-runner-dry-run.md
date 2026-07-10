@@ -69,11 +69,18 @@ still executes no Graph requests and changes no SharePoint schema.
 --workspace-id notary_team_01 --owner-approval-reference <approval-reference>
 --reason "Approved schema apply for workspace rollout"
 --execute-live-schema-apply --live-readiness-gate <gate.json>
+--provisioner-state <privileged-apply-state.json>
+--provisioner-certificate-path <provisioner.cert.pem>
+--provisioner-private-key-path <provisioner.key.pem>
 --correlation-id <id> --write-redacted-evidence` is the owner-gated Graph REST
 dispatcher behind that envelope. It uses only Microsoft Graph v1.0, sequences
 preflight, mutation and readback, stops on the first failure and writes redacted
 evidence. This command is the first path that can execute real SharePoint schema
 changes, so every use remains separately owner-approved.
+
+Before token acquisition, the required provisioner bootstrap resolves the
+tenant and dedicated provisioning-app client ID from local state. A conflicting
+explicit client ID blocks the run before any Graph request.
 
 The dispatcher authenticates exclusively through the separate provisioning app
 with `M365_PROVISIONER_*`. Runtime credentials using `M365_RUNTIME_*` are not

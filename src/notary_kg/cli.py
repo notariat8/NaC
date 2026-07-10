@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from nac_gnotkg.views import build_cost_review_view
 from nac_m365_graph.auth import token_provider_from_env
 from nac_m365_graph.graph_client import GraphRestClient
+from nac_m365_graph.provisioner_env_bootstrap import (
+    build_provisioner_env_bootstrap,
+    load_provisioner_env_state,
+    write_provisioner_env_bootstrap_artifact,
+)
 
 from .business_case_inventory import build_business_case_inventory
 from .catalog import all_case_summaries, find_case, load_catalogs
@@ -396,6 +402,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a passed live-readiness gate JSON artifact.",
     )
     process_ontology_schema_apply_live_dispatch.add_argument(
+        "--provisioner-state",
+        type=Path,
+        required=True,
+        help="Local non-secret privileged-apply state containing the dedicated provisioning application.",
+    )
+    process_ontology_schema_apply_live_dispatch.add_argument(
+        "--provisioner-certificate-path",
+        type=Path,
+        default=None,
+        help="Local public certificate path used for provisioning app authentication.",
+    )
+    process_ontology_schema_apply_live_dispatch.add_argument(
+        "--provisioner-private-key-path",
+        type=Path,
+        default=None,
+        help="Local private-key path used for provisioning app authentication.",
+    )
+    process_ontology_schema_apply_live_dispatch.add_argument(
+        "--provisioner-env-bootstrap-output",
+        type=Path,
+        default=None,
+        help="Redacted provisioner bootstrap evidence path.",
+    )
+    process_ontology_schema_apply_live_dispatch.add_argument(
         "--correlation-id",
         required=True,
         help="Non-secret correlation ID for the owner-gated Graph REST dispatch.",
@@ -668,7 +698,33 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if payload["status"] == "READY_FOR_GRAPH_REST_DISPATCH" else 1
 
     if args.command == "process-ontology-schema-apply-live-dispatch":
-        client = GraphRestClient(token_provider_from_env())
+        state_path = _resolve_repo_path(repo_root, args.provisioner_state)
+        certificate_path = _resolve_optional_repo_path(repo_root, args.provisioner_certificate_path)
+        private_key_path = _resolve_optional_repo_path(repo_root, args.provisioner_private_key_path)
+        try:
+            provisioner_state = load_provisioner_env_state(state_path)
+        except (OSError, json.JSONDecodeError):
+            provisioner_state = {}
+        bootstrap = build_provisioner_env_bootstrap(
+            provisioner_state,
+            certificate_path=certificate_path,
+            private_key_path=private_key_path,
+            env=os.environ,
+        )
+        bootstrap_output = args.provisioner_env_bootstrap_output
+        if bootstrap_output is None:
+            output_parent = args.output.parent if args.output is not None else Path("out/notary-kg")
+            bootstrap_output = output_parent / "provisioner-env-bootstrap.redacted.json"
+        write_provisioner_env_bootstrap_artifact(
+            bootstrap.readiness,
+            _resolve_repo_path(repo_root, bootstrap_output),
+        )
+        if bootstrap.readiness["status"] != "PASSED":
+            _print_payload(bootstrap.readiness, args.format)
+            return 1
+        effective_env = dict(os.environ)
+        effective_env.update(bootstrap.env_overlay)
+        client = GraphRestClient(token_provider_from_env(effective_env))
         payload = write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
             client,
             repo_root,
@@ -719,6 +775,14 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
+    return path if path.is_absolute() else repo_root / path
+
+
+def _resolve_optional_repo_path(repo_root: Path, path: Path | None) -> Path | None:
+    return _resolve_repo_path(repo_root, path) if path is not None else None
 
 
 def _status_payload(catalogs) -> dict:
