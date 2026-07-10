@@ -804,7 +804,7 @@ def _render_path(template: str, replacements: dict[str, str]) -> str:
         raise RuntimeError("Graph REST path must start with /")
     if path.startswith("/_api") or "/_api/" in path:
         raise RuntimeError("legacy SharePoint REST path is blocked")
-    return path
+    return urllib.parse.quote(path, safe="/:?&=$,()%-")
 
 
 def _value_count(response: dict[str, Any]) -> int:

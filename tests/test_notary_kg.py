@@ -1873,6 +1873,8 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertGreaterEqual(payload["summary"]["mutation_request_count"], 1)
         self.assertTrue(client.checkpoint_observed_before_first_request)
         self.assertEqual({step["workspaceId"] for step in payload["dispatch_steps"]}, {"notary_team_01"})
+        self.assertTrue(all(" " not in path and "'" not in path for _, path in client.requests))
+        self.assertIn("$filter=displayName%20eq%20%27Prozessregister%27", client.requests[0][1])
         self.assertTrue(all("LegacyCustom" in patch[1]["choice"]["choices"] for patch in client.patches))
         self.assertTrue(all(patch[1]["choice"]["allowTextEntry"] is False for patch in client.patches))
         self.assertTrue(all(patch[1]["choice"]["displayAs"] == "dropDownMenu" for patch in client.patches))
@@ -1883,6 +1885,23 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertFalse(payload["privacy"]["storesRawGraphResponse"])
         self.assertNotIn("funktion8.sharepoint.com", serialized)
         self.assertNotIn('"authorization"', serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_encodes_odata_filter_path(self) -> None:
+        path = graph_dispatcher_module._render_path(
+            "/sites/{site-id}/lists?$filter=displayName eq '{target-display-name}'",
+            {
+                "site-id": "tenant.sharepoint.com,site-id,web-id",
+                "target-display-name": "Müller & Söhne's / Register",
+            },
+        )
+
+        self.assertEqual(
+            path,
+            "/sites/tenant.sharepoint.com,site-id,web-id/lists?"
+            "$filter=displayName%20eq%20%27M%C3%BCller%20%26%20S%C3%B6hne%27%27s%20%2F%20Register%27",
+        )
+        self.assertFalse(any(ord(character) <= 0x20 or ord(character) == 0x7F for character in path))
+        self.assertNotIn("'", path)
 
     def test_process_ontology_schema_apply_graph_dispatcher_writes_redacted_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
