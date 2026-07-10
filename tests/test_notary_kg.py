@@ -1744,9 +1744,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             output_json = temp_root / "dispatch.redacted.json"
             output_md = temp_root / "dispatch.redacted.md"
             buffer = io.StringIO()
+            provisioner_token_provider = object()
             with (
-                patch("notary_kg.cli.runtime_token_provider_from_env", return_value=object()),
-                patch("notary_kg.cli.GraphRestClient", return_value=object()),
+                patch(
+                    "notary_kg.cli.token_provider_from_env",
+                    return_value=provisioner_token_provider,
+                ) as token_provider,
+                patch("notary_kg.cli.GraphRestClient", return_value=object()) as graph_client,
                 patch(
                     "notary_kg.cli.write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact",
                     return_value={"status": "PASSED"},
@@ -1781,6 +1785,8 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 )
 
         self.assertEqual(exit_code, 0)
+        token_provider.assert_called_once_with()
+        graph_client.assert_called_once_with(provisioner_token_provider)
         call = writer.call_args
         self.assertEqual(call.kwargs["workspace_id"], "notary_team_01")
         self.assertEqual(call.kwargs["owner_approval_reference"], "approval-cli-forwarding")

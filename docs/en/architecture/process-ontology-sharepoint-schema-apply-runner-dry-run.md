@@ -75,6 +75,11 @@ preflight, mutation and readback, stops on the first failure and writes redacted
 evidence. This command is the first path that can execute real SharePoint schema
 changes, so every use remains separately owner-approved.
 
+The dispatcher authenticates exclusively through the separate provisioning app
+with `M365_PROVISIONER_*`. Runtime credentials using `M365_RUNTIME_*` are not
+allowed for schema changes; the runtime app remains limited to `Sites.Selected`
+and approved operational data access.
+
 ## Boundaries
 
 The dry-run is offline-only:

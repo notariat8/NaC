@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from nac_gnotkg.views import build_cost_review_view
-from nac_m365_graph.auth import runtime_token_provider_from_env
+from nac_m365_graph.auth import token_provider_from_env
 from nac_m365_graph.graph_client import GraphRestClient
 
 from .business_case_inventory import build_business_case_inventory
@@ -668,7 +668,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if payload["status"] == "READY_FOR_GRAPH_REST_DISPATCH" else 1
 
     if args.command == "process-ontology-schema-apply-live-dispatch":
-        client = GraphRestClient(runtime_token_provider_from_env())
+        client = GraphRestClient(token_provider_from_env())
         payload = write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
             client,
             repo_root,

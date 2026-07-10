@@ -79,6 +79,11 @@ und schreibt redigierte Evidence. Der Befehl ist der erste Pfad, der echte
 SharePoint-Schemaänderungen ausführen kann; deshalb bleibt jede Nutzung
 separat owner-approved.
 
+Der Dispatcher authentisiert ausschließlich über die getrennte Provisioning-App
+mit `M365_PROVISIONER_*`. Runtime-Credentials mit `M365_RUNTIME_*` sind für
+Schemaänderungen nicht zulässig; die Runtime-App bleibt auf `Sites.Selected`
+und den freigegebenen operativen Datenzugriff begrenzt.
+
 ## Grenzen
 
 Der Dry-Run ist offline-only:
