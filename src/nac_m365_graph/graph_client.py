@@ -15,7 +15,7 @@ class AccessTokenProvider(Protocol):
 
 class GraphHttpError(RuntimeError):
     def __init__(self, status: int, body: str):
-        super().__init__(f"Microsoft Graph request failed with HTTP {status}: {body[:500]}")
+        super().__init__(f"Microsoft Graph request failed with HTTP {status}")
         self.status = status
         self.body = body
 
