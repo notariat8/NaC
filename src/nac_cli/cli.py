@@ -435,6 +435,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--workspace-id", choices=["notary_team_01"], required=True
     )
     kg_process_ontology_schema_apply_live_dispatch.add_argument("--live-readiness-gate", type=Path, required=True)
+    kg_process_ontology_schema_apply_live_dispatch.add_argument("--provisioner-state", type=Path, required=True)
+    kg_process_ontology_schema_apply_live_dispatch.add_argument("--provisioner-certificate-path", type=Path)
+    kg_process_ontology_schema_apply_live_dispatch.add_argument("--provisioner-private-key-path", type=Path)
+    kg_process_ontology_schema_apply_live_dispatch.add_argument("--provisioner-env-bootstrap-output", type=Path)
     kg_process_ontology_schema_apply_live_dispatch.add_argument("--correlation-id", required=True)
     kg_process_ontology_schema_apply_live_dispatch.add_argument("--owner-approval-reference", required=True)
     kg_process_ontology_schema_apply_live_dispatch.add_argument("--reason", required=True)
@@ -1578,6 +1582,15 @@ def command_kg(args: argparse.Namespace) -> int:
         argv.append("--no-ensure-default-artifacts")
     if getattr(args, "live_readiness_gate", None) is not None:
         argv.extend(["--live-readiness-gate", str(args.live_readiness_gate)])
+    for attribute, flag in (
+        ("provisioner_state", "--provisioner-state"),
+        ("provisioner_certificate_path", "--provisioner-certificate-path"),
+        ("provisioner_private_key_path", "--provisioner-private-key-path"),
+        ("provisioner_env_bootstrap_output", "--provisioner-env-bootstrap-output"),
+    ):
+        value = getattr(args, attribute, None)
+        if value is not None:
+            argv.extend([flag, str(value)])
     workspace_ids = getattr(args, "workspace_id", None)
     if workspace_ids is not None:
         if isinstance(workspace_ids, list):
