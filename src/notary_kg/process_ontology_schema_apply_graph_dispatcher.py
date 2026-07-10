@@ -21,7 +21,7 @@ from .process_ontology_schema_apply_plan import (
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_graph_dispatcher"
 DEFAULT_GRAPH_DISPATCHER_JSON = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.json")
 DEFAULT_GRAPH_DISPATCHER_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.md")
@@ -30,6 +30,7 @@ MUTATION_SKIPPED = "SKIPPED"
 MUTATION_CONFIRMED = "CONFIRMED"
 MUTATION_POSSIBLE = "POSSIBLE"
 MAX_DIAGNOSTIC_COUNT = 1000
+MAX_GRAPH_INNER_ERROR_DEPTH = 8
 GRAPH_ERROR_CLASS_BY_CODE = {
     "badArgument": "REQUEST_VALIDATION",
     "invalidRequest": "REQUEST_VALIDATION",
@@ -38,6 +39,71 @@ GRAPH_ERROR_ENVELOPES = {"STANDARD", "NONSTANDARD", "MALFORMED", "EMPTY", "NOT_A
 GRAPH_ERROR_CODES = {*GRAPH_ERROR_CLASS_BY_CODE, "UNCLASSIFIED"}
 GRAPH_ERROR_CLASSES = {*GRAPH_ERROR_CLASS_BY_CODE.values(), "UNCLASSIFIED"}
 RETRY_DISPOSITIONS = {"DO_NOT_RETRY_UNCHANGED", "RETRY_WITH_BACKOFF", "REVIEW_REQUIRED"}
+STEP_ERROR_PHASES_BY_CODE = {
+    "choice_column_resolution_failed": {"resolution"},
+    "choice_readback_verification_failed": {"readback"},
+    "dispatcher_validation_failed": {"validation"},
+    "graph_http_error": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "graph_request_failed": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "readback_verification_failed": {"readback"},
+}
+GRAPH_REQUEST_ERROR_CODES = {"graph_http_error", "graph_request_failed"}
+DIAGNOSTIC_TOP_LEVEL_FIELDS = {
+    "contract",
+    "graphError",
+    "retryDisposition",
+    "endpoint",
+    "facet",
+    "expectedHttpStatus",
+    "columnShape",
+    "requestShape",
+    "counts",
+}
+GRAPH_ERROR_DIAGNOSTIC_FIELDS = {
+    "envelope",
+    "code",
+    "class",
+    "messagePresent",
+    "innerErrorPresent",
+    "detailsPresent",
+}
+COLUMN_SHAPE_FIELDS = {
+    "choiceFacetPresent",
+    "choiceFacetIsObject",
+    "choicesPresent",
+    "choicesIsArray",
+    "readOnlyPresent",
+    "readOnlyIsBoolean",
+    "readOnlyTrue",
+    "sealedPresent",
+    "sealedIsBoolean",
+    "sealedTrue",
+    "indexedPresent",
+    "indexedIsBoolean",
+    "indexedTrue",
+}
+REQUEST_SHAPE_FIELDS = {
+    "bodyIsObject",
+    "choiceFacetPresent",
+    "choiceFacetIsObject",
+    "odataTypePresent",
+    "odataTypeAllowlisted",
+    "choicesPresent",
+    "choicesIsArray",
+    "allowTextEntryPresent",
+    "allowTextEntryIsBoolean",
+    "displayAsPresent",
+    "displayAsRecognized",
+}
+DIAGNOSTIC_COUNT_FIELDS = {
+    "currentChoiceCount",
+    "requiredChoiceCount",
+    "mergedChoiceCount",
+    "requestChoiceCount",
+    "requestBodyFieldCount",
+    "choiceFacetFieldCount",
+    "countsCapped",
+}
 
 
 class ProcessOntologySchemaApplyGraphClient(Protocol):
@@ -235,11 +301,10 @@ def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     )
     validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
     if validation.errors:
-        payload["status"] = "FAILED"
-        payload["errors"] = [
-            *payload["errors"],
-            *({"code": "dispatcher_validation_failed", "detail": error} for error in validation.errors),
-        ]
+        payload = _validation_failure_payload(payload)
+        revalidation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+        if revalidation.errors:
+            raise RuntimeError("dispatcher validation-failure evidence invariant failed")
     evidence_checkpoint(payload)
     return payload
 
@@ -422,54 +487,48 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         errors.append("planned step count must match approval binding")
     if not summary.get("owner_approval_reference_sha256") or not summary.get("reason_sha256"):
         errors.append("graph dispatcher must retain redacted approval and reason hashes")
-    expected_recorded_errors = [
-        step["error"]
-        for step in payload.get("dispatch_steps", [])
-        if step.get("status") == "FAILED" and isinstance(step.get("error"), dict)
-    ]
-    if payload.get("errors") != expected_recorded_errors:
-        errors.append("top-level errors must exactly mirror failed-step errors")
 
-    allowed_outcomes = {MUTATION_NOT_ATTEMPTED, MUTATION_SKIPPED, MUTATION_CONFIRMED, MUTATION_POSSIBLE}
-    for step in payload.get("dispatch_steps", []):
-        step_id = step.get("id", "<unknown>")
+    dispatch_steps = payload.get("dispatch_steps")
+    if type(dispatch_steps) is not list:
+        errors.append("dispatch_steps must be a list")
+        dispatch_steps = []
+    allowed_outcomes = {
+        MUTATION_NOT_ATTEMPTED,
+        MUTATION_SKIPPED,
+        MUTATION_CONFIRMED,
+        MUTATION_POSSIBLE,
+    }
+    failed_errors: list[Any] = []
+    for index, step in enumerate(dispatch_steps):
+        if type(step) is not dict:
+            errors.append(f"dispatch step {index}: step must be an object")
+            continue
+        step_id = step.get("id")
+        if not isinstance(step_id, str) or not step_id:
+            errors.append(f"dispatch step {index}: step id must be a non-empty string")
+            step_id = f"<step-{index}>"
         if step.get("ownerGateRequired") is not True:
             errors.append(f"{step_id}: owner gate must be required")
         if step.get("graphRestOnly") is not True:
             errors.append(f"{step_id}: step must be Graph REST only")
         if step.get("mutationOutcome") not in allowed_outcomes:
             errors.append(f"{step_id}: invalid mutation outcome")
+        if step.get("status") not in {"PASSED", "FAILED"}:
+            errors.append(f"{step_id}: final step status must be PASSED or FAILED")
         if step.get("status") == "PASSED" and step.get("mutationOutcome") == MUTATION_POSSIBLE:
             errors.append(f"{step_id}: possible mutation cannot be reported as passed")
         for raw_key in ("rawGraphPathStored", "rawGraphResponseStored", "rawMutationPayloadStored"):
             if step.get(raw_key) is not False:
                 errors.append(f"{step_id}: {raw_key} must be false")
-        error = step.get("error")
-        if isinstance(error, dict):
-            extra_error_keys = set(error) - {"stepId", "code", "phase", "httpStatus", "diagnostic"}
-            if extra_error_keys:
-                errors.append(f"{step_id}: error contains unsupported fields")
-            http_status = error.get("httpStatus")
-            if http_status is not None and (
-                isinstance(http_status, bool)
-                or not isinstance(http_status, int)
-                or not 100 <= http_status <= 599
-            ):
-                errors.append(f"{step_id}: HTTP status must be an integer from 100 through 599")
-            diagnostic = error.get("diagnostic")
-            choice_patch_failure = (
-                step.get("operation") == "extend_choice_column"
-                and step.get("method") == "PATCH"
-                and error.get("phase") == "mutation"
-            )
-            if choice_patch_failure and not isinstance(diagnostic, dict):
-                errors.append(f"{step_id}: failed Choice PATCH must expose closed diagnostics")
-            elif isinstance(diagnostic, dict):
-                if not choice_patch_failure:
-                    errors.append(f"{step_id}: diagnostics are limited to failed Choice PATCHes")
-                errors.extend(
-                    _validate_choice_patch_failure_diagnostic(step_id, diagnostic, http_status)
-                )
+
+        if step.get("status") == "FAILED":
+            failed_errors.append(step.get("error"))
+            errors.extend(_validate_failed_step_error(step_id, step))
+        elif "error" in step:
+            errors.append(f"{step_id}: nonfailed step must not expose error")
+
+    if type(payload.get("errors")) is not list or payload.get("errors") != failed_errors:
+        errors.append("top-level errors must exactly mirror failed-step errors")
 
     privacy = payload.get("privacy", {})
     for key in (
@@ -505,71 +564,58 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     )
 
 
+def _validate_failed_step_error(step_id: str, step: dict[str, Any]) -> list[str]:
+    error = step.get("error")
+    if type(error) is not dict:
+        return [f"{step_id}: failed step error must be an exact object"]
+    code = error.get("code")
+    phase = error.get("phase")
+    expected_fields = {"stepId", "code", "phase"}
+    if code == "graph_http_error":
+        expected_fields.add("httpStatus")
+    choice_patch_failure = (
+        step.get("operation") == "extend_choice_column"
+        and step.get("method") == "PATCH"
+        and phase == "mutation"
+        and code in GRAPH_REQUEST_ERROR_CODES
+    )
+    if choice_patch_failure:
+        expected_fields.add("diagnostic")
+
+    errors: list[str] = []
+    if set(error) != expected_fields:
+        errors.append(f"{step_id}: error fields must match the closed code contract")
+    if error.get("stepId") != step_id:
+        errors.append(f"{step_id}: error stepId must exactly match step id")
+    allowed_phases = STEP_ERROR_PHASES_BY_CODE.get(code)
+    if allowed_phases is None:
+        errors.append(f"{step_id}: invalid closed error code")
+    elif phase not in allowed_phases:
+        errors.append(f"{step_id}: invalid phase for error code")
+    http_status = error.get("httpStatus")
+    if code == "graph_http_error" and (
+        isinstance(http_status, bool)
+        or not isinstance(http_status, int)
+        or not 100 <= http_status <= 599
+    ):
+        errors.append(f"{step_id}: HTTP status must be an integer from 100 through 599")
+    if choice_patch_failure:
+        diagnostic = error.get("diagnostic")
+        if type(diagnostic) is not dict:
+            errors.append(f"{step_id}: failed Choice PATCH must expose closed diagnostics")
+        else:
+            errors.extend(_validate_choice_patch_failure_diagnostic(step_id, diagnostic, http_status))
+    return errors
+
+
 def _validate_choice_patch_failure_diagnostic(
     step_id: str,
     diagnostic: dict[str, Any],
     http_status: Any,
 ) -> list[str]:
     errors: list[str] = []
-    expected_top_level = {
-        "contract",
-        "graphError",
-        "retryDisposition",
-        "endpoint",
-        "facet",
-        "expectedHttpStatus",
-        "columnShape",
-        "requestShape",
-        "counts",
-    }
-    expected_graph_error = {
-        "envelope",
-        "code",
-        "class",
-        "messagePresent",
-        "innerErrorPresent",
-        "detailsPresent",
-    }
-    expected_column_shape = {
-        "choiceFacetPresent",
-        "choiceFacetIsObject",
-        "choicesPresent",
-        "choicesIsArray",
-        "readOnlyPresent",
-        "readOnlyIsBoolean",
-        "readOnlyTrue",
-        "sealedPresent",
-        "sealedIsBoolean",
-        "sealedTrue",
-        "indexedPresent",
-        "indexedIsBoolean",
-        "indexedTrue",
-    }
-    expected_request_shape = {
-        "bodyIsObject",
-        "choiceFacetPresent",
-        "choiceFacetIsObject",
-        "odataTypePresent",
-        "odataTypeAllowlisted",
-        "choicesPresent",
-        "choicesIsArray",
-        "allowTextEntryPresent",
-        "allowTextEntryIsBoolean",
-        "displayAsPresent",
-        "displayAsRecognized",
-    }
-    expected_counts = {
-        "currentChoiceCount",
-        "requiredChoiceCount",
-        "mergedChoiceCount",
-        "requestChoiceCount",
-        "requestBodyFieldCount",
-        "choiceFacetFieldCount",
-        "countsCapped",
-    }
-    if set(diagnostic) != expected_top_level:
-        errors.append(f"{step_id}: Choice PATCH diagnostic fields must match the closed contract")
-        return errors
+    if set(diagnostic) != DIAGNOSTIC_TOP_LEVEL_FIELDS:
+        return [f"{step_id}: Choice PATCH diagnostic fields must match the closed contract"]
     if diagnostic.get("contract") != "choice_patch_failure/v1":
         errors.append(f"{step_id}: unexpected Choice PATCH diagnostic contract")
     if diagnostic.get("endpoint") != "COLUMN_DEFINITION_UPDATE":
@@ -582,7 +628,7 @@ def _validate_choice_patch_failure_diagnostic(
         errors.append(f"{step_id}: invalid Choice PATCH retry disposition")
 
     graph_error = diagnostic.get("graphError")
-    if not isinstance(graph_error, dict) or set(graph_error) != expected_graph_error:
+    if type(graph_error) is not dict or set(graph_error) != GRAPH_ERROR_DIAGNOSTIC_FIELDS:
         errors.append(f"{step_id}: Graph error diagnostic fields must match the closed contract")
     else:
         envelope = graph_error.get("envelope")
@@ -613,22 +659,22 @@ def _validate_choice_patch_failure_diagnostic(
                 errors.append(f"{step_id}: Graph error shape values must be booleans")
 
     for name, expected_fields in (
-        ("columnShape", expected_column_shape),
-        ("requestShape", expected_request_shape),
+        ("columnShape", COLUMN_SHAPE_FIELDS),
+        ("requestShape", REQUEST_SHAPE_FIELDS),
     ):
         shape = diagnostic.get(name)
-        if not isinstance(shape, dict) or set(shape) != expected_fields:
+        if type(shape) is not dict or set(shape) != expected_fields:
             errors.append(f"{step_id}: {name} fields must match the closed contract")
         elif any(not isinstance(value, bool) for value in shape.values()):
             errors.append(f"{step_id}: {name} values must be booleans")
 
     counts = diagnostic.get("counts")
-    if not isinstance(counts, dict) or set(counts) != expected_counts:
+    if type(counts) is not dict or set(counts) != DIAGNOSTIC_COUNT_FIELDS:
         errors.append(f"{step_id}: diagnostic count fields must match the closed contract")
     else:
         if not isinstance(counts.get("countsCapped"), bool):
             errors.append(f"{step_id}: countsCapped must be boolean")
-        for key in expected_counts - {"countsCapped"}:
+        for key in DIAGNOSTIC_COUNT_FIELDS - {"countsCapped"}:
             value = counts.get(key)
             if (
                 isinstance(value, bool)
@@ -637,6 +683,32 @@ def _validate_choice_patch_failure_diagnostic(
             ):
                 errors.append(f"{step_id}: {key} must be a bounded non-negative integer")
     return errors
+
+
+def _validation_failure_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    dispatch_steps = [dict(step) for step in payload.get("dispatch_steps", [])]
+    if not dispatch_steps:
+        raise RuntimeError("dispatcher validation failure has no dispatched step")
+    failed_step = dispatch_steps[-1]
+    failed_step["status"] = "FAILED"
+    failed_step["error"] = {
+        "stepId": failed_step["id"],
+        "code": "dispatcher_validation_failed",
+        "phase": "validation",
+    }
+    dispatch_steps[-1] = failed_step
+    normalized["dispatch_steps"] = dispatch_steps
+    normalized["status"] = "FAILED"
+    normalized["completion"] = "FAILED"
+    summary = dict(payload["summary"])
+    summary["passed_step_count"] = sum(step.get("status") == "PASSED" for step in dispatch_steps)
+    summary["failed_step_count"] = 1
+    summary["stopped_on_first_failure"] = True
+    summary["stop_reason"] = "dispatcher_validation_failed"
+    normalized["summary"] = summary
+    normalized["errors"] = [failed_step["error"]]
+    return normalized
 
 
 def write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
@@ -1078,12 +1150,7 @@ def _closed_graph_error(exc: Exception) -> dict[str, Any]:
                     error_object = candidate
                 else:
                     envelope = "NONSTANDARD"
-    raw_code = error_object.get("code")
-    code = (
-        raw_code
-        if isinstance(raw_code, str) and raw_code in GRAPH_ERROR_CLASS_BY_CODE
-        else "UNCLASSIFIED"
-    )
+    code = _deepest_recognized_graph_code(error_object)
     return {
         "envelope": envelope,
         "code": code,
@@ -1092,6 +1159,20 @@ def _closed_graph_error(exc: Exception) -> dict[str, Any]:
         "innerErrorPresent": "innerError" in error_object,
         "detailsPresent": "details" in error_object,
     }
+
+
+def _deepest_recognized_graph_code(error_object: dict[str, Any]) -> str:
+    code = "UNCLASSIFIED"
+    current = error_object
+    for _depth in range(MAX_GRAPH_INNER_ERROR_DEPTH + 1):
+        candidate = current.get("code")
+        if isinstance(candidate, str) and candidate in GRAPH_ERROR_CLASS_BY_CODE:
+            code = candidate
+        inner_error = current.get("innerError")
+        if type(inner_error) is not dict:
+            break
+        current = inner_error
+    return code
 
 
 def _retry_disposition(exc: Exception, error_class: str) -> str:
