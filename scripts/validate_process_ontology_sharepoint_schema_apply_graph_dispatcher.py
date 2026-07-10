@@ -14,6 +14,7 @@ if src_text in sys.path:
     sys.path.remove(src_text)
 sys.path.insert(0, src_text)
 
+from nac_m365_graph.graph_client import GraphHttpError  # noqa: E402
 from notary_kg.process_ontology_schema_apply_graph_dispatcher import (  # noqa: E402
     SCHEMA_VERSION,
     run_process_ontology_sharepoint_schema_apply_graph_dispatcher,
@@ -41,11 +42,12 @@ FORBIDDEN_MARKERS = (
 
 
 class FakeGraphDispatcherClient:
-    def __init__(self) -> None:
+    def __init__(self, *, choice_patch_error_code: str | None = None) -> None:
         self.posts: list[tuple[str, dict]] = []
         self.patches: list[tuple[str, dict]] = []
         self.get_counts: dict[str, int] = {}
         self.choice_columns = {"Vorgangstyp", "CurrentPhase", "ProcessPhase", "RoleTemplate"}
+        self.choice_patch_error_code = choice_patch_error_code
 
     def get(self, path: str) -> dict:
         self.get_counts[path] = self.get_counts.get(path, 0) + 1
@@ -54,12 +56,35 @@ class FakeGraphDispatcherClient:
         if "$filter=name" in path:
             name = self._quoted_filter_value(path)
             if name in self.choice_columns:
-                return {"value": [{"id": f"fake-choice-column-{name}", "name": name, "choice": {"choices": []}}]}
+                return {
+                    "value": [
+                        {
+                            "id": f"fake-choice-column-{name}",
+                            "name": name,
+                            "readOnly": False,
+                            "sealed": False,
+                            "indexed": True,
+                            "choice": {"choices": []},
+                        }
+                    ]
+                }
             return self._filter_response(path, "name", created=bool(self.posts))
         if "/columns/fake-choice-column" in path or "/columns/fake-choice-" in path:
             if self.patches:
-                return {"id": "fake-choice-column", "choice": {"choices": self.patches[-1][1]["choice"]["choices"]}}
-            return {"id": "fake-choice-column", "choice": {"choices": []}}
+                return {
+                    "id": "fake-choice-column",
+                    "readOnly": False,
+                    "sealed": False,
+                    "indexed": True,
+                    "choice": {"choices": self.patches[-1][1]["choice"]["choices"]},
+                }
+            return {
+                "id": "fake-choice-column",
+                "readOnly": False,
+                "sealed": False,
+                "indexed": True,
+                "choice": {"choices": []},
+            }
         return {"value": [{"id": "fake-existing"}]}
 
     def post(self, path: str, payload: dict) -> dict:
@@ -67,6 +92,27 @@ class FakeGraphDispatcherClient:
         return {"id": f"fake-post-{len(self.posts)}"}
 
     def patch(self, path: str, payload: dict) -> dict:
+        if isinstance(payload.get("choice"), dict) and self.choice_patch_error_code:
+            raise GraphHttpError(
+                400,
+                json.dumps(
+                    {
+                        "error": {
+                            "code": self.choice_patch_error_code,
+                            "message": "validator-sensitive-message-must-not-survive",
+                            "innerError": {
+                                "request-id": "validator-sensitive-request-id-must-not-survive",
+                            },
+                            "details": [
+                                {
+                                    "target": path,
+                                    "value": "validator-sensitive-choice-must-not-survive",
+                                }
+                            ],
+                        }
+                    }
+                ),
+            )
         self.patches.append((path, payload))
         return {"id": f"fake-patch-{len(self.patches)}"}
 
@@ -135,6 +181,60 @@ def main() -> int:
             errors.append("graph dispatcher must cover all 34 notary_team_01 apply steps")
         if payload.get("summary", {}).get("mutation_request_count", 0) < 1:
             errors.append("graph dispatcher must execute at least one mutation")
+
+        for graph_error_code in ("invalidRequest", "badArgument"):
+            failure_json = temp_root / f"choice-patch-{graph_error_code}.redacted.json"
+            failure_md = temp_root / f"choice-patch-{graph_error_code}.redacted.md"
+            failure_payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                FakeGraphDispatcherClient(choice_patch_error_code=graph_error_code),
+                REPO_ROOT,
+                live_readiness_gate=gate_json,
+                workspace_id="notary_team_01",
+                correlation_id="nac-schema-apply-choice-diagnostic-validator",
+                owner_approval_reference="owner-approval-choice-diagnostic-validator",
+                reason="Validate closed Choice PATCH diagnostics",
+                owner_approved=True,
+                execute_live_schema_apply=True,
+                write_redacted_evidence=True,
+                evidence_json_output=failure_json,
+                evidence_markdown_output=failure_md,
+            )
+            errors.extend(
+                validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                    failure_payload
+                ).errors
+            )
+            failed_step = failure_payload.get("dispatch_steps", [{}])[-1]
+            diagnostic = failed_step.get("error", {}).get("diagnostic", {})
+            if failure_payload.get("status") != "FAILED":
+                errors.append("Choice PATCH diagnostic validator run must fail closed")
+            if failed_step.get("mutationOutcome") != "POSSIBLE":
+                errors.append("failed Choice PATCH must preserve POSSIBLE mutation semantics")
+            if diagnostic.get("graphError", {}).get("code") != graph_error_code:
+                errors.append("Choice PATCH diagnostic must retain only an allowlisted Graph code")
+            if diagnostic.get("graphError", {}).get("class") != "REQUEST_VALIDATION":
+                errors.append("Choice PATCH diagnostic must classify request validation")
+            if diagnostic.get("retryDisposition") != "DO_NOT_RETRY_UNCHANGED":
+                errors.append("Choice PATCH diagnostic must block unchanged retries")
+            if diagnostic.get("expectedHttpStatus") != 200:
+                errors.append("Choice PATCH diagnostic must retain expected HTTP status 200")
+            if diagnostic.get("endpoint") != "COLUMN_DEFINITION_UPDATE":
+                errors.append("Choice PATCH diagnostic must retain the endpoint class")
+            if diagnostic.get("facet") != "CHOICE":
+                errors.append("Choice PATCH diagnostic must retain the facet class")
+            if any(
+                isinstance(value, int) and not isinstance(value, bool) and not 0 <= value <= 1000
+                for value in diagnostic.get("counts", {}).values()
+            ):
+                errors.append("Choice PATCH diagnostic counts must remain bounded")
+            serialized_failure = json.dumps(failure_payload, ensure_ascii=False, sort_keys=True)
+            for marker in (
+                "validator-sensitive-message-must-not-survive",
+                "validator-sensitive-request-id-must-not-survive",
+                "validator-sensitive-choice-must-not-survive",
+            ):
+                if marker in serialized_failure:
+                    errors.append(f"Choice PATCH diagnostic retained forbidden marker: {marker}")
 
         artifact_payload = write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
             FakeGraphDispatcherClient(),
