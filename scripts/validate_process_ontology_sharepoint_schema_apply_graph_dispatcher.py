@@ -15,6 +15,9 @@ if src_text in sys.path:
 sys.path.insert(0, src_text)
 
 from nac_m365_graph.graph_client import GraphHttpError  # noqa: E402
+from notary_kg.process_ontology_schema_apply_binding import (  # noqa: E402
+    build_process_ontology_sharepoint_schema_apply_binding,
+)
 from notary_kg.process_ontology_schema_apply_graph_dispatcher import (  # noqa: E402
     SCHEMA_VERSION,
     run_process_ontology_sharepoint_schema_apply_graph_dispatcher,
@@ -136,9 +139,16 @@ def _nested_graph_error_body(codes: tuple[str, ...], path: str) -> str:
     return json.dumps({"error": error})
 
 
-def _choice_failure_errors(payload: dict, expected_code: str) -> list[str]:
+def _choice_failure_errors(
+    payload: dict,
+    expected_code: str,
+    expected_binding_sha256: str,
+) -> list[str]:
     errors = list(
-        validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload).errors
+        validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload,
+            expected_binding_sha256=expected_binding_sha256,
+        ).errors
     )
     failed_step = payload.get("dispatch_steps", [{}])[-1]
     diagnostic = failed_step.get("error", {}).get("diagnostic", {})
@@ -200,6 +210,10 @@ def main() -> int:
             gate_md,
             workspace_ids=["notary_team_01"],
         )
+        expected_binding_sha256 = build_process_ontology_sharepoint_schema_apply_binding(
+            REPO_ROOT,
+            ["notary_team_01"],
+        )["binding_sha256"]
         payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
             FakeGraphDispatcherClient(),
             REPO_ROOT,
@@ -214,7 +228,10 @@ def main() -> int:
             evidence_json_output=dispatch_json,
             evidence_markdown_output=dispatch_md,
         )
-        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload,
+            expected_binding_sha256=expected_binding_sha256,
+        )
         errors.extend(validation.errors)
         if payload.get("schema_version") != SCHEMA_VERSION:
             errors.append("unexpected graph dispatcher schema version")
@@ -247,7 +264,13 @@ def main() -> int:
                 evidence_json_output=failure_json,
                 evidence_markdown_output=failure_md,
             )
-            errors.extend(_choice_failure_errors(failure_payload, expected_code))
+            errors.extend(
+                _choice_failure_errors(
+                    failure_payload,
+                    expected_code,
+                    expected_binding_sha256,
+                )
+            )
 
         artifact_payload = write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
             FakeGraphDispatcherClient(),

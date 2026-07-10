@@ -22,7 +22,7 @@ from .process_ontology_schema_apply_readiness import (
 SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1"
 ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
 ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1"
-LIVE_READINESS_GATE_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1"
+LIVE_READINESS_GATE_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2"
 LIVE_READINESS_REQUIRED_CHECK_IDS = (
     "execution_contract",
     "workspace_readiness",

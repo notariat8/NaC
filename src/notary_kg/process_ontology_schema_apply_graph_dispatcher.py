@@ -311,10 +311,17 @@ def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         status=final_status,
         stop_reason=stop_reason,
     )
-    validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+    trusted_binding_sha256 = binding["binding_sha256"]
+    validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        payload,
+        expected_binding_sha256=trusted_binding_sha256,
+    )
     if validation.errors:
         payload = _validation_failure_payload(payload)
-        revalidation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+        revalidation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload,
+            expected_binding_sha256=trusted_binding_sha256,
+        )
         if revalidation.errors:
             raise RuntimeError("dispatcher validation-failure evidence invariant failed")
     evidence_checkpoint(payload)
@@ -453,6 +460,8 @@ def _build_dispatch_payload(
 
 def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     payload: dict[str, Any],
+    *,
+    expected_binding_sha256: str | None = None,
 ) -> ProcessOntologySchemaApplyGraphDispatcherValidation:
     errors: list[str] = []
     schema_version = payload.get("schema_version")
@@ -557,6 +566,7 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
                 approval_binding,
                 dispatch_steps,
                 planned,
+                expected_binding_sha256,
             )
         )
 
@@ -601,6 +611,7 @@ def _validate_v02_approval_binding(
     binding: dict[str, Any],
     dispatch_steps: list[dict[str, Any]],
     planned_step_count: Any,
+    expected_binding_sha256: str | None,
 ) -> list[str]:
     errors: list[str] = []
     expected_binding_fields = {
@@ -618,6 +629,10 @@ def _validate_v02_approval_binding(
         errors.append("v0.2 approval binding fields must match the closed contract")
     if binding.get("schema_version") != APPLY_BINDING_SCHEMA_VERSION:
         errors.append("v0.2 dispatcher must use the current apply binding schema")
+    if not _is_sha256(expected_binding_sha256):
+        errors.append("v0.2 validation requires a trusted expected binding hash")
+    elif binding.get("binding_sha256") != expected_binding_sha256:
+        errors.append("artifact approval binding does not match the trusted expected binding hash")
 
     projection = binding.get("selected_step_projection")
     if type(projection) is not list:
@@ -658,6 +673,8 @@ def _validate_v02_approval_binding(
         errors.append("approval binding hash must include the selected-step projection")
 
     for index, step in enumerate(dispatch_steps):
+        if type(step) is not dict:
+            continue
         if index >= len(projection):
             errors.append(f"{step.get('id', f'<step-{index}>')}: no approved projection entry")
             continue
@@ -1362,6 +1379,14 @@ def _choice_config(response: dict[str, Any]) -> dict[str, Any]:
 def _payload_sha256(payload: Any) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     return _sha256(canonical)
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _sha256(value: str) -> str:

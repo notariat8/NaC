@@ -330,6 +330,21 @@ def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
     return gate_json
 
 
+def _validate_graph_dispatcher(
+    payload: dict,
+    *,
+    expected_binding_sha256: str | None = None,
+) -> object:
+    if expected_binding_sha256 is None and payload.get("schema_version") == (
+        "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2"
+    ):
+        expected_binding_sha256 = payload["approval_binding"]["binding_sha256"]
+    return validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        payload,
+        expected_binding_sha256=expected_binding_sha256,
+    )
+
+
 class NotaryKnowledgeGraphTests(unittest.TestCase):
     def test_loads_usecase_local_catalogs(self) -> None:
         catalogs = load_catalogs(REPO_ROOT)
@@ -1214,7 +1229,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
@@ -1258,6 +1273,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             empty["summary"]["passed_check_count"] = 0
             empty["summary"]["blocked_check_count"] = 0
             empty_validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(empty)
+            stale = json.loads(gate_json.read_text(encoding="utf-8"))
+            stale["schema_version"] = (
+                "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1"
+            )
+            stale_validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+                stale
+            )
 
         self.assertEqual(validation.status, "FAILED")
         self.assertIn("blockers must exactly match all non-passing checks", validation.errors)
@@ -1265,6 +1287,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertIn(
             "live readiness gate must include every required check exactly once and in canonical order",
             empty_validation.errors,
+        )
+        self.assertIn(
+            "unexpected live readiness gate schema_version",
+            stale_validation.errors,
         )
 
     def test_process_ontology_schema_apply_binding_covers_permission_and_readiness_state(self) -> None:
@@ -1334,7 +1360,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
@@ -1382,7 +1408,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
@@ -2057,7 +2083,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 evidence_json_output=dispatch_json,
                 evidence_markdown_output=dispatch_md,
             )
-            validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+            validation = _validate_graph_dispatcher(payload)
             serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2")
@@ -2413,7 +2439,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                     )
                     self.assertFalse(diagnostic["counts"]["countsCapped"])
                     self.assertEqual(
-                        validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                        _validate_graph_dispatcher(
                             payload
                         ).errors,
                         (),
@@ -2466,7 +2492,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 error = candidate["dispatch_steps"][-1]["error"]
                 error[field] = value
                 candidate["errors"] = [error]
-                validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                validation = _validate_graph_dispatcher(
                     candidate
                 )
                 self.assertTrue(
@@ -2480,7 +2506,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertTrue(
             any(
                 "failed step error must be an exact object" in item
-                for item in validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                for item in _validate_graph_dispatcher(
                     raw_error
                 ).errors
             )
@@ -2495,7 +2521,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertTrue(
             any(
                 "nonfailed step must not expose error" in item
-                for item in validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                for item in _validate_graph_dispatcher(
                     nonfailed_error
                 ).errors
             )
@@ -2505,7 +2531,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         mismatched_top_level["errors"] = [{"code": "raw-top-level"}]
         self.assertIn(
             "top-level errors must exactly mirror failed-step errors",
-            validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            _validate_graph_dispatcher(
                 mismatched_top_level
             ).errors,
         )
@@ -2541,7 +2567,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                     target = target[key]
                 target[path[-1]] = value
                 candidate["errors"] = [candidate["dispatch_steps"][-1]["error"]]
-                validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                validation = _validate_graph_dispatcher(
                     candidate
                 )
                 self.assertTrue(
@@ -2557,7 +2583,11 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         )
         validation_calls = 0
 
-        def fail_validation_once(payload: dict) -> object:
+        def fail_validation_once(
+            payload: dict,
+            *,
+            expected_binding_sha256: str | None = None,
+        ) -> object:
             nonlocal validation_calls
             validation_calls += 1
             if validation_calls == 1:
@@ -2565,7 +2595,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                     status="FAILED",
                     errors=("sensitive-validation-detail-must-not-survive",),
                 )
-            return original_validator(payload)
+            return original_validator(
+                payload,
+                expected_binding_sha256=expected_binding_sha256,
+            )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
@@ -2604,7 +2637,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             },
         )
         self.assertEqual(payload["errors"], [failed_step["error"]])
-        self.assertEqual(original_validator(payload).errors, ())
+        self.assertEqual(
+            original_validator(
+                payload,
+                expected_binding_sha256=payload["approval_binding"]["binding_sha256"],
+            ).errors,
+            (),
+        )
         self.assertNotIn("sensitive-validation-detail-must-not-survive", serialized)
 
     def test_process_ontology_schema_apply_graph_dispatcher_validates_prior_v01_choice_failures(
@@ -2629,7 +2668,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         prior_error.pop("diagnostic")
         prior_without_diagnostic["errors"] = [prior_error]
         self.assertEqual(
-            validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            _validate_graph_dispatcher(
                 prior_without_diagnostic
             ).errors,
             (),
@@ -2645,7 +2684,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         prior_with_open_diagnostic["errors"] = [
             prior_with_open_diagnostic["dispatch_steps"][-1]["error"]
         ]
-        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        validation = _validate_graph_dispatcher(
             prior_with_open_diagnostic
         )
         self.assertTrue(
@@ -2673,7 +2712,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 failed_step[field] = value
                 failed_step["error"].pop("diagnostic")
                 candidate["errors"] = [failed_step["error"]]
-                validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                validation = _validate_graph_dispatcher(
                     candidate
                 )
                 self.assertTrue(
@@ -2694,24 +2733,64 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
 
+        trusted_binding_sha256 = payload["approval_binding"]["binding_sha256"]
+        self.assertIn(
+            "v0.2 validation requires a trusted expected binding hash",
+            validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload).errors,
+        )
+
         candidate = json.loads(json.dumps(payload))
         failed_step = candidate["dispatch_steps"][-1]
         failed_step["operation"] = "create_column"
         failed_step["method"] = "POST"
         failed_step["error"].pop("diagnostic")
         candidate["errors"] = [failed_step["error"]]
-        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(candidate)
 
+        binding = candidate["approval_binding"]
+        projection_entry = binding["selected_step_projection"][
+            failed_step["sequence"] - 1
+        ]
+        projection_entry["operation"] = "create_column"
+        projection_entry["method"] = "POST"
+        binding["selected_step_projection_sha256"] = graph_dispatcher_module._payload_sha256(
+            {"steps": binding["selected_step_projection"]}
+        )
+        binding_source = {
+            key: value
+            for key, value in binding.items()
+            if key not in {"schema_version", "binding_sha256"}
+        }
+        binding["binding_sha256"] = graph_dispatcher_module._payload_sha256(binding_source)
+
+        validation = _validate_graph_dispatcher(
+            candidate,
+            expected_binding_sha256=trusted_binding_sha256,
+        )
         joined_errors = "\n".join(validation.errors)
         self.assertNotIn("invalid closed operation", joined_errors)
-        self.assertNotIn(
-            "method must match the closed operation contract",
-            joined_errors,
-        )
+        self.assertNotIn("method must match the closed operation contract", joined_errors)
+        self.assertNotIn("dispatch step must match the approved selected-step projection", joined_errors)
+        self.assertNotIn("selected-step projection hash must match", joined_errors)
+        self.assertNotIn("approval binding hash must include", joined_errors)
         self.assertIn(
-            f"{failed_step['id']}: dispatch step must match the approved selected-step projection",
+            "artifact approval binding does not match the trusted expected binding hash",
             validation.errors,
         )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_non_object_steps_without_crash(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        candidate = json.loads(json.dumps(payload))
+        candidate["dispatch_steps"][0] = "not-an-object"
+        validation = _validate_graph_dispatcher(
+            candidate,
+            expected_binding_sha256=payload["approval_binding"]["binding_sha256"],
+        )
+
+        self.assertIn("dispatch step 0: step must be an object", validation.errors)
 
     def test_process_ontology_schema_apply_graph_dispatcher_reads_prior_v01_cli_fixture(
         self,
