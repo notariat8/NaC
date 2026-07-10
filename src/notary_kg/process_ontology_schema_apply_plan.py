@@ -210,6 +210,14 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
             errors.append(f"{step.get('id', '<unknown>')}: request path must target Graph lists")
         if request.get("headers") != {"Content-Type": "application/json"}:
             errors.append(f"{step.get('id', '<unknown>')}: request must not carry auth/secrets in headers")
+        request_body = request.get("body", {})
+        column_definitions = [request_body, *request_body.get("columns", [])]
+        for column in column_definitions:
+            choice = column.get("choice", {})
+            if choice.get("displayAs") == "checkBoxes" and column.get("indexed") is not False:
+                errors.append(
+                    f"{step.get('id', '<unknown>')}: multi-valued choice columns cannot be indexed"
+                )
 
     guardrails = payload.get("guardrails", {})
     if guardrails.get("offline_only") is not True:
@@ -381,6 +389,7 @@ def _column_definition(field: dict[str, Any], choice_catalog: dict[str, list[str
             "choices": choice_catalog.get(field["name"], []),
         }
     elif column_type == "multiChoice":
+        body["indexed"] = False
         body["choice"] = {
             "allowTextEntry": False,
             "displayAs": "checkBoxes",

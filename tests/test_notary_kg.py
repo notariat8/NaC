@@ -538,6 +538,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             if "choice" in column
         ]
         process_phase_template = next(column for column in choice_columns if column["name"] == "ProcessPhaseTemplate")
+        business_case_type = next(column for column in choice_columns if column["name"] == "BusinessCaseType")
 
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
         self.assertEqual(payload["status"], "PASSED")
@@ -562,6 +563,19 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
         self.assertTrue(all("allowMultipleSelection" not in column["choice"] for column in choice_columns))
         self.assertEqual(process_phase_template["choice"]["displayAs"], "checkBoxes")
+        self.assertFalse(process_phase_template["indexed"])
+        self.assertTrue(business_case_type["indexed"])
+        invalid_payload = json.loads(json.dumps(payload))
+        invalid_columns = invalid_payload["steps"][0]["request"]["body"]["columns"]
+        invalid_process_phase = next(
+            column for column in invalid_columns if column["name"] == "ProcessPhaseTemplate"
+        )
+        invalid_process_phase["indexed"] = True
+        invalid_validation = validate_process_ontology_sharepoint_schema_apply_plan(invalid_payload)
+        self.assertIn(
+            "step-001.optional-list.Prozessregister: multi-valued choice columns cannot be indexed",
+            invalid_validation.errors,
+        )
 
     def test_cli_process_ontology_schema_apply_plan_returns_safe_json(self) -> None:
         buffer = io.StringIO()
