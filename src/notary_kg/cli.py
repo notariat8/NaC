@@ -34,7 +34,7 @@ from .process_ontology_schema_apply_execution_contract import (
     build_process_ontology_sharepoint_schema_apply_execution_contract,
 )
 from .process_ontology_schema_apply_graph_dispatcher import (
-    SCHEMA_VERSION as PROCESS_ONTOLOGY_SCHEMA_APPLY_GRAPH_DISPATCHER_SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS as PROCESS_ONTOLOGY_SCHEMA_APPLY_GRAPH_DISPATCHER_SCHEMA_VERSIONS,
     write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact,
 )
 from .process_ontology_schema_apply_owner_gated_live_plan import (
@@ -1127,7 +1127,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
             print(f"- Markdown: {payload['artifact_paths']['markdown']}")
         return
 
-    if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_GRAPH_DISPATCHER_SCHEMA_VERSION:
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_APPLY_GRAPH_DISPATCHER_SCHEMA_VERSIONS:
         summary = payload["summary"]
         print("Process ontology SharePoint schema apply Graph dispatcher")
         print(f"- status: {payload['status']}")

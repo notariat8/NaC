@@ -2050,7 +2050,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
             serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
@@ -2596,6 +2596,79 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["errors"], [failed_step["error"]])
         self.assertEqual(original_validator(payload).errors, ())
         self.assertNotIn("sensitive-validation-detail-must-not-survive", serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_validates_prior_v01_choice_failures(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            current = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        prior_without_diagnostic = json.loads(json.dumps(current))
+        prior_without_diagnostic["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+        )
+        prior_error = prior_without_diagnostic["dispatch_steps"][-1]["error"]
+        prior_error.pop("diagnostic")
+        prior_without_diagnostic["errors"] = [prior_error]
+        self.assertEqual(
+            validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                prior_without_diagnostic
+            ).errors,
+            (),
+        )
+
+        prior_with_open_diagnostic = json.loads(json.dumps(current))
+        prior_with_open_diagnostic["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+        )
+        prior_with_open_diagnostic["dispatch_steps"][-1]["error"]["diagnostic"][
+            "message"
+        ] = "must-not-be-accepted"
+        prior_with_open_diagnostic["errors"] = [
+            prior_with_open_diagnostic["dispatch_steps"][-1]["error"]
+        ]
+        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            prior_with_open_diagnostic
+        )
+        self.assertTrue(
+            any(
+                "Choice PATCH diagnostic fields must match the closed contract" in item
+                for item in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_closes_operation_method_contract(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        cases = (
+            ("operation", "extend_choice_colum", "invalid closed operation"),
+            ("method", "POST", "method must match the closed operation contract"),
+        )
+        for field, value, expected_error in cases:
+            with self.subTest(field=field):
+                candidate = json.loads(json.dumps(payload))
+                failed_step = candidate["dispatch_steps"][-1]
+                failed_step[field] = value
+                failed_step["error"].pop("diagnostic")
+                candidate["errors"] = [failed_step["error"]]
+                validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                    candidate
+                )
+                self.assertTrue(
+                    any(expected_error in item for item in validation.errors),
+                    validation.errors,
+                )
+                self.assertTrue(
+                    any(
+                        "failed Choice PATCH must expose closed diagnostics" in item
+                        for item in validation.errors
+                    ),
+                    validation.errors,
+                )
 
     def test_process_ontology_schema_apply_graph_dispatcher_reads_prior_v01_cli_fixture(
         self,

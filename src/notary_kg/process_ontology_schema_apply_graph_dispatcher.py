@@ -21,7 +21,9 @@ from .process_ontology_schema_apply_plan import (
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+LEGACY_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2"
+SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, SCHEMA_VERSION}
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_graph_dispatcher"
 DEFAULT_GRAPH_DISPATCHER_JSON = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.json")
 DEFAULT_GRAPH_DISPATCHER_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.md")
@@ -48,6 +50,12 @@ STEP_ERROR_PHASES_BY_CODE = {
     "readback_verification_failed": {"readback"},
 }
 GRAPH_REQUEST_ERROR_CODES = {"graph_http_error", "graph_request_failed"}
+METHOD_BY_OPERATION = {
+    "create_list": "POST",
+    "create_document_library": "POST",
+    "create_column": "POST",
+    "extend_choice_column": "PATCH",
+}
 DIAGNOSTIC_TOP_LEVEL_FIELDS = {
     "contract",
     "graphError",
@@ -443,7 +451,8 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     payload: dict[str, Any],
 ) -> ProcessOntologySchemaApplyGraphDispatcherValidation:
     errors: list[str] = []
-    if payload.get("schema_version") != SCHEMA_VERSION:
+    schema_version = payload.get("schema_version")
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         errors.append("unexpected graph dispatcher schema_version")
     if payload.get("contract_id") != CONTRACT_ID:
         errors.append("unexpected graph dispatcher contract_id")
@@ -511,6 +520,13 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
             errors.append(f"{step_id}: owner gate must be required")
         if step.get("graphRestOnly") is not True:
             errors.append(f"{step_id}: step must be Graph REST only")
+        operation = step.get("operation")
+        method = step.get("method")
+        expected_method = METHOD_BY_OPERATION.get(operation)
+        if expected_method is None:
+            errors.append(f"{step_id}: invalid closed operation")
+        elif method != expected_method:
+            errors.append(f"{step_id}: method must match the closed operation contract")
         if step.get("mutationOutcome") not in allowed_outcomes:
             errors.append(f"{step_id}: invalid mutation outcome")
         if step.get("status") not in {"PASSED", "FAILED"}:
@@ -523,7 +539,7 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
 
         if step.get("status") == "FAILED":
             failed_errors.append(step.get("error"))
-            errors.extend(_validate_failed_step_error(step_id, step))
+            errors.extend(_validate_failed_step_error(step_id, step, schema_version))
         elif "error" in step:
             errors.append(f"{step_id}: nonfailed step must not expose error")
 
@@ -564,7 +580,11 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     )
 
 
-def _validate_failed_step_error(step_id: str, step: dict[str, Any]) -> list[str]:
+def _validate_failed_step_error(
+    step_id: str,
+    step: dict[str, Any],
+    schema_version: Any,
+) -> list[str]:
     error = step.get("error")
     if type(error) is not dict:
         return [f"{step_id}: failed step error must be an exact object"]
@@ -573,13 +593,13 @@ def _validate_failed_step_error(step_id: str, step: dict[str, Any]) -> list[str]
     expected_fields = {"stepId", "code", "phase"}
     if code == "graph_http_error":
         expected_fields.add("httpStatus")
-    choice_patch_failure = (
-        step.get("operation") == "extend_choice_column"
-        and step.get("method") == "PATCH"
-        and phase == "mutation"
-        and code in GRAPH_REQUEST_ERROR_CODES
+    choice_patch_failure = phase == "mutation" and code in GRAPH_REQUEST_ERROR_CODES and (
+        step.get("operation") == "extend_choice_column" or step.get("method") == "PATCH"
     )
-    if choice_patch_failure:
+    diagnostic = error.get("diagnostic")
+    diagnostic_required = choice_patch_failure and schema_version == SCHEMA_VERSION
+    diagnostic_present = "diagnostic" in error
+    if diagnostic_required or diagnostic_present:
         expected_fields.add("diagnostic")
 
     errors: list[str] = []
@@ -599,12 +619,13 @@ def _validate_failed_step_error(step_id: str, step: dict[str, Any]) -> list[str]
         or not 100 <= http_status <= 599
     ):
         errors.append(f"{step_id}: HTTP status must be an integer from 100 through 599")
-    if choice_patch_failure:
-        diagnostic = error.get("diagnostic")
+    if diagnostic_required or diagnostic_present:
         if type(diagnostic) is not dict:
             errors.append(f"{step_id}: failed Choice PATCH must expose closed diagnostics")
-        else:
+        elif choice_patch_failure:
             errors.extend(_validate_choice_patch_failure_diagnostic(step_id, diagnostic, http_status))
+        else:
+            errors.append(f"{step_id}: diagnostics are only allowed for Choice PATCH failures")
     return errors
 
 
