@@ -384,7 +384,6 @@ def _column_definition(field: dict[str, Any], choice_catalog: dict[str, list[str
         body["choice"] = {
             "allowTextEntry": False,
             "displayAs": "checkBoxes",
-            "allowMultipleSelection": True,
             "choices": choice_catalog.get(field["name"], []),
         }
     elif column_type == "boolean":

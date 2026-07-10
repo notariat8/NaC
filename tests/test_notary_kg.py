@@ -530,6 +530,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         validation = validate_process_ontology_sharepoint_schema_apply_plan(payload)
         operations = {step["operation"] for step in payload["steps"]}
         endpoints = payload["apply_boundary"]["future_apply_endpoint_families"]
+        choice_columns = [
+            column
+            for step in payload["steps"]
+            for column in step["request"]["body"].get("columns", [])
+            if "choice" in column
+        ]
+        process_phase_template = next(column for column in choice_columns if column["name"] == "ProcessPhaseTemplate")
 
         self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
         self.assertEqual(payload["status"], "PASSED")
@@ -552,6 +559,8 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
         self.assertFalse(payload["apply_boundary"]["changes_sharepoint_schema"])
         self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
+        self.assertTrue(all("allowMultipleSelection" not in column["choice"] for column in choice_columns))
+        self.assertEqual(process_phase_template["choice"]["displayAs"], "checkBoxes")
 
     def test_cli_process_ontology_schema_apply_plan_returns_safe_json(self) -> None:
         buffer = io.StringIO()
