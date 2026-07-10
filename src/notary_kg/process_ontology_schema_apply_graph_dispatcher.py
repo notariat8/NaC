@@ -9,7 +9,11 @@ from typing import Any, Protocol
 
 from nac_m365_graph.graph_client import GraphHttpError
 
-from .process_ontology_schema_apply_binding import build_process_ontology_sharepoint_schema_apply_binding
+from .process_ontology_schema_apply_binding import (
+    SCHEMA_VERSION as APPLY_BINDING_SCHEMA_VERSION,
+    SELECTED_STEP_PROJECTION_FIELDS,
+    build_process_ontology_sharepoint_schema_apply_binding,
+)
 
 from .process_ontology_schema_apply_live_runner import (
     build_process_ontology_sharepoint_schema_apply_live_runner,
@@ -21,7 +25,9 @@ from .process_ontology_schema_apply_plan import (
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+LEGACY_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2"
+SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, SCHEMA_VERSION}
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_graph_dispatcher"
 DEFAULT_GRAPH_DISPATCHER_JSON = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.json")
 DEFAULT_GRAPH_DISPATCHER_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-graph-dispatcher.redacted.md")
@@ -29,6 +35,87 @@ MUTATION_NOT_ATTEMPTED = "NOT_ATTEMPTED"
 MUTATION_SKIPPED = "SKIPPED"
 MUTATION_CONFIRMED = "CONFIRMED"
 MUTATION_POSSIBLE = "POSSIBLE"
+MAX_DIAGNOSTIC_COUNT = 1000
+MAX_GRAPH_INNER_ERROR_DEPTH = 8
+GRAPH_ERROR_CLASS_BY_CODE = {
+    "badArgument": "REQUEST_VALIDATION",
+    "invalidRequest": "REQUEST_VALIDATION",
+}
+GRAPH_ERROR_ENVELOPES = {"STANDARD", "NONSTANDARD", "MALFORMED", "EMPTY", "NOT_AVAILABLE"}
+GRAPH_ERROR_CODES = {*GRAPH_ERROR_CLASS_BY_CODE, "UNCLASSIFIED"}
+GRAPH_ERROR_CLASSES = {*GRAPH_ERROR_CLASS_BY_CODE.values(), "UNCLASSIFIED"}
+RETRY_DISPOSITIONS = {"DO_NOT_RETRY_UNCHANGED", "RETRY_WITH_BACKOFF", "REVIEW_REQUIRED"}
+STEP_ERROR_PHASES_BY_CODE = {
+    "choice_column_resolution_failed": {"resolution"},
+    "choice_readback_verification_failed": {"readback"},
+    "dispatcher_validation_failed": {"validation"},
+    "graph_http_error": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "graph_request_failed": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "readback_verification_failed": {"readback"},
+}
+GRAPH_REQUEST_ERROR_CODES = {"graph_http_error", "graph_request_failed"}
+METHOD_BY_OPERATION = {
+    "create_list": "POST",
+    "create_document_library": "POST",
+    "create_column": "POST",
+    "extend_choice_column": "PATCH",
+}
+DIAGNOSTIC_TOP_LEVEL_FIELDS = {
+    "contract",
+    "graphError",
+    "retryDisposition",
+    "endpoint",
+    "facet",
+    "expectedHttpStatus",
+    "columnShape",
+    "requestShape",
+    "counts",
+}
+GRAPH_ERROR_DIAGNOSTIC_FIELDS = {
+    "envelope",
+    "code",
+    "class",
+    "messagePresent",
+    "innerErrorPresent",
+    "detailsPresent",
+}
+COLUMN_SHAPE_FIELDS = {
+    "choiceFacetPresent",
+    "choiceFacetIsObject",
+    "choicesPresent",
+    "choicesIsArray",
+    "readOnlyPresent",
+    "readOnlyIsBoolean",
+    "readOnlyTrue",
+    "sealedPresent",
+    "sealedIsBoolean",
+    "sealedTrue",
+    "indexedPresent",
+    "indexedIsBoolean",
+    "indexedTrue",
+}
+REQUEST_SHAPE_FIELDS = {
+    "bodyIsObject",
+    "choiceFacetPresent",
+    "choiceFacetIsObject",
+    "odataTypePresent",
+    "odataTypeAllowlisted",
+    "choicesPresent",
+    "choicesIsArray",
+    "allowTextEntryPresent",
+    "allowTextEntryIsBoolean",
+    "displayAsPresent",
+    "displayAsRecognized",
+}
+DIAGNOSTIC_COUNT_FIELDS = {
+    "currentChoiceCount",
+    "requiredChoiceCount",
+    "mergedChoiceCount",
+    "requestChoiceCount",
+    "requestBodyFieldCount",
+    "choiceFacetFieldCount",
+    "countsCapped",
+}
 
 
 class ProcessOntologySchemaApplyGraphClient(Protocol):
@@ -57,6 +144,7 @@ class DispatchStepFailure(RuntimeError):
         mutation_attempted: bool = False,
         mutation_outcome: str = MUTATION_NOT_ATTEMPTED,
         http_status: int | None = None,
+        diagnostic: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(code)
         self.code = code
@@ -64,6 +152,7 @@ class DispatchStepFailure(RuntimeError):
         self.mutation_attempted = mutation_attempted
         self.mutation_outcome = mutation_outcome
         self.http_status = http_status
+        self.diagnostic = diagnostic
 
 
 def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
@@ -222,13 +311,19 @@ def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         status=final_status,
         stop_reason=stop_reason,
     )
-    validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+    trusted_binding_sha256 = binding["binding_sha256"]
+    validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        payload,
+        expected_binding_sha256=trusted_binding_sha256,
+    )
     if validation.errors:
-        payload["status"] = "FAILED"
-        payload["errors"] = [
-            *payload["errors"],
-            *({"code": "dispatcher_validation_failed", "detail": error} for error in validation.errors),
-        ]
+        payload = _validation_failure_payload(payload)
+        revalidation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload,
+            expected_binding_sha256=trusted_binding_sha256,
+        )
+        if revalidation.errors:
+            raise RuntimeError("dispatcher validation-failure evidence invariant failed")
     evidence_checkpoint(payload)
     return payload
 
@@ -365,9 +460,12 @@ def _build_dispatch_payload(
 
 def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     payload: dict[str, Any],
+    *,
+    expected_binding_sha256: str | None = None,
 ) -> ProcessOntologySchemaApplyGraphDispatcherValidation:
     errors: list[str] = []
-    if payload.get("schema_version") != SCHEMA_VERSION:
+    schema_version = payload.get("schema_version")
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         errors.append("unexpected graph dispatcher schema_version")
     if payload.get("contract_id") != CONTRACT_ID:
         errors.append("unexpected graph dispatcher contract_id")
@@ -404,28 +502,76 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         errors.append("graph dispatcher final status must be PASSED, PARTIAL or FAILED")
     if summary.get("executed_graph_requests") is not True:
         errors.append("graph dispatcher must execute Graph requests")
-    workspace_ids = payload.get("approval_binding", {}).get("workspace_ids", [])
+    approval_binding = payload.get("approval_binding")
+    if type(approval_binding) is not dict:
+        errors.append("graph dispatcher approval binding must be an object")
+        approval_binding = {}
+    workspace_ids = approval_binding.get("workspace_ids", [])
     if len(workspace_ids) != 1 or summary.get("workspace_id") != workspace_ids[0]:
         errors.append("graph dispatcher workspace must match approval binding")
-    if payload.get("approval_binding", {}).get("selected_apply_unit_count") != planned:
+    if approval_binding.get("selected_apply_unit_count") != planned:
         errors.append("planned step count must match approval binding")
     if not summary.get("owner_approval_reference_sha256") or not summary.get("reason_sha256"):
         errors.append("graph dispatcher must retain redacted approval and reason hashes")
 
-    allowed_outcomes = {MUTATION_NOT_ATTEMPTED, MUTATION_SKIPPED, MUTATION_CONFIRMED, MUTATION_POSSIBLE}
-    for step in payload.get("dispatch_steps", []):
-        step_id = step.get("id", "<unknown>")
+    dispatch_steps = payload.get("dispatch_steps")
+    if type(dispatch_steps) is not list:
+        errors.append("dispatch_steps must be a list")
+        dispatch_steps = []
+    allowed_outcomes = {
+        MUTATION_NOT_ATTEMPTED,
+        MUTATION_SKIPPED,
+        MUTATION_CONFIRMED,
+        MUTATION_POSSIBLE,
+    }
+    failed_errors: list[Any] = []
+    for index, step in enumerate(dispatch_steps):
+        if type(step) is not dict:
+            errors.append(f"dispatch step {index}: step must be an object")
+            continue
+        step_id = step.get("id")
+        if not isinstance(step_id, str) or not step_id:
+            errors.append(f"dispatch step {index}: step id must be a non-empty string")
+            step_id = f"<step-{index}>"
         if step.get("ownerGateRequired") is not True:
             errors.append(f"{step_id}: owner gate must be required")
         if step.get("graphRestOnly") is not True:
             errors.append(f"{step_id}: step must be Graph REST only")
+        operation = step.get("operation")
+        method = step.get("method")
+        expected_method = METHOD_BY_OPERATION.get(operation)
+        if expected_method is None:
+            errors.append(f"{step_id}: invalid closed operation")
+        elif method != expected_method:
+            errors.append(f"{step_id}: method must match the closed operation contract")
         if step.get("mutationOutcome") not in allowed_outcomes:
             errors.append(f"{step_id}: invalid mutation outcome")
+        if step.get("status") not in {"PASSED", "FAILED"}:
+            errors.append(f"{step_id}: final step status must be PASSED or FAILED")
         if step.get("status") == "PASSED" and step.get("mutationOutcome") == MUTATION_POSSIBLE:
             errors.append(f"{step_id}: possible mutation cannot be reported as passed")
         for raw_key in ("rawGraphPathStored", "rawGraphResponseStored", "rawMutationPayloadStored"):
             if step.get(raw_key) is not False:
                 errors.append(f"{step_id}: {raw_key} must be false")
+
+        if step.get("status") == "FAILED":
+            failed_errors.append(step.get("error"))
+            errors.extend(_validate_failed_step_error(step_id, step, schema_version))
+        elif "error" in step:
+            errors.append(f"{step_id}: nonfailed step must not expose error")
+
+    if schema_version == SCHEMA_VERSION:
+        errors.extend(
+            _validate_v02_approval_binding(
+                approval_binding,
+                dispatch_steps,
+                planned,
+                expected_binding_sha256,
+            )
+        )
+
+    if type(payload.get("errors")) is not list or payload.get("errors") != failed_errors:
+        errors.append("top-level errors must exactly mirror failed-step errors")
 
     privacy = payload.get("privacy", {})
     for key in (
@@ -459,6 +605,245 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         status="PASSED" if not errors else "FAILED",
         errors=tuple(errors),
     )
+
+
+def _validate_v02_approval_binding(
+    binding: dict[str, Any],
+    dispatch_steps: list[dict[str, Any]],
+    planned_step_count: Any,
+    expected_binding_sha256: str | None,
+) -> list[str]:
+    errors: list[str] = []
+    expected_binding_fields = {
+        "schema_version",
+        "workspace_ids",
+        "workspace_bindings",
+        "apply_plan_sha256",
+        "workspace_readiness_sha256",
+        "selected_apply_unit_count",
+        "selected_step_projection",
+        "selected_step_projection_sha256",
+        "binding_sha256",
+    }
+    if set(binding) != expected_binding_fields:
+        errors.append("v0.2 approval binding fields must match the closed contract")
+    if binding.get("schema_version") != APPLY_BINDING_SCHEMA_VERSION:
+        errors.append("v0.2 dispatcher must use the current apply binding schema")
+    if not _is_sha256(expected_binding_sha256):
+        errors.append("v0.2 validation requires a trusted expected binding hash")
+    elif binding.get("binding_sha256") != expected_binding_sha256:
+        errors.append("artifact approval binding does not match the trusted expected binding hash")
+
+    projection = binding.get("selected_step_projection")
+    if type(projection) is not list:
+        errors.append("selected-step projection must be a list")
+        projection = []
+    if binding.get("selected_apply_unit_count") != len(projection):
+        errors.append("selected apply unit count must match selected-step projection")
+    if planned_step_count != len(projection):
+        errors.append("planned step count must match selected-step projection")
+
+    for index, entry in enumerate(projection, start=1):
+        if type(entry) is not dict or set(entry) != SELECTED_STEP_PROJECTION_FIELDS:
+            errors.append(f"selected-step projection {index}: fields must match the closed contract")
+            continue
+        if entry.get("sequence") != index:
+            errors.append(f"selected-step projection {index}: sequence must match position")
+        for key in ("apply_unit_id", "source_step_id"):
+            if not isinstance(entry.get(key), str) or not entry[key]:
+                errors.append(f"selected-step projection {index}: {key} must be a non-empty string")
+        operation = entry.get("operation")
+        expected_method = METHOD_BY_OPERATION.get(operation)
+        if expected_method is None:
+            errors.append(f"selected-step projection {index}: invalid closed operation")
+        elif entry.get("method") != expected_method:
+            errors.append(
+                f"selected-step projection {index}: method must match the closed operation contract"
+            )
+
+    projection_hash = binding.get("selected_step_projection_sha256")
+    if projection_hash != _payload_sha256({"steps": projection}):
+        errors.append("selected-step projection hash must match its redacted content")
+    binding_source = {
+        key: value
+        for key, value in binding.items()
+        if key not in {"schema_version", "binding_sha256"}
+    }
+    if binding.get("binding_sha256") != _payload_sha256(binding_source):
+        errors.append("approval binding hash must include the selected-step projection")
+
+    for index, step in enumerate(dispatch_steps):
+        if type(step) is not dict:
+            continue
+        if index >= len(projection):
+            errors.append(f"{step.get('id', f'<step-{index}>')}: no approved projection entry")
+            continue
+        approved = projection[index]
+        actual = {
+            "sequence": step.get("sequence"),
+            "apply_unit_id": step.get("id"),
+            "source_step_id": step.get("sourceStepId"),
+            "operation": step.get("operation"),
+            "method": step.get("method"),
+        }
+        if actual != approved:
+            errors.append(
+                f"{step.get('id', f'<step-{index}>')}: dispatch step must match the approved "
+                "selected-step projection"
+            )
+    return errors
+
+
+def _validate_failed_step_error(
+    step_id: str,
+    step: dict[str, Any],
+    schema_version: Any,
+) -> list[str]:
+    error = step.get("error")
+    if type(error) is not dict:
+        return [f"{step_id}: failed step error must be an exact object"]
+    code = error.get("code")
+    phase = error.get("phase")
+    expected_fields = {"stepId", "code", "phase"}
+    if code == "graph_http_error":
+        expected_fields.add("httpStatus")
+    choice_patch_failure = phase == "mutation" and code in GRAPH_REQUEST_ERROR_CODES and (
+        step.get("operation") == "extend_choice_column" or step.get("method") == "PATCH"
+    )
+    diagnostic = error.get("diagnostic")
+    diagnostic_required = choice_patch_failure and schema_version == SCHEMA_VERSION
+    diagnostic_present = "diagnostic" in error
+    if diagnostic_required or diagnostic_present:
+        expected_fields.add("diagnostic")
+
+    errors: list[str] = []
+    if set(error) != expected_fields:
+        errors.append(f"{step_id}: error fields must match the closed code contract")
+    if error.get("stepId") != step_id:
+        errors.append(f"{step_id}: error stepId must exactly match step id")
+    allowed_phases = STEP_ERROR_PHASES_BY_CODE.get(code)
+    if allowed_phases is None:
+        errors.append(f"{step_id}: invalid closed error code")
+    elif phase not in allowed_phases:
+        errors.append(f"{step_id}: invalid phase for error code")
+    http_status = error.get("httpStatus")
+    if code == "graph_http_error" and (
+        isinstance(http_status, bool)
+        or not isinstance(http_status, int)
+        or not 100 <= http_status <= 599
+    ):
+        errors.append(f"{step_id}: HTTP status must be an integer from 100 through 599")
+    if diagnostic_required or diagnostic_present:
+        if type(diagnostic) is not dict:
+            errors.append(f"{step_id}: failed Choice PATCH must expose closed diagnostics")
+        elif choice_patch_failure:
+            errors.extend(_validate_choice_patch_failure_diagnostic(step_id, diagnostic, http_status))
+        else:
+            errors.append(f"{step_id}: diagnostics are only allowed for Choice PATCH failures")
+    return errors
+
+
+def _validate_choice_patch_failure_diagnostic(
+    step_id: str,
+    diagnostic: dict[str, Any],
+    http_status: Any,
+) -> list[str]:
+    errors: list[str] = []
+    if set(diagnostic) != DIAGNOSTIC_TOP_LEVEL_FIELDS:
+        return [f"{step_id}: Choice PATCH diagnostic fields must match the closed contract"]
+    if diagnostic.get("contract") != "choice_patch_failure/v1":
+        errors.append(f"{step_id}: unexpected Choice PATCH diagnostic contract")
+    if diagnostic.get("endpoint") != "COLUMN_DEFINITION_UPDATE":
+        errors.append(f"{step_id}: unexpected Choice PATCH diagnostic endpoint")
+    if diagnostic.get("facet") != "CHOICE":
+        errors.append(f"{step_id}: unexpected Choice PATCH diagnostic facet")
+    if diagnostic.get("expectedHttpStatus") != 200:
+        errors.append(f"{step_id}: Choice PATCH expected HTTP status must be 200")
+    if diagnostic.get("retryDisposition") not in RETRY_DISPOSITIONS:
+        errors.append(f"{step_id}: invalid Choice PATCH retry disposition")
+
+    graph_error = diagnostic.get("graphError")
+    if type(graph_error) is not dict or set(graph_error) != GRAPH_ERROR_DIAGNOSTIC_FIELDS:
+        errors.append(f"{step_id}: Graph error diagnostic fields must match the closed contract")
+    else:
+        envelope = graph_error.get("envelope")
+        code = graph_error.get("code")
+        error_class = graph_error.get("class")
+        if envelope not in GRAPH_ERROR_ENVELOPES:
+            errors.append(f"{step_id}: invalid Graph error envelope")
+        if code not in GRAPH_ERROR_CODES:
+            errors.append(f"{step_id}: invalid Graph error code")
+        if error_class not in GRAPH_ERROR_CLASSES:
+            errors.append(f"{step_id}: invalid Graph error class")
+        expected_class = GRAPH_ERROR_CLASS_BY_CODE.get(code, "UNCLASSIFIED")
+        if error_class != expected_class:
+            errors.append(f"{step_id}: Graph error code and class must agree")
+        if code != "UNCLASSIFIED" and envelope != "STANDARD":
+            errors.append(f"{step_id}: allowlisted Graph error codes require a standard envelope")
+        expected_retry = (
+            "DO_NOT_RETRY_UNCHANGED"
+            if error_class == "REQUEST_VALIDATION"
+            else "RETRY_WITH_BACKOFF"
+            if http_status in {429, 500, 502, 503, 504}
+            else "REVIEW_REQUIRED"
+        )
+        if diagnostic.get("retryDisposition") != expected_retry:
+            errors.append(f"{step_id}: Graph error class and retry disposition must agree")
+        for key in ("messagePresent", "innerErrorPresent", "detailsPresent"):
+            if not isinstance(graph_error.get(key), bool):
+                errors.append(f"{step_id}: Graph error shape values must be booleans")
+
+    for name, expected_fields in (
+        ("columnShape", COLUMN_SHAPE_FIELDS),
+        ("requestShape", REQUEST_SHAPE_FIELDS),
+    ):
+        shape = diagnostic.get(name)
+        if type(shape) is not dict or set(shape) != expected_fields:
+            errors.append(f"{step_id}: {name} fields must match the closed contract")
+        elif any(not isinstance(value, bool) for value in shape.values()):
+            errors.append(f"{step_id}: {name} values must be booleans")
+
+    counts = diagnostic.get("counts")
+    if type(counts) is not dict or set(counts) != DIAGNOSTIC_COUNT_FIELDS:
+        errors.append(f"{step_id}: diagnostic count fields must match the closed contract")
+    else:
+        if not isinstance(counts.get("countsCapped"), bool):
+            errors.append(f"{step_id}: countsCapped must be boolean")
+        for key in DIAGNOSTIC_COUNT_FIELDS - {"countsCapped"}:
+            value = counts.get(key)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not 0 <= value <= MAX_DIAGNOSTIC_COUNT
+            ):
+                errors.append(f"{step_id}: {key} must be a bounded non-negative integer")
+    return errors
+
+
+def _validation_failure_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    dispatch_steps = [dict(step) for step in payload.get("dispatch_steps", [])]
+    if not dispatch_steps:
+        raise RuntimeError("dispatcher validation failure has no dispatched step")
+    failed_step = dispatch_steps[-1]
+    failed_step["status"] = "FAILED"
+    failed_step["error"] = {
+        "stepId": failed_step["id"],
+        "code": "dispatcher_validation_failed",
+        "phase": "validation",
+    }
+    dispatch_steps[-1] = failed_step
+    normalized["dispatch_steps"] = dispatch_steps
+    normalized["status"] = "FAILED"
+    normalized["completion"] = "FAILED"
+    summary = dict(payload["summary"])
+    summary["passed_step_count"] = sum(step.get("status") == "PASSED" for step in dispatch_steps)
+    summary["failed_step_count"] = 1
+    summary["stopped_on_first_failure"] = True
+    summary["stop_reason"] = "dispatcher_validation_failed"
+    normalized["summary"] = summary
+    normalized["errors"] = [failed_step["error"]]
+    return normalized
 
 
 def write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
@@ -622,8 +1007,9 @@ def _dispatch_extend_choice_step(
             if key in current_choice:
                 plan_choice[key] = current_choice[key]
         plan_choice["choices"] = merged_choices
+        patch_body = {"choice": plan_choice}
         try:
-            mutation_shape = client.patch(mutation_path, {"choice": plan_choice})
+            mutation_shape = client.patch(mutation_path, patch_body)
             mutation_outcome = MUTATION_CONFIRMED
         except Exception as exc:
             raise _safe_failure(
@@ -631,6 +1017,14 @@ def _dispatch_extend_choice_step(
                 "mutation",
                 mutation_attempted=True,
                 mutation_outcome=MUTATION_POSSIBLE,
+                diagnostic=_choice_patch_failure_diagnostic(
+                    exc,
+                    preflight=preflight,
+                    request_body=patch_body,
+                    current_choice_count=len(current_choices),
+                    required_choice_count=len(required_choices),
+                    merged_choice_count=len(merged_choices),
+                ),
             ) from exc
     try:
         readback = client.get(preflight_path)
@@ -677,6 +1071,7 @@ def _pending_step(
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -709,9 +1104,12 @@ def _failed_step(
     }
     if failure.http_status is not None:
         error["httpStatus"] = failure.http_status
+    if failure.diagnostic is not None:
+        error["diagnostic"] = failure.diagnostic
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -748,6 +1146,7 @@ def _redacted_dispatch_step(
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -777,6 +1176,7 @@ def _safe_failure(
     *,
     mutation_attempted: bool = False,
     mutation_outcome: str = MUTATION_NOT_ATTEMPTED,
+    diagnostic: dict[str, Any] | None = None,
 ) -> DispatchStepFailure:
     if isinstance(exc, DispatchStepFailure):
         return exc
@@ -787,13 +1187,145 @@ def _safe_failure(
             mutation_attempted=mutation_attempted,
             mutation_outcome=mutation_outcome,
             http_status=exc.status,
+            diagnostic=diagnostic,
         )
     return DispatchStepFailure(
         "graph_request_failed",
         phase,
         mutation_attempted=mutation_attempted,
         mutation_outcome=mutation_outcome,
+        diagnostic=diagnostic,
     )
+
+
+def _choice_patch_failure_diagnostic(
+    exc: Exception,
+    *,
+    preflight: dict[str, Any],
+    request_body: dict[str, Any],
+    current_choice_count: int,
+    required_choice_count: int,
+    merged_choice_count: int,
+) -> dict[str, Any]:
+    graph_error = _closed_graph_error(exc)
+    request_choice = request_body.get("choice")
+    request_choice_object = request_choice if isinstance(request_choice, dict) else {}
+    request_choices = request_choice_object.get("choices")
+    column = _column_definition(preflight)
+    column_choice = column.get("choice")
+    column_choice_object = column_choice if isinstance(column_choice, dict) else {}
+    column_choices = column_choice_object.get("choices")
+    raw_counts = {
+        "currentChoiceCount": current_choice_count,
+        "requiredChoiceCount": required_choice_count,
+        "mergedChoiceCount": merged_choice_count,
+        "requestChoiceCount": len(request_choices) if isinstance(request_choices, list) else 0,
+        "requestBodyFieldCount": len(request_body),
+        "choiceFacetFieldCount": len(request_choice_object),
+    }
+    return {
+        "contract": "choice_patch_failure/v1",
+        "graphError": graph_error,
+        "retryDisposition": _retry_disposition(exc, graph_error["class"]),
+        "endpoint": "COLUMN_DEFINITION_UPDATE",
+        "facet": "CHOICE",
+        "expectedHttpStatus": 200,
+        "columnShape": {
+            "choiceFacetPresent": "choice" in column,
+            "choiceFacetIsObject": isinstance(column_choice, dict),
+            "choicesPresent": "choices" in column_choice_object,
+            "choicesIsArray": isinstance(column_choices, list),
+            "readOnlyPresent": "readOnly" in column,
+            "readOnlyIsBoolean": isinstance(column.get("readOnly"), bool),
+            "readOnlyTrue": column.get("readOnly") is True,
+            "sealedPresent": "sealed" in column,
+            "sealedIsBoolean": isinstance(column.get("sealed"), bool),
+            "sealedTrue": column.get("sealed") is True,
+            "indexedPresent": "indexed" in column,
+            "indexedIsBoolean": isinstance(column.get("indexed"), bool),
+            "indexedTrue": column.get("indexed") is True,
+        },
+        "requestShape": {
+            "bodyIsObject": isinstance(request_body, dict),
+            "choiceFacetPresent": "choice" in request_body,
+            "choiceFacetIsObject": isinstance(request_choice, dict),
+            "odataTypePresent": "@odata.type" in request_choice_object,
+            "odataTypeAllowlisted": request_choice_object.get("@odata.type")
+            == CHOICE_COLUMN_ODATA_TYPE,
+            "choicesPresent": "choices" in request_choice_object,
+            "choicesIsArray": isinstance(request_choices, list),
+            "allowTextEntryPresent": "allowTextEntry" in request_choice_object,
+            "allowTextEntryIsBoolean": isinstance(
+                request_choice_object.get("allowTextEntry"), bool
+            ),
+            "displayAsPresent": "displayAs" in request_choice_object,
+            "displayAsRecognized": request_choice_object.get("displayAs")
+            in {"checkBoxes", "dropDownMenu", "radioButtons"},
+        },
+        "counts": {
+            **{key: min(value, MAX_DIAGNOSTIC_COUNT) for key, value in raw_counts.items()},
+            "countsCapped": any(value > MAX_DIAGNOSTIC_COUNT for value in raw_counts.values()),
+        },
+    }
+
+
+def _closed_graph_error(exc: Exception) -> dict[str, Any]:
+    envelope = "NOT_AVAILABLE"
+    error_object: dict[str, Any] = {}
+    if isinstance(exc, GraphHttpError):
+        body = exc.body
+        if not body:
+            envelope = "EMPTY"
+        else:
+            try:
+                parsed = json.loads(body)
+            except (json.JSONDecodeError, TypeError):
+                envelope = "MALFORMED"
+            else:
+                candidate = parsed.get("error") if isinstance(parsed, dict) else None
+                if isinstance(candidate, dict):
+                    envelope = "STANDARD"
+                    error_object = candidate
+                else:
+                    envelope = "NONSTANDARD"
+    code = _deepest_recognized_graph_code(error_object)
+    return {
+        "envelope": envelope,
+        "code": code,
+        "class": GRAPH_ERROR_CLASS_BY_CODE.get(code, "UNCLASSIFIED"),
+        "messagePresent": "message" in error_object,
+        "innerErrorPresent": "innerError" in error_object,
+        "detailsPresent": "details" in error_object,
+    }
+
+
+def _deepest_recognized_graph_code(error_object: dict[str, Any]) -> str:
+    code = "UNCLASSIFIED"
+    current = error_object
+    for _depth in range(MAX_GRAPH_INNER_ERROR_DEPTH + 1):
+        candidate = current.get("code")
+        if isinstance(candidate, str) and candidate in GRAPH_ERROR_CLASS_BY_CODE:
+            code = candidate
+        inner_error = current.get("innerError")
+        if type(inner_error) is not dict:
+            break
+        current = inner_error
+    return code
+
+
+def _retry_disposition(exc: Exception, error_class: str) -> str:
+    if error_class == "REQUEST_VALIDATION":
+        return "DO_NOT_RETRY_UNCHANGED"
+    if isinstance(exc, GraphHttpError) and exc.status in {429, 500, 502, 503, 504}:
+        return "RETRY_WITH_BACKOFF"
+    return "REVIEW_REQUIRED"
+
+
+def _column_definition(response: dict[str, Any]) -> dict[str, Any]:
+    value = response.get("value")
+    if isinstance(value, list) and value and isinstance(value[0], dict):
+        return value[0]
+    return response
 
 
 def _base_replacements(workspace: dict[str, Any], unit: dict[str, Any], plan_step: dict[str, Any]) -> dict[str, str]:
@@ -842,6 +1374,19 @@ def _choice_config(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(choice, dict):
             return dict(choice)
     return {}
+
+
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return _sha256(canonical)
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _sha256(value: str) -> str:

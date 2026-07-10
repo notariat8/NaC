@@ -23,6 +23,7 @@ from notary_kg.business_case_inventory import (
     validate_business_case_inventory,
 )
 from notary_kg.cli import main as kg_main
+from notary_kg import cli as kg_cli_module
 from notary_kg.deep_process_routing import (
     build_deep_process_candidate_routing,
     validate_deep_process_candidate_routing,
@@ -107,12 +108,58 @@ from notary_kg.workflow_contract import build_workflow_contract_draft
 from nac_gnotkg.views import build_cost_review_view
 
 
+PRIOR_V01_GRAPH_DISPATCHER_EVIDENCE = {
+    "schema_version": "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1",
+    "status": "PARTIAL",
+    "mode": "owner_gated_graph_rest_dispatcher",
+    "summary": {
+        "correlation_id": "prior-v01-correlation",
+        "dispatched_step_count": 2,
+        "mutation_request_count": 1,
+        "executed_graph_requests": True,
+        "executed_graph_writes": True,
+        "stopped_on_first_failure": False,
+    },
+    "artifact_paths": {
+        "json": "out/prior-v01.redacted.json",
+        "markdown": "out/prior-v01.redacted.md",
+    },
+}
+
+
+def _fake_nested_graph_error_body(codes: tuple[str, ...], path: str) -> str:
+    error: dict = {
+        "code": codes[0],
+        "message": "sensitive-choice-message-must-not-survive",
+        "details": [
+            {
+                "code": "sensitive-detail-code-must-not-survive",
+                "target": path,
+                "value": "sensitive-choice-value-must-not-survive",
+                "token": "sensitive-token-must-not-survive",
+            }
+        ],
+    }
+    current = error
+    for code in codes[1:]:
+        nested = {"code": code, "message": "sensitive-nested-message-must-not-survive"}
+        current["innerError"] = nested
+        current = nested
+    current["innerError"] = {
+        "date": "2099-12-31T23:59:59Z",
+        "request-id": "sensitive-request-id-must-not-survive",
+        "client-request-id": "sensitive-client-request-id-must-not-survive",
+    }
+    return json.dumps({"error": error})
+
+
 class FakeProcessOntologySchemaApplyGraphClient:
     def __init__(
         self,
         *,
         fail_readback_after_write: bool = False,
         fail_mutation: bool = False,
+        choice_patch_error_codes: tuple[str, ...] = (),
         rewrite_choice_settings_after_patch: bool = False,
         required_checkpoint_path: Path | None = None,
     ) -> None:
@@ -125,6 +172,7 @@ class FakeProcessOntologySchemaApplyGraphClient:
         self.choice_state: dict[str, dict] = {}
         self.fail_readback_after_write = fail_readback_after_write
         self.fail_mutation = fail_mutation
+        self.choice_patch_error_codes = choice_patch_error_codes
         self.rewrite_choice_settings_after_patch = rewrite_choice_settings_after_patch
         self.fail_next_readback = False
         self.required_checkpoint_path = required_checkpoint_path
@@ -149,7 +197,18 @@ class FakeProcessOntologySchemaApplyGraphClient:
                     column_id,
                     {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
                 )
-                return {"value": [{"id": column_id, "name": name, "choice": dict(choice)}]}
+                return {
+                    "value": [
+                        {
+                            "id": column_id,
+                            "name": name,
+                            "readOnly": False,
+                            "sealed": False,
+                            "indexed": True,
+                            "choice": dict(choice),
+                        }
+                    ]
+                }
             return self._filter_response(path, "name")
         if "/columns/fake-choice-column" in path or "/columns/fake-choice-" in path:
             column_id = path.split("/columns/", 1)[1].split("?", 1)[0]
@@ -157,7 +216,13 @@ class FakeProcessOntologySchemaApplyGraphClient:
                 column_id,
                 {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
             )
-            return {"id": column_id, "choice": dict(choice)}
+            return {
+                "id": column_id,
+                "readOnly": False,
+                "sealed": False,
+                "indexed": True,
+                "choice": dict(choice),
+            }
         return {"value": [{"id": "fake-existing"}]}
 
     def post(self, path: str, payload: dict) -> dict:
@@ -182,6 +247,11 @@ class FakeProcessOntologySchemaApplyGraphClient:
             and payload["choice"].get("@odata.type") != "microsoft.graph.choiceColumn"
         ):
             raise GraphHttpError(400, "choice-column-type-discriminator-required")
+        if isinstance(payload.get("choice"), dict) and self.choice_patch_error_codes:
+            raise GraphHttpError(
+                400,
+                _fake_nested_graph_error_body(self.choice_patch_error_codes, path),
+            )
         self.patches.append((path, payload))
         object_id = path.split("/columns/", 1)[1].split("?", 1)[0] if "/columns/" in path else f"fake-patch-{len(self.patches)}"
         if isinstance(payload.get("choice"), dict):
@@ -216,6 +286,29 @@ class FakeProcessOntologySchemaApplyGraphClient:
         return "fake"
 
 
+def _run_choice_patch_failure(
+    temp_root: Path,
+    graph_error_codes: str | tuple[str, ...],
+) -> dict:
+    gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+    codes = (graph_error_codes,) if isinstance(graph_error_codes, str) else graph_error_codes
+    safe_name = "allowlisted" if any(code in {"invalidRequest", "badArgument"} for code in codes) else "unknown"
+    return run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        FakeProcessOntologySchemaApplyGraphClient(choice_patch_error_codes=codes),
+        REPO_ROOT,
+        live_readiness_gate=gate_json,
+        workspace_id="notary_team_01",
+        correlation_id=f"nac-schema-apply-choice-diagnostic-{safe_name}",
+        owner_approval_reference=f"owner-approval-choice-diagnostic-{safe_name}",
+        reason="Choice PATCH diagnostic privacy test",
+        owner_approved=True,
+        execute_live_schema_apply=True,
+        write_redacted_evidence=True,
+        evidence_json_output=temp_root / f"dispatcher-{safe_name}.redacted.json",
+        evidence_markdown_output=temp_root / f"dispatcher-{safe_name}.redacted.md",
+    )
+
+
 def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
     artifact_root = temp_root / "artifacts"
     artifact_json = artifact_root / "process-ontology-schema-apply-runner-dry-run.redacted.json"
@@ -235,6 +328,21 @@ def _write_notary_team_01_schema_apply_gate(temp_root: Path) -> Path:
         workspace_ids=["notary_team_01"],
     )
     return gate_json
+
+
+def _validate_graph_dispatcher(
+    payload: dict,
+    *,
+    expected_binding_sha256: str | None = None,
+) -> object:
+    if expected_binding_sha256 is None and payload.get("schema_version") == (
+        "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2"
+    ):
+        expected_binding_sha256 = payload["approval_binding"]["binding_sha256"]
+    return validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+        payload,
+        expected_binding_sha256=expected_binding_sha256,
+    )
 
 
 class NotaryKnowledgeGraphTests(unittest.TestCase):
@@ -1121,7 +1229,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
@@ -1165,6 +1273,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             empty["summary"]["passed_check_count"] = 0
             empty["summary"]["blocked_check_count"] = 0
             empty_validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(empty)
+            stale = json.loads(gate_json.read_text(encoding="utf-8"))
+            stale["schema_version"] = (
+                "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1"
+            )
+            stale_validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
+                stale
+            )
 
         self.assertEqual(validation.status, "FAILED")
         self.assertIn("blockers must exactly match all non-passing checks", validation.errors)
@@ -1172,6 +1287,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertIn(
             "live readiness gate must include every required check exactly once and in canonical order",
             empty_validation.errors,
+        )
+        self.assertIn(
+            "unexpected live readiness gate schema_version",
+            stale_validation.errors,
         )
 
     def test_process_ontology_schema_apply_binding_covers_permission_and_readiness_state(self) -> None:
@@ -1188,6 +1307,16 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         ):
             altered = build_process_ontology_sharepoint_schema_apply_binding(REPO_ROOT, ["notary_team_01"])
 
+        self.assertEqual(
+            baseline["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-binding/v0.2",
+        )
+        self.assertEqual(len(baseline["selected_step_projection"]), 34)
+        self.assertEqual(
+            set(baseline["selected_step_projection"][0]),
+            {"sequence", "apply_unit_id", "source_step_id", "operation", "method"},
+        )
+        self.assertEqual(len(baseline["selected_step_projection_sha256"]), 64)
         self.assertNotEqual(baseline["workspace_readiness_sha256"], altered["workspace_readiness_sha256"])
         self.assertNotEqual(baseline["binding_sha256"], altered["binding_sha256"])
 
@@ -1231,7 +1360,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
@@ -1279,7 +1408,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
@@ -1954,10 +2083,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 evidence_json_output=dispatch_json,
                 evidence_markdown_output=dispatch_md,
             )
-            validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload)
+            validation = _validate_graph_dispatcher(payload)
             serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
@@ -2249,6 +2378,432 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["dispatch_steps"][0]["mutationOutcome"], "POSSIBLE")
         self.assertEqual(payload["dispatch_steps"][0]["error"]["httpStatus"], 502)
         self.assertNotIn("secret-mutation-body-must-not-be-stored", serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_selects_deepest_recognized_code(
+        self,
+    ) -> None:
+        cases = (
+            (("invalidRequest",), "invalidRequest"),
+            (("outerSensitiveUnknown", "badArgument"), "badArgument"),
+            (("badArgument", "middleSensitiveUnknown", "invalidRequest"), "invalidRequest"),
+            (("tenantSpecificSensitiveCodeMustNotSurvive",), "UNCLASSIFIED"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for index, (codes, expected_code) in enumerate(cases):
+                with self.subTest(codes=codes):
+                    payload = _run_choice_patch_failure(
+                        Path(temp_dir) / str(index),
+                        codes,
+                    )
+                    failed_step = payload["dispatch_steps"][-1]
+                    error = failed_step["error"]
+                    diagnostic = error["diagnostic"]
+                    graph_error = diagnostic["graphError"]
+                    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+                    self.assertEqual(payload["status"], "FAILED")
+                    self.assertEqual(failed_step["sequence"], 31)
+                    self.assertEqual(failed_step["mutationOutcome"], "POSSIBLE")
+                    self.assertTrue(failed_step["mutationAttempted"])
+                    self.assertEqual(error["httpStatus"], 400)
+                    self.assertEqual(graph_error["envelope"], "STANDARD")
+                    self.assertEqual(graph_error["code"], expected_code)
+                    self.assertEqual(
+                        graph_error["class"],
+                        "REQUEST_VALIDATION"
+                        if expected_code != "UNCLASSIFIED"
+                        else "UNCLASSIFIED",
+                    )
+                    self.assertTrue(graph_error["messagePresent"])
+                    self.assertTrue(graph_error["innerErrorPresent"])
+                    self.assertTrue(graph_error["detailsPresent"])
+                    self.assertEqual(
+                        diagnostic["retryDisposition"],
+                        "DO_NOT_RETRY_UNCHANGED"
+                        if expected_code != "UNCLASSIFIED"
+                        else "REVIEW_REQUIRED",
+                    )
+                    self.assertEqual(diagnostic["endpoint"], "COLUMN_DEFINITION_UPDATE")
+                    self.assertEqual(diagnostic["facet"], "CHOICE")
+                    self.assertEqual(diagnostic["expectedHttpStatus"], 200)
+                    self.assertTrue(diagnostic["columnShape"]["choiceFacetIsObject"])
+                    self.assertFalse(diagnostic["columnShape"]["readOnlyTrue"])
+                    self.assertFalse(diagnostic["columnShape"]["sealedTrue"])
+                    self.assertTrue(diagnostic["columnShape"]["indexedTrue"])
+                    self.assertTrue(all(diagnostic["requestShape"].values()))
+                    self.assertEqual(diagnostic["counts"]["currentChoiceCount"], 1)
+                    self.assertGreater(diagnostic["counts"]["requiredChoiceCount"], 0)
+                    self.assertEqual(
+                        diagnostic["counts"]["mergedChoiceCount"],
+                        diagnostic["counts"]["requestChoiceCount"],
+                    )
+                    self.assertFalse(diagnostic["counts"]["countsCapped"])
+                    self.assertEqual(
+                        _validate_graph_dispatcher(
+                            payload
+                        ).errors,
+                        (),
+                    )
+                    for raw_code in codes:
+                        if raw_code not in {"invalidRequest", "badArgument"}:
+                            self.assertNotIn(raw_code, serialized)
+                    for forbidden in (
+                        "sensitive-choice-message-must-not-survive",
+                        "sensitive-nested-message-must-not-survive",
+                        "sensitive-request-id-must-not-survive",
+                        "sensitive-client-request-id-must-not-survive",
+                        "sensitive-detail-code-must-not-survive",
+                        "sensitive-choice-value-must-not-survive",
+                        "sensitive-token-must-not-survive",
+                    ):
+                        self.assertNotIn(forbidden, serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_bounds_inner_error_walk(
+        self,
+    ) -> None:
+        codes = (
+            "invalidRequest",
+            *(f"unknown-depth-{index}" for index in range(8)),
+            "badArgument",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), codes)
+            diagnostic = payload["dispatch_steps"][-1]["error"]["diagnostic"]
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+        self.assertEqual(diagnostic["graphError"]["code"], "invalidRequest")
+        self.assertNotIn("badArgument", serialized)
+        self.assertNotIn("unknown-depth-", serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_open_error_shapes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        for field, value, expected_error in (
+            ("rawBody", "must-not-be-accepted", "error fields must match the closed code contract"),
+            ("code", "arbitrary_error", "invalid closed error code"),
+            ("phase", "arbitrary_phase", "invalid phase for error code"),
+            ("stepId", "wrong-step-id", "error stepId must exactly match step id"),
+        ):
+            with self.subTest(field=field):
+                candidate = json.loads(json.dumps(payload))
+                error = candidate["dispatch_steps"][-1]["error"]
+                error[field] = value
+                candidate["errors"] = [error]
+                validation = _validate_graph_dispatcher(
+                    candidate
+                )
+                self.assertTrue(
+                    any(expected_error in item for item in validation.errors),
+                    validation.errors,
+                )
+
+        raw_error = json.loads(json.dumps(payload))
+        raw_error["dispatch_steps"][-1]["error"] = "raw-error-string"
+        raw_error["errors"] = ["raw-error-string"]
+        self.assertTrue(
+            any(
+                "failed step error must be an exact object" in item
+                for item in _validate_graph_dispatcher(
+                    raw_error
+                ).errors
+            )
+        )
+
+        nonfailed_error = json.loads(json.dumps(payload))
+        nonfailed_error["dispatch_steps"][0]["error"] = {
+            "stepId": nonfailed_error["dispatch_steps"][0]["id"],
+            "code": "readback_verification_failed",
+            "phase": "readback",
+        }
+        self.assertTrue(
+            any(
+                "nonfailed step must not expose error" in item
+                for item in _validate_graph_dispatcher(
+                    nonfailed_error
+                ).errors
+            )
+        )
+
+        mismatched_top_level = json.loads(json.dumps(payload))
+        mismatched_top_level["errors"] = [{"code": "raw-top-level"}]
+        self.assertIn(
+            "top-level errors must exactly mirror failed-step errors",
+            _validate_graph_dispatcher(
+                mismatched_top_level
+            ).errors,
+        )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_open_diagnostics(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        cases = (
+            (
+                ("diagnostic", "message"),
+                "must-not-be-accepted",
+                "Choice PATCH diagnostic fields must match the closed contract",
+            ),
+            (
+                ("diagnostic", "counts", "requestChoiceCount"),
+                1001,
+                "requestChoiceCount must be a bounded non-negative integer",
+            ),
+            (
+                ("diagnostic", "graphError", "code"),
+                "tenantSpecificSensitiveCodeMustNotSurvive",
+                "invalid Graph error code",
+            ),
+        )
+        for path, value, expected_error in cases:
+            with self.subTest(path=path):
+                candidate = json.loads(json.dumps(payload))
+                target = candidate["dispatch_steps"][-1]["error"]
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                candidate["errors"] = [candidate["dispatch_steps"][-1]["error"]]
+                validation = _validate_graph_dispatcher(
+                    candidate
+                )
+                self.assertTrue(
+                    any(expected_error in item for item in validation.errors),
+                    validation.errors,
+                )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_revalidates_validation_failure(
+        self,
+    ) -> None:
+        original_validator = (
+            graph_dispatcher_module.validate_process_ontology_sharepoint_schema_apply_graph_dispatcher
+        )
+        validation_calls = 0
+
+        def fail_validation_once(
+            payload: dict,
+            *,
+            expected_binding_sha256: str | None = None,
+        ) -> object:
+            nonlocal validation_calls
+            validation_calls += 1
+            if validation_calls == 1:
+                return graph_dispatcher_module.ProcessOntologySchemaApplyGraphDispatcherValidation(
+                    status="FAILED",
+                    errors=("sensitive-validation-detail-must-not-survive",),
+                )
+            return original_validator(
+                payload,
+                expected_binding_sha256=expected_binding_sha256,
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+            with patch.object(
+                graph_dispatcher_module,
+                "validate_process_ontology_sharepoint_schema_apply_graph_dispatcher",
+                side_effect=fail_validation_once,
+            ):
+                payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                    FakeProcessOntologySchemaApplyGraphClient(),
+                    REPO_ROOT,
+                    live_readiness_gate=gate_json,
+                    workspace_id="notary_team_01",
+                    correlation_id="nac-schema-apply-validation-failure",
+                    owner_approval_reference="owner-approval-validation-failure",
+                    reason="Validation failure evidence invariant test",
+                    owner_approved=True,
+                    execute_live_schema_apply=True,
+                    write_redacted_evidence=True,
+                    evidence_json_output=temp_root / "dispatcher.redacted.json",
+                    evidence_markdown_output=temp_root / "dispatcher.redacted.md",
+                    max_steps=1,
+                )
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+        failed_step = payload["dispatch_steps"][-1]
+        self.assertEqual(validation_calls, 2)
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertEqual(
+            failed_step["error"],
+            {
+                "stepId": failed_step["id"],
+                "code": "dispatcher_validation_failed",
+                "phase": "validation",
+            },
+        )
+        self.assertEqual(payload["errors"], [failed_step["error"]])
+        self.assertEqual(
+            original_validator(
+                payload,
+                expected_binding_sha256=payload["approval_binding"]["binding_sha256"],
+            ).errors,
+            (),
+        )
+        self.assertNotIn("sensitive-validation-detail-must-not-survive", serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_validates_prior_v01_choice_failures(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            current = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        prior_without_diagnostic = json.loads(json.dumps(current))
+        prior_without_diagnostic["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+        )
+        for step in prior_without_diagnostic["dispatch_steps"]:
+            step.pop("sourceStepId")
+        prior_binding = prior_without_diagnostic["approval_binding"]
+        prior_binding["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-binding/v0.1"
+        )
+        prior_binding.pop("selected_step_projection")
+        prior_binding.pop("selected_step_projection_sha256")
+        prior_error = prior_without_diagnostic["dispatch_steps"][-1]["error"]
+        prior_error.pop("diagnostic")
+        prior_without_diagnostic["errors"] = [prior_error]
+        self.assertEqual(
+            _validate_graph_dispatcher(
+                prior_without_diagnostic
+            ).errors,
+            (),
+        )
+
+        prior_with_open_diagnostic = json.loads(json.dumps(current))
+        prior_with_open_diagnostic["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
+        )
+        prior_with_open_diagnostic["dispatch_steps"][-1]["error"]["diagnostic"][
+            "message"
+        ] = "must-not-be-accepted"
+        prior_with_open_diagnostic["errors"] = [
+            prior_with_open_diagnostic["dispatch_steps"][-1]["error"]
+        ]
+        validation = _validate_graph_dispatcher(
+            prior_with_open_diagnostic
+        )
+        self.assertTrue(
+            any(
+                "Choice PATCH diagnostic fields must match the closed contract" in item
+                for item in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_closes_operation_method_contract(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        cases = (
+            ("operation", "extend_choice_colum", "invalid closed operation"),
+            ("method", "POST", "method must match the closed operation contract"),
+        )
+        for field, value, expected_error in cases:
+            with self.subTest(field=field):
+                candidate = json.loads(json.dumps(payload))
+                failed_step = candidate["dispatch_steps"][-1]
+                failed_step[field] = value
+                failed_step["error"].pop("diagnostic")
+                candidate["errors"] = [failed_step["error"]]
+                validation = _validate_graph_dispatcher(
+                    candidate
+                )
+                self.assertTrue(
+                    any(expected_error in item for item in validation.errors),
+                    validation.errors,
+                )
+                self.assertTrue(
+                    any(
+                        "failed Choice PATCH must expose closed diagnostics" in item
+                        for item in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_coherent_step_relabeling(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        trusted_binding_sha256 = payload["approval_binding"]["binding_sha256"]
+        self.assertIn(
+            "v0.2 validation requires a trusted expected binding hash",
+            validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(payload).errors,
+        )
+
+        candidate = json.loads(json.dumps(payload))
+        failed_step = candidate["dispatch_steps"][-1]
+        failed_step["operation"] = "create_column"
+        failed_step["method"] = "POST"
+        failed_step["error"].pop("diagnostic")
+        candidate["errors"] = [failed_step["error"]]
+
+        binding = candidate["approval_binding"]
+        projection_entry = binding["selected_step_projection"][
+            failed_step["sequence"] - 1
+        ]
+        projection_entry["operation"] = "create_column"
+        projection_entry["method"] = "POST"
+        binding["selected_step_projection_sha256"] = graph_dispatcher_module._payload_sha256(
+            {"steps": binding["selected_step_projection"]}
+        )
+        binding_source = {
+            key: value
+            for key, value in binding.items()
+            if key not in {"schema_version", "binding_sha256"}
+        }
+        binding["binding_sha256"] = graph_dispatcher_module._payload_sha256(binding_source)
+
+        validation = _validate_graph_dispatcher(
+            candidate,
+            expected_binding_sha256=trusted_binding_sha256,
+        )
+        joined_errors = "\n".join(validation.errors)
+        self.assertNotIn("invalid closed operation", joined_errors)
+        self.assertNotIn("method must match the closed operation contract", joined_errors)
+        self.assertNotIn("dispatch step must match the approved selected-step projection", joined_errors)
+        self.assertNotIn("selected-step projection hash must match", joined_errors)
+        self.assertNotIn("approval binding hash must include", joined_errors)
+        self.assertIn(
+            "artifact approval binding does not match the trusted expected binding hash",
+            validation.errors,
+        )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_non_object_steps_without_crash(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        candidate = json.loads(json.dumps(payload))
+        candidate["dispatch_steps"][0] = "not-an-object"
+        validation = _validate_graph_dispatcher(
+            candidate,
+            expected_binding_sha256=payload["approval_binding"]["binding_sha256"],
+        )
+
+        self.assertIn("dispatch step 0: step must be an object", validation.errors)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_reads_prior_v01_cli_fixture(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            kg_cli_module._print_payload(PRIOR_V01_GRAPH_DISPATCHER_EVIDENCE, "text")
+
+        rendered = output.getvalue()
+        self.assertIn("Process ontology SharePoint schema apply Graph dispatcher", rendered)
+        self.assertIn("- status: PARTIAL", rendered)
+        self.assertIn("- correlation ID: prior-v01-correlation", rendered)
 
     def test_process_ontology_schema_apply_graph_dispatcher_rejects_tampered_gate_before_graph(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
