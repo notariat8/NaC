@@ -9,7 +9,14 @@ from .process_ontology_schema_apply_plan import build_process_ontology_sharepoin
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-binding/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-binding/v0.2"
+SELECTED_STEP_PROJECTION_FIELDS = {
+    "sequence",
+    "apply_unit_id",
+    "source_step_id",
+    "operation",
+    "method",
+}
 
 
 def build_process_ontology_sharepoint_schema_apply_binding(
@@ -21,6 +28,20 @@ def build_process_ontology_sharepoint_schema_apply_binding(
     workspaces_by_id = {str(workspace["workspace_id"]): workspace for workspace in readiness["workspaces"]}
     selected_ids = _selected_workspace_ids(workspaces_by_id, workspace_ids)
     selected_workspaces = [workspaces_by_id[workspace_id] for workspace_id in selected_ids]
+    plan_by_id = {str(step["id"]): step for step in apply_plan["steps"]}
+    selected_step_projection = [
+        {
+            "sequence": sequence,
+            "apply_unit_id": unit["id"],
+            "source_step_id": unit["source_step_id"],
+            "operation": unit["operation"],
+            "method": plan_by_id[str(unit["source_step_id"])]["request"]["method"],
+        }
+        for sequence, unit in enumerate(
+            (unit for workspace in selected_workspaces for unit in workspace["apply_units"]),
+            start=1,
+        )
+    ]
 
     apply_plan_sha256 = _payload_sha256(apply_plan)
     workspace_readiness_sha256 = _payload_sha256({**readiness, "workspaces": selected_workspaces})
@@ -38,6 +59,10 @@ def build_process_ontology_sharepoint_schema_apply_binding(
         "apply_plan_sha256": apply_plan_sha256,
         "workspace_readiness_sha256": workspace_readiness_sha256,
         "selected_apply_unit_count": sum(item["apply_unit_count"] for item in workspace_bindings),
+        "selected_step_projection": selected_step_projection,
+        "selected_step_projection_sha256": _payload_sha256(
+            {"steps": selected_step_projection}
+        ),
     }
     return {
         "schema_version": SCHEMA_VERSION,
@@ -58,7 +83,7 @@ def _selected_workspace_ids(
     return selected
 
 
-def _payload_sha256(payload: dict[str, Any]) -> str:
+def _payload_sha256(payload: Any) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     return _text_sha256(canonical)
 

@@ -9,7 +9,11 @@ from typing import Any, Protocol
 
 from nac_m365_graph.graph_client import GraphHttpError
 
-from .process_ontology_schema_apply_binding import build_process_ontology_sharepoint_schema_apply_binding
+from .process_ontology_schema_apply_binding import (
+    SCHEMA_VERSION as APPLY_BINDING_SCHEMA_VERSION,
+    SELECTED_STEP_PROJECTION_FIELDS,
+    build_process_ontology_sharepoint_schema_apply_binding,
+)
 
 from .process_ontology_schema_apply_live_runner import (
     build_process_ontology_sharepoint_schema_apply_live_runner,
@@ -489,10 +493,14 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         errors.append("graph dispatcher final status must be PASSED, PARTIAL or FAILED")
     if summary.get("executed_graph_requests") is not True:
         errors.append("graph dispatcher must execute Graph requests")
-    workspace_ids = payload.get("approval_binding", {}).get("workspace_ids", [])
+    approval_binding = payload.get("approval_binding")
+    if type(approval_binding) is not dict:
+        errors.append("graph dispatcher approval binding must be an object")
+        approval_binding = {}
+    workspace_ids = approval_binding.get("workspace_ids", [])
     if len(workspace_ids) != 1 or summary.get("workspace_id") != workspace_ids[0]:
         errors.append("graph dispatcher workspace must match approval binding")
-    if payload.get("approval_binding", {}).get("selected_apply_unit_count") != planned:
+    if approval_binding.get("selected_apply_unit_count") != planned:
         errors.append("planned step count must match approval binding")
     if not summary.get("owner_approval_reference_sha256") or not summary.get("reason_sha256"):
         errors.append("graph dispatcher must retain redacted approval and reason hashes")
@@ -543,6 +551,15 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         elif "error" in step:
             errors.append(f"{step_id}: nonfailed step must not expose error")
 
+    if schema_version == SCHEMA_VERSION:
+        errors.extend(
+            _validate_v02_approval_binding(
+                approval_binding,
+                dispatch_steps,
+                planned,
+            )
+        )
+
     if type(payload.get("errors")) is not list or payload.get("errors") != failed_errors:
         errors.append("top-level errors must exactly mirror failed-step errors")
 
@@ -578,6 +595,86 @@ def validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         status="PASSED" if not errors else "FAILED",
         errors=tuple(errors),
     )
+
+
+def _validate_v02_approval_binding(
+    binding: dict[str, Any],
+    dispatch_steps: list[dict[str, Any]],
+    planned_step_count: Any,
+) -> list[str]:
+    errors: list[str] = []
+    expected_binding_fields = {
+        "schema_version",
+        "workspace_ids",
+        "workspace_bindings",
+        "apply_plan_sha256",
+        "workspace_readiness_sha256",
+        "selected_apply_unit_count",
+        "selected_step_projection",
+        "selected_step_projection_sha256",
+        "binding_sha256",
+    }
+    if set(binding) != expected_binding_fields:
+        errors.append("v0.2 approval binding fields must match the closed contract")
+    if binding.get("schema_version") != APPLY_BINDING_SCHEMA_VERSION:
+        errors.append("v0.2 dispatcher must use the current apply binding schema")
+
+    projection = binding.get("selected_step_projection")
+    if type(projection) is not list:
+        errors.append("selected-step projection must be a list")
+        projection = []
+    if binding.get("selected_apply_unit_count") != len(projection):
+        errors.append("selected apply unit count must match selected-step projection")
+    if planned_step_count != len(projection):
+        errors.append("planned step count must match selected-step projection")
+
+    for index, entry in enumerate(projection, start=1):
+        if type(entry) is not dict or set(entry) != SELECTED_STEP_PROJECTION_FIELDS:
+            errors.append(f"selected-step projection {index}: fields must match the closed contract")
+            continue
+        if entry.get("sequence") != index:
+            errors.append(f"selected-step projection {index}: sequence must match position")
+        for key in ("apply_unit_id", "source_step_id"):
+            if not isinstance(entry.get(key), str) or not entry[key]:
+                errors.append(f"selected-step projection {index}: {key} must be a non-empty string")
+        operation = entry.get("operation")
+        expected_method = METHOD_BY_OPERATION.get(operation)
+        if expected_method is None:
+            errors.append(f"selected-step projection {index}: invalid closed operation")
+        elif entry.get("method") != expected_method:
+            errors.append(
+                f"selected-step projection {index}: method must match the closed operation contract"
+            )
+
+    projection_hash = binding.get("selected_step_projection_sha256")
+    if projection_hash != _payload_sha256({"steps": projection}):
+        errors.append("selected-step projection hash must match its redacted content")
+    binding_source = {
+        key: value
+        for key, value in binding.items()
+        if key not in {"schema_version", "binding_sha256"}
+    }
+    if binding.get("binding_sha256") != _payload_sha256(binding_source):
+        errors.append("approval binding hash must include the selected-step projection")
+
+    for index, step in enumerate(dispatch_steps):
+        if index >= len(projection):
+            errors.append(f"{step.get('id', f'<step-{index}>')}: no approved projection entry")
+            continue
+        approved = projection[index]
+        actual = {
+            "sequence": step.get("sequence"),
+            "apply_unit_id": step.get("id"),
+            "source_step_id": step.get("sourceStepId"),
+            "operation": step.get("operation"),
+            "method": step.get("method"),
+        }
+        if actual != approved:
+            errors.append(
+                f"{step.get('id', f'<step-{index}>')}: dispatch step must match the approved "
+                "selected-step projection"
+            )
+    return errors
 
 
 def _validate_failed_step_error(
@@ -957,6 +1054,7 @@ def _pending_step(
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -994,6 +1092,7 @@ def _failed_step(
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -1030,6 +1129,7 @@ def _redacted_dispatch_step(
     return {
         "sequence": sequence,
         "id": unit["id"],
+        "sourceStepId": unit["source_step_id"],
         "workspaceId": workspace["workspace_id"],
         "operation": unit["operation"],
         "target": unit["target"],
@@ -1257,6 +1357,11 @@ def _choice_config(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(choice, dict):
             return dict(choice)
     return {}
+
+
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return _sha256(canonical)
 
 
 def _sha256(value: str) -> str:

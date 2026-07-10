@@ -361,11 +361,14 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         _live_readiness_check(
             "approval_binding",
             binding["selected_apply_unit_count"] > 0
+            and len(binding["selected_step_projection"])
+            == binding["selected_apply_unit_count"]
+            and len(binding["selected_step_projection_sha256"]) == 64
             and len(binding["binding_sha256"]) == 64
             and len(binding["apply_plan_sha256"]) == 64
             and len(binding["workspace_readiness_sha256"]) == 64,
-            "workspace, site, readiness and apply plan are bound by SHA-256",
-            "live apply gate must bind workspace, site, readiness and apply plan",
+            "workspace, site, readiness, apply plan and selected steps are bound by SHA-256",
+            "live apply gate must bind workspace, site, readiness, apply plan and selected steps",
         ),
     ]
     blockers = [check for check in checks if check["status"] != "PASSED"]
@@ -770,7 +773,15 @@ def validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         errors.append("approved_workspace_count must match approval binding")
     if summary.get("approved_workspace_apply_unit_count") != binding.get("selected_apply_unit_count"):
         errors.append("approved workspace apply unit count must match approval binding")
-    for key in ("binding_sha256", "apply_plan_sha256", "workspace_readiness_sha256"):
+    projection = binding.get("selected_step_projection", [])
+    if not isinstance(projection, list) or len(projection) != binding.get("selected_apply_unit_count"):
+        errors.append("live readiness gate selected-step projection must match apply unit count")
+    for key in (
+        "binding_sha256",
+        "apply_plan_sha256",
+        "workspace_readiness_sha256",
+        "selected_step_projection_sha256",
+    ):
         value = binding.get(key)
         if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
             errors.append(f"live readiness gate must include valid {key}")

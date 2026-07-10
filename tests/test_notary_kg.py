@@ -1281,6 +1281,16 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         ):
             altered = build_process_ontology_sharepoint_schema_apply_binding(REPO_ROOT, ["notary_team_01"])
 
+        self.assertEqual(
+            baseline["schema_version"],
+            "nac.process-ontology-sharepoint-schema-apply-binding/v0.2",
+        )
+        self.assertEqual(len(baseline["selected_step_projection"]), 34)
+        self.assertEqual(
+            set(baseline["selected_step_projection"][0]),
+            {"sequence", "apply_unit_id", "source_step_id", "operation", "method"},
+        )
+        self.assertEqual(len(baseline["selected_step_projection_sha256"]), 64)
         self.assertNotEqual(baseline["workspace_readiness_sha256"], altered["workspace_readiness_sha256"])
         self.assertNotEqual(baseline["binding_sha256"], altered["binding_sha256"])
 
@@ -2607,6 +2617,14 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         prior_without_diagnostic["schema_version"] = (
             "nac.process-ontology-sharepoint-schema-apply-graph-dispatcher/v0.1"
         )
+        for step in prior_without_diagnostic["dispatch_steps"]:
+            step.pop("sourceStepId")
+        prior_binding = prior_without_diagnostic["approval_binding"]
+        prior_binding["schema_version"] = (
+            "nac.process-ontology-sharepoint-schema-apply-binding/v0.1"
+        )
+        prior_binding.pop("selected_step_projection")
+        prior_binding.pop("selected_step_projection_sha256")
         prior_error = prior_without_diagnostic["dispatch_steps"][-1]["error"]
         prior_error.pop("diagnostic")
         prior_without_diagnostic["errors"] = [prior_error]
@@ -2669,6 +2687,31 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                     ),
                     validation.errors,
                 )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_coherent_step_relabeling(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = _run_choice_patch_failure(Path(temp_dir), "invalidRequest")
+
+        candidate = json.loads(json.dumps(payload))
+        failed_step = candidate["dispatch_steps"][-1]
+        failed_step["operation"] = "create_column"
+        failed_step["method"] = "POST"
+        failed_step["error"].pop("diagnostic")
+        candidate["errors"] = [failed_step["error"]]
+        validation = validate_process_ontology_sharepoint_schema_apply_graph_dispatcher(candidate)
+
+        joined_errors = "\n".join(validation.errors)
+        self.assertNotIn("invalid closed operation", joined_errors)
+        self.assertNotIn(
+            "method must match the closed operation contract",
+            joined_errors,
+        )
+        self.assertIn(
+            f"{failed_step['id']}: dispatch step must match the approved selected-step projection",
+            validation.errors,
+        )
 
     def test_process_ontology_schema_apply_graph_dispatcher_reads_prior_v01_cli_fixture(
         self,
