@@ -34,12 +34,13 @@ flags and the `required_for_live_apply_readiness` marker, but no request
 details. If the default folder does not yet contain a dry-run artifact, the
 command creates that default artifact offline first.
 
-`nac kg process-ontology-schema-apply-live-readiness-gate --format json`
-writes a final offline gate before a later real SharePoint schema apply. The
-gate checks that the execution contract, workspace readiness, runner dry-run,
-redacted artifact index, redaction boundary and owner gate are complete. The
-command also writes the redacted artifact index when it is not yet present in
-the selected artifact folder.
+`nac kg process-ontology-schema-apply-live-readiness-gate --format json
+--workspace-id notary_team_01` writes a final offline gate before a later real
+SharePoint schema apply. This slice deliberately accepts only
+`notary_team_01`; the gate binds exactly that approved workspace. The gate checks that the execution contract,
+workspace readiness, runner dry-run, redacted artifact index, redaction
+boundary and owner gate are complete. The command also writes the redacted
+artifact index when it is not yet present in the selected artifact folder.
 
 `nac kg process-ontology-schema-apply-owner-gated-live-plan --format json`
 writes the next offline contract for the later live execution. The plan contains
@@ -55,12 +56,24 @@ The contract marks the live runner command as implemented, but itself executes
 no Graph requests.
 
 `nac kg process-ontology-schema-apply-live --format json --owner-approved
+--workspace-id notary_team_01 --owner-approval-reference <approval-reference>
+--reason "Approved schema apply for workspace rollout"
 --execute-live-schema-apply --live-readiness-gate <gate.json>
 --correlation-id <id> --write-redacted-evidence` writes the owner-gated live
 runner envelope. The command blocks without the full required flags or without a
-passed live-readiness gate. With the full gate it creates the redacted start
-evidence for Graph REST dispatch, but this slice still executes no Graph
-requests and changes no SharePoint schema.
+passed live-readiness gate bound to `notary_team_01`. With the full gate it
+creates the redacted start evidence for Graph REST dispatch, but this slice
+still executes no Graph requests and changes no SharePoint schema.
+
+`nac kg process-ontology-schema-apply-live-dispatch --owner-approved
+--workspace-id notary_team_01 --owner-approval-reference <approval-reference>
+--reason "Approved schema apply for workspace rollout"
+--execute-live-schema-apply --live-readiness-gate <gate.json>
+--correlation-id <id> --write-redacted-evidence` is the owner-gated Graph REST
+dispatcher behind that envelope. It uses only Microsoft Graph v1.0, sequences
+preflight, mutation and readback, stops on the first failure and writes redacted
+evidence. This command is the first path that can execute real SharePoint schema
+changes, so every use remains separately owner-approved.
 
 ## Boundaries
 
@@ -80,8 +93,9 @@ offline evidence is complete and redacted. The owner-gated live plan also
 executes no Graph requests; it only makes the later execution edge reviewable.
 The runner contract also remains offline and is the last interface boundary
 before the actual runner implementation. The live runner envelope is the first
-implemented command surface of this runner edge; the actual Graph REST
-dispatcher remains the next owner-gated live slice.
+implemented command surface of this runner edge. The Graph REST dispatcher is
+implemented as the owner-gated live path and is checked with a fake client in
+the strict gate; real tenant write runs remain separate owner approvals.
 
 The validators
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -97,4 +111,6 @@ and
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py)
 and
 [scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py)
+and
+[scripts/validate_process_ontology_sharepoint_schema_apply_graph_dispatcher.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_graph_dispatcher.py)
 check this boundary in the strict quality gate.

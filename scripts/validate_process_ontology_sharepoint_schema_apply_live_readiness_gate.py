@@ -56,6 +56,7 @@ def main() -> int:
             artifact_root,
             gate_json,
             gate_md,
+            workspace_ids=["notary_team_01"],
             ensure_default_artifacts=False,
         )
         validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(payload)
@@ -65,12 +66,14 @@ def main() -> int:
             errors.append("unexpected live readiness gate schema version")
         if payload.get("status") != "PASSED":
             errors.append("live readiness gate status must pass")
-        if payload.get("summary", {}).get("check_count") != 6:
-            errors.append("live readiness gate must include six checks")
+        if payload.get("summary", {}).get("check_count") != 7:
+            errors.append("live readiness gate must include seven checks")
         if payload.get("summary", {}).get("blocked_check_count") != 0:
             errors.append("live readiness gate must not include blockers")
         if payload.get("summary", {}).get("workspace_apply_unit_count") != 68:
             errors.append("live readiness gate must cover 68 apply units")
+        if payload.get("summary", {}).get("approved_workspace_apply_unit_count") != 34:
+            errors.append("live readiness gate must bind 34 notary_team_01 apply units")
         if not gate_json.is_file():
             errors.append("JSON live readiness gate was not written")
         if not gate_md.is_file():

@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .process_ontology_schema_apply_binding import (
+    SCHEMA_VERSION as APPLY_BINDING_SCHEMA_VERSION,
+    build_process_ontology_sharepoint_schema_apply_binding,
+)
+
 from .process_ontology_schema_apply_execution_contract import (
     build_process_ontology_sharepoint_schema_apply_execution_contract,
 )
@@ -18,6 +23,15 @@ SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0
 ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
 ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1"
 LIVE_READINESS_GATE_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.1"
+LIVE_READINESS_REQUIRED_CHECK_IDS = (
+    "execution_contract",
+    "workspace_readiness",
+    "runner_dry_run",
+    "dry_run_artifact_index",
+    "redaction_boundary",
+    "live_apply_owner_gate",
+    "approval_binding",
+)
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_runner_dry_run"
 DEFAULT_DRY_RUN_ARTIFACT_JSON = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json")
 DEFAULT_DRY_RUN_ARTIFACT_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md")
@@ -279,11 +293,13 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
     artifact_root: Path | None = None,
     artifact_index: dict[str, Any] | None = None,
     *,
+    workspace_ids: list[str] | tuple[str, ...] | None = None,
     ensure_default_artifacts: bool = True,
 ) -> dict[str, Any]:
     execution_contract = build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root)
     readiness = build_process_ontology_sharepoint_schema_apply_readiness(repo_root)
     dry_run = build_process_ontology_sharepoint_schema_apply_runner_dry_run(repo_root)
+    binding = build_process_ontology_sharepoint_schema_apply_binding(repo_root, workspace_ids)
     if artifact_index is None:
         artifact_index = build_process_ontology_sharepoint_schema_apply_artifact_index(
             repo_root,
@@ -342,6 +358,15 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
             "live apply remains explicitly owner-gated",
             "future live write/schema apply/runner execution must remain owner-gated",
         ),
+        _live_readiness_check(
+            "approval_binding",
+            binding["selected_apply_unit_count"] > 0
+            and len(binding["binding_sha256"]) == 64
+            and len(binding["apply_plan_sha256"]) == 64
+            and len(binding["workspace_readiness_sha256"]) == 64,
+            "workspace, site, readiness and apply plan are bound by SHA-256",
+            "live apply gate must bind workspace, site, readiness and apply plan",
+        ),
     ]
     blockers = [check for check in checks if check["status"] != "PASSED"]
     payload = {
@@ -356,12 +381,15 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
             "artifact_index_schema": artifact_index["schema_version"],
             "artifact_root": artifact_index["source"]["artifact_root"],
         },
+        "approval_binding": binding,
         "summary": {
             "check_count": len(checks),
             "passed_check_count": sum(1 for check in checks if check["status"] == "PASSED"),
             "blocked_check_count": len(blockers),
             "workspace_count": readiness["summary"]["workspace_count"],
             "workspace_apply_unit_count": readiness["summary"]["workspace_apply_unit_count"],
+            "approved_workspace_count": len(binding["workspace_ids"]),
+            "approved_workspace_apply_unit_count": binding["selected_apply_unit_count"],
             "dry_run_step_count": dry_run["summary"]["dry_run_step_count"],
             "artifact_count": artifact_index["summary"]["artifact_count"],
             "required_for_live_apply_readiness_count": artifact_index["summary"][
@@ -415,6 +443,7 @@ def write_process_ontology_sharepoint_schema_apply_live_readiness_gate(
     json_output: Path | None = None,
     markdown_output: Path | None = None,
     *,
+    workspace_ids: list[str] | tuple[str, ...] | None = None,
     ensure_default_artifacts: bool = True,
 ) -> dict[str, Any]:
     index_root = _resolve_output_path(repo_root, artifact_root or DEFAULT_APPLY_ARTIFACT_INDEX_ROOT)
@@ -429,6 +458,7 @@ def write_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         repo_root,
         artifact_root,
         artifact_index,
+        workspace_ids=workspace_ids,
         ensure_default_artifacts=ensure_default_artifacts,
     )
     json_path = _resolve_output_path(repo_root, json_output or DEFAULT_LIVE_READINESS_GATE_JSON)
@@ -703,14 +733,22 @@ def validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
     summary = payload.get("summary", {})
     checks = payload.get("checks", [])
     blockers = payload.get("blockers", [])
+    check_ids = tuple(check.get("id") for check in checks)
+    expected_blockers = [check for check in checks if check.get("status") != "PASSED"]
+    if check_ids != LIVE_READINESS_REQUIRED_CHECK_IDS:
+        errors.append("live readiness gate must include every required check exactly once and in canonical order")
     if summary.get("check_count") != len(checks):
         errors.append("check_count must match checks")
     if summary.get("passed_check_count") != sum(1 for check in checks if check.get("status") == "PASSED"):
         errors.append("passed_check_count must match checks")
     if summary.get("blocked_check_count") != len(blockers):
         errors.append("blocked_check_count must match blockers")
+    if blockers != expected_blockers:
+        errors.append("blockers must exactly match all non-passing checks")
     if payload.get("status") == "PASSED" and blockers:
         errors.append("passed live readiness gate must not include blockers")
+    if payload.get("status") == "PASSED" and expected_blockers:
+        errors.append("passed live readiness gate must pass every check")
     if summary.get("workspace_apply_unit_count") != 68:
         errors.append("live readiness gate must cover 68 workspace apply units")
     if summary.get("dry_run_step_count") != 68:
@@ -719,6 +757,23 @@ def validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         errors.append("live readiness gate must reference at least one dry-run artifact")
     if summary.get("required_for_live_apply_readiness_count", 0) < 1:
         errors.append("live readiness gate must reference live-readiness evidence")
+    binding = payload.get("approval_binding", {})
+    if binding.get("schema_version") != APPLY_BINDING_SCHEMA_VERSION:
+        errors.append("live readiness gate must include the apply binding schema")
+    workspace_ids = binding.get("workspace_ids", [])
+    if not isinstance(workspace_ids, list) or not workspace_ids or len(workspace_ids) != len(set(workspace_ids)):
+        errors.append("live readiness gate must bind at least one unique workspace")
+    workspace_bindings = binding.get("workspace_bindings", [])
+    if not isinstance(workspace_bindings, list) or len(workspace_bindings) != len(workspace_ids):
+        errors.append("live readiness gate workspace bindings must match workspace ids")
+    if summary.get("approved_workspace_count") != len(workspace_ids):
+        errors.append("approved_workspace_count must match approval binding")
+    if summary.get("approved_workspace_apply_unit_count") != binding.get("selected_apply_unit_count"):
+        errors.append("approved workspace apply unit count must match approval binding")
+    for key in ("binding_sha256", "apply_plan_sha256", "workspace_readiness_sha256"):
+        value = binding.get(key)
+        if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+            errors.append(f"live readiness gate must include valid {key}")
     for key in ("executes_graph_requests", "writes_sharepoint", "changes_sharepoint_schema"):
         if summary.get(key) is not False:
             errors.append(f"summary must keep {key} false")

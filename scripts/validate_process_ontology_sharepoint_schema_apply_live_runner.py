@@ -74,6 +74,7 @@ def main() -> int:
             artifact_root,
             gate_json,
             gate_md,
+            workspace_ids=["notary_team_01"],
         )
         payload = write_process_ontology_sharepoint_schema_apply_live_runner(
             REPO_ROOT,
@@ -81,7 +82,10 @@ def main() -> int:
             runner_json,
             runner_md,
             live_readiness_gate=gate_json,
+            workspace_id="notary_team_01",
             correlation_id="nac-schema-apply-live-runner-validator",
+            owner_approval_reference="owner-approval-live-runner-validator",
+            reason="Validate bound live runner",
             owner_approved=True,
             execute_live_schema_apply=True,
             write_redacted_evidence=True,
@@ -94,8 +98,8 @@ def main() -> int:
             errors.append("unexpected live runner schema version")
         if payload.get("status") != "READY_FOR_GRAPH_REST_DISPATCH":
             errors.append("live runner must become ready for Graph REST dispatch after the owner gate")
-        if payload.get("summary", {}).get("runner_step_count") != 68:
-            errors.append("live runner must expose 68 runner steps")
+        if payload.get("summary", {}).get("runner_step_count") != 34:
+            errors.append("live runner must expose 34 notary_team_01 runner steps")
         if payload.get("summary", {}).get("executes_graph_requests") is not False:
             errors.append("live runner validator must keep Graph execution false in this slice")
         if payload.get("summary", {}).get("writes_sharepoint") is not False:

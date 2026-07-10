@@ -33,6 +33,68 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertIn("requires --owner-approved", payload["errors"][0])
 
+    def test_release_gate_run_isolates_default_outputs_and_preserves_explicit_overrides(self) -> None:
+        parser = cli.build_parser()
+        parsed_arguments: list[list[str]] = []
+        parse_args = parser.parse_args
+
+        def capture_parse_args(arguments: list[str]) -> object:
+            parsed_arguments.append(list(arguments))
+            return parse_args(arguments)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            explicit_runtime_smoke_output = Path(tmp) / "explicit-runtime-smoke.redacted.json"
+            with patch.object(cli, "build_parser", return_value=parser), patch.object(
+                parser,
+                "parse_args",
+                side_effect=capture_parse_args,
+            ):
+                payload, return_code = _invoke_release_gate_run(
+                    [
+                        "--runtime-smoke-output",
+                        str(explicit_runtime_smoke_output),
+                        "--format",
+                        "json",
+                    ]
+                )
+
+        self.assertEqual(return_code, 2)
+        self.assertEqual(payload["status"], "BLOCKED")
+        arguments = parsed_arguments[0]
+        default_output_options = [
+            "--runtime-env-bootstrap-output",
+            "--runtime-certificate-expiry-output",
+            "--runtime-smoke-output",
+            "--runtime-metadata-output",
+            "--release-gate-inventory-artifact",
+            "--release-gate-matter-access-artifact",
+            "--release-gate-matter-access-apply-readiness-artifact",
+            "--release-gate-matter-access-apply-request-artifact",
+            "--release-gate-matter-access-apply-policy-smoke-artifact",
+            "--mcp-suite-output",
+            "--mcp-leftover-output",
+            "--release-gate-evidence-output",
+            "--release-gate-evidence-json-output",
+            "--release-gate-artifact-index-output",
+            "--release-gate-run-artifact-dir",
+            "--release-gate-readiness-output",
+            "--release-gate-audit-pack-dir",
+            "--release-gate-post-run-report-root",
+            "--release-gate-post-run-report-output",
+            "--release-gate-post-run-report-json-output",
+            "--release-gate-github-comment-output",
+            "--release-gate-post-run-report-index-output",
+            "--release-gate-post-run-report-index-json-output",
+        ]
+        default_root = Path(arguments[arguments.index("--runtime-env-bootstrap-output") + 1]).parent
+        self.assertFalse(default_root.is_relative_to(REPO_ROOT))
+        for option in default_output_options:
+            option_index = arguments.index(option)
+            self.assertTrue(Path(arguments[option_index + 1]).is_relative_to(default_root), option)
+        self.assertEqual(arguments[-4:-2], ["--runtime-smoke-output", str(explicit_runtime_smoke_output)])
+        parsed = parse_args(arguments)
+        self.assertEqual(parsed.runtime_smoke_output, explicit_runtime_smoke_output)
+
     def test_release_gate_run_executes_fixed_sequence(self) -> None:
         calls: list[list[str]] = []
 
@@ -64,7 +126,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         "--mcp-smoke-correlation-id",
                         "runner-corr",
                         "--release-gate-inventory-artifact",
-                        "out/m365/teams-sharepoint/mcp-inventory-smoke.redacted.json",
+                        str(tmp_path / "mcp-inventory-smoke.redacted.json"),
                         "--runtime-certificate-path",
                         str(certificate_path),
                         "--runtime-private-key-path",
@@ -550,6 +612,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(artifact_index_output),
                         "--release-gate-run-artifact-dir",
                         str(retention_dir),
+                        "--release-gate-readiness-output",
+                        str(retention_dir / "release-readiness.redacted.json"),
                         "--release-gate-write-audit-pack",
                         "--release-gate-audit-pack-dir",
                         str(audit_pack_dir),
@@ -657,6 +721,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(artifact_index_output),
                         "--release-gate-run-artifact-dir",
                         str(retention_dir),
+                        "--release-gate-readiness-output",
+                        str(retention_dir / "release-readiness.redacted.json"),
                         "--release-gate-audit-pack-dir",
                         str(audit_pack_dir),
                         "--release-gate-post-run-report-root",
@@ -737,7 +803,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertIn("missing_reason", comment)
         self.assertFalse(post_report["privacy"]["github_comment_posted"])
 
-    def test_release_gate_run_readiness_uses_baseline_audit_pack_default_dir(self) -> None:
+    def test_release_gate_run_readiness_uses_configured_audit_pack_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             runtime_state = tmp_path / "runtime-state.json"
@@ -755,10 +821,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
             artifact_index_output = tmp_path / "release-gate-artifact-index.redacted.json"
             retention_root = tmp_path / "release-gates"
             retention_dir = retention_root / "runner-corr"
-            expected_audit_pack_dir = (
-                REPO_ROOT
-                / "out/m365/teams-sharepoint/release-gate-audit-packs/left-baseline-corr__right-runner-corr"
-            )
+            expected_audit_pack_dir = tmp_path / "release-gate-audit-pack"
             shutil.rmtree(expected_audit_pack_dir, ignore_errors=True)
             runtime_state.write_text(json.dumps(_runtime_state()), encoding="utf-8")
             certificate_path.touch()
@@ -810,6 +873,10 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                             str(artifact_index_output),
                             "--release-gate-run-artifact-dir",
                             str(retention_dir),
+                            "--release-gate-readiness-output",
+                            str(retention_dir / "release-readiness.redacted.json"),
+                            "--release-gate-audit-pack-dir",
+                            str(expected_audit_pack_dir),
                             "--release-gate-write-audit-pack",
                             "--release-gate-compare-left",
                             "baseline-corr",
@@ -832,10 +899,7 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["release_gate_readiness"], "READY")
         self.assertEqual(payload["summary"]["release_gate_audit_pack_dir"], str(expected_audit_pack_dir))
-        self.assertIn(
-            "out/m365/teams-sharepoint/release-gate-audit-packs/left-baseline-corr__right-runner-corr",
-            payload["steps"][-1]["command"],
-        )
+        self.assertIn(str(expected_audit_pack_dir), payload["steps"][-1]["command"])
         self.assertEqual(readiness["summary"]["audit_pack_status"], "PASSED")
         self.assertEqual(
             readiness["summary"]["audit_pack_path"],
@@ -884,6 +948,8 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
                         str(runtime_env_bootstrap_output),
                         "--release-gate-run-artifact-dir",
                         str(retention_dir),
+                        "--release-gate-readiness-output",
+                        str(retention_dir / "release-readiness.redacted.json"),
                         "--release-gate-audit-pack-dir",
                         str(audit_pack_dir),
                         "--release-gate-write-readiness",
@@ -2193,21 +2259,69 @@ class M365ReleaseGateRunnerTests(unittest.TestCase):
 
 
 def _invoke_release_gate_run(extra_args: list[str]) -> tuple[dict, int]:
-    parser = cli.build_parser()
-    args = parser.parse_args(
-        [
-            "--repo-root",
-            str(REPO_ROOT),
-            "m365",
-            "teams-sharepoint",
-            "release-gate-run",
-            *extra_args,
-        ]
-    )
-    output = StringIO()
-    with redirect_stdout(output):
-        return_code = args.func(args)
-    return json.loads(output.getvalue()), return_code
+    with tempfile.TemporaryDirectory() as tmp:
+        output_root = Path(tmp)
+        parser = cli.build_parser()
+        args = parser.parse_args(
+            [
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "release-gate-run",
+                "--runtime-env-bootstrap-output",
+                str(output_root / "runtime-env-bootstrap.redacted.json"),
+                "--runtime-certificate-expiry-output",
+                str(output_root / "runtime-certificate-expiry-monitor.redacted.json"),
+                "--runtime-smoke-output",
+                str(output_root / "runtime-smoke.redacted.json"),
+                "--runtime-metadata-output",
+                str(output_root / "runtime-metadata.redacted.json"),
+                "--release-gate-inventory-artifact",
+                str(output_root / "mcp-inventory-smoke.redacted.json"),
+                "--release-gate-matter-access-artifact",
+                str(output_root / "matter-access-delegation-smoke.redacted.json"),
+                "--release-gate-matter-access-apply-readiness-artifact",
+                str(output_root / "matter-access-apply-readiness.redacted.json"),
+                "--release-gate-matter-access-apply-request-artifact",
+                str(output_root / "matter-access-apply-request-plan.redacted.json"),
+                "--release-gate-matter-access-apply-policy-smoke-artifact",
+                str(output_root / "matter-access-apply-policy-smoke.redacted.json"),
+                "--mcp-suite-output",
+                str(output_root / "mcp-smoke-suite.redacted.json"),
+                "--mcp-leftover-output",
+                str(output_root / "mcp-smoke-leftover-cleanup.redacted.json"),
+                "--release-gate-evidence-output",
+                str(output_root / "release-gate-evidence.redacted.md"),
+                "--release-gate-evidence-json-output",
+                str(output_root / "release-gate-evidence.redacted.json"),
+                "--release-gate-artifact-index-output",
+                str(output_root / "release-gate-artifact-index.redacted.json"),
+                "--release-gate-run-artifact-dir",
+                str(output_root / "release-gate-run"),
+                "--release-gate-readiness-output",
+                str(output_root / "release-readiness.redacted.json"),
+                "--release-gate-audit-pack-dir",
+                str(output_root / "release-gate-audit-pack"),
+                "--release-gate-post-run-report-root",
+                str(output_root / "release-gate-post-run-reports"),
+                "--release-gate-post-run-report-output",
+                str(output_root / "release-gate-post-run-report.redacted.md"),
+                "--release-gate-post-run-report-json-output",
+                str(output_root / "release-gate-post-run-report.redacted.json"),
+                "--release-gate-github-comment-output",
+                str(output_root / "github-evidence-comment.redacted.md"),
+                "--release-gate-post-run-report-index-output",
+                str(output_root / "release-gate-post-run-report-index.redacted.md"),
+                "--release-gate-post-run-report-index-json-output",
+                str(output_root / "release-gate-post-run-report-index.redacted.json"),
+                *extra_args,
+            ]
+        )
+        output = StringIO()
+        with redirect_stdout(output):
+            return_code = args.func(args)
+        return json.loads(output.getvalue()), return_code
 
 
 def _invoke_retention_list(extra_args: list[str]) -> tuple[dict, int]:

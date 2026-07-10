@@ -243,6 +243,14 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     ],
                 ),
                 (
+                    "process_ontology_sharepoint_schema_apply_graph_dispatcher",
+                    "Process Ontology SharePoint Schema Apply Graph Dispatcher",
+                    [
+                        sys.executable,
+                        "scripts/validate_process_ontology_sharepoint_schema_apply_graph_dispatcher.py",
+                    ],
+                ),
+                (
                     "notarial_ontology_scale_budget",
                     "Notarial Ontology Scale Budget",
                     [sys.executable, "scripts/validate_notarial_ontology_scale_budget.py"],

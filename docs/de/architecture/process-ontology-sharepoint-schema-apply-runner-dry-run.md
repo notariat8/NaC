@@ -34,13 +34,14 @@ Schrittzahlen, Redaktionsflags und die Markierung
 Standardordner noch kein Dry-Run-Artefakt liegt, erzeugt der Befehl dieses
 Standardartefakt offline nach.
 
-`nac kg process-ontology-schema-apply-live-readiness-gate --format json`
-schreibt daraus ein letztes Offline-Gate vor einem späteren echten
-SharePoint-Schema-Apply. Das Gate prüft, ob Execution Contract,
-Workspace-Readiness, Runner-Dry-Run, redigierter Artefaktindex,
-Redaktionsgrenze und Owner-Gate vollständig vorliegen. Der Befehl schreibt
-zusätzlich den redigierten Artefaktindex, falls er im gewählten
-Artefaktverzeichnis noch nicht vorhanden ist.
+`nac kg process-ontology-schema-apply-live-readiness-gate --format json
+--workspace-id notary_team_01` schreibt daraus ein letztes Offline-Gate vor
+einem späteren echten SharePoint-Schema-Apply. Dieser Slice akzeptiert bewusst
+nur `notary_team_01`; das Gate bindet genau diesen freigegebenen Workspace. Das
+Gate prüft, ob Execution Contract, Workspace-Readiness, Runner-Dry-Run,
+redigierter Artefaktindex, Redaktionsgrenze und Owner-Gate vollständig
+vorliegen. Der Befehl schreibt zusätzlich den redigierten Artefaktindex, falls
+er im gewählten Artefaktverzeichnis noch nicht vorhanden ist.
 
 `nac kg process-ontology-schema-apply-owner-gated-live-plan --format json`
 schreibt den nächsten Offline-Vertrag für die spätere Live-Ausführung. Der
@@ -57,12 +58,26 @@ redigierte Evidence. Der Vertrag markiert den Live-Runner-Befehl als
 implementiert, führt aber selbst keine Graph-Requests aus.
 
 `nac kg process-ontology-schema-apply-live --format json --owner-approved
+--workspace-id notary_team_01 --owner-approval-reference <approval-reference>
+--reason "Freigegebener Schema-Apply für Workspace-Rollout"
 --execute-live-schema-apply --live-readiness-gate <gate.json>
 --correlation-id <id> --write-redacted-evidence` schreibt den owner-gated
 Live-Runner-Envelope. Der Befehl blockt ohne vollständige Pflichtflags oder
-ohne bestandenes Live-Readiness-Gate. Mit vollständigem Gate erzeugt er die
-redigierte Start-Evidence für den Graph-REST-Dispatch, führt in diesem Slice
-aber noch keine Graph-Requests aus und ändert kein SharePoint-Schema.
+ohne bestandenes, für `notary_team_01` gebundenes Live-Readiness-Gate. Mit
+vollständigem Gate erzeugt er die redigierte Start-Evidence für den
+Graph-REST-Dispatch, führt in diesem Slice aber noch keine Graph-Requests aus
+und ändert kein SharePoint-Schema.
+
+`nac kg process-ontology-schema-apply-live-dispatch --owner-approved
+--workspace-id notary_team_01 --owner-approval-reference <approval-reference>
+--reason "Freigegebener Schema-Apply für Workspace-Rollout"
+--execute-live-schema-apply --live-readiness-gate <gate.json>
+--correlation-id <id> --write-redacted-evidence` ist der owner-gated
+Graph-REST-Dispatcher hinter diesem Envelope. Er nutzt nur Microsoft Graph
+v1.0, sequenziert Preflight, Mutation und Readback, stoppt beim ersten Fehler
+und schreibt redigierte Evidence. Der Befehl ist der erste Pfad, der echte
+SharePoint-Schemaänderungen ausführen kann; deshalb bleibt jede Nutzung
+separat owner-approved.
 
 ## Grenzen
 
@@ -83,8 +98,10 @@ vollständig und redigiert sind. Der Owner-gated Live-Plan führt ebenfalls kein
 Graph-Requests aus; er macht nur die spätere Ausführungskante prüfbar. Der
 Runner-Vertrag bleibt ebenfalls offline und ist die letzte Schnittstellenkante
 vor der tatsächlichen Runner-Implementierung. Der Live-Runner-Envelope ist die
-erste implementierte Befehlsfläche dieser Runner-Kante; der eigentliche
-Graph-REST-Dispatcher bleibt der nächste owner-gated Live-Slice.
+erste implementierte Befehlsfläche dieser Runner-Kante. Der Graph-REST-
+Dispatcher ist als owner-gated Live-Pfad implementiert und wird mit Fake-Client
+im Strict Gate geprüft; echte Tenant-Schreibläufe bleiben separate Owner-
+Approvals.
 
 Die Validatoren
 [scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_runner_dry_run.py)
@@ -100,4 +117,6 @@ und
 [scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract.py)
 und
 [scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_live_runner.py)
+und
+[scripts/validate_process_ontology_sharepoint_schema_apply_graph_dispatcher.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_graph_dispatcher.py)
 prüfen diese Grenze im strikten Quality Gate.

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .process_ontology_schema_apply_binding import build_process_ontology_sharepoint_schema_apply_binding
 from .process_ontology_schema_apply_owner_gated_runner_contract import (
     build_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract,
+)
+from .process_ontology_schema_apply_runner_dry_run import (
+    validate_process_ontology_sharepoint_schema_apply_live_readiness_gate,
 )
 
 
@@ -27,7 +32,10 @@ def build_process_ontology_sharepoint_schema_apply_live_runner(
     artifact_root: Path | None = None,
     *,
     live_readiness_gate: Path | None = None,
+    workspace_id: str | None = None,
     correlation_id: str | None = None,
+    owner_approval_reference: str | None = None,
+    reason: str | None = None,
     owner_approved: bool = False,
     execute_live_schema_apply: bool = False,
     write_redacted_evidence: bool = False,
@@ -48,12 +56,20 @@ def build_process_ontology_sharepoint_schema_apply_live_runner(
         owner_approved=owner_approved,
         execute_live_schema_apply=execute_live_schema_apply,
         write_redacted_evidence=write_redacted_evidence,
+        workspace_id=workspace_id,
         correlation_id=correlation_id,
+        owner_approval_reference=owner_approval_reference,
+        reason=reason,
         gate_payload=gate_payload,
         gate_errors=gate_errors,
+        repo_root=repo_root,
     )
     ready = not blocked_reasons
-    runner_steps = [_live_runner_step(step) for step in contract["runner_steps"]]
+    runner_steps = [
+        _live_runner_step(step)
+        for step in contract["runner_steps"]
+        if workspace_id is None or step["workspace_id"] == workspace_id
+    ]
     payload = {
         "schema_version": SCHEMA_VERSION,
         "contract_id": CONTRACT_ID,
@@ -73,13 +89,21 @@ def build_process_ontology_sharepoint_schema_apply_live_runner(
             "owner_approved": owner_approved,
             "execute_live_schema_apply": execute_live_schema_apply,
             "write_redacted_evidence": write_redacted_evidence,
+            "workspace_id": workspace_id or "",
             "correlation_id": correlation_id or "",
+            "owner_approval_reference_present": bool(owner_approval_reference),
+            "owner_approval_reference_sha256": _sha256(owner_approval_reference or ""),
+            "reason_present": bool(reason),
+            "reason_sha256": _sha256(reason or ""),
             "live_readiness_gate_required": True,
             "required_flags": [
                 "--owner-approved",
                 "--execute-live-schema-apply",
                 "--live-readiness-gate",
+                "--workspace-id",
                 "--correlation-id",
+                "--owner-approval-reference",
+                "--reason",
                 "--write-redacted-evidence",
             ],
             "missing_or_blocking": blocked_reasons,
@@ -159,7 +183,10 @@ def write_process_ontology_sharepoint_schema_apply_live_runner(
     markdown_output: Path | None = None,
     *,
     live_readiness_gate: Path | None = None,
+    workspace_id: str | None = None,
     correlation_id: str | None = None,
+    owner_approval_reference: str | None = None,
+    reason: str | None = None,
     owner_approved: bool = False,
     execute_live_schema_apply: bool = False,
     write_redacted_evidence: bool = False,
@@ -169,7 +196,10 @@ def write_process_ontology_sharepoint_schema_apply_live_runner(
         repo_root,
         artifact_root,
         live_readiness_gate=live_readiness_gate,
+        workspace_id=workspace_id,
         correlation_id=correlation_id,
+        owner_approval_reference=owner_approval_reference,
+        reason=reason,
         owner_approved=owner_approved,
         execute_live_schema_apply=execute_live_schema_apply,
         write_redacted_evidence=write_redacted_evidence,
@@ -200,9 +230,10 @@ def validate_process_ontology_sharepoint_schema_apply_live_runner(
         errors.append("live runner must expose the owner-gated runner surface")
 
     summary = payload.get("summary", {})
+    runner_step_count = len(payload.get("runner_steps", []))
     for key in ("runner_step_count", "preflight_count", "mutation_count", "readback_count"):
-        if summary.get(key) != 68:
-            errors.append(f"{key} must cover 68 steps")
+        if summary.get(key) != runner_step_count:
+            errors.append(f"{key} must match selected runner steps")
     if payload.get("status") == "READY_FOR_GRAPH_REST_DISPATCH" and summary.get("owner_gate_satisfied") is not True:
         errors.append("ready live runner must satisfy the owner gate")
     if payload.get("status") == "BLOCKED" and not payload.get("owner_gate", {}).get("missing_or_blocking"):
@@ -214,20 +245,34 @@ def validate_process_ontology_sharepoint_schema_apply_live_runner(
         errors.append("this runner slice must not claim the Graph dispatcher is implemented")
 
     owner_gate = payload.get("owner_gate", {})
+    for prefix in ("owner_approval_reference", "reason"):
+        digest = owner_gate.get(f"{prefix}_sha256")
+        if not isinstance(digest, str) or len(digest) != 64:
+            errors.append(f"owner gate must store a redacted {prefix} hash")
+        if prefix in owner_gate:
+            errors.append(f"owner gate must not store raw {prefix}")
+    if payload.get("status") == "READY_FOR_GRAPH_REST_DISPATCH":
+        if owner_gate.get("owner_approval_reference_present") is not True:
+            errors.append("ready owner gate must include an approval reference")
+        if owner_gate.get("reason_present") is not True:
+            errors.append("ready owner gate must include a reason")
     required_flags = owner_gate.get("required_flags", [])
     for flag in (
         "--owner-approved",
         "--execute-live-schema-apply",
         "--live-readiness-gate",
+        "--workspace-id",
         "--correlation-id",
+        "--owner-approval-reference",
+        "--reason",
         "--write-redacted-evidence",
     ):
         if flag not in required_flags:
             errors.append(f"missing required owner-gate flag: {flag}")
 
     steps = payload.get("runner_steps", [])
-    if len(steps) != 68:
-        errors.append("live runner must expose 68 steps")
+    if not steps:
+        errors.append("live runner must expose at least one selected step")
     for step in steps:
         step_id = step.get("id", "<unknown>")
         if step.get("mode") != "owner_gated_live_step_surface":
@@ -287,9 +332,13 @@ def _blocked_reasons(
     owner_approved: bool,
     execute_live_schema_apply: bool,
     write_redacted_evidence: bool,
+    workspace_id: str | None,
     correlation_id: str | None,
+    owner_approval_reference: str | None,
+    reason: str | None,
     gate_payload: dict[str, Any],
     gate_errors: list[str],
+    repo_root: Path,
 ) -> list[str]:
     reasons: list[str] = []
     if not owner_approved:
@@ -298,11 +347,25 @@ def _blocked_reasons(
         reasons.append("missing --execute-live-schema-apply")
     if not write_redacted_evidence:
         reasons.append("missing --write-redacted-evidence")
+    if not workspace_id:
+        reasons.append("missing --workspace-id")
+    elif workspace_id != "notary_team_01":
+        reasons.append("unsupported --workspace-id; only notary_team_01 is enabled for live schema apply")
     if not correlation_id:
         reasons.append("missing --correlation-id")
+    if not owner_approval_reference:
+        reasons.append("missing --owner-approval-reference")
+    if not reason:
+        reasons.append("missing --reason")
     reasons.extend(gate_errors)
-    if gate_payload and gate_payload.get("status") != "PASSED":
-        reasons.append("live readiness gate did not pass")
+    if gate_payload:
+        gate_validation = validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(gate_payload)
+        if gate_payload.get("status") != "PASSED" or gate_validation.errors:
+            reasons.append("live readiness gate did not pass validation")
+        elif workspace_id == "notary_team_01":
+            expected_binding = build_process_ontology_sharepoint_schema_apply_binding(repo_root, [workspace_id])
+            if gate_payload.get("approval_binding") != expected_binding:
+                reasons.append("live readiness gate does not match selected workspace and current apply plan")
     return reasons
 
 
@@ -358,3 +421,7 @@ def _resolve_output_path(repo_root: Path, path: Path) -> Path:
 
 def _relative_path(repo_root: Path, path: Path) -> str:
     return str(path.relative_to(repo_root) if path.is_relative_to(repo_root) else path)
+
+
+def _sha256(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
