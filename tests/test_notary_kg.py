@@ -113,6 +113,7 @@ class FakeProcessOntologySchemaApplyGraphClient:
         *,
         fail_readback_after_write: bool = False,
         fail_mutation: bool = False,
+        rewrite_choice_settings_after_patch: bool = False,
         required_checkpoint_path: Path | None = None,
     ) -> None:
         self.requests: list[tuple[str, str]] = []
@@ -124,6 +125,7 @@ class FakeProcessOntologySchemaApplyGraphClient:
         self.choice_state: dict[str, dict] = {}
         self.fail_readback_after_write = fail_readback_after_write
         self.fail_mutation = fail_mutation
+        self.rewrite_choice_settings_after_patch = rewrite_choice_settings_after_patch
         self.fail_next_readback = False
         self.required_checkpoint_path = required_checkpoint_path
         self.checkpoint_observed_before_first_request = False
@@ -145,7 +147,7 @@ class FakeProcessOntologySchemaApplyGraphClient:
                 column_id = f"fake-choice-column-{name}"
                 choice = self.choice_state.setdefault(
                     column_id,
-                    {"choices": ["LegacyCustom"], "allowTextEntry": False, "displayAs": "dropDownMenu"},
+                    {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
                 )
                 return {"value": [{"id": column_id, "name": name, "choice": dict(choice)}]}
             return self._filter_response(path, "name")
@@ -153,7 +155,7 @@ class FakeProcessOntologySchemaApplyGraphClient:
             column_id = path.split("/columns/", 1)[1].split("?", 1)[0]
             choice = self.choice_state.setdefault(
                 column_id,
-                {"choices": ["LegacyCustom"], "allowTextEntry": False, "displayAs": "dropDownMenu"},
+                {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
             )
             return {"id": column_id, "choice": dict(choice)}
         return {"value": [{"id": "fake-existing"}]}
@@ -175,10 +177,18 @@ class FakeProcessOntologySchemaApplyGraphClient:
         self.requests.append(("PATCH", path))
         if self.fail_mutation:
             raise GraphHttpError(502, "secret-mutation-body-must-not-be-stored")
+        if (
+            isinstance(payload.get("choice"), dict)
+            and payload["choice"].get("@odata.type") != "microsoft.graph.choiceColumn"
+        ):
+            raise GraphHttpError(400, "choice-column-type-discriminator-required")
         self.patches.append((path, payload))
         object_id = path.split("/columns/", 1)[1].split("?", 1)[0] if "/columns/" in path else f"fake-patch-{len(self.patches)}"
         if isinstance(payload.get("choice"), dict):
             self.choice_state[object_id] = dict(payload["choice"])
+            if self.rewrite_choice_settings_after_patch:
+                self.choice_state[object_id]["allowTextEntry"] = False
+                self.choice_state[object_id]["displayAs"] = "dropDownMenu"
         if self.fail_readback_after_write:
             self.fail_next_readback = True
         return {"id": object_id}
@@ -575,6 +585,16 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertIn(
             "step-001.optional-list.Prozessregister: multi-valued choice columns cannot be indexed",
             invalid_validation.errors,
+        )
+        invalid_choice_patch = json.loads(json.dumps(payload))
+        choice_patch_step = next(
+            step for step in invalid_choice_patch["steps"] if step["operation"] == "extend_choice_column"
+        )
+        choice_patch_step["request"]["body"]["choice"].pop("@odata.type")
+        invalid_choice_patch_validation = validate_process_ontology_sharepoint_schema_apply_plan(invalid_choice_patch)
+        self.assertIn(
+            f"{choice_patch_step['id']}: choice PATCH must declare microsoft.graph.choiceColumn",
+            invalid_choice_patch_validation.errors,
         )
 
     def test_cli_process_ontology_schema_apply_plan_returns_safe_json(self) -> None:
@@ -1948,8 +1968,12 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertTrue(all(" " not in path and "'" not in path for _, path in client.requests))
         self.assertIn("$filter=displayName%20eq%20%27Prozessregister%27", client.requests[0][1])
         self.assertTrue(all("LegacyCustom" in patch[1]["choice"]["choices"] for patch in client.patches))
-        self.assertTrue(all(patch[1]["choice"]["allowTextEntry"] is False for patch in client.patches))
-        self.assertTrue(all(patch[1]["choice"]["displayAs"] == "dropDownMenu" for patch in client.patches))
+        self.assertTrue(all(
+            patch[1]["choice"]["@odata.type"] == "microsoft.graph.choiceColumn"
+            for patch in client.patches
+        ))
+        self.assertTrue(all(patch[1]["choice"]["allowTextEntry"] is True for patch in client.patches))
+        self.assertTrue(all(patch[1]["choice"]["displayAs"] == "radioButtons" for patch in client.patches))
         self.assertTrue(payload["summary"]["executed_graph_requests"])
         self.assertTrue(payload["summary"]["executed_graph_writes"])
         self.assertTrue(payload["guardrails"]["graph_rest_only"])
@@ -2085,6 +2109,46 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(second["summary"]["mutation_request_count"], 0)
         self.assertEqual(second["summary"]["skipped_mutation_count"], 34)
         self.assertEqual(len(client.posts) + len(client.patches), write_count)
+        self.assertTrue(all(choice["allowTextEntry"] is True for choice in client.choice_state.values()))
+        self.assertTrue(
+            all(choice["displayAs"] == "radioButtons" for choice in client.choice_state.values())
+        )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_choice_setting_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            gate_json = _write_notary_team_01_schema_apply_gate(Path(temp_dir))
+            client = FakeProcessOntologySchemaApplyGraphClient(
+                rewrite_choice_settings_after_patch=True
+            )
+            payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                client,
+                REPO_ROOT,
+                live_readiness_gate=gate_json,
+                workspace_id="notary_team_01",
+                correlation_id="nac-schema-apply-choice-setting-drift",
+                owner_approval_reference="owner-approval-choice-setting-drift",
+                reason="Reject Choice setting drift after Graph PATCH",
+                owner_approved=True,
+                execute_live_schema_apply=True,
+                write_redacted_evidence=True,
+                evidence_json_output=Path(temp_dir) / "dispatcher.redacted.json",
+                evidence_markdown_output=Path(temp_dir) / "dispatcher.redacted.md",
+            )
+
+        failed_step = payload["dispatch_steps"][-1]
+        self.assertEqual(payload["status"], "FAILED")
+        self.assertTrue(payload["summary"]["stopped_on_first_failure"])
+        self.assertEqual(failed_step["sequence"], 31)
+        self.assertEqual(
+            failed_step["error"],
+            {
+                "stepId": "notary_team_01.step-031.Akten.Vorgangstyp.choices",
+                "code": "choice_readback_verification_failed",
+                "phase": "readback",
+            },
+        )
+        self.assertTrue(failed_step["mutationAttempted"])
+        self.assertEqual(failed_step["mutationOutcome"], "CONFIRMED")
 
     def test_process_ontology_schema_apply_graph_dispatcher_tracks_post_write_readback_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
