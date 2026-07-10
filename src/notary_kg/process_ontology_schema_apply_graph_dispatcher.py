@@ -14,7 +14,10 @@ from .process_ontology_schema_apply_binding import build_process_ontology_sharep
 from .process_ontology_schema_apply_live_runner import (
     build_process_ontology_sharepoint_schema_apply_live_runner,
 )
-from .process_ontology_schema_apply_plan import build_process_ontology_sharepoint_schema_apply_plan
+from .process_ontology_schema_apply_plan import (
+    CHOICE_COLUMN_ODATA_TYPE,
+    build_process_ontology_sharepoint_schema_apply_plan,
+)
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 
 
@@ -601,6 +604,11 @@ def _dispatch_extend_choice_step(
         str(value) for value in unit["preflight_idempotency_check"].get("required_choice_values", [])
     ]
     current_choice = _choice_config(preflight)
+    preserved_choice_settings = {
+        key: current_choice[key]
+        for key in ("allowTextEntry", "displayAs")
+        if key in current_choice
+    }
     current_choices = [str(value) for value in current_choice.get("choices", [])]
     merged_choices = list(dict.fromkeys([*current_choices, *required_choices]))
     exists = all(choice in current_choices for choice in required_choices)
@@ -609,6 +617,7 @@ def _dispatch_extend_choice_step(
     mutation_outcome = MUTATION_SKIPPED if exists else MUTATION_NOT_ATTEMPTED
     if not exists:
         plan_choice = dict(plan_step["request"]["body"].get("choice", {}))
+        plan_choice["@odata.type"] = CHOICE_COLUMN_ODATA_TYPE
         for key in ("allowTextEntry", "displayAs"):
             if key in current_choice:
                 plan_choice[key] = current_choice[key]
@@ -632,8 +641,13 @@ def _dispatch_extend_choice_step(
             mutation_attempted=not exists,
             mutation_outcome=mutation_outcome,
         ) from exc
-    readback_choices = _choice_values(readback)
-    if not all(choice in readback_choices for choice in merged_choices):
+    readback_choice = _choice_config(readback)
+    readback_choices = [str(value) for value in readback_choice.get("choices", [])]
+    choices_preserved = all(choice in readback_choices for choice in merged_choices)
+    settings_preserved = all(
+        readback_choice.get(key) == value for key, value in preserved_choice_settings.items()
+    )
+    if not choices_preserved or not settings_preserved:
         raise DispatchStepFailure(
             "choice_readback_verification_failed",
             "readback",
@@ -828,11 +842,6 @@ def _choice_config(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(choice, dict):
             return dict(choice)
     return {}
-
-
-def _choice_values(response: dict[str, Any]) -> list[str]:
-    choices = _choice_config(response).get("choices")
-    return [str(choice) for choice in choices] if isinstance(choices, list) else []
 
 
 def _sha256(value: str) -> str:

@@ -18,6 +18,7 @@ GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 GRAPH_LIST_CREATE_DOC = "https://learn.microsoft.com/en-us/graph/api/list-create?view=graph-rest-1.0"
 GRAPH_COLUMN_CREATE_DOC = "https://learn.microsoft.com/en-us/graph/api/list-post-columns?view=graph-rest-1.0"
 GRAPH_COLUMN_UPDATE_DOC = "https://learn.microsoft.com/en-us/graph/api/columndefinition-update?view=graph-rest-1.0"
+CHOICE_COLUMN_ODATA_TYPE = "microsoft.graph.choiceColumn"
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +212,12 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
         if request.get("headers") != {"Content-Type": "application/json"}:
             errors.append(f"{step.get('id', '<unknown>')}: request must not carry auth/secrets in headers")
         request_body = request.get("body", {})
+        if step.get("operation") == "extend_choice_column":
+            choice = request_body.get("choice", {})
+            if choice.get("@odata.type") != CHOICE_COLUMN_ODATA_TYPE:
+                errors.append(
+                    f"{step.get('id', '<unknown>')}: choice PATCH must declare {CHOICE_COLUMN_ODATA_TYPE}"
+                )
         column_definitions = [request_body, *request_body.get("columns", [])]
         for column in column_definitions:
             choice = column.get("choice", {})
@@ -312,6 +319,7 @@ def _extend_choice_step(
         request_body={
             "name": column_name,
             "choice": {
+                "@odata.type": CHOICE_COLUMN_ODATA_TYPE,
                 "allowTextEntry": False,
                 "displayAs": "dropDownMenu",
                 "choices": planned_choices,
