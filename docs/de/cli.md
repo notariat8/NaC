@@ -973,6 +973,7 @@ Beispiel für ein lokales Fixture:
 ```json
 {
   "status": "OK",
+  "pages_complete": true,
   "rows": [
     {
       "business_case_type_id": "immobilienkaufvertrag",

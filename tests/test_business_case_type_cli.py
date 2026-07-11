@@ -27,6 +27,7 @@ class BusinessCaseTypeRuntimeCliTests(unittest.TestCase):
         catalog = BusinessCaseTypeCatalog.from_repo(REPO_ROOT)
         return {
             "status": "OK",
+            "pages_complete": True,
             "rows": [
                 {
                     "business_case_type_id": business_case_type_id,

@@ -6,6 +6,23 @@ from typing import Literal, Protocol
 
 RegistryFetchStatus = Literal["OK", "NOT_MODIFIED", "UNAVAILABLE"]
 
+SAFE_UNAVAILABLE_REASON_CODES = frozenset(
+    {
+        "fixture_transport_unavailable",
+        "transport_authentication_failed",
+        "transport_authorization_failed",
+        "transport_rate_limited",
+        "transport_timeout",
+        "transport_unavailable",
+    }
+)
+
+
+def safe_unavailable_reason_code(reason_code: object) -> str:
+    if isinstance(reason_code, str) and reason_code in SAFE_UNAVAILABLE_REASON_CODES:
+        return reason_code
+    return "transport_unavailable"
+
 
 @dataclass(frozen=True, slots=True)
 class BusinessCaseTypeRegistryRow:
@@ -21,13 +38,13 @@ class RegistryFetchResult:
     status: RegistryFetchStatus
     rows: tuple[BusinessCaseTypeRegistryRow, ...] = ()
     reason_code: str = ""
-    pages_complete: bool = True
+    pages_complete: bool = False
 
     @classmethod
     def ok(
         cls,
         *rows: BusinessCaseTypeRegistryRow,
-        pages_complete: bool = True,
+        pages_complete: bool,
     ) -> "RegistryFetchResult":
         return cls(status="OK", rows=tuple(rows), pages_complete=pages_complete)
 
@@ -37,7 +54,7 @@ class RegistryFetchResult:
 
     @classmethod
     def unavailable(cls, reason_code: str = "transport_unavailable") -> "RegistryFetchResult":
-        return cls(status="UNAVAILABLE", reason_code=reason_code)
+        return cls(status="UNAVAILABLE", reason_code=safe_unavailable_reason_code(reason_code))
 
 
 class BusinessCaseTypeRegistryReadPort(Protocol):

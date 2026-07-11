@@ -15,7 +15,11 @@ from .business_case_inventory import (
     build_business_case_inventory,
 )
 from .business_case_type_cache import BusinessCaseTypeRegistryCache, RegistryCacheEntry, RegistryCacheKey
-from .business_case_type_transport import BusinessCaseTypeRegistryReadPort, RegistryFetchResult
+from .business_case_type_transport import (
+    BusinessCaseTypeRegistryReadPort,
+    RegistryFetchResult,
+    safe_unavailable_reason_code,
+)
 
 
 LookupPurpose = Literal["canonical_assignment", "legacy_read", "migration"]
@@ -255,7 +259,7 @@ def business_case_type_get(
             return _result(
                 request, catalog, "VALIDATION_UNAVAILABLE", canonical_id, alias,
                 "HARD_EXPIRED" if hard_expired else "UNAVAILABLE",
-                fetch.reason_code or "registry_unavailable",
+                safe_unavailable_reason_code(fetch.reason_code),
                 etag=None if hard_expired or cached is None else cached.etag,
             )
         if fetch.status == "NOT_MODIFIED":

@@ -78,9 +78,9 @@ class RuntimeTests(unittest.TestCase):
             BusinessCaseTypeCatalog.from_inventory(inventory)
 
     def test_canonical_and_purpose_bound_alias(self):
-        result = self.lookup(FakePort([RegistryFetchResult.ok(row(self.catalog))]))
+        result = self.lookup(FakePort([RegistryFetchResult.ok(row(self.catalog), pages_complete=True)]))
         self.assertEqual("VALID", result.status)
-        alias_port = FakePort([RegistryFetchResult.ok(row(self.catalog))])
+        alias_port = FakePort([RegistryFetchResult.ok(row(self.catalog), pages_complete=True)])
         alias = self.lookup(alias_port, "grundstueckskaufvertrag", "legacy_read")
         self.assertEqual("VALID", alias.status)
         self.assertTrue(alias.resolved_from_alias)
@@ -113,13 +113,13 @@ class RuntimeTests(unittest.TestCase):
 
     def test_registry_requires_exactly_one_strict_row(self):
         invalid_results = [
-            RegistryFetchResult.ok(),
-            RegistryFetchResult.ok(row(self.catalog), row(self.catalog)),
-            RegistryFetchResult.ok(row(self.catalog, business_case_type_id="testament-erbvertrag")),
-            RegistryFetchResult.ok(row(self.catalog, catalog_version="0" * 64)),
-            RegistryFetchResult.ok(row(self.catalog, lifecycle_status="retired")),
-            RegistryFetchResult.ok(row(self.catalog, selectable=1)),
-            RegistryFetchResult.ok(row(self.catalog, etag="")),
+            RegistryFetchResult.ok(pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog), row(self.catalog), pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog, business_case_type_id="testament-erbvertrag"), pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog, catalog_version="0" * 64), pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog, lifecycle_status="retired"), pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog, selectable=1), pages_complete=True),
+            RegistryFetchResult.ok(row(self.catalog, etag=""), pages_complete=True),
             RegistryFetchResult.ok(row(self.catalog), pages_complete=False),
         ]
         for fetch in invalid_results:
@@ -131,7 +131,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual("INVALID", result.status)
 
     def test_cache_boundaries_revalidation_not_modified_and_hard_expiry(self):
-        port = FakePort([RegistryFetchResult.ok(row(self.catalog)), RegistryFetchResult.not_modified(), RegistryFetchResult.unavailable(), RegistryFetchResult.unavailable()])
+        port = FakePort([RegistryFetchResult.ok(row(self.catalog), pages_complete=True), RegistryFetchResult.not_modified(), RegistryFetchResult.unavailable(), RegistryFetchResult.unavailable()])
         self.assertEqual("MISS", self.lookup(port).cache_state)
         self.now = 299.999
         self.assertEqual("FRESH", self.lookup(port).cache_state)
@@ -147,7 +147,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual("HARD_EXPIRED", expired.cache_state)
 
     def test_timeout_at_revalidation_never_authorizes_assignment(self):
-        port = FakePort([RegistryFetchResult.ok(row(self.catalog)), RegistryFetchResult.unavailable("timeout")])
+        port = FakePort([RegistryFetchResult.ok(row(self.catalog), pages_complete=True), RegistryFetchResult.unavailable("transport_timeout")])
         self.assertEqual("VALID", self.lookup(port).status)
         self.now = 300.0
         self.assertEqual("VALIDATION_UNAVAILABLE", self.lookup(port).status)
@@ -158,7 +158,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual("not_modified_without_valid_cache_basis", result.reason_code)
 
     def test_negative_ttl_uses_30_second_boundary(self):
-        port = FakePort([RegistryFetchResult.ok(), RegistryFetchResult.ok(row(self.catalog))])
+        port = FakePort([RegistryFetchResult.ok(pages_complete=True), RegistryFetchResult.ok(row(self.catalog), pages_complete=True)])
         self.assertEqual("INVALID", self.lookup(port).status)
         self.now = 29.999
         self.assertEqual("NEGATIVE", self.lookup(port).cache_state)
@@ -167,7 +167,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(2, len(port.calls))
 
     def test_transport_failures_are_not_negative_cached(self):
-        port = FakePort([RegistryFetchResult.unavailable(), RegistryFetchResult.ok(row(self.catalog))])
+        port = FakePort([RegistryFetchResult.unavailable(), RegistryFetchResult.ok(row(self.catalog), pages_complete=True)])
         self.assertEqual("VALIDATION_UNAVAILABLE", self.lookup(port).status)
         self.assertEqual("VALID", self.lookup(port).status)
 
@@ -180,6 +180,31 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual("VALIDATION_UNAVAILABLE", result.status)
         self.assertEqual("registry_transport_exception", result.reason_code)
         self.assertNotIn("secret", result.reason_code)
+
+    def test_untrusted_transport_reason_is_redacted(self):
+        result = self.lookup(
+            FakePort([
+                RegistryFetchResult(
+                    status="UNAVAILABLE",
+                    reason_code="secret upstream response",
+                )
+            ])
+        )
+        self.assertEqual("VALIDATION_UNAVAILABLE", result.status)
+        self.assertEqual("transport_unavailable", result.reason_code)
+        self.assertNotIn("secret", result.reason_code)
+
+    def test_ok_requires_explicit_paging_completeness(self):
+        result = self.lookup(
+            FakePort([
+                RegistryFetchResult(
+                    status="OK",
+                    rows=(row(self.catalog),),
+                )
+            ])
+        )
+        self.assertEqual("INVALID", result.status)
+        self.assertEqual("registry_paging_incomplete", result.reason_code)
 
     def test_incomplete_paging_is_fail_closed(self):
         result = self.lookup(
@@ -197,7 +222,7 @@ class RuntimeTests(unittest.TestCase):
         other_key = ("site-1", "testament-erbvertrag", self.catalog.catalog_version)
         generation = self.cache.generation("site-1")
         self.cache.store(other_key, RegistryCacheEntry("testament-erbvertrag", "active", True, self.catalog.catalog_version, "other", 0.0), generation=generation)
-        port = FakePort([RegistryFetchResult.ok(row(self.catalog)), RegistryFetchResult.ok(row(self.catalog, etag="\"etag-2\""))])
+        port = FakePort([RegistryFetchResult.ok(row(self.catalog), pages_complete=True), RegistryFetchResult.ok(row(self.catalog, etag="\"etag-2\""), pages_complete=True)])
         self.assertEqual("VALID", self.lookup(port).status)
         self.now = 300.0
         self.assertEqual("VALID", self.lookup(port).status)

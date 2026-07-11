@@ -1393,7 +1393,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
 
 class _FixtureBusinessCaseTypeRegistryReadPort:
     _MAX_FIXTURE_BYTES = 65536
-    _ROOT_KEYS = frozenset({"status", "rows", "reason_code"})
+    _ROOT_KEYS = frozenset({"status", "rows", "reason_code", "pages_complete"})
     _ROW_KEYS = frozenset(
         {
             "business_case_type_id",
@@ -1419,8 +1419,10 @@ class _FixtureBusinessCaseTypeRegistryReadPort:
         if not isinstance(rows, list):
             raise ValueError("registry fixture rows must be a list")
         if status == "OK":
+            if raw.get("pages_complete") is not True:
+                raise ValueError("OK registry fixture requires pages_complete=true")
             parsed_rows = tuple(cls._parse_row(row) for row in rows)
-            return cls(RegistryFetchResult.ok(*parsed_rows))
+            return cls(RegistryFetchResult.ok(*parsed_rows, pages_complete=True))
         if rows:
             raise ValueError("non-OK registry fixtures cannot contain rows")
         if status == "NOT_MODIFIED":

@@ -938,6 +938,7 @@ Example local fixture:
 ```json
 {
   "status": "OK",
+  "pages_complete": true,
   "rows": [
     {
       "business_case_type_id": "immobilienkaufvertrag",
