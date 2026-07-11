@@ -132,6 +132,20 @@
       ]
     },
     {
+      "id": "invariant.m365_onprem.graph_and_agentic_boundaries",
+      "domain": "m365_onprem_target_architecture",
+      "severity": "critical",
+      "statement": "M365 access remains Graph REST v1.0 or Graph-v1.0-backed MCP only; NVIDIA NeMo Agent Toolkit is the only productive agentic toolkit; SharePoint and local WSL sidecars never become durable workflow truth.",
+      "source_paths": [
+        "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+        "docs/en/architecture/microsoft-first-onprem-target-architecture.md",
+        "workflows/contracts/microsoft-first-onprem-target-architecture.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_microsoft_first_onprem_target_architecture.py"
+      ]
+    },
+    {
       "id": "invariant.business_case_type.exact_identity_no_normalization",
       "domain": "business_case_type_runtime",
       "severity": "critical",

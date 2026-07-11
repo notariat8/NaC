@@ -93,6 +93,11 @@ machen die Abnahmeharness agentisch lesbar.
   Vertrag für die MVP-Datenhaltung über Teams Team, Microsoft-365-Gruppe,
   SharePoint-Team-Site, Microsoft Graph REST only, declaratives Schema,
   Provisioner-Skeleton, MCP-Grenze und Owner-Gates ohne Live-Apply.
+- [workflows/contracts/microsoft-first-onprem-target-architecture.contract.json](microsoft-first-onprem-target-architecture.contract.json):
+  Entscheidungsvertrag für Teams, SPFx, SharePoint, Entra und Graph REST v1.0
+  als Microsoft-Kante sowie Python/FastAPI, deterministische Workflows, NVIDIA
+  NeMo Agent Toolkit, PostgreSQL, Outbox/Broker und WORM als On-Prem-Kern;
+  Temporal bleibt ein zeitbegrenzter, ergebnisoffener Spike-Kandidat.
 - [workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json](m365-sharepoint-bpmn-viewer-adapter.contract.json):
   Vertrag für einen späteren read-only SPFx-BPMN-Viewer in SharePoint mit
   `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder

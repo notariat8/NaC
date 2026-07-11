@@ -1,0 +1,174 @@
+{
+  "schema_version": "nac.microsoft-first-onprem-target-architecture/v0.2",
+  "contract_id": "architecture.microsoft_first_onprem_target",
+  "title": "Microsoft-First On-Prem AI Target Architecture",
+  "status": "accepted_planning_baseline",
+  "last_update": "2026-07-11",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/613",
+  "purpose": "Bind the Microsoft 365 user, identity and data edge to an on-prem AI, durable workflow, persistence and audit core without making SharePoint the workflow engine or selecting Temporal without a measured spike.",
+  "decisions": {
+    "microsoft_first_edge": [
+      "microsoft_teams",
+      "sharepoint_online",
+      "spfx",
+      "entra_id",
+      "microsoft_graph_rest_v1"
+    ],
+    "onprem_core": [
+      "python_fastapi_bff",
+      "deterministic_workflow_control_plane",
+      "nvidia_nemo_agent_toolkit",
+      "postgresql",
+      "outbox_broker",
+      "worm_audit"
+    ],
+    "only_agentic_toolkit": "nvidia_nemo_agent_toolkit",
+    "m365_agents_sdk_role": "optional_channel_adapter_only",
+    "temporal_status": "timeboxed_candidate_spike_not_selected",
+    "sharepoint_role": "documents_visible_lists_and_business_projections",
+    "local_wsl_role": "non_authoritative_workstation_sidecar"
+  },
+  "pdf_assessment": {
+    "teams_as_user_entry": "adopt",
+    "spfx_react_typescript": "adopt",
+    "spfx_1_22_heft_toolchain": "adopt",
+    "app_catalog_sppkg_teams_publishing_admin_approval": "adapt",
+    "python_outside_sharepoint": "adopt",
+    "sharepoint_as_hosting_platform": "adapt",
+    "graph_or_sharepoint_rest": "adapt",
+    "entra_sso_aadhttpclient": "adopt",
+    "sharepoint_lists_for_process_state": "adapt",
+    "bpmn_js": "adapt",
+    "bpmn_instance_model_version_pinning": "adopt",
+    "bpmn_js_lazy_loading_code_splitting": "adopt",
+    "teams_custom_app_policies_early_admin_gate": "adapt",
+    "spiffworkflow_as_default": "reject",
+    "postgresql": "adapt",
+    "microsoft_365_agents_sdk": "adapt",
+    "azure_app_service_container_apps": "reject_as_prerequisite",
+    "wsl_containers": "adapt"
+  },
+  "layer_boundaries": {
+    "ui": {
+      "components": ["teams", "sharepoint", "spfx", "bpmn_js_viewer"],
+      "owns": ["user_interaction", "forms", "task_view", "matter_projection"],
+      "must_not_own": ["business_truth", "workflow_timers", "secrets", "agentic_runtime"]
+    },
+    "bff_and_access": {
+      "components": ["python", "fastapi", "entra_token_validation"],
+      "owns": ["api_facade", "role_binding", "matter_binding", "purpose_binding", "dto_redaction"]
+    },
+    "workflow": {
+      "owns": ["long_running_instances", "human_tasks", "deadlines", "retries", "idempotency", "versioning"],
+      "agent_output_is_binding_transition": false
+    },
+    "personal_agent": {
+      "owns": ["user_assistance", "local_document_proposals", "bounded_mcp_calls"],
+      "authoritative_process_truth": false
+    },
+    "m365_adapter": {
+      "allowed": ["microsoft_graph_rest_v1", "mcp_backed_only_by_graph_rest_v1"],
+      "forbidden": ["sharepoint_rest", "sharepoint_csom", "pnp", "microsoft_graph_sdk", "graph_beta"]
+    },
+    "persistence": {
+      "common_postgresql": ["domain_read_models", "outbox", "human_task_metadata", "projections", "sync_state"],
+      "temporal_mode": {
+        "authoritative_execution_store": "temporal_service_and_event_history",
+        "owns": ["workflow_execution_state", "timers", "retries"]
+      },
+      "baseline_mode": {
+        "authoritative_execution_store": "postgresql",
+        "owns": ["workflow_execution_state", "timers", "leases", "retries"]
+      },
+      "sharepoint": ["documents", "visible_metadata", "task_projections", "matter_projections"],
+      "worm_separate_in_all_modes": true
+    },
+    "audit": {
+      "required": ["append_only_events", "hash_binding", "worm_retention", "reconciliation"],
+      "sharepoint_version_history_is_sufficient": false
+    }
+  },
+  "guardrails": {
+    "graph_base_url": "https://graph.microsoft.com/v1.0",
+    "graph_rest_or_graph_backed_mcp_only": true,
+    "sharepoint_rest_allowed": false,
+    "pnp_allowed": false,
+    "graph_sdk_allowed": false,
+    "graph_beta_allowed": false,
+    "azure_ai_runtime_required": false,
+    "cloud_runtime_required": false,
+    "ai_and_models_onprem": true,
+    "sharepoint_is_workflow_engine": false,
+    "sharepoint_is_technical_workflow_truth": false,
+    "local_sidecar_is_authoritative": false,
+    "temporal_is_final_decision": false,
+    "live_actions_in_this_contract": false
+  },
+  "storage_roles": {
+    "sharepoint": "documents_and_user_facing_projections",
+    "postgresql_common": "domain_read_models_outbox_task_metadata_projections_and_sync_state",
+    "temporal_mode": {
+      "authoritative_execution_store": "temporal_service_and_event_history",
+      "temporal_owns": ["workflow_execution_state", "timers", "retries"],
+      "postgresql_owns": ["domain_read_models", "outbox", "human_task_metadata", "projections", "sync_state"]
+    },
+    "baseline_mode": {
+      "authoritative_execution_store": "postgresql",
+      "postgresql_owns": ["workflow_execution_state", "timers", "leases", "retries", "domain_read_models", "outbox", "human_task_metadata", "projections", "sync_state"]
+    },
+    "workflow_history": "selected_engine_execution_history_not_sole_legal_evidence",
+    "worm": "immutable_approval_access_delegation_and_mutation_evidence",
+    "local_cache": "encrypted_short_lived_non_authoritative",
+    "agent_memory": "personal_preferences_without_matter_truth"
+  },
+  "durable_workflow_spike": {
+    "timebox_weeks_max": 6,
+    "candidates": ["temporal_self_hosted_python", "python_postgresql_baseline"],
+    "required_measurements": [
+      "process_and_host_restart",
+      "month_long_timer",
+      "human_task_wait",
+      "workflow_versioning",
+      "idempotency",
+      "backup_restore",
+      "high_availability_effort",
+      "monitoring",
+      "operating_hours",
+      "license_and_infrastructure_cost"
+    ],
+    "requires_separate_adr": true,
+    "is_agentic_toolkit_selection": false
+  },
+  "roadmap": {
+    "days_0_90": ["s3_runtime", "s4_graph_read_adapter", "entra_fastapi_bff_spec", "spfx_read_only_workspace", "spfx_delivery_governance", "bpmn_instance_version_pinning", "durable_workflow_spike", "synthetic_end_to_end_matter"],
+    "days_91_180": ["selected_workflow_control_plane", "mode_specific_persistence", "human_tasks_and_deadlines", "nemo_bounded_activities", "outbox_inbox_reconciliation", "worm_evidence", "local_sidecar_pilot"],
+    "days_181_365": ["four_first_wave_cases", "ha_backup_restore", "capacity_and_monitoring", "two_plus_two_office_pilot", "optional_m365_agents_channel_adapter"]
+  },
+  "repository_ownership": {
+    "spfx": "spfx/",
+    "m365_graph_adapter": "src/nac_m365_graph/",
+    "ontology_and_type_runtime": "src/notary_kg/",
+    "workflow_control_plane": "src/nac_runtime/",
+    "workflow_contracts": "workflows/",
+    "onprem_deployment": "deploy/runtime/onprem/",
+    "workstation_connectors": "plugins/"
+  },
+  "open_owner_decisions": [
+    "rpo_rto_availability_and_maintenance",
+    "worm_target_retention_anchor_and_exit",
+    "entra_m365_license_level",
+    "durable_workflow_spike_outcome",
+    "teams_chat_required_for_first_pilot",
+    "operations_ownership"
+  ],
+  "evidence": {
+    "documents": [
+      "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+      "docs/en/architecture/microsoft-first-onprem-target-architecture.md"
+    ],
+    "validator": "scripts/validate_microsoft_first_onprem_target_architecture.py",
+    "contains_matter_data": false,
+    "contains_credentials": false
+  }
+}
+

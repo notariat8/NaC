@@ -51,7 +51,10 @@
             "docs/en/architecture/teams-sharepoint-graph-data-plane.md",
             "docs/de/architecture/nemo-agent-toolkit-aiq-m365.md",
             "docs/en/architecture/nemo-agent-toolkit-aiq-m365.md",
-            "workflows/contracts/README.md"
+            "workflows/contracts/README.md",
+            "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+            "docs/en/architecture/microsoft-first-onprem-target-architecture.md",
+            "workflows/contracts/microsoft-first-onprem-target-architecture.contract.json"
           ]
         },
         {

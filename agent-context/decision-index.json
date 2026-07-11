@@ -100,6 +100,22 @@
       ]
     },
     {
+      "id": "ADR-M365-ONPREM-006",
+      "title": "Microsoft-first edge with on-prem AI and durable workflow core",
+      "status": "accepted",
+      "decision_date": "2026-07-11",
+      "domain": "m365_onprem_target_architecture",
+      "context_key": "microsoft_first_onprem_target_architecture",
+      "owner": "ofunk",
+      "summary": "Teams, SPFx, SharePoint, Entra and Graph REST v1.0 form the user, identity and data edge; Python/FastAPI, deterministic workflows, NVIDIA NeMo Agent Toolkit, PostgreSQL, outbox/broker and WORM remain on-prem. Temporal is an outcome-open timeboxed spike candidate only.",
+      "source_paths": [
+        "docs/de/architecture/microsoft-first-onprem-target-architecture.md",
+        "docs/en/architecture/microsoft-first-onprem-target-architecture.md",
+        "workflows/contracts/microsoft-first-onprem-target-architecture.contract.json"
+      ],
+      "verification_contracts": []
+    },
+    {
       "id": "ADR-BUSINESS-CASE-TYPE-001",
       "title": "BusinessCaseTypeId validity is viewer-independent",
       "status": "accepted",

@@ -341,6 +341,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_teams_sharepoint_graph_data_plane.py"],
                 ),
                 (
+                    "microsoft_first_onprem_target_architecture",
+                    "Microsoft-First On-Prem Target Architecture",
+                    [sys.executable, "scripts/validate_microsoft_first_onprem_target_architecture.py"],
+                ),
+                (
                     "m365_release_readiness_gate",
                     "M365 Release Readiness Gate",
                     [sys.executable, "scripts/validate_m365_release_readiness_gate.py"],

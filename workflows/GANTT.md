@@ -41,6 +41,8 @@ gantt
     AI-SBOM-Baseline-Export-Mapping            :done,   w4ae, 2026-06-30, 1d
     Legal-Model-Evaluationsbenchmark           :done,   w4t, 2026-06-28, 1d
     On-Prem-Connector-Grenzvertrag            :done,   w4n, 2026-06-28, 1d
+    Microsoft-first On-Prem-Zielvertrag          :done,   w4ah, 2026-07-11, 1d
+    Durable-Workflow-Spike                       :        w4ai, after w4ah, 42d
     Ponytail-Agent-Tooling-Kandidat            :done,   w4v, 2026-06-29, 1d
     Ponytail-Skill-Only-Smoke-Runbook          :done,   w4w, 2026-06-29, 1d
     Ponytail-Skill-Only-Smoke-Ausführung       :done,   w4x, 2026-06-29, 1d
