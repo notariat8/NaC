@@ -10,7 +10,7 @@ from .process_ontology_schema_apply_readiness import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_execution_contract"
 
 
@@ -37,6 +37,7 @@ def build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root:
             "graph_rest_only": readiness["source"]["graph_rest_only"],
             "legacy_sharepoint_api_allowed": readiness["source"]["legacy_sharepoint_api_allowed"],
             "graph_sdk_allowed": readiness["source"]["graph_sdk_allowed"],
+            "live_execution_approval_state": readiness["source"]["live_execution_approval_state"],
         },
         "summary": {
             "workspace_count": len(workspace_contracts),
@@ -52,7 +53,7 @@ def build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root:
             ),
             "owner_gate_required_now": False,
             "owner_gate_required_before_live_apply": True,
-            "live_apply_contract_status": "READY_FOR_OWNER_GATED_EXECUTION",
+            "live_apply_contract_status": "BLOCKED_PENDING_S6_S7_APPROVAL",
         },
         "permission_gate": {
             "required_application_permission": REQUIRED_PERMISSION,
@@ -87,6 +88,7 @@ def build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root:
             "stop_if_idempotency_readback_is_ambiguous": True,
             "stop_if_required_list_id_missing": True,
             "stop_if_runtime_permission_missing": True,
+            "stop_if_s6_s7_live_approval_missing": True,
             "automatic_rollback_allowed": False,
             "manual_owner_review_required_after_failure": True,
         },
@@ -101,6 +103,8 @@ def build_process_ontology_sharepoint_schema_apply_execution_contract(repo_root:
                 "per_mutation_expected_status",
                 "per_mutation_readback_result",
                 "stop_rule_evaluation",
+                "pre_apply_schema_snapshot_metadata",
+                "additive_rollback_boundary",
                 "post_apply_schema_snapshot_metadata",
             ],
         },
@@ -161,13 +165,13 @@ def validate_process_ontology_sharepoint_schema_apply_execution_contract(
         errors.append("execution contract must cover both notary workspaces")
     if summary.get("execution_phase_count") != 8:
         errors.append("execution contract must keep the eight readiness phases")
-    if summary.get("workspace_apply_unit_count", 0) < 60:
-        errors.append("execution contract must cover expanded workspace apply units")
+    if not isinstance(summary.get("workspace_apply_unit_count"), int) or summary["workspace_apply_unit_count"] < 0:
+        errors.append("execution contract workspace_apply_unit_count must be non-negative")
     if summary.get("mutating_operation_count") != summary.get("workspace_apply_unit_count"):
         errors.append("each apply unit is a future mutating operation and must be counted")
     if summary.get("owner_gate_required_before_live_apply") is not True:
         errors.append("live apply must require owner gate")
-    if summary.get("live_apply_contract_status") != "READY_FOR_OWNER_GATED_EXECUTION":
+    if summary.get("live_apply_contract_status") != "BLOCKED_PENDING_S6_S7_APPROVAL":
         errors.append("unexpected live apply contract status")
 
     permission_gate = payload.get("permission_gate", {})
@@ -219,6 +223,7 @@ def validate_process_ontology_sharepoint_schema_apply_execution_contract(
         "stop_if_idempotency_readback_is_ambiguous",
         "stop_if_required_list_id_missing",
         "stop_if_runtime_permission_missing",
+        "stop_if_s6_s7_live_approval_missing",
         "manual_owner_review_required_after_failure",
     ):
         if stop_rules.get(key) is not True:
@@ -314,7 +319,7 @@ def _phase_contract(phase: str, workspace_contracts: list[dict[str, Any]]) -> di
 
 
 def _phase_units(phase: str, apply_units: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if phase == "create_optional_process_projection_resources":
+    if phase == "create_required_runtime_projection_resources":
         return [
             unit
             for unit in apply_units
@@ -347,7 +352,7 @@ def _required_readbacks(phase: str) -> list[str]:
     mapping = {
         "resolve_workspace_site_ids": ["site_metadata"],
         "verify_required_list_ids": ["required_list_metadata"],
-        "create_optional_process_projection_resources": ["created_or_existing_list_metadata"],
+        "create_required_runtime_projection_resources": ["created_or_existing_list_metadata"],
         "create_missing_process_columns": ["created_or_existing_column_metadata"],
         "resolve_choice_column_ids": ["choice_column_metadata"],
         "extend_choice_columns": ["updated_choice_column_metadata"],

@@ -96,10 +96,10 @@ def main() -> int:
 
         if payload.get("schema_version") != SCHEMA_VERSION:
             errors.append("unexpected live runner schema version")
-        if payload.get("status") != "READY_FOR_GRAPH_REST_DISPATCH":
-            errors.append("live runner must become ready for Graph REST dispatch after the owner gate")
-        if payload.get("summary", {}).get("runner_step_count") != 34:
-            errors.append("live runner must expose 34 notary_team_01 runner steps")
+        if payload.get("status") != "BLOCKED":
+            errors.append("live runner must remain blocked pending S6/S7 even after the owner gate")
+        if payload.get("summary", {}).get("runner_step_count") != 33:
+            errors.append("live runner must expose 33 notary_team_01 runner steps")
         if payload.get("summary", {}).get("executes_graph_requests") is not False:
             errors.append("live runner validator must keep Graph execution false in this slice")
         if payload.get("summary", {}).get("writes_sharepoint") is not False:

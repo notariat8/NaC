@@ -12,8 +12,9 @@ from .process_ontology_schema_gap import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-plan/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-plan/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_plan"
+LIVE_EXECUTION_APPROVAL_STATE = "BLOCKED_PENDING_S6_S7_APPROVAL"
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 GRAPH_LIST_CREATE_DOC = "https://learn.microsoft.com/en-us/graph/api/list-create?view=graph-rest-1.0"
 GRAPH_COLUMN_CREATE_DOC = "https://learn.microsoft.com/en-us/graph/api/list-post-columns?view=graph-rest-1.0"
@@ -35,14 +36,12 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
     choice_catalog = _choice_catalog(gap_review, process_contract)
 
     steps: list[dict[str, Any]] = []
-    for gap in gap_review["optional_projection_gaps"]:
-        if gap["gap_type"] == "missing_optional_process_projection_list":
-            steps.append(_create_list_step(gap, choice_catalog, len(steps) + 1, "genericList"))
-        elif gap["gap_type"] == "missing_optional_bpmn_model_library":
-            steps.append(_create_list_step(gap, choice_catalog, len(steps) + 1, "documentLibrary"))
+    for gap in gap_review["required_projection_gaps"]:
+        steps.append(_create_list_step(gap, choice_catalog, len(steps) + 1, "genericList"))
 
     for gap in gap_review["field_gaps"]:
-        steps.append(_create_column_step(gap, choice_catalog, len(steps) + 1))
+        if gap["gap_type"] == "missing_process_field":
+            steps.append(_create_column_step(gap, choice_catalog, len(steps) + 1))
 
     for gap in gap_review["choice_gaps"]:
         steps.append(_extend_choice_step(gap, existing_lists, choice_catalog, len(steps) + 1))
@@ -56,6 +55,7 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
             "schema_gap_review": gap_review["schema_version"],
             "schema_gap_status": gap_review["status"],
             "schema_gap_contract_id": gap_review["contract_id"],
+            "legacy_column_contract": gap_review["legacy_column_contract"],
             "sharepoint_schema": str(SHAREPOINT_SCHEMA_PATH),
             "sharepoint_schema_version": sharepoint_schema["schema_version"],
             "graph_base_url": GRAPH_BASE_URL,
@@ -65,6 +65,12 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
         },
         "summary": {
             "source_total_gap_count": gap_review["summary"]["total_gap_count"],
+            "source_required_gap_count": (
+                len(gap_review["required_projection_gaps"])
+                + sum(1 for gap in gap_review["field_gaps"] if gap["gap_type"] == "missing_process_field")
+                + len(gap_review["choice_gaps"])
+            ),
+            "excluded_optional_projection_gap_count": len(gap_review["optional_projection_gaps"]),
             "create_list_step_count": sum(1 for step in steps if step["operation"] == "create_list"),
             "create_document_library_step_count": sum(
                 1 for step in steps if step["operation"] == "create_document_library"
@@ -74,10 +80,12 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
             "total_step_count": len(steps),
             "owner_gate_required_now": False,
             "owner_gate_required_before_apply": True,
+            "live_execution_approval_state": LIVE_EXECUTION_APPROVAL_STATE,
         },
         "apply_boundary": {
             "mode": "plan_only",
             "owner_gate_required_before_apply": True,
+            "live_execution_approval_state": LIVE_EXECUTION_APPROVAL_STATE,
             "executes_graph_requests": False,
             "writes_sharepoint": False,
             "changes_sharepoint_schema": False,
@@ -88,6 +96,19 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
                 "POST /sites/{site-id}/lists/{list-id}/columns",
                 "PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}",
             ],
+        },
+        "recovery_evidence_plan": {
+            "pre_apply_snapshot_required": True,
+            "snapshot_scope": [
+                "target_list_metadata",
+                "target_column_definitions",
+                "list_and_column_etags_when_available",
+            ],
+            "additive_rollback_only": True,
+            "delete_created_columns_on_rollback": False,
+            "delete_canonical_values_on_rollback": False,
+            "restore_projection_metadata_with_etag_guards": True,
+            "automatic_rollback_allowed": False,
         },
         "documentation_references": [
             {
@@ -107,6 +128,12 @@ def build_process_ontology_sharepoint_schema_apply_plan(repo_root: Path) -> dict
             },
         ],
         "steps": steps,
+        "optional_projection_plan": {
+            "mode": "separate_opt_in_plan",
+            "included_in_default_s2_plan": False,
+            "gap_count": len(gap_review["optional_projection_gaps"]),
+            "gaps": gap_review["optional_projection_gaps"],
+        },
         "guardrails": {
             "offline_only": True,
             "executes_graph_requests": False,
@@ -150,6 +177,11 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
         errors.append("apply plan must remain offline")
 
     source = payload.get("source", {})
+    legacy = source.get("legacy_column_contract", {})
+    if legacy.get("target") != "Akten.Vorgangstyp" or legacy.get("protected") is not True:
+        errors.append("apply plan must bind the protected legacy Choice fingerprint")
+    if legacy.get("expected_type") != "choice":
+        errors.append("apply plan must preserve legacy Akten.Vorgangstyp as Choice")
     if source.get("schema_gap_status") != "PASSED":
         errors.append("schema gap review must pass before building apply plan")
     if source.get("graph_rest_only") is not True:
@@ -160,14 +192,22 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
         errors.append("Graph SDK must remain blocked for this apply-plan contract")
 
     summary = payload.get("summary", {})
-    if summary.get("source_total_gap_count", 0) < 30:
-        errors.append("apply plan must be derived from the complete schema gap set")
-    if summary.get("total_step_count") != summary.get("source_total_gap_count"):
-        errors.append("apply plan must contain exactly one step per source gap")
-    if summary.get("create_column_step_count", 0) < 20:
-        errors.append("apply plan must include concrete column-create steps")
-    if summary.get("extend_choice_step_count", 0) < 1:
-        errors.append("apply plan must include choice-extension steps")
+    for key in ("source_total_gap_count", "source_required_gap_count", "excluded_optional_projection_gap_count"):
+        if not isinstance(summary.get(key), int) or summary[key] < 0:
+            errors.append(f"{key} must be a non-negative integer")
+    if summary.get("total_step_count") != summary.get("source_required_gap_count"):
+        errors.append("default apply plan must contain exactly one step per required source gap")
+    operation_count = sum(
+        int(summary.get(key, 0))
+        for key in (
+            "create_list_step_count",
+            "create_document_library_step_count",
+            "create_column_step_count",
+            "extend_choice_step_count",
+        )
+    )
+    if summary.get("total_step_count") != operation_count:
+        errors.append("apply plan operation counts must equal total_step_count")
     if summary.get("owner_gate_required_now") is not False:
         errors.append("offline plan creation must not require owner gate now")
     if summary.get("owner_gate_required_before_apply") is not True:
@@ -181,6 +221,8 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
             errors.append(f"apply boundary must keep {key} false")
     if apply_boundary.get("future_apply_requires_owner_approval") is not True:
         errors.append("future apply must require owner approval")
+    if apply_boundary.get("live_execution_approval_state") != LIVE_EXECUTION_APPROVAL_STATE:
+        errors.append("S2 live execution must remain blocked pending S6/S7 approval")
 
     for expected in (
         "POST /sites/{site-id}/lists",
@@ -189,6 +231,37 @@ def validate_process_ontology_sharepoint_schema_apply_plan(
     ):
         if expected not in apply_boundary.get("future_apply_endpoint_families", []):
             errors.append(f"missing Graph endpoint family: {expected}")
+
+    if any(
+        step.get("target") == "Akten"
+        and (
+            step.get("source_gap_id") == "Akten.Vorgangstyp.choices"
+            or step.get("request", {}).get("body", {}).get("name") == "Vorgangstyp"
+        )
+        for step in payload.get("steps", [])
+    ):
+        errors.append("legacy Akten.Vorgangstyp must not be targeted by the S2 plan")
+
+    optional_plan = payload.get("optional_projection_plan", {})
+    if optional_plan.get("mode") != "separate_opt_in_plan":
+        errors.append("optional projections must use a separate opt-in plan")
+    if optional_plan.get("included_in_default_s2_plan") is not False:
+        errors.append("optional projections must not be included in the default S2 plan")
+    optional_targets = {gap.get("target") for gap in optional_plan.get("gaps", [])}
+    if optional_plan.get("gap_count") != len(optional_plan.get("gaps", [])):
+        errors.append("optional projection gap_count must match gaps")
+    if optional_plan.get("gap_count", 0) > 0 and not {"Prozessregister", "BPMN Models"}.issubset(optional_targets):
+        errors.append("non-empty optional projection plan must retain Prozessregister and BPMN Models")
+    if any(step.get("target") in optional_targets for step in payload.get("steps", [])):
+        errors.append("default S2 plan must not contain optional projection steps")
+
+    recovery = payload.get("recovery_evidence_plan", {})
+    for key in ("pre_apply_snapshot_required", "additive_rollback_only", "restore_projection_metadata_with_etag_guards"):
+        if recovery.get(key) is not True:
+            errors.append(f"recovery evidence plan must require {key}")
+    for key in ("delete_created_columns_on_rollback", "delete_canonical_values_on_rollback", "automatic_rollback_allowed"):
+        if recovery.get(key) is not False:
+            errors.append(f"recovery evidence plan must keep {key} false")
 
     seen_sequences: set[int] = set()
     for step in payload.get("steps", []):
@@ -386,22 +459,24 @@ def _column_definition(field: dict[str, Any], choice_catalog: dict[str, list[str
         "description": field.get("reason", "Process ontology projection field."),
         "required": bool(field.get("required", False)),
         "hidden": False,
-        "indexed": bool(field.get("required", False) or field["name"].endswith("Id")),
+        "indexed": bool(field.get("indexed", field.get("required", False) or field["name"].endswith("Id"))),
     }
+    if field.get("enforceUniqueValues") is not None:
+        body["enforceUniqueValues"] = bool(field["enforceUniqueValues"])
     if column_type == "text":
-        body["text"] = {"allowMultipleLines": False, "maxLength": 255}
+        body["text"] = {"allowMultipleLines": False, "maxLength": int(field.get("maxLength", 255))}
     elif column_type == "choice":
         body["choice"] = {
             "allowTextEntry": False,
             "displayAs": "dropDownMenu",
-            "choices": choice_catalog.get(field["name"], []),
+            "choices": list(field.get("choices", choice_catalog.get(field["name"], []))),
         }
     elif column_type == "multiChoice":
         body["indexed"] = False
         body["choice"] = {
             "allowTextEntry": False,
             "displayAs": "checkBoxes",
-            "choices": choice_catalog.get(field["name"], []),
+            "choices": list(field.get("choices", choice_catalog.get(field["name"], []))),
         }
     elif column_type == "boolean":
         body["boolean"] = {}
@@ -414,10 +489,7 @@ def _column_definition(field: dict[str, Any], choice_catalog: dict[str, list[str
 
 
 def _choice_catalog(gap_review: dict[str, Any], process_contract: dict[str, Any]) -> dict[str, list[str]]:
-    business_case_choices: list[str] = []
-    for gap in gap_review.get("choice_gaps", []):
-        if gap["id"] == "Akten.Vorgangstyp.choices":
-            business_case_choices = gap.get("missing_choices", [])
+    business_case_choices = list(gap_review.get("business_case_type_ids", []))
     process_phases = process_contract["contract"]["required_process_phases"]
     role_templates = process_contract["contract"]["required_role_templates"]
     return {

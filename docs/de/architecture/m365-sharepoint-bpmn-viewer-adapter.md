@@ -1,7 +1,7 @@
 # M365 SharePoint BPMN Viewer Adapter
 
-Status: Contract-first-Entscheidung
-Letzte inhaltliche Anpassung: 2026-07-08
+Status: S1/S2 offline implementiert; optionaler Viewer, kein Live-Apply
+Letzte inhaltliche Anpassung: 2026-07-11, [Issue #610](https://github.com/notariat8/NaC/issues/610)
 
 ## Zweck
 
@@ -42,6 +42,19 @@ Die spätere SharePoint-Site kann zwei zusätzliche Artefakte bekommen:
 | `BPMN Models` | Dokumentbibliothek für freigegebene BPMN-XML-Kopien oder Pointer |
 | `Prozessregister` | Liste für Prozessname, Owner, Status, Version, Review-Datum und Modell-Link |
 
+Diese beiden Viewer-Artefakte bleiben optional. Die Gültigkeit einer
+`BusinessCaseTypeId` hängt stattdessen vom repo-versionierten Katalog und dem
+erforderlichen, viewer-unabhängigen `Vorgangsartenregister` ab. Ein fehlendes
+`Prozessregister`, ein fehlendes BPMN-Modell oder ein deaktivierter Viewer
+macht eine kanonische Vorgangsart nicht ungültig.
+
+Wenn ein `Prozessregister`-Eintrag existiert, gilt
+`ProcessKey == BusinessCaseTypeId`. `ProcessKey` ist eindeutig und indexiert;
+`NacBpmnModelId`, `BpmnDriveItemId`, `BpmnXmlSha256`, `BpmnGitPath`,
+`BpmnGitCommitSha`, `NacBpmnVersion` und `BpmnContentMode` sind nullable.
+Damit kann das optionale Register auch einen Prozess ohne bereits
+veröffentlichtes BPMN-Modell beschreiben.
+
 Das Webpart darf freigegebene BPMN-XML-Dateien lesen. Es darf keine
 Akten-Dokumentinhalte, Mandatswerte, Secrets oder produktive Fachsystemdaten
 lesen. Status-Overlays sind nur als geprüfte Metadaten erlaubt, zum Beispiel
@@ -54,6 +67,17 @@ ist `optional_plan_only_no_live_apply`: `nac m365 teams-sharepoint
 bpmn-viewer-plan --format json` rendert die geplante Bibliothek, Liste und
 Spalten, führt aber keinen Live-Apply gegen Microsoft 365 aus und erweitert
 nicht das verpflichtende MVP-SharePoint-Schema.
+
+Der getrennte S2-Schema-Plan plant das erforderliche
+`Vorgangsartenregister` und die additive Textspalte
+`Akten.VorgangstypId`. Er schützt das bestehende Legacy-Choice
+`Akten.Vorgangstyp` und enthält weder Choice-Erweiterung noch Konvertierung
+oder sonstigen Patch dieses Felds. `Prozessregister` und `BPMN Models` gehören
+nicht zu diesem verpflichtenden Default, sondern ausschließlich zum getrennten
+optionalen Viewer-Provisioning-Plan. Der S2-Plan umfasst 33 Offline-Schritte;
+die Readiness expandiert sie für zwei Workspaces zu 66
+Workspace-Apply-Units. Ausführung und Dry-Run bleiben ohne Graph-Requests und
+SharePoint-Writes im Status `BLOCKED_PENDING_S6_S7_APPROVAL`.
 
 Der erste SPFx-Schnitt liegt source-only unter `spfx/nac-bpmn-viewer`. Der
 Befehl `nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json`

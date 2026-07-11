@@ -63,6 +63,37 @@ from .process_ontology_schema_gap import build_process_ontology_sharepoint_schem
 from .workflow_contract import build_workflow_contract_draft
 
 
+BUSINESS_CASE_INVENTORY_SCHEMA_VERSIONS = {
+    "nac.notarial-business-case-inventory/v0.1",
+    "nac.notarial-business-case-inventory/v0.2",
+}
+PROCESS_ONTOLOGY_SCHEMA_VERSIONS = {
+    "nac.notarial-process-ontology/v1",
+    "nac.notarial-process-ontology/v2",
+}
+PROCESS_ONTOLOGY_SCHEMA_GAP_VERSIONS = {
+    "nac.process-ontology-sharepoint-schema-gap/v0.1",
+    "nac.process-ontology-sharepoint-schema-gap/v0.2",
+}
+PROCESS_ONTOLOGY_SCHEMA_APPLY_PLAN_VERSIONS = {
+    "nac.process-ontology-sharepoint-schema-apply-plan/v0.1",
+    "nac.process-ontology-sharepoint-schema-apply-plan/v0.2",
+}
+PROCESS_ONTOLOGY_SCHEMA_APPLY_READINESS_VERSIONS = {
+    "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1",
+    "nac.process-ontology-sharepoint-schema-apply-readiness/v0.2",
+}
+PROCESS_ONTOLOGY_SCHEMA_APPLY_EXECUTION_CONTRACT_VERSIONS = {
+    "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1",
+    "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.2",
+}
+PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_VERSIONS = {
+    "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+    "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.2",
+}
+LIVE_EXECUTION_APPROVAL_STATE = "BLOCKED_PENDING_S6_S7_APPROVAL"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="notary-kg",
@@ -113,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "business-case-inventory",
-        help="Build the thin notarial business-case inventory for ontology sizing.",
+        help="Build the canonical notarial business-case type inventory, including legacy aliases.",
     )
 
     subparsers.add_parser(
@@ -123,17 +154,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "process-ontology-contract",
-        help="Evaluate the notarial process ontology product-model contract.",
+        help="Evaluate canonical type identity and viewer-independent process ontology validity.",
     )
 
     subparsers.add_parser(
         "process-ontology-schema-gap",
-        help="Compare the process ontology contract with the current SharePoint MVP schema.",
+        help="Compare required type-registry and optional process/viewer projections with SharePoint.",
     )
 
     subparsers.add_parser(
         "process-ontology-schema-apply-plan",
-        help="Build an offline Graph REST apply plan from the process ontology SharePoint schema gaps.",
+        help="Build the offline S2 Graph REST plan without patching legacy Akten.Vorgangstyp.",
     )
 
     subparsers.add_parser(
@@ -785,6 +816,17 @@ def _resolve_optional_repo_path(repo_root: Path, path: Path | None) -> Path | No
     return _resolve_repo_path(repo_root, path) if path is not None else None
 
 
+def _legacy_vorgangstyp_patch_planned(payload: dict) -> bool:
+    return any(
+        step.get("target") == "Akten"
+        and (
+            step.get("source_gap_id") == "Akten.Vorgangstyp.choices"
+            or step.get("request", {}).get("body", {}).get("name") == "Vorgangstyp"
+        )
+        for step in payload.get("steps", [])
+    )
+
+
 def _status_payload(catalogs) -> dict:
     catalog_summaries = [catalog.summary() for catalog in catalogs]
     case_summaries = all_case_summaries(catalogs)
@@ -897,13 +939,16 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- produktive Register-/XNP-Aktion: {payload['guardrails']['productive_register_or_xnp_action']}")
         return
 
-    if payload.get("schema_version") == "nac.notarial-business-case-inventory/v0.1":
+    if payload.get("schema_version") in BUSINESS_CASE_INVENTORY_SCHEMA_VERSIONS:
         summary = payload["summary"]
         print("Notarial business-case inventory")
         print(f"- status: {payload['status']}")
         print(f"- mode: {payload['mode']}")
         print(f"- business cases: {summary['business_case_count']}")
         print(f"- canonical coverage: {summary['canonical_covered_count']}/{summary['canonical_target_count']}")
+        if payload["schema_version"].endswith("/v0.2"):
+            print(f"- canonical business-case types: {summary['canonical_business_case_type_count']}")
+            print(f"- legacy aliases: {summary['legacy_alias_count']}")
         print(f"- backlog candidates: {summary['backlog_candidate_count']}")
         print(f"- max complexity score: {summary['max_complexity_score']}")
         print("")
@@ -918,6 +963,13 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print("Recommended deep-process slices")
         for slug in summary["deep_process_slices_recommended"]:
             print(f"- {slug}")
+        if payload["schema_version"].endswith("/v0.2"):
+            validity = payload["type_validity_dependencies"]
+            print("")
+            print("Type validity")
+            print(f"- Vorgangsartenregister required: {validity['vorgangsartenregister_required']}")
+            print(f"- Prozessregister required: {validity['prozessregister_required']}")
+            print(f"- viewer required: {validity['viewer_required']}")
         return
 
     if payload.get("schema_version") == "nac.notarial-ontology-sizing-storage/v0.1":
@@ -943,7 +995,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
                 print(f"- {warning}")
         return
 
-    if payload.get("schema_version") == "nac.notarial-process-ontology/v1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_VERSIONS:
         evaluation = payload["evaluation"]
         summary = evaluation["summary"]
         print("Notarial process ontology contract")
@@ -951,6 +1003,10 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- contract: {payload['contract_path']}")
         print(f"- business cases: {summary['business_case_count']}")
         print(f"- canonical coverage: {summary['canonical_covered_count']}/{summary['canonical_required']}")
+        if payload["schema_version"].endswith("/v2"):
+            inventory_summary = payload["inventory_snapshot"]["summary"]
+            print(f"- canonical business-case types: {inventory_summary['canonical_business_case_type_count']}")
+            print(f"- legacy aliases: {inventory_summary['legacy_alias_count']}")
         print(f"- entity classes: {summary['entity_class_count']}")
         print(f"- relationship templates: {summary['relationship_template_count']}")
         print(f"- process phases: {summary['process_phase_count']}")
@@ -965,7 +1021,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
                 print(f"- {warning}")
         return
 
-    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-gap/v0.1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_GAP_VERSIONS:
         summary = payload["summary"]
         print("Process ontology to SharePoint schema gap review")
         print(f"- status: {payload['status']}")
@@ -976,9 +1032,18 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- field gaps: {summary['field_gap_count']}")
         print(f"- choice gaps: {summary['choice_gap_count']}")
         print(f"- total gaps: {summary['total_gap_count']}")
+        if payload["schema_version"].endswith("/v0.2"):
+            legacy = payload["legacy_column_contract"]
+            required_targets = {gap["target"] for gap in payload["required_projection_gaps"]}
+            optional_targets = {gap["target"] for gap in payload["optional_projection_gaps"]}
+            print(f"- canonical BusinessCaseTypeIds: {len(payload['business_case_type_ids'])}")
+            print(f"- Vorgangsartenregister required projection: {'Vorgangsartenregister' in required_targets}")
+            print(f"- Prozessregister optional projection: {'Prozessregister' in optional_targets}")
+            print(f"- legacy {legacy['target']} protected: {legacy['protected']}")
+            print("- legacy Akten.Vorgangstyp patch planned: False")
         return
 
-    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-apply-plan/v0.1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_APPLY_PLAN_VERSIONS:
         summary = payload["summary"]
         print("Process ontology SharePoint schema apply plan")
         print(f"- status: {payload['status']}")
@@ -990,9 +1055,12 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- extend choice steps: {summary['extend_choice_step_count']}")
         print(f"- total steps: {summary['total_step_count']}")
         print(f"- owner gate before apply: {summary['owner_gate_required_before_apply']}")
+        if payload["schema_version"].endswith("/v0.2"):
+            print(f"- legacy Akten.Vorgangstyp patch planned: {_legacy_vorgangstyp_patch_planned(payload)}")
+            print(f"- live execution approval: {summary['live_execution_approval_state']}")
         return
 
-    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_APPLY_READINESS_VERSIONS:
         summary = payload["summary"]
         print("Process ontology SharePoint schema apply readiness")
         print(f"- status: {payload['status']}")
@@ -1005,9 +1073,11 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- missing required list IDs: {summary['missing_required_list_id_count']}")
         print(f"- dynamic ID resolutions: {summary['dynamic_resource_resolution_count']}")
         print(f"- live apply readiness: {summary['live_apply_readiness']}")
+        if payload["schema_version"].endswith("/v0.2"):
+            print(f"- live execution approval: {payload['source']['live_execution_approval_state']}")
         return
 
-    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_APPLY_EXECUTION_CONTRACT_VERSIONS:
         summary = payload["summary"]
         print("Process ontology SharePoint schema apply execution contract")
         print(f"- status: {payload['status']}")
@@ -1021,7 +1091,7 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- owner gate before live apply: {summary['owner_gate_required_before_live_apply']}")
         return
 
-    if payload.get("schema_version") == "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1":
+    if payload.get("schema_version") in PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_VERSIONS:
         summary = payload["summary"]
         print("Process ontology SharePoint schema apply runner dry-run")
         print(f"- status: {payload['status']}")
@@ -1032,6 +1102,10 @@ def _print_payload(payload: dict, output_format: str) -> None:
         print(f"- future mutation requests: {summary['future_mutation_request_count']}")
         print(f"- readback requests: {summary['readback_request_count']}")
         print(f"- owner gate before live apply: {summary['owner_gate_required_before_live_apply']}")
+        if payload["schema_version"].endswith("/v0.2"):
+            print(f"- executes Graph requests: {summary['executes_graph_requests']}")
+            print(f"- writes SharePoint: {summary['writes_sharepoint']}")
+            print(f"- live execution approval: {LIVE_EXECUTION_APPROVAL_STATE}")
         return
 
     if payload.get("schema_version") == PROCESS_ONTOLOGY_SCHEMA_APPLY_RUNNER_DRY_RUN_ARTIFACT_SCHEMA_VERSION:

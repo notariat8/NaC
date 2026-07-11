@@ -84,6 +84,15 @@ REQUIRED_ENDPOINTS = {
     "GET /sites/{site-id}/lists/{list-id}/items",
     "GET /sites/{site-id}/lists/{list-id}/items/{item-id}",
 }
+PROCESS_ROW_BPMN_FIELDS = {
+    "NacBpmnModelId",
+    "BpmnDriveItemId",
+    "BpmnXmlSha256",
+    "BpmnGitPath",
+    "BpmnGitCommitSha",
+    "NacBpmnVersion",
+    "BpmnContentMode",
+}
 
 
 def main() -> int:
@@ -159,7 +168,7 @@ def _validate_contract(
 ) -> list[str]:
     errors: list[str] = []
     expected = {
-        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.1",
+        "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.2",
         "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
         "status": "contract_first",
     }
@@ -393,6 +402,31 @@ def _validate_contract(
             "linked_bpmn_model_renderable",
         }:
             errors.append("process_register_selection.required_checks is invalid")
+
+    binding = payload.get("business_case_type_binding")
+    if not isinstance(binding, dict):
+        errors.append("business_case_type_binding must be an object")
+    else:
+        expected = {
+            "business_case_type_id_field": "BusinessCaseTypeId",
+            "process_register_list": "Prozessregister",
+            "existing_row_join_invariant": "ProcessKey == BusinessCaseTypeId",
+            "process_key_column": "ProcessKey",
+        }
+        for key, value in expected.items():
+            if binding.get(key) != value:
+                errors.append(f"business_case_type_binding.{key} must be {value}")
+        for flag in (
+            "process_register_optional_for_business_case_type_validity",
+            "process_key_unique",
+            "process_key_indexed",
+        ):
+            if binding.get(flag) is not True:
+                errors.append(f"business_case_type_binding.{flag} must be true")
+        if binding.get("absence_invalidates_business_case_type") is not False:
+            errors.append("business_case_type_binding.absence_invalidates_business_case_type must be false")
+        if set(_as_list(binding.get("nullable_process_row_bpmn_fields"))) != PROCESS_ROW_BPMN_FIELDS:
+            errors.append("business_case_type_binding.nullable_process_row_bpmn_fields is invalid")
 
     runtime_readiness = payload.get("runtime_readiness")
     if not isinstance(runtime_readiness, dict):

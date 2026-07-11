@@ -67,7 +67,7 @@ def main() -> int:
             errors.append("artifact index status must pass")
         if payload.get("summary", {}).get("artifact_count") != 1:
             errors.append("artifact index must include one synthetic artifact")
-        if payload.get("summary", {}).get("total_dry_run_step_count") != 68:
+        if payload.get("summary", {}).get("total_dry_run_step_count") != 66:
             errors.append("artifact index must carry the dry-run step total")
         if not index_json.is_file():
             errors.append("JSON artifact index was not written")

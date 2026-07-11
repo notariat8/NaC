@@ -65,12 +65,12 @@ def main() -> int:
 
         if payload.get("schema_version") != SCHEMA_VERSION:
             errors.append("unexpected owner-gated live plan schema version")
-        if payload.get("status") != "READY_FOR_OWNER_APPROVAL":
-            errors.append("owner-gated live plan must be ready for owner approval")
-        if payload.get("summary", {}).get("planned_live_step_count") != 68:
-            errors.append("owner-gated live plan must cover 68 planned live steps")
-        if payload.get("summary", {}).get("owner_gate_required_now") is not True:
-            errors.append("owner-gated live plan must require owner gate now")
+        if payload.get("status") != "BLOCKED":
+            errors.append("owner-gated live plan must be blocked pending S6/S7 approval")
+        if payload.get("summary", {}).get("planned_live_step_count") != 66:
+            errors.append("owner-gated live plan must cover 66 planned live steps")
+        if payload.get("summary", {}).get("owner_gate_required_now") is not False:
+            errors.append("owner-gated live plan must not solicit approval before S6/S7")
         if not plan_json.is_file():
             errors.append("JSON owner-gated live plan was not written")
         if not plan_md.is_file():

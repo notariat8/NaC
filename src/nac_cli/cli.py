@@ -283,7 +283,7 @@ def build_parser() -> argparse.ArgumentParser:
     kg_pilot_checklist.add_argument("slug")
     kg_business_case_inventory = kg_sub.add_parser(
         "business-case-inventory",
-        help="Erzeugt das dünne Geschäftsvorfall-Inventar für Ontologie-Sizing.",
+        help="Erzeugt das kanonische Vorgangsarten-Inventar einschließlich historischer Aliase.",
     )
     kg_business_case_inventory.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_ontology_storage_contract = kg_sub.add_parser(
@@ -293,17 +293,17 @@ def build_parser() -> argparse.ArgumentParser:
     kg_ontology_storage_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_process_ontology_contract = kg_sub.add_parser(
         "process-ontology-contract",
-        help="Prüft den Prozess-/Ontologie-Produktmodell-Vertrag gegen Inventar und SharePoint-MVP-Grenze.",
+        help="Prüft kanonische Typidentität und viewer-unabhängige Gültigkeit des Ontologievertrags.",
     )
     kg_process_ontology_contract.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_process_ontology_schema_gap = kg_sub.add_parser(
         "process-ontology-schema-gap",
-        help="Prüft den Prozess-/Ontologie-Vertrag gegen das aktuelle SharePoint-MVP-Listenmodell.",
+        help="Prüft Pflicht-Vorgangsartenregister und optionale Prozess-/Viewer-Projektionen gegen SharePoint.",
     )
     kg_process_ontology_schema_gap.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_process_ontology_schema_apply_plan = kg_sub.add_parser(
         "process-ontology-schema-apply-plan",
-        help="Erzeugt einen Offline-Graph-REST-Apply-Plan aus den Prozess-/Ontologie-SharePoint-Schema-Gaps.",
+        help="Erzeugt den Offline-S2-Plan ohne Patch des Legacy-Felds Akten.Vorgangstyp.",
     )
     kg_process_ontology_schema_apply_plan.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
     kg_process_ontology_schema_apply_readiness = kg_sub.add_parser(

@@ -38,19 +38,29 @@ def main() -> int:
     errors.extend(validation.errors)
 
     summary = payload.get("summary", {})
-    if summary.get("total_step_count") != 34:
-        errors.append("expected 34 plan steps derived from the current schema gap review")
-    if summary.get("create_column_step_count") != 28:
-        errors.append("expected 28 create-column steps")
-    if summary.get("extend_choice_step_count") != 4:
-        errors.append("expected 4 choice-extension steps")
+    if summary.get("total_step_count") != 33:
+        errors.append("expected 33 required-only plan steps derived from the current schema gap review")
+    if summary.get("create_column_step_count") != 29:
+        errors.append("expected 29 create-column steps")
+    if summary.get("extend_choice_step_count") != 3:
+        errors.append("expected 3 choice-extension steps")
     if summary.get("create_list_step_count") != 1:
-        errors.append("expected one optional process-register list creation plan")
-    if summary.get("create_document_library_step_count") != 1:
-        errors.append("expected one optional BPMN model document-library creation plan")
+        errors.append("expected only the required type-register creation plan")
+    if summary.get("create_document_library_step_count") != 0:
+        errors.append("optional BPMN model library must stay out of the default S2 plan")
+    if summary.get("excluded_optional_projection_gap_count") != 2:
+        errors.append("expected two separately exposed optional projection gaps")
+
+    legacy_targets = [
+        step for step in payload.get("steps", [])
+        if step.get("target") == "Akten"
+        and step.get("request", {}).get("body", {}).get("name") == "Vorgangstyp"
+    ]
+    if legacy_targets:
+        errors.append("S2 plan must not target legacy Akten.Vorgangstyp")
 
     operations = {step.get("operation") for step in payload.get("steps", [])}
-    for operation in {"create_list", "create_document_library", "create_column", "extend_choice_column"}:
+    for operation in {"create_list", "create_column", "extend_choice_column"}:
         if operation not in operations:
             errors.append(f"missing apply-plan operation: {operation}")
 

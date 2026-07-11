@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,12 +14,59 @@ from .process_ontology_contract import (
 
 
 SHAREPOINT_SCHEMA_PATH = Path("deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json")
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-gap/v0.1"
+BPMN_VIEWER_PROVISIONING_PATH = Path("deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json")
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-gap/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_gap"
+
+LEGACY_VORGANGSTYP_BASELINE: dict[str, Any] = {
+    "name": "Vorgangstyp",
+    "type": "choice",
+    "choices": [
+        "immobilienkaufvertrag",
+        "unterschriftsbeglaubigung",
+        "online-gmbh-gruendung",
+        "handelsregisteranmeldung",
+    ],
+    "required": True,
+}
+LEGACY_VORGANGSTYP_BASELINE_SHA256 = "471a8b1702a8636ac831dd93cf123a587ea14a16fddfe2ccde1d5d66f75f1eeb"
+
+
+REQUIRED_RUNTIME_PROJECTIONS = {
+    "lists": {
+        "Vorgangsartenregister": [
+            {
+                "name": "BusinessCaseTypeId",
+                "type": "text",
+                "required": True,
+                "indexed": True,
+                "enforceUniqueValues": True,
+                "maxLength": 128,
+            },
+            {
+                "name": "LifecycleStatus",
+                "type": "choice",
+                "required": True,
+                "choices": ["active", "deprecated", "retired"],
+                "indexed": False,
+            },
+            {"name": "Selectable", "type": "boolean", "required": True, "indexed": False},
+            {"name": "CatalogVersion", "type": "text", "required": True, "indexed": False},
+        ]
+    }
+}
 
 
 EXPECTED_PROCESS_COLUMNS: dict[str, list[dict[str, Any]]] = {
     "Akten": [
+        {
+            "name": "VorgangstypId",
+            "type": "text",
+            "required": False,
+            "indexed": True,
+            "maxLength": 128,
+            "reason": "Canonical BusinessCaseTypeId; additive to the unchanged legacy Vorgangstyp Choice.",
+        },
         {"name": "ProcessInstanceId", "type": "text", "required": True, "reason": "Stable runtime process-instance identifier."},
         {"name": "CurrentPhase", "type": "choice", "required": True, "reason": "Current canonical process phase from the process ontology contract."},
         {"name": "CurrentBpmnStepCode", "type": "text", "required": False, "reason": "Current BPMN step pointer for task and evidence routing."},
@@ -60,26 +108,6 @@ EXPECTED_PROCESS_COLUMNS: dict[str, list[dict[str, Any]]] = {
     ],
 }
 
-OPTIONAL_PROCESS_PROJECTIONS = {
-    "lists": {
-        "Prozessregister": [
-            {"name": "ProcessModelId", "type": "text", "required": True},
-            {"name": "BusinessCaseType", "type": "choice", "required": True},
-            {"name": "ProcessPhaseTemplate", "type": "multiChoice", "required": True},
-            {"name": "BpmnModelRef", "type": "text", "required": False},
-            {"name": "ModelStatus", "type": "choice", "required": True},
-            {"name": "Version", "type": "text", "required": True},
-        ]
-    },
-    "document_libraries": {
-        "BPMN Models": [
-            {"name": "BusinessCaseType", "type": "choice", "required": True},
-            {"name": "ModelStatus", "type": "choice", "required": True},
-            {"name": "Version", "type": "text", "required": True},
-        ]
-    },
-}
-
 
 @dataclass(frozen=True, slots=True)
 class ProcessOntologySchemaGapValidation:
@@ -91,17 +119,38 @@ def build_process_ontology_sharepoint_schema_gap(repo_root: Path) -> dict[str, A
     process_contract = build_process_ontology_contract(repo_root)
     inventory = build_business_case_inventory(repo_root)
     sharepoint_schema = json.loads((repo_root / SHAREPOINT_SCHEMA_PATH).read_text(encoding="utf-8"))
+    viewer_provisioning = json.loads((repo_root / BPMN_VIEWER_PROVISIONING_PATH).read_text(encoding="utf-8"))
+    optional_process_projections = _optional_process_projections(viewer_provisioning)
     list_index = _sharepoint_list_index(sharepoint_schema)
     library_index = _sharepoint_library_index(sharepoint_schema)
     required_lists = process_contract["contract"]["sharepoint_projection_rules"]["required_lists_or_libraries"]
     process_phases = process_contract["contract"]["required_process_phases"]
     role_templates = process_contract["contract"]["required_role_templates"]
+    legacy_vorgangstyp = list_index.get("Akten", {}).get("raw_columns_by_name", {}).get("Vorgangstyp")
     all_case_slugs = [item["slug"] for item in inventory["business_cases"]]
+    business_case_type_ids = [
+        str(item.get("business_case_type_id", item["slug"]))
+        for item in inventory["business_cases"]
+        if item.get("inventory_scope") == "canonical_top10_or_next10"
+    ]
 
-    missing_required_lists = [list_name for list_name in required_lists if list_name not in list_index]
-    optional_projection_gaps = _optional_projection_gaps(list_index, library_index)
+    missing_required_lists = [
+        list_name
+        for list_name in required_lists
+        if list_name not in list_index
+        and list_name not in REQUIRED_RUNTIME_PROJECTIONS["lists"]
+    ]
+    required_projection_gaps = _required_projection_gaps(list_index)
+    optional_projection_gaps = _optional_projection_gaps(list_index, library_index, optional_process_projections)
     field_gaps = _field_gaps(list_index)
     choice_gaps = _choice_gaps(list_index, all_case_slugs, process_phases, role_templates)
+    shape_mismatch_gaps = [
+        gap
+        for gap in [*required_projection_gaps, *field_gaps]
+        if gap["gap_type"].endswith("shape_mismatch") or gap["gap_type"] == "field_shape_mismatch"
+    ]
+    observed_legacy_fingerprint = _payload_sha256(legacy_vorgangstyp) if legacy_vorgangstyp is not None else None
+    legacy_matches_baseline = legacy_vorgangstyp == LEGACY_VORGANGSTYP_BASELINE
     payload = {
         "schema_version": SCHEMA_VERSION,
         "contract_id": CONTRACT_ID,
@@ -112,6 +161,8 @@ def build_process_ontology_sharepoint_schema_gap(repo_root: Path) -> dict[str, A
             "process_ontology_contract_status": process_contract["status"],
             "sharepoint_schema": str(SHAREPOINT_SCHEMA_PATH),
             "sharepoint_schema_version": sharepoint_schema["schema_version"],
+            "bpmn_viewer_provisioning": str(BPMN_VIEWER_PROVISIONING_PATH),
+            "bpmn_viewer_provisioning_version": viewer_provisioning["schema_version"],
             "business_case_inventory_schema": inventory["schema_version"],
             "business_case_inventory_status": inventory["status"],
             "graph_rest_only": sharepoint_schema["graph"]["rest_only"],
@@ -121,13 +172,35 @@ def build_process_ontology_sharepoint_schema_gap(repo_root: Path) -> dict[str, A
             "business_case_count": len(all_case_slugs),
             "required_list_count": len(required_lists),
             "missing_required_list_count": len(missing_required_lists),
+            "required_projection_gap_count": len(required_projection_gaps),
             "optional_projection_gap_count": len(optional_projection_gaps),
             "field_gap_count": len(field_gaps),
             "choice_gap_count": len(choice_gaps),
-            "total_gap_count": len(missing_required_lists) + len(optional_projection_gaps) + len(field_gaps) + len(choice_gaps),
+            "blocking_shape_mismatch_count": len(shape_mismatch_gaps),
+            "optional_shape_mismatch_count": sum(
+                1 for gap in optional_projection_gaps if gap["gap_type"].endswith("shape_mismatch")
+            ),
+            "total_gap_count": (
+                len(missing_required_lists)
+                + len(required_projection_gaps)
+                + len(optional_projection_gaps)
+                + len(field_gaps)
+                + len(choice_gaps)
+            ),
             "owner_gate_required_now": False,
         },
+        "business_case_type_ids": business_case_type_ids,
+        "legacy_column_contract": {
+            "target": "Akten.Vorgangstyp",
+            "protected": True,
+            "expected_type": "choice",
+            "baseline_definition": LEGACY_VORGANGSTYP_BASELINE,
+            "baseline_fingerprint_sha256": LEGACY_VORGANGSTYP_BASELINE_SHA256,
+            "observed_fingerprint_sha256": observed_legacy_fingerprint,
+            "matches_pinned_baseline": legacy_matches_baseline,
+        },
         "missing_required_lists": _missing_required_list_gaps(missing_required_lists),
+        "required_projection_gaps": required_projection_gaps,
         "optional_projection_gaps": optional_projection_gaps,
         "field_gaps": field_gaps,
         "choice_gaps": choice_gaps,
@@ -188,19 +261,47 @@ def validate_process_ontology_sharepoint_schema_gap(payload: dict[str, Any]) -> 
     if source.get("legacy_sharepoint_api_allowed") is not False:
         errors.append("legacy SharePoint API must remain blocked")
 
+    legacy = payload.get("legacy_column_contract", {})
+    if legacy.get("target") != "Akten.Vorgangstyp" or legacy.get("protected") is not True:
+        errors.append("legacy Akten.Vorgangstyp must remain protected")
+    if legacy.get("expected_type") != "choice":
+        errors.append("legacy Akten.Vorgangstyp must remain Choice")
+    if legacy.get("baseline_definition") != LEGACY_VORGANGSTYP_BASELINE:
+        errors.append("legacy Akten.Vorgangstyp baseline definition must remain pinned")
+    if legacy.get("baseline_fingerprint_sha256") != LEGACY_VORGANGSTYP_BASELINE_SHA256:
+        errors.append("legacy Akten.Vorgangstyp baseline fingerprint must remain pinned")
+    if legacy.get("observed_fingerprint_sha256") != LEGACY_VORGANGSTYP_BASELINE_SHA256:
+        errors.append("legacy Akten.Vorgangstyp is missing or drifted from the pinned baseline")
+    if legacy.get("matches_pinned_baseline") is not True:
+        errors.append("legacy Akten.Vorgangstyp must exactly match the pinned baseline")
+
+    business_case_type_ids = payload.get("business_case_type_ids", [])
+    if len(business_case_type_ids) != len(set(business_case_type_ids)) or len(business_case_type_ids) < 20:
+        errors.append("canonical BusinessCaseTypeId values must be unique and complete")
+
     summary = payload.get("summary", {})
     if summary.get("business_case_count", 0) < 20:
         errors.append("schema gap review must cover all canonical business cases")
     if summary.get("missing_required_list_count") != 0:
         errors.append("MVP required SharePoint lists must exist before field gap review")
-    if summary.get("field_gap_count", 0) <= 0:
-        errors.append("expected process-instance field gaps to be surfaced")
-    if summary.get("choice_gap_count", 0) <= 0:
-        errors.append("expected process ontology choice gaps to be surfaced")
-    if summary.get("optional_projection_gap_count", 0) <= 0:
-        errors.append("expected optional Prozessregister/BPMN Models projection gaps")
+    gap_sections = {
+        "required_projection_gap_count": payload.get("required_projection_gaps", []),
+        "optional_projection_gap_count": payload.get("optional_projection_gaps", []),
+        "field_gap_count": payload.get("field_gaps", []),
+        "choice_gap_count": payload.get("choice_gaps", []),
+    }
+    for count_key, gaps in gap_sections.items():
+        if summary.get(count_key) != len(gaps):
+            errors.append(f"{count_key} must match its gap section")
+    if summary.get("blocking_shape_mismatch_count") != 0:
+        errors.append("existing SharePoint fields must match their complete expected shape")
 
-    for gap in [*payload.get("field_gaps", []), *payload.get("choice_gaps", []), *payload.get("optional_projection_gaps", [])]:
+    for gap in [
+        *payload.get("required_projection_gaps", []),
+        *payload.get("field_gaps", []),
+        *payload.get("choice_gaps", []),
+        *payload.get("optional_projection_gaps", []),
+    ]:
         if gap.get("mode") != "plan_only":
             errors.append(f"{gap.get('id', '<unknown>')}: gap must be plan_only")
         if gap.get("owner_gate_required_before_apply") is not True:
@@ -237,21 +338,59 @@ def validate_process_ontology_sharepoint_schema_gap(payload: dict[str, Any]) -> 
     return ProcessOntologySchemaGapValidation(status="PASSED" if not errors else "FAILED", errors=tuple(errors))
 
 
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _sharepoint_list_index(schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {
-        item["display_name"]: {
-            **item,
-            "columns_by_name": {column["name"]: column for column in item.get("columns", [])},
+    result: dict[str, dict[str, Any]] = {}
+    for item in schema.get("sharepoint", {}).get("lists", []):
+        indexed_columns = set(item.get("indexed_columns", []))
+        columns = {
+            column["name"]: _normalized_column_shape(column, column["name"] in indexed_columns)
+            for column in item.get("columns", [])
         }
-        for item in schema.get("sharepoint", {}).get("lists", [])
-    }
+        result[item["display_name"]] = {**item, "columns_by_name": columns, "raw_columns_by_name": {column["name"]: column for column in item.get("columns", [])}}
+    return result
 
 
 def _sharepoint_library_index(schema: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {
-        item["display_name"]: item
-        for item in schema.get("sharepoint", {}).get("document_libraries", [])
-    }
+    result: dict[str, dict[str, Any]] = {}
+    for item in schema.get("sharepoint", {}).get("document_libraries", []):
+        indexed_columns = set(item.get("indexed_columns", []))
+        columns = {
+            column["name"]: _normalized_column_shape(column, column["name"] in indexed_columns)
+            for column in item.get("columns", [])
+        }
+        result[item["display_name"]] = {**item, "columns_by_name": columns, "raw_columns_by_name": {column["name"]: column for column in item.get("columns", [])}}
+    return result
+
+
+def _normalized_column_shape(column: dict[str, Any], indexed_by_parent: bool = False) -> dict[str, Any]:
+    normalized = dict(column)
+    normalized["indexed"] = bool(column.get("indexed", indexed_by_parent))
+    if "enforce_unique_values" in column:
+        normalized["enforceUniqueValues"] = column["enforce_unique_values"]
+    text = column.get("text", {})
+    if "max_length" in column:
+        normalized["maxLength"] = column["max_length"]
+    elif isinstance(text, dict) and "maxLength" in text:
+        normalized["maxLength"] = text["maxLength"]
+    choice = column.get("choice", {})
+    if isinstance(choice, dict) and "choices" in choice:
+        normalized["choices"] = choice["choices"]
+    return normalized
+
+
+def _column_shape_mismatches(existing: dict[str, Any], expected: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    mismatches: dict[str, dict[str, Any]] = {}
+    for key in ("type", "required", "indexed", "enforceUniqueValues", "maxLength"):
+        if key in expected and existing.get(key) != expected[key]:
+            mismatches[key] = {"expected": expected[key], "observed": existing.get(key)}
+    if "choices" in expected and existing.get("choices") != expected["choices"]:
+        mismatches["choices"] = {"expected": expected["choices"], "observed": existing.get("choices")}
+    return mismatches
 
 
 def _missing_required_list_gaps(missing_required_lists: list[str]) -> list[dict[str, Any]]:
@@ -267,33 +406,118 @@ def _missing_required_list_gaps(missing_required_lists: list[str]) -> list[dict[
     ]
 
 
+def _optional_process_projections(provisioning: dict[str, Any]) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    sharepoint = provisioning.get("sharepoint", {})
+    projections: dict[str, dict[str, list[dict[str, Any]]]] = {
+        "lists": {},
+        "document_libraries": {},
+    }
+    for source_key, target_key in (("lists", "lists"), ("document_libraries", "document_libraries")):
+        for resource in sharepoint.get(source_key, []):
+            indexed_columns = set(resource.get("indexed_columns", []))
+            expected_columns: list[dict[str, Any]] = []
+            for column in resource.get("columns", []):
+                expected = {
+                    "name": column["name"],
+                    "type": column["type"],
+                    "required": bool(column.get("required", False)),
+                    "indexed": column["name"] in indexed_columns,
+                }
+                if "choices" in column:
+                    expected["choices"] = list(column["choices"])
+                if column.get("enforce_unique_values") is True:
+                    expected["enforceUniqueValues"] = True
+                if column["name"] == "ProcessKey":
+                    expected["maxLength"] = 128
+                expected_columns.append(expected)
+            projections[target_key][resource["display_name"]] = expected_columns
+    return projections
+
+
 def _optional_projection_gaps(
     list_index: dict[str, dict[str, Any]],
     library_index: dict[str, dict[str, Any]],
+    optional_process_projections: dict[str, dict[str, list[dict[str, Any]]]],
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
-    for list_name, columns in OPTIONAL_PROCESS_PROJECTIONS["lists"].items():
-        if list_name not in list_index:
+    gaps.extend(
+        _projection_gaps(
+            list_index,
+            optional_process_projections["lists"],
+            required_for_mvp=False,
+            missing_gap_type="missing_optional_process_projection_list",
+            mismatch_gap_type="optional_process_projection_shape_mismatch",
+            reason="Optional process model registry for BPMN/SPFx viewer and process template selection.",
+        )
+    )
+    gaps.extend(
+        _projection_gaps(
+            library_index,
+            optional_process_projections["document_libraries"],
+            required_for_mvp=False,
+            missing_gap_type="missing_optional_bpmn_model_library",
+            mismatch_gap_type="optional_bpmn_model_library_shape_mismatch",
+            reason="Optional SharePoint document library for approved BPMN model files.",
+        )
+    )
+    return gaps
+
+
+def _required_projection_gaps(list_index: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    return _projection_gaps(
+        list_index,
+        REQUIRED_RUNTIME_PROJECTIONS["lists"],
+        required_for_mvp=True,
+        missing_gap_type="missing_required_runtime_projection_list",
+        mismatch_gap_type="required_runtime_projection_shape_mismatch",
+        reason="Required viewer-independent runtime projection for canonical business-case type validation.",
+    )
+
+
+def _projection_gaps(
+    resource_index: dict[str, dict[str, Any]],
+    expected_resources: dict[str, list[dict[str, Any]]],
+    *,
+    required_for_mvp: bool,
+    missing_gap_type: str,
+    mismatch_gap_type: str,
+    reason: str,
+) -> list[dict[str, Any]]:
+    gaps: list[dict[str, Any]] = []
+    for resource_name, expected_columns in expected_resources.items():
+        resource = resource_index.get(resource_name)
+        if resource is None:
             gaps.append(
                 _gap(
-                    gap_id=f"optional-list.{list_name}",
-                    target=list_name,
-                    gap_type="missing_optional_process_projection_list",
-                    required_for_mvp=False,
-                    reason="Optional process model registry for BPMN/SPFx viewer and process template selection.",
-                    planned_columns=columns,
+                    gap_id=f"{'required' if required_for_mvp else 'optional'}-resource.{resource_name}",
+                    target=resource_name,
+                    gap_type=missing_gap_type,
+                    required_for_mvp=required_for_mvp,
+                    reason=reason,
+                    planned_columns=expected_columns,
                 )
             )
-    for library_name, columns in OPTIONAL_PROCESS_PROJECTIONS["document_libraries"].items():
-        if library_name not in library_index:
+            continue
+        existing_columns = resource.get("columns_by_name", {})
+        mismatches = {
+            expected["name"]: (
+                {"missing": {"expected": expected, "observed": None}}
+                if expected["name"] not in existing_columns
+                else _column_shape_mismatches(existing_columns[expected["name"]], expected)
+            )
+            for expected in expected_columns
+        }
+        mismatches = {name: values for name, values in mismatches.items() if values}
+        if mismatches:
             gaps.append(
                 _gap(
-                    gap_id=f"optional-library.{library_name}",
-                    target=library_name,
-                    gap_type="missing_optional_bpmn_model_library",
-                    required_for_mvp=False,
-                    reason="Optional SharePoint document library for approved BPMN model files.",
-                    planned_columns=columns,
+                    gap_id=f"{'required' if required_for_mvp else 'optional'}-resource.{resource_name}.shape",
+                    target=resource_name,
+                    gap_type=mismatch_gap_type,
+                    required_for_mvp=required_for_mvp,
+                    reason=reason,
+                    planned_columns=expected_columns,
+                    shape_mismatches=mismatches,
                 )
             )
     return gaps
@@ -317,16 +541,17 @@ def _field_gaps(list_index: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                     )
                 )
                 continue
-            if existing.get("type") != expected["type"]:
+            mismatches = _column_shape_mismatches(existing, expected)
+            if mismatches:
                 gaps.append(
                     _gap(
-                        gap_id=f"{list_name}.{expected['name']}.type",
+                        gap_id=f"{list_name}.{expected['name']}.shape",
                         target=list_name,
-                        gap_type="field_type_mismatch",
+                        gap_type="field_shape_mismatch",
                         field=expected,
-                        existing_type=existing.get("type"),
                         required_for_mvp=bool(expected["required"]),
                         reason=expected["reason"],
+                        shape_mismatches=mismatches,
                     )
                 )
     return gaps
@@ -339,13 +564,6 @@ def _choice_gaps(
     role_templates: list[str],
 ) -> list[dict[str, Any]]:
     checks = [
-        {
-            "list": "Akten",
-            "field": "Vorgangstyp",
-            "required_choices": all_case_slugs,
-            "gap_type": "business_case_choice_extension_plan",
-            "required_for_mvp": True,
-        },
         {
             "list": "Akten",
             "field": "CurrentPhase",
@@ -403,6 +621,7 @@ def _gap(
     existing_type: str | None = None,
     missing_choice_count: int | None = None,
     missing_choices: list[str] | None = None,
+    shape_mismatches: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     gap = {
         "id": gap_id,
@@ -426,4 +645,6 @@ def _gap(
         gap["missing_choice_count"] = missing_choice_count
     if missing_choices is not None:
         gap["missing_choices"] = missing_choices
+    if shape_mismatches is not None:
+        gap["shape_mismatches"] = shape_mismatches
     return gap

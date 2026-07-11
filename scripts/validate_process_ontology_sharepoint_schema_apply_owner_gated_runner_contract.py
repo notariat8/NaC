@@ -67,8 +67,8 @@ def main() -> int:
             errors.append("unexpected owner-gated runner contract schema version")
         if payload.get("status") != "PASSED":
             errors.append("owner-gated runner contract must pass")
-        if payload.get("summary", {}).get("runner_step_count") != 68:
-            errors.append("owner-gated runner contract must cover 68 runner steps")
+        if payload.get("summary", {}).get("runner_step_count") != 66:
+            errors.append("owner-gated runner contract must cover 66 runner steps")
         if not contract_json.is_file():
             errors.append("JSON owner-gated runner contract was not written")
         if not contract_md.is_file():

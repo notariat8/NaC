@@ -1,119 +1,105 @@
-# Notarial Process Ontology Contract
+# Notarial Process/Ontology Contract
 
-This decision note fixes the product-model contract for the M365/SharePoint MVP.
+Status: S1/S2 implemented offline on 2026-07-11 under
+[Issue #610](https://github.com/notariat8/NaC/issues/610); S3-S7 open.
 
-The machine-readable contract lives in
+This decision note describes the implemented domain product-model contract for
+the M365/SharePoint MVP. The machine-readable contract is
 [workflows/contracts/notarial-process-ontology.contract.json](../../../workflows/contracts/notarial-process-ontology.contract.json)
-and is checked with `nac kg process-ontology-contract --format json`.
+and is evaluated with `nac kg process-ontology-contract`.
 
-## Purpose
+## Identity And Validity
 
-The contract is the product boundary between the business-case inventory, BPMN
-process model, ontology projection, SharePoint storage and agent runtime. It no
-longer only asks whether SharePoint works technically; it defines the canonical
-product objects NaC knows for notarial workflows:
+- The inventory contains 20 canonical `BusinessCaseTypeId` values and two
+  historical aliases. Aliases are not new canonical identities.
+- The repository-versioned use-case catalog remains authoritative.
+- The viewer-independent `Vorgangsartenregister` is the required SharePoint
+  runtime projection. `BusinessCaseTypeId` is unique, indexed and associated
+  with `LifecycleStatus`, `Selectable` and `CatalogVersion` there.
+- `Akten.VorgangstypId` is the additive indexed text projection of the same
+  identity.
+- `Akten.Vorgangstyp` remains an unchanged legacy Choice. S2 plans no Choice
+  extension, conversion or other patch of that field.
+- `Prozessregister` is optional. When a row exists,
+  `ProcessKey == BusinessCaseTypeId`. `NacProcessId` remains the technical row
+  identity.
+- `NacBpmnModelId`, `BpmnDriveItemId`, `BpmnXmlSha256`, `BpmnGitPath`,
+  `BpmnGitCommitSha`, `NacBpmnVersion` and `BpmnContentMode` are nullable in
+  `Prozessregister`.
+- A missing `Prozessregister`, missing BPMN model or disabled viewer does not
+  invalidate a canonical business-case type. Only the specific BPMN/viewer
+  operation is blocked.
 
-- business-case types
-- matters and status
-- participants, roles and role bindings
-- process phases, tasks, deadlines, gates and decisions
-- document types, document pointers and versions
-- evidence pointers and audit events
-- time-boxed deputy grants
-- BPMN model pointers
+SharePoint remains the operational MVP store for metadata, tasks, document
+pointers, deputy grants and redacted audit events. The ontology remains a
+versioned product-model and projection contract, not a runtime store or global
+reasoner on the request path.
 
-## Decisions
+## Offline Boundaries
 
-- SharePoint remains the operative MVP data store for metadata, tasks,
-  document pointers, deputy grants and redacted audit events.
-- The ontology is a versioned product-model and projection contract, not a
-  runtime store and not a global reasoner on the request path.
-- All business cases from the inventory are counted for sizing and the case
-  index; deep BPMN/ontology modeling may still remain selective.
-- Microsoft 365 stays connected through Microsoft Graph REST v1.0. SDKs,
-  legacy SharePoint APIs and Graph beta remain blocked for this boundary.
-- `Prozessregister` and `BPMN Models` are optional later SharePoint projections
-  and require an owner-gated schema action before live use.
-
-## Boundaries
-
-This slice is offline-only:
+S1 and S2 are implemented exclusively offline:
 
 - no Microsoft Graph requests
 - no SharePoint writes
 - no SharePoint schema changes
-- no matter values in the repo
-- no document full text
-- no secrets
-- no central knowledge-graph folder
-- no productive BPMN modeler or workflow-engine apply
+- no matter values or document full text in the repository
+- no secrets and no central knowledge-graph folder
+- Microsoft Graph REST v1.0 remains the only future M365 data boundary; SDKs,
+  legacy SharePoint APIs and Graph beta remain blocked
 
-The validator
-[scripts/validate_notarial_process_ontology_contract.py](../../../scripts/validate_notarial_process_ontology_contract.py)
-checks these boundaries in the strict quality gate as
-`notarial_process_ontology_contract`.
+The
+[process ontology validator](../../../scripts/validate_notarial_process_ontology_contract.py)
+checks these boundaries.
 
-## SharePoint Schema Gap Review
+## Schema Gap And Apply Plan
 
-`nac kg process-ontology-schema-gap --format json` compares this contract with
-the current SharePoint MVP schema
+`nac kg process-ontology-schema-gap` compares the v2 contract with the current
+SharePoint MVP schema at
 [deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json](../../../deploy/m365/teams-sharepoint/nac-mvp.teams-sharepoint.json).
+The v0.2 result identifies:
 
-The review only creates plan data. It executes no Graph requests, writes
-nothing to SharePoint and changes no schema. The current expected finding is:
+- the required `Vorgangsartenregister`
+- the additive `Akten.VorgangstypId` text column
+- additional process-instance field gaps
+- the optional `Prozessregister` and optional `BPMN Models` library as
+  separate viewer projections that are not part of the required S2 apply plan
+- the protected fingerprint of the unchanged legacy
+  `Akten.Vorgangstyp` Choice
 
-- all six required MVP lists exist
-- concrete process-instance field gaps remain open, for example
-  `ProcessInstanceId`, `CurrentPhase`, `BpmnModelRef`,
-  `EvidencePointerId` and `RoleBindingId`
-- `Akten.Vorgangstyp` does not yet cover all business cases from the inventory
-  as choice values
-- `Prozessregister` and `BPMN Models` are optional later projections and are
-  intentionally still missing from the current MVP schema
+`nac kg process-ontology-schema-apply-plan` produces 33 fully local Graph REST
+request templates for the required default S2 scope. The plan contains
+idempotency checks, preconditions, expected success statuses, snapshots and
+additive recovery boundaries. It contains neither `Prozessregister` nor `BPMN
+Models`, contains no patch for `Akten.Vorgangstyp` and executes no request.
+The two viewer artifacts are prepared only through the separate optional
+viewer provisioning plan.
 
-The validator
-[scripts/validate_process_ontology_sharepoint_schema_gap.py](../../../scripts/validate_process_ontology_sharepoint_schema_gap.py)
-checks this gap list in the strict quality gate as
-`process_ontology_sharepoint_schema_gap`.
+The
+[schema-gap](../../../scripts/validate_process_ontology_sharepoint_schema_gap.py)
+and
+[apply-plan](../../../scripts/validate_process_ontology_sharepoint_schema_apply_plan.py)
+validators check these semantics.
 
-## SharePoint Schema Apply Plan
+## Readiness, Execution Contract And Dry Run
 
-`nac kg process-ontology-schema-apply-plan --format json` derives a concrete,
-but still fully local, Graph REST step sequence from the schema gap review. The
-plan contains exactly one step per gap:
+`nac kg process-ontology-schema-apply-readiness` expands the 33 plan steps for
+two workspaces into 66 workspace apply units. Site and list IDs, dynamic
+resolutions, `Sites.Manage.All`, ordering, idempotency and recovery evidence
+are checked offline. `OWNER_GATE_REQUIRED` is not live approval.
 
-- optional list/library creation through `POST /sites/{site-id}/lists`
-- missing columns through `POST /sites/{site-id}/lists/{list-id}/columns`
-- choice extensions through
-  `PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}`
+`nac kg process-ontology-schema-apply-execution-contract` and
+`nac kg process-ontology-schema-apply-runner-dry-run` bind the same 66 units to
+preflight, future mutation and readback plans. These artifacts also execute no
+Graph requests, write nothing to SharePoint and change no schema.
 
-The apply plan only contains request templates, idempotency checks,
-preconditions and expected success statuses. It executes no Graph requests,
-writes nothing to SharePoint and changes no schema. A later live apply remains
-owner-gated and may only use Microsoft Graph REST.
+The
+[readiness validator](../../../scripts/validate_process_ontology_sharepoint_schema_apply_readiness.py)
+checks workspace expansion. The execution contract sets the binding status
+`BLOCKED_PENDING_S6_S7_APPROVAL`.
 
-The validator
-[scripts/validate_process_ontology_sharepoint_schema_apply_plan.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_plan.py)
-checks this plan in the strict quality gate as
-`process_ontology_sharepoint_schema_apply_plan`.
+## Open Slices
 
-## SharePoint Schema Apply Readiness
-
-`nac kg process-ontology-schema-apply-readiness --format json` acts as the
-final offline safety check before a later live apply:
-
-- which workspaces and site IDs are known from the provisioned M365 state
-- which required lists already have a list ID
-- which optional lists/libraries and choice columns must be dynamically
-  resolved during an owner-gated apply
-- which application permission (`Sites.Manage.All`) is required
-- which ordering and idempotency checks apply to a later apply
-
-The readiness run expands the apply plan per workspace, but still executes no
-Graph requests and writes nothing to SharePoint. The result is therefore not
-"live apply may run automatically", but `OWNER_GATE_REQUIRED`.
-
-The validator
-[scripts/validate_process_ontology_sharepoint_schema_apply_readiness.py](../../../scripts/validate_process_ontology_sharepoint_schema_apply_readiness.py)
-checks this boundary in the strict quality gate as
-`process_ontology_sharepoint_schema_apply_readiness`.
+S1 Contract and S2 Schema Plan are implemented offline. S3 Runtime, S4
+MCP/Graph, S5 Migration, S6 Immutable Evidence and S7 Live Approval remain
+open. No live schema apply, backfill, cutover or rollback may run before S6/S7
+are implemented and receive dual approval.

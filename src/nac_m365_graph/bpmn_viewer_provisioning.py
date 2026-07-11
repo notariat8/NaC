@@ -45,6 +45,15 @@ REQUIRED_PROZESSREGISTER_COLUMNS = {
     "ViewerEnabled",
     "OverlayPolicy",
 }
+PROCESS_ROW_BPMN_FIELDS = {
+    "NacBpmnModelId",
+    "BpmnDriveItemId",
+    "BpmnXmlSha256",
+    "BpmnGitPath",
+    "BpmnGitCommitSha",
+    "NacBpmnVersion",
+    "BpmnContentMode",
+}
 SUPPORTED_COLUMN_TYPES = {"text", "choice", "boolean", "dateTime", "user"}
 REQUIRED_BLOCKED_OPERATIONS = {
     "live_apply",
@@ -71,8 +80,8 @@ def load_bpmn_viewer_provisioning_config(
 
 def validate_bpmn_viewer_provisioning_config(config: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if config.get("schema_version") != "nac.m365-bpmn-viewer-provisioning/v0.1":
-        errors.append("bpmn viewer provisioning schema_version must be nac.m365-bpmn-viewer-provisioning/v0.1")
+    if config.get("schema_version") != "nac.m365-bpmn-viewer-provisioning/v0.2":
+        errors.append("bpmn viewer provisioning schema_version must be nac.m365-bpmn-viewer-provisioning/v0.2")
     if config.get("status") != "optional_plan_only_no_live_apply":
         errors.append("bpmn viewer provisioning status must be optional_plan_only_no_live_apply")
     graph = config.get("graph")
@@ -127,13 +136,13 @@ def validate_bpmn_viewer_provisioning_config(config: dict[str, Any]) -> list[str
         by_name = {item.get("display_name"): item for item in libraries if isinstance(item, dict)}
         bpmn_models = by_name.get("BPMN Models")
         if isinstance(bpmn_models, dict):
-            columns = {
-                item.get("name")
-                for item in bpmn_models.get("columns", [])
-                if isinstance(item, dict) and isinstance(item.get("name"), str)
-            }
-            for missing in sorted(REQUIRED_BPMN_MODELS_COLUMNS - columns):
+            columns = _columns_by_name(bpmn_models)
+            for missing in sorted(REQUIRED_BPMN_MODELS_COLUMNS - set(columns)):
                 errors.append(f"bpmn viewer provisioning BPMN Models columns missing {missing}")
+            for name in sorted(PROCESS_ROW_BPMN_FIELDS):
+                column = columns.get(name)
+                if isinstance(column, dict) and column.get("required") is not True:
+                    errors.append(f"bpmn viewer provisioning BPMN Models column {name} must be required")
         for library in libraries:
             if not isinstance(library, dict):
                 errors.append("bpmn viewer provisioning document library entries must be objects")
@@ -151,13 +160,18 @@ def validate_bpmn_viewer_provisioning_config(config: dict[str, Any]) -> list[str
             errors.append(f"bpmn viewer provisioning lists missing {missing}")
         process_register = by_name.get("Prozessregister")
         if isinstance(process_register, dict):
-            columns = {
-                item.get("name")
-                for item in process_register.get("columns", [])
-                if isinstance(item, dict) and isinstance(item.get("name"), str)
-            }
-            for missing in sorted(REQUIRED_PROZESSREGISTER_COLUMNS - columns):
+            columns = _columns_by_name(process_register)
+            for missing in sorted(REQUIRED_PROZESSREGISTER_COLUMNS - set(columns)):
                 errors.append(f"bpmn viewer provisioning Prozessregister columns missing {missing}")
+            process_key = columns.get("ProcessKey")
+            if isinstance(process_key, dict) and process_key.get("enforce_unique_values") is not True:
+                errors.append("bpmn viewer provisioning Prozessregister ProcessKey must enforce unique values")
+            if "ProcessKey" not in set(_strings(process_register.get("indexed_columns"))):
+                errors.append("bpmn viewer provisioning Prozessregister ProcessKey must be indexed")
+            for name in sorted(PROCESS_ROW_BPMN_FIELDS):
+                column = columns.get(name)
+                if isinstance(column, dict) and column.get("required") is not False:
+                    errors.append(f"bpmn viewer provisioning Prozessregister column {name} must be nullable")
         for list_def in lists:
             errors.extend(_validate_list_definition(list_def))
 
@@ -294,3 +308,11 @@ def _validate_columns(value: dict[str, Any], label: str) -> list[str]:
 
 def _strings(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _columns_by_name(value: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        item["name"]: item
+        for item in value.get("columns", [])
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from .process_ontology_schema_apply_binding import build_process_ontology_sharepoint_schema_apply_binding
+from .process_ontology_schema_apply_plan import build_process_ontology_sharepoint_schema_apply_plan
+from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
 from .process_ontology_schema_apply_owner_gated_runner_contract import (
     build_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract,
 )
@@ -15,7 +17,7 @@ from .process_ontology_schema_apply_runner_dry_run import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_live_runner"
 DEFAULT_LIVE_RUNNER_JSON = Path("out/notary-kg/process-ontology-schema-apply-live.redacted.json")
 DEFAULT_LIVE_RUNNER_MARKDOWN = Path("out/notary-kg/process-ontology-schema-apply-live.redacted.md")
@@ -64,6 +66,8 @@ def build_process_ontology_sharepoint_schema_apply_live_runner(
         gate_errors=gate_errors,
         repo_root=repo_root,
     )
+    if "S2 schema plan live execution is blocked pending S6/S7 approval" not in blocked_reasons:
+        blocked_reasons.append("S2 schema plan live execution is blocked pending S6/S7 approval")
     ready = not blocked_reasons
     runner_steps = [
         _live_runner_step(step)
@@ -114,6 +118,7 @@ def build_process_ontology_sharepoint_schema_apply_live_runner(
             "mutation_count": len(runner_steps),
             "readback_count": len(runner_steps),
             "owner_gate_satisfied": ready,
+            "s2_execution_blocked": True,
             "ready_for_graph_rest_dispatch": ready,
             "executes_graph_requests": False,
             "writes_sharepoint": False,
@@ -234,6 +239,12 @@ def validate_process_ontology_sharepoint_schema_apply_live_runner(
     for key in ("runner_step_count", "preflight_count", "mutation_count", "readback_count"):
         if summary.get(key) != runner_step_count:
             errors.append(f"{key} must match selected runner steps")
+    if payload.get("status") != "BLOCKED":
+        errors.append("S2 live runner must remain blocked pending S6/S7 approval")
+    if summary.get("s2_execution_blocked") is not True:
+        errors.append("S2 execution blocker must be explicit")
+    if summary.get("ready_for_graph_rest_dispatch") is not False:
+        errors.append("S2 live runner must not become ready for Graph dispatch")
     if payload.get("status") == "READY_FOR_GRAPH_REST_DISPATCH" and summary.get("owner_gate_satisfied") is not True:
         errors.append("ready live runner must satisfy the owner gate")
     if payload.get("status") == "BLOCKED" and not payload.get("owner_gate", {}).get("missing_or_blocking"):
@@ -271,8 +282,6 @@ def validate_process_ontology_sharepoint_schema_apply_live_runner(
             errors.append(f"missing required owner-gate flag: {flag}")
 
     steps = payload.get("runner_steps", [])
-    if not steps:
-        errors.append("live runner must expose at least one selected step")
     for step in steps:
         step_id = step.get("id", "<unknown>")
         if step.get("mode") != "owner_gated_live_step_surface":
@@ -364,8 +373,35 @@ def _blocked_reasons(
             reasons.append("live readiness gate did not pass validation")
         elif workspace_id == "notary_team_01":
             expected_binding = build_process_ontology_sharepoint_schema_apply_binding(repo_root, [workspace_id])
-            if gate_payload.get("approval_binding") != expected_binding:
-                reasons.append("live readiness gate does not match selected workspace and current apply plan")
+            current_apply_plan_sha256 = _payload_sha256(
+                build_process_ontology_sharepoint_schema_apply_plan(repo_root)
+            )
+            current_workspace_readiness_sha256 = _payload_sha256(
+                build_process_ontology_sharepoint_schema_apply_readiness(repo_root)
+            )
+            gate_source = gate_payload.get("source", {})
+            indexed_artifacts = gate_payload.get("evidence", {}).get("indexed_artifacts", [])
+            binding_matches = gate_payload.get("approval_binding") == expected_binding
+            source_matches_binding = (
+                gate_source.get("apply_plan_sha256") == expected_binding["apply_plan_sha256"]
+                and gate_source.get("workspace_readiness_sha256")
+                == expected_binding["workspace_readiness_sha256"]
+            )
+            index_matches_current = (
+                gate_source.get("artifact_index_apply_plan_sha256") == current_apply_plan_sha256
+                and gate_source.get("artifact_index_workspace_readiness_sha256")
+                == current_workspace_readiness_sha256
+                and all(
+                    artifact.get("apply_plan_sha256") == current_apply_plan_sha256
+                    and artifact.get("workspace_readiness_sha256")
+                    == current_workspace_readiness_sha256
+                    for artifact in indexed_artifacts
+                )
+            )
+            if not (binding_matches and source_matches_binding and index_matches_current):
+                reasons.append(
+                    "live readiness gate does not match selected workspace and freshly recomputed current plan/readiness"
+                )
     return reasons
 
 
@@ -421,6 +457,11 @@ def _resolve_output_path(repo_root: Path, path: Path) -> Path:
 
 def _relative_path(repo_root: Path, path: Path) -> str:
     return str(path.relative_to(repo_root) if path.is_relative_to(repo_root) else path)
+
+
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _sha256(value: str) -> str:

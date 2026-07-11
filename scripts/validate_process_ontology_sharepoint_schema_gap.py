@@ -42,8 +42,14 @@ def main() -> int:
         errors.append("expected concrete process-instance field gaps")
     if summary.get("choice_gap_count", 0) < 1:
         errors.append("expected process ontology choice gaps")
+    if summary.get("required_projection_gap_count") != 1:
+        errors.append("expected the required Vorgangsartenregister projection gap")
     if summary.get("optional_projection_gap_count", 0) < 2:
         errors.append("expected Prozessregister and BPMN Models optional projection gaps")
+    if summary.get("blocking_shape_mismatch_count") != 0:
+        errors.append("existing schema fields must match complete expected shapes")
+    if payload.get("legacy_column_contract", {}).get("matches_pinned_baseline") is not True:
+        errors.append("legacy Akten.Vorgangstyp must match the independent pinned baseline")
     if payload.get("apply_boundary", {}).get("owner_gate_required_before_apply") is not True:
         errors.append("future schema apply must remain owner-gated")
     if payload.get("guardrails", {}).get("offline_only") is not True:

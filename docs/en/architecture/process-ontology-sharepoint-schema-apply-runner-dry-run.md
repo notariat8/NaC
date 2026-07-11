@@ -23,7 +23,7 @@ also writes redacted evidence files:
 - `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json`
 - `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md`
 
-The artifact includes all 68 dry-run steps as a redacted index. Site IDs are
+The artifact includes all 66 dry-run steps as a redacted index. Site IDs are
 collapsed back to `{site-id}`, request headers are not stored, and planned
 mutation bodies are represented only as body-shape key lists.
 
@@ -50,7 +50,7 @@ itself remains `offline_only` and executes no Graph requests.
 
 `nac kg process-ontology-schema-apply-owner-gated-runner-contract --format json`
 then writes the execution-near runner contract. It binds the later
-`nac kg process-ontology-schema-apply-live` command to 68 planned runner steps,
+`nac kg process-ontology-schema-apply-live` command to 66 planned runner steps,
 owner gate, required flags, stop-before-mutation rules and redacted evidence.
 The contract marks the live runner command as implemented, but itself executes
 no Graph requests.

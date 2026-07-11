@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import copy
 import json
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+
+from scripts.validate_m365_sharepoint_bpmn_viewer_adapter import _validate_contract
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -121,6 +124,39 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"},
         )
         self.assertIn("linked_bpmn_model_renderable", selection["required_checks"])
+
+    def test_business_case_type_binding_keeps_viewer_projection_optional(self) -> None:
+        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.2")
+        binding = self.contract["business_case_type_binding"]
+
+        self.assertEqual(binding["business_case_type_id_field"], "BusinessCaseTypeId")
+        self.assertEqual(binding["process_register_list"], "Prozessregister")
+        self.assertEqual(binding["existing_row_join_invariant"], "ProcessKey == BusinessCaseTypeId")
+        self.assertEqual(binding["process_key_column"], "ProcessKey")
+        self.assertTrue(binding["process_register_optional_for_business_case_type_validity"])
+        self.assertTrue(binding["process_key_unique"])
+        self.assertTrue(binding["process_key_indexed"])
+        self.assertFalse(binding["absence_invalidates_business_case_type"])
+        self.assertEqual(
+            set(binding["nullable_process_row_bpmn_fields"]),
+            {
+                "NacBpmnModelId",
+                "BpmnDriveItemId",
+                "BpmnXmlSha256",
+                "BpmnGitPath",
+                "BpmnGitCommitSha",
+                "NacBpmnVersion",
+                "BpmnContentMode",
+            },
+        )
+
+        invalid = copy.deepcopy(self.contract)
+        invalid["business_case_type_binding"]["absence_invalidates_business_case_type"] = True
+        errors = _validate_contract(invalid, {}, {}, {}, {})
+        self.assertIn(
+            "business_case_type_binding.absence_invalidates_business_case_type must be false",
+            errors,
+        )
 
     def test_contract_links_runtime_readiness_without_deploy_or_live_read(self) -> None:
         readiness = self.contract["runtime_readiness"]

@@ -70,10 +70,10 @@ def main() -> int:
             errors.append("live readiness gate must include seven checks")
         if payload.get("summary", {}).get("blocked_check_count") != 0:
             errors.append("live readiness gate must not include blockers")
-        if payload.get("summary", {}).get("workspace_apply_unit_count") != 68:
-            errors.append("live readiness gate must cover 68 apply units")
-        if payload.get("summary", {}).get("approved_workspace_apply_unit_count") != 34:
-            errors.append("live readiness gate must bind 34 notary_team_01 apply units")
+        if payload.get("summary", {}).get("workspace_apply_unit_count") != 66:
+            errors.append("live readiness gate must cover 66 apply units")
+        if payload.get("summary", {}).get("approved_workspace_apply_unit_count") != 33:
+            errors.append("live readiness gate must bind 33 notary_team_01 apply units")
         if not gate_json.is_file():
             errors.append("JSON live readiness gate was not written")
         if not gate_md.is_file():

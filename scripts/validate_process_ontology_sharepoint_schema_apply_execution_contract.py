@@ -40,8 +40,8 @@ def main() -> int:
     summary = payload.get("summary", {})
     if summary.get("workspace_count") != 2:
         errors.append("expected two notary workspaces")
-    if summary.get("workspace_apply_unit_count") != 68:
-        errors.append("expected 68 workspace apply units")
+    if summary.get("workspace_apply_unit_count") != 66:
+        errors.append("expected 66 workspace apply units")
     if summary.get("execution_phase_count") != 8:
         errors.append("expected eight execution phases")
     if payload.get("execution_boundary", {}).get("future_runner_must_require_explicit_live_flag") is not True:

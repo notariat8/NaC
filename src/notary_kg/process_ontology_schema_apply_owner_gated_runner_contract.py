@@ -15,7 +15,7 @@ from .process_ontology_schema_apply_runner_dry_run import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_owner_gated_runner_contract"
 DEFAULT_OWNER_GATED_RUNNER_CONTRACT_JSON = Path(
     "out/notary-kg/process-ontology-schema-apply-owner-gated-runner-contract.redacted.json"
@@ -66,7 +66,8 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract(
             "readback_count": len(steps),
             "owner_gate_required_now": False,
             "owner_gate_required_before_execution": True,
-            "runner_implementation_ready_for_next_slice": True,
+            "runner_implementation_ready_for_next_slice": False,
+            "s2_execution_blocked": True,
             "executes_graph_requests": False,
             "writes_sharepoint": False,
             "changes_sharepoint_schema": False,
@@ -86,6 +87,7 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_runner_contract(
             "stop_before_first_mutation_if_owner_approval_missing": True,
             "stop_before_first_mutation_if_live_readiness_gate_blocked": True,
             "stop_before_first_mutation_if_runtime_permission_missing": True,
+            "stop_before_first_mutation_if_s6_s7_approval_missing": True,
             "stop_on_first_failed_preflight": True,
             "stop_on_first_unexpected_mutation_status": True,
             "stop_on_first_ambiguous_readback": True,
@@ -178,9 +180,16 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contrac
         errors.append("runner contract must remain offline")
 
     summary = payload.get("summary", {})
-    for key in ("runner_step_count", "preflight_count", "mutation_count", "readback_count"):
-        if summary.get(key) != 68:
-            errors.append(f"{key} must cover 68 steps")
+    runner_step_count = summary.get("runner_step_count")
+    if not isinstance(runner_step_count, int) or runner_step_count < 0:
+        errors.append("runner_step_count must be a non-negative integer")
+    for key in ("preflight_count", "mutation_count", "readback_count"):
+        if summary.get(key) != runner_step_count:
+            errors.append(f"{key} must match runner_step_count")
+    if summary.get("runner_implementation_ready_for_next_slice") is not False:
+        errors.append("S2 runner must not be marked ready for execution")
+    if summary.get("s2_execution_blocked") is not True:
+        errors.append("S2 runner contract must remain blocked")
     if summary.get("owner_gate_required_before_execution") is not True:
         errors.append("runner execution must require owner gate")
     for key in ("executes_graph_requests", "writes_sharepoint", "changes_sharepoint_schema"):
@@ -205,6 +214,7 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contrac
         "stop_before_first_mutation_if_owner_approval_missing",
         "stop_before_first_mutation_if_live_readiness_gate_blocked",
         "stop_before_first_mutation_if_runtime_permission_missing",
+        "stop_before_first_mutation_if_s6_s7_approval_missing",
         "stop_on_first_failed_preflight",
         "stop_on_first_unexpected_mutation_status",
         "stop_on_first_ambiguous_readback",
@@ -216,8 +226,8 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_runner_contrac
         errors.append("automatic rollback must remain blocked")
 
     steps = payload.get("runner_steps", [])
-    if len(steps) != 68:
-        errors.append("runner contract must expose 68 steps")
+    if len(steps) != runner_step_count:
+        errors.append("runner contract step list must match the dynamic summary count")
     for step in steps:
         if step.get("mode") != "future_owner_gated_step_contract":
             errors.append(f"{step.get('id', '<unknown>')}: unexpected step mode")

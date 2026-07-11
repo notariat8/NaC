@@ -15,7 +15,7 @@ from .process_ontology_schema_apply_runner_dry_run import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_owner_gated_live_plan"
 DEFAULT_OWNER_GATED_LIVE_PLAN_JSON = Path(
     "out/notary-kg/process-ontology-schema-apply-owner-gated-live-plan.redacted.json"
@@ -71,7 +71,8 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
             "planned_preflight_count": planned_live_step_count,
             "planned_mutation_count": planned_live_step_count,
             "planned_readback_count": planned_live_step_count,
-            "owner_gate_required_now": True,
+            "owner_gate_required_now": False,
+            "s2_execution_blocked": True,
             "owner_approval_required_before_execution": True,
             "owner_approval_text_required": True,
             "live_readiness_gate_required": True,
@@ -103,6 +104,8 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
                 "--write-redacted-evidence",
             ],
             "blocked_without_owner_approval": True,
+            "approval_accepted_for_current_plan": False,
+            "blocked_pending_slices": ["S6", "S7"],
             "delegated_user_context_allowed": False,
             "technical_owner_user": "funktion8@funktion8.de",
         },
@@ -114,6 +117,7 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
                 "--correlation-id <correlation-id> --write-redacted-evidence"
             ),
             "command_exists_now": True,
+            "execution_enabled_now": False,
             "runtime_permission_required": REQUIRED_PERMISSION,
             "application_owner_path_required": True,
             "graph_rest_only": True,
@@ -154,6 +158,8 @@ def build_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
                 "per_mutation_expected_status",
                 "per_mutation_readback_result",
                 "stop_rule_evaluation",
+                "pre_apply_schema_snapshot_metadata",
+                "additive_rollback_boundary",
                 "post_apply_schema_snapshot_metadata",
             ],
             "raw_graph_response_allowed": False,
@@ -252,11 +258,17 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
         errors.append("live plan must cover both notary workspaces")
     if summary.get("phase_count") != 8:
         errors.append("live plan must preserve eight execution phases")
-    for key in ("planned_live_step_count", "planned_preflight_count", "planned_mutation_count", "planned_readback_count"):
-        if summary.get(key) != 68:
-            errors.append(f"{key} must cover 68 planned steps")
+    planned_count = summary.get("planned_live_step_count")
+    if not isinstance(planned_count, int) or planned_count < 0:
+        errors.append("planned_live_step_count must be a non-negative integer")
+    for key in ("planned_preflight_count", "planned_mutation_count", "planned_readback_count"):
+        if summary.get(key) != planned_count:
+            errors.append(f"{key} must match planned_live_step_count")
+    if summary.get("owner_gate_required_now") is not False:
+        errors.append("S2 must not solicit a live owner approval before S6/S7")
+    if summary.get("s2_execution_blocked") is not True:
+        errors.append("S2 live plan must remain execution-blocked")
     for key in (
-        "owner_gate_required_now",
         "owner_approval_required_before_execution",
         "owner_approval_text_required",
         "live_readiness_gate_required",
@@ -280,12 +292,18 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
     ):
         if required_flag not in owner_gate.get("required_flags", []):
             errors.append(f"missing owner-gate flag: {required_flag}")
+    if owner_gate.get("approval_accepted_for_current_plan") is not False:
+        errors.append("owner approval must not enable the S2 plan")
+    if owner_gate.get("blocked_pending_slices") != ["S6", "S7"]:
+        errors.append("S2 plan must name the S6/S7 blockers")
     if owner_gate.get("blocked_without_owner_approval") is not True:
         errors.append("live plan must block without owner approval")
     if owner_gate.get("delegated_user_context_allowed") is not False:
         errors.append("delegated user context must remain blocked")
 
     runner = payload.get("future_runner_contract", {})
+    if runner.get("execution_enabled_now") is not False:
+        errors.append("live runner execution must remain disabled for S2")
     if runner.get("command_exists_now") is not True:
         errors.append("live runner command must exist once the owner-gated live surface is implemented")
     if runner.get("runtime_permission_required") != REQUIRED_PERMISSION:
@@ -305,8 +323,8 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
         errors.append("execution plan must include eight phases")
     if len(workspace_plans) != 2:
         errors.append("execution plan must include two workspace plans")
-    if sum(int(phase.get("planned_unit_count", 0)) for phase in phase_order) != 68:
-        errors.append("phase plan must sum to 68 planned units")
+    if sum(int(phase.get("planned_unit_count", 0)) for phase in phase_order) != planned_count:
+        errors.append("phase plan must match planned live units")
     for key in ("preflight_before_every_mutation", "readback_after_every_mutation", "manual_owner_review_after_failure"):
         if execution_plan.get(key) is not True:
             errors.append(f"execution plan must require {key}")
@@ -339,6 +357,10 @@ def validate_process_ontology_sharepoint_schema_apply_owner_gated_live_plan(
         if guardrails.get(key) is not False:
             errors.append(f"guardrail must be false: {key}")
 
+    blocker_ids = {blocker.get("id") for blocker in payload.get("blockers", [])}
+    if payload.get("status") != "BLOCKED" or "s2_pending_s6_s7_approval" not in blocker_ids:
+        errors.append("owner-gated live plan must expose the S6/S7 blocker")
+
     return ProcessOntologySchemaApplyOwnerGatedLivePlanValidation(
         status="PASSED" if not errors else "FAILED",
         errors=tuple(errors),
@@ -351,6 +373,8 @@ def _blockers(execution_contract: dict[str, Any], live_readiness_gate: dict[str,
         blockers.append({"id": "execution_contract", "detail": "execution contract must pass"})
     if live_readiness_gate.get("status") != "PASSED":
         blockers.append({"id": "live_readiness_gate", "detail": "live readiness gate must pass"})
+    if execution_contract.get("summary", {}).get("live_apply_contract_status") == "BLOCKED_PENDING_S6_S7_APPROVAL":
+        blockers.append({"id": "s2_pending_s6_s7_approval", "detail": "S2 schema plan cannot execute before S6 immutable evidence and S7 live approval"})
     return blockers
 
 

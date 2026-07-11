@@ -40,16 +40,16 @@ def main() -> int:
     summary = payload.get("summary", {})
     if summary.get("workspace_count") != 2:
         errors.append("expected two provisioned notary workspaces")
-    if summary.get("apply_plan_step_count") != 34:
-        errors.append("expected 34 source apply-plan steps")
-    if summary.get("workspace_apply_unit_count") != 68:
-        errors.append("expected 68 workspace apply units")
+    if summary.get("apply_plan_step_count") != 33:
+        errors.append("expected 33 required-only source apply-plan steps")
+    if summary.get("workspace_apply_unit_count") != 66:
+        errors.append("expected 66 workspace apply units")
     if summary.get("known_site_id_count") != 2:
         errors.append("expected known site IDs for both workspaces")
     if summary.get("missing_required_list_id_count") != 0:
         errors.append("expected no missing required list IDs")
-    if summary.get("dynamic_resource_resolution_count") != 12:
-        errors.append("expected 12 dynamic ID resolutions across both workspaces")
+    if summary.get("dynamic_resource_resolution_count") != 8:
+        errors.append("expected 8 dynamic ID resolutions across both workspaces")
     if summary.get("live_apply_readiness") != "OWNER_GATE_REQUIRED":
         errors.append("live apply must remain owner-gated")
 
@@ -62,10 +62,10 @@ def main() -> int:
         errors.append("delegated user context must stay blocked for live schema apply")
 
     for workspace in payload.get("workspaces", []):
-        if workspace.get("summary", {}).get("workspace_apply_unit_count") != 34:
-            errors.append(f"{workspace.get('workspace_id')}: expected 34 apply units")
-        if workspace.get("summary", {}).get("dynamic_resource_resolution_count") != 6:
-            errors.append(f"{workspace.get('workspace_id')}: expected six dynamic ID resolutions")
+        if workspace.get("summary", {}).get("workspace_apply_unit_count") != 33:
+            errors.append(f"{workspace.get('workspace_id')}: expected 33 apply units")
+        if workspace.get("summary", {}).get("dynamic_resource_resolution_count") != 4:
+            errors.append(f"{workspace.get('workspace_id')}: expected four dynamic ID resolutions")
         if workspace.get("summary", {}).get("missing_required_list_id_count") != 0:
             errors.append(f"{workspace.get('workspace_id')}: missing required list IDs")
 

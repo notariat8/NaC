@@ -1,8 +1,8 @@
 {
-  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.1",
+  "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.2",
   "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
   "status": "contract_first",
-  "last_update": "2026-07-08",
+  "last_update": "2026-07-11",
   "purpose": "Defines the read-only SharePoint/SPFx BPMN viewer adapter boundary for publishing approved NaC BPMN models into the Microsoft 365 work surface without making SharePoint the BPMN source of truth, workflow engine or modeler.",
   "source_of_truth": {
     "approved_bpmn_templates": [
@@ -145,6 +145,25 @@
     "reads_sharepoint_file_content_now": false,
     "app_catalog_deploy_allowed_now": false,
     "returns_matter_document_content": false
+  },
+  "business_case_type_binding": {
+    "business_case_type_id_field": "BusinessCaseTypeId",
+    "process_register_list": "Prozessregister",
+    "process_register_optional_for_business_case_type_validity": true,
+    "existing_row_join_invariant": "ProcessKey == BusinessCaseTypeId",
+    "process_key_column": "ProcessKey",
+    "process_key_unique": true,
+    "process_key_indexed": true,
+    "absence_invalidates_business_case_type": false,
+    "nullable_process_row_bpmn_fields": [
+      "NacBpmnModelId",
+      "BpmnDriveItemId",
+      "BpmnXmlSha256",
+      "BpmnGitPath",
+      "BpmnGitCommitSha",
+      "NacBpmnVersion",
+      "BpmnContentMode"
+    ]
   },
   "runtime_readiness": {
     "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",

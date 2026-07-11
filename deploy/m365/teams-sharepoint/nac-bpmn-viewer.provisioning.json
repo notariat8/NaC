@@ -1,5 +1,5 @@
 {
-  "schema_version": "nac.m365-bpmn-viewer-provisioning/v0.1",
+  "schema_version": "nac.m365-bpmn-viewer-provisioning/v0.2",
   "name": "nac-bpmn-viewer-optional-sharepoint-surface",
   "status": "optional_plan_only_no_live_apply",
   "description": "Optional SharePoint artifacts for a future read-only SPFx BPMN viewer. This plan is separate from the required M365 MVP runtime schema.",
@@ -45,7 +45,8 @@
           {
             "name": "ProcessKey",
             "type": "text",
-            "required": true
+            "required": true,
+            "max_length": 128
           },
           {
             "name": "NacBpmnVersion",
@@ -161,7 +162,9 @@
           {
             "name": "ProcessKey",
             "type": "text",
-            "required": true
+            "required": true,
+            "enforce_unique_values": true,
+            "max_length": 128
           },
           {
             "name": "ProcessName",
@@ -187,32 +190,32 @@
           {
             "name": "NacBpmnModelId",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "BpmnDriveItemId",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "BpmnXmlSha256",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "BpmnGitPath",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "BpmnGitCommitSha",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "NacBpmnVersion",
             "type": "text",
-            "required": true
+            "required": false
           },
           {
             "name": "BpmnContentMode",
@@ -221,7 +224,7 @@
               "ApprovedCopy",
               "PointerOnly"
             ],
-            "required": true
+            "required": false
           },
           {
             "name": "ViewerEnabled",

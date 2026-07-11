@@ -20,6 +20,7 @@ from .process_ontology_schema_apply_live_runner import (
 )
 from .process_ontology_schema_apply_plan import (
     CHOICE_COLUMN_ODATA_TYPE,
+    LIVE_EXECUTION_APPROVAL_STATE,
     build_process_ontology_sharepoint_schema_apply_plan,
 )
 from .process_ontology_schema_apply_readiness import build_process_ontology_sharepoint_schema_apply_readiness
@@ -46,11 +47,14 @@ GRAPH_ERROR_CODES = {*GRAPH_ERROR_CLASS_BY_CODE, "UNCLASSIFIED"}
 GRAPH_ERROR_CLASSES = {*GRAPH_ERROR_CLASS_BY_CODE.values(), "UNCLASSIFIED"}
 RETRY_DISPOSITIONS = {"DO_NOT_RETRY_UNCHANGED", "RETRY_WITH_BACKOFF", "REVIEW_REQUIRED"}
 STEP_ERROR_PHASES_BY_CODE = {
+    "ambiguous_graph_match": {"preflight", "readback"},
     "choice_column_resolution_failed": {"resolution"},
     "choice_readback_verification_failed": {"readback"},
     "dispatcher_validation_failed": {"validation"},
     "graph_http_error": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "existing_object_shape_mismatch": {"preflight"},
     "graph_request_failed": {"resolution", "preflight", "mutation", "readback", "unknown"},
+    "readback_shape_verification_failed": {"readback"},
     "readback_verification_failed": {"readback"},
 }
 GRAPH_REQUEST_ERROR_CODES = {"graph_http_error", "graph_request_failed"}
@@ -171,6 +175,7 @@ def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
     evidence_markdown_output: Path,
     max_steps: int | None = None,
 ) -> dict[str, Any]:
+    """Reject the S2 plan before any Graph or evidence side effect."""
     _validate_dispatch_inputs(
         workspace_id=workspace_id,
         correlation_id=correlation_id,
@@ -181,6 +186,10 @@ def run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
         write_redacted_evidence=write_redacted_evidence,
         max_steps=max_steps,
     )
+    current_apply_plan = build_process_ontology_sharepoint_schema_apply_plan(repo_root)
+    if current_apply_plan.get("summary", {}).get("live_execution_approval_state") == LIVE_EXECUTION_APPROVAL_STATE:
+        raise ValueError("S2 schema plan Graph dispatch is blocked pending S6/S7 approval")
+
     json_path = _resolve_output_path(repo_root, evidence_json_output)
     markdown_path = _resolve_output_path(repo_root, evidence_markdown_output)
     if json_path.resolve() == markdown_path.resolve():
@@ -904,11 +913,25 @@ def _dispatch_create_step(
 ) -> dict[str, Any]:
     replacements = _base_replacements(workspace, unit, plan_step)
     preflight_path = _render_path(unit["preflight_idempotency_check"]["path_template"], replacements)
+    if unit["operation"] == "create_list":
+        preflight_path = f"{preflight_path}&$expand=columns"
     try:
         preflight = client.get(preflight_path)
     except Exception as exc:
         raise _safe_failure(exc, "preflight") from exc
-    exists = _value_count(preflight) > 0
+    preflight_count = _value_count(preflight)
+    if preflight_count > 1:
+        raise DispatchStepFailure("ambiguous_graph_match", "preflight")
+    exists = preflight_count == 1
+    if exists and not _create_shape_matches(
+        preflight,
+        plan_step["request"]["body"],
+        unit["operation"],
+    ):
+        raise DispatchStepFailure(
+            "existing_object_shape_mismatch",
+            "preflight",
+        )
     mutation_path = _render_path(plan_step["request"]["path_template"], replacements)
     mutation_shape: dict[str, Any] = {}
     mutation_outcome = MUTATION_SKIPPED if exists else MUTATION_NOT_ATTEMPTED
@@ -939,9 +962,20 @@ def _dispatch_create_step(
             mutation_outcome=mutation_outcome,
         ) from exc
     readback_count = _value_count(readback)
-    if readback_count < 1:
+    if readback_count != 1:
         raise DispatchStepFailure(
             "readback_verification_failed",
+            "readback",
+            mutation_attempted=not exists,
+            mutation_outcome=mutation_outcome,
+        )
+    if not _create_shape_matches(
+        readback,
+        plan_step["request"]["body"],
+        unit["operation"],
+    ):
+        raise DispatchStepFailure(
+            "readback_shape_verification_failed",
             "readback",
             mutation_attempted=not exists,
             mutation_outcome=mutation_outcome,
@@ -976,7 +1010,9 @@ def _dispatch_extend_choice_step(
         resolution = client.get(resolution_path)
     except Exception as exc:
         raise _safe_failure(exc, "resolution") from exc
-    column_id = _first_value_id(resolution)
+    if _value_count(resolution) != 1:
+        raise DispatchStepFailure("choice_column_resolution_failed", "resolution")
+    column_id = _single_value_id(resolution)
     if not column_id:
         raise DispatchStepFailure("choice_column_resolution_failed", "resolution")
     replacements["column-id"] = column_id
@@ -985,15 +1021,20 @@ def _dispatch_extend_choice_step(
         preflight = client.get(preflight_path)
     except Exception as exc:
         raise _safe_failure(exc, "preflight") from exc
+    if _value_count(preflight) != 1:
+        raise DispatchStepFailure("ambiguous_graph_match", "preflight")
     required_choices = [
         str(value) for value in unit["preflight_idempotency_check"].get("required_choice_values", [])
     ]
+    plan_choice = dict(plan_step["request"]["body"].get("choice", {}))
+    expected_column_name = replacements["column-name"]
+    if not _choice_column_shape_matches(
+        preflight,
+        expected_name=expected_column_name,
+        expected_choice=plan_choice,
+    ):
+        raise DispatchStepFailure("existing_object_shape_mismatch", "preflight")
     current_choice = _choice_config(preflight)
-    preserved_choice_settings = {
-        key: current_choice[key]
-        for key in ("allowTextEntry", "displayAs")
-        if key in current_choice
-    }
     current_choices = [str(value) for value in current_choice.get("choices", [])]
     merged_choices = list(dict.fromkeys([*current_choices, *required_choices]))
     exists = all(choice in current_choices for choice in required_choices)
@@ -1001,11 +1042,7 @@ def _dispatch_extend_choice_step(
     mutation_shape: dict[str, Any] = {}
     mutation_outcome = MUTATION_SKIPPED if exists else MUTATION_NOT_ATTEMPTED
     if not exists:
-        plan_choice = dict(plan_step["request"]["body"].get("choice", {}))
         plan_choice["@odata.type"] = CHOICE_COLUMN_ODATA_TYPE
-        for key in ("allowTextEntry", "displayAs"):
-            if key in current_choice:
-                plan_choice[key] = current_choice[key]
         plan_choice["choices"] = merged_choices
         patch_body = {"choice": plan_choice}
         try:
@@ -1035,13 +1072,28 @@ def _dispatch_extend_choice_step(
             mutation_attempted=not exists,
             mutation_outcome=mutation_outcome,
         ) from exc
+    if _value_count(readback) != 1:
+        raise DispatchStepFailure(
+            "readback_verification_failed",
+            "readback",
+            mutation_attempted=not exists,
+            mutation_outcome=mutation_outcome,
+        )
+    if not _choice_column_shape_matches(
+        readback,
+        expected_name=expected_column_name,
+        expected_choice=plan_choice,
+    ):
+        raise DispatchStepFailure(
+            "choice_readback_verification_failed",
+            "readback",
+            mutation_attempted=not exists,
+            mutation_outcome=mutation_outcome,
+        )
     readback_choice = _choice_config(readback)
     readback_choices = [str(value) for value in readback_choice.get("choices", [])]
     choices_preserved = all(choice in readback_choices for choice in merged_choices)
-    settings_preserved = all(
-        readback_choice.get(key) == value for key, value in preserved_choice_settings.items()
-    )
-    if not choices_preserved or not settings_preserved:
+    if not choices_preserved:
         raise DispatchStepFailure(
             "choice_readback_verification_failed",
             "readback",
@@ -1321,6 +1373,112 @@ def _retry_disposition(exc: Exception, error_class: str) -> str:
     return "REVIEW_REQUIRED"
 
 
+_COLUMN_FACETS = ("text", "choice", "boolean", "dateTime")
+
+
+def _create_shape_matches(
+    response: dict[str, Any],
+    expected_body: dict[str, Any],
+    operation: str,
+) -> bool:
+    actual = _column_definition(response)
+    if operation == "create_list":
+        return _list_shape_matches(actual, expected_body)
+    if operation == "create_column":
+        return _column_shape_matches(actual, expected_body)
+    return False
+
+
+def _list_shape_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    if actual.get("displayName") != expected.get("displayName"):
+        return False
+    actual_list = actual.get("list")
+    expected_list = expected.get("list")
+    if type(actual_list) is not dict or type(expected_list) is not dict:
+        return False
+    if actual_list.get("template") != expected_list.get("template"):
+        return False
+    actual_columns = actual.get("columns")
+    expected_columns = expected.get("columns")
+    if type(actual_columns) is not list or type(expected_columns) is not list:
+        return False
+    actual_by_name = {
+        column.get("name"): column
+        for column in actual_columns
+        if type(column) is dict and isinstance(column.get("name"), str)
+    }
+    return all(
+        isinstance(expected_column.get("name"), str)
+        and expected_column["name"] in actual_by_name
+        and _column_shape_matches(
+            actual_by_name[expected_column["name"]],
+            expected_column,
+        )
+        for expected_column in expected_columns
+        if type(expected_column) is dict
+    ) and all(type(column) is dict for column in expected_columns)
+
+
+def _column_shape_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    if actual.get("name") != expected.get("name"):
+        return False
+    for key in ("required", "hidden", "indexed", "enforceUniqueValues"):
+        if bool(actual.get(key, False)) != bool(expected.get(key, False)):
+            return False
+    expected_facets = [facet for facet in _COLUMN_FACETS if facet in expected]
+    actual_facets = [facet for facet in _COLUMN_FACETS if facet in actual]
+    if len(expected_facets) != 1 or actual_facets != expected_facets:
+        return False
+    facet = expected_facets[0]
+    actual_config = actual.get(facet)
+    expected_config = expected.get(facet)
+    if type(actual_config) is not dict or type(expected_config) is not dict:
+        return False
+    if facet == "text":
+        return (
+            bool(actual_config.get("allowMultipleLines", False))
+            == bool(expected_config.get("allowMultipleLines", False))
+            and actual_config.get("maxLength") == expected_config.get("maxLength")
+        )
+    if facet == "choice":
+        return (
+            bool(actual_config.get("allowTextEntry", False))
+            == bool(expected_config.get("allowTextEntry", False))
+            and actual_config.get("displayAs") == expected_config.get("displayAs")
+            and actual_config.get("choices") == expected_config.get("choices")
+        )
+    if facet == "dateTime":
+        return actual_config.get("displayAs") == expected_config.get("displayAs")
+    return True
+
+
+def _choice_column_shape_matches(
+    response: dict[str, Any],
+    *,
+    expected_name: str,
+    expected_choice: dict[str, Any],
+) -> bool:
+    actual = _column_definition(response)
+    if actual.get("name") != expected_name:
+        return False
+    if type(actual.get("readOnly")) is not bool or actual["readOnly"] is not False:
+        return False
+    actual_facets = [facet for facet in _COLUMN_FACETS if facet in actual]
+    if actual_facets != ["choice"]:
+        return False
+    actual_choice = actual.get("choice")
+    if type(actual_choice) is not dict:
+        return False
+    actual_choices = actual_choice.get("choices")
+    if type(actual_choices) is not list or not all(isinstance(choice, str) for choice in actual_choices):
+        return False
+    return (
+        type(actual_choice.get("allowTextEntry")) is bool
+        and actual_choice.get("allowTextEntry") == expected_choice.get("allowTextEntry")
+        and actual_choice.get("displayAs") == expected_choice.get("displayAs")
+    )
+
+
 def _column_definition(response: dict[str, Any]) -> dict[str, Any]:
     value = response.get("value")
     if isinstance(value, list) and value and isinstance(value[0], dict):
@@ -1358,9 +1516,9 @@ def _value_count(response: dict[str, Any]) -> int:
     return len(value) if isinstance(value, list) else (1 if response else 0)
 
 
-def _first_value_id(response: dict[str, Any]) -> str:
+def _single_value_id(response: dict[str, Any]) -> str:
     value = response.get("value")
-    if isinstance(value, list) and value and isinstance(value[0], dict):
+    if isinstance(value, list) and len(value) == 1 and isinstance(value[0], dict):
         return str(value[0].get("id") or "")
     return ""
 

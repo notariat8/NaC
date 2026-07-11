@@ -38,6 +38,25 @@ def main() -> int:
         if slug not in case_slugs:
             errors.append(f"canonical usecase missing: {slug}")
 
+    summary = payload.get("summary", {})
+    if summary.get("business_case_count") != 22:
+        errors.append("inventory must retain 22 catalog sizing entries")
+    if summary.get("canonical_business_case_type_count") != 20:
+        errors.append("inventory must contain 20 canonical BusinessCaseTypeIds")
+    if summary.get("legacy_alias_count") != 2:
+        errors.append("inventory must contain 2 legacy aliases")
+    dependencies = payload.get("type_validity_dependencies", {})
+    expected_dependencies = {
+        "repo_versioned_catalog_required": True,
+        "vorgangsartenregister_required": True,
+        "prozessregister_required": False,
+        "bpmn_model_required": False,
+        "viewer_required": False,
+        "exact_match_required": True,
+    }
+    if dependencies != expected_dependencies:
+        errors.append("BusinessCaseTypeId validity dependency contract mismatch")
+
     storage = payload.get("storage_strategy", {})
     if storage.get("sharepoint_role") != "operative_mvp_data_store":
         errors.append("SharePoint must remain operative MVP data store")
@@ -61,7 +80,7 @@ def main() -> int:
     print("STATUS: PASSED")
     print(
         "OK: Notarial business-case inventory covers canonical usecases "
-        "with thin ontology sizing and SharePoint MVP storage boundaries."
+        "as 20 canonical IDs plus 2 direct aliases without BPMN validity dependency."
     )
     return 0
 

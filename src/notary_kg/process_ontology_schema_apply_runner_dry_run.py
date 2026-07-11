@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,9 +20,11 @@ from .process_ontology_schema_apply_readiness import (
 )
 
 
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1"
-ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
-ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1"
+LEGACY_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.2"
+LEGACY_ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1"
+ARTIFACT_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.2"
+ARTIFACT_INDEX_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.2"
 LIVE_READINESS_GATE_SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-live-readiness-gate/v0.2"
 LIVE_READINESS_REQUIRED_CHECK_IDS = (
     "execution_contract",
@@ -92,6 +95,8 @@ def build_process_ontology_sharepoint_schema_apply_runner_dry_run(repo_root: Pat
             "apply_readiness_status": readiness["status"],
             "apply_plan_schema": apply_plan["schema_version"],
             "apply_plan_status": apply_plan["status"],
+            "apply_plan_sha256": _payload_sha256(apply_plan),
+            "workspace_readiness_sha256": _payload_sha256(readiness),
             "graph_base_url": apply_plan["source"]["graph_base_url"],
             "graph_rest_only": apply_plan["source"]["graph_rest_only"],
             "legacy_sharepoint_api_allowed": False,
@@ -190,6 +195,7 @@ def build_process_ontology_sharepoint_schema_apply_artifact_index(
         write_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(repo_root)
         generated_default_artifact = True
 
+    current_dry_run = build_process_ontology_sharepoint_schema_apply_runner_dry_run(repo_root)
     artifact_rows = [
         row
         for artifact_path in sorted(root.rglob("process-ontology-schema-apply-runner-dry-run*.redacted.json"))
@@ -207,6 +213,10 @@ def build_process_ontology_sharepoint_schema_apply_artifact_index(
             "artifact_root": _relative_path(repo_root, root),
             "query": query or "",
             "generated_default_artifact": generated_default_artifact,
+            "current_dry_run_schema": SCHEMA_VERSION,
+            "current_dry_run_step_count": current_dry_run["summary"]["dry_run_step_count"],
+            "current_apply_plan_sha256": current_dry_run["source"]["apply_plan_sha256"],
+            "current_workspace_readiness_sha256": current_dry_run["source"]["workspace_readiness_sha256"],
         },
         "summary": {
             "artifact_count": len(artifact_rows),
@@ -318,23 +328,33 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         ),
         _live_readiness_check(
             "workspace_readiness",
-            readiness["status"] == "PASSED" and readiness["summary"]["workspace_apply_unit_count"] == 68,
-            "workspace readiness passed for all 68 apply units",
+            readiness["status"] == "PASSED" and readiness["summary"]["workspace_apply_unit_count"] == readiness["summary"]["workspace_count"] * readiness["summary"]["apply_plan_step_count"],
+            f"workspace readiness passed for all {readiness['summary']['workspace_apply_unit_count']} apply units",
             "workspace readiness must resolve both workspaces and all apply units",
         ),
         _live_readiness_check(
             "runner_dry_run",
             dry_run["status"] == "PASSED"
-            and dry_run["summary"]["dry_run_step_count"] == 68
+            and dry_run["summary"]["dry_run_step_count"] == readiness["summary"]["workspace_apply_unit_count"]
             and dry_run["summary"]["owner_gate_required_before_live_apply"] is True,
-            "runner dry-run passed with 68 planned steps and owner gate",
+            f"runner dry-run passed with {dry_run['summary']['dry_run_step_count']} planned steps and owner gate",
             "runner dry-run must pass and remain owner-gated",
         ),
         _live_readiness_check(
             "dry_run_artifact_index",
             artifact_index["status"] == "PASSED"
             and artifact_index["summary"]["artifact_count"] >= 1
-            and artifact_index["summary"]["required_for_live_apply_readiness_count"] >= 1,
+            and artifact_index["summary"]["required_for_live_apply_readiness_count"] >= 1
+            and all(
+                artifact.get("schema_version") == ARTIFACT_SCHEMA_VERSION
+                and artifact.get("status") == "PASSED"
+                and artifact.get("validation_status") == "PASSED"
+                and artifact.get("dry_run_step_count") == dry_run["summary"]["dry_run_step_count"]
+                and artifact.get("apply_plan_sha256") == dry_run["source"]["apply_plan_sha256"]
+                and artifact.get("workspace_readiness_sha256")
+                == dry_run["source"]["workspace_readiness_sha256"]
+                for artifact in artifact_index["artifacts"]
+            ),
             "redacted dry-run artifact index is present and live-readiness relevant",
             "redacted artifact index must include at least one live-readiness artifact",
         ),
@@ -383,6 +403,12 @@ def build_process_ontology_sharepoint_schema_apply_live_readiness_gate(
             "dry_run_schema": dry_run["schema_version"],
             "artifact_index_schema": artifact_index["schema_version"],
             "artifact_root": artifact_index["source"]["artifact_root"],
+            "apply_plan_sha256": binding["apply_plan_sha256"],
+            "workspace_readiness_sha256": binding["workspace_readiness_sha256"],
+            "artifact_index_apply_plan_sha256": artifact_index["source"]["current_apply_plan_sha256"],
+            "artifact_index_workspace_readiness_sha256": artifact_index["source"][
+                "current_workspace_readiness_sha256"
+            ],
         },
         "approval_binding": binding,
         "summary": {
@@ -503,8 +529,11 @@ def validate_process_ontology_sharepoint_schema_apply_runner_dry_run(
     summary = payload.get("summary", {})
     if summary.get("workspace_count") != 2:
         errors.append("dry-run must cover both workspaces")
-    if summary.get("dry_run_step_count") != 68:
-        errors.append("dry-run must expose all workspace apply units")
+    if not isinstance(summary.get("dry_run_step_count"), int) or summary["dry_run_step_count"] < 0:
+        errors.append("dry-run step count must be a non-negative integer")
+    for key in ("apply_plan_sha256", "workspace_readiness_sha256"):
+        if not _valid_sha256(source.get(key)):
+            errors.append(f"dry-run must bind current {key}")
     for key in (
         "preflight_request_count",
         "future_mutation_request_count",
@@ -519,8 +548,8 @@ def validate_process_ontology_sharepoint_schema_apply_runner_dry_run(
         errors.append("live apply must require owner gate")
 
     dry_run_steps = payload.get("dry_run_steps", [])
-    if len(dry_run_steps) != 68:
-        errors.append("expected 68 dry-run steps")
+    if len(dry_run_steps) != summary.get("dry_run_step_count"):
+        errors.append("dry-run step list must match the dynamic summary count")
     for step in dry_run_steps:
         step_id = step.get("id", "<unknown>")
         if step.get("mode") != "dry_run_only":
@@ -574,21 +603,26 @@ def validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
 ) -> ProcessOntologySchemaApplyRunnerDryRunArtifactValidation:
     errors: list[str] = []
     if payload.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
-        errors.append("unexpected artifact schema_version")
+        errors.append("stale or unexpected artifact schema_version")
     if payload.get("contract_id") != f"{CONTRACT_ID}.artifact":
         errors.append("unexpected artifact contract_id")
     if payload.get("mode") != "redacted_offline_artifact":
         errors.append("artifact must remain redacted_offline_artifact")
+    if payload.get("status") != "PASSED":
+        errors.append("artifact status must pass")
 
     source = payload.get("source", {})
     if source.get("dry_run_schema") != SCHEMA_VERSION:
-        errors.append("artifact must reference the dry-run schema")
+        errors.append("artifact must reference the current dry-run schema")
+    for key in ("apply_plan_sha256", "workspace_readiness_sha256"):
+        if not _valid_sha256(source.get(key)):
+            errors.append(f"artifact must bind current {key}")
     if source.get("dry_run_status") != "PASSED":
         errors.append("dry-run source must pass before artifact creation")
 
     summary = payload.get("summary", {})
-    if summary.get("dry_run_step_count") != 68:
-        errors.append("artifact must include all 68 dry-run steps")
+    if not isinstance(summary.get("dry_run_step_count"), int) or summary["dry_run_step_count"] < 0:
+        errors.append("artifact dry-run step count must be a non-negative integer")
     for key in ("preflight_request_count", "future_mutation_request_count", "readback_request_count"):
         if summary.get(key) != summary.get("dry_run_step_count"):
             errors.append(f"{key} must match dry-run step count")
@@ -613,8 +647,8 @@ def validate_process_ontology_sharepoint_schema_apply_runner_dry_run_artifact(
             errors.append(f"redaction flag mismatch: {key}")
 
     steps = payload.get("dry_run_step_index", [])
-    if len(steps) != 68:
-        errors.append("artifact dry-run step index must include 68 entries")
+    if len(steps) != summary.get("dry_run_step_count"):
+        errors.append("artifact dry-run step index must match the dynamic summary count")
     for step in steps:
         step_id = step.get("id", "<unknown>")
         if step.get("mode") != "redacted_step_index":
@@ -671,10 +705,24 @@ def validate_process_ontology_sharepoint_schema_apply_artifact_index(
         if summary.get(key) is not False:
             errors.append(f"summary must keep {key} false")
 
+    source = payload.get("source", {})
+    if source.get("current_dry_run_schema") != SCHEMA_VERSION:
+        errors.append("artifact index must bind the current dry-run schema")
+    if not isinstance(source.get("current_dry_run_step_count"), int) or source["current_dry_run_step_count"] < 0:
+        errors.append("artifact index current dry-run count must be non-negative")
+    for key in ("current_apply_plan_sha256", "current_workspace_readiness_sha256"):
+        if not _valid_sha256(source.get(key)):
+            errors.append(f"artifact index must bind {key}")
+
     for artifact in artifacts:
         artifact_id = artifact.get("id", "<unknown>")
         if artifact.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
-            errors.append(f"{artifact_id}: unexpected artifact schema")
+            errors.append(f"{artifact_id}: stale or unexpected artifact schema")
+        if artifact.get("status") != "PASSED" or artifact.get("validation_status") != "PASSED":
+            errors.append(f"{artifact_id}: artifact and validation status must both pass")
+        for key in ("apply_plan_sha256", "workspace_readiness_sha256"):
+            if not _valid_sha256(artifact.get(key)):
+                errors.append(f"{artifact_id}: artifact index must bind current {key}")
         if artifact.get("redacted") is not True:
             errors.append(f"{artifact_id}: artifact must be redacted")
         if artifact.get("contains_request_headers") is not False:
@@ -683,8 +731,12 @@ def validate_process_ontology_sharepoint_schema_apply_artifact_index(
             errors.append(f"{artifact_id}: artifact index must reject tokens or secrets")
         if artifact.get("required_for_live_apply_readiness") is not True:
             errors.append(f"{artifact_id}: artifact must be live-apply readiness evidence")
-        if int(artifact.get("dry_run_step_count", 0)) != 68:
-            errors.append(f"{artifact_id}: artifact must cover 68 dry-run steps")
+        if artifact.get("dry_run_step_count") != source.get("current_dry_run_step_count"):
+            errors.append(f"{artifact_id}: artifact count does not match current dry-run")
+        if artifact.get("apply_plan_sha256") != source.get("current_apply_plan_sha256"):
+            errors.append(f"{artifact_id}: artifact apply-plan hash is stale")
+        if artifact.get("workspace_readiness_sha256") != source.get("current_workspace_readiness_sha256"):
+            errors.append(f"{artifact_id}: artifact workspace-readiness hash is stale")
 
     redaction = payload.get("redaction", {})
     for key in (
@@ -752,17 +804,52 @@ def validate_process_ontology_sharepoint_schema_apply_live_readiness_gate(
         errors.append("passed live readiness gate must not include blockers")
     if payload.get("status") == "PASSED" and expected_blockers:
         errors.append("passed live readiness gate must pass every check")
-    if summary.get("workspace_apply_unit_count") != 68:
-        errors.append("live readiness gate must cover 68 workspace apply units")
-    if summary.get("dry_run_step_count") != 68:
-        errors.append("live readiness gate must cover 68 dry-run steps")
+    if not isinstance(summary.get("workspace_apply_unit_count"), int) or summary["workspace_apply_unit_count"] < 0:
+        errors.append("live readiness workspace apply unit count must be non-negative")
+    if summary.get("dry_run_step_count") != summary.get("workspace_apply_unit_count"):
+        errors.append("live readiness gate dry-run count must match workspace apply units")
     if summary.get("artifact_count", 0) < 1:
         errors.append("live readiness gate must reference at least one dry-run artifact")
     if summary.get("required_for_live_apply_readiness_count", 0) < 1:
         errors.append("live readiness gate must reference live-readiness evidence")
+    indexed_artifacts = payload.get("evidence", {}).get("indexed_artifacts", [])
+    if not indexed_artifacts:
+        errors.append("live readiness gate must include indexed artifact rows")
+    for artifact in indexed_artifacts:
+        artifact_id = artifact.get("id", "<unknown>")
+        if artifact.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
+            errors.append(f"{artifact_id}: live readiness rejects stale artifact schema")
+        if artifact.get("status") != "PASSED" or artifact.get("validation_status") != "PASSED":
+            errors.append(f"{artifact_id}: live readiness requires passing artifact status and validation")
+        if artifact.get("dry_run_step_count") != summary.get("dry_run_step_count"):
+            errors.append(f"{artifact_id}: live readiness artifact count must match current dry-run")
+        for key in ("apply_plan_sha256", "workspace_readiness_sha256"):
+            if not _valid_sha256(artifact.get(key)):
+                errors.append(f"{artifact_id}: live readiness artifact missing current {key}")
+            source_key = (
+                "artifact_index_apply_plan_sha256"
+                if key == "apply_plan_sha256"
+                else "artifact_index_workspace_readiness_sha256"
+            )
+            if artifact.get(key) != payload.get("source", {}).get(source_key):
+                errors.append(f"{artifact_id}: live readiness artifact has stale {key}")
     binding = payload.get("approval_binding", {})
+    source = payload.get("source", {})
+    for key in ("apply_plan_sha256", "workspace_readiness_sha256"):
+        if source.get(key) != binding.get(key):
+            errors.append(f"live readiness gate source {key} must equal approval_binding")
+    for key in ("artifact_index_apply_plan_sha256", "artifact_index_workspace_readiness_sha256"):
+        if not _valid_sha256(source.get(key)):
+            errors.append(f"live readiness gate source must include valid {key}")
     if binding.get("schema_version") != APPLY_BINDING_SCHEMA_VERSION:
         errors.append("live readiness gate must include the apply binding schema")
+    binding_source = {
+        key: value
+        for key, value in binding.items()
+        if key not in {"schema_version", "binding_sha256"}
+    }
+    if binding.get("binding_sha256") != _payload_sha256(binding_source):
+        errors.append("live readiness gate approval_binding hash does not match canonical binding")
     workspace_ids = binding.get("workspace_ids", [])
     if not isinstance(workspace_ids, list) or not workspace_ids or len(workspace_ids) != len(set(workspace_ids)):
         errors.append("live readiness gate must bind at least one unique workspace")
@@ -870,6 +957,8 @@ def _artifact_payload(repo_root: Path, dry_run: dict[str, Any], json_path: Path,
             "dry_run_schema": dry_run["schema_version"],
             "dry_run_status": dry_run["status"],
             "dry_run_contract_id": dry_run["contract_id"],
+            "apply_plan_sha256": dry_run["source"]["apply_plan_sha256"],
+            "workspace_readiness_sha256": dry_run["source"]["workspace_readiness_sha256"],
         },
         "artifact_paths": {
             "json": str(json_path.relative_to(repo_root) if json_path.is_relative_to(repo_root) else json_path),
@@ -1054,6 +1143,8 @@ def _artifact_index_row(repo_root: Path, artifact_path: Path) -> dict[str, Any]:
             "dry_run_step_count": 0,
             "workspace_count": 0,
             "future_mutation_request_count": 0,
+            "apply_plan_sha256": "",
+            "workspace_readiness_sha256": "",
             "required_for_live_apply_readiness": False,
             "redacted": False,
             "contains_request_headers": True,
@@ -1076,6 +1167,8 @@ def _artifact_index_row(repo_root: Path, artifact_path: Path) -> dict[str, Any]:
         "dry_run_step_count": int(summary.get("dry_run_step_count", 0)),
         "workspace_count": int(summary.get("workspace_count", 0)),
         "future_mutation_request_count": int(summary.get("future_mutation_request_count", 0)),
+        "apply_plan_sha256": payload.get("source", {}).get("apply_plan_sha256", ""),
+        "workspace_readiness_sha256": payload.get("source", {}).get("workspace_readiness_sha256", ""),
         "owner_gate_required_before_live_apply": bool(summary.get("owner_gate_required_before_live_apply", False)),
         "required_for_live_apply_readiness": any(
             attachment.get("required_for_live_apply_readiness") is True for attachment in attachments
@@ -1186,6 +1279,19 @@ def _live_readiness_gate_markdown(payload: dict[str, Any]) -> str:
     for key, value in payload["guardrails"].items():
         lines.append(f"- `{key}`: `{value}`")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _valid_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _relative_path(repo_root: Path, path: Path) -> str:

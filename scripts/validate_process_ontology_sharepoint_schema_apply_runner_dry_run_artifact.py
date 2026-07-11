@@ -68,10 +68,10 @@ def main() -> int:
             if marker.lower() in combined.lower():
                 errors.append(f"artifact must not contain marker: {marker}")
 
-        if payload.get("summary", {}).get("dry_run_step_count") != 68:
-            errors.append("artifact must include all 68 dry-run steps")
-        if len(payload.get("dry_run_step_index", [])) != 68:
-            errors.append("artifact dry-run step index must include 68 entries")
+        if payload.get("summary", {}).get("dry_run_step_count") != 66:
+            errors.append("artifact must include all 66 required-only dry-run steps")
+        if len(payload.get("dry_run_step_index", [])) != 66:
+            errors.append("artifact dry-run step index must include 66 entries")
         for attachment in payload.get("evidence_attachments", []):
             if attachment.get("required_for_live_apply_readiness") is not True:
                 errors.append("artifact evidence must be required for live apply readiness")

@@ -22,7 +22,7 @@ schreibt daraus zusätzlich redigierte Evidence-Dateien:
 - `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.json`
 - `out/notary-kg/process-ontology-schema-apply-runner-dry-run.redacted.md`
 
-Das Artefakt enthält die 68 Dry-Run-Schritte als redigierten Index. Site-IDs
+Das Artefakt enthält die 66 Dry-Run-Schritte als redigierten Index. Site-IDs
 werden auf `{site-id}` zurückgeführt, Request-Header werden nicht gespeichert
 und geplante Mutationsbodies werden nur als Body-Shape-Key-Liste ausgegeben.
 
@@ -52,7 +52,7 @@ Graph-Requests aus.
 
 `nac kg process-ontology-schema-apply-owner-gated-runner-contract --format json`
 schreibt anschließend den ausführungsnahen Runner-Vertrag. Er bindet den
-späteren Befehl `nac kg process-ontology-schema-apply-live` an 68 geplante
+späteren Befehl `nac kg process-ontology-schema-apply-live` an 66 geplante
 Runner-Schritte, Owner-Gate, Pflichtflags, Stop-before-mutation-Regeln und
 redigierte Evidence. Der Vertrag markiert den Live-Runner-Befehl als
 implementiert, führt aber selbst keine Graph-Requests aus.

@@ -29,6 +29,9 @@ class CaseSummary:
     workflow_dependencies: tuple[str, ...]
     first_open_questions: tuple[str, ...]
     non_empty_values: tuple[str, ...]
+    business_case_type_id: str | None
+    legacy_alias_target_business_case_type_id: str | None
+    identity_metadata_errors: tuple[str, ...]
 
     @property
     def ready_for_development(self) -> bool:
@@ -53,6 +56,9 @@ class CaseSummary:
             "workflow_dependencies": list(self.workflow_dependencies),
             "first_open_questions": list(self.first_open_questions),
             "non_empty_values": list(self.non_empty_values),
+            "business_case_type_id": self.business_case_type_id,
+            "legacy_alias_target_business_case_type_id": self.legacy_alias_target_business_case_type_id,
+            "identity_metadata_errors": list(self.identity_metadata_errors),
             "ready_for_development": self.ready_for_development,
         }
 
@@ -132,6 +138,11 @@ class KnowledgeGraphCatalog:
             if isinstance(item, dict) and item.get("value") not in EMPTY_VALUES
         )
 
+        declared_id, alias_target, identity_errors = _business_case_identity_metadata(case)
+        business_case_type_id = declared_id
+        if "business_case_type_id" not in case and case.get("status") != "legacy_alias":
+            business_case_type_id = str(case.get("slug", ""))
+
         return CaseSummary(
             catalog_id=self.graph_id,
             case_id=str(case.get("id", "")),
@@ -150,6 +161,9 @@ class KnowledgeGraphCatalog:
             workflow_dependencies=tuple(str(item) for item in _as_list(case.get("workflow_dependencies"))),
             first_open_questions=first_open_questions,
             non_empty_values=non_empty_values,
+            business_case_type_id=business_case_type_id,
+            legacy_alias_target_business_case_type_id=alias_target,
+            identity_metadata_errors=identity_errors,
         )
 
 
@@ -187,3 +201,31 @@ def find_case(catalogs: list[KnowledgeGraphCatalog], slug: str) -> CaseSummary |
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
+
+def _business_case_identity_metadata(
+    case: dict[str, Any],
+) -> tuple[str | None, str | None, tuple[str, ...]]:
+    errors: list[str] = []
+    declared_id: str | None = None
+    if "business_case_type_id" in case:
+        value = case.get("business_case_type_id")
+        if isinstance(value, str):
+            declared_id = value
+        else:
+            errors.append("business_case_type_id must be a string when declared")
+
+    alias_target: str | None = None
+    if "legacy_alias" in case:
+        alias = case.get("legacy_alias")
+        if not isinstance(alias, dict) or set(alias) != {"target"}:
+            errors.append("legacy_alias must contain exactly one structured target")
+        else:
+            target = alias.get("target")
+            if not isinstance(target, dict) or set(target) != {"business_case_type_id"}:
+                errors.append("legacy_alias.target must contain exactly business_case_type_id")
+            elif not isinstance(target.get("business_case_type_id"), str):
+                errors.append("legacy_alias target business_case_type_id must be a string")
+            else:
+                alias_target = target["business_case_type_id"]
+
+    return declared_id, alias_target, tuple(errors)

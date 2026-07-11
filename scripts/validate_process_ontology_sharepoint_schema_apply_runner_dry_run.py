@@ -40,10 +40,10 @@ def main() -> int:
     summary = payload.get("summary", {})
     if summary.get("workspace_count") != 2:
         errors.append("expected two notary workspaces")
-    if summary.get("dry_run_step_count") != 68:
-        errors.append("expected 68 dry-run steps")
-    if summary.get("future_mutation_request_count") != 68:
-        errors.append("expected 68 future mutation request plans")
+    if summary.get("dry_run_step_count") != 66:
+        errors.append("expected 66 dry-run steps")
+    if summary.get("future_mutation_request_count") != 66:
+        errors.append("expected 66 future mutation request plans")
     if payload.get("evidence_plan", {}).get("raw_graph_response_allowed") is not False:
         errors.append("raw Graph responses must remain blocked")
 

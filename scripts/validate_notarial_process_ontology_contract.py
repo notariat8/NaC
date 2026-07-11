@@ -48,6 +48,8 @@ def main() -> int:
     evaluation = payload.get("evaluation", {})
     summary = evaluation.get("summary", {})
     derived = evaluation.get("derived_decision", {})
+    projection = contract.get("sharepoint_projection_rules", {})
+    projection_contracts = projection.get("projection_contracts", {})
 
     if scope.get("offline_contract_only") is not True:
         errors.append("process ontology contract must remain offline-only")
@@ -79,6 +81,31 @@ def main() -> int:
         errors.append("runtime ontology reasoning must remain off the request path")
     if derived.get("live_apply_required_now") is not False:
         errors.append("contract must not require live apply now")
+    for key, expected in {
+        "type_validity_requires_vorgangsartenregister": True,
+        "type_validity_requires_process_register": False,
+        "type_validity_requires_bpmn_model": False,
+        "type_validity_requires_viewer": False,
+        "process_key_equals_business_case_type_id_when_present": True,
+    }.items():
+        if derived.get(key) is not expected:
+            errors.append(f"derived type validity decision mismatch: {key}")
+    required = set(projection.get("required_lists_or_libraries", []))
+    optional = set(projection.get("optional_future_lists_or_libraries", []))
+    if "Vorgangsartenregister" not in required:
+        errors.append("Vorgangsartenregister must be required")
+    if not {"Prozessregister", "BPMN Models"} <= optional:
+        errors.append("Prozessregister and BPMN Models must remain optional")
+    process = projection_contracts.get("Prozessregister", {})
+    process_key = process.get("process_key", {})
+    if process_key.get("equals_business_case_type_id_when_present") is not True:
+        errors.append("Prozessregister.ProcessKey must equal BusinessCaseTypeId when present")
+    if process.get("required_for_type_validity") is not False:
+        errors.append("Prozessregister must not be required for type validity")
+    bpmn = projection_contracts.get("BPMN Models", {})
+    if bpmn.get("required_for_type_validity") is not False:
+        errors.append("BPMN Models must not be required for type validity")
+
 
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     lowered = serialized.lower()
@@ -95,7 +122,7 @@ def main() -> int:
     print("STATUS: PASSED")
     print(
         "OK: Notarial process ontology contract binds all business cases to a "
-        "SharePoint MVP projection and keeps ontology/BPMN off the runtime request path."
+        "viewer-independent type registry and keeps process/BPMN projections optional."
     )
     print(
         "SIZING: "

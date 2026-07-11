@@ -135,6 +135,11 @@
       "status": "legacy_alias",
       "priority": "P2",
       "usecase_path": "usecases/testament",
+      "legacy_alias": {
+        "target": {
+          "business_case_type_id": "testament-erbvertrag"
+        }
+      },
       "summary": "Legacy-Starter-Alias für usecases/testament-erbvertrag; bleibt aus Kompatibilitätsgründen bestehen, waehrend neue Workflow-Arbeit den kanonischen Usecase nutzt.",
       "legal_anchors": [
         "src.beurkg"

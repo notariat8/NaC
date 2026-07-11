@@ -1,9 +1,9 @@
 {
-  "schema_version": "nac.notarial-process-ontology/v1",
+  "schema_version": "nac.notarial-process-ontology/v2",
   "contract_id": "notarial.process_ontology",
   "title": "Notarial process ontology contract",
   "status": "offline_contract_no_live_apply",
-  "last_update": "2026-07-09",
+  "last_update": "2026-07-11",
   "purpose": "Define the product-model boundary for notarial workflows: business-case types, process phases, roles, documents, evidence, access delegation and SharePoint MVP projections without making the ontology a runtime database.",
   "source_documents": {
     "business_case_inventory_command": "nac kg business-case-inventory --format json",
@@ -39,6 +39,34 @@
     "sdk_allowed": false,
     "legacy_sharepoint_api_allowed": false,
     "graph_beta_allowed": false
+  },
+  "business_case_type_identity": {
+    "canonical_field": "BusinessCaseTypeId",
+    "canonical_source": "canonical_usecase_slug",
+    "canonical_id_equals_slug": true,
+    "syntax_pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "max_length": 128,
+    "exact_match_without_normalization": true,
+    "canonical_count": 20,
+    "legacy_alias_count": 2,
+    "catalog_sizing_entry_count": 22,
+    "aliases_have_canonical_id": false,
+    "aliases_require_one_direct_known_canonical_target": true,
+    "alias_collisions_chains_cycles_self_targets_and_duplicates_allowed": false
+  },
+  "runtime_type_validity": {
+    "required_dependencies": [
+      "repo_versioned_catalog",
+      "Vorgangsartenregister"
+    ],
+    "non_dependencies": [
+      "Prozessregister",
+      "BPMN Models",
+      "bpmn_model",
+      "bpmn_viewer"
+    ],
+    "missing_optional_process_or_bpmn_projection_invalidates_type": false,
+    "vorgangsartenregister_is_viewer_independent": true
   },
   "canonical_entity_classes": [
     "BusinessCaseType",
@@ -146,6 +174,7 @@
     "graph_access": "microsoft_graph_rest_v1_only",
     "schema_apply": "owner_gated_future_apply",
     "required_lists_or_libraries": [
+      "Vorgangsartenregister",
       "Akten",
       "Beteiligte",
       "AufgabenFristen",
@@ -157,6 +186,43 @@
       "Prozessregister",
       "BPMN Models"
     ],
+    "projection_contracts": {
+      "Vorgangsartenregister": {
+        "required_for_type_validity": true,
+        "viewer_independent": true,
+        "unique_indexed_key": "BusinessCaseTypeId",
+        "required_fields": [
+          "BusinessCaseTypeId",
+          "LifecycleStatus",
+          "Selectable",
+          "CatalogVersion"
+        ],
+        "bpmn_or_viewer_fields_allowed": false
+      },
+      "Prozessregister": {
+        "required_for_type_validity": false,
+        "optional": true,
+        "process_key": {
+          "field": "ProcessKey",
+          "indexed": true,
+          "unique": true,
+          "equals_business_case_type_id_when_present": true
+        },
+        "nullable_bpmn_link_fields": [
+          "NacBpmnModelId",
+          "BpmnDriveItemId",
+          "BpmnXmlSha256",
+          "BpmnGitPath",
+          "BpmnGitCommitSha",
+          "NacBpmnVersion",
+          "BpmnContentMode"
+        ]
+      },
+      "BPMN Models": {
+        "required_for_type_validity": false,
+        "optional": true
+      }
+    },
     "blocked_storage": [
       "document_full_text",
       "raw_graph_response",
@@ -170,7 +236,9 @@
     "runtime_engine": false,
     "bpmn_js_sharepoint_viewer": "optional_spfx_viewer_only",
     "modeler_live_apply": "blocked_until_owner_gated_contract",
-    "required_pointer_entity": "BpmnModelPointer"
+    "pointer_entity": "BpmnModelPointer",
+    "pointer_nullable": true,
+    "required_for_type_validity": false
   },
   "agent_runtime_boundary": {
     "agentic_toolkit": "nvidia_nemo_agent_toolkit",

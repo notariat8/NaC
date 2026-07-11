@@ -1,8 +1,8 @@
 # ADR: Stabile BusinessCaseTypeId
 
-Status: Vorschlag zur Review, offline, kein Live-Apply
-Issue: [GitHub #605](https://github.com/notariat8/NaC/issues/605)
-Datum: 2026-07-10
+Status: Angenommen; S1/S2 offline implementiert, kein Live-Apply
+Issue: [GitHub #610](https://github.com/notariat8/NaC/issues/610)
+Datum: 2026-07-11
 
 ## Kontext
 
@@ -21,8 +21,10 @@ auf eine Identität zusammen. Die heutigen Grenzen prüfen der
 [Prozessontologie-Validator](../../../scripts/validate_notarial_process_ontology_contract.py)
 und der
 [BPMN-Viewer-Adapter-Validator](../../../scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py).
-Diese ADR ändert in diesem Issue weder Code noch Verträge, Schema, Tenant oder
-Policies.
+Issue #610 implementiert S1 und S2 ausschließlich offline in Verträgen,
+Validatoren, Inventar und Schema-Planung. Es wurden keine Graph-Requests
+ausgeführt, kein Tenant verändert und kein SharePoint-Schema live angewendet.
+S3 bis S7 bleiben offen.
 
 ## Entscheidung
 
@@ -255,42 +257,43 @@ Zweckfreigabe.
 
 ## Explizite Umsetzungsslices
 
-Diese ADR genehmigt keinen Slice; jeder Slice braucht Review und passende
+Diese ADR ist angenommen. Issue #610 hat S1 und S2 am 2026-07-11 offline
+implementiert. S3 bis S7 bleiben offen und brauchen jeweils Review und passende
 Tests, bevor ein Live-Apply erwogen wird.
 
-| Slice | Erforderliche Änderung | Abnahmekante |
-| --- | --- | --- |
-| S1 Vertrag | Ontologie-, Inventory- und Viewer-Verträge auf unabhängiges `Vorgangsartenregister`, optionales `Prozessregister`, nullable BPMN-Links und Alias-Invarianten ausrichten | Validatoren beweisen viewer-unabhängige Typgültigkeit und blockieren Drift offline |
-| S2 Schema-Plan | `Akten.VorgangstypId` und `Vorgangsartenregister` planen; `Prozessregister.ProcessKey` eindeutig und BPMN-Links nullable machen; Legacy-Choice unverändert lassen | Dry-Run, Readiness, Snapshot- und Rollback-Plan; weiterhin kein Live-Apply |
-| S3 Runtime | `business_case_type_get`, kanonische Validierung und getrennte Registry-/Viewer-ETag-Caches implementieren | Negativtests für Timeout, Drift, Duplikat, Alias, Viewer-Ausfall und Cache-Ablauf |
-| S4 MCP/Graph | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
-| S5 Migration | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
-| S6 Immutable Evidence | durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
-| S7 Live-Freigabe | separaten owner-gated Schema-/Backfill-Apply mit Funktionstrennung und Cleanup-Verbot vorbereiten | vollständige PR-Diff, N-/N-1-Rollback-Probe, negative Autorisierung und explizite duale Freigabe |
+| Slice | Status | Erforderliche Änderung | Abnahmekante |
+| --- | --- | --- | --- |
+| S1 Vertrag | offline implementiert in #610 | Ontologie-, Inventory- und Viewer-Verträge auf unabhängiges `Vorgangsartenregister`, optionales `Prozessregister`, nullable BPMN-Links und Alias-Invarianten ausrichten | Validatoren beweisen viewer-unabhängige Typgültigkeit und blockieren Drift offline |
+| S2 Schema-Plan | offline implementiert in #610 | `Akten.VorgangstypId` und `Vorgangsartenregister` im verpflichtenden Default planen; `Prozessregister` und `BPMN Models` bleiben getrennte optionale Viewer-Provisionierung; Legacy-Choice unverändert lassen | 33 Plan-Schritte und 66 Workspace-Apply-Units; Dry-Run, Readiness, Snapshot- und Rollback-Plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
+| S3 Runtime | offen | `business_case_type_get`, kanonische Validierung und getrennte Registry-/Viewer-ETag-Caches implementieren | Negativtests für Timeout, Drift, Duplikat, Alias, Viewer-Ausfall und Cache-Ablauf |
+| S4 MCP/Graph | offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
+| S5 Migration | offen | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
+| S6 Immutable Evidence | offen | durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
+| S7 Live-Freigabe | offen | separaten owner-gated Schema-/Backfill-Apply mit Funktionstrennung und Cleanup-Verbot vorbereiten | vollständige PR-Diff, N-/N-1-Rollback-Probe, negative Autorisierung und explizite duale Freigabe |
 
 ## Akzeptanzkriterien Und Verifikation
 
-- `AC-605-01`: Die drei Projektionen verwenden exakt denselben stabilen
+- `AC-610-01`: Die drei Projektionen verwenden exakt denselben stabilen
   Identifier, soweit sie existieren; Typgültigkeit bleibt viewer-unabhängig.
-- `AC-605-02`: Alias-, Retired-, Drift-, Duplikat- und Cache-Fehler blockieren
+- `AC-610-02`: Alias-, Retired-, Drift-, Duplikat- und Cache-Fehler blockieren
   fail-closed.
-- `AC-605-03`: Dual-Read/-Write, Backfill, Cutover und Rollback sind begrenzt,
+- `AC-610-03`: Dual-Read/-Write, Backfill, Cutover und Rollback sind begrenzt,
   ETag-gesichert, durch stabile Endscans belegt und ohne in-place
   Choice-Konvertierung.
-- `AC-605-04`: Runtime, Provisioning und Audit sind nach Least Privilege und
+- `AC-610-04`: Runtime, Provisioning und Audit sind nach Least Privilege und
   Funktionstrennung begrenzt; negative Autorisierungstests sind Pflicht.
-- `AC-605-05`: S1 bis S7 benennen Code-, Schema-, MCP- und Evidence-Arbeit vor
+- `AC-610-05`: S1 bis S7 benennen Code-, Schema-, MCP- und Evidence-Arbeit vor
   jedem Live-Apply.
-- `AC-605-06`: Deutsche und englische ADR sowie interne Links sind valide.
-- `AC-605-07`: `AuditJournalLite` ist keine revisionssichere Quelle; ohne
+- `AC-610-06`: Deutsche und englische ADR sowie interne Links sind valide.
+- `AC-610-07`: `AuditJournalLite` ist keine revisionssichere Quelle; ohne
   immutable Outbox/Event-Stream und persistente Quarantäne bleibt Live-Mutation
   verboten.
-- `AC-605-08`: Snapshots binden `Vorgangsartenregister`, `Prozessregister` und
+- `AC-610-08`: Snapshots binden `Vorgangsartenregister`, `Prozessregister` und
   ETags; N-1-Rollback und Forward-Recovery sind vor Cutover getestet.
-- `AC-605-09`: `ActorRef` wird als personenbezogen behandelt, pseudonymisiert,
+- `AC-610-09`: `ActorRef` wird als personenbezogen behandelt, pseudonymisiert,
   zweckgebunden aufgelöst und mindestens zehn Jahre geschützt aufbewahrt.
 
-Für diesen reinen Dokumentationsvorschlag gelten:
+Für die offline implementierten S1-/S2-Artefakte gelten:
 
 ```bash
 python3 scripts/validate_language_parity.py

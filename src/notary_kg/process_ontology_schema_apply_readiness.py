@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +13,7 @@ from .process_ontology_schema_apply_plan import (
 
 
 PROVISIONED_STATE_PATH = Path("deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json")
-SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1"
+SCHEMA_VERSION = "nac.process-ontology-sharepoint-schema-apply-readiness/v0.2"
 CONTRACT_ID = "notarial.process_ontology_sharepoint_schema_apply_readiness"
 REQUIRED_PERMISSION = "Sites.Manage.All"
 
@@ -40,6 +41,9 @@ def build_process_ontology_sharepoint_schema_apply_readiness(repo_root: Path) ->
         "source": {
             "apply_plan_schema": apply_plan["schema_version"],
             "apply_plan_status": apply_plan["status"],
+            "apply_plan_step_count": apply_plan["summary"]["total_step_count"],
+            "apply_plan_sha256": _payload_sha256(apply_plan),
+            "live_execution_approval_state": apply_plan["summary"]["live_execution_approval_state"],
             "provisioned_state": str(PROVISIONED_STATE_PATH),
             "provisioned_state_version": provisioned["state_version"],
             "tenant_id_present": bool(provisioned.get("tenant", {}).get("tenant_id")),
@@ -67,11 +71,12 @@ def build_process_ontology_sharepoint_schema_apply_readiness(repo_root: Path) ->
             "delegated_user_context_allowed_for_live_apply": False,
             "application_owner_path_required": True,
         },
+        "recovery_evidence_plan": dict(apply_plan["recovery_evidence_plan"]),
         "ordering": {
             "phase_order": [
                 "resolve_workspace_site_ids",
                 "verify_required_list_ids",
-                "create_optional_process_projection_resources",
+                "create_required_runtime_projection_resources",
                 "create_missing_process_columns",
                 "resolve_choice_column_ids",
                 "extend_choice_columns",
@@ -137,6 +142,12 @@ def validate_process_ontology_sharepoint_schema_apply_readiness(
     source = payload.get("source", {})
     if source.get("apply_plan_status") != "PASSED":
         errors.append("apply plan must pass before readiness")
+    if source.get("apply_plan_step_count") != payload.get("summary", {}).get("apply_plan_step_count"):
+        errors.append("readiness apply-plan count must bind the current plan")
+    if not _valid_sha256(source.get("apply_plan_sha256")):
+        errors.append("readiness must bind the current apply plan SHA-256")
+    if source.get("live_execution_approval_state") != "BLOCKED_PENDING_S6_S7_APPROVAL":
+        errors.append("S2 readiness must remain blocked pending S6/S7 approval")
     if source.get("graph_base_url") != GRAPH_BASE_URL:
         errors.append("unexpected Graph base URL")
     if source.get("graph_rest_only") is not True:
@@ -147,18 +158,28 @@ def validate_process_ontology_sharepoint_schema_apply_readiness(
         errors.append("Graph SDK must remain blocked")
 
     summary = payload.get("summary", {})
+    if not isinstance(summary.get("apply_plan_step_count"), int) or summary["apply_plan_step_count"] < 0:
+        errors.append("readiness apply_plan_step_count must be a non-negative integer")
     if summary.get("workspace_count", 0) < 2:
         errors.append("expected both notary workspaces")
     if summary.get("workspace_apply_unit_count") != summary.get("workspace_count", 0) * summary.get("apply_plan_step_count", 0):
         errors.append("readiness must expand every apply-plan step per workspace")
     if summary.get("missing_required_list_id_count") != 0:
         errors.append("all required MVP list IDs must be known before apply readiness")
-    if summary.get("dynamic_resource_resolution_count", 0) <= 0:
-        errors.append("expected dynamic resource resolution requirements")
+    if not isinstance(summary.get("dynamic_resource_resolution_count"), int) or summary["dynamic_resource_resolution_count"] < 0:
+        errors.append("dynamic_resource_resolution_count must be a non-negative integer")
     if summary.get("owner_gate_required_before_live_apply") is not True:
         errors.append("live apply must remain owner-gated")
     if summary.get("live_apply_readiness") != "OWNER_GATE_REQUIRED":
         errors.append("readiness must not silently mark live apply as executable")
+
+    recovery = payload.get("recovery_evidence_plan", {})
+    if recovery.get("pre_apply_snapshot_required") is not True:
+        errors.append("readiness must require a pre-apply schema snapshot")
+    if recovery.get("additive_rollback_only") is not True:
+        errors.append("readiness rollback must remain additive")
+    if recovery.get("automatic_rollback_allowed") is not False:
+        errors.append("readiness must block automatic rollback")
 
     permission = payload.get("permission_readiness", {})
     if permission.get("required_application_permission") != REQUIRED_PERMISSION:
@@ -181,6 +202,10 @@ def validate_process_ontology_sharepoint_schema_apply_readiness(
             for key in ("executes_graph_requests", "writes_sharepoint", "changes_sharepoint_schema"):
                 if unit.get(key) is not False:
                     errors.append(f"{unit.get('id', '<unknown>')}: unit must keep {key} false")
+            if unit.get("pre_apply_snapshot_required") is not True:
+                errors.append(f"{unit.get('id', '<unknown>')}: missing pre-apply snapshot")
+            if unit.get("rollback_mode") != "retain_additive_columns_and_values":
+                errors.append(f"{unit.get('id', '<unknown>')}: rollback must retain additive data")
             if unit.get("owner_gate_required_before_live_apply") is not True:
                 errors.append(f"{unit.get('id', '<unknown>')}: missing owner gate")
             if unit.get("site_id_status") != "known":
@@ -288,6 +313,9 @@ def _apply_unit(
         "target_list_id_status": _target_id_status(step["operation"], target_id),
         "target_list_or_library_id": target_id,
         "dynamic_resolution_required": dynamic_resolution_required,
+        "pre_apply_snapshot_required": True,
+        "snapshot_scope": ["target_list_metadata", "target_column_definition", "etag_when_available"],
+        "rollback_mode": "retain_additive_columns_and_values",
         "preflight_idempotency_check": step["idempotency_check"],
         "future_request_template": {
             "method": step["request"]["method"],
@@ -312,3 +340,16 @@ def _permission_present(provisioned: dict[str, Any], permission: str) -> bool:
         .get("application_permissions", [])
     )
     return permission in permissions
+
+
+def _payload_sha256(payload: Any) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _valid_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )

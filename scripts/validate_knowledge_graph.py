@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+src_root_text = str(SRC_ROOT)
+if src_root_text in sys.path:
+    sys.path.remove(src_root_text)
+sys.path.insert(0, src_root_text)
+
+from notary_kg.business_case_inventory import (  # noqa: E402
+    build_business_case_inventory,
+    validate_business_case_inventory,
+)
 USECASES_ROOT = REPO_ROOT / "usecases"
 KG_FILE_NAME = "knowledge-graph.graph.json"
 KG_REVIEW_NAME = "knowledge-graph.md"
@@ -181,6 +192,12 @@ def main() -> int:
             + ", ".join(sorted(missing_slugs))
         )
 
+    if not errors:
+        inventory = build_business_case_inventory(REPO_ROOT)
+        identity_validation = validate_business_case_inventory(inventory)
+        errors.extend(
+            f"BusinessCaseTypeId-Vertrag: {error}" for error in identity_validation.errors
+        )
     if errors:
         print("STATUS: FAILED")
         for error in errors:

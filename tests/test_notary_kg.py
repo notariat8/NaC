@@ -162,6 +162,9 @@ class FakeProcessOntologySchemaApplyGraphClient:
         choice_patch_error_codes: tuple[str, ...] = (),
         rewrite_choice_settings_after_patch: bool = False,
         required_checkpoint_path: Path | None = None,
+        wrong_existing_shape: str | None = None,
+        ambiguous_match: str | None = None,
+        choice_shape_drift: str | None = None,
     ) -> None:
         self.requests: list[tuple[str, str]] = []
         self.posts: list[tuple[str, dict]] = []
@@ -176,6 +179,10 @@ class FakeProcessOntologySchemaApplyGraphClient:
         self.rewrite_choice_settings_after_patch = rewrite_choice_settings_after_patch
         self.fail_next_readback = False
         self.required_checkpoint_path = required_checkpoint_path
+        self.wrong_existing_shape = wrong_existing_shape
+        self.ambiguous_match = ambiguous_match
+        self.choice_shape_drift = choice_shape_drift
+        self.column_names: dict[str, str] = {}
         self.checkpoint_observed_before_first_request = False
 
     def get(self, path: str) -> dict:
@@ -188,14 +195,65 @@ class FakeProcessOntologySchemaApplyGraphClient:
             self.fail_next_readback = False
             raise GraphHttpError(503, "secret-response-body-must-not-be-stored")
         if "$filter=displayName" in path:
+            if self.ambiguous_match == "list_preflight":
+                name = self._quoted_filter_value(path)
+                return {"value": [{"id": "duplicate-list-a", "displayName": name}, {"id": "duplicate-list-b", "displayName": name}]}
+            if self.ambiguous_match == "list_readback" and self.get_counts[path] > 1:
+                name = self._quoted_filter_value(path)
+                return {"value": [{"id": "duplicate-list-a", "displayName": name}, {"id": "duplicate-list-b", "displayName": name}]}
+            if self.wrong_existing_shape == "list":
+                return {
+                    "value": [
+                        {
+                            "id": "wrong-shape-list",
+                            "displayName": self._quoted_filter_value(path),
+                            "list": {"template": "documentLibrary"},
+                            "columns": [],
+                            "description": "sensitive-wrong-shape-detail-must-not-survive",
+                        }
+                    ]
+                }
             return self._filter_response(path, "displayName")
         if "$filter=name" in path:
             name = self._quoted_filter_value(path)
-            if name in self.choice_columns:
+            if self.wrong_existing_shape == "column" and name not in self.choice_columns:
+                return {
+                    "value": [
+                        {
+                            "id": "wrong-shape-column",
+                            "name": name,
+                            "required": True,
+                            "hidden": False,
+                            "indexed": False,
+                            "enforceUniqueValues": False,
+                            "text": {"allowMultipleLines": True, "maxLength": 8},
+                            "description": "sensitive-wrong-shape-detail-must-not-survive",
+                        }
+                    ]
+                }
+            existing = self._filter_response(path, "name")
+            if self.ambiguous_match == "choice_resolution" and name == "CurrentPhase" and existing["value"] and self.get_counts[path] > 2:
+                return {"value": [dict(existing["value"][0]), {**existing["value"][0], "id": f"duplicate-choice-{name}"}]}
+            if (
+                existing["value"]
+                and name in self.choice_columns
+                and (self.choice_patch_error_codes or self.rewrite_choice_settings_after_patch)
+                and self.get_counts[path] > 2
+            ):
+                column_id = str(existing["value"][0]["id"])
+                self.choice_state[column_id] = {
+                    "choices": ["LegacyCustom"],
+                    "allowTextEntry": False,
+                    "displayAs": "dropDownMenu",
+                }
+                existing["value"][0]["choice"] = dict(self.choice_state[column_id])
+            if existing["value"]:
+                return existing
+            if name == "Vorgangstyp":
                 column_id = f"fake-choice-column-{name}"
                 choice = self.choice_state.setdefault(
                     column_id,
-                    {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
+                    {"choices": ["LegacyCustom"], "allowTextEntry": False, "displayAs": "dropDownMenu"},
                 )
                 return {
                     "value": [
@@ -209,20 +267,28 @@ class FakeProcessOntologySchemaApplyGraphClient:
                         }
                     ]
                 }
-            return self._filter_response(path, "name")
-        if "/columns/fake-choice-column" in path or "/columns/fake-choice-" in path:
+            return existing
+        if "/columns/" in path:
             column_id = path.split("/columns/", 1)[1].split("?", 1)[0]
-            choice = self.choice_state.setdefault(
-                column_id,
-                {"choices": ["LegacyCustom"], "allowTextEntry": True, "displayAs": "radioButtons"},
-            )
-            return {
-                "id": column_id,
-                "readOnly": False,
-                "sealed": False,
-                "indexed": True,
-                "choice": dict(choice),
-            }
+            if column_id in self.choice_state:
+                response = {
+                    "id": column_id,
+                    "name": self.column_names.get(
+                        column_id,
+                        column_id.removeprefix("fake-choice-column-"),
+                    ),
+                    "readOnly": False,
+                    "sealed": False,
+                    "indexed": True,
+                    "choice": dict(self.choice_state[column_id]),
+                }
+                if self.choice_shape_drift == "readOnly":
+                    response["readOnly"] = True
+                elif self.choice_shape_drift == "facet":
+                    response["text"] = {"allowMultipleLines": False, "maxLength": 128}
+                elif self.choice_shape_drift == "settings":
+                    response["choice"]["allowTextEntry"] = True
+                return response
         return {"value": [{"id": "fake-existing"}]}
 
     def post(self, path: str, payload: dict) -> dict:
@@ -233,7 +299,11 @@ class FakeProcessOntologySchemaApplyGraphClient:
         object_id = f"fake-post-{len(self.posts)}"
         for key in ("displayName", "name"):
             if payload.get(key):
-                self.objects[(path, key, str(payload[key]))] = {"id": object_id, key: payload[key]}
+                self.objects[(path, key, str(payload[key]))] = {"id": object_id, **payload}
+        if isinstance(payload.get("choice"), dict):
+            self.choice_state[object_id] = dict(payload["choice"])
+        if isinstance(payload.get("name"), str):
+            self.column_names[object_id] = payload["name"]
         if self.fail_readback_after_write:
             self.fail_next_readback = True
         return {"id": object_id}
@@ -257,8 +327,8 @@ class FakeProcessOntologySchemaApplyGraphClient:
         if isinstance(payload.get("choice"), dict):
             self.choice_state[object_id] = dict(payload["choice"])
             if self.rewrite_choice_settings_after_patch:
-                self.choice_state[object_id]["allowTextEntry"] = False
-                self.choice_state[object_id]["displayAs"] = "dropDownMenu"
+                self.choice_state[object_id]["allowTextEntry"] = True
+                self.choice_state[object_id]["displayAs"] = "radioButtons"
         if self.fail_readback_after_write:
             self.fail_next_readback = True
         return {"id": object_id}
@@ -286,6 +356,53 @@ class FakeProcessOntologySchemaApplyGraphClient:
         return "fake"
 
 
+_REAL_GRAPH_APPLY_PLAN_BUILDER = (
+    graph_dispatcher_module.build_process_ontology_sharepoint_schema_apply_plan
+)
+_REAL_GRAPH_LIVE_RUNNER_BUILDER = (
+    graph_dispatcher_module.build_process_ontology_sharepoint_schema_apply_live_runner
+)
+
+
+def _nonblocked_graph_apply_plan(*args: object, **kwargs: object) -> dict:
+    payload = _REAL_GRAPH_APPLY_PLAN_BUILDER(*args, **kwargs)
+    patched = dict(payload)
+    patched["summary"] = dict(payload["summary"])
+    patched["summary"]["live_execution_approval_state"] = "TEST_PATCHED_READY"
+    return patched
+
+
+def _ready_graph_live_runner(*args: object, **kwargs: object) -> dict:
+    payload = _REAL_GRAPH_LIVE_RUNNER_BUILDER(*args, **kwargs)
+    patched = dict(payload)
+    patched["status"] = "READY_FOR_GRAPH_REST_DISPATCH"
+    return patched
+
+
+def _run_fake_graph_dispatcher(
+    client: FakeProcessOntologySchemaApplyGraphClient,
+    repo_root: Path,
+    **kwargs: object,
+) -> dict:
+    with (
+        patch.object(
+            graph_dispatcher_module,
+            "build_process_ontology_sharepoint_schema_apply_plan",
+            side_effect=_nonblocked_graph_apply_plan,
+        ),
+        patch.object(
+            graph_dispatcher_module,
+            "build_process_ontology_sharepoint_schema_apply_live_runner",
+            side_effect=_ready_graph_live_runner,
+        ),
+    ):
+        return run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            client,
+            repo_root,
+            **kwargs,
+        )
+
+
 def _run_choice_patch_failure(
     temp_root: Path,
     graph_error_codes: str | tuple[str, ...],
@@ -293,7 +410,7 @@ def _run_choice_patch_failure(
     gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
     codes = (graph_error_codes,) if isinstance(graph_error_codes, str) else graph_error_codes
     safe_name = "allowlisted" if any(code in {"invalidRequest", "badArgument"} for code in codes) else "unknown"
-    return run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+    return _run_fake_graph_dispatcher(
         FakeProcessOntologySchemaApplyGraphClient(choice_patch_error_codes=codes),
         REPO_ROOT,
         live_readiness_gate=gate_json,
@@ -392,7 +509,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         validation = validate_business_case_inventory(payload)
         cases = {entry["slug"]: entry for entry in payload["business_cases"]}
 
-        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
@@ -427,7 +544,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["storage_strategy"]["document_content_role"], "outside_ontology_and_outside_git")
         for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
@@ -452,7 +569,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-business-case-inventory/v0.2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_ontology_storage_contract_bounds_inventory_and_m365_store(self) -> None:
@@ -528,7 +645,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         summary = payload["evaluation"]["summary"]
         derived = payload["evaluation"]["derived_decision"]
 
-        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
@@ -556,7 +673,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v2")
         self.assertEqual(payload["status"], "PASSED")
         for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
@@ -580,7 +697,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v1")
+        self.assertEqual(payload["schema_version"], "nac.notarial-process-ontology/v2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_process_ontology_schema_gap_surfaces_concrete_sharepoint_gaps(self) -> None:
@@ -590,7 +707,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         optional_gap_ids = {gap["id"] for gap in payload["optional_projection_gaps"]}
         choice_gap_ids = {gap["id"] for gap in payload["choice_gaps"]}
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
@@ -600,9 +717,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertGreaterEqual(payload["summary"]["choice_gap_count"], 1)
         self.assertIn("Akten.ProcessInstanceId.missing", field_gap_ids)
         self.assertIn("AufgabenFristen.ProcessPhase.missing", field_gap_ids)
-        self.assertIn("optional-list.Prozessregister", optional_gap_ids)
-        self.assertIn("optional-library.BPMN Models", optional_gap_ids)
-        self.assertIn("Akten.Vorgangstyp.choices", choice_gap_ids)
+        self.assertIn("optional-resource.Prozessregister", optional_gap_ids)
+        self.assertIn("optional-resource.BPMN Models", optional_gap_ids)
+        self.assertNotIn("Akten.Vorgangstyp.choices", choice_gap_ids)
+        self.assertEqual(payload["required_projection_gaps"][0]["target"], "Vorgangsartenregister")
         self.assertFalse(payload["apply_boundary"]["executes_graph_requests"])
         self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
         self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
@@ -617,7 +735,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         for forbidden in ("client_secret", "private_key", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
@@ -641,7 +759,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-gap/v0.2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_process_ontology_schema_apply_plan_builds_graph_rest_steps_from_gaps(self) -> None:
@@ -649,29 +767,31 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         validation = validate_process_ontology_sharepoint_schema_apply_plan(payload)
         operations = {step["operation"] for step in payload["steps"]}
         endpoints = payload["apply_boundary"]["future_apply_endpoint_families"]
-        choice_columns = [
-            column
-            for step in payload["steps"]
-            for column in step["request"]["body"].get("columns", [])
-            if "choice" in column
-        ]
-        process_phase_template = next(column for column in choice_columns if column["name"] == "ProcessPhaseTemplate")
-        business_case_type = next(column for column in choice_columns if column["name"] == "BusinessCaseType")
+        register_step = next(step for step in payload["steps"] if step["target"] == "Vorgangsartenregister")
+        register_columns = {
+            column["name"]: column for column in register_step["request"]["body"]["columns"]
+        }
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
-        self.assertEqual(payload["summary"]["source_total_gap_count"], 34)
-        self.assertEqual(payload["summary"]["total_step_count"], 34)
-        self.assertEqual(payload["summary"]["create_column_step_count"], 28)
-        self.assertEqual(payload["summary"]["extend_choice_step_count"], 4)
+        self.assertEqual(payload["summary"]["source_total_gap_count"], 35)
+        self.assertEqual(payload["summary"]["source_required_gap_count"], 33)
+        self.assertEqual(payload["summary"]["excluded_optional_projection_gap_count"], 2)
+        self.assertEqual(payload["summary"]["total_step_count"], 33)
+        self.assertEqual(payload["summary"]["create_column_step_count"], 29)
+        self.assertEqual(payload["summary"]["extend_choice_step_count"], 3)
         self.assertEqual(payload["summary"]["create_list_step_count"], 1)
-        self.assertEqual(payload["summary"]["create_document_library_step_count"], 1)
+        self.assertEqual(payload["summary"]["create_document_library_step_count"], 0)
         self.assertIn("create_list", operations)
-        self.assertIn("create_document_library", operations)
         self.assertIn("create_column", operations)
         self.assertIn("extend_choice_column", operations)
+        self.assertNotIn("create_document_library", operations)
+        self.assertFalse(any(step["target"] == "Prozessregister" for step in payload["steps"]))
+        self.assertFalse(any(step["target"] == "BPMN Models" for step in payload["steps"]))
+        self.assertFalse(payload["optional_projection_plan"]["included_in_default_s2_plan"])
+        self.assertEqual(payload["optional_projection_plan"]["gap_count"], 2)
         self.assertIn("POST /sites/{site-id}/lists", endpoints)
         self.assertIn("POST /sites/{site-id}/lists/{list-id}/columns", endpoints)
         self.assertIn("PATCH /sites/{site-id}/lists/{list-id}/columns/{column-id}", endpoints)
@@ -679,21 +799,15 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertFalse(payload["apply_boundary"]["writes_sharepoint"])
         self.assertFalse(payload["apply_boundary"]["changes_sharepoint_schema"])
         self.assertTrue(payload["apply_boundary"]["owner_gate_required_before_apply"])
-        self.assertTrue(all("allowMultipleSelection" not in column["choice"] for column in choice_columns))
-        self.assertEqual(process_phase_template["choice"]["displayAs"], "checkBoxes")
-        self.assertFalse(process_phase_template["indexed"])
-        self.assertTrue(business_case_type["indexed"])
-        invalid_payload = json.loads(json.dumps(payload))
-        invalid_columns = invalid_payload["steps"][0]["request"]["body"]["columns"]
-        invalid_process_phase = next(
-            column for column in invalid_columns if column["name"] == "ProcessPhaseTemplate"
-        )
-        invalid_process_phase["indexed"] = True
-        invalid_validation = validate_process_ontology_sharepoint_schema_apply_plan(invalid_payload)
-        self.assertIn(
-            "step-001.optional-list.Prozessregister: multi-valued choice columns cannot be indexed",
-            invalid_validation.errors,
-        )
+
+        business_case_type_id = register_columns["BusinessCaseTypeId"]
+        self.assertEqual(business_case_type_id["text"]["maxLength"], 128)
+        self.assertTrue(business_case_type_id["indexed"])
+        self.assertTrue(business_case_type_id["enforceUniqueValues"])
+        lifecycle_status = register_columns["LifecycleStatus"]
+        self.assertEqual(lifecycle_status["choice"]["choices"], ["active", "deprecated", "retired"])
+        self.assertFalse(lifecycle_status["choice"]["allowTextEntry"])
+
         invalid_choice_patch = json.loads(json.dumps(payload))
         choice_patch_step = next(
             step for step in invalid_choice_patch["steps"] if step["operation"] == "extend_choice_column"
@@ -715,9 +829,9 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.2")
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["total_step_count"], 34)
+        self.assertEqual(payload["summary"]["total_step_count"], 33)
         for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
 
@@ -740,23 +854,23 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-plan/v0.2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_process_ontology_schema_apply_readiness_expands_plan_per_workspace(self) -> None:
         payload = build_process_ontology_sharepoint_schema_apply_readiness(REPO_ROOT)
         validation = validate_process_ontology_sharepoint_schema_apply_readiness(payload)
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
         self.assertEqual(payload["summary"]["workspace_count"], 2)
-        self.assertEqual(payload["summary"]["apply_plan_step_count"], 34)
-        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        self.assertEqual(payload["summary"]["apply_plan_step_count"], 33)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 66)
         self.assertEqual(payload["summary"]["known_site_id_count"], 2)
         self.assertEqual(payload["summary"]["missing_required_list_id_count"], 0)
-        self.assertEqual(payload["summary"]["dynamic_resource_resolution_count"], 12)
+        self.assertEqual(payload["summary"]["dynamic_resource_resolution_count"], 8)
         self.assertEqual(payload["summary"]["live_apply_readiness"], "OWNER_GATE_REQUIRED")
         self.assertEqual(payload["permission_readiness"]["required_application_permission"], "Sites.Manage.All")
         self.assertTrue(payload["permission_readiness"]["permission_present_in_provisioned_state"])
@@ -777,9 +891,9 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).lower()
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.2")
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 66)
         for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
 
@@ -802,7 +916,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         payload = json.loads(buffer.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-readiness/v0.2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_process_ontology_schema_apply_execution_contract_is_owner_gated(self) -> None:
@@ -813,17 +927,17 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
         self.assertEqual(summary["workspace_count"], 2)
         self.assertEqual(summary["execution_phase_count"], 8)
-        self.assertEqual(summary["workspace_apply_unit_count"], 68)
-        self.assertEqual(summary["mutating_operation_count"], 68)
+        self.assertEqual(summary["workspace_apply_unit_count"], 66)
+        self.assertEqual(summary["mutating_operation_count"], 66)
         self.assertTrue(summary["owner_gate_required_before_live_apply"])
-        self.assertEqual(summary["live_apply_contract_status"], "READY_FOR_OWNER_GATED_EXECUTION")
+        self.assertEqual(summary["live_apply_contract_status"], "BLOCKED_PENDING_S6_S7_APPROVAL")
         self.assertTrue(boundary["future_runner_must_require_owner_approval"])
         self.assertTrue(boundary["future_runner_must_require_explicit_live_flag"])
         self.assertIn("--execute-live-schema-apply", boundary["future_runner_required_flags"])
@@ -855,10 +969,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 66)
         for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
 
@@ -883,7 +997,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-execution-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
 
@@ -895,16 +1009,16 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
         self.assertEqual(summary["workspace_count"], 2)
-        self.assertEqual(summary["dry_run_step_count"], 68)
-        self.assertEqual(summary["preflight_request_count"], 68)
-        self.assertEqual(summary["future_mutation_request_count"], 68)
-        self.assertEqual(summary["readback_request_count"], 68)
+        self.assertEqual(summary["dry_run_step_count"], 66)
+        self.assertEqual(summary["preflight_request_count"], 66)
+        self.assertEqual(summary["future_mutation_request_count"], 66)
+        self.assertEqual(summary["readback_request_count"], 66)
         self.assertFalse(summary["executes_graph_requests"])
         self.assertFalse(summary["writes_sharepoint"])
         self.assertFalse(summary["changes_sharepoint_schema"])
@@ -934,10 +1048,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 66)
         for forbidden in ("client_secret", "private_key", "authorization", "bearer ", "raw_mandate", "mandatsdaten"):
             self.assertNotIn(forbidden, serialized)
 
@@ -962,7 +1076,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
 
@@ -985,15 +1099,15 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertTrue(json_exists)
         self.assertTrue(markdown_exists)
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
-        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
-        self.assertEqual(len(payload["dry_run_step_index"]), 68)
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 66)
+        self.assertEqual(len(payload["dry_run_step_index"]), 66)
         self.assertTrue(payload["redaction"]["redacted"])
         self.assertFalse(payload["redaction"]["contains_site_ids"])
         self.assertFalse(payload["redaction"]["contains_request_headers"])
@@ -1035,7 +1149,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertTrue(json_exists)
@@ -1071,7 +1185,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-runner-dry-run-artifact/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
 
@@ -1100,15 +1214,15 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             json_exists = index_json.is_file()
             markdown_exists = index_md.is_file()
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertTrue(json_exists)
         self.assertTrue(markdown_exists)
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
         self.assertEqual(payload["summary"]["artifact_count"], 1)
-        self.assertEqual(payload["summary"]["total_dry_run_step_count"], 68)
-        self.assertEqual(payload["artifacts"][0]["dry_run_step_count"], 68)
+        self.assertEqual(payload["summary"]["total_dry_run_step_count"], 66)
+        self.assertEqual(payload["artifacts"][0]["dry_run_step_count"], 66)
         self.assertTrue(payload["artifacts"][0]["required_for_live_apply_readiness"])
         self.assertFalse(payload["guardrails"]["executes_graph_requests"])
         self.assertFalse(payload["guardrails"]["writes_sharepoint"])
@@ -1151,7 +1265,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             payload = json.loads(buffer.getvalue())
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.2")
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["artifact_count"], 1)
 
@@ -1194,7 +1308,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             payload = json.loads(buffer.getvalue())
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-artifact-index/v0.2")
         self.assertEqual(payload["status"], "PASSED")
 
     def test_process_ontology_schema_apply_live_readiness_gate_requires_artifacts_and_owner_gate(self) -> None:
@@ -1236,10 +1350,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(validation.errors, ())
         self.assertEqual(payload["summary"]["check_count"], 7)
         self.assertEqual(payload["summary"]["approved_workspace_count"], 1)
-        self.assertEqual(payload["summary"]["approved_workspace_apply_unit_count"], 34)
+        self.assertEqual(payload["summary"]["approved_workspace_apply_unit_count"], 33)
         self.assertEqual(payload["summary"]["blocked_check_count"], 0)
-        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 68)
-        self.assertEqual(payload["summary"]["dry_run_step_count"], 68)
+        self.assertEqual(payload["summary"]["workspace_apply_unit_count"], 66)
+        self.assertEqual(payload["summary"]["dry_run_step_count"], 66)
         self.assertEqual(payload["summary"]["artifact_count"], 1)
         self.assertTrue(payload["summary"]["owner_gate_required_before_live_apply"])
         self.assertFalse(payload["summary"]["executes_graph_requests"])
@@ -1311,7 +1425,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             baseline["schema_version"],
             "nac.process-ontology-sharepoint-schema-apply-binding/v0.2",
         )
-        self.assertEqual(len(baseline["selected_step_projection"]), 34)
+        self.assertEqual(len(baseline["selected_step_projection"]), 33)
         self.assertEqual(
             set(baseline["selected_step_projection"][0]),
             {"sequence", "apply_unit_id", "source_step_id", "operation", "method"},
@@ -1440,18 +1554,18 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.2",
         )
-        self.assertEqual(payload["status"], "READY_FOR_OWNER_APPROVAL")
+        self.assertEqual(payload["status"], "BLOCKED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
         self.assertEqual(payload["summary"]["workspace_count"], 2)
         self.assertEqual(payload["summary"]["phase_count"], 8)
-        self.assertEqual(payload["summary"]["planned_live_step_count"], 68)
-        self.assertEqual(payload["summary"]["planned_preflight_count"], 68)
-        self.assertEqual(payload["summary"]["planned_mutation_count"], 68)
-        self.assertEqual(payload["summary"]["planned_readback_count"], 68)
-        self.assertTrue(payload["summary"]["owner_gate_required_now"])
+        self.assertEqual(payload["summary"]["planned_live_step_count"], 66)
+        self.assertEqual(payload["summary"]["planned_preflight_count"], 66)
+        self.assertEqual(payload["summary"]["planned_mutation_count"], 66)
+        self.assertEqual(payload["summary"]["planned_readback_count"], 66)
+        self.assertFalse(payload["summary"]["owner_gate_required_now"])
         self.assertTrue(payload["owner_gate"]["blocked_without_owner_approval"])
         self.assertIn("--owner-approved", payload["owner_gate"]["required_flags"])
         self.assertIn("--execute-live-schema-apply", payload["owner_gate"]["required_flags"])
@@ -1499,12 +1613,12 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
             payload = json.loads(buffer.getvalue())
 
-        self.assertEqual(exit_code, 0)
+        self.assertEqual(exit_code, 1)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.2",
         )
-        self.assertEqual(payload["status"], "READY_FOR_OWNER_APPROVAL")
+        self.assertEqual(payload["status"], "BLOCKED")
 
     def test_nac_cli_process_ontology_schema_apply_owner_gated_live_plan_accepts_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1544,13 +1658,13 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
             payload = json.loads(buffer.getvalue())
 
-        self.assertEqual(exit_code, 0)
+        self.assertEqual(exit_code, 1)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-live-plan/v0.2",
         )
-        self.assertEqual(payload["status"], "READY_FOR_OWNER_APPROVAL")
-        self.assertEqual(payload["summary"]["planned_live_step_count"], 68)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["planned_live_step_count"], 66)
 
     def test_process_ontology_schema_apply_owner_gated_runner_contract_exposes_step_sequence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1579,15 +1693,15 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
-        self.assertEqual(payload["summary"]["runner_step_count"], 68)
-        self.assertEqual(payload["summary"]["preflight_count"], 68)
-        self.assertEqual(payload["summary"]["mutation_count"], 68)
-        self.assertEqual(payload["summary"]["readback_count"], 68)
+        self.assertEqual(payload["summary"]["runner_step_count"], 66)
+        self.assertEqual(payload["summary"]["preflight_count"], 66)
+        self.assertEqual(payload["summary"]["mutation_count"], 66)
+        self.assertEqual(payload["summary"]["readback_count"], 66)
         self.assertTrue(payload["runner_interface"]["command_implemented_now"])
         self.assertEqual(payload["runner_interface"]["command"], "nac kg process-ontology-schema-apply-live")
         self.assertIn("--owner-approved", payload["runner_interface"]["required_flags"])
@@ -1638,7 +1752,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
 
@@ -1683,10 +1797,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(
             payload["schema_version"],
-            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.1",
+            "nac.process-ontology-sharepoint-schema-apply-owner-gated-runner-contract/v0.2",
         )
         self.assertEqual(payload["status"], "PASSED")
-        self.assertEqual(payload["summary"]["runner_step_count"], 68)
+        self.assertEqual(payload["summary"]["runner_step_count"], 66)
 
     def test_process_ontology_schema_apply_live_runner_blocks_without_owner_gate(self) -> None:
         payload = build_process_ontology_sharepoint_schema_apply_live_runner(
@@ -1696,7 +1810,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         )
         validation = validate_process_ontology_sharepoint_schema_apply_live_runner(payload)
 
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.1")
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.2")
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertEqual(validation.status, "PASSED")
         self.assertIn("missing --owner-approved", payload["owner_gate"]["missing_or_blocking"])
@@ -1767,11 +1881,11 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             runner_json_exists = runner_json.is_file()
             runner_md_exists = runner_md.is_file()
 
-        self.assertEqual(payload["status"], "READY_FOR_GRAPH_REST_DISPATCH")
+        self.assertEqual(payload["status"], "BLOCKED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
-        self.assertEqual(payload["summary"]["runner_step_count"], 34)
-        self.assertTrue(payload["summary"]["owner_gate_satisfied"])
+        self.assertEqual(payload["summary"]["runner_step_count"], 33)
+        self.assertFalse(payload["summary"]["owner_gate_satisfied"])
         self.assertFalse(payload["summary"]["executes_graph_requests"])
         self.assertFalse(payload["summary"]["writes_sharepoint"])
         self.assertFalse(payload["summary"]["changes_sharepoint_schema"])
@@ -1840,10 +1954,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
             payload = json.loads(buffer.getvalue())
 
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.1")
-        self.assertEqual(payload["status"], "READY_FOR_GRAPH_REST_DISPATCH")
-        self.assertEqual(payload["summary"]["runner_step_count"], 34)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.2")
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["runner_step_count"], 33)
 
     def test_nac_cli_process_ontology_schema_apply_live_accepts_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1905,10 +2019,10 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
 
             payload = json.loads(buffer.getvalue())
 
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.1")
-        self.assertEqual(payload["status"], "READY_FOR_GRAPH_REST_DISPATCH")
-        self.assertEqual(payload["summary"]["runner_step_count"], 34)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(payload["schema_version"], "nac.process-ontology-sharepoint-schema-apply-live-runner/v0.2")
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertEqual(payload["summary"]["runner_step_count"], 33)
 
     def test_cli_process_ontology_schema_apply_live_dispatch_forwards_owner_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2046,6 +2160,36 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertIn("--execute-live-schema-apply", argv)
         self.assertIn("--write-redacted-evidence", argv)
 
+    def test_process_ontology_schema_apply_graph_dispatcher_blocks_s2_before_graph(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+            dispatch_json = temp_root / "dispatcher.redacted.json"
+            dispatch_md = temp_root / "dispatcher.redacted.md"
+            client = FakeProcessOntologySchemaApplyGraphClient()
+
+            with self.assertRaisesRegex(ValueError, "blocked pending S6/S7 approval"):
+                run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                    client,
+                    REPO_ROOT,
+                    live_readiness_gate=gate_json,
+                    workspace_id="notary_team_01",
+                    correlation_id="nac-schema-apply-s2-block",
+                    owner_approval_reference="owner-approval-s2-block",
+                    reason="Prove public S2 dispatch remains closed",
+                    owner_approved=True,
+                    execute_live_schema_apply=True,
+                    write_redacted_evidence=True,
+                    evidence_json_output=dispatch_json,
+                    evidence_markdown_output=dispatch_md,
+                )
+
+        self.assertEqual(client.requests, [])
+        self.assertEqual(client.posts, [])
+        self.assertEqual(client.patches, [])
+        self.assertFalse(dispatch_json.exists())
+        self.assertFalse(dispatch_md.exists())
+
     def test_process_ontology_schema_apply_graph_dispatcher_runs_with_fake_client(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
@@ -2069,7 +2213,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 workspace_ids=["notary_team_01"],
             )
             client = FakeProcessOntologySchemaApplyGraphClient(required_checkpoint_path=dispatch_json)
-            payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload = _run_fake_graph_dispatcher(
                 client,
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2090,12 +2234,12 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(validation.status, "PASSED")
         self.assertEqual(validation.errors, ())
-        self.assertEqual(payload["summary"]["dispatched_step_count"], 34)
+        self.assertEqual(payload["summary"]["dispatched_step_count"], 33)
         self.assertGreaterEqual(payload["summary"]["mutation_request_count"], 1)
         self.assertTrue(client.checkpoint_observed_before_first_request)
         self.assertEqual({step["workspaceId"] for step in payload["dispatch_steps"]}, {"notary_team_01"})
         self.assertTrue(all(" " not in path and "'" not in path for _, path in client.requests))
-        self.assertIn("$filter=displayName%20eq%20%27Prozessregister%27", client.requests[0][1])
+        self.assertIn("$filter=displayName%20eq%20%27Vorgangsartenregister%27", client.requests[0][1])
         self.assertTrue(all("LegacyCustom" in patch[1]["choice"]["choices"] for patch in client.patches))
         self.assertTrue(all(
             patch[1]["choice"]["@odata.type"] == "microsoft.graph.choiceColumn"
@@ -2150,11 +2294,11 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 gate_md,
                 workspace_ids=["notary_team_01"],
             )
-            payload = write_process_ontology_sharepoint_schema_apply_graph_dispatcher_artifact(
+            payload = _run_fake_graph_dispatcher(
                 FakeProcessOntologySchemaApplyGraphClient(),
                 REPO_ROOT,
-                dispatch_json,
-                dispatch_md,
+                evidence_json_output=dispatch_json,
+                evidence_markdown_output=dispatch_md,
                 live_readiness_gate=gate_json,
                 workspace_id="notary_team_01",
                 correlation_id="nac-schema-apply-dispatcher-artifact-test",
@@ -2180,7 +2324,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             client = FakeProcessOntologySchemaApplyGraphClient()
 
             with self.assertRaisesRegex(ValueError, "max_steps must be lower"):
-                run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                _run_fake_graph_dispatcher(
                     client,
                     REPO_ROOT,
                     live_readiness_gate=gate_json,
@@ -2193,7 +2337,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                     write_redacted_evidence=True,
                     evidence_json_output=temp_root / "invalid-max-steps.redacted.json",
                     evidence_markdown_output=temp_root / "invalid-max-steps.redacted.md",
-                    max_steps=34,
+                    max_steps=33,
                 )
 
         self.assertEqual(client.requests, [])
@@ -2202,7 +2346,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             gate_json = _write_notary_team_01_schema_apply_gate(Path(temp_dir))
             client = FakeProcessOntologySchemaApplyGraphClient()
-            first = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            first = _run_fake_graph_dispatcher(
                 client,
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2217,7 +2361,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 evidence_markdown_output=Path(temp_dir) / "dispatcher.redacted.md",
             )
             write_count = len(client.posts) + len(client.patches)
-            second = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            second = _run_fake_graph_dispatcher(
                 client,
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2236,12 +2380,136 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(second["status"], "PASSED")
         self.assertEqual(second["completion"], "NO_CHANGES")
         self.assertEqual(second["summary"]["mutation_request_count"], 0)
-        self.assertEqual(second["summary"]["skipped_mutation_count"], 34)
+        self.assertEqual(second["summary"]["skipped_mutation_count"], 33)
         self.assertEqual(len(client.posts) + len(client.patches), write_count)
-        self.assertTrue(all(choice["allowTextEntry"] is True for choice in client.choice_state.values()))
+        self.assertTrue(all(choice["allowTextEntry"] is False for choice in client.choice_state.values()))
         self.assertTrue(
-            all(choice["displayAs"] == "radioButtons" for choice in client.choice_state.values())
+            all(choice["displayAs"] == "dropDownMenu" for choice in client.choice_state.values())
         )
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_wrong_existing_shapes(
+        self,
+    ) -> None:
+        cases = (("list", 1, 0), ("column", 2, 1))
+        for shape_kind, expected_sequence, prior_post_count in cases:
+            with self.subTest(shape_kind=shape_kind), tempfile.TemporaryDirectory() as temp_dir:
+                temp_root = Path(temp_dir)
+                gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+                client = FakeProcessOntologySchemaApplyGraphClient(
+                    wrong_existing_shape=shape_kind
+                )
+                payload = _run_fake_graph_dispatcher(
+                    client,
+                    REPO_ROOT,
+                    live_readiness_gate=gate_json,
+                    workspace_id="notary_team_01",
+                    correlation_id=f"nac-schema-apply-wrong-{shape_kind}-shape",
+                    owner_approval_reference=f"owner-approval-wrong-{shape_kind}-shape",
+                    reason=f"Reject wrong existing {shape_kind} shape",
+                    owner_approved=True,
+                    execute_live_schema_apply=True,
+                    write_redacted_evidence=True,
+                    evidence_json_output=temp_root / "dispatcher.redacted.json",
+                    evidence_markdown_output=temp_root / "dispatcher.redacted.md",
+                )
+                serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+            failed_step = payload["dispatch_steps"][-1]
+            self.assertEqual(payload["status"], "FAILED")
+            self.assertEqual(failed_step["sequence"], expected_sequence)
+            self.assertEqual(
+                failed_step["error"]["code"],
+                "existing_object_shape_mismatch",
+            )
+            self.assertEqual(failed_step["error"]["phase"], "preflight")
+            self.assertFalse(failed_step["mutationAttempted"])
+            self.assertEqual(failed_step["mutationOutcome"], "NOT_ATTEMPTED")
+            self.assertEqual(len(client.posts), prior_post_count)
+            self.assertEqual(client.patches, [])
+            self.assertNotIn("sensitive-wrong-shape-detail-must-not-survive", serialized)
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_ambiguous_named_matches(
+        self,
+    ) -> None:
+        cases = (
+            ("list_preflight", "ambiguous_graph_match", "preflight", 1, False),
+            ("choice_resolution", "choice_column_resolution_failed", "resolution", 31, False),
+            ("list_readback", "readback_verification_failed", "readback", 1, True),
+        )
+        for mode, expected_code, expected_phase, expected_sequence, mutation_attempted in cases:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp_dir:
+                temp_root = Path(temp_dir)
+                gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+                client = FakeProcessOntologySchemaApplyGraphClient(ambiguous_match=mode)
+                payload = _run_fake_graph_dispatcher(
+                    client,
+                    REPO_ROOT,
+                    live_readiness_gate=gate_json,
+                    workspace_id="notary_team_01",
+                    correlation_id=f"nac-schema-apply-ambiguous-{mode}",
+                    owner_approval_reference=f"owner-approval-ambiguous-{mode}",
+                    reason=f"Reject ambiguous Graph match during {mode}",
+                    owner_approved=True,
+                    execute_live_schema_apply=True,
+                    write_redacted_evidence=True,
+                    evidence_json_output=temp_root / "dispatcher.redacted.json",
+                    evidence_markdown_output=temp_root / "dispatcher.redacted.md",
+                )
+
+            failed_step = payload["dispatch_steps"][-1]
+            self.assertEqual(payload["status"], "FAILED")
+            self.assertEqual(failed_step["sequence"], expected_sequence)
+            self.assertEqual(failed_step["error"]["code"], expected_code)
+            self.assertEqual(failed_step["error"]["phase"], expected_phase)
+            self.assertIs(failed_step["mutationAttempted"], mutation_attempted)
+            if mode == "list_preflight":
+                self.assertEqual(client.posts, [])
+                self.assertEqual(client.patches, [])
+            elif mode == "choice_resolution":
+                self.assertEqual(client.patches, [])
+            else:
+                self.assertEqual(len(client.posts), 1)
+                self.assertEqual(failed_step["mutationOutcome"], "CONFIRMED")
+
+    def test_process_ontology_schema_apply_graph_dispatcher_rejects_choice_shape_drift(
+        self,
+    ) -> None:
+        for drift in ("readOnly", "facet", "settings"):
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temp_dir:
+                temp_root = Path(temp_dir)
+                gate_json = _write_notary_team_01_schema_apply_gate(temp_root)
+                client = FakeProcessOntologySchemaApplyGraphClient(
+                    choice_shape_drift=drift
+                )
+                payload = _run_fake_graph_dispatcher(
+                    client,
+                    REPO_ROOT,
+                    live_readiness_gate=gate_json,
+                    workspace_id="notary_team_01",
+                    correlation_id=f"nac-schema-apply-choice-shape-{drift}",
+                    owner_approval_reference=f"owner-approval-choice-shape-{drift}",
+                    reason=f"Reject existing Choice shape drift: {drift}",
+                    owner_approved=True,
+                    execute_live_schema_apply=True,
+                    write_redacted_evidence=True,
+                    evidence_json_output=temp_root / "dispatcher.redacted.json",
+                    evidence_markdown_output=temp_root / "dispatcher.redacted.md",
+                )
+
+            failed_step = payload["dispatch_steps"][-1]
+            self.assertEqual(payload["status"], "FAILED")
+            self.assertEqual(failed_step["sequence"], 31)
+            self.assertEqual(
+                failed_step["error"],
+                {
+                    "stepId": "notary_team_01.step-031.Akten.CurrentPhase.choices",
+                    "code": "existing_object_shape_mismatch",
+                    "phase": "preflight",
+                },
+            )
+            self.assertFalse(failed_step["mutationAttempted"])
+            self.assertEqual(failed_step["mutationOutcome"], "NOT_ATTEMPTED")
+            self.assertEqual(client.patches, [])
 
     def test_process_ontology_schema_apply_graph_dispatcher_rejects_choice_setting_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2249,7 +2517,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             client = FakeProcessOntologySchemaApplyGraphClient(
                 rewrite_choice_settings_after_patch=True
             )
-            payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload = _run_fake_graph_dispatcher(
                 client,
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2262,7 +2530,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 write_redacted_evidence=True,
                 evidence_json_output=Path(temp_dir) / "dispatcher.redacted.json",
                 evidence_markdown_output=Path(temp_dir) / "dispatcher.redacted.md",
-            )
+                    )
 
         failed_step = payload["dispatch_steps"][-1]
         self.assertEqual(payload["status"], "FAILED")
@@ -2271,7 +2539,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         self.assertEqual(
             failed_step["error"],
             {
-                "stepId": "notary_team_01.step-031.Akten.Vorgangstyp.choices",
+                "stepId": "notary_team_01.step-031.Akten.CurrentPhase.choices",
                 "code": "choice_readback_verification_failed",
                 "phase": "readback",
             },
@@ -2283,7 +2551,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             gate_json = _write_notary_team_01_schema_apply_gate(Path(temp_dir))
             client = FakeProcessOntologySchemaApplyGraphClient(fail_readback_after_write=True)
-            payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload = _run_fake_graph_dispatcher(
                 client,
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2331,7 +2599,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 ),
                 self.assertRaisesRegex(OSError, "synthetic evidence writer failure"),
             ):
-                run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                _run_fake_graph_dispatcher(
                     client,
                     REPO_ROOT,
                     live_readiness_gate=gate_json,
@@ -2356,7 +2624,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
     def test_process_ontology_schema_apply_graph_dispatcher_redacts_uncertain_mutation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             gate_json = _write_notary_team_01_schema_apply_gate(Path(temp_dir))
-            payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+            payload = _run_fake_graph_dispatcher(
                 FakeProcessOntologySchemaApplyGraphClient(fail_mutation=True),
                 REPO_ROOT,
                 live_readiness_gate=gate_json,
@@ -2608,7 +2876,7 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
                 "validate_process_ontology_sharepoint_schema_apply_graph_dispatcher",
                 side_effect=fail_validation_once,
             ):
-                payload = run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
+                payload = _run_fake_graph_dispatcher(
                     FakeProcessOntologySchemaApplyGraphClient(),
                     REPO_ROOT,
                     live_readiness_gate=gate_json,
@@ -2813,7 +3081,14 @@ class NotaryKnowledgeGraphTests(unittest.TestCase):
             gate_json.write_text(json.dumps(gate), encoding="utf-8")
             client = FakeProcessOntologySchemaApplyGraphClient()
 
-            with self.assertRaisesRegex(ValueError, "not ready for Graph REST dispatch"):
+            with (
+                patch.object(
+                    graph_dispatcher_module,
+                    "build_process_ontology_sharepoint_schema_apply_plan",
+                    side_effect=_nonblocked_graph_apply_plan,
+                ),
+                self.assertRaisesRegex(ValueError, "not ready for Graph REST dispatch"),
+            ):
                 run_process_ontology_sharepoint_schema_apply_graph_dispatcher(
                     client,
                     REPO_ROOT,
