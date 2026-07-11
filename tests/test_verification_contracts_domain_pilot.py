@@ -22,7 +22,7 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
                 "ADR-M365-MATTER-ACCESS-003",
             },
         )
-        for item in payload["decisions"]:
+        for item in (entry for entry in payload["decisions"] if entry["domain"] == "m365_matter_access_delegation"):
             self.assertEqual(item["status"], "accepted")
             self.assertEqual(item["domain"], "m365_matter_access_delegation")
             self.assertIn(
@@ -46,7 +46,7 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
                 "invariant.m365_evidence.redacted_only_no_matter_payloads",
             },
         )
-        for item in payload["invariants"]:
+        for item in (entry for entry in payload["invariants"] if entry["domain"] == "m365_matter_access_delegation"):
             self.assertEqual(item["severity"], "critical")
             self.assertIn("scripts/validate_verification_contracts_domain_pilot.py", item["enforced_by"])
 

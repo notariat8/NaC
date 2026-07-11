@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-07-05
+Letzte Aktualisierung: 2026-07-11
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter
@@ -76,6 +76,9 @@ gantt
     Agenten-Workflow-Regel synchronisieren       :done,    b1y, 2026-05-20, 1d
     NaC-MCP-Chat-Integrationsschicht planen      :         b1w, after b3, 14d
     M365-App-geführtes Privilegienänderungs-Gate :         b1wa, after b1w, 7d
+    Microsoft-first On-Prem-Zielarchitektur       :done,    b1wb, 2026-07-11, 1d
+    Durable-Workflow-Kandidatenspitze             :         b1wc, after b1wb, 42d
+    SPFx Read-only Arbeitsfläche                  :         b1wd, after b1wc, 28d
     Legal-Graph-Domänen-MVP planen              :active,  b1z, 2026-06-12, 14d
     Legal-Graph-Primärquellenpilot ohne Kommentarzugriff :done,   b1za, 2026-06-12, 7d
     Legal-Nemotron-Finetuning-Gates planen       :done,    b1zb, 2026-06-28, 2d

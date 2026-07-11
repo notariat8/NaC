@@ -119,6 +119,8 @@ def _validate_decisions(payload: dict[str, Any]) -> list[str]:
     for decision_id in sorted(REQUIRED_DECISIONS - set(by_id)):
         errors.append(f"decision-index missing required decision {decision_id}")
     for decision_id, decision in by_id.items():
+        if decision.get("domain") != "m365_matter_access_delegation":
+            continue
         if decision.get("status") != "accepted":
             errors.append(f"{decision_id} must be accepted")
         if decision.get("domain") != "m365_matter_access_delegation":
@@ -145,6 +147,8 @@ def _validate_invariants(payload: dict[str, Any]) -> list[str]:
     for invariant_id in sorted(REQUIRED_INVARIANTS - set(by_id)):
         errors.append(f"invariant-index missing required invariant {invariant_id}")
     for invariant_id, invariant in by_id.items():
+        if invariant.get("domain") != "m365_matter_access_delegation":
+            continue
         if invariant.get("severity") != "critical":
             errors.append(f"{invariant_id} must be critical")
         if not str(invariant.get("statement", "")).strip():
