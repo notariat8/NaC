@@ -1,7 +1,7 @@
 # ADR: Stable BusinessCaseTypeId
 
-Status: accepted; S1/S2 implemented offline, no live apply
-Issue: [GitHub #610](https://github.com/notariat8/NaC/issues/610)
+Status: accepted; S1/S2 implemented offline, S3 in progress, no live apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612)
 Date: 2026-07-11
 
 ## Context
@@ -23,7 +23,13 @@ and the
 [BPMN viewer adapter validator](../../../scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py).
 Issue #610 implements S1 and S2 exclusively offline in contracts, validators,
 inventory and schema planning. It executed no Graph requests, changed no
-tenant and applied no SharePoint schema live. S3 through S7 remain open.
+tenant and applied no SharePoint schema live. S3 is being implemented offline
+under Issue #612 according to the
+[S3 spec](../superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md)
+and
+[S3 implementation plan](../superpowers/plans/2026-07-11-business-case-type-runtime-s3.md).
+Its status remains `in progress` until code, contract, negative-test,
+strict-gate and Protected-PR evidence passes. S4 through S7 remain open.
 
 ## Decision
 
@@ -255,7 +261,7 @@ live apply can be considered.
 | --- | --- | --- | --- |
 | S1 Contract | implemented offline in #610 | align ontology, inventory and viewer contracts on independent `Vorgangsartenregister`, optional `Prozessregister`, nullable BPMN links and alias invariants | validators prove viewer-independent type validity and block drift offline |
 | S2 Schema plan | implemented offline in #610 | plan `Akten.VorgangstypId` and `Vorgangsartenregister` in the required default; keep `Prozessregister` and `BPMN Models` in separate optional viewer provisioning; leave legacy Choice unchanged | 33 plan steps and 66 workspace apply units; dry run, readiness, snapshot and rollback plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
-| S3 Runtime | open | implement `business_case_type_get`, canonical validation and separate registry/viewer ETag caches | negative tests cover timeout, drift, duplicate, alias, viewer outage and cache expiry |
+| S3 Runtime | in progress in #612; completion bound to AC-S3-01 through AC-S3-06 | implement `business_case_type_get`, content-based `CatalogVersion`, explicit runtime lifecycle, purpose-bound aliases and separate registry/viewer ETag caches offline | spec, domain/verification contracts, validator, CLI, negative tests, strict gate, independent review and Protected PR checks pass without Graph/tenant access |
 | S4 MCP/Graph | open | constrain `case_create`, correction/backfill paths and optional process reads by selected fields, paging, ETag, site scope and operation roles | negative authorization and fake-Graph smokes prove no broad rights or viewer coupling |
 | S5 Migration | open | implement inventory dry run, idempotent backfill, persistent quarantine, registry/process snapshots, stable final scans and N-1 replay | all seven classes, ETag conflicts, rollback order and forward recovery pass |
 | S6 Immutable evidence | open | implement durable outbox, broker/WORM events, correlation, pseudonymous ActorRef, retention, access review and reconciliation | every live mutation stays blocked without complete intent/outcome/readback evidence |

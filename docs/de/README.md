@@ -189,6 +189,11 @@ Runtime-Fixtures und keine zusätzlichen fachlichen NaC-Beispiele.
 - [docs/de/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md):
   M365-Mandatszugriffsdelegation für Aktenzuständigkeit,
   Vertretungsfreigaben, Audit und `matter-access-plan` ohne Live-Tenant-Aktion.
+- [docs/de/architecture/business-case-type-id.md](architecture/business-case-type-id.md):
+  definiert die stabile, viewer-unabhängige `BusinessCaseTypeId`, ihre minimale
+  SharePoint-Registry und die offline geplante S3-Runtime-Grenze aus
+  [Spec](superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md)
+  und [Plan](superpowers/plans/2026-07-11-business-case-type-runtime-s3.md).
 - [docs/de/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md):
   Contract-first-Grenze für einen späteren read-only SPFx-BPMN-Viewer in
   SharePoint mit `bpmn-js`, Microsoft Graph REST und ohne Modeler oder
