@@ -286,6 +286,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Erzeugt das kanonische Vorgangsarten-Inventar einschließlich historischer Aliase.",
     )
     kg_business_case_inventory.add_argument("--format", choices=["text", "json"], default=argparse.SUPPRESS)
+    kg_business_case_type_get = kg_sub.add_parser(
+        "business-case-type-get",
+        help="Prüft eine Vorgangsarten-ID ausschließlich gegen ein lokales Registry-Fixture.",
+    )
+    kg_business_case_type_get.add_argument("identifier")
+    kg_business_case_type_get.add_argument("--site-id", required=True)
+    kg_business_case_type_get.add_argument(
+        "--purpose",
+        choices=["canonical_assignment", "legacy_read", "migration"],
+        required=True,
+    )
+    kg_business_case_type_get.add_argument("--registry-fixture", type=Path, required=True)
+    kg_business_case_type_get.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
     kg_ontology_storage_contract = kg_sub.add_parser(
         "ontology-storage-contract",
         help="Prüft den Ontologie-Sizing- und Storage-Vertrag gegen das Geschäftsvorfall-Inventar.",
@@ -1568,6 +1583,16 @@ def command_kg(args: argparse.Namespace) -> int:
     argv = ["--repo-root", str(resolve_repo_root(args.repo_root)), "--format", args.format, args.kg_command]
     if getattr(args, "slug", None):
         argv.append(args.slug)
+    if getattr(args, "identifier", None):
+        argv.append(args.identifier)
+    for attribute, flag in (
+        ("site_id", "--site-id"),
+        ("purpose", "--purpose"),
+        ("registry_fixture", "--registry-fixture"),
+    ):
+        value = getattr(args, attribute, None)
+        if value is not None:
+            argv.extend([flag, str(value)])
     if getattr(args, "artifact_root", None) is not None:
         argv.extend(["--artifact-root", str(args.artifact_root)])
     if getattr(args, "query", None) is not None:
@@ -1887,6 +1912,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Codex 5h Batch Run Envelope", "validate_codex_5h_batch_run_envelope.py"),
             ("Codex Agent Context Index Audit", "validate_codex_agent_context_index_audit.py"),
             ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
+            ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -1917,6 +1943,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_codex_5h_batch_run_envelope.py",
             "scripts/validate_codex_agent_context_index_audit.py",
             "scripts/validate_verification_contracts_domain_pilot.py",
+            "scripts/validate_business_case_type_runtime.py",
         ]
         overall_rc = 0
         for script_name in validators:

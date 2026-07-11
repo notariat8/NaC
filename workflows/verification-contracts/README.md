@@ -33,6 +33,11 @@ can prove that a slice is complete.
   retention verification for correlation-based local archives and indexes of
   redacted owner-gated apply live-smoke evidence.
 
+- [business-case-type-runtime.verification.json](business-case-type-runtime.verification.json):
+  executable S3 acceptance contract for Issue #612 covering exact ID/alias
+  resolution, registry cardinality/version/status, cache TTL/invalidation,
+  viewer isolation, ETag/data minimization and CLI/strict/review evidence.
+
 ## Agent Indexes
 
 - [agent-context/decision-index.json](../../agent-context/decision-index.json)

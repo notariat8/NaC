@@ -22,7 +22,9 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
                 "ADR-M365-MATTER-ACCESS-003",
             },
         )
-        for item in (entry for entry in payload["decisions"] if entry["domain"] == "m365_matter_access_delegation"):
+        for item in payload["decisions"]:
+            if item["id"] not in {"ADR-M365-MATTER-ACCESS-001", "ADR-M365-MATTER-ACCESS-002", "ADR-M365-MATTER-ACCESS-003"}:
+                continue
             self.assertEqual(item["status"], "accepted")
             self.assertEqual(item["domain"], "m365_matter_access_delegation")
             self.assertIn(
@@ -46,7 +48,16 @@ class VerificationContractsDomainPilotTests(unittest.TestCase):
                 "invariant.m365_evidence.redacted_only_no_matter_payloads",
             },
         )
-        for item in (entry for entry in payload["invariants"] if entry["domain"] == "m365_matter_access_delegation"):
+        for item in payload["invariants"]:
+            if item["id"] not in {
+                "invariant.m365_matter_access.no_blanket_visibility",
+                "invariant.m365_matter_access.timeboxed_deputy_access",
+                "invariant.m365_matter_access.reason_approver_audit_required",
+                "invariant.m365_graph.rest_only_no_legacy_sdk",
+                "invariant.m365_matter_access.owner_gate_before_live_write",
+                "invariant.m365_evidence.redacted_only_no_matter_payloads",
+            }:
+                continue
             self.assertEqual(item["severity"], "critical")
             self.assertIn("scripts/validate_verification_contracts_domain_pilot.py", item["enforced_by"])
 

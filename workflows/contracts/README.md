@@ -180,3 +180,5 @@ machen die Abnahmeharness agentisch lesbar.
   `InMemoryRuntimeStore`-Demo-Pfad zur späteren M365/SharePoint- und
   Event-Journal-gestützten Prozessinstanz-Anzeige, ohne Mandatsdaten, Secrets
   oder produktiven Cloud-Apply.
+
+- [business-case-type-runtime.contract.json](business-case-type-runtime.contract.json): Offline-S3-Vertrag für die sechs Akzeptanzkriterien aus Issue #612: exakte BusinessCaseTypeId- und Aliasauflösung, Registry-Kardinalität/Version/Status, Cache-TTL/Invalidierung, Viewer-Isolation, ETag/Datenminimierung sowie CLI- und Strict-Gate-Nachweis ohne Graph-, HTTP- oder Credential-Zugriff.

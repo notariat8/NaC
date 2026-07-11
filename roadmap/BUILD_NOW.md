@@ -27,6 +27,7 @@ for Fachpersonal without exposing `value` fields.
 | Case-local KG files | Implemented | `usecases/*/knowledge-graph.graph.json`, `usecases/*/knowledge-graph.md` |
 | KG validator | Implemented | `scripts/validate_knowledge_graph.py` |
 | KG runtime package | Implemented | `src/notary_kg/` |
+| BusinessCaseType S3 runtime | In progress (#612) | Completion requires `business_case_type_get`, content-based catalog version, purpose-bound aliases, isolated caches, contracts, negative tests and strict validation; no Graph or tenant access in S3. |
 | KG CLI | Implemented | `scripts/notary_kg.py`, `notary-kg` after package install |
 | KG editor view | Implemented | `src/notary_kg/editor.py`, `schemas/kg-editor-patch.schema.json`, `workflows/contracts/kg-editor.contract.json` |
 | Workflow contract draft generator | Implemented | `src/notary_kg/workflow_contract.py`, `nac kg workflow-contract <slug>`, `tests/test_notary_kg.py` |
@@ -67,6 +68,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0015 | Legal AI-SBOM delta artifact proposal | Done | `nac legal-graph ai-sbom-delta-proposal` reports a concrete metadata-only Legal-Nemotron AI-SBOM delta proposal with components, candidates, attestations and blocked actions, without runtime activation, endpoint activation, training, checkpoint publication, source-text storage or mandate data. |
 | DEV-0016 | AI-SBOM baseline export mapping | Done | `nac ai-sbom export-mapping` reports CycloneDX JSON and SPDX JSON target mappings for the repo-wide AI-SBOM baseline while release export, external SBOM tool execution, mandate data, secrets and release binding remain blocked before owner apply. |
 | DEV-0017 | Legal source inventory review depth | Done | `nac legal-graph source-inventory --format json` now reports per-source review depth for seed metadata, license terms, TDM/bulk access, attribution, storage boundary and next required review while ingestion, benchmark generation, model evaluation, training and mandate data remain blocked. |
+| DEV-0018 | BusinessCaseType S3 offline runtime | In progress (#612) | `AC-S3-01` through `AC-S3-06`, contracts, CLI, validator, negative tests, strict gate, independent review and Protected PR checks pass without Graph, credentials or tenant access. |
 
 ## Roadmap Review Notes
 
@@ -85,6 +87,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-06-30 | Legal Source Inventory review depth | Extend the source inventory from simple source status to per-source review depth without ingestion. | Continue with source-license/TDM evidence, approved benchmark generation or licensed commentary connector gates in separate PRs; owner apply remains required before any ingestion, corpus preparation, evaluation, training or release binding. |
 | 2026-07-11 | Microsoft-first / on-prem AI target architecture | Teams, SPFx, SharePoint, Entra and Graph REST v1.0 form the Microsoft edge; Python/FastAPI, deterministic workflows, NeMo Agent Toolkit, PostgreSQL, outbox/broker and WORM remain on-prem. Temporal is a timeboxed candidate spike, not a selected platform. | Complete S3/S4, then run the durable-workflow spike before selecting an engine; live, credential and deployment actions remain separately owner-gated. |
 | 2026-07-05 | M365 application-owned privileged change path | Add as the next iteration for the Teams/SharePoint data plane. Standard users stay least-privilege; Teams, SharePoint schema, site permission and membership mutations move behind a controlled provisioning app/API. Direct Graph app owners are users or service principals, so `technical_owner_user` or a service principal is the technical owner anchor while `nac_platform_admins` is the governance group. | Implement as a separate owner-gated PR: dedicated provisioning app, technical app owner anchor, governance group, Graph REST mutation API, `Sites.Selected` runtime grants, drift/export evidence and explicit audit records. |
+| 2026-07-11 | BusinessCaseType S3 runtime | Start the viewer-independent offline runtime under Issue #612. CatalogVersion is content-based, runtime lifecycle is explicit, aliases are purpose-bound and registry/cache validation fails closed. | Mark implemented only after AC-S3-01 through AC-S3-06, contracts, CLI, validator, negative tests, strict gate, independent review and Protected PR checks pass; Graph REST integration remains S4. |
 
 ## Local Developer Commands
 

@@ -127,6 +127,11 @@ regardless of the language used in the prompt. The binding rule is defined in
 - [docs/en/architecture/m365-matter-access-delegation.md](architecture/m365-matter-access-delegation.md)
   defines M365 Matter Access Delegation for matter assignment, deputy grants,
   audit and `matter-access-plan` without live tenant action.
+- [docs/en/architecture/business-case-type-id.md](architecture/business-case-type-id.md)
+  defines stable, viewer-independent `BusinessCaseTypeId`, its minimal
+  SharePoint registry and the offline planned S3 runtime boundary from the
+  [spec](superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md)
+  and [plan](superpowers/plans/2026-07-11-business-case-type-runtime-s3.md).
 - [docs/en/architecture/m365-sharepoint-bpmn-viewer-adapter.md](architecture/m365-sharepoint-bpmn-viewer-adapter.md)
   defines the contract-first boundary for a later read-only SPFx BPMN viewer
   in SharePoint with `bpmn-js`, Microsoft Graph REST and no modeler or workflow

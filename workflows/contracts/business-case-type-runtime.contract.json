@@ -1,0 +1,48 @@
+{
+  "schema_version": "nac.business-case-type-runtime/v1",
+  "contract_id": "notarial.business_case_type_runtime",
+  "status": "offline_s3",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/612",
+  "catalog": {
+    "version": "sha256_of_canonical_entries_aliases_lifecycle_and_selectability",
+    "source_status_is_runtime_lifecycle": false,
+    "id_pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "max_length": 128,
+    "normalization_allowed": false
+  },
+  "lookup": {
+    "purposes": ["canonical_assignment", "legacy_read", "migration"],
+    "statuses": ["VALID", "INVALID", "VALIDATION_UNAVAILABLE"],
+    "canonical_assignment_accepts_alias": false,
+    "legacy_and_migration_accept_one_direct_alias": true,
+    "alias_audit_required": true,
+    "registry_row_count": 1,
+    "registry_required_fields": ["BusinessCaseTypeId", "LifecycleStatus", "Selectable", "CatalogVersion", "etag"]
+  },
+  "registry_cache": {
+    "key": ["site_id", "BusinessCaseTypeId", "CatalogVersion"],
+    "fresh_seconds": 300,
+    "hard_expiry_seconds": 900,
+    "negative_seconds": 30,
+    "clock": "monotonic",
+    "single_flight": true,
+    "site_generation_invalidation": true,
+    "not_modified_requires_positive_basis": true,
+    "transport_failures_negative_cached": false
+  },
+  "viewer_isolation": {
+    "separate_class": true,
+    "separate_entry_type": true,
+    "separate_lock": true,
+    "separate_generation": true,
+    "type_validity_reads_viewer": false
+  },
+  "scope": {
+    "offline_only": true,
+    "graph_client": false,
+    "http": false,
+    "credentials": false,
+    "matter_data": false,
+    "document_content": false
+  }
+}

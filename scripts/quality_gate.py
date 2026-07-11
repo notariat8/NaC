@@ -164,6 +164,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_notarial_process_ontology_contract.py"],
                 ),
                 (
+                    "business_case_type_runtime",
+                    "Business Case Type Runtime",
+                    [sys.executable, "scripts/validate_business_case_type_runtime.py"],
+                ),
+                (
                     "process_ontology_sharepoint_schema_gap",
                     "Process Ontology SharePoint Schema Gap Review",
                     [sys.executable, "scripts/validate_process_ontology_sharepoint_schema_gap.py"],

@@ -114,6 +114,66 @@
         "workflows/contracts/microsoft-first-onprem-target-architecture.contract.json"
       ],
       "verification_contracts": []
+    },
+    {
+      "id": "ADR-BUSINESS-CASE-TYPE-001",
+      "title": "BusinessCaseTypeId validity is viewer-independent",
+      "status": "accepted",
+      "decision_date": "2026-07-11",
+      "domain": "business_case_type_runtime",
+      "context_key": "business_case_type_runtime_s3",
+      "owner": "ofunk",
+      "summary": "Canonical business-case type validity depends on the repository catalog and the minimal Vorgangsartenregister projection, never on Prozessregister, BPMN models or viewer availability.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/business-case-type-runtime.verification.json"
+      ]
+    },
+    {
+      "id": "ADR-BUSINESS-CASE-TYPE-002",
+      "title": "CatalogVersion is a content identity and runtime lifecycle is explicit",
+      "status": "accepted",
+      "decision_date": "2026-07-11",
+      "domain": "business_case_type_runtime",
+      "context_key": "business_case_type_runtime_s3",
+      "owner": "ofunk",
+      "summary": "CatalogVersion is derived from canonical catalog content. Inventory schema versions, timestamps and planning source status do not authorize runtime lifecycle or matter selection.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/business-case-type-runtime.verification.json"
+      ]
+    },
+    {
+      "id": "ADR-BUSINESS-CASE-TYPE-003",
+      "title": "Aliases are purpose-bound and cache revalidation fails closed",
+      "status": "accepted",
+      "decision_date": "2026-07-11",
+      "domain": "business_case_type_runtime",
+      "context_key": "business_case_type_runtime_s3",
+      "owner": "ofunk",
+      "summary": "Canonical assignment rejects aliases. Legacy read and migration may resolve one direct alias with audit-required evidence. Cache age never authorizes a mutation after the five-minute revalidation boundary.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/business-case-type-runtime.verification.json"
+      ]
     }
   ]
 }

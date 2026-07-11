@@ -964,3 +964,30 @@ flowchart LR
 
 Dadurch wird NaC für das Büro visuell nutzbar und bleibt für Betrieb, Prüfung
 und Weiterentwicklung maschinell nachvollziehbar.
+
+## S3-Vorgangsartenprüfung Offline
+Der Befehl `nac kg business-case-type-get` ist die reine S3-Offline-Bedienkante. Er liest nur das mit `--registry-fixture` angegebene synthetische JSON und bietet keine Token-, Tenant-, Graph-, HTTP-, Credential- oder Live-Option. Relative Fixture-Pfade werden gegen das Repository aufgelöst. Der Exit-Code ist nur bei `status=VALID` null.
+
+Beispiel für ein lokales Fixture:
+
+```json
+{
+  "status": "OK",
+  "pages_complete": true,
+  "rows": [
+    {
+      "business_case_type_id": "immobilienkaufvertrag",
+      "lifecycle_status": "active",
+      "selectable": true,
+      "catalog_version": "<aktuelle-64-stellige-CatalogVersion>",
+      "etag": "\"synthetic-etag\""
+    }
+  ]
+}
+```
+
+Aufruf:
+
+```bash
+nac kg business-case-type-get immobilienkaufvertrag --site-id synthetic-site-01 --purpose canonical_assignment --registry-fixture tests/fixtures/business-case-type-registry.json --format json
+```
