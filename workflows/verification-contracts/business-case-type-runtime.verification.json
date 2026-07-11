@@ -1,0 +1,97 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_runtime_s3",
+  "domain_contract_id": "notarial.business_case_type_runtime",
+  "title": "BusinessCaseType Runtime S3 Verification",
+  "status": "active_mvp",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/612",
+  "acceptance_ids": ["AC-S3-01", "AC-S3-02", "AC-S3-03", "AC-S3-04", "AC-S3-05", "AC-S3-06"],
+  "applies_when": {
+    "paths": [
+      "src/notary_kg/business_case_type_*.py",
+      "src/notary_kg/cli.py",
+      "src/nac_cli/cli.py",
+      "workflows/contracts/business-case-type-runtime.contract.json",
+      "workflows/verification-contracts/business-case-type-runtime.verification.json",
+      "scripts/validate_business_case_type_runtime.py",
+      "tests/test_business_case_type_*.py",
+      "docs/de/architecture/business-case-type-id.md",
+      "docs/en/architecture/business-case-type-id.md",
+      "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+      "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+      "docs/de/superpowers/plans/2026-07-11-business-case-type-runtime-s3.md",
+      "docs/en/superpowers/plans/2026-07-11-business-case-type-runtime-s3.md",
+      "agent-context/index.json"
+    ]
+  },
+  "required_context": {
+    "always_on": ["AGENTS.md", "policies/process-policy.yaml", "policies/data-protection-policy.yaml", "policies/technology-policy.yaml"],
+    "scoped": ["docs/AGENTS.md", "workflows/contracts/AGENTS.md"],
+    "on_demand": [
+      "agent-context/index.json",
+      "docs/de/architecture/business-case-type-id.md",
+      "docs/en/architecture/business-case-type-id.md",
+      "workflows/contracts/business-case-type-runtime.contract.json"
+    ],
+    "runtime": ["fresh git diff", "fresh focused test output", "fresh validator output", "fresh strict-gate output", "fresh independent review"]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_runtime tests.test_business_case_type_cache tests.test_business_case_type_cli",
+    "python3 scripts/validate_business_case_type_runtime.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "python3 scripts/nac.py doctor --profile strict",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-S3-01: canonical IDs and direct known aliases resolve deterministically by purpose; unknown IDs, spelling variants, alias chains, cycles and retired or nonselectable entries fail closed.",
+    "AC-S3-02: validity requires exactly one fully typed registry row with exact BusinessCaseTypeId and CatalogVersion; zero rows, duplicates, timeout and version drift never produce VALID.",
+    "AC-S3-03: the registry cache enforces 300-second revalidation, 900-second hard expiry, 30-second negative TTL and site-wide invalidation on ETag or CatalogVersion drift.",
+    "AC-S3-04: registry and viewer caches have separate types, stores, locks and invalidation paths; viewer state is never read for type validity.",
+    "AC-S3-05: ETag and NOT_MODIFIED behavior is deterministic and cached metadata excludes matter, document, person, raw Graph and credential data.",
+    "AC-S3-06: central CLI, standalone validator, DE/EN documentation, strict gate and independent review pass without Graph, tenant, HTTP or credential access."
+  ],
+  "thresholds": {
+    "canonical_business_case_type_count": 20,
+    "direct_alias_count": 2,
+    "registry_revalidation_seconds": 300,
+    "registry_hard_expiry_seconds": 900,
+    "negative_cache_seconds": 30,
+    "required_acceptance_criteria": 6,
+    "allowed_live_graph_calls": 0
+  },
+  "exit_conditions": [
+    "All six acceptance criteria from Issue #612 are represented identically in spec, plan and verification contract.",
+    "Focused runtime, cache and CLI tests pass.",
+    "The standalone S3 validator and repository contract verification pass.",
+    "Language, link, traceability, strict-gate and diff checks pass.",
+    "Independent base...head review has no unresolved findings."
+  ],
+  "required_evidence": [
+    "issue_612_acceptance_criteria",
+    "s3_spec_and_plan_de_en",
+    "domain_contract",
+    "verification_contract",
+    "focused_runtime_cache_cli_test_result",
+    "standalone_validator_result",
+    "contracts_verify_result",
+    "strict_gate_result",
+    "git_diff_check_result",
+    "independent_review_result"
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "no_live_graph_or_tenant_access": true,
+    "no_unresolved_review_findings": true
+  },
+  "failure_behavior": {
+    "acceptance_mismatch": "block_completion",
+    "missing_required_context": "fail_closed",
+    "fixture_or_runtime_error": "return_redacted_nonzero_result",
+    "quality_gate_failure": "block_completion",
+    "review_finding": "block_completion"
+  }
+}

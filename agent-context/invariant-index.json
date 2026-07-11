@@ -130,6 +130,67 @@
         "scripts/validate_m365_matter_access_apply_live_smoke_retention.py",
         "tests/test_m365_matter_access_apply_live_smoke_retention.py"
       ]
+    },
+    {
+      "id": "invariant.business_case_type.exact_identity_no_normalization",
+      "domain": "business_case_type_runtime",
+      "severity": "critical",
+      "statement": "BusinessCaseTypeId input is compared exactly; case folding, trimming, Unicode normalization and URL decoding must not create a valid identity.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_runtime.py",
+        "tests/test_business_case_type_runtime.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.exactly_one_registry_row",
+      "domain": "business_case_type_runtime",
+      "severity": "critical",
+      "statement": "Validation requires exactly one fully typed Vorgangsartenregister row across all pages with exact ID, CatalogVersion, active lifecycle, Boolean Selectable true and a non-empty ETag.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_runtime.py",
+        "tests/test_business_case_type_runtime.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.alias_purpose_bound",
+      "domain": "business_case_type_runtime",
+      "severity": "critical",
+      "statement": "Canonical assignment rejects aliases; legacy read and migration may resolve exactly one direct alias and must mark the result audit-required and non-selectable.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_runtime.py",
+        "tests/test_business_case_type_runtime.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.cache_fail_closed_viewer_isolated",
+      "domain": "business_case_type_runtime",
+      "severity": "critical",
+      "statement": "A positive registry entry requires synchronous revalidation at 300 seconds, is unusable at 900 seconds, and viewer metadata must never influence BusinessCaseTypeId validity.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md",
+        "workflows/contracts/business-case-type-runtime.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_runtime.py",
+        "tests/test_business_case_type_cache.py",
+        "tests/test_business_case_type_runtime.py"
+      ]
     }
   ]
 }

@@ -929,3 +929,30 @@ flowchart LR
 
 This makes NaC visually usable for the office while keeping it machine-checkable
 for operations, review and further development.
+
+## Offline S3 Business-Case-Type Validation
+The `nac kg business-case-type-get` command is the fixture-only S3 offline entry point. It reads only the synthetic JSON supplied through `--registry-fixture` and exposes no token, tenant, Graph, HTTP, credential or live option. Relative fixture paths are resolved against the repository. The exit code is zero only for `status=VALID`.
+
+Example local fixture:
+
+```json
+{
+  "status": "OK",
+  "pages_complete": true,
+  "rows": [
+    {
+      "business_case_type_id": "immobilienkaufvertrag",
+      "lifecycle_status": "active",
+      "selectable": true,
+      "catalog_version": "<current-64-character-CatalogVersion>",
+      "etag": "\"synthetic-etag\""
+    }
+  ]
+}
+```
+
+Invocation:
+
+```bash
+nac kg business-case-type-get immobilienkaufvertrag --site-id synthetic-site-01 --purpose canonical_assignment --registry-fixture tests/fixtures/business-case-type-registry.json --format json
+```

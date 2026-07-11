@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,13 @@ from nac_m365_graph.provisioner_env_bootstrap import (
 )
 
 from .business_case_inventory import build_business_case_inventory
+from .business_case_type_cache import BusinessCaseTypeRegistryCache
+from .business_case_type_runtime import (
+    BusinessCaseTypeCatalog,
+    BusinessCaseTypeLookupRequest,
+    business_case_type_get,
+)
+from .business_case_type_transport import BusinessCaseTypeRegistryRow, RegistryFetchResult
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
@@ -146,6 +154,19 @@ def build_parser() -> argparse.ArgumentParser:
         "business-case-inventory",
         help="Build the canonical notarial business-case type inventory, including legacy aliases.",
     )
+
+    business_case_type_get_parser = subparsers.add_parser(
+        "business-case-type-get",
+        help="Validate one business-case type through the offline registry fixture port.",
+    )
+    business_case_type_get_parser.add_argument("identifier")
+    business_case_type_get_parser.add_argument("--site-id", required=True)
+    business_case_type_get_parser.add_argument(
+        "--purpose",
+        choices=["canonical_assignment", "legacy_read", "migration"],
+        required=True,
+    )
+    business_case_type_get_parser.add_argument("--registry-fixture", type=Path, required=True)
 
     subparsers.add_parser(
         "ontology-storage-contract",
@@ -618,6 +639,32 @@ def main(argv: list[str] | None = None) -> int:
         payload = build_business_case_inventory(repo_root)
         _print_payload(payload, args.format)
         return 0 if payload["status"] == "PASSED" else 1
+
+    if args.command == "business-case-type-get":
+        fixture_path = args.registry_fixture
+        if not fixture_path.is_absolute():
+            fixture_path = repo_root / fixture_path
+        try:
+            read_port = _FixtureBusinessCaseTypeRegistryReadPort.from_path(fixture_path)
+            catalog = BusinessCaseTypeCatalog.from_repo(repo_root)
+            result = business_case_type_get(
+                BusinessCaseTypeLookupRequest(
+                    site_id=args.site_id,
+                    identifier=args.identifier,
+                    purpose=args.purpose,
+                ),
+                catalog=catalog,
+                read_port=read_port,
+                registry_cache=BusinessCaseTypeRegistryCache(),
+            )
+            payload = asdict(result)
+            _print_business_case_type_lookup(payload, args.format)
+            return 0 if result.status == "VALID" else 1
+        except Exception:
+            # This offline CLI is a redaction boundary. Runtime and fixture
+            # details must never escape through tracebacks or exception text.
+            print("ERROR: business-case-type lookup failed")
+            return 1
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)
@@ -1343,6 +1390,99 @@ def _print_payload(payload: dict, output_format: str) -> None:
         for question in payload["first_open_questions"]:
             print(f"- {question}")
 
+
+class _FixtureBusinessCaseTypeRegistryReadPort:
+    _MAX_FIXTURE_BYTES = 65536
+    _ROOT_KEYS = frozenset({"status", "rows", "reason_code", "pages_complete"})
+    _ROW_KEYS = frozenset(
+        {
+            "business_case_type_id",
+            "lifecycle_status",
+            "selectable",
+            "catalog_version",
+            "etag",
+        }
+    )
+
+    def __init__(self, result: RegistryFetchResult) -> None:
+        self._result = result
+
+    @classmethod
+    def from_path(cls, path: Path) -> "_FixtureBusinessCaseTypeRegistryReadPort":
+        if path.stat().st_size > cls._MAX_FIXTURE_BYTES:
+            raise ValueError("registry fixture exceeds offline size limit")
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict) or not set(raw).issubset(cls._ROOT_KEYS):
+            raise ValueError("registry fixture must be a supported object")
+        status = raw.get("status")
+        rows = raw.get("rows", [])
+        if not isinstance(rows, list):
+            raise ValueError("registry fixture rows must be a list")
+        if status == "OK":
+            if raw.get("pages_complete") is not True:
+                raise ValueError("OK registry fixture requires pages_complete=true")
+            parsed_rows = tuple(cls._parse_row(row) for row in rows)
+            return cls(RegistryFetchResult.ok(*parsed_rows, pages_complete=True))
+        if rows:
+            raise ValueError("non-OK registry fixtures cannot contain rows")
+        if status == "NOT_MODIFIED":
+            return cls(RegistryFetchResult.not_modified())
+        if status == "UNAVAILABLE":
+            reason_code = raw.get("reason_code", "fixture_transport_unavailable")
+            if not isinstance(reason_code, str) or not reason_code:
+                raise ValueError("unavailable fixture requires a reason code")
+            return cls(RegistryFetchResult.unavailable(reason_code))
+        raise ValueError("unsupported registry fixture status")
+
+    @classmethod
+    def _parse_row(cls, raw: object) -> BusinessCaseTypeRegistryRow:
+        if not isinstance(raw, dict) or set(raw) != cls._ROW_KEYS:
+            raise ValueError("registry fixture row shape mismatch")
+        values = (
+            raw["business_case_type_id"],
+            raw["lifecycle_status"],
+            raw["catalog_version"],
+            raw["etag"],
+        )
+        if not all(isinstance(value, str) for value in values):
+            raise ValueError("registry fixture text field type mismatch")
+        if type(raw["selectable"]) is not bool:
+            raise ValueError("registry fixture Selectable must be boolean")
+        return BusinessCaseTypeRegistryRow(
+            business_case_type_id=raw["business_case_type_id"],
+            lifecycle_status=raw["lifecycle_status"],
+            selectable=raw["selectable"],
+            catalog_version=raw["catalog_version"],
+            etag=raw["etag"],
+        )
+
+    def fetch_registry(
+        self,
+        *,
+        site_id: str,
+        business_case_type_id: str,
+        catalog_version: str,
+        if_none_match: str | None,
+    ) -> RegistryFetchResult:
+        del site_id, business_case_type_id, catalog_version, if_none_match
+        return self._result
+
+
+def _print_business_case_type_lookup(payload: dict[str, object], output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+        return
+    print("BusinessCaseType runtime lookup")
+    print(f"- status: {payload['status']}")
+    print(f"- requested identifier: {payload['requested_identifier']}")
+    print(f"- canonical BusinessCaseTypeId: {payload['canonical_business_case_type_id']}")
+    print(f"- CatalogVersion: {payload['catalog_version']}")
+    print(f"- registry ETag: {payload['registry_etag']}")
+    print(f"- resolved from alias: {payload['resolved_from_alias']}")
+    print(f"- audit required: {payload['audit_required']}")
+    print(f"- selectable: {payload['selectable']}")
+    print(f"- cache state: {payload['cache_state']}")
+    print(f"- reason code: {payload['reason_code']}")
 
 if __name__ == "__main__":
     raise SystemExit(main())
