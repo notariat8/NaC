@@ -90,7 +90,7 @@ def validate_domain_contract(contract: dict[str, Any]) -> list[str]:
     for field, expected in {
         "schema_version": "nac.business-case-type-graph-read-edge/v0.1",
         "contract_id": "m365.business_case_type_graph_read_edge",
-        "status": "implemented_offline_pending_protected_pr",
+        "status": "implemented_offline",
         "leading_issue": "https://github.com/notariat8/NaC/issues/616",
     }.items():
         if contract.get(field) != expected:
@@ -239,7 +239,7 @@ def validate_verification_contract(verification: dict[str, Any]) -> list[str]:
         "schema_version": "nac.verification-contract/v0.1",
         "contract_id": "verification.business_case_type_graph_read_edge_s4",
         "domain_contract_id": "m365.business_case_type_graph_read_edge",
-        "status": "implemented_offline_pending_protected_pr",
+        "status": "implemented_offline",
         "leading_issue": "https://github.com/notariat8/NaC/issues/616",
     }.items():
         if verification.get(field) != expected:
@@ -357,10 +357,10 @@ def validate_document_traceability(texts: dict[str, str]) -> list[str]:
         for token in (EXPECTED_CLI, "Sites.Selected", "S4b"):
             if token not in text:
                 errors.append(f"{label} missing traceability token {token}")
-        if label == "DE spec" and "Status: in Umsetzung; Runtime im Branch implementiert; Abschluss nach Gates und Protected PR" not in text:
+        if label == "DE spec" and "Status: Runtime offline implementiert in PR #617; Governance-Synchronisierung im S5-PR bis zu grüner Remote-CI offen; S4b-Writes bleiben offen" not in text:
             errors.append("DE spec implementation status mismatch")
         if label == "EN spec":
-            if "Status: in progress; runtime implemented on the branch; completion after gates and Protected PR" not in text:
+            if "Status: runtime implemented offline in PR #617; governance synchronization remains open in the S5 PR until remote CI is green; S4b writes remain open" not in text:
                 errors.append("EN spec implementation status mismatch")
             if "5. the identical `BusinessCaseTypeId` and `CatalogVersion` filters." not in text:
                 errors.append("EN spec normative NextLink filter binding missing")
@@ -373,7 +373,7 @@ def validate_document_traceability(texts: dict[str, str]) -> list[str]:
                 if f"- [x] **WP{wp} " not in text:
                     errors.append(f"{label} must mark WP{wp} complete")
             if "- [ ] **WP9 " not in text:
-                errors.append(f"{label} must keep WP9 open")
+                errors.append(f"{label} must keep WP9 pending until the synchronizing PR passes remote CI")
             if "Remote-CI" not in text and "remote CI" not in text:
                 errors.append(f"{label} must bind completion to remote CI")
     return errors

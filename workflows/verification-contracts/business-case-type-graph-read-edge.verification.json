@@ -3,7 +3,7 @@
   "contract_id": "verification.business_case_type_graph_read_edge_s4",
   "domain_contract_id": "m365.business_case_type_graph_read_edge",
   "title": "BusinessCaseType Graph Read Edge S4 Verification",
-  "status": "implemented_offline_pending_protected_pr",
+  "status": "implemented_offline",
   "leading_issue": "https://github.com/notariat8/NaC/issues/616",
   "acceptance_ids": [
     "AC-S4-01",

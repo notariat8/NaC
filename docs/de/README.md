@@ -389,3 +389,4 @@ In diesem Musterrepo sind nur Techniken aus [policies/technology-policy.yaml](..
 In diesem Musterrepo sind keine echten personenbezogenen Daten oder Secrets zulässig.
 
 - [BusinessCaseType Graph Read Edge S4](superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md) verfolgt Issue #616 für `Sites.Selected`/`read`, vollständiges Same-Filter-Paging, lokale ETag-Auswertung, Redaction, Viewer-Isolation und die Offline-CLI `nac m365 teams-sharepoint business-case-type-read-plan`; S4b-Writes bleiben offen.
+- [BusinessCaseType Migration S5](superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md) implementiert Issue #618 offline mit sieben Inventarklassen, exaktem Legacy-Mapping, idempotentem Backfill-Plan, persistenter lokaler Quarantäne, unabhängig erfassten stabilen Endscans und N-/N-1-Profil-Evaluation; `READY` bleibt S5-offline und Live-Aufrufe sowie Tenant-Writes bleiben null.

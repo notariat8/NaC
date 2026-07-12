@@ -69,7 +69,8 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0016 | AI-SBOM baseline export mapping | Done | `nac ai-sbom export-mapping` reports CycloneDX JSON and SPDX JSON target mappings for the repo-wide AI-SBOM baseline while release export, external SBOM tool execution, mandate data, secrets and release binding remain blocked before owner apply. |
 | DEV-0017 | Legal source inventory review depth | Done | `nac legal-graph source-inventory --format json` now reports per-source review depth for seed metadata, license terms, TDM/bulk access, attribution, storage boundary and next required review while ingestion, benchmark generation, model evaluation, training and mandate data remain blocked. |
 | DEV-0018 | BusinessCaseType S3 offline runtime | Done offline (#614) | `AC-S3-01` through `AC-S3-06`, contracts, CLI, validator, negative tests, strict gate, independent review and Protected PR checks pass without Graph, credentials or tenant access. |
-| DEV-0019 | BusinessCaseType S4 Graph Read Edge | In progress (#616) | `AC-S4-01` through `AC-S4-07`; exact `Sites.Selected` plus site grant `read`, same-filter paging, no collection `If-None-Match`, redaction/viewer isolation, offline CLI, contracts, validator and tests. S4b writes remain open. |
+| DEV-0019 | BusinessCaseType S4 Graph Read Edge | Done offline (#617) | `AC-S4-01` through `AC-S4-07`; exact `Sites.Selected` plus site grant `read`, same-filter paging, no collection `If-None-Match`, redaction/viewer isolation, offline CLI, contracts, validator and tests. S4b writes remain open. |
+| DEV-0020 | BusinessCaseType S5 offline migration | In progress (#618) | Inventory dry run, exact legacy mapping, idempotent backfill planning, persistent quarantine, deterministic snapshots, stable final scans and N-1 replay; no credentials, HTTP, Graph or tenant writes. |
 
 ## Roadmap Review Notes
 

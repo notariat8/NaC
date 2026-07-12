@@ -2,7 +2,7 @@
   "schema_version": "nac.business-case-type-graph-read-edge/v0.1",
   "contract_id": "m365.business_case_type_graph_read_edge",
   "title": "BusinessCaseType Graph REST v1.0 Read Edge",
-  "status": "implemented_offline_pending_protected_pr",
+  "status": "implemented_offline",
   "leading_issue": "https://github.com/notariat8/NaC/issues/616",
   "slice": {
     "id": "S4",

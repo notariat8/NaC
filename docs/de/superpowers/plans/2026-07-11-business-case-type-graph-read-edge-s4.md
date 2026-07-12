@@ -1,6 +1,6 @@
 # BusinessCaseType Graph Read Edge S4 Implementierungsplan
 
-**Status:** in Umsetzung; Runtime im Branch implementiert; WP1-WP8 abgeschlossen; WP9 offen bis Gates, Protected PR und Remote-CI
+**Status:** Runtime offline implementiert in PR #617; WP9 im synchronisierenden S5-PR bis zu grüner Remote-CI offen; S4b-Writes bleiben offen
 
 **Spec:** [BusinessCaseType Graph Read Edge S4 Design](../specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md)
 **Leading Issue:** [GitHub #616](https://github.com/notariat8/NaC/issues/616)
@@ -12,7 +12,7 @@
 Den GET-only Graph-v1.0-Adapter von `nac_m365_graph` zum bestehenden
 `notary_kg`-Domain-Port in diesem Implementierungsslice bauen. Runtime, Request-Bindung, Paging, lokale ETag-Semantik, Redaction,
 Offline-CLI und Nachweise sind im Branch umgesetzt. S3 bleibt unverändert,
-S4b-Writes bleiben außerhalb des Scopes; der Abschluss wartet auf WP9.
+S4b-Writes bleiben außerhalb des Scopes; WP9 wird erst nach Merge des synchronisierenden S5-PR mit grüner Remote-CI abgeschlossen.
 
 ## Acceptance-Mapping zu Issue #616
 
@@ -87,7 +87,7 @@ Implementierungsslice ausgeführt.
 
 ## Abschlussregel
 
-S4 ist erst nach Erfüllung aller sieben ACs, bestandenem Strict-Gate,
-unabhängigem Review und grünen Protected-PR-Checks implementiert. Der Branch öffnet weder External Service noch Human Approval und erlaubt
-exakt null Live-Graph-Aufrufe; abgeschlossen ist S4 erst nach WP9. S4b bleibt ein separates Issue für spätere
+S4 wurde mit Erfüllung aller sieben ACs, bestandenem Strict-Gate,
+unabhängigem Review und grünen Protected-PR-Checks in PR #617 technisch offline implementiert; die Governance-Synchronisierung erfolgt im S5-PR. Der Branch öffnet weder External Service noch Human Approval und erlaubt
+exakt null Live-Graph-Aufrufe. S4b bleibt ein separates Issue für spätere
 Writes; S3 wird nicht stillschweigend erweitert.

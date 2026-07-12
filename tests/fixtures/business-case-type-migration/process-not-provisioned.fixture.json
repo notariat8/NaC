@@ -1,0 +1,332 @@
+{
+  "schema_version": "nac.business-case-type-migration-fixture/v0.1",
+  "data_classification": "synthetic",
+  "contains_production_data": false,
+  "observed_at": "2026-07-12T08:00:00Z",
+  "catalog_version": "fcf1c7ba1a35980f5f1d371381ae5c218cd3ce94372f2c1df821f2ad40d2fab0",
+  "matter_pages": [
+    {
+      "page_number": 1,
+      "page_count": 1,
+      "complete": true,
+      "rows": [
+        {
+          "record_ref": "synref-clean-001",
+          "snapshot_etag": "synthetic-etag-etag-1",
+          "current_etag": "synthetic-etag-etag-1",
+          "legacy_choice": "immobilienkaufvertrag",
+          "business_case_type_id": "immobilienkaufvertrag",
+          "read_status": "complete"
+        }
+      ]
+    }
+  ],
+  "registry_snapshot": {
+    "status": "present",
+    "complete": true,
+    "rows": [
+      {
+        "business_case_type_id": "adoption-familienrechtliche-erklaerungen",
+        "etag": "synthetic-etag-registry-catalog-01",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "bautraegervertrag",
+        "etag": "synthetic-etag-registry-catalog-02",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "ehevertrag-scheidungsfolgenvereinbarung",
+        "etag": "synthetic-etag-registry-catalog-03",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "erbausschlagung",
+        "etag": "synthetic-etag-registry-catalog-04",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "erbscheinsantrag-nachlass",
+        "etag": "synthetic-etag-registry-catalog-05",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "geschaeftsanteilsuebertragung-gmbh",
+        "etag": "synthetic-etag-registry-catalog-06",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "gesellschafterbeschluss-gmbh-ug",
+        "etag": "synthetic-etag-registry-catalog-07",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "grundschuld-hypothekenbestellung",
+        "etag": "synthetic-etag-registry-catalog-08",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "handelsregisteranmeldung",
+        "etag": "synthetic-etag-registry-1",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "immobilienkaufvertrag",
+        "etag": "synthetic-etag-registry-2",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "loeschungsbewilligung-grundbuchloeschung",
+        "etag": "synthetic-etag-registry-catalog-11",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "online-gmbh-gruendung",
+        "etag": "synthetic-etag-registry-3",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "pflichtteilsverzicht-erbverzicht",
+        "etag": "synthetic-etag-registry-catalog-13",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "schenkungsvertrag-uebertragungsvertrag",
+        "etag": "synthetic-etag-registry-catalog-14",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "teilungserklaerung-weg",
+        "etag": "synthetic-etag-registry-catalog-15",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "testament-erbvertrag",
+        "etag": "synthetic-etag-registry-catalog-16",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "unterschriftsbeglaubigung",
+        "etag": "synthetic-etag-registry-4",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vereinsregisteranmeldung",
+        "etag": "synthetic-etag-registry-catalog-18",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vollmacht-immobilien-gesellschaftsgeschaefte",
+        "etag": "synthetic-etag-registry-catalog-19",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vorsorgevollmacht-patientenverfuegung",
+        "etag": "synthetic-etag-registry-catalog-20",
+        "selectable": true
+      }
+    ]
+  },
+  "process_snapshot": {
+    "status": "not_provisioned"
+  },
+  "scans": [
+    {
+      "scan_id": "scan-one",
+      "scanned_at": "2026-07-12T08:00:00Z",
+      "writes_frozen": true,
+      "complete": true,
+      "pages_complete": true,
+      "record_count": 1,
+      "scan_hash": "ee58522482f6dc0d591c426addfe7dcdbe7f6e4637fb00e5d76453ea4ce450c1",
+      "matter_pages": [
+        {
+          "page_number": 1,
+          "page_count": 1,
+          "complete": true,
+          "rows": [
+            {
+              "record_ref": "synref-clean-001",
+              "snapshot_etag": "synthetic-etag-etag-1",
+              "current_etag": "synthetic-etag-etag-1",
+              "legacy_choice": "immobilienkaufvertrag",
+              "business_case_type_id": "immobilienkaufvertrag",
+              "read_status": "complete"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "scan_id": "scan-two",
+      "scanned_at": "2026-07-12T08:15:00Z",
+      "writes_frozen": true,
+      "complete": true,
+      "pages_complete": true,
+      "record_count": 1,
+      "scan_hash": "ee58522482f6dc0d591c426addfe7dcdbe7f6e4637fb00e5d76453ea4ce450c1",
+      "matter_pages": [
+        {
+          "page_number": 1,
+          "page_count": 1,
+          "complete": true,
+          "rows": [
+            {
+              "record_ref": "synref-clean-001",
+              "snapshot_etag": "synthetic-etag-etag-1",
+              "current_etag": "synthetic-etag-etag-1",
+              "legacy_choice": "immobilienkaufvertrag",
+              "business_case_type_id": "immobilienkaufvertrag",
+              "read_status": "complete"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "replay_scenarios": {
+    "read-vorgangstyp-id": {
+      "registry_row": {
+        "VorgangstypId": "immobilienkaufvertrag"
+      }
+    },
+    "ignore-additive-registry-fields": {
+      "registry_row": {
+        "VorgangstypId": "immobilienkaufvertrag",
+        "future_field": "ignored"
+      }
+    },
+    "unknown-id-fail-closed": {
+      "registry_row": {
+        "VorgangstypId": "unknown-type"
+      }
+    },
+    "new-type-without-legacy-read-only": {
+      "registry_row": {
+        "VorgangstypId": "bautraegervertrag",
+        "legacy_choice": null
+      }
+    }
+  },
+  "bindings": {
+    "site_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+    "schema_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+    "matter_list_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+    "registry_list_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+    "process_list_hash": "5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "role_approval_refs": [
+    "synthetic-approval-backfill",
+    "synthetic-approval-cutover"
+  ],
+  "post_scan_observed_at": "2026-07-12T08:16:00Z",
+  "post_scan_registry_snapshot": {
+    "status": "present",
+    "complete": true,
+    "rows": [
+      {
+        "business_case_type_id": "adoption-familienrechtliche-erklaerungen",
+        "etag": "synthetic-etag-registry-catalog-01",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "bautraegervertrag",
+        "etag": "synthetic-etag-registry-catalog-02",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "ehevertrag-scheidungsfolgenvereinbarung",
+        "etag": "synthetic-etag-registry-catalog-03",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "erbausschlagung",
+        "etag": "synthetic-etag-registry-catalog-04",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "erbscheinsantrag-nachlass",
+        "etag": "synthetic-etag-registry-catalog-05",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "geschaeftsanteilsuebertragung-gmbh",
+        "etag": "synthetic-etag-registry-catalog-06",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "gesellschafterbeschluss-gmbh-ug",
+        "etag": "synthetic-etag-registry-catalog-07",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "grundschuld-hypothekenbestellung",
+        "etag": "synthetic-etag-registry-catalog-08",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "handelsregisteranmeldung",
+        "etag": "synthetic-etag-registry-1",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "immobilienkaufvertrag",
+        "etag": "synthetic-etag-registry-2",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "loeschungsbewilligung-grundbuchloeschung",
+        "etag": "synthetic-etag-registry-catalog-11",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "online-gmbh-gruendung",
+        "etag": "synthetic-etag-registry-3",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "pflichtteilsverzicht-erbverzicht",
+        "etag": "synthetic-etag-registry-catalog-13",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "schenkungsvertrag-uebertragungsvertrag",
+        "etag": "synthetic-etag-registry-catalog-14",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "teilungserklaerung-weg",
+        "etag": "synthetic-etag-registry-catalog-15",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "testament-erbvertrag",
+        "etag": "synthetic-etag-registry-catalog-16",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "unterschriftsbeglaubigung",
+        "etag": "synthetic-etag-registry-4",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vereinsregisteranmeldung",
+        "etag": "synthetic-etag-registry-catalog-18",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vollmacht-immobilien-gesellschaftsgeschaefte",
+        "etag": "synthetic-etag-registry-catalog-19",
+        "selectable": true
+      },
+      {
+        "business_case_type_id": "vorsorgevollmacht-patientenverfuegung",
+        "etag": "synthetic-etag-registry-catalog-20",
+        "selectable": true
+      }
+    ]
+  },
+  "post_scan_process_snapshot": {
+    "status": "not_provisioned"
+  }
+}

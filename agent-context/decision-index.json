@@ -194,6 +194,26 @@
       "verification_contracts": [
         "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json"
       ]
+    },
+    {
+      "id": "ADR-BUSINESS-CASE-TYPE-005",
+      "title": "S5 migration remains deterministic, synthetic-only and offline",
+      "status": "accepted",
+      "decision_date": "2026-07-12",
+      "domain": "business_case_type_migration",
+      "context_key": "business_case_type_migration_s5",
+      "owner": "ofunk",
+      "summary": "S5 classifies exactly seven disjoint inventory states, binds the frozen four-row typed mapping and snapshots canonically, plans only idempotent VorgangstypId writes with ETag, persists blockers in a process-serialized local quarantine, and evaluates hash-pinned N/N-1 profiles without executing candidate runtimes. READY is S5_OFFLINE_ONLY; Graph, credentials, live calls, tenant writes, cutover and rollback execution remain excluded until separate S6/S7 gates and executable N/N-1 validation.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "docs/de/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "docs/en/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "workflows/contracts/business-case-type-migration-s5.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/business-case-type-migration-s5.verification.json"
+      ]
     }
   ]
 }

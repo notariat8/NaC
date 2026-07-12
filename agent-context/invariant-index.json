@@ -273,6 +273,54 @@
         "tests/test_business_case_type_graph_read_edge.py",
         "tests/test_business_case_type_graph_read_edge_cli.py"
       ]
+    },
+    {
+      "id": "invariant.business_case_type.migration_exact_classification",
+      "domain": "business_case_type_migration",
+      "severity": "critical",
+      "statement": "Every valid synthetic migration row is assigned exactly one of seven ordered classes without trimming, normalization or guessing; only mappable may produce a planned VorgangstypId operation.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "docs/en/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "workflows/contracts/business-case-type-migration-s5.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_migration.py",
+        "tests/test_business_case_type_migration.py",
+        "tests/test_business_case_type_migration_contract.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.migration_quarantine_no_delete",
+      "domain": "business_case_type_migration",
+      "severity": "critical",
+      "statement": "All blocker classes are written only to content-addressed local quarantine with no overwrite, close, cleanup or delete path; divergent content and unsafe paths fail closed.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "docs/en/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "workflows/contracts/business-case-type-migration-s5.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_migration.py",
+        "tests/test_business_case_type_migration_quarantine.py",
+        "tests/test_business_case_type_migration_cli.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.migration_zero_live_calls_writes",
+      "domain": "business_case_type_migration",
+      "severity": "critical",
+      "statement": "S5 accepts synthetic fixtures only and performs exactly zero Graph, HTTP, DNS, credential, Entra, SharePoint or tenant actions; live backfill, cutover and recovery execution remain blocked behind S6 and S7.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "docs/en/superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md",
+        "workflows/contracts/business-case-type-migration-s5.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_migration.py",
+        "tests/test_business_case_type_migration_cli.py",
+        "workflows/verification-contracts/business-case-type-migration-s5.verification.json"
+      ]
     }
   ]
 }
