@@ -174,6 +174,26 @@
       "verification_contracts": [
         "workflows/verification-contracts/business-case-type-runtime.verification.json"
       ]
+    },
+    {
+      "id": "ADR-BUSINESS-CASE-TYPE-004",
+      "title": "Graph read edge is exact-scope, complete and locally compared",
+      "status": "accepted",
+      "decision_date": "2026-07-11",
+      "domain": "business_case_type_graph_read_edge",
+      "context_key": "business_case_type_graph_read_edge_s4",
+      "owner": "ofunk",
+      "summary": "The S4 adapter uses Graph REST v1.0 GET only with exactly Sites.Selected and an existing site grant role read. Every next link preserves the same-filter bound site, list, projection, BusinessCaseTypeId filter and CatalogVersion filter; row ETags are compared locally after a complete read and are never sent as collection If-None-Match. Redaction and viewer isolation remain mandatory; S4b writes stay open and excluded.",
+      "source_paths": [
+        "docs/de/architecture/business-case-type-id.md",
+        "docs/en/architecture/business-case-type-id.md",
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+      ],
+      "verification_contracts": [
+        "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json"
+      ]
     }
   ]
 }

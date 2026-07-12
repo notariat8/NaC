@@ -1,7 +1,7 @@
 # ADR: Stable BusinessCaseTypeId
 
-Status: accepted; S1/S2 implemented offline, S3 in progress, no live apply
-Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612)
+Status: accepted; S1/S2/S3 implemented offline, S4 read edge in progress, no live apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616)
 Date: 2026-07-11
 
 ## Context
@@ -261,8 +261,8 @@ live apply can be considered.
 | --- | --- | --- | --- |
 | S1 Contract | implemented offline in #610 | align ontology, inventory and viewer contracts on independent `Vorgangsartenregister`, optional `Prozessregister`, nullable BPMN links and alias invariants | validators prove viewer-independent type validity and block drift offline |
 | S2 Schema plan | implemented offline in #610 | plan `Akten.VorgangstypId` and `Vorgangsartenregister` in the required default; keep `Prozessregister` and `BPMN Models` in separate optional viewer provisioning; leave legacy Choice unchanged | 33 plan steps and 66 workspace apply units; dry run, readiness, snapshot and rollback plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
-| S3 Runtime | in progress in #612; completion bound to AC-S3-01 through AC-S3-06 | implement `business_case_type_get`, content-based `CatalogVersion`, explicit runtime lifecycle, purpose-bound aliases and separate registry/viewer ETag caches offline | spec, domain/verification contracts, validator, CLI, negative tests, strict gate, independent review and Protected PR checks pass without Graph/tenant access |
-| S4 MCP/Graph | open | constrain `case_create`, correction/backfill paths and optional process reads by selected fields, paging, ETag, site scope and operation roles | negative authorization and fake-Graph smokes prove no broad rights or viewer coupling |
+| S3 Runtime | implemented offline in #614 | implement `business_case_type_get`, content-based `CatalogVersion`, explicit runtime lifecycle, purpose-bound aliases and separate registry/viewer ETag caches offline | spec, domain/verification contracts, validator, CLI, negative tests, strict gate, independent review and Protected PR checks pass without Graph/tenant access |
+| S4 Graph Read Edge | in progress in #616; S4b writes open | constrain `case_create`, correction/backfill paths and optional process reads by selected fields, paging, ETag, site scope and operation roles | negative authorization and fake-Graph smokes prove no broad rights or viewer coupling |
 | S5 Migration | open | implement inventory dry run, idempotent backfill, persistent quarantine, registry/process snapshots, stable final scans and N-1 replay | all seven classes, ETag conflicts, rollback order and forward recovery pass |
 | S6 Immutable evidence | open | implement durable outbox, broker/WORM events, correlation, pseudonymous ActorRef, retention, access review and reconciliation | every live mutation stays blocked without complete intent/outcome/readback evidence |
 | S7 Live approval | open | prepare separate owner-gated schema/backfill apply with separation of duties and no cleanup | complete PR diff, N/N-1 rollback rehearsal, negative authorization and explicit dual approval |
@@ -299,3 +299,9 @@ python3 scripts/validate_doc_links.py
 
 Later implementation pull requests must also pass the affected contract
 validators and the [strict quality gate](../quality-gate.md).
+
+## S4 Graph Read Edge (#616)
+
+The active S4 read edge binds Graph REST v1.0 `GET` immutably to the site, `Vorgangsartenregister`, operation and role. Only `Sites.Selected` and an existing site grant `read` are allowed; paging must preserve the `BusinessCaseTypeId` and `CatalogVersion` filters. Row ETags are compared locally only after a complete read and are never sent as collection `If-None-Match`. Results remain redacted and viewer-isolated. The entry point is `nac m365 teams-sharepoint business-case-type-read-plan`; it is offline and loads no credentials, HTTP, DNS or Graph client. S4b writes remain open.
+
+Traceability: **AC-S4-01:** exact GET/projection path; **AC-S4-02:** complete same-filter paging; **AC-S4-03:** local ETag evaluation; **AC-S4-04:** exact permission/grant binding; **AC-S4-05:** strict typing and viewer isolation; **AC-S4-06:** redaction; **AC-S4-07:** CLI, contracts, validator, tests, documentation and gates.

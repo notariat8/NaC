@@ -182,3 +182,5 @@ machen die Abnahmeharness agentisch lesbar.
   oder produktiven Cloud-Apply.
 
 - [business-case-type-runtime.contract.json](business-case-type-runtime.contract.json): Offline-S3-Vertrag für die sechs Akzeptanzkriterien aus Issue #612: exakte BusinessCaseTypeId- und Aliasauflösung, Registry-Kardinalität/Version/Status, Cache-TTL/Invalidierung, Viewer-Isolation, ETag/Datenminimierung sowie CLI- und Strict-Gate-Nachweis ohne Graph-, HTTP- oder Credential-Zugriff.
+
+- [business-case-type-graph-read-edge.contract.json](business-case-type-graph-read-edge.contract.json): Offline implementierter S4-Read-Edge-Vertrag, dessen Abschluss den Protected PR voraussetzt, für Issue #616 mit exakt `Sites.Selected` plus Site-Grant `read`, Graph REST v1.0 GET, Same-Filter-Paging, lokaler Row-ETag-Auswertung, Redaction und Viewer-Isolation; S4b-Writes bleiben offen.

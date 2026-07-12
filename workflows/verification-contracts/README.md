@@ -44,3 +44,5 @@ can prove that a slice is complete.
   records accepted decisions that explain why domain guardrails exist.
 - [agent-context/invariant-index.json](../../agent-context/invariant-index.json)
   records guardrails that validators must keep enforced.
+
+- [business-case-type-graph-read-edge.verification.json](business-case-type-graph-read-edge.verification.json): Executable S4 acceptance contract for Issue #616 covering AC-S4-01 through AC-S4-07, exact `Sites.Selected`/`read` scope, same-filter paging, no collection `If-None-Match`, redaction, viewer isolation, offline CLI and zero live Graph calls.

@@ -1,0 +1,236 @@
+{
+  "schema_version": "nac.business-case-type-graph-read-edge/v0.1",
+  "contract_id": "m365.business_case_type_graph_read_edge",
+  "title": "BusinessCaseType Graph REST v1.0 Read Edge",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/616",
+  "slice": {
+    "id": "S4",
+    "read_edge_only": true,
+    "s3_domain_runtime_unchanged": true,
+    "s4b_writes_in_scope": false,
+    "allowed_live_graph_calls": 0
+  },
+  "adapter_boundary": {
+    "adapter_package": "nac_m365_graph",
+    "domain_package": "notary_kg",
+    "domain_port": "BusinessCaseTypeRegistryReadPort",
+    "domain_result": "RegistryFetchResult",
+    "adapter_may_make_domain_validity_decision": false,
+    "adapter_may_read_viewer_port": false
+  },
+  "binding": {
+    "immutable_per_adapter_instance": true,
+    "required_values": [
+      "site_id",
+      "list_id",
+      "operation",
+      "role",
+      "runtime_permission",
+      "site_grant_role"
+    ],
+    "logical_list_name": "Vorgangsartenregister",
+    "site_id_must_equal_bound_value": true,
+    "list_id_must_equal_bound_value": true,
+    "mismatch_behavior": "block_before_transport",
+    "site_grant_role_exact": "read",
+    "broader_site_grant_roles_allowed": false
+  },
+  "authorization": {
+    "allowed_runtime_permissions_exact": [
+      "Sites.Selected"
+    ],
+    "delegated_permissions_allowed": false,
+    "schema_permissions_allowed": false,
+    "provisioning_permissions_allowed": false,
+    "broader_site_permissions_allowed": false,
+    "forbidden_permissions": [
+      "Sites.Read.All",
+      "Sites.ReadWrite.All",
+      "Sites.Manage.All",
+      "Files.Read.All"
+    ],
+    "operation_role_bindings": {
+      "case_create_validation": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ],
+      "matter_type_correction_validation": [
+        "MatterCorrector",
+        "runtime_service"
+      ],
+      "backfill_validation": [
+        "BackfillOperator",
+        "runtime_service"
+      ],
+      "optional_process_read": [
+        "notary",
+        "notary_clerk",
+        "substitution_notary",
+        "substitution_clerk",
+        "runtime_service"
+      ]
+    },
+    "unknown_operation_or_role_behavior": "block_before_transport"
+  },
+  "graph_request": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "api_version": "v1.0",
+    "allowed_methods": [
+      "GET"
+    ],
+    "collection_path_template": "/sites/{bound-site-id}/lists/{bound-list-id}/items",
+    "item_select_exact": [
+      "id",
+      "eTag"
+    ],
+    "fields_select_exact": [
+      "BusinessCaseTypeId",
+      "LifecycleStatus",
+      "Selectable",
+      "CatalogVersion"
+    ],
+    "selected_properties_exact": [
+      "id",
+      "eTag",
+      "BusinessCaseTypeId",
+      "LifecycleStatus",
+      "Selectable",
+      "CatalogVersion"
+    ],
+    "graph_beta_allowed": false,
+    "graph_sdk_allowed": false,
+    "sharepoint_rest_allowed": false,
+    "pnp_allowed": false,
+    "redirects_allowed": false,
+    "request_headers": {
+      "collection_if_none_match_allowed": false,
+      "row_etag_as_collection_if_none_match_allowed": false
+    },
+    "filter_fields_exact": [
+      "BusinessCaseTypeId",
+      "CatalogVersion"
+    ]
+  },
+  "response_typing": {
+    "strict_payload_shape": true,
+    "unknown_properties_discarded": true,
+    "required_row_fields": [
+      "id",
+      "eTag",
+      "BusinessCaseTypeId",
+      "LifecycleStatus",
+      "Selectable",
+      "CatalogVersion"
+    ],
+    "viewer_fields_affect_validity": false,
+    "process_fields_affect_validity": false,
+    "matter_fields_affect_validity": false,
+    "document_fields_affect_validity": false,
+    "person_fields_affect_validity": false,
+    "raw_graph_response_persisted": false,
+    "max_response_bytes": 1048576
+  },
+  "paging": {
+    "complete_collection_required": true,
+    "partial_success_allowed": false,
+    "next_link_must_be_absolute_https": true,
+    "next_link_host_exact": "graph.microsoft.com",
+    "next_link_base_path_exact": "/v1.0",
+    "next_link_same_site_required": true,
+    "next_link_same_list_required": true,
+    "next_link_same_collection_required": true,
+    "next_link_same_projection_required": true,
+    "canonical_next_link_loop_detection": true,
+    "max_pages": 100,
+    "max_items": 1000,
+    "loop_or_limit_behavior": "UNAVAILABLE_without_partial_rows",
+    "invalid_payload_behavior": "UNAVAILABLE_without_partial_rows",
+    "next_link_same_business_case_type_id_filter_required": true,
+    "next_link_same_catalog_version_filter_required": true
+  },
+  "etag_semantics": {
+    "collection_read_before_comparison": "complete",
+    "local_comparison_only": true,
+    "matching_row_count_required": 1,
+    "matching_business_case_type_id_required": true,
+    "identical_row_etag_result": "NOT_MODIFIED",
+    "different_row_etag_result": "OK_with_new_row",
+    "zero_multiple_or_incomplete_rows_may_return_not_modified": false,
+    "http_304_extension_in_scope": false
+  },
+  "redaction": {
+    "adapter_reason_codes": [
+      "transport_authentication_failed",
+      "transport_authorization_failed",
+      "transport_rate_limited",
+      "transport_timeout",
+      "transport_unavailable"
+    ],
+    "fixture_only_reason_code": "fixture_transport_unavailable",
+    "unknown_failure_maps_to": "transport_unavailable",
+    "forbidden_in_results_exceptions_logs_and_evidence": [
+      "tokens",
+      "credentials",
+      "concrete_graph_paths",
+      "site_ids",
+      "list_ids",
+      "item_ids",
+      "graph_bodies",
+      "matter_values"
+    ]
+  },
+  "offline_cli": {
+    "command": "nac m365 teams-sharepoint business-case-type-read-plan",
+    "output": "redacted_offline_request_plan",
+    "credentials_accepted_or_loaded": false,
+    "http_allowed": false,
+    "dns_allowed": false,
+    "live_graph_client_instantiated": false,
+    "live_calls_allowed": 0,
+    "output_fields": [
+      "method",
+      "graph_version",
+      "logical_resource_binding",
+      "selected_field_names",
+      "page_limit",
+      "item_limit",
+      "response_byte_limit",
+      "gate_results",
+      "contract_version"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-S4-01",
+      "requirement": "The adapter generates only Graph REST v1.0 GETs for the bound site/list and selects exactly id, eTag, BusinessCaseTypeId, LifecycleStatus, Selectable, and CatalogVersion."
+    },
+    {
+      "id": "AC-S4-02",
+      "requirement": "Paging is complete only after a validated end; foreign hosts/bases/sites/lists, loops, invalid payloads, and page/item limit breaches never produce a valid type."
+    },
+    {
+      "id": "AC-S4-03",
+      "requirement": "After a complete read, an identical row ETag is mapped locally to NOT_MODIFIED; different ETags return the new row. A row ETag is never misused as collection If-None-Match."
+    },
+    {
+      "id": "AC-S4-04",
+      "requirement": "An incorrect site, list, operation, role, or runtime permission is blocked before transport; the contract allows only Sites.Selected and no schema/provisioning rights."
+    },
+    {
+      "id": "AC-S4-05",
+      "requirement": "Graph responses are strictly typed and reduced to the registry fields; viewer, process, matter, document, and person fields do not affect type validity."
+    },
+    {
+      "id": "AC-S4-06",
+      "requirement": "HTTP/transport errors are mapped to fixed redacted reason codes; tokens, paths, IDs, Graph bodies, and matter values appear in neither results nor exceptions/evidence."
+    },
+    {
+      "id": "AC-S4-07",
+      "requirement": "The central CLI, domain/verification contract, standalone validator, fake Graph tests, DE/EN documentation, strict gate, and independent base...head review pass."
+    }
+  ]
+}

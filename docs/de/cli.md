@@ -991,3 +991,7 @@ Aufruf:
 ```bash
 nac kg business-case-type-get immobilienkaufvertrag --site-id synthetic-site-01 --purpose canonical_assignment --registry-fixture tests/fixtures/business-case-type-registry.json --format json
 ```
+
+## S4 Graph-Read-Plan Offline
+
+`nac m365 teams-sharepoint business-case-type-read-plan` erzeugt ausschließlich einen redigierten Offline-Request-Plan für den BusinessCaseType-Read-Edge aus Issue #616. Der Befehl lädt keine Credentials, führt keine HTTP-, DNS- oder Live-Graph-Aufrufe aus und plant nur Graph REST v1.0 `GET` mit `Sites.Selected` und Site-Grant `read`. S4b-Writes bleiben offen.

@@ -13,8 +13,8 @@ gantt
     Skill- und Python-Workflow-Grenze klären  :done,   w2, 2026-05-14, 14d
     KG-Runtime-Status-CLI-MVP                  :done,   w3, 2026-05-15, 1d
     BusinessCaseType-S1-S2-Verträge            :done,   w3b, 2026-07-11, 1d
-    BusinessCaseType-S3-Offline-Runtime         :active, w3c, 2026-07-11, 7d
-    BusinessCaseType-S4-Graph-Adapter           :       w3d, after w3c, 7d
+    BusinessCaseType-S3-Offline-Runtime         :done,   w3c, 2026-07-11, 7d
+    BusinessCaseType-S4-Graph-Adapter           :active, w3d, after w3c, 7d
     Usecase-lokale KG-Runtime-Bindung          :done,   w3a, 2026-05-15, 1d
     No-code-KG-Editor-View-Vertrag             :done,   w4a, 2026-05-15, 1d
     Deutsche Workflow-MD-Sprachführung        :done,   w4b, 2026-05-17, 1d

@@ -205,6 +205,74 @@
         "tests/test_business_case_type_cache.py",
         "tests/test_business_case_type_runtime.py"
       ]
+    },
+    {
+      "id": "invariant.business_case_type.graph_exact_sites_selected_read_grant",
+      "domain": "business_case_type_graph_read_edge",
+      "severity": "critical",
+      "statement": "Every S4 request requires application permission exactly Sites.Selected and an existing bound-site grant role exactly read; broader, delegated, schema and provisioning permissions block before transport.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_contract.py",
+        "tests/test_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_cli.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.graph_same_filter_paging",
+      "domain": "business_case_type_graph_read_edge",
+      "severity": "critical",
+      "statement": "Every Graph next link remains HTTPS Graph v1.0 on the same bound site, list, collection and projection with identical BusinessCaseTypeId and CatalogVersion filters; drift, loops, invalid payloads and limits fail closed without partial rows.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_contract.py",
+        "tests/test_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_cli.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.graph_no_collection_if_none_match",
+      "domain": "business_case_type_graph_read_edge",
+      "severity": "critical",
+      "statement": "A row ETag is compared locally only after the complete filtered collection read and is never sent as a collection If-None-Match header; HTTP 304 is outside S4.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_contract.py",
+        "tests/test_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_cli.py"
+      ]
+    },
+    {
+      "id": "invariant.business_case_type.graph_redaction_viewer_isolation",
+      "domain": "business_case_type_graph_read_edge",
+      "severity": "critical",
+      "statement": "The S4 edge returns only strictly typed registry fields and fixed redacted reason codes; credentials, paths, IDs, bodies and matter values remain absent, and viewer, process, matter, document and person fields never affect type validity.",
+      "source_paths": [
+        "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+        "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+      ],
+      "enforced_by": [
+        "scripts/validate_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_contract.py",
+        "tests/test_business_case_type_graph_read_edge.py",
+        "tests/test_business_case_type_graph_read_edge_cli.py"
+      ]
     }
   ]
 }

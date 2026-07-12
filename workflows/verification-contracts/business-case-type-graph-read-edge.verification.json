@@ -1,0 +1,145 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_graph_read_edge_s4",
+  "domain_contract_id": "m365.business_case_type_graph_read_edge",
+  "title": "BusinessCaseType Graph Read Edge S4 Verification",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/616",
+  "acceptance_ids": [
+    "AC-S4-01",
+    "AC-S4-02",
+    "AC-S4-03",
+    "AC-S4-04",
+    "AC-S4-05",
+    "AC-S4-06",
+    "AC-S4-07"
+  ],
+  "applies_when": {
+    "paths": [
+      "src/nac_m365_graph/business_case_type_*.py",
+      "src/notary_kg/business_case_type_transport.py",
+      "src/nac_cli/cli.py",
+      "workflows/contracts/business-case-type-graph-read-edge.contract.json",
+      "workflows/verification-contracts/business-case-type-graph-read-edge.verification.json",
+      "scripts/validate_business_case_type_graph_read_edge.py",
+      "tests/test_business_case_type_graph_read_edge*.py",
+      "docs/de/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+      "docs/en/superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md",
+      "docs/de/superpowers/plans/2026-07-11-business-case-type-graph-read-edge-s4.md",
+      "docs/en/superpowers/plans/2026-07-11-business-case-type-graph-read-edge-s4.md"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "policies/process-policy.yaml",
+      "policies/access-control-policy.yaml",
+      "policies/data-protection-policy.yaml",
+      "policies/technology-policy.yaml"
+    ],
+    "scoped": [
+      "docs/AGENTS.md",
+      "workflows/contracts/AGENTS.md"
+    ],
+    "on_demand": [
+      "agent-context/index.json",
+      "docs/de/architecture/business-case-type-id.md",
+      "docs/en/architecture/business-case-type-id.md",
+      "workflows/contracts/business-case-type-runtime.contract.json",
+      "workflows/contracts/business-case-type-graph-read-edge.contract.json"
+    ],
+    "runtime": [
+      "fresh base...head diff",
+      "fresh focused fake Graph test output",
+      "fresh standalone validator output",
+      "fresh contract verification output",
+      "fresh strict-gate output",
+      "fresh independent review"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_graph_read_edge tests.test_business_case_type_graph_read_edge_cli tests.test_business_case_type_graph_read_edge_contract",
+    "python3 scripts/validate_business_case_type_graph_read_edge.py",
+    "python3 scripts/nac.py m365 teams-sharepoint business-case-type-read-plan --help",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "python3 scripts/nac.py doctor --profile strict",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-S4-01: The adapter generates only Graph REST v1.0 GETs for the bound site/list and selects exactly id, eTag, BusinessCaseTypeId, LifecycleStatus, Selectable, and CatalogVersion.",
+    "AC-S4-02: Paging is complete only after a validated end; foreign hosts/bases/sites/lists, loops, invalid payloads, and page/item limit breaches never produce a valid type.",
+    "AC-S4-03: After a complete read, an identical row ETag is mapped locally to NOT_MODIFIED; different ETags return the new row. A row ETag is never misused as collection If-None-Match.",
+    "AC-S4-04: An incorrect site, list, operation, role, or runtime permission is blocked before transport; the contract allows only Sites.Selected and no schema/provisioning rights.",
+    "AC-S4-05: Graph responses are strictly typed and reduced to the registry fields; viewer, process, matter, document, and person fields do not affect type validity.",
+    "AC-S4-06: HTTP/transport errors are mapped to fixed redacted reason codes; tokens, paths, IDs, Graph bodies, and matter values appear in neither results nor exceptions/evidence.",
+    "AC-S4-07: The central CLI, domain/verification contract, standalone validator, fake Graph tests, DE/EN documentation, strict gate, and independent base...head review pass."
+  ],
+  "thresholds": {
+    "required_acceptance_criteria": 7,
+    "selected_item_and_registry_fields": 6,
+    "max_pages": 100,
+    "max_items": 1000,
+    "max_response_bytes": 1048576,
+    "allowed_live_graph_calls": 0,
+    "allowed_write_methods": 0,
+    "allowed_runtime_permissions": 1
+  },
+  "required_evidence": [
+    "issue_616_acceptance_criteria",
+    "s4_spec_and_plan_de_en",
+    "domain_contract",
+    "verification_contract",
+    "bound_scope_negative_test_result",
+    "fake_graph_paging_test_result",
+    "complete_read_etag_test_result",
+    "selected_fields_typing_test_result",
+    "redaction_test_result",
+    "offline_cli_no_credentials_no_http_result",
+    "standalone_validator_result",
+    "contracts_verify_result",
+    "strict_gate_result",
+    "git_diff_check_result",
+    "independent_base_head_review_result"
+  ],
+  "evidence_policy": {
+    "redacted_only": true,
+    "raw_graph_responses_allowed": false,
+    "credentials_or_tokens_allowed": false,
+    "concrete_graph_paths_or_ids_allowed": false,
+    "matter_values_allowed": false,
+    "allowed_live_graph_calls": 0
+  },
+  "exit_conditions": [
+    "All seven acceptance criteria from Issue #616 are represented with identical semantics in the DE/EN spec, DE/EN plan, domain contract, and verification contract.",
+    "The adapter boundary is only nac_m365_graph to the unchanged notary_kg BusinessCaseTypeRegistryReadPort.",
+    "Focused fake Graph tests prove exact GET-only selection, pre-transport scope blocking, complete fail-closed paging, local row-ETag comparison, and redaction.",
+    "The central CLI produces only a redacted offline request plan and performs zero credential loads, HTTP calls, DNS calls, or live Graph client construction.",
+    "The standalone validator, contract verification, language, link, traceability, strict-gate, and diff checks pass.",
+    "Independent base...head review has no unresolved findings and S4b writes remain excluded."
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "all_required_evidence_redacted": true,
+    "s3_unchanged": true,
+    "s4b_writes_absent": true,
+    "allowed_live_graph_calls": 0,
+    "no_unresolved_review_findings": true
+  },
+  "failure_behavior": {
+    "acceptance_mismatch": "block_completion",
+    "foreign_or_invalid_next_link": "fail_closed_without_partial_rows",
+    "paging_loop_or_limit_breach": "fail_closed_without_partial_rows",
+    "invalid_or_incomplete_payload": "fail_closed_without_partial_rows",
+    "row_etag_used_as_collection_if_none_match": "block_completion",
+    "unredacted_result_exception_log_or_evidence": "block_completion",
+    "credential_http_dns_or_live_graph_attempt": "block_completion",
+    "quality_gate_failure": "block_completion",
+    "review_finding": "block_completion",
+    "binding_permission_or_site_grant_mismatch": "block_before_transport",
+    "next_link_filter_drift": "fail_closed_without_partial_rows"
+  }
+}

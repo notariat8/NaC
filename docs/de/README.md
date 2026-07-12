@@ -387,3 +387,5 @@ In diesem Musterrepo sind nur Techniken aus [policies/technology-policy.yaml](..
 ## Datenschutz-Regel
 
 In diesem Musterrepo sind keine echten personenbezogenen Daten oder Secrets zulässig.
+
+- [BusinessCaseType Graph Read Edge S4](superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md) verfolgt Issue #616 für `Sites.Selected`/`read`, vollständiges Same-Filter-Paging, lokale ETag-Auswertung, Redaction, Viewer-Isolation und die Offline-CLI `nac m365 teams-sharepoint business-case-type-read-plan`; S4b-Writes bleiben offen.

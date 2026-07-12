@@ -1,7 +1,7 @@
 # ADR: Stabile BusinessCaseTypeId
 
-Status: Angenommen; S1/S2 offline implementiert, S3 in Umsetzung, kein Live-Apply
-Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612)
+Status: Angenommen; S1/S2/S3 offline implementiert, S4 Read Edge in Umsetzung, kein Live-Apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616)
 Datum: 2026-07-11
 
 ## Kontext
@@ -271,8 +271,8 @@ Tests, bevor ein Live-Apply erwogen wird.
 | --- | --- | --- | --- |
 | S1 Vertrag | offline implementiert in #610 | Ontologie-, Inventory- und Viewer-Verträge auf unabhängiges `Vorgangsartenregister`, optionales `Prozessregister`, nullable BPMN-Links und Alias-Invarianten ausrichten | Validatoren beweisen viewer-unabhängige Typgültigkeit und blockieren Drift offline |
 | S2 Schema-Plan | offline implementiert in #610 | `Akten.VorgangstypId` und `Vorgangsartenregister` im verpflichtenden Default planen; `Prozessregister` und `BPMN Models` bleiben getrennte optionale Viewer-Provisionierung; Legacy-Choice unverändert lassen | 33 Plan-Schritte und 66 Workspace-Apply-Units; Dry-Run, Readiness, Snapshot- und Rollback-Plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
-| S3 Runtime | in Umsetzung in #612; Abschluss an AC-S3-01 bis AC-S3-06 gebunden | `business_case_type_get`, inhaltsbasierte `CatalogVersion`, expliziten Runtime-Lifecycle, zweckgebundene Aliase und getrennte Registry-/Viewer-ETag-Caches offline implementieren | Spec, Domain-/Verification Contract, Validator, CLI, Negativtests, Strict-Gate, unabhängiger Review und Protected-PR-Checks bestehen ohne Graph-/Tenant-Zugriff |
-| S4 MCP/Graph | offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
+| S3 Runtime | offline implementiert in #614 | `business_case_type_get`, inhaltsbasierte `CatalogVersion`, expliziten Runtime-Lifecycle, zweckgebundene Aliase und getrennte Registry-/Viewer-ETag-Caches offline implementieren | Spec, Domain-/Verification Contract, Validator, CLI, Negativtests, Strict-Gate, unabhängiger Review und Protected-PR-Checks bestehen ohne Graph-/Tenant-Zugriff |
+| S4 Graph Read Edge | in Umsetzung in #616; S4b-Writes offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
 | S5 Migration | offen | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
 | S6 Immutable Evidence | offen | durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
 | S7 Live-Freigabe | offen | separaten owner-gated Schema-/Backfill-Apply mit Funktionstrennung und Cleanup-Verbot vorbereiten | vollständige PR-Diff, N-/N-1-Rollback-Probe, negative Autorisierung und explizite duale Freigabe |
@@ -309,3 +309,9 @@ python3 scripts/validate_doc_links.py
 Spätere Implementierungs-PRs müssen zusätzlich die betroffenen
 Vertragsvalidatoren und den
 [strikten Quality Gate](../quality-gate.md) erfolgreich ausführen.
+
+## S4 Graph Read Edge (#616)
+
+Der aktive S4-Read-Edge bindet Graph REST v1.0 `GET` unveränderlich an Site, `Vorgangsartenregister`, Operation und Rolle. Zulässig sind ausschließlich `Sites.Selected` und ein vorhandener Site-Grant `read`; Paging muss `BusinessCaseTypeId`- und `CatalogVersion`-Filter beibehalten. Row-ETags werden erst nach vollständigem Read lokal verglichen und nie als Collection-`If-None-Match` gesendet. Ergebnisse bleiben redigiert und viewer-isoliert. Die Bedienkante ist `nac m365 teams-sharepoint business-case-type-read-plan`; sie ist offline und lädt weder Credentials noch HTTP/DNS/Graph-Clients. S4b-Writes bleiben offen.
+
+Traceability: **AC-S4-01:** exakter GET/Projection-Pfad; **AC-S4-02:** vollständiges Same-Filter-Paging; **AC-S4-03:** lokale ETag-Auswertung; **AC-S4-04:** exakte Permission/Grant-Bindung; **AC-S4-05:** strikte Typisierung und Viewer-Isolation; **AC-S4-06:** Redaction; **AC-S4-07:** CLI, Contracts, Validator, Tests, Dokumentation und Gates.

@@ -33,6 +33,14 @@ from nac_legal_graph.catalog import build_review_payload, legal_graph_status
 from nac_legal_graph.model_card import legal_model_card_proposal_status
 from nac_legal_graph.patches import build_update_patch
 from nac_legal_graph.sources import legal_graph_source_status, legal_source_inventory_status
+from nac_m365_graph.business_case_type_read_plan import (
+    DEFAULT_OPERATION as DEFAULT_BUSINESS_CASE_TYPE_READ_OPERATION,
+    DEFAULT_ROLE as DEFAULT_BUSINESS_CASE_TYPE_READ_ROLE,
+    DEFAULT_RUNTIME_PERMISSION as DEFAULT_BUSINESS_CASE_TYPE_RUNTIME_PERMISSION,
+    DEFAULT_SITE_GRANT_ROLE as DEFAULT_BUSINESS_CASE_TYPE_SITE_GRANT_ROLE,
+    build_business_case_type_read_plan,
+    format_business_case_type_read_plan,
+)
 from nac_m365_graph.mcp_smoke_leftover_cleanup import DEFAULT_MCP_SMOKE_LEFTOVER_CLEANUP_OUTPUT
 from nac_m365_graph.mcp_smoke_suite import DEFAULT_MCP_SMOKE_SUITE_OUTPUT
 from nac_m365_graph.matter_access_apply_readiness import DEFAULT_MATTER_ACCESS_APPLY_READINESS_OUTPUT
@@ -655,6 +663,7 @@ def build_parser() -> argparse.ArgumentParser:
             "validate",
             "plan",
             "application-owner-readiness",
+            "business-case-type-read-plan",
             "bpmn-viewer-plan",
             "matter-access-plan",
             "matter-access-decision-replay",
@@ -2395,6 +2404,24 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "business-case-type-read-plan":
+            plan = build_business_case_type_read_plan(
+                repo_root,
+                operation=getattr(args, "operation", DEFAULT_BUSINESS_CASE_TYPE_READ_OPERATION),
+                role=getattr(args, "role", DEFAULT_BUSINESS_CASE_TYPE_READ_ROLE),
+                runtime_permission=getattr(
+                    args, "runtime_permission", DEFAULT_BUSINESS_CASE_TYPE_RUNTIME_PERMISSION
+                ),
+                site_grant_role=getattr(
+                    args, "site_grant_role", DEFAULT_BUSINESS_CASE_TYPE_SITE_GRANT_ROLE
+                ),
+            )
+            if args.format == "json":
+                print_json(plan)
+            else:
+                print(format_business_case_type_read_plan(plan).rstrip())
+            return 0 if plan["status"] == "PASSED" else 2
+
         if args.teams_sharepoint_command == "runtime-env-bootstrap":
             runtime_state_path = _resolve_m365_release_gate_path(
                 repo_root,
@@ -7509,5 +7536,35 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    effective_argv = sys.argv[1:] if argv is None else argv
+    command_index = _business_case_type_read_plan_command_index(effective_argv)
+    if command_index is not None:
+        return _run_business_case_type_read_plan_command(effective_argv, command_index)
+    args = build_parser().parse_args(effective_argv)
     return args.func(args)
+
+
+def _business_case_type_read_plan_command_index(argv: list[str]) -> int | None:
+    command = ("m365", "teams-sharepoint", "business-case-type-read-plan")
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _run_business_case_type_read_plan_command(argv: list[str], command_index: int) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint business-case-type-read-plan",
+        description="Erzeugt einen redigierten Offline-Leseplan fuer das Vorgangsartenregister.",
+    )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument("--operation", default=DEFAULT_BUSINESS_CASE_TYPE_READ_OPERATION)
+    parser.add_argument("--role", default=DEFAULT_BUSINESS_CASE_TYPE_READ_ROLE)
+    parser.add_argument("--runtime-permission", default=DEFAULT_BUSINESS_CASE_TYPE_RUNTIME_PERMISSION)
+    parser.add_argument("--site-grant-role", default=DEFAULT_BUSINESS_CASE_TYPE_SITE_GRANT_ROLE)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    args = parser.parse_args(command_argv)
+    args.m365_command = "teams-sharepoint"
+    args.teams_sharepoint_command = "business-case-type-read-plan"
+    return command_m365(args)

@@ -286,3 +286,5 @@ documented in [TRADEMARK.md](../../TRADEMARK.md).
 - Notary office: [prompts/en/onboarding/notary-first-setup.md](../../prompts/en/onboarding/notary-first-setup.md)
 The synchronous MVP path in this repository is `notary`. Subject-matter
 examples are derived only from [usecases/](../../usecases).
+
+- [BusinessCaseType Graph Read Edge S4](superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md) tracks Issue #616 for `Sites.Selected`/`read`, complete same-filter paging, local ETag evaluation, redaction, viewer isolation and the offline CLI `nac m365 teams-sharepoint business-case-type-read-plan`; S4b writes remain open.
