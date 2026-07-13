@@ -174,7 +174,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             deploy = runner.commands[3]
             self.assertNotIn("--skipFeatureDeployment", deploy)
             page_add = runner.commands[7]
-            self.assertEqual(self._value(page_add, "--layoutType"), "SingleWebPartAppPage")
+            self.assertEqual(self._value(page_add, "--layoutType"), "Article")
             web_part_add = runner.commands[9]
             self.assertEqual(self._value(web_part_add, "--webPartId"), WEB_PART_ID)
 
