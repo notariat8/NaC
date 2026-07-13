@@ -21,6 +21,12 @@ from nac_m365_graph.bpmn_viewer_provisioning import (  # noqa: E402
     validate_bpmn_viewer_provisioning_config,
 )
 from nac_m365_graph.graph_client import GraphHttpError, GraphRestClient  # noqa: E402
+from nac_m365_graph.mvp_test_environment_deploy import (  # noqa: E402
+    DEFAULT_MVP_TEST_ENVIRONMENT_DEPLOY_OUTPUT,
+    EXPECTED_WORKSPACE_ID,
+    run_mvp_test_environment_deploy,
+    write_mvp_test_environment_deploy_artifact,
+)
 from nac_m365_graph.matter_access_delegation import (  # noqa: E402
     DEFAULT_MATTER_ACCESS_DELEGATION_CONTRACT,
     build_matter_access_plan,
@@ -204,6 +210,7 @@ def parse_args() -> argparse.Namespace:
             "mcp-smoke-cleanup",
             "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
+            "test-environment-deploy",
             "apply",
             "drift",
             "export",
@@ -477,6 +484,21 @@ def parse_args() -> argparse.Namespace:
         help="Run positive write-read smoke and then clean up the same synthetic item in one owner-gated suite.",
     )
     parser.add_argument(
+        "--test-environment-package-sha256",
+        help="Expected SHA-256 of the site-scoped SPFx package.",
+    )
+    parser.add_argument(
+        "--test-environment-include-teams",
+        action="store_true",
+        help="Publish and install the generated Teams package on the fixed notary_team_01 team.",
+    )
+    parser.add_argument(
+        "--test-environment-output",
+        type=Path,
+        default=DEFAULT_MVP_TEST_ENVIRONMENT_DEPLOY_OUTPUT,
+        help="Path for the combined redacted MVP test-environment evidence under out/.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON output.",
@@ -490,6 +512,91 @@ def main() -> int:
         args.command,
         args.mcp_smoke_correlation_id,
     )
+    if args.command == "test-environment-deploy":
+        if not args.owner_approved:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": ["test-environment-deploy requires --owner-approved"],
+                },
+                args.json,
+                return_code=2,
+            )
+        if args.mcp_smoke_workspace_id != EXPECTED_WORKSPACE_ID:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [f"test-environment-deploy is restricted to {EXPECTED_WORKSPACE_ID}"],
+                },
+                args.json,
+                return_code=2,
+            )
+        if not args.test_environment_package_sha256:
+            return _emit(
+                {
+                    "status": "BLOCKED",
+                    "errors": [
+                        "test-environment-deploy requires --test-environment-package-sha256"
+                    ],
+                },
+                args.json,
+                return_code=2,
+            )
+        try:
+            client = GraphRestClient(runtime_token_provider_from_env())
+            result = run_mvp_test_environment_deploy(
+                client,
+                repo_root=REPO_ROOT,
+                workspace_id=args.mcp_smoke_workspace_id,
+                owner_approved=True,
+                expected_package_sha256=args.test_environment_package_sha256,
+                include_teams=args.test_environment_include_teams,
+                correlation_id=mcp_smoke_correlation_id,
+                provisioned_state_path=args.provisioned_state,
+                contract_path=args.mcp_contract,
+            )
+            write_mvp_test_environment_deploy_artifact(result, args.test_environment_output)
+        except GraphConfigError as exc:
+            return _emit(
+                {"status": "BLOCKED", "errors": [str(exc)]},
+                args.json,
+                return_code=2,
+            )
+        except GraphHttpError as exc:
+            return _emit(
+                {
+                    "status": "FAILED",
+                    "errors": ["Microsoft Graph request failed during MVP test-environment deploy"],
+                    "summary": {
+                        "graph_http_status": exc.status,
+                        "graph_error_code": _graph_error_code(exc.body),
+                    },
+                },
+                args.json,
+                return_code=1,
+            )
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            return _emit(
+                {"status": "FAILED", "errors": [str(exc)]},
+                args.json,
+                return_code=1,
+            )
+        return _emit(
+            {
+                "status": result["status"],
+                "summary": {
+                    "artifact_path": str(args.test_environment_output),
+                    "workspace_verified": result["scope"]["workspaceVerified"],
+                    "control_plane_status": result["controlPlane"]["status"],
+                    "synthetic_data_smoke_status": result["syntheticDataSmoke"]["status"],
+                    "live_bff_decision": False,
+                },
+                "result": result,
+            },
+            args.json,
+            return_code=0 if result["status"] == "PASSED" else 1,
+        )
+
     if args.command == "mcp-smoke-leftover-cleanup":
         if not args.owner_approved:
             return _emit(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import subprocess
 import sys
@@ -24,67 +25,90 @@ SPFX_ROOT = REPO_ROOT / "spfx" / "nac-bpmn-viewer"
 
 
 class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
-    def test_runtime_readiness_artifact_validates_offline_guardrails(self) -> None:
+    def test_runtime_readiness_validates_package_and_site_scope(self) -> None:
         readiness = load_bpmn_viewer_runtime_readiness(DEFAULT_BPMN_VIEWER_RUNTIME_READINESS)
 
         self.assertEqual(validate_bpmn_viewer_runtime_readiness(readiness), [])
-        self.assertEqual(readiness["status"], "offline_runtime_readiness_no_live_deploy")
-        self.assertFalse(readiness["spfx_packaging_boundary"]["npm_install_allowed_now"])
-        self.assertFalse(readiness["spfx_packaging_boundary"]["package_solution_allowed_now"])
-        self.assertFalse(readiness["app_catalog_deploy_gate"]["app_catalog_upload_allowed_now"])
-        self.assertFalse(readiness["graph_bpmn_content_read_gate"]["live_content_read_enabled_now"])
-        self.assertTrue(readiness["app_catalog_deploy_gate"]["requires_owner_gate"])
-        self.assertIn(
-            "NacDataClass in Template,Demo,Reference",
-            readiness["graph_bpmn_content_read_gate"]["required_metadata_gates"],
-        )
+        self.assertEqual(readiness["status"], "synthetic_site_scoped_runtime_ready")
+        packaging = readiness["spfx_packaging_boundary"]
+        self.assertTrue(packaging["package_lock_required"])
+        self.assertTrue(packaging["npm_ci_allowed_now"])
+        self.assertTrue(packaging["build_allowed_now"])
+        self.assertTrue(packaging["package_solution_allowed_now"])
+        self.assertTrue(packaging["generated_outputs_excluded_from_source_scans"])
+        self.assertEqual(packaging["reproducible_commands"], ["npm ci", "npm run build"])
 
-    def test_runtime_readiness_result_is_passed_but_not_deployable(self) -> None:
+        deployment = readiness["app_catalog_deployment"]
+        self.assertEqual(deployment["approval"], "owner_approved")
+        self.assertEqual(deployment["approved_workspace_id"], "notary_team_01")
+        self.assertTrue(deployment["site_scoped"])
+        self.assertFalse(deployment["tenant_wide"])
+
+    def test_runtime_result_is_ready_but_graph_and_writes_remain_blocked(self) -> None:
         result = build_bpmn_viewer_runtime_readiness_result(load_bpmn_viewer_runtime_readiness())
 
         self.assertEqual(result["status"], "PASSED")
         self.assertEqual(result["summary"]["readiness_gate_count"], 3)
-        self.assertFalse(result["summary"]["live_deploy_allowed_now"])
-        self.assertFalse(result["summary"]["live_content_read_enabled_now"])
-        self.assertFalse(result["summary"]["app_catalog_upload_allowed_now"])
+        self.assertTrue(result["summary"]["package_build_allowed_now"])
+        self.assertTrue(result["summary"]["package_solution_allowed_now"])
+        self.assertTrue(result["summary"]["app_catalog_deploy_owner_approved"])
+        self.assertTrue(result["summary"]["site_scoped_install_allowed_now"])
+        self.assertFalse(result["summary"]["tenant_wide_deploy_allowed_now"])
+        self.assertFalse(result["summary"]["graph_access_allowed"])
         self.assertEqual(
-            {gate["id"] for gate in result["readinessGates"]},
+            {gate["id"]: gate["status"] for gate in result["readinessGates"]},
             {
-                "spfx_packaging_boundary",
-                "app_catalog_deploy_gate",
-                "graph_bpmn_content_read_gate",
+                "spfx_packaging_boundary": "READY",
+                "app_catalog_deployment": "OWNER_APPROVED",
+                "synthetic_data_boundary": "ENFORCED",
             },
         )
-        for gate in result["readinessGates"]:
-            self.assertEqual(gate["status"], "BLOCKED_UNTIL_OWNER_GATE")
-            self.assertFalse(gate["allowed_now"])
-        self.assertTrue(result["guardrails"]["graph_rest_only"])
-        self.assertFalse(result["guardrails"]["graph_sdk_allowed"])
-        self.assertFalse(result["guardrails"]["workflow_execution_allowed"])
+        guardrails = result["guardrails"]
+        self.assertFalse(guardrails["graph_permissions_requested"])
+        self.assertFalse(guardrails["direct_graph_access_allowed"])
+        self.assertFalse(guardrails["ms_graph_client_allowed"])
+        self.assertFalse(guardrails["aad_http_client_allowed"])
+        self.assertFalse(guardrails["legacy_sharepoint_api_allowed"])
+        self.assertFalse(guardrails["sharepoint_writes_allowed"])
+        self.assertFalse(guardrails["workflow_execution_allowed"])
+        self.assertFalse(guardrails["real_matter_data_allowed"])
 
-    def test_spfx_runtime_readiness_keeps_source_tree_package_free(self) -> None:
-        for blocked in ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "node_modules", "sharepoint/solution"):
-            self.assertFalse((SPFX_ROOT / blocked).exists(), blocked)
-        self.assertEqual(list(SPFX_ROOT.rglob("*.sppkg")), [])
+    def test_runtime_rejects_broader_deployment_or_network_data_mode(self) -> None:
+        readiness = load_bpmn_viewer_runtime_readiness()
+        invalid = copy.deepcopy(readiness)
+        invalid["app_catalog_deployment"]["tenant_wide"] = True
+        invalid["synthetic_data_boundary"]["graph_access_allowed"] = True
+        invalid["synthetic_data_boundary"]["writes_allowed"] = True
 
+        errors = validate_bpmn_viewer_runtime_readiness(invalid)
+
+        self.assertTrue(any("tenant_wide" in error for error in errors))
+        self.assertTrue(any("graph_access_allowed" in error for error in errors))
+        self.assertTrue(any("writes_allowed" in error for error in errors))
+
+    def test_package_lock_and_site_scoped_solution_are_present(self) -> None:
+        self.assertTrue((SPFX_ROOT / "package-lock.json").is_file())
         package = json.loads((SPFX_ROOT / "package.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(package["scripts"]), {"validate:skeleton"})
-        for flag in (
-            "npmInstallRequiredNow",
-            "buildRequiredNow",
-            "appCatalogDeployAllowedNow",
-            "tenantApplyAllowedNow",
-            "executesGraphRequestsNow",
-        ):
-            self.assertFalse(package["nacSkeleton"][flag])
+        lock = json.loads((SPFX_ROOT / "package-lock.json").read_text(encoding="utf-8"))
+        solution = json.loads((SPFX_ROOT / "config/package-solution.json").read_text(encoding="utf-8"))
 
-        package_solution = json.loads((SPFX_ROOT / "config" / "package-solution.json").read_text(encoding="utf-8"))
-        self.assertFalse(package_solution["nacGuardrails"]["packageSolutionEnabledNow"])
-        self.assertFalse(package_solution["nacGuardrails"]["appCatalogDeployAllowedNow"])
-        self.assertFalse(package_solution["nacGuardrails"]["tenantApplyAllowedNow"])
-        self.assertNotIn("webApiPermissionRequests", package_solution["solution"])
+        self.assertEqual(lock["packages"][""]["name"], package["name"])
+        self.assertEqual(lock["packages"][""]["version"], package["version"])
+        self.assertFalse(solution["solution"]["skipFeatureDeployment"])
+        self.assertEqual(solution["solution"]["webApiPermissionRequests"], [])
 
-    def test_central_cli_exposes_bpmn_viewer_runtime_readiness(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--", "spfx/nac-bpmn-viewer"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.splitlines()
+        for generated in ("node_modules", "lib", "dist", "temp", "sharepoint/solution"):
+            prefix = f"spfx/nac-bpmn-viewer/{generated}"
+            self.assertFalse(any(path == prefix or path.startswith(f"{prefix}/") for path in tracked))
+
+    def test_central_cli_exposes_runtime_readiness(self) -> None:
         result = subprocess.run(
             [
                 sys.executable,
@@ -101,15 +125,17 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
-            timeout=10,
+            timeout=20,
         )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
-        self.assertFalse(payload["guardrails"]["app_catalog_upload_allowed_now"])
-        self.assertFalse(payload["guardrails"]["live_content_read_enabled_now"])
-        self.assertFalse(payload["guardrails"]["package_solution_allowed_now"])
+        self.assertTrue(payload["guardrails"]["package_solution_allowed_now"])
+        self.assertTrue(payload["guardrails"]["app_catalog_deploy_owner_approved"])
+        self.assertTrue(payload["guardrails"]["site_scoped_install_allowed_now"])
+        self.assertFalse(payload["guardrails"]["tenant_wide_deploy_allowed_now"])
+        self.assertFalse(payload["guardrails"]["direct_graph_access_allowed"])
 
 
 if __name__ == "__main__":

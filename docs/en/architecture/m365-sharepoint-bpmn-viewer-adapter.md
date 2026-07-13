@@ -1,195 +1,58 @@
 # M365 SharePoint BPMN Viewer Adapter
 
-Status: S1/S2 implemented offline; optional viewer, no live apply
-Last content update: 2026-07-11, [Issue #610](https://github.com/notariat8/NaC/issues/610)
-
 ## Purpose
 
-NaC can later show BPMN processes in SharePoint without making SharePoint the
-leading BPMN source, BPMN modeler or workflow engine. The clean starting point
-is a read-only SPFx web part with `bpmn-js` in viewer-only mode. This web part
-renders approved BPMN XML models and, optionally, reviewed status metadata
-from SharePoint lists.
+The adapter provides a visible, read-only matter projection for the synthetic `notary_team_01` test environment. The surface is a packageable SharePoint Framework web part using **SPFx 1.23.2**, **Heft**, and `bpmn-js/lib/Viewer`. It supports `SharePointWebPart` and `TeamsTab` hosts.
 
-The active MVP data path remains Teams, Microsoft 365 group and SharePoint
-team site through Microsoft Graph REST. This adapter is only a display and
-navigation surface on the same M365 work surface.
+The mode is **viewer-only**. It does not model or save BPMN, start workflows, write SharePoint data, or process real matter data.
 
-## Decision
+## Package and build contract
 
-The MVP does not build a SharePoint plugin or BPMN modeler now. NaC first
-defines only the contract for a later `NaC BPMN Viewer`:
+Package source lives under `spfx/nac-bpmn-viewer`. `package-lock.json` is required source. The reproducible build uses:
 
-```text
-Git BPMN templates
-  -> Python validation and pull request review
-    -> approved BPMN model copy or pointer
-      -> SharePoint document library "BPMN Models"
-        -> SPFx Web Part with bpmn-js Viewer
-          -> read-only process page in SharePoint
+```bash
+npm ci
+npm run build
 ```
 
-This is deliberately smaller than a full modeler. Editing stays in the local
-NaC BPMN-js editor and in the pull-request process. SharePoint only displays
-what has already been approved.
+`npm run build` runs the Heft production build and `heft package-solution --production`. The generated package is `sharepoint/solution/nac-bpmn-viewer.sppkg`.
 
-## SharePoint Surface
+`node_modules`, `lib`, `dist`, `temp`, and `sharepoint/solution` remain ignored and untracked. Recursive source scans do not enter these paths.
 
-The later SharePoint site may receive two additional artifacts:
+## Deployment boundary
 
-| Artifact | Purpose |
-| --- | --- |
-| `BPMN Models` | Document library for approved BPMN XML copies or pointers |
-| `Prozessregister` | List for process name, owner, status, version, review date and model link |
+The current App Catalog deployment is **owner-approved** and **site-scoped** only for `notary_team_01`. `skipFeatureDeployment=false` enforces site installation. Tenant-wide deployment and installation into any other workspace remain blocked.
 
-These two viewer artifacts remain optional. `BusinessCaseTypeId` validity
-instead depends on the repository-versioned catalog and the required,
-viewer-independent `Vorgangsartenregister`. A missing `Prozessregister`,
-missing BPMN model or disabled viewer does not invalidate a canonical
-business-case type.
+The approval covers package build, App Catalog upload, and site installation within this boundary. It does not approve production data, new permissions, or additional sites.
 
-When a `Prozessregister` row exists,
-`ProcessKey == BusinessCaseTypeId`. `ProcessKey` is unique and indexed;
-`NacBpmnModelId`, `BpmnDriveItemId`, `BpmnXmlSha256`, `BpmnGitPath`,
-`BpmnGitCommitSha`, `NacBpmnVersion` and `BpmnContentMode` are nullable. The
-optional register can therefore describe a process before a BPMN model is
-published.
+## Graph-free data mode
 
-The web part may read approved BPMN XML files. It must not read matter
-document contents, mandate values, secrets or productive specialist-system
-data. Status overlays are allowed only as reviewed metadata, for example from
-`AufgabenFristen`, `AuditJournalLite`, `DokumentRegister` or a later
-`Prozessregister`.
+Runtime data comes only from the package-bound `package_fixture` in `fixtures/syntheticWorkspace.ts`; BPMN XML is bundled from `fixtures/sampleBpmn.ts`.
 
-For this MVP slice there is only an optional provisioning plan at
-`deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json`. Its status is
-`optional_plan_only_no_live_apply`: `nac m365 teams-sharepoint
-bpmn-viewer-plan --format json` renders the planned library, list and columns,
-but does not run a live apply against Microsoft 365 and does not extend the
-required MVP SharePoint schema.
+The SPFx package requests no Graph permission and contains no `MSGraphClient`, `AadHttpClient`, direct Microsoft Graph call, Graph SDK, PnP, CSOM, or legacy SharePoint API. `webApiPermissionRequests` stays absent or empty.
 
-The separate S2 schema plan plans the required `Vorgangsartenregister` and the
-additive `Akten.VorgangstypId` text column. It protects the existing legacy
-`Akten.Vorgangstyp` Choice and contains no Choice extension, conversion or
-other patch of that field. `Prozessregister` and `BPMN Models` are not part of
-this required default; they belong only to the separate optional viewer
-provisioning plan. The S2 plan has 33 offline steps; readiness expands them
-for two workspaces into 66 workspace apply units. Execution and dry run remain
-without Graph requests or SharePoint writes in
-`BLOCKED_PENDING_S6_S7_APPROVAL` status.
+The projection contains synthetic status, task, deadline, and BPMN data only. **No real matter data** is read, displayed, or stored.
 
-The first SPFx slice is source-only under `spfx/nac-bpmn-viewer`. The command
-`nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json` renders the
-skeleton, the synthetic render fixture and the MCP request plans for
-`bpmn_model_get`, `process_register_list` and `bpmn_viewer_overlay_get`. This
-slice does not build an SPFx package, does not create `package-lock.json`, does
-not use the App Catalog and does not run a Graph or tenant apply.
+## UI and DOM contract
 
-The offline render contract `spfx-bpmn-viewer-offline-render-contract` is wired
-through
-[nac-spfx-bpmn-viewer.skeleton.json](../../../deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json),
-[render-contract.fixture.json](../../../tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json)
-and the
-[M365 SharePoint BPMN viewer adapter contract](../../../workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json).
-It has exactly the states `approved_renderable`,
-`approval_missing_or_review_required`, `viewer_disabled`,
-`contains_matter_data` and `invalid_mime_or_hash_missing`. The DOM markers
-`data-nac-render-state`, `data-nac-content-source` and
-`data-nac-metadata-overlay` carry only the redacted render status; the overlay
-contains no matter contents, mandate values, credential material or raw Graph
-paths. The CLI contract remains offline with `liveTenantAccess=false`,
-`appCatalogDeploy=false` and `request_plan_count=3`.
+The current UI exposes its package mode directly:
 
-The process-register selection contract
-`spfx-bpmn-viewer-process-register-selection-contract` also stays offline. The
-command
-`nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json`
-selects exactly one approved, viewer-enabled row from synthetic
-`Prozessregister` metadata, links it to `BPMN Models` and blocks missing
-approval, disabled viewers, non-`MetadataOnly` overlays or non-renderable BPMN
-models. The command reads no SharePoint file content, executes no Graph
-requests, starts no workflow and deploys no SPFx package.
+- `data-nac-component="test-workspace"` identifies the test surface.
+- `Synthetische Testdaten` visibly identifies the data class.
+- `Keine Mandatsdaten` confirms the runtime boundary.
+- A different `workspaceId` fails closed with `Workspace nicht freigegeben.`.
 
-The runtime-readiness slice also remains offline:
-`nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json`
-checks the boundaries for SPFx packaging, App Catalog deployment and the later
-Graph content read of approved `.bpmn` files. `PASSED` means only that the
-guardrails are intact. It does not approve packaging, App Catalog upload,
-tenant apply or live BPMN content reads. Those steps remain owner gates with a
-separate PR, rollback plan and redacted evidence.
+These markers replace the former offline render-state DOM contract. Security checks remain explicit: package source, workspace allowlist, viewer-only behavior, no writes, no Graph, and no real matter data are validated separately.
 
-## Graph REST Boundary
+## Contracts and evidence
 
-All access runs through Microsoft Graph REST v1.0 or an MCP server that also
-uses Microsoft Graph REST internally. Legacy SharePoint REST APIs, CSOM, PnP
-and Microsoft Graph SDKs remain blocked.
+The authoritative artifacts are the [viewer adapter contract](../../../workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json), [SPFx package artifact](../../../deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json), and [runtime readiness](../../../deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json).
 
-Allowed endpoint families for the viewer contract:
-
-- `GET /sites/{site-id}/drives`
-- `GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content`
-- `GET /sites/{site-id}/lists/{list-id}/items`
-- `GET /sites/{site-id}/lists/{list-id}/items/{item-id}`
-
-The content read is limited to approved BPMN XML models. It is not permission
-to read matter document contents or mandate payloads.
-Before a later live read, at least `ApprovalStatus=Approved`,
-`ViewerEnabled=true`, `ContainsMatterData=false`, an allowed `NacDataClass` and
-the `BpmnXmlSha256` check against the loaded XML must pass.
-
-## Why SPFx
-
-SharePoint Online is not a neutral file host where modern pages should
-reliably execute arbitrary HTML or JavaScript apps. Custom Script is restricted
-in SharePoint Online for security reasons. An SPFx web part is the appropriate
-SharePoint delivery shape for client-side components.
-
-`bpmn-js` is suitable for rendering BPMN 2.0 XML in the browser. NaC uses only
-the viewer here. The modeler, saving, locking, XML round-tripping, versioning
-and approvals are a separate later scope.
-
-## Blocked
-
-This adapter must not:
-
-- write or save BPMN XML,
-- start or execute workflow instances,
-- mutate SharePoint schema, Teams or memberships,
-- read matter document contents or mandate payloads,
-- store secrets,
-- use Custom Script or loose HTML embedding as the product path,
-- use legacy SharePoint APIs, CSOM, PnP or Graph SDKs,
-- replace pull-request review and Python validation.
-
-## Relationship To MCP
-
-No new MCP server is needed now. If the viewer later uses MCP, it uses the
-existing `teams-sharepoint-data-mcp` boundary. Possible read-only tools are:
-
-- `bpmn_model_get`
-- `process_register_list`
-- `bpmn_viewer_overlay_get`
-
-These tools remain read-only, redact metadata and do not return matter
-document contents. In the current runtime they are request-plan tools; the
-owner-gated live-read mode remains limited to `case_get` and `document_list`.
-
-## Relationship To The BPMN-js Editor
-
-The existing BPMN-js editor contract remains the editing and governance
-boundary. The SharePoint adapter is a display projection for approved models,
-not the source, editor or execution engine.
-
-## Validation
-
-The contract is enforced by these checks:
+Run:
 
 ```bash
 python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py
-python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness
 python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton
-python3 scripts/nac.py m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json
-python3 -m unittest tests.test_m365_bpmn_viewer_provisioning
+python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness
 python3 -m unittest tests.test_m365_sharepoint_bpmn_viewer_adapter
-python3 scripts/quality_gate.py --profile strict
 ```

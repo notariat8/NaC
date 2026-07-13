@@ -1,0 +1,179 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_mvp_test_environment",
+  "title": "M365 MVP test environment verification",
+  "status": "implementation_authorized_pending_protected_pr_and_live_evidence",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "spec_id": "m365-mvp-test-environment",
+  "delivery_mode": "Protected PR",
+  "risk_gates": [
+    "Privacy",
+    "External Service",
+    "Human Approval"
+  ],
+  "acceptance_ids": [
+    "AC-620-01",
+    "AC-620-02",
+    "AC-620-03",
+    "AC-620-04",
+    "AC-620-05",
+    "AC-620-06",
+    "AC-620-07"
+  ],
+  "target_boundary": {
+    "workspace_id_exact": "notary_team_01",
+    "synthetic_matter_id_exact": "NAC-SYN-MATTER-001",
+    "matter_type_exact": "immobilienkaufvertrag",
+    "other_workspaces_allowed": false,
+    "production_data_allowed": false,
+    "permission_or_credential_changes_allowed": false
+  },
+  "ui_package": {
+    "framework_exact": "SPFx",
+    "framework_version_exact": "1.23.2",
+    "deployment_scope_exact": "site",
+    "skip_feature_deployment_exact": false,
+    "hosts_required": [
+      "SharePointWebPart",
+      "SharePointFullPage",
+      "TeamsTab",
+      "TeamsPersonalApp"
+    ],
+    "graph_permission_requests_exact": 0,
+    "direct_graph_from_spfx_allowed": false,
+    "legacy_sharepoint_api_or_sdk_allowed": false,
+    "package_bound_synthetic_data_required_before_bff_activation": true,
+    "visible_labels_required": [
+      "Synthetische Testdaten",
+      "Keine Mandatsdaten"
+    ],
+    "delegated_api_target_exact": "NaC BFF",
+    "delegated_api_activation_status_exact": "DEFERRED"
+  },
+  "data_plane": {
+    "browser_graph_calls_allowed": false,
+    "graph_beta_allowed": false,
+    "legacy_api_allowed": false,
+    "writes_exactly_scoped_to_synthetic_fixture": true,
+    "targeted_readback_required": true,
+    "run_owned_cleanup_required": true,
+    "foreign_or_preexisting_item_deletion_allowed": false,
+    "data_api_exact": "raw Microsoft Graph REST v1.0"
+  },
+  "synthetic_fixture": {
+    "bpmn_standard_exact": "BPMN 2.0",
+    "bpmn_hash_binding_required": true,
+    "task_count_exact": 2,
+    "bpmn_step_link_required_for_each_task": true,
+    "minimum_explicit_due_dates": 1,
+    "due_date_format_exact": "ISO-8601 UTC",
+    "role_scenarios_exact": [
+      "assigned_allow",
+      "valid_deputy_allow",
+      "unauthorized_deny_without_existence_leak"
+    ]
+  },
+  "bff_boundary": {
+    "dynamic_path_exact": "SPFx/Teams -> NaC BFF -> Microsoft Graph REST v1.0",
+    "server_side_role_case_purpose_deputy_gate_required": true,
+    "redacted_dto_only": true,
+    "live_activation_status_exact": "DEFERRED",
+    "activation_prerequisites": [
+      "existing_public_https_endpoint",
+      "existing_delegated_entra_scope"
+    ],
+    "new_permission_scope_or_credential_change_allowed_in_slice": false,
+    "identity_source_exact": "validated Entra access token claims",
+    "workspace_site_list_resolution_exact": "server-side allowlist"
+  },
+  "checks": [
+    "python3 -m unittest tests.test_m365_mvp_test_environment_verification_contract",
+    "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton tests.test_m365_bpmn_viewer_runtime_readiness tests.test_m365_sharepoint_bpmn_viewer_adapter tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_smoke tests.test_m365_mvp_test_environment_deploy tests.test_m365_test_environment_bff tests.test_m365_runtime_env_bootstrap",
+    "python3 scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/nac.py doctor --profile strict",
+    "git diff --check"
+  ],
+  "required_evidence": [
+    "site-scoped SPFx package manifest and SHA-256",
+    "zero Graph permission and no-direct-Graph package inspection",
+    "synthetic BPMN hash plus task and due-date readback",
+    "assigned, valid-deputy, and unauthorized role decisions",
+    "run-owned cleanup result",
+    "redacted live evidence for notary_team_01",
+    "SharePoint and Teams visual proof",
+    "green Protected PR checks and strict gate"
+  ],
+  "evidence_policy": {
+    "synthetic_only": true,
+    "redacted_only": true,
+    "tokens_certificates_private_keys_allowed": false,
+    "raw_graph_responses_allowed": false,
+    "people_documents_real_matter_numbers_allowed": false,
+    "correlation_package_and_bpmn_hashes_allowed": true
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-620-01",
+      "requirement": "A reproducibly built, site-scoped and installable SPFx package declares SharePointWebPart and TeamsTab hosts and sets skipFeatureDeployment=false."
+    },
+    {
+      "id": "AC-620-02",
+      "requirement": "SPFx never requests Microsoft Graph permissions or calls Graph directly; its only permitted dynamic API target is a delegated NaC BFF scope, whose activation remains DEFERRED while no existing scope and public HTTPS endpoint are available."
+    },
+    {
+      "id": "AC-620-03",
+      "requirement": "The BFF derives user identity only from a validated Entra access token and resolves workspace, site and list identifiers exclusively through a server-side allowlist; live token validation remains DEFERRED until the existing endpoint and delegated scope prerequisites are met."
+    },
+    {
+      "id": "AC-620-04",
+      "requirement": "An assigned user receives only a redacted projection containing synthetic matter status, tasks, due date and BPMN; the package-bound projection is package-ready while the live BFF delivery path remains DEFERRED."
+    },
+    {
+      "id": "AC-620-05",
+      "requirement": "Unassigned users and manipulated workspace, matter, purpose or filter inputs fail closed without revealing whether the matter exists or exposing its metadata."
+    },
+    {
+      "id": "AC-620-06",
+      "requirement": "Site-scoped SharePoint and optional Teams deployment, Graph REST v1.0 write/readback, run-owned cleanup and their evidence are reproducible and redacted."
+    },
+    {
+      "id": "AC-620-07",
+      "requirement": "The slice creates no credential or permission, touches no production data and performs no operation in any workspace other than notary_team_01."
+    }
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "workspace_matches_exactly": true,
+    "all_data_is_synthetic": true,
+    "all_evidence_is_redacted": true,
+    "cleanup_complete": true,
+    "no_permission_or_credential_change": true,
+    "bff_activation_remains_deferred": true
+  },
+  "failure_behavior": {
+    "wrong_workspace_site_team_or_package_hash": "fail_before_first_write",
+    "spfx_graph_permission_or_direct_graph_dependency": "block_deployment",
+    "production_like_data": "block_execution",
+    "readback_or_role_mismatch": "FAILED_then_targeted_run_owned_cleanup",
+    "cleanup_incomplete": "FAILED_with_redacted_evidence",
+    "missing_public_https_endpoint_or_delegated_scope": "keep_bff_activation_DEFERRED"
+  },
+  "deployment_control_plane": {
+    "tool_exact": "Microsoft 365 CLI",
+    "purpose_exact": "site-scoped App Catalog, SharePoint page and Teams package deployment",
+    "allowed_operations_exact": [
+      "deploy_spfx_package_to_app_catalog",
+      "install_or_upgrade_app_on_exact_site",
+      "publish_dedicated_page_and_webpart",
+      "publish_or_install_teams_package_in_exact_team"
+    ],
+    "sharepoint_list_or_item_data_operations_allowed": false,
+    "permission_scope_or_credential_changes_allowed": false,
+    "tenant_wide_deployment_allowed": false
+  }
+}

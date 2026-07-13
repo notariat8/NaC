@@ -3,11 +3,14 @@
   "id": "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21",
   "alias": "NacBpmnViewerWebPart",
   "componentType": "WebPart",
-  "version": "0.0.0",
+  "version": "*",
   "manifestVersion": 2,
   "requiresCustomScript": false,
   "supportedHosts": [
-    "SharePointWebPart"
+    "SharePointWebPart",
+    "TeamsPersonalApp",
+    "TeamsTab",
+    "SharePointFullPage"
   ],
   "preconfiguredEntries": [
     {
@@ -16,18 +19,16 @@
         "default": "NaC"
       },
       "title": {
-        "default": "NaC BPMN Viewer"
+        "default": "NaC Vorgangsansicht"
       },
       "description": {
-        "default": "Read-only BPMN viewer skeleton for approved NaC process models."
+        "default": "Read-only test workspace for approved NaC process models."
       },
       "officeFabricIconFontName": "Flow",
       "properties": {
-        "workspaceId": "notary_team_01",
-        "bpmnModelId": "bpmn-model-immobilienkaufvertrag-v1",
-        "processId": "process-immobilienkaufvertrag",
-        "caseId": ""
+        "workspaceId": "notary_team_01"
       }
     }
-  ]
+  ],
+  "supportsThemeVariants": true
 }

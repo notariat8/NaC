@@ -1,67 +1,57 @@
 {
-  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.1",
-  "name": "nac-spfx-bpmn-viewer-skeleton",
-  "status": "offline_skeleton_no_package_deploy",
-  "last_update": "2026-07-08",
-  "purpose": "Offline skeleton for a future SharePoint Framework client-side web part that renders approved BPMN XML through bpmn-js Viewer without making SharePoint the BPMN source, editor, workflow engine or deployment target in this slice.",
+  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.2",
+  "name": "nac-spfx-bpmn-viewer",
+  "status": "synthetic_site_scoped_package",
+  "last_update": "2026-07-13",
+  "purpose": "Packageable site-scoped SPFx BPMN viewer for workspace notary_team_01 using only package-bound synthetic notarial test data.",
   "spfx": {
     "framework": "SharePoint Framework",
+    "framework_version": "1.23.2",
+    "build_tool": "Heft",
     "component_type": "clientSideWebPart",
     "component_name": "NaC BPMN Viewer",
     "library": "bpmn-js",
     "bpmn_js_import": "bpmn-js/lib/Viewer",
     "bpmn_js_mode": "viewer_only",
-    "source_skeleton_included_now": true,
     "package_root": "spfx/nac-bpmn-viewer",
+    "approved_workspace_id": "notary_team_01",
+    "data_source": "package_fixture",
+    "source_package_included_now": true,
+    "package_lock_required": true,
+    "npm_ci_allowed_now": true,
+    "build_allowed_now": true,
+    "package_solution_enabled_now": true,
+    "reproducible_build_required": true,
+    "site_scoped_package": true,
+    "teams_hosts_enabled": true,
+    "app_catalog_deploy_owner_approved": true,
+    "site_scoped_install_allowed_now": true,
     "modeler_enabled": false,
     "workflow_execution_allowed": false,
     "requires_custom_script": false,
     "loose_html_embedding_allowed": false,
-    "actual_spfx_package_included_now": false,
-    "package_solution_enabled_now": false,
-    "app_catalog_deploy_allowed_now": false,
     "tenant_wide_deploy_allowed_now": false,
-    "npm_install_required_now": false,
-    "package_repo_recommended": "separate_spfx_repo_or_future_app_package"
+    "graph_permissions_requested": false,
+    "direct_graph_access_allowed": false,
+    "aad_http_client_allowed": false,
+    "sharepoint_writes_allowed": false,
+    "contains_real_matter_data": false
+  },
+  "deployment_scope": {
+    "approval": "owner_approved",
+    "approved_workspace_id": "notary_team_01",
+    "site_scoped": true,
+    "tenant_wide": false
   },
   "render_contract": {
-    "container_id": "nac-bpmn-viewer-container",
-    "component_props": [
-      {
-        "name": "workspaceId",
-        "required": true,
-        "source": "page configuration or future Teams-connected SharePoint context"
-      },
-      {
-        "name": "processId",
-        "required": false,
-        "source": "Prozessregister metadata"
-      },
-      {
-        "name": "bpmnModelId",
-        "required": true,
-        "source": "BPMN Models metadata"
-      },
-      {
-        "name": "caseId",
-        "required": false,
-        "source": "viewer overlay context"
-      }
-    ],
-    "allowed_inputs_now": [
-      "approved_bpmn_xml_fixture",
-      "bpmn_model_metadata_request_plan",
-      "process_register_metadata_request_plan",
-      "viewer_overlay_metadata_request_plan"
-    ],
-    "future_inputs_after_owner_gate": [
-      "approved_bpmn_xml_graph_content_read"
-    ],
-    "outputs": [
-      "bpmn_js_viewer_dom",
-      "fit_viewport_canvas_state",
-      "redacted_metadata_overlay"
-    ],
+    "workspace_id": "notary_team_01",
+    "content_source": "package_fixture",
+    "synthetic_data_only": true,
+    "viewer_only": true,
+    "live_tenant_access": false,
+    "graph_access": false,
+    "writes_allowed": false,
+    "real_matter_data_allowed": false,
     "render_states": [
       "approved_renderable",
       "approval_missing_or_review_required",
@@ -70,65 +60,42 @@
       "invalid_mime_or_hash_missing"
     ],
     "dom_markers": {
-      "render_state": "data-nac-render-state",
-      "content_source": "data-nac-content-source",
-      "metadata_overlay": "data-nac-metadata-overlay"
+      "component": "data-nac-component=\"test-workspace\"",
+      "synthetic_data": "Synthetische Testdaten",
+      "no_matter_data": "Keine Mandatsdaten"
     },
-    "offline_decision_order": [
-      "approvalStatus must be Approved",
-      "viewerEnabled must be true",
-      "containsMatterData must be false",
-      "bpmnXmlMimeType must be application/xml or text/xml",
-      "bpmnXmlSha256 must be present"
-    ],
-    "metadata_overlay": {
-      "kind": "redacted_metadata_only",
+    "privacy_guards": {
       "matter_content_present": false,
       "private_payload_values_present": false,
       "credential_material_present": false,
       "raw_graph_paths_present": false
-    },
-    "forbidden_outputs": [
-      "raw_matter_document_content",
-      "mandate_payload_values",
-      "tokens_or_secrets",
-      "bpmn_model_write_payload"
-    ]
+    }
   },
-  "mcp_request_plan_binding": {
-    "server_id": "teams-sharepoint-data-mcp",
-    "executes_graph_requests_now": false,
-    "tools_request_plan_only_now": true,
-    "tools": [
-      "bpmn_model_get",
-      "process_register_list",
-      "bpmn_viewer_overlay_get"
+  "package_contract": {
+    "install_command": "npm ci",
+    "build_command": "npm run build",
+    "package_output": "sharepoint/solution/nac-bpmn-viewer.sppkg",
+    "generated_paths_ignored_untracked": [
+      "node_modules",
+      "lib",
+      "dist",
+      "temp",
+      "sharepoint/solution"
     ],
-    "owner_gated_live_read_tools_enabled_now": [
-      "case_get",
-      "document_list"
-    ]
-  },
-  "graph_content_read_boundary": {
-    "future_endpoint": "GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content",
-    "live_content_read_enabled_now": false,
-    "fixture_content_allowed_now": true,
-    "required_metadata_gates": [
-      "ApprovalStatus=Approved",
-      "ViewerEnabled=true",
-      "ContainsMatterData=false",
-      "NacDataClass in Template,Demo,Reference",
-      "BpmnXmlSha256 matches downloaded XML"
+    "supported_hosts": [
+      "SharePointWebPart",
+      "TeamsTab"
     ]
   },
   "test_fixtures": {
-    "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json"
+    "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
+    "package_workspace": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
   },
-    "blocked_operations": [
-    "app_catalog_deploy",
+  "blocked_operations": [
     "tenant_wide_deploy",
-    "npm_install",
-    "live_tenant_apply",
+    "graph_permission_request",
+    "direct_graph_request",
+    "aad_http_client",
     "write_bpmn_xml",
     "save_bpmn_model",
     "execute_workflow",
