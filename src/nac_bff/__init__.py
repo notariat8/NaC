@@ -6,6 +6,7 @@ from .test_environment import (
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
     BffResponse,
+    DeterministicSyntheticAccessDecisionPort,
     TestEnvironmentBff,
     ValidatedClaims,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "ALLOWED_WORKSPACE_ID",
     "AccessDecision",
     "BffResponse",
+    "DeterministicSyntheticAccessDecisionPort",
     "TestEnvironmentBff",
     "ValidatedClaims",
 ]

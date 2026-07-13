@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 from typing import Any
-
-from .mcp_runtime import RuntimeContext, load_mcp_contract, plan_tool_request, validate_mcp_contract
-from .privileged_change import DEFAULT_PROVISIONED_STATE, load_provisioned_state
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPFX_BPMN_VIEWER_SKELETON = (
@@ -15,17 +13,12 @@ DEFAULT_SPFX_BPMN_VIEWER_SKELETON = (
 DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE = (
     REPO_ROOT / "tests" / "fixtures" / "m365" / "spfx-bpmn-viewer" / "render-contract.fixture.json"
 )
-REQUIRED_MCP_TOOLS = {
+APPROVED_WORKSPACE_ID = "notary_team_01"
+SPFX_VERSION = "1.23.2"
+PROCESS_SELECTION_FIXTURE_TOOLS = {
     "bpmn_model_get",
     "process_register_list",
     "bpmn_viewer_overlay_get",
-}
-REQUIRED_GRAPH_CONTENT_METADATA_GATES = {
-    "ApprovalStatus=Approved",
-    "ViewerEnabled=true",
-    "ContainsMatterData=false",
-    "NacDataClass in Template,Demo,Reference",
-    "BpmnXmlSha256 matches downloaded XML",
 }
 REQUIRED_RENDER_STATES = {
     "approved_renderable",
@@ -43,9 +36,9 @@ REQUIRED_PROCESS_SELECTION_CHECKS = {
     "linked_bpmn_model_renderable",
 }
 REQUIRED_DOM_MARKERS = {
-    "render_state": "data-nac-render-state",
-    "content_source": "data-nac-content-source",
-    "metadata_overlay": "data-nac-metadata-overlay",
+    "component": 'data-nac-component="test-workspace"',
+    "synthetic_data": "Synthetische Testdaten",
+    "no_matter_data": "Keine Mandatsdaten",
 }
 ALLOWED_BPMN_XML_MIME_TYPES = {"application/xml", "text/xml"}
 REDACTED_OVERLAY_FORBIDDEN_MARKERS = {
@@ -60,10 +53,10 @@ REDACTED_OVERLAY_FORBIDDEN_MARKERS = {
     "Mandatswert",
 }
 REQUIRED_BLOCKED_OPERATIONS = {
-    "app_catalog_deploy",
     "tenant_wide_deploy",
-    "npm_install",
-    "live_tenant_apply",
+    "graph_permission_request",
+    "direct_graph_request",
+    "aad_http_client",
     "write_bpmn_xml",
     "save_bpmn_model",
     "execute_workflow",
@@ -78,34 +71,41 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "graph_beta",
 }
 SPFX_SKELETON_REQUIRED_FILES = {
+    ".gitignore",
+    ".npmignore",
+    ".yo-rc.json",
     "README.md",
     "package.json",
+    "package-lock.json",
+    "config/config.json",
     "config/package-solution.json",
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
     "src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
-    "src/webparts/nacBpmnViewer/services/BpmnViewerRequestPlan.ts",
     "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
+    "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_color.png",
+    "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_outline.png",
+    "tsconfig.json",
 }
-SPFX_SKELETON_BLOCKED_PATHS = {
-    "package-lock.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
+SPFX_GENERATED_PATHS = {
     "node_modules",
     "dist",
     "lib",
     "temp",
     "sharepoint/solution",
 }
+SPFX_SKELETON_BLOCKED_PATHS = SPFX_GENERATED_PATHS
 SPFX_SKELETON_BLOCKED_MARKERS = {
     "Graph" + "ServiceClient",
     "MS" + "GraphClient",
+    "Aad" + "HttpClient",
+    "graph.microsoft" + ".com",
+    "@" + "microsoft/microsoft-graph-client",
     "@" + "pnp",
     "_" + "api/",
     "/" + "_api",
     "graph" + "beta",
-    "gulp " + "bundle",
-    "gulp " + "package-solution",
     "m365 " + "spo",
 }
 
@@ -128,11 +128,12 @@ def validate_spfx_bpmn_viewer_skeleton(
     render_fixture: dict[str, Any] | None = None,
     mcp_contract: dict[str, Any] | None = None,
 ) -> list[str]:
+    del mcp_contract
     errors: list[str] = []
-    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.1":
+    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.2":
         errors.append("SPFx BPMN viewer skeleton schema_version is invalid")
-    if skeleton.get("status") != "offline_skeleton_no_package_deploy":
-        errors.append("SPFx BPMN viewer skeleton status must be offline_skeleton_no_package_deploy")
+    if skeleton.get("status") != "synthetic_site_scoped_package":
+        errors.append("SPFx BPMN viewer skeleton status must be synthetic_site_scoped_package")
 
     spfx = skeleton.get("spfx")
     if not isinstance(spfx, dict):
@@ -140,55 +141,78 @@ def validate_spfx_bpmn_viewer_skeleton(
     else:
         expected = {
             "framework": "SharePoint Framework",
+            "framework_version": SPFX_VERSION,
+            "build_tool": "Heft",
             "component_type": "clientSideWebPart",
             "library": "bpmn-js",
             "bpmn_js_import": "bpmn-js/lib/Viewer",
             "bpmn_js_mode": "viewer_only",
+            "package_root": "spfx/nac-bpmn-viewer",
+            "approved_workspace_id": APPROVED_WORKSPACE_ID,
+            "data_source": "package_fixture",
         }
         for key, value in expected.items():
             if spfx.get(key) != value:
                 errors.append(f"SPFx BPMN viewer skeleton spfx.{key} must be {value}")
-        if spfx.get("source_skeleton_included_now") is not True:
-            errors.append("SPFx BPMN viewer skeleton spfx.source_skeleton_included_now must be true")
-        package_root = spfx.get("package_root")
-        if package_root != "spfx/nac-bpmn-viewer":
-            errors.append("SPFx BPMN viewer skeleton spfx.package_root must be spfx/nac-bpmn-viewer")
-        else:
-            errors.extend(_validate_spfx_source_root(REPO_ROOT / package_root))
+        for flag in (
+            "source_package_included_now",
+            "package_lock_required",
+            "npm_ci_allowed_now",
+            "build_allowed_now",
+            "package_solution_enabled_now",
+            "reproducible_build_required",
+            "site_scoped_package",
+            "teams_hosts_enabled",
+            "app_catalog_deploy_owner_approved",
+            "site_scoped_install_allowed_now",
+        ):
+            if spfx.get(flag) is not True:
+                errors.append(f"SPFx BPMN viewer skeleton spfx.{flag} must be true")
         for flag in (
             "modeler_enabled",
             "workflow_execution_allowed",
             "requires_custom_script",
             "loose_html_embedding_allowed",
-            "actual_spfx_package_included_now",
-            "package_solution_enabled_now",
-            "app_catalog_deploy_allowed_now",
             "tenant_wide_deploy_allowed_now",
-            "npm_install_required_now",
+            "graph_permissions_requested",
+            "direct_graph_access_allowed",
+            "aad_http_client_allowed",
+            "sharepoint_writes_allowed",
+            "contains_real_matter_data",
         ):
             if spfx.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer skeleton spfx.{flag} must be false")
+        if spfx.get("package_root") == "spfx/nac-bpmn-viewer":
+            errors.extend(_validate_spfx_source_root(REPO_ROOT / spfx["package_root"]))
+
+    deployment = skeleton.get("deployment_scope")
+    if not isinstance(deployment, dict):
+        errors.append("SPFx BPMN viewer skeleton deployment_scope must be an object")
+    else:
+        if deployment.get("approved_workspace_id") != APPROVED_WORKSPACE_ID:
+            errors.append("SPFx BPMN viewer skeleton deployment scope must be notary_team_01")
+        if deployment.get("approval") != "owner_approved":
+            errors.append("SPFx BPMN viewer skeleton deployment scope must be owner_approved")
+        if deployment.get("site_scoped") is not True:
+            errors.append("SPFx BPMN viewer skeleton deployment must be site-scoped")
+        if deployment.get("tenant_wide") is not False:
+            errors.append("SPFx BPMN viewer skeleton deployment must not be tenant-wide")
 
     render = skeleton.get("render_contract")
     if not isinstance(render, dict):
         errors.append("SPFx BPMN viewer skeleton render_contract must be an object")
     else:
-        if render.get("container_id") != "nac-bpmn-viewer-container":
-            errors.append("SPFx BPMN viewer skeleton render_contract.container_id is invalid")
-        props = {
-            item.get("name"): item
-            for item in _as_list(render.get("component_props"))
-            if isinstance(item, dict)
-        }
-        for prop in ("workspaceId", "bpmnModelId"):
-            if props.get(prop, {}).get("required") is not True:
-                errors.append(f"SPFx BPMN viewer skeleton render_contract must require {prop}")
-        forbidden = set(_strings(render.get("forbidden_outputs")))
-        for item in ("raw_matter_document_content", "tokens_or_secrets", "bpmn_model_write_payload"):
-            if item not in forbidden:
-                errors.append(f"SPFx BPMN viewer skeleton forbidden_outputs missing {item}")
-        if set(_strings(render.get("render_states"))) != REQUIRED_RENDER_STATES:
-            errors.append("SPFx BPMN viewer skeleton render_contract.render_states is invalid")
+        if render.get("workspace_id") != APPROVED_WORKSPACE_ID:
+            errors.append("SPFx BPMN viewer skeleton render_contract.workspace_id is invalid")
+        if render.get("content_source") != "package_fixture":
+            errors.append("SPFx BPMN viewer skeleton render content must come from package_fixture")
+        if render.get("synthetic_data_only") is not True:
+            errors.append("SPFx BPMN viewer skeleton render content must be synthetic only")
+        if render.get("viewer_only") is not True:
+            errors.append("SPFx BPMN viewer skeleton render contract must be viewer-only")
+        for flag in ("live_tenant_access", "graph_access", "writes_allowed", "real_matter_data_allowed"):
+            if render.get(flag) is not False:
+                errors.append(f"SPFx BPMN viewer skeleton render_contract.{flag} must be false")
         dom_markers = render.get("dom_markers")
         if not isinstance(dom_markers, dict):
             errors.append("SPFx BPMN viewer skeleton render_contract.dom_markers must be an object")
@@ -196,49 +220,18 @@ def validate_spfx_bpmn_viewer_skeleton(
             for key, value in REQUIRED_DOM_MARKERS.items():
                 if dom_markers.get(key) != value:
                     errors.append(f"SPFx BPMN viewer skeleton render_contract.dom_markers.{key} must be {value}")
-        overlay = render.get("metadata_overlay")
-        if not isinstance(overlay, dict):
-            errors.append("SPFx BPMN viewer skeleton render_contract.metadata_overlay must be an object")
+        privacy = render.get("privacy_guards")
+        if not isinstance(privacy, dict):
+            errors.append("SPFx BPMN viewer skeleton render_contract.privacy_guards must be an object")
         else:
-            if overlay.get("kind") != "redacted_metadata_only":
-                errors.append("SPFx BPMN viewer skeleton metadata overlay kind must be redacted_metadata_only")
             for flag in (
                 "matter_content_present",
                 "private_payload_values_present",
                 "credential_material_present",
                 "raw_graph_paths_present",
             ):
-                if overlay.get(flag) is not False:
-                    errors.append(f"SPFx BPMN viewer skeleton metadata_overlay.{flag} must be false")
-
-    binding = skeleton.get("mcp_request_plan_binding")
-    if not isinstance(binding, dict):
-        errors.append("SPFx BPMN viewer skeleton mcp_request_plan_binding must be an object")
-    else:
-        if binding.get("server_id") != "teams-sharepoint-data-mcp":
-            errors.append("SPFx BPMN viewer skeleton must bind teams-sharepoint-data-mcp")
-        if binding.get("executes_graph_requests_now") is not False:
-            errors.append("SPFx BPMN viewer skeleton must not execute Graph requests now")
-        if binding.get("tools_request_plan_only_now") is not True:
-            errors.append("SPFx BPMN viewer skeleton MCP tools must be request-plan-only now")
-        if set(_strings(binding.get("tools"))) != REQUIRED_MCP_TOOLS:
-            errors.append("SPFx BPMN viewer skeleton MCP tools must be the BPMN viewer request-plan tools")
-        if set(_strings(binding.get("owner_gated_live_read_tools_enabled_now"))) != {"case_get", "document_list"}:
-            errors.append("SPFx BPMN viewer skeleton live-read tools must stay case_get and document_list")
-
-    graph = skeleton.get("graph_content_read_boundary")
-    if not isinstance(graph, dict):
-        errors.append("SPFx BPMN viewer skeleton graph_content_read_boundary must be an object")
-    else:
-        if graph.get("future_endpoint") != "GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content":
-            errors.append("SPFx BPMN viewer skeleton future content endpoint is invalid")
-        if graph.get("live_content_read_enabled_now") is not False:
-            errors.append("SPFx BPMN viewer skeleton live content read must be disabled now")
-        if graph.get("fixture_content_allowed_now") is not True:
-            errors.append("SPFx BPMN viewer skeleton fixture content must be allowed now")
-        metadata_gates = set(_strings(graph.get("required_metadata_gates")))
-        for gate in sorted(REQUIRED_GRAPH_CONTENT_METADATA_GATES - metadata_gates):
-            errors.append(f"SPFx BPMN viewer skeleton metadata gate missing {gate}")
+                if privacy.get(flag) is not False:
+                    errors.append(f"SPFx BPMN viewer skeleton privacy_guards.{flag} must be false")
 
     blocked = set(_strings(skeleton.get("blocked_operations")))
     for operation in sorted(REQUIRED_BLOCKED_OPERATIONS - blocked):
@@ -246,54 +239,169 @@ def validate_spfx_bpmn_viewer_skeleton(
 
     if render_fixture is not None:
         errors.extend(_validate_render_fixture(render_fixture, skeleton))
-    if mcp_contract is not None:
-        errors.extend(_validate_mcp_contract_binding(mcp_contract))
     return errors
 
 
 def _validate_spfx_source_root(root: Path) -> list[str]:
     errors: list[str] = []
     if not root.is_dir():
-        return [f"SPFx BPMN viewer skeleton source root missing: {root.relative_to(REPO_ROOT)}"]
+        return [f"SPFx BPMN viewer package root missing: {root.relative_to(REPO_ROOT)}"]
     for required in sorted(SPFX_SKELETON_REQUIRED_FILES):
         if not (root / required).is_file():
-            errors.append(f"SPFx BPMN viewer skeleton source missing {required}")
-    for blocked in sorted(SPFX_SKELETON_BLOCKED_PATHS):
-        if (root / blocked).exists():
-            errors.append(f"SPFx BPMN viewer skeleton must not include {blocked}")
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in {".json", ".md", ".ts", ".tsx"}:
-            continue
-        text = path.read_text(encoding="utf-8")
+            errors.append(f"SPFx BPMN viewer package source missing {required}")
+
+    gitignore = root / ".gitignore"
+    if gitignore.is_file():
+        ignored = {line.strip().strip("/") for line in gitignore.read_text(encoding="utf-8").splitlines()}
+        for generated in sorted(SPFX_GENERATED_PATHS):
+            ignored_names = {generated, generated.split("/", 1)[0], generated.rsplit("/", 1)[-1]}
+            if ignored.isdisjoint(ignored_names):
+                errors.append(f"SPFx BPMN viewer .gitignore must ignore {generated}")
+    for tracked in _tracked_generated_paths(root):
+        errors.append(f"SPFx BPMN viewer generated path must remain untracked: {tracked}")
+
+    package_path = root / "package.json"
+    lock_path = root / "package-lock.json"
+    if package_path.is_file():
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+        if package.get("private") is not True:
+            errors.append("SPFx BPMN viewer package.json must be private")
+        scripts = package.get("scripts")
+        if not isinstance(scripts, dict):
+            errors.append("SPFx BPMN viewer package.json scripts must be an object")
+        else:
+            build = str(scripts.get("build", ""))
+            if "heft test --clean --production" not in build or "heft package-solution --production" not in build:
+                errors.append("SPFx BPMN viewer build must use reproducible Heft production packaging")
+        all_dependencies = {
+            **(package.get("dependencies") if isinstance(package.get("dependencies"), dict) else {}),
+            **(package.get("devDependencies") if isinstance(package.get("devDependencies"), dict) else {}),
+        }
+        spfx_dependencies = {
+            name: version for name, version in all_dependencies.items() if name.startswith("@microsoft/sp")
+        }
+        if not spfx_dependencies or set(spfx_dependencies.values()) != {SPFX_VERSION}:
+            errors.append(f"SPFx BPMN viewer Microsoft SPFx dependencies must be pinned to {SPFX_VERSION}")
+        if all_dependencies.get("@rushstack/heft") != "1.2.17":
+            errors.append("SPFx BPMN viewer Heft version must be pinned to 1.2.17")
+        if all_dependencies.get("bpmn-js") != "17.11.1":
+            errors.append("SPFx BPMN viewer bpmn-js must be pinned to 17.11.1")
+        for dependency in all_dependencies:
+            lowered = dependency.lower()
+            if "graph-client" in lowered or "@pnp" in lowered:
+                errors.append(f"SPFx BPMN viewer dependency {dependency} is forbidden")
+
+        if lock_path.is_file():
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+            if lock.get("lockfileVersion") != 3 or lock.get("requires") is not True:
+                errors.append("SPFx BPMN viewer package-lock.json must use npm lockfileVersion 3")
+            locked_root = lock.get("packages", {}).get("", {})
+            for key in ("name", "version"):
+                if locked_root.get(key) != package.get(key):
+                    errors.append(f"SPFx BPMN viewer package-lock root {key} must match package.json")
+            for key in ("dependencies", "devDependencies", "engines"):
+                if locked_root.get(key) != package.get(key):
+                    errors.append(f"SPFx BPMN viewer package-lock root {key} must match package.json")
+
+    package_solution = root / "config" / "package-solution.json"
+    if package_solution.is_file():
+        payload = json.loads(package_solution.read_text(encoding="utf-8"))
+        solution = payload.get("solution", {})
+        if solution.get("skipFeatureDeployment") is not False:
+            errors.append("SPFx BPMN viewer package must be site-scoped")
+        if solution.get("webApiPermissionRequests"):
+            errors.append("SPFx BPMN viewer package must not request Web API or Graph permissions")
+        if payload.get("paths", {}).get("zippedPackage") != "solution/nac-bpmn-viewer.sppkg":
+            errors.append("SPFx BPMN viewer package-solution output path is invalid")
+
+    manifest = root / "src" / "webparts" / "nacBpmnViewer" / "NacBpmnViewerWebPart.manifest.json"
+    if manifest.is_file():
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        hosts = set(_strings(payload.get("supportedHosts")))
+        if not {"SharePointWebPart", "TeamsTab"}.issubset(hosts):
+            errors.append("SPFx BPMN viewer manifest must support SharePointWebPart and TeamsTab")
+        if payload.get("requiresCustomScript") is not False:
+            errors.append("SPFx BPMN viewer manifest must not require custom script")
+        entries = _as_list(payload.get("preconfiguredEntries"))
+        workspace = entries[0].get("properties", {}).get("workspaceId") if entries and isinstance(entries[0], dict) else None
+        if workspace != APPROVED_WORKSPACE_ID:
+            errors.append("SPFx BPMN viewer manifest workspaceId must be notary_team_01")
+
+    for source_path in _iter_spfx_source_files(root):
+        source_text = source_path.read_text(encoding="utf-8")
         for marker in sorted(SPFX_SKELETON_BLOCKED_MARKERS):
-            if marker in text:
-                rel = path.relative_to(REPO_ROOT)
-                errors.append(f"SPFx BPMN viewer skeleton {rel} contains blocked marker {marker!r}")
+            if marker in source_text:
+                rel = source_path.relative_to(REPO_ROOT)
+                errors.append(f"SPFx BPMN viewer {rel} contains blocked marker {marker!r}")
+
     component = root / "src" / "webparts" / "nacBpmnViewer" / "components" / "NacBpmnViewer.tsx"
     if component.is_file():
-        text = component.read_text(encoding="utf-8")
-        if "bpmn-js/lib/Viewer" not in text:
-            errors.append("SPFx BPMN viewer component must import bpmn-js/lib/Viewer")
+        source_text = component.read_text(encoding="utf-8")
+        for required in (
+            "bpmn-js/lib/Viewer",
+            "syntheticWorkspaceFixture",
+            *REQUIRED_DOM_MARKERS.values(),
+        ):
+            if required not in source_text:
+                errors.append(f"SPFx BPMN viewer component missing UI contract marker {required!r}")
         for blocked in ("Model" + "er", "save" + "XML", "start" + "Process", "execute" + "Workflow"):
-            if blocked in text:
+            if blocked in source_text:
                 errors.append(f"SPFx BPMN viewer component contains blocked viewer marker {blocked!r}")
-        for marker in REQUIRED_DOM_MARKERS.values():
-            if marker not in text:
-                errors.append(f"SPFx BPMN viewer component missing DOM marker {marker}")
-        if "data-case-id" in text:
-            errors.append("SPFx BPMN viewer component must not render raw case IDs into DOM attributes")
-    service = root / "src" / "webparts" / "nacBpmnViewer" / "services" / "BpmnViewerRequestPlan.ts"
-    if service.is_file():
-        text = service.read_text(encoding="utf-8")
-        for tool in sorted(REQUIRED_MCP_TOOLS):
-            if tool not in text:
-                errors.append(f"SPFx BPMN viewer request plan service missing {tool}")
-        for render_state in sorted(REQUIRED_RENDER_STATES):
-            if render_state not in text:
-                errors.append(f"SPFx BPMN viewer request plan service missing render state {render_state}")
+
+    fixture = root / "src" / "webparts" / "nacBpmnViewer" / "fixtures" / "syntheticWorkspace.ts"
+    if fixture.is_file():
+        fixture_text = fixture.read_text(encoding="utf-8")
+        for required in (
+            "workspaceId: 'notary_team_01'",
+            "containsMatterData: false",
+            "source: 'package_fixture'",
+            "bpmnXml: sampleApprovedBpmnXml",
+        ):
+            if required not in fixture_text:
+                errors.append(f"SPFx BPMN viewer synthetic fixture missing {required!r}")
     return errors
+
+
+def _iter_spfx_source_files(root: Path) -> list[Path]:
+    files: list[Path] = []
+    for current, directories, names in os.walk(root):
+        current_path = Path(current)
+        kept_directories: list[str] = []
+        for directory in directories:
+            relative = (current_path / directory).relative_to(root).as_posix()
+            if any(
+                relative == generated or relative.startswith(f"{generated}/")
+                for generated in SPFX_GENERATED_PATHS
+            ):
+                continue
+            kept_directories.append(directory)
+        directories[:] = kept_directories
+
+        for name in names:
+            path = current_path / name
+            if name == "package-lock.json":
+                continue
+            if path.suffix.lower() in {".json", ".md", ".ts", ".tsx"}:
+                files.append(path)
+    return files
+
+def _tracked_generated_paths(root: Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-files", "--", str(root.relative_to(REPO_ROOT))],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ["git-ls-files-check-failed"]
+    tracked: list[str] = []
+    package_prefix = root.relative_to(REPO_ROOT).as_posix()
+    for item in result.stdout.splitlines():
+        relative = item.removeprefix(f"{package_prefix}/")
+        if any(relative == generated or relative.startswith(f"{generated}/") for generated in SPFX_GENERATED_PATHS):
+            tracked.append(item)
+    return tracked
 
 
 def evaluate_spfx_bpmn_viewer_render_case(model: dict[str, Any]) -> dict[str, Any]:
@@ -395,12 +503,11 @@ def build_spfx_bpmn_viewer_process_selection_result(
     render_fixture: dict[str, Any] | None = None,
     mcp_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    del mcp_contract
     render_fixture = render_fixture or load_spfx_bpmn_viewer_render_fixture()
-    mcp_contract = mcp_contract or load_mcp_contract()
     validation_errors = validate_spfx_bpmn_viewer_skeleton(
         skeleton,
         render_fixture=render_fixture,
-        mcp_contract=mcp_contract,
     )
     selection_errors = _validate_process_selection_fixture(render_fixture)
     errors = validation_errors + selection_errors
@@ -427,9 +534,10 @@ def build_spfx_bpmn_viewer_process_selection_result(
     )
     result["contract"] = {
         "schema_version": "nac.m365-spfx-bpmn-viewer-process-selection/v0.1",
-        "status": "offline_selection_no_live_read",
+        "status": "synthetic_fixture_selection_no_live_read",
         "fixture": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
-        "requestPlanTools": sorted(REQUIRED_MCP_TOOLS),
+        "dataSource": "package_fixture",
+        "requestPlanTools": [],
         "requiredChecks": sorted(REQUIRED_PROCESS_SELECTION_CHECKS),
     }
     return result
@@ -442,50 +550,29 @@ def build_spfx_bpmn_viewer_skeleton_result(
     mcp_contract: dict[str, Any] | None = None,
     provisioned_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    del mcp_contract, provisioned_state
     render_fixture = render_fixture or load_spfx_bpmn_viewer_render_fixture()
-    mcp_contract = mcp_contract or load_mcp_contract()
-    provisioned_state = _state_with_optional_bpmn_viewer_lists(
-        provisioned_state or load_provisioned_state(DEFAULT_PROVISIONED_STATE)
-    )
-    errors = validate_spfx_bpmn_viewer_skeleton(
-        skeleton,
-        render_fixture=render_fixture,
-        mcp_contract=mcp_contract,
-    )
+    errors = validate_spfx_bpmn_viewer_skeleton(skeleton, render_fixture=render_fixture)
     if errors:
-        return {
-            "status": "FAILED",
-            "errors": errors,
-        }
+        return {"status": "FAILED", "errors": errors}
 
-    context = RuntimeContext(
-        actor_id="spfx-bpmn-viewer-skeleton",
-        actor_role="runtime_service",
-        workspace_id=str(render_fixture["workspace_id"]),
-        purpose="spfx_bpmn_viewer_request_plan_fixture",
-        correlation_id="spfx-bpmn-viewer-skeleton",
-        case_id=str(render_fixture["component_props"].get("caseId", "")),
-        role_case_gate="open",
-        write_approved=False,
-    )
-    bpmn_model_id = str(render_fixture["component_props"]["bpmnModelId"])
-    case_id = str(render_fixture["component_props"].get("caseId", ""))
-    request_plans = [
-        plan_tool_request(mcp_contract, provisioned_state, context, "bpmn_model_get", {"bpmn_model_id": bpmn_model_id}),
-        plan_tool_request(mcp_contract, provisioned_state, context, "process_register_list", {}),
-        plan_tool_request(mcp_contract, provisioned_state, context, "bpmn_viewer_overlay_get", {"case_id": case_id}),
-    ]
     render_case_results = _build_render_case_results(render_fixture)
     return {
         "status": "PASSED",
         "summary": {
             "component": skeleton["spfx"]["component_name"],
             "spfx_component_type": skeleton["spfx"]["component_type"],
+            "spfx_version": skeleton["spfx"]["framework_version"],
+            "build_tool": skeleton["spfx"]["build_tool"],
             "bpmn_js_mode": skeleton["spfx"]["bpmn_js_mode"],
-            "request_plan_count": len(request_plans),
-            "app_catalog_deploy_allowed_now": False,
-            "live_tenant_apply_allowed_now": False,
-            "live_content_read_enabled_now": False,
+            "data_source": skeleton["spfx"]["data_source"],
+            "approved_workspace_id": skeleton["spfx"]["approved_workspace_id"],
+            "package_solution_enabled_now": True,
+            "app_catalog_deploy_owner_approved": True,
+            "site_scoped_install_allowed_now": True,
+            "tenant_wide_deploy_allowed_now": False,
+            "executes_graph_requests_now": False,
+            "request_plan_count": 0,
         },
         "skeleton": {
             "schema_version": skeleton["schema_version"],
@@ -494,28 +581,34 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "fixture": skeleton["test_fixtures"]["render_contract"],
         },
         "renderContract": {
-            "containerId": skeleton["render_contract"]["container_id"],
+            "workspaceId": skeleton["render_contract"]["workspace_id"],
             "componentProps": _redact_component_props(render_fixture["component_props"]),
-            "request_plan_count": len(request_plans),
+            "request_plan_count": 0,
             "liveTenantAccess": False,
-            "appCatalogDeploy": False,
+            "appCatalogDeployOwnerApproved": True,
             "domMarkers": skeleton["render_contract"]["dom_markers"],
-            "metadataOverlay": skeleton["render_contract"]["metadata_overlay"],
+            "privacyGuards": skeleton["render_contract"]["privacy_guards"],
             "expectedRenderState": render_fixture["expected_render_state"],
             "cases": render_case_results,
         },
-        "requestPlans": [plan.to_dict() for plan in request_plans],
+        "requestPlans": [],
         "guardrails": {
-            "executes_graph_requests_now": False,
-            "mcp_tools_request_plan_only_now": True,
-            "actual_spfx_package_included_now": False,
-            "package_solution_enabled_now": False,
-            "app_catalog_deploy_allowed_now": False,
+            "package_lock_required": True,
+            "npm_ci_allowed_now": True,
+            "build_allowed_now": True,
+            "package_solution_enabled_now": True,
+            "app_catalog_deploy_owner_approved": True,
+            "site_scoped_install_allowed_now": True,
+            "approved_workspace_only": True,
             "tenant_wide_deploy_allowed_now": False,
-            "npm_install_required_now": False,
+            "executes_graph_requests_now": False,
+            "graph_permissions_requested": False,
+            "aad_http_client_allowed": False,
             "legacy_sharepoint_api_allowed": False,
             "graph_sdk_allowed": False,
             "matter_document_content_reads_allowed": False,
+            "sharepoint_writes_allowed": False,
+            "workflow_execution_allowed": False,
         },
     }
 
@@ -533,6 +626,8 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
         for key in ("workspaceId", "bpmnModelId"):
             if not props.get(key):
                 errors.append(f"SPFx BPMN viewer render fixture component_props.{key} is required")
+        if props.get("workspaceId") != APPROVED_WORKSPACE_ID:
+            errors.append("SPFx BPMN viewer render fixture workspaceId must be notary_team_01")
     render_contract = fixture.get("render_contract")
     if not isinstance(render_contract, dict):
         errors.append("SPFx BPMN viewer render fixture render_contract must be an object")
@@ -541,15 +636,8 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
             errors.append("SPFx BPMN viewer render fixture render_contract.liveTenantAccess must be false")
         if render_contract.get("appCatalogDeploy") is not False:
             errors.append("SPFx BPMN viewer render fixture render_contract.appCatalogDeploy must be false")
-        if render_contract.get("request_plan_count") != len(REQUIRED_MCP_TOOLS):
+        if render_contract.get("request_plan_count") != len(PROCESS_SELECTION_FIXTURE_TOOLS):
             errors.append("SPFx BPMN viewer render fixture request_plan_count must be 3")
-        dom_markers = render_contract.get("dom_markers")
-        if not isinstance(dom_markers, dict):
-            errors.append("SPFx BPMN viewer render fixture dom_markers must be an object")
-        else:
-            for key, value in REQUIRED_DOM_MARKERS.items():
-                if dom_markers.get(key) != value:
-                    errors.append(f"SPFx BPMN viewer render fixture dom_markers.{key} must be {value}")
         if render_contract.get("metadata_overlay") != "redacted_metadata_only":
             errors.append("SPFx BPMN viewer render fixture metadata_overlay must be redacted_metadata_only")
         redaction = render_contract.get("redaction_policy")
@@ -611,7 +699,7 @@ def _validate_render_fixture(fixture: dict[str, Any], skeleton: dict[str, Any]) 
         else:
             errors.extend(_validate_redacted_overlay(overlay, f"render case {name!r}"))
     expected_tools = set(_strings(fixture.get("expected_request_plan_tools")))
-    if expected_tools != REQUIRED_MCP_TOOLS:
+    if expected_tools != PROCESS_SELECTION_FIXTURE_TOOLS:
         errors.append("SPFx BPMN viewer render fixture expected_request_plan_tools is invalid")
     expected_state = fixture.get("expected_render_state")
     if not isinstance(expected_state, dict):
@@ -652,28 +740,6 @@ def _validate_process_selection_fixture(fixture: dict[str, Any]) -> list[str]:
     checks = {check.get("id") for check in _as_list(result.get("checks")) if isinstance(check, dict)}
     for missing in sorted(REQUIRED_PROCESS_SELECTION_CHECKS - checks):
         errors.append(f"SPFx BPMN viewer process selection fixture missing check {missing}")
-    return errors
-
-
-def _validate_mcp_contract_binding(contract: dict[str, Any]) -> list[str]:
-    errors = validate_mcp_contract(contract)
-    if errors:
-        return errors
-    tools = {
-        tool.get("id"): tool
-        for tool in _as_list(contract.get("tools"))
-        if isinstance(tool, dict)
-    }
-    for tool_id in REQUIRED_MCP_TOOLS:
-        tool = tools.get(tool_id)
-        if not isinstance(tool, dict):
-            errors.append(f"SPFx BPMN viewer MCP binding missing tool {tool_id}")
-            continue
-        if tool.get("graph_method") != "GET":
-            errors.append(f"SPFx BPMN viewer MCP binding {tool_id} must use GET")
-        for flag in ("reads_files", "writes_items", "requires_write_approval"):
-            if tool.get(flag) is not False:
-                errors.append(f"SPFx BPMN viewer MCP binding {tool_id}.{flag} must be false")
     return errors
 
 
@@ -779,18 +845,6 @@ def _process_selection_guardrails() -> dict[str, bool]:
         "startsWorkflow": False,
         "appCatalogDeployAllowedNow": False,
     }
-
-
-def _state_with_optional_bpmn_viewer_lists(state: dict[str, Any]) -> dict[str, Any]:
-    cloned = json.loads(json.dumps(state))
-    for workspace in cloned.get("workspaces", []):
-        if not isinstance(workspace, dict):
-            continue
-        lists = workspace.setdefault("lists", {})
-        if isinstance(lists, dict):
-            lists.setdefault("BPMN Models", {"id": "list-bpmn-models"})
-            lists.setdefault("Prozessregister", {"id": "list-process-register"})
-    return cloned
 
 
 def _has_valid_bpmn_xml_reference(model: dict[str, Any]) -> bool:

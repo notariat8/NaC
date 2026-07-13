@@ -1,0 +1,23 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "nac-bpmn-viewer",
+    "environment": "spo",
+    "packageManager": "npm",
+    "useGulp": false,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "NaC Workspace",
+    "componentDescription": "Read-only notarial workspace for Teams and SharePoint",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "nac-bpmn-viewer",
+    "libraryId": "14e55e42-6443-4955-a8c4-b046164ec2d2",
+    "solutionShortDescription": "Synthetic read-only NaC workspace for Teams and SharePoint",
+    "skipFeatureDeployment": false,
+    "isDomainIsolated": false
+  }
+}

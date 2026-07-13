@@ -1,0 +1,45 @@
+{
+  "schema_version": "nac.m365-mvp-test-environment-bpmn-fixture/v0.1",
+  "fixture_id": "NAC-SYN-MATTER-001-BPMN",
+  "package": {
+    "name": "@notariat8/nac-bpmn-viewer",
+    "version": "0.1.0",
+    "binding": "package_test_fixture"
+  },
+  "workspace": {
+    "workspace_id": "notary_team_01",
+    "matter": {
+      "matter_id": "NAC-SYN-MATTER-001",
+      "business_case_type_id": "immobilienkaufvertrag",
+      "status": "Entwurf",
+      "deadline": "2026-08-31T16:00:00Z"
+    },
+    "tasks": [
+      {
+        "task_id": "NAC-SYN-TASK-001",
+        "title": "Vertragsentwurf prüfen",
+        "step_code": "synthetic_contract_review",
+        "status": "Offen",
+        "requires_notary_approval": true,
+        "due_at": null
+      },
+      {
+        "task_id": "NAC-SYN-DEADLINE-001",
+        "title": "Abschlussfrist überwachen",
+        "step_code": "synthetic_completion_deadline",
+        "status": "Offen",
+        "requires_notary_approval": false,
+        "due_at": "2026-08-31T16:00:00Z"
+      }
+    ]
+  },
+  "model": {
+    "model_id": "NAC-SYN-BPMN-MATTER-001",
+    "title": "Synthetic real-estate purchase matter",
+    "notation": "BPMN 2.0",
+    "version": "1.0.0",
+    "process_key": "NAC_SYN_MATTER_001",
+    "content_sha256": "1dd7203a515d434949ef9300d5738cf7318d842119ec689aaa7ba1f9a7a6d167",
+    "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n  xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\"\n  xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\"\n  xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\"\n  id=\"Definitions_NacSyntheticMatter\"\n  targetNamespace=\"https://notariat8.de/nac/synthetic\">\n  <bpmn:process id=\"NAC_SYN_MATTER_001\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Synthetic\"/>\n    <bpmn:userTask id=\"synthetic_contract_review\" name=\"Vertragsentwurf prüfen\"/>\n    <bpmn:userTask id=\"synthetic_completion_deadline\" name=\"Abschlussfrist überwachen\"/>\n    <bpmn:endEvent id=\"EndEvent_Synthetic\"/>\n    <bpmn:sequenceFlow id=\"Flow_Start_Review\" sourceRef=\"StartEvent_Synthetic\" targetRef=\"synthetic_contract_review\"/>\n    <bpmn:sequenceFlow id=\"Flow_Review_Deadline\" sourceRef=\"synthetic_contract_review\" targetRef=\"synthetic_completion_deadline\"/>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_End\" sourceRef=\"synthetic_completion_deadline\" targetRef=\"EndEvent_Synthetic\"/>\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_NacSyntheticMatter\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_NacSyntheticMatter\" bpmnElement=\"NAC_SYN_MATTER_001\">\n      <bpmndi:BPMNShape id=\"StartEvent_Synthetic_di\" bpmnElement=\"StartEvent_Synthetic\">\n        <dc:Bounds x=\"120\" y=\"122\" width=\"36\" height=\"36\"/>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"synthetic_contract_review_di\" bpmnElement=\"synthetic_contract_review\">\n        <dc:Bounds x=\"220\" y=\"100\" width=\"140\" height=\"80\"/>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"synthetic_completion_deadline_di\" bpmnElement=\"synthetic_completion_deadline\">\n        <dc:Bounds x=\"430\" y=\"100\" width=\"150\" height=\"80\"/>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Synthetic_di\" bpmnElement=\"EndEvent_Synthetic\">\n        <dc:Bounds x=\"650\" y=\"122\" width=\"36\" height=\"36\"/>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_Start_Review_di\" bpmnElement=\"Flow_Start_Review\">\n        <di:waypoint x=\"156\" y=\"140\"/>\n        <di:waypoint x=\"220\" y=\"140\"/>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Review_Deadline_di\" bpmnElement=\"Flow_Review_Deadline\">\n        <di:waypoint x=\"360\" y=\"140\"/>\n        <di:waypoint x=\"430\" y=\"140\"/>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Deadline_End_di\" bpmnElement=\"Flow_Deadline_End\">\n        <di:waypoint x=\"580\" y=\"140\"/>\n        <di:waypoint x=\"650\" y=\"140\"/>\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>"
+  }
+}

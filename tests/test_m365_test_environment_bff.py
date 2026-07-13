@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib
 import json
 from pathlib import Path
@@ -17,8 +18,17 @@ from nac_bff.test_environment import (  # noqa: E402
     ALLOWED_PURPOSE,
     ALLOWED_WORKSPACE_ID,
     AccessDecision,
+    DeterministicSyntheticAccessDecisionPort,
     TestEnvironmentBff,
     ValidatedClaims,
+)
+from nac_mvp_test_environment import (  # noqa: E402
+    BPMN_PROCESS_KEY,
+    BPMN_SHA256,
+    DEADLINE,
+    MATTER_STATUS,
+    SYNTHETIC_POLICY_STATE,
+    TASKS,
 )
 
 
@@ -55,22 +65,23 @@ class _GraphPort:
 
 def _projection() -> dict:
     return {
-        "status": "in_review",
-        "deadline": "2026-08-31",
+        "status": MATTER_STATUS,
+        "deadline": DEADLINE,
         "tasks": [
             {
-                "title": "Kaufvertragsentwurf prüfen",
-                "status": "open",
+                "taskId": task["task_id"],
+                "title": task["title"],
+                "stepCode": task["step_code"],
+                "status": task["status"],
+                "requiresNotaryApproval": task["requires_notary_approval"],
+                "dueAt": task["due_at"],
                 "sharepointItemId": "DO_NOT_EXPOSE_ITEM_ID",
-            },
-            {
-                "title": "Beurkundung vorbereiten",
-                "status": "planned",
-            },
+            }
+            for task in TASKS
         ],
         "bpmn": {
-            "modelKey": "immobilienkaufvertrag",
-            "sha256": "a" * 64,
+            "modelKey": BPMN_PROCESS_KEY,
+            "sha256": BPMN_SHA256,
             "graphDownloadUrl": "DO_NOT_EXPOSE_DOWNLOAD_URL",
         },
         "siteId": "DO_NOT_EXPOSE_SITE_ID",
@@ -106,6 +117,32 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
             graph,
         )
 
+    def _policy_response(
+        self,
+        actor_id: str,
+        *,
+        policy_state: dict | None = None,
+    ) -> tuple[object, _GraphPort]:
+        graph = _GraphPort(_projection())
+        bff = TestEnvironmentBff(
+            expected_tenant_id="synthetic-tenant",
+            access_decision_port=DeterministicSyntheticAccessDecisionPort(
+                policy_state=SYNTHETIC_POLICY_STATE if policy_state is None else policy_state
+            ),
+            graph_rest_port=graph,
+        )
+        response = bff.get_workspace(
+            claims=ValidatedClaims(
+                object_id=actor_id,
+                tenant_id="synthetic-tenant",
+                subject="synthetic-subject",
+            ),
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        return response, graph
+
     def test_allowlists_are_exactly_the_single_synthetic_target(self) -> None:
         self.assertEqual(ALLOWED_WORKSPACE_ID, "notary_team_01")
         self.assertEqual(ALLOWED_MATTER_ID, "NAC-SYN-MATTER-001")
@@ -127,7 +164,20 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(response.body["matter"]["matterId"], ALLOWED_MATTER_ID)
         self.assertEqual(response.body["matter"]["businessCaseTypeId"], "immobilienkaufvertrag")
         self.assertEqual(response.body["matter"]["accessMode"], "assigned")
-        self.assertEqual(response.body["matter"]["tasks"][0], {"title": "Kaufvertragsentwurf prüfen", "status": "open"})
+        self.assertEqual(
+            response.body["matter"]["tasks"],
+            [
+                {
+                    "taskId": task["task_id"],
+                    "title": task["title"],
+                    "stepCode": task["step_code"],
+                    "status": task["status"],
+                    "requiresNotaryApproval": task["requires_notary_approval"],
+                    "dueAt": task["due_at"],
+                }
+                for task in TASKS
+            ],
+        )
         serialized = json.dumps(response.body, ensure_ascii=False)
         for sentinel in (
             "DO_NOT_EXPOSE_ITEM_ID",
@@ -143,6 +193,44 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(len(access.calls), 1)
         self.assertEqual(access.calls[0]["actor_id"], "synthetic-assigned-user")
         self.assertEqual(graph.calls, [{"workspace_id": ALLOWED_WORKSPACE_ID, "matter_id": ALLOWED_MATTER_ID}])
+
+    def test_canonical_policy_allows_assignment_and_valid_deputy_but_denies_unassigned(self) -> None:
+        assigned, assigned_graph = self._policy_response("nac-synthetic-assigned")
+        deputy, deputy_graph = self._policy_response("nac-synthetic-deputy")
+        denied, denied_graph = self._policy_response("nac-synthetic-unassigned")
+
+        self.assertEqual((assigned.status_code, assigned.body["matter"]["accessMode"]), (200, "assigned"))
+        self.assertEqual((deputy.status_code, deputy.body["matter"]["accessMode"]), (200, "deputy"))
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(denied.body, {"detail": "access denied"})
+        self.assertEqual(len(assigned_graph.calls), 1)
+        self.assertEqual(len(deputy_graph.calls), 1)
+        self.assertEqual(denied_graph.calls, [])
+
+    def test_deputy_policy_requires_reason_duration_audit_and_approval(self) -> None:
+        invalid_states: list[tuple[str, dict]] = []
+        for field, value in (
+            ("reason", " "),
+            ("valid_until", "2026-07-13T07:00:00Z"),
+            ("approved_by", ""),
+            ("approval_status", "pending"),
+            ("audit_correlation_id", ""),
+        ):
+            state = copy.deepcopy(SYNTHETIC_POLICY_STATE)
+            state["deputy_grants"][0][field] = value
+            invalid_states.append((field, state))
+        missing_audit = copy.deepcopy(SYNTHETIC_POLICY_STATE)
+        missing_audit["audit_events"] = []
+        invalid_states.append(("audit_event", missing_audit))
+
+        for field, state in invalid_states:
+            with self.subTest(field=field):
+                response, graph = self._policy_response(
+                    "nac-synthetic-deputy", policy_state=state
+                )
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.body, {"detail": "access denied"})
+                self.assertEqual(graph.calls, [])
 
     def test_deputy_decision_is_visible_only_as_access_mode(self) -> None:
         bff, _, _ = self._bff(decision=AccessDecision.deputy())
@@ -171,28 +259,116 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual(response.body, {"detail": "access denied"})
         self.assertEqual(graph.calls, [])
 
-    def test_workspace_matter_and_purpose_manipulation_fail_before_ports(self) -> None:
-        for field, value in (
-            ("workspace_id", "notary_team_02"),
-            ("matter_id", "NAC-SYN-MATTER-999"),
-            ("purpose", "export_all_matters"),
-        ):
-            with self.subTest(field=field):
+    def test_unauthorized_and_manipulated_inputs_are_externally_indistinguishable(self) -> None:
+        denied_bff, denied_access, denied_graph = self._bff(
+            decision=AccessDecision.deny()
+        )
+        denied = denied_bff.get_workspace(
+            claims=self.claims,
+            workspace_id=ALLOWED_WORKSPACE_ID,
+            matter_id=ALLOWED_MATTER_ID,
+            purpose=ALLOWED_PURPOSE,
+        )
+        expected_external_response = (denied.status_code, denied.body)
+
+        self.assertEqual(expected_external_response, (403, {"detail": "access denied"}))
+        self.assertEqual(len(denied_access.calls), 1)
+        self.assertEqual(denied_graph.calls, [])
+
+        manipulations = (
+            ("workspace", {"workspace_id": "notary_team_02"}),
+            ("matter", {"matter_id": "NAC-SYN-MATTER-999"}),
+            ("purpose", {"purpose": "export_all_matters"}),
+            ("filter", {"request_filters": {"$filter": "Status eq 'Offen'"}}),
+            ("malformed_filters", {"request_filters": "Status eq 'Offen'"}),
+        )
+        for label, overrides in manipulations:
+            with self.subTest(label=label):
                 bff, access, graph = self._bff()
                 request = {
                     "claims": self.claims,
                     "workspace_id": ALLOWED_WORKSPACE_ID,
                     "matter_id": ALLOWED_MATTER_ID,
                     "purpose": ALLOWED_PURPOSE,
+                    "request_filters": {},
                 }
-                request[field] = value
+                request.update(overrides)
 
                 response = bff.get_workspace(**request)
 
-                self.assertEqual(response.status_code, 404)
-                self.assertEqual(response.body, {"detail": "resource not found"})
+                self.assertEqual(
+                    (response.status_code, response.body), expected_external_response
+                )
                 self.assertEqual(access.calls, [])
                 self.assertEqual(graph.calls, [])
+
+    def test_fastapi_query_shape_rejects_filters_duplicates_and_missing_purpose(self) -> None:
+        from nac_bff.fastapi_adapter import _parse_workspace_query
+
+        purpose, filters = _parse_workspace_query([("purpose", ALLOWED_PURPOSE)])
+        self.assertEqual((purpose, filters), (ALLOWED_PURPOSE, {}))
+
+        invalid_shapes = (
+            [],
+            [("purpose", "")],
+            [("purpose", "x" * 81)],
+            [("purpose", ALLOWED_PURPOSE), ("purpose", ALLOWED_PURPOSE)],
+            [("purpose", ALLOWED_PURPOSE), ("$filter", "Status eq 'Offen'")],
+            [("$filter", "Status eq 'Offen'")],
+        )
+        for query_items in invalid_shapes:
+            with self.subTest(query_items=query_items):
+                parsed_purpose, parsed_filters = _parse_workspace_query(query_items)
+                self.assertEqual(parsed_purpose, "")
+                self.assertEqual(parsed_filters, {"invalid_query_shape": True})
+
+    def test_fastapi_http_responses_do_not_leak_matter_existence(self) -> None:
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("FastAPI runtime dependencies are not installed")
+
+        from nac_bff.fastapi_adapter import create_fastapi_app
+
+        access = _AccessPort(AccessDecision.deny())
+        graph = _GraphPort(_projection())
+        bff = TestEnvironmentBff(
+            expected_tenant_id="synthetic-tenant",
+            access_decision_port=access,
+            graph_rest_port=graph,
+        )
+
+        async def validated_claims() -> ValidatedClaims:
+            return self.claims
+
+        client = TestClient(
+            create_fastapi_app(
+                bff=bff,
+                validated_claims_dependency=validated_claims,
+            )
+        )
+        base_path = f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/{ALLOWED_MATTER_ID}"
+        baseline = client.get(base_path, params={"purpose": ALLOWED_PURPOSE})
+        expected_external_response = (baseline.status_code, baseline.json())
+        self.assertEqual(expected_external_response, (403, {"detail": "access denied"}))
+
+        manipulated_urls = (
+            f"/v1/workspaces/notary_team_02/matters/{ALLOWED_MATTER_ID}?purpose={ALLOWED_PURPOSE}",
+            f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/NAC-SYN-MATTER-999?purpose={ALLOWED_PURPOSE}",
+            f"{base_path}?purpose=export_all_matters",
+            f"{base_path}?purpose={ALLOWED_PURPOSE}&%24filter=Status%20eq%20Offen",
+            f"{base_path}?purpose={ALLOWED_PURPOSE}&purpose={ALLOWED_PURPOSE}",
+            base_path,
+        )
+        for url in manipulated_urls:
+            with self.subTest(url=url):
+                response = client.get(url)
+                self.assertEqual(
+                    (response.status_code, response.json()), expected_external_response
+                )
+
+        self.assertEqual(len(access.calls), 1)
+        self.assertEqual(graph.calls, [])
 
     def test_identity_is_accepted_only_as_injected_validated_claims(self) -> None:
         bff, access, graph = self._bff()

@@ -73,6 +73,7 @@ python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
+python scripts/nac.py m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 python scripts/nac.py m365 teams-sharepoint bpmn-viewer-plan --format json
 python scripts/nac.py m365 teams-sharepoint matter-access-plan --format json
 python scripts/nac.py m365 teams-sharepoint matter-access-decision-replay --format json
@@ -146,6 +147,7 @@ nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
+nac m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 nac m365 teams-sharepoint bpmn-viewer-plan --format json
 nac m365 teams-sharepoint matter-access-plan --format json
 nac m365 teams-sharepoint matter-access-decision-replay --format json
@@ -318,6 +320,7 @@ nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
+nac m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
@@ -393,6 +396,22 @@ die benötigten Runtime-Env-Werte als Subprozess-Overlay erhalten. Der Runner
 schreibt diesen Bootstrap-Nachweis zusätzlich als redigiertes Artefakt und
 hängt ihn an `release-gate-evidence` und den Artifact-Index an. Der Live-Lauf
 bleibt trotzdem owner-gated und führt ohne `--owner-approved` nicht aus.
+
+`test-environment-deploy` ist der owner-gated One-Shot-Runner für die
+synthetische MVP-Testumgebung. Er akzeptiert ausschließlich den exakten
+Workspace `notary_team_01`, bindet das site-spezifische SPFx-Paket an den
+mit `--test-environment-package-sha256` übergebenen SHA-256 und verwendet
+die bestehende `runtime-env-bootstrap`-Grenze. Mit
+`--test-environment-include-teams` wird das abgeleitete Teams-Paket
+optional im exakten Team veröffentlicht und installiert. Der Lauf darf
+ausschließlich die deklarierte synthetische Immobilienkaufakte, ihre Aufgaben
+und Frist per Microsoft Graph REST `v1.0` schreiben, gezielt zurücklesen
+und anschließend laufgebunden bereinigen. Deployment-, Readback- und Cleanup-
+Evidence ist redigiert. Der Befehl erzeugt oder ändert keine Berechtigung,
+keinen Scope und kein Credential. Der Live-BFF, delegierte BFF-Scope und die
+Entra-Tokenvalidierung bleiben `DEFERRED`; die sichtbare Oberfläche
+verwendet bis zu deren separater Aktivierung ausschließlich die
+paketgebundene synthetische Projektion.
 
 `runtime-smoke` und `runtime-metadata` lesen dabei nur Graph-REST-Metadaten und
 prüfen die gefundenen Listen und Dokumentbibliotheken gegen das deklarative

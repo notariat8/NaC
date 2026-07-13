@@ -199,6 +199,73 @@ class M365RuntimeEnvBootstrapTests(unittest.TestCase):
         self.assertEqual(child_env["M365_RUNTIME_CLIENT_CERTIFICATE_PATH"], str(certificate_path))
         self.assertEqual(child_env["M365_RUNTIME_CLIENT_KEY_PATH"], str(private_key_path))
 
+    def test_test_environment_deploy_child_receives_runtime_env_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            state_path = tmp_path / "runtime-state.json"
+            certificate_path = tmp_path / "runtime.cert.pem"
+            private_key_path = tmp_path / "runtime.key.pem"
+            state_path.write_text(json.dumps(_runtime_state()), encoding="utf-8")
+            certificate_path.touch()
+            private_key_path.touch()
+
+            args = cli.build_parser().parse_args(
+                [
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "m365",
+                    "teams-sharepoint",
+                    "test-environment-deploy",
+                    "--owner-approved",
+                    "--runtime-smoke-state",
+                    str(state_path),
+                    "--runtime-certificate-path",
+                    str(certificate_path),
+                    "--runtime-private-key-path",
+                    str(private_key_path),
+                    "--test-environment-package-sha256",
+                    "a" * 64,
+                    "--test-environment-include-teams",
+                    "--format",
+                    "json",
+                ]
+            )
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps({"status": "PASSED"}) + "\n",
+                stderr="",
+            )
+            with (
+                patch.dict(cli.os.environ, {}, clear=True),
+                patch("nac_cli.cli.subprocess.run", return_value=completed) as run_mock,
+            ):
+                stdout = StringIO()
+                with redirect_stdout(stdout):
+                    return_code = args.func(args)
+            child_env = run_mock.call_args.kwargs["env"]
+            child_argv = run_mock.call_args.args[0]
+
+        self.assertEqual(return_code, 0)
+        self.assertIn("test-environment-deploy", child_argv)
+        self.assertIn("--test-environment-package-sha256", child_argv)
+        self.assertIn("--test-environment-include-teams", child_argv)
+        self.assertIsNotNone(child_env)
+        runtime_names = {
+            name
+            for name in child_env
+            if name.startswith("M365_RUNTIME_") or name == "M365_TENANT_ID"
+        }
+        self.assertEqual(
+            runtime_names,
+            {
+                "M365_TENANT_ID",
+                "M365_RUNTIME_CLIENT_ID",
+                "M365_RUNTIME_CLIENT_CERTIFICATE_PATH",
+                "M365_RUNTIME_CLIENT_KEY_PATH",
+            },
+        )
+
     def test_matter_access_apply_smoke_child_preserves_explicit_runtime_env(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

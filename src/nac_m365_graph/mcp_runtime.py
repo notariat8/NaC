@@ -623,15 +623,16 @@ def _payload_for_tool(
             }
         }
     if tool_name == "task_create":
-        return {
-            "fields": {
-                "NacTaskId": arguments["task_id"],
-                "NacCaseId": arguments["case_id"],
-                "BpmnStepCode": arguments["bpmn_step_code"],
-                "Status": arguments["status"],
-                "RequiresNotaryApproval": arguments["requires_notary_approval"],
-            }
+        fields = {
+            "NacTaskId": arguments["task_id"],
+            "NacCaseId": arguments["case_id"],
+            "BpmnStepCode": arguments["bpmn_step_code"],
+            "Status": arguments["status"],
+            "RequiresNotaryApproval": arguments["requires_notary_approval"],
         }
+        if "due_date" in arguments:
+            fields["DueDate"] = arguments["due_date"]
+        return {"fields": fields}
     if tool_name == "grant_request":
         return {
             "fields": {

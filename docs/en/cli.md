@@ -72,6 +72,7 @@ python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
+python scripts/nac.py m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 python scripts/nac.py m365 teams-sharepoint bpmn-viewer-plan --format json
 python scripts/nac.py m365 teams-sharepoint matter-access-plan --format json
 python scripts/nac.py m365 teams-sharepoint matter-access-decision-replay --format json
@@ -145,6 +146,7 @@ nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
+nac m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 nac m365 teams-sharepoint bpmn-viewer-plan --format json
 nac m365 teams-sharepoint matter-access-plan --format json
 nac m365 teams-sharepoint matter-access-decision-replay --format json
@@ -315,6 +317,7 @@ nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
+nac m365 teams-sharepoint test-environment-deploy --owner-approved --mcp-smoke-workspace-id notary_team_01 --mcp-smoke-correlation-id <correlation-id> --test-environment-package-sha256 <sha256> --test-environment-include-teams --format json
 nac m365 teams-sharepoint privileged-plan --format json
 nac m365 teams-sharepoint mcp-manifest --format json
 nac batch-approval m365 --batch-pr 383 --batch-pr 385 --format json
@@ -376,19 +379,35 @@ and points to the bundled `runtime-certificate-rotation` approval path. It
 reads no certificate, private-key or secret files and emits no thumbprint,
 tenant ID, client ID, site ID, raw Graph response or mandate data.
 
-`runtime-env-bootstrap` is offline and prepares the certificate-based runtime
-environment for local release-gate child processes. The command reads only the
-non-secret runtime-smoke state, checks local certificate and private-key paths
-for existence without reading file contents, and writes
-`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`. The artifact
-contains variable names, status and privacy flags, but no tenant ID, client ID,
-certificate thumbprint, certificate body, private-key data, token or secret
-values. `release-gate-run` uses the same bootstrap logic internally so
-`runtime-smoke`, `runtime-metadata` and the MCP smoke steps receive the needed
-runtime env values as a child-process overlay. The runner also writes this
-bootstrap evidence as a redacted artifact and attaches it to
-`release-gate-evidence` and the artifact index. The live run remains
-owner-gated and does not execute without `--owner-approved`.
+`runtime-env-bootstrap` is offline and prepares the certificate-based
+runtime environment for local release-gate child processes. The command reads
+only the non-secret runtime-smoke state, checks local certificate and
+private-key paths for existence without reading file contents, and writes
+`out/m365/teams-sharepoint/runtime-env-bootstrap.redacted.json`. The
+artifact contains variable names, status and privacy flags, but no tenant ID,
+client ID, certificate thumbprint, certificate body, private-key data, token
+or secret values. `release-gate-run` uses the same bootstrap logic
+internally so `runtime-smoke`, `runtime-metadata`, and the MCP smoke
+steps receive the needed runtime environment values as a child-process
+overlay. The runner also writes this bootstrap evidence as a redacted artifact
+and attaches it to `release-gate-evidence` and the artifact index. The
+live run remains owner-gated and does not execute without
+`--owner-approved`.
+
+`test-environment-deploy` is the owner-gated one-shot runner for the
+synthetic MVP test environment. It accepts only the exact workspace
+`notary_team_01`, binds the site-scoped SPFx package to the SHA-256
+supplied through `--test-environment-package-sha256`, and uses the
+existing `runtime-env-bootstrap` boundary. With
+`--test-environment-include-teams`, the derived Teams package is
+optionally published and installed in the exact team. The run may write only
+the declared synthetic real-estate purchase matter, its tasks, and due date
+through Microsoft Graph REST `v1.0`, read them back by exact identifier,
+and then perform run-owned cleanup. Deployment, readback, and cleanup evidence
+is redacted. The command creates or changes no permission, scope, or
+credential. The live BFF, delegated BFF scope, and Entra token validation
+remain `DEFERRED`; until their separate activation, the visible UI uses
+the package-bound synthetic projection only.
 
 `runtime-smoke` and `runtime-metadata` read only Graph REST metadata and compare
 the discovered lists and document libraries against the declarative MVP schema.

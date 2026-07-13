@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any, Callable
 
 from .test_environment import TestEnvironmentBff, ValidatedClaims
@@ -19,7 +20,7 @@ def create_fastapi_app(
     """
 
     try:
-        from fastapi import Depends, FastAPI, Query
+        from fastapi import Depends, FastAPI, Request
         from fastapi.responses import JSONResponse
     except ImportError as exc:  # pragma: no cover - exercised by container wiring
         raise RuntimeError("FastAPI is available only in the nac-bff runtime image") from exc
@@ -40,24 +41,36 @@ def create_fastapi_app(
             headers=_security_headers(),
         )
 
-    @app.get("/v1/workspaces/{workspace_id}/matters/{matter_id}")
     async def get_workspace(
+        request: object,
         workspace_id: str,
         matter_id: str,
-        purpose: str = Query(..., min_length=1, max_length=80),
         claims: object = Depends(validated_claims_dependency),
     ):
+        purpose, request_filters = _parse_workspace_query(
+            request.query_params.multi_items()
+        )
         response = bff.get_workspace(
             claims=claims,
             workspace_id=workspace_id,
             matter_id=matter_id,
             purpose=purpose,
+            request_filters=request_filters,
         )
         return JSONResponse(
             status_code=response.status_code,
             content=response.body,
             headers=_security_headers(),
         )
+
+    # ``Request`` is imported lazily, while postponed annotations otherwise
+    # resolve only against module globals during FastAPI route registration.
+    get_workspace.__annotations__["request"] = Request
+    app.add_api_route(
+        "/v1/workspaces/{workspace_id}/matters/{matter_id}",
+        get_workspace,
+        methods=["GET"],
+    )
 
     return app
 
@@ -89,6 +102,24 @@ def create_unconfigured_app() -> Any:
         graph_rest_port=_UnavailableGraph(),
     )
     return create_fastapi_app(bff=bff, validated_claims_dependency=_no_validated_claims)
+
+
+def _parse_workspace_query(
+    query_items: Iterable[tuple[str, str]],
+) -> tuple[str, dict[str, bool]]:
+    """Accept exactly one bounded ``purpose`` parameter and nothing else.
+
+    The marker deliberately contains no request-controlled values. It lets the
+    domain boundary return its generic unauthorized response for missing,
+    duplicate, malformed or additional query parameters.
+    """
+
+    items = list(query_items)
+    if len(items) == 1:
+        key, value = items[0]
+        if key == "purpose" and isinstance(value, str) and 1 <= len(value) <= 80:
+            return value, {}
+    return "", {"invalid_query_shape": True}
 
 
 def _security_headers() -> dict[str, str]:

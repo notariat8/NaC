@@ -708,6 +708,7 @@ def build_parser() -> argparse.ArgumentParser:
             "mcp-smoke-cleanup",
             "mcp-smoke-leftover-cleanup",
             "mcp-smoke-suite",
+            "test-environment-deploy",
             "release-gate-evidence",
             "release-gate-retention-audit-pack",
             "release-gate-retention-compare",
@@ -965,6 +966,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--mcp-suite-cleanup",
         action="store_true",
         help="Fuehrt Write-Read-Smoke und Cleanup derselben synthetischen Akte in einem owner-gated Lauf aus.",
+    )
+    teams_sharepoint.add_argument(
+        "--test-environment-package-sha256",
+        help="Erwarteter SHA-256 des site-scoped SPFx-Pakets.",
+    )
+    teams_sharepoint.add_argument(
+        "--test-environment-include-teams",
+        action="store_true",
+        help="Veröffentlicht und installiert das Teams-Paket ausschließlich für notary_team_01.",
+    )
+    teams_sharepoint.add_argument(
+        "--test-environment-output",
+        type=Path,
+        help="Pfad für die kombinierte redigierte MVP-Testumgebungs-Evidence unter out/.",
     )
     teams_sharepoint.add_argument(
         "--release-gate-evidence-output",
@@ -2809,6 +2824,14 @@ def command_m365(args: argparse.Namespace) -> int:
             script_args.extend(["--mcp-suite-output", str(args.mcp_suite_output)])
         if args.mcp_suite_cleanup:
             script_args.append("--mcp-suite-cleanup")
+        if args.test_environment_package_sha256:
+            script_args.extend(
+                ["--test-environment-package-sha256", args.test_environment_package_sha256]
+            )
+        if args.test_environment_include_teams:
+            script_args.append("--test-environment-include-teams")
+        if args.test_environment_output:
+            script_args.extend(["--test-environment-output", str(args.test_environment_output)])
         if args.owner_approved:
             script_args.append("--owner-approved")
         if args.format == "json":
@@ -6748,7 +6771,10 @@ def _runtime_env_bootstrap_messages(readiness: dict[str, Any]) -> list[str]:
 
 
 def _m365_teams_sharepoint_child_env(repo_root: Path, args: argparse.Namespace) -> dict[str, str] | None:
-    if getattr(args, "teams_sharepoint_command", None) != "matter-access-apply-smoke":
+    if getattr(args, "teams_sharepoint_command", None) not in {
+        "matter-access-apply-smoke",
+        "test-environment-deploy",
+    }:
         return None
     overlay, readiness = _m365_runtime_env_overlay_for_child(repo_root, args)
     if readiness.get("status") != "PASSED" or not overlay:

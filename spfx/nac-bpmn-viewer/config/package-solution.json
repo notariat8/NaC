@@ -1,38 +1,41 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
   "solution": {
-    "name": "nac-bpmn-viewer-spfx-skeleton",
+    "name": "nac-bpmn-viewer-client-side-solution",
     "id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
-    "version": "0.0.0.0",
+    "version": "0.1.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": false,
     "isDomainIsolated": false,
+    "webApiPermissionRequests": [],
     "developer": {
       "name": "notariat8",
       "websiteUrl": "https://github.com/notariat8/NaC",
-      "privacyUrl": "https://github.com/notariat8/NaC",
-      "termsOfUseUrl": "https://github.com/notariat8/NaC",
-      "mpnId": "Unset"
+      "privacyUrl": "https://github.com/notariat8/NaC/blob/main/policies/data-protection-policy.yaml",
+      "termsOfUseUrl": "https://github.com/notariat8/NaC/blob/main/LICENSE",
+      "mpnId": "Undefined-1.23.2"
     },
     "metadata": {
       "shortDescription": {
-        "default": "Offline source skeleton for the read-only NaC BPMN Viewer."
+        "default": "NaC read-only notarial workspace"
       },
       "longDescription": {
-        "default": "This skeleton is not packaged or deployed in the MVP slice. It documents the future SPFx web part boundary for rendering approved BPMN XML with bpmn-js Viewer."
+        "default": "Site-scoped Teams and SharePoint test workspace for synthetic notarial process metadata and approved BPMN models."
       },
       "screenshotPaths": [],
       "videoUrl": "",
       "categories": []
     },
-    "features": []
+    "features": [
+      {
+        "title": "nac-bpmn-viewer Feature",
+        "description": "The feature that activates elements of the nac-bpmn-viewer solution.",
+        "id": "ea9917ea-2860-45fb-89bd-121120178be3",
+        "version": "1.0.0.0"
+      }
+    ]
   },
   "paths": {
-    "zippedPackage": "solution/nac-bpmn-viewer-spfx-skeleton.sppkg"
-  },
-  "nacGuardrails": {
-    "packageSolutionEnabledNow": false,
-    "appCatalogDeployAllowedNow": false,
-    "tenantApplyAllowedNow": false
+    "zippedPackage": "solution/nac-bpmn-viewer.sppkg"
   }
 }

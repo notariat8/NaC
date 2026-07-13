@@ -18,177 +18,121 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
-    def test_contract_keeps_sharepoint_viewer_only(self) -> None:
+    def test_contract_defines_packageable_viewer_only_spfx(self) -> None:
+        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.3")
+        self.assertEqual(self.contract["status"], "synthetic_site_scoped_mvp")
         spfx = self.contract["spfx_surface"]
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
+        self.assertEqual(spfx["framework_version"], "1.23.2")
+        self.assertEqual(spfx["build_tool"], "Heft")
         self.assertEqual(spfx["library"], "bpmn-js")
         self.assertEqual(spfx["bpmn_js_mode"], "viewer_only")
-        self.assertTrue(spfx["included_in_nac_repo_now"])
-        self.assertEqual(spfx["package_root"], "spfx/nac-bpmn-viewer")
-        self.assertEqual(spfx["status"], "offline_source_only")
-        self.assertFalse(spfx["app_catalog_deploy_allowed_now"])
-        self.assertFalse(spfx["tenant_apply_allowed_now"])
-        self.assertFalse(spfx["executes_graph_requests_now"])
+        self.assertTrue(spfx["package_lock_required"])
+        self.assertTrue(spfx["reproducible_build_required"])
+        self.assertTrue(spfx["package_solution_enabled_now"])
+        self.assertTrue(spfx["site_scoped"])
+        self.assertFalse(spfx["tenant_wide"])
         self.assertFalse(spfx["modeler_enabled"])
         self.assertFalse(spfx["workflow_execution_allowed"])
-        self.assertFalse(spfx["requires_custom_script"])
+        self.assertFalse(spfx["writes_sharepoint_or_bpmn"])
+        self.assertIn("TeamsTab", spfx["supported_hosts"])
 
-    def test_contract_keeps_graph_rest_boundary(self) -> None:
-        graph = self.contract["graph_policy"]
-        self.assertTrue(graph["graph_rest_only"])
-        self.assertTrue(graph["raw_http_required"])
-        self.assertFalse(graph["legacy_sharepoint_api_allowed"])
-        self.assertFalse(graph["csom_allowed"])
-        self.assertFalse(graph["pnp_allowed"])
-        self.assertFalse(graph["graph_sdk_allowed"])
-        self.assertIn(
-            "GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content",
-            graph["allowed_endpoint_patterns"],
-        )
-
-    def test_contract_blocks_modeler_execution_and_matter_payloads(self) -> None:
-        blocked = set(self.contract["blocked_operations"])
-        for operation in {
-            "write_bpmn_xml",
-            "save_bpmn_model",
-            "execute_workflow",
-            "start_process_instance",
-            "mutate_sharepoint_schema",
-            "read_matter_document_content",
-            "read_matter_payload",
-            "store_mandate_data",
-            "spfx_bundle",
-            "spfx_package_solution",
-            "create_sppkg",
-            "app_catalog_upload",
-            "site_app_install",
-            "live_bpmn_content_read",
-        }:
-            self.assertIn(operation, blocked)
-        self.assertTrue(self.contract["sharepoint_surface"]["approved_bpmn_xml_content_read_allowed"])
-        self.assertFalse(self.contract["sharepoint_surface"]["matter_document_content_reads_allowed"])
-
-    def test_contract_links_optional_provisioning_plan_without_live_apply(self) -> None:
-        optional_plan = self.contract["optional_provisioning_plan"]
-
-        self.assertEqual(
-            optional_plan["artifact"],
-            "deploy/m365/teams-sharepoint/nac-bpmn-viewer.provisioning.json",
-        )
-        self.assertEqual(optional_plan["command"], "nac m365 teams-sharepoint bpmn-viewer-plan --format json")
-        self.assertEqual(optional_plan["status"], "optional_plan_only_no_live_apply")
-        self.assertFalse(optional_plan["adds_to_required_mvp_schema_now"])
-        self.assertFalse(optional_plan["live_apply_implemented"])
-        self.assertFalse(optional_plan["mutates_tenant_now"])
-        self.assertTrue(optional_plan["owner_gate_required_before_future_apply"])
-        self.assertEqual(optional_plan["planned_document_libraries"], ["BPMN Models"])
-        self.assertEqual(optional_plan["planned_lists"], ["Prozessregister"])
-
-    def test_contract_links_offline_spfx_skeleton_without_deploy(self) -> None:
-        skeleton = self.contract["offline_spfx_skeleton"]
-
-        self.assertEqual(
-            skeleton["artifact"],
-            "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
-        )
-        self.assertEqual(skeleton["package_root"], "spfx/nac-bpmn-viewer")
-        self.assertEqual(skeleton["command"], "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json")
-        self.assertEqual(skeleton["status"], "offline_skeleton_no_package_deploy")
-        self.assertTrue(skeleton["source_skeleton_included_now"])
-        self.assertFalse(skeleton["actual_spfx_package_included_now"])
-        self.assertFalse(skeleton["package_solution_enabled_now"])
-        self.assertFalse(skeleton["app_catalog_deploy_allowed_now"])
-        self.assertFalse(skeleton["tenant_apply_allowed_now"])
-        self.assertFalse(skeleton["executes_graph_requests_now"])
-
-    def test_contract_links_process_register_selection_without_live_read(self) -> None:
-        selection = self.contract["process_register_selection"]
-
-        self.assertEqual(selection["slice"], "spfx-bpmn-viewer-process-register-selection-contract")
-        self.assertEqual(
-            selection["command"],
-            "nac m365 teams-sharepoint spfx-bpmn-viewer-process-selection --format json",
-        )
-        self.assertEqual(selection["status"], "offline_selection_no_live_read")
-        self.assertEqual(selection["selects_from"], "Prozessregister")
-        self.assertEqual(selection["links_to"], "BPMN Models")
-        self.assertEqual(selection["requires_process_status"], "Approved")
-        self.assertEqual(selection["requires_overlay_policy"], "MetadataOnly")
-        self.assertTrue(selection["requires_viewer_enabled"])
-        self.assertFalse(selection["executes_graph_requests_now"])
-        self.assertFalse(selection["reads_sharepoint_file_content_now"])
-        self.assertFalse(selection["app_catalog_deploy_allowed_now"])
-        self.assertFalse(selection["returns_matter_document_content"])
-        self.assertEqual(
-            set(selection["request_plan_tools"]),
-            {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"},
-        )
-        self.assertIn("linked_bpmn_model_renderable", selection["required_checks"])
-
-    def test_business_case_type_binding_keeps_viewer_projection_optional(self) -> None:
-        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.2")
-        binding = self.contract["business_case_type_binding"]
-
-        self.assertEqual(binding["business_case_type_id_field"], "BusinessCaseTypeId")
-        self.assertEqual(binding["process_register_list"], "Prozessregister")
-        self.assertEqual(binding["existing_row_join_invariant"], "ProcessKey == BusinessCaseTypeId")
-        self.assertEqual(binding["process_key_column"], "ProcessKey")
-        self.assertTrue(binding["process_register_optional_for_business_case_type_validity"])
-        self.assertTrue(binding["process_key_unique"])
-        self.assertTrue(binding["process_key_indexed"])
-        self.assertFalse(binding["absence_invalidates_business_case_type"])
-        self.assertEqual(
-            set(binding["nullable_process_row_bpmn_fields"]),
-            {
-                "NacBpmnModelId",
-                "BpmnDriveItemId",
-                "BpmnXmlSha256",
-                "BpmnGitPath",
-                "BpmnGitCommitSha",
-                "NacBpmnVersion",
-                "BpmnContentMode",
-            },
-        )
+    def test_deployment_is_owner_approved_only_for_notary_team_01(self) -> None:
+        deployment = self.contract["deployment_scope"]
+        self.assertEqual(deployment["approval"], "owner_approved")
+        self.assertEqual(deployment["approved_workspace_ids"], ["notary_team_01"])
+        self.assertTrue(deployment["app_catalog_upload_allowed_now"])
+        self.assertTrue(deployment["site_scoped_install_allowed_now"])
+        self.assertFalse(deployment["tenant_wide_deploy_allowed_now"])
+        self.assertFalse(deployment["other_workspace_deploy_allowed_now"])
 
         invalid = copy.deepcopy(self.contract)
-        invalid["business_case_type_binding"]["absence_invalidates_business_case_type"] = True
+        invalid["deployment_scope"]["approved_workspace_ids"].append("other_workspace")
         errors = _validate_contract(invalid, {}, {}, {}, {})
         self.assertIn(
-            "business_case_type_binding.absence_invalidates_business_case_type must be false",
+            "deployment_scope.approved_workspace_ids must contain only notary_team_01",
             errors,
         )
 
-    def test_contract_links_runtime_readiness_without_deploy_or_live_read(self) -> None:
-        readiness = self.contract["runtime_readiness"]
+    def test_packaging_requires_lockfile_and_excludes_generated_trees(self) -> None:
+        packaging = self.contract["packaging_contract"]
+        self.assertEqual(packaging["package_lock"], "spfx/nac-bpmn-viewer/package-lock.json")
+        self.assertEqual(packaging["install_command"], "npm ci")
+        self.assertEqual(packaging["build_command"], "npm run build")
+        self.assertEqual(packaging["package_output"], "sharepoint/solution/nac-bpmn-viewer.sppkg")
+        self.assertEqual(
+            set(packaging["generated_paths_ignored_untracked"]),
+            {"node_modules", "lib", "dist", "temp", "sharepoint/solution"},
+        )
+        self.assertTrue(packaging["generated_paths_excluded_from_recursive_source_scans"])
 
-        self.assertEqual(
-            readiness["artifact"],
-            "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
-        )
-        self.assertEqual(
-            readiness["command"],
-            "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
-        )
-        self.assertEqual(readiness["status"], "offline_runtime_readiness_no_live_deploy")
-        self.assertFalse(readiness["spfx_package_allowed_now"])
-        self.assertFalse(readiness["app_catalog_upload_allowed_now"])
-        self.assertFalse(readiness["tenant_apply_allowed_now"])
-        self.assertFalse(readiness["live_bpmn_content_read_enabled_now"])
-        self.assertFalse(readiness["executes_graph_requests_now"])
-        self.assertIn("NacDataClass in Template,Demo,Reference", readiness["metadata_gates"])
-        for value in readiness["privacy_guards"].values():
+    def test_contract_is_graph_free_and_contains_no_permission_path(self) -> None:
+        boundary = self.contract["graph_free_boundary"]
+        for value in boundary.values():
             self.assertFalse(value)
 
-    def test_contract_keeps_bpmn_mcp_tools_planning_only(self) -> None:
-        mcp = self.contract["mcp_boundary"]
+        invalid = copy.deepcopy(self.contract)
+        invalid["graph_free_boundary"]["aad_http_client_allowed"] = True
+        errors = _validate_contract(invalid, {}, {}, {}, {})
+        self.assertIn("graph_free_boundary.aad_http_client_allowed must be false", errors)
 
+    def test_contract_uses_only_package_bound_synthetic_data(self) -> None:
+        synthetic = self.contract["synthetic_data_boundary"]
+        self.assertEqual(synthetic["workspace_id"], "notary_team_01")
+        self.assertEqual(synthetic["source"], "package_fixture")
+        self.assertTrue(synthetic["synthetic_data_only"])
+        self.assertFalse(synthetic["contains_real_matter_data"])
+        self.assertFalse(synthetic["reads_sharepoint_content"])
+        self.assertFalse(synthetic["reads_matter_document_content"])
+        self.assertFalse(synthetic["writes_allowed"])
+
+        render = self.contract["package_render_contract"]
+        self.assertEqual(render["request_plan_count"], 0)
+        self.assertTrue(render["viewer_only"])
+        self.assertFalse(render["liveTenantAccess"])
         self.assertEqual(
-            set(mcp["request_plan_tools_enabled_now"]),
-            {"bpmn_model_get", "process_register_list", "bpmn_viewer_overlay_get"},
+            render["dom_markers"],
+            {
+                "component": 'data-nac-component="test-workspace"',
+                "synthetic_data": "Synthetische Testdaten",
+                "no_matter_data": "Keine Mandatsdaten",
+            },
         )
-        self.assertEqual(set(mcp["owner_gated_live_read_tools_enabled_now"]), {"case_get", "document_list"})
-        self.assertTrue(mcp["tools_read_only"])
-        self.assertTrue(mcp["tools_must_not_return_matter_document_content"])
+        self.assertTrue(all(value is False for value in render["privacy_guards"].values()))
+
+    def test_blocked_operations_cover_writes_real_data_and_network_clients(self) -> None:
+        blocked = set(self.contract["blocked_operations"])
+        for operation in {
+            "tenant_wide_deploy",
+            "deploy_other_workspace",
+            "graph_permission_request",
+            "direct_graph_request",
+            "ms_graph_client",
+            "aad_http_client",
+            "graph_sdk",
+            "legacy_sharepoint_api",
+            "pnp",
+            "write_bpmn_xml",
+            "execute_workflow",
+            "write_sharepoint_data",
+            "read_matter_document_content",
+            "store_real_matter_data",
+        }:
+            self.assertIn(operation, blocked)
+
+    def test_runtime_readiness_matches_package_mode(self) -> None:
+        readiness = self.contract["runtime_readiness"]
+        self.assertEqual(readiness["status"], "synthetic_site_scoped_runtime_ready")
+        self.assertEqual(
+            readiness["redacted_artifact_kind"],
+            "redacted_synthetic_site_scoped_readiness_json",
+        )
+        self.assertTrue(readiness["spfx_package_allowed_now"])
+        self.assertTrue(readiness["app_catalog_upload_allowed_now"])
+        self.assertTrue(readiness["site_scoped_install_allowed_now"])
+        self.assertFalse(readiness["tenant_wide_deploy_allowed_now"])
+        self.assertFalse(readiness["graph_access_allowed"])
+        self.assertFalse(readiness["writes_allowed"])
 
     def test_validator_passes(self) -> None:
         result = subprocess.run(
@@ -197,6 +141,7 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
+            timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("STATUS: PASSED", result.stdout)

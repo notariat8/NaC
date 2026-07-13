@@ -1119,6 +1119,64 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
             },
         )
 
+    def test_task_create_payload_includes_optional_due_date(self) -> None:
+        plan = plan_tool_request(
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            _open_context(case_id="case-1", write_approved=True),
+            "task_create",
+            {
+                "task_id": "task-1",
+                "case_id": "case-1",
+                "bpmn_step_code": "draft-contract",
+                "status": "Offen",
+                "requires_notary_approval": True,
+                "due_date": "2026-08-31T16:00:00Z",
+            },
+        )
+
+        self.assertEqual(
+            plan.payload,
+            {
+                "fields": {
+                    "NacTaskId": "task-1",
+                    "NacCaseId": "case-1",
+                    "BpmnStepCode": "draft-contract",
+                    "Status": "Offen",
+                    "RequiresNotaryApproval": True,
+                    "DueDate": "2026-08-31T16:00:00Z",
+                }
+            },
+        )
+
+    def test_task_create_payload_is_unchanged_without_due_date(self) -> None:
+        plan = plan_tool_request(
+            load_mcp_contract(DEFAULT_MCP_CONTRACT),
+            _provisioned_state(),
+            _open_context(case_id="case-1", write_approved=True),
+            "task_create",
+            {
+                "task_id": "task-1",
+                "case_id": "case-1",
+                "bpmn_step_code": "draft-contract",
+                "status": "Offen",
+                "requires_notary_approval": True,
+            },
+        )
+
+        self.assertEqual(
+            plan.payload,
+            {
+                "fields": {
+                    "NacTaskId": "task-1",
+                    "NacCaseId": "case-1",
+                    "BpmnStepCode": "draft-contract",
+                    "Status": "Offen",
+                    "RequiresNotaryApproval": True,
+                }
+            },
+        )
+
     def test_grant_request_payload_keeps_reason_duration_and_audit_correlation(self) -> None:
         plan = plan_tool_request(
             load_mcp_contract(DEFAULT_MCP_CONTRACT),
@@ -1266,6 +1324,31 @@ class TeamsSharePointDataMcpTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
         self.assertIn("--owner-approved", result.stderr)
+
+    def test_central_cli_test_environment_deploy_requires_owner_before_credentials(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/nac.py",
+                "--repo-root",
+                str(REPO_ROOT),
+                "m365",
+                "teams-sharepoint",
+                "test-environment-deploy",
+                "--format",
+                "json",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertIn("--owner-approved", payload["errors"][0])
 
     def test_central_cli_mcp_live_read_smoke_requires_owner_approval(self) -> None:
         result = subprocess.run(

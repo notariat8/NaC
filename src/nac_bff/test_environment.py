@@ -1,25 +1,30 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
 from enum import Enum
-import re
 from typing import Any, Mapping, Protocol
 
-
-ALLOWED_WORKSPACE_ID = "notary_team_01"
-ALLOWED_MATTER_ID = "NAC-SYN-MATTER-001"
-ALLOWED_PURPOSE = "view_synthetic_matter_workspace"
-
-_BUSINESS_CASE_TYPE_ID = "immobilienkaufvertrag"
-_MATTER_DISPLAY_NAME = "Synthetische IKV-Testakte"
-_MODEL_KEY = "immobilienkaufvertrag"
-_SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.1"
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_ALLOWED_MATTER_STATUSES = frozenset(
-    {"draft", "open", "in_review", "ready_for_signature", "completed"}
+from nac_mvp_test_environment import (
+    BPMN_PROCESS_KEY,
+    BPMN_SHA256,
+    BUSINESS_CASE_TYPE_ID,
+    DEADLINE,
+    MATTER_ID,
+    MATTER_STATUS,
+    POLICY_REFERENCE_TIME,
+    PURPOSE,
+    SYNTHETIC_POLICY_STATE,
+    TASKS,
+    WORKSPACE_ID,
+    evaluate_synthetic_access_policy,
 )
-_ALLOWED_TASK_STATUSES = frozenset({"planned", "open", "in_progress", "completed"})
+
+
+ALLOWED_WORKSPACE_ID = WORKSPACE_ID
+ALLOWED_MATTER_ID = MATTER_ID
+ALLOWED_PURPOSE = PURPOSE
+_MATTER_DISPLAY_NAME = "Synthetische IKV-Testakte"
+_SCHEMA_VERSION = "nac.m365-test-environment-workspace/v0.1"
 
 
 class AccessMode(str, Enum):
@@ -83,6 +88,47 @@ class AccessDecisionPort(Protocol):
         ...
 
 
+class DeterministicSyntheticAccessDecisionPort:
+    """BFF policy port backed by the canonical fail-closed synthetic policy."""
+
+    def __init__(
+        self,
+        *,
+        policy_state: Mapping[str, Any] = SYNTHETIC_POLICY_STATE,
+        reference_time: str = POLICY_REFERENCE_TIME,
+    ) -> None:
+        self._policy_state = policy_state
+        self._reference_time = reference_time
+
+    def decide(
+        self,
+        *,
+        actor_id: str,
+        tenant_id: str,
+        workspace_id: str,
+        matter_id: str,
+        purpose: str,
+    ) -> AccessDecision:
+        del tenant_id
+        result = evaluate_synthetic_access_policy(
+            {
+                "actor_id": actor_id,
+                "workspace_id": workspace_id,
+                "case_id": matter_id,
+                "purpose": purpose,
+            },
+            policy_state=self._policy_state,
+            reference_time=self._reference_time,
+        )
+        if result.get("decision") != "ALLOW":
+            return AccessDecision.deny()
+        if result.get("mode") == "assigned":
+            return AccessDecision.assigned()
+        if result.get("mode") == "deputy":
+            return AccessDecision.deputy()
+        return AccessDecision.deny()
+
+
 class GraphRestPort(Protocol):
     """Read-only, raw Microsoft Graph REST v1.0 data port.
 
@@ -134,18 +180,23 @@ class TestEnvironmentBff:
         workspace_id: str,
         matter_id: str,
         purpose: str,
+        request_filters: Mapping[str, object] | None = None,
     ) -> BffResponse:
         if not isinstance(claims, ValidatedClaims):
             return _error(401, "authentication required")
 
         # Scope checks precede access and data ports so manipulated identifiers
-        # cannot be used for probing or arbitrary Graph path construction.
+        # cannot be used for probing or arbitrary Graph path construction. All
+        # authenticated, unauthorized request shapes deliberately share the
+        # same external response so matter existence cannot be inferred.
         if (
             workspace_id != ALLOWED_WORKSPACE_ID
             or matter_id != ALLOWED_MATTER_ID
             or purpose != ALLOWED_PURPOSE
+            or not isinstance(request_filters, (Mapping, type(None)))
+            or bool(request_filters)
         ):
-            return _error(404, "resource not found")
+            return _error(403, "access denied")
         if claims.tenant_id != self._expected_tenant_id:
             return _error(403, "access denied")
 
@@ -185,64 +236,54 @@ class TestEnvironmentBff:
 def _build_redacted_dto(raw: Mapping[str, Any], *, access_mode: str) -> dict[str, Any]:
     if not isinstance(raw, Mapping):
         raise _ProjectionError("projection must be an object")
-
-    status = _bounded_string(raw.get("status"), field="status", maximum=40)
-    if status not in _ALLOWED_MATTER_STATUSES:
-        raise _ProjectionError("unsupported matter status")
-
-    deadline = _bounded_string(raw.get("deadline"), field="deadline", maximum=10)
-    try:
-        date.fromisoformat(deadline)
-    except ValueError as exc:
-        raise _ProjectionError("deadline must be an ISO date") from exc
+    if raw.get("status") != MATTER_STATUS or raw.get("deadline") != DEADLINE:
+        raise _ProjectionError("synthetic matter projection diverged")
 
     tasks_value = raw.get("tasks")
-    if not isinstance(tasks_value, list) or len(tasks_value) > 20:
-        raise _ProjectionError("tasks must be a bounded list")
-    tasks: list[dict[str, str]] = []
-    for task in tasks_value:
+    if not isinstance(tasks_value, list) or len(tasks_value) != len(TASKS):
+        raise _ProjectionError("synthetic tasks diverged")
+    tasks_by_id = {task.get("taskId"): task for task in tasks_value if isinstance(task, Mapping)}
+    if len(tasks_by_id) != len(TASKS):
+        raise _ProjectionError("synthetic task IDs diverged")
+    tasks: list[dict[str, Any]] = []
+    for expected in TASKS:
+        task = tasks_by_id.get(expected["task_id"])
         if not isinstance(task, Mapping):
-            raise _ProjectionError("task must be an object")
-        title = _bounded_string(task.get("title"), field="task.title", maximum=160)
-        task_status = _bounded_string(task.get("status"), field="task.status", maximum=40)
-        if task_status not in _ALLOWED_TASK_STATUSES:
-            raise _ProjectionError("unsupported task status")
-        tasks.append({"title": title, "status": task_status})
+            raise _ProjectionError("synthetic task missing")
+        canonical = {
+            "taskId": expected["task_id"],
+            "title": expected["title"],
+            "stepCode": expected["step_code"],
+            "status": expected["status"],
+            "requiresNotaryApproval": expected["requires_notary_approval"],
+            "dueAt": expected["due_at"],
+        }
+        if any(task.get(key) != value for key, value in canonical.items()):
+            raise _ProjectionError("synthetic task projection diverged")
+        tasks.append(canonical)
 
     bpmn_value = raw.get("bpmn")
-    if not isinstance(bpmn_value, Mapping):
-        raise _ProjectionError("bpmn must be an object")
-    model_key = _bounded_string(bpmn_value.get("modelKey"), field="bpmn.modelKey", maximum=80)
-    if model_key != _MODEL_KEY:
-        raise _ProjectionError("unexpected BPMN model key")
-    sha256 = _bounded_string(bpmn_value.get("sha256"), field="bpmn.sha256", maximum=64)
-    if not _SHA256_RE.fullmatch(sha256):
-        raise _ProjectionError("invalid BPMN SHA-256")
+    if (
+        not isinstance(bpmn_value, Mapping)
+        or bpmn_value.get("modelKey") != BPMN_PROCESS_KEY
+        or bpmn_value.get("sha256") != BPMN_SHA256
+    ):
+        raise _ProjectionError("synthetic BPMN projection diverged")
 
-    # This explicit shape is the redaction boundary. No raw Graph IDs, fields,
-    # download URLs, user identifiers or token-adjacent values are copied.
     return {
         "schemaVersion": _SCHEMA_VERSION,
         "workspaceId": ALLOWED_WORKSPACE_ID,
         "matter": {
             "matterId": ALLOWED_MATTER_ID,
-            "businessCaseTypeId": _BUSINESS_CASE_TYPE_ID,
+            "businessCaseTypeId": BUSINESS_CASE_TYPE_ID,
             "displayName": _MATTER_DISPLAY_NAME,
-            "status": status,
-            "deadline": deadline,
+            "status": MATTER_STATUS,
+            "deadline": DEADLINE,
             "tasks": tasks,
-            "bpmn": {"modelKey": model_key, "sha256": sha256},
+            "bpmn": {"modelKey": BPMN_PROCESS_KEY, "sha256": BPMN_SHA256},
             "accessMode": access_mode,
         },
     }
-
-
-def _bounded_string(value: object, *, field: str, maximum: int) -> str:
-    if not isinstance(value, str) or not value or len(value) > maximum:
-        raise _ProjectionError(f"{field} must be a bounded string")
-    if any(ord(character) < 32 for character in value):
-        raise _ProjectionError(f"{field} contains control characters")
-    return value
 
 
 def _error(status_code: int, detail: str) -> BffResponse:
