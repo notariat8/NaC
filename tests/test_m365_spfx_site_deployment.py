@@ -191,7 +191,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 if self._command_head(command) == ("spo", "page", "get"):
                     page_get_count += 1
                     content = "[]" if page_get_count == 1 else INITIAL_PAGE_CONTENT
-                    return FakeResult(stdout=json.dumps({"CanvasContent1": content}))
+                    return FakeResult(stdout=json.dumps({"canvasContentJson": content}))
                 return self._create_handler(command)
 
             runner = FakeRunner(empty_canvas_handler)

@@ -936,9 +936,14 @@ def _page_exists(payload: Any) -> bool:
 
 
 def _page_canvas_is_empty(payload: Any) -> bool:
-    if not isinstance(payload, dict) or not _has_field(payload, "CanvasContent1"):
+    if not isinstance(payload, dict):
         return False
-    canvas = _field(payload, "CanvasContent1")
+    if _has_field(payload, "canvasContentJson"):
+        canvas = _field(payload, "canvasContentJson")
+    elif _has_field(payload, "CanvasContent1"):
+        canvas = _field(payload, "CanvasContent1")
+    else:
+        return False
     if isinstance(canvas, str):
         try:
             canvas = json.loads(canvas)
