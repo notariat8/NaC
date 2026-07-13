@@ -1,0 +1,122 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.business_case_type_migration_s5",
+  "domain_contract_id": "notary-kg.business_case_type_migration_s5",
+  "title": "BusinessCaseType migration S5 offline verification",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/618",
+  "acceptance_ids": [
+    "AC-S5-01",
+    "AC-S5-02",
+    "AC-S5-03",
+    "AC-S5-04",
+    "AC-S5-05",
+    "AC-S5-06",
+    "AC-S5-07"
+  ],
+  "applies_when": {
+    "paths": [
+      "src/notary_kg/business_case_type_migration*.py",
+      "src/nac_cli/cli.py",
+      "scripts/validate_business_case_type_migration.py",
+      "tests/test_business_case_type_migration*.py",
+      "tests/fixtures/business-case-type-migration/**",
+      "workflows/migrations/business-case-type/*.json",
+      "workflows/contracts/business-case-type-migration-s5.contract.json",
+      "workflows/verification-contracts/business-case-type-migration-s5.verification.json"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "Issue #618 acceptance criteria and no-live boundary"
+    ],
+    "scoped": [
+      "BusinessCaseType S5 design and implementation plan"
+    ],
+    "on_demand": [
+      "S3 runtime and S4 Graph read-edge contracts"
+    ],
+    "runtime": [
+      "Synthetic fixture bundle only; no external connector"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_business_case_type_migration tests.test_business_case_type_migration_quarantine tests.test_business_case_type_migration_cli tests.test_business_case_type_migration_contract",
+    "python3 scripts/validate_business_case_type_migration.py",
+    "python3 scripts/nac.py kg business-case-type-migration-dry-run --help",
+    "python3 scripts/nac.py contracts verify",
+    "python3 scripts/validate_spec_traceability.py",
+    "python3 scripts/validate_language_parity.py",
+    "python3 scripts/validate_doc_links.py",
+    "python3 scripts/validate_gantt_progress.py",
+    "python3 scripts/nac.py doctor --profile strict",
+    "git diff --check"
+  ],
+  "invariants": [
+    "AC-S5-01: Every validly shaped row receives exactly one of seven classes in normative order.",
+    "AC-S5-02: Canonical hashes bind every version, independently captured final-scan page set and summary, pre/post-scan snapshot and ETag including explicit process-register state.",
+    "AC-S5-03: Only mappable plans VorgangstypId with If-Match; blockers persist in a process-serialized local quarantine.",
+    "AC-S5-04: READY is S5 offline readiness only and requires only already_canonical, two independent stable frozen scans, full-catalog registry coverage and an empty reconciled quarantine.",
+    "AC-S5-05: N and N-1 pinned profiles evaluate the same four scenarios without claiming executable runtime validation.",
+    "AC-S5-06: Recovery remains non-mutating and BLOCKED_PENDING_S6_S7_APPROVAL; switching to N-1 requires later executable validation.",
+    "AC-S5-07: Allowed live calls and tenant writes are both exactly zero."
+  ],
+  "thresholds": {
+    "required_acceptance_criteria": 7,
+    "classification_classes": 7,
+    "legacy_mapping_rows": 4,
+    "max_pages": 1000,
+    "max_rows_per_page": 100,
+    "max_rows": 100000,
+    "operation_page_size": 100,
+    "minimum_scan_separation_seconds": 900,
+    "runtime_candidates": 2,
+    "rollback_steps": 6,
+    "allowed_live_calls": 0,
+    "allowed_tenant_writes": 0,
+    "profile_scenarios_per_candidate": 4
+  },
+  "required_evidence": [
+    "Canonical domain and verification contracts",
+    "Exact four-row mapping and independently pinned N/N-1 profiles",
+    "Two independently captured final-scan page sets plus post-scan registry and process snapshots captured after scan two",
+    "Full runtime-catalog registry coverage and empty reconciled quarantine for offline READY",
+    "Redacted dry-run output with explicit S5_OFFLINE_ONLY scope, blocked live-cutover status, class counts and top-level hashes",
+    "Standalone validator and focused unit tests",
+    "Synthetic ready, all-class blocker, process-state, paging, profile-evaluation and quarantine fixtures"
+  ],
+  "evidence_policy": {
+    "synthetic_only": true,
+    "redacted_only": true,
+    "production_or_resolvable_matter_data_allowed": false,
+    "raw_graph_responses_allowed": false,
+    "credentials_tokens_certificates_allowed": false,
+    "immutable_or_worm_claim_allowed": false,
+    "allowed_live_calls": 0,
+    "allowed_tenant_writes": 0
+  },
+  "exit_conditions": [
+    "All seven acceptance criteria are covered by executable checks.",
+    "All valid fixtures pass and negative fixtures fail for the declared reason.",
+    "Every domain behavior check, when its module is importable, agrees with the contract oracle.",
+    "No unresolved Privacy, External Service or Human Approval finding remains.",
+    "Protected PR checks are green."
+  ],
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_covered": true,
+    "all_fixture_hashes_bound": true,
+    "domain_behavior_checked_when_importable": true,
+    "all_evidence_synthetic_and_redacted": true,
+    "allowed_live_calls": 0,
+    "allowed_tenant_writes": 0,
+    "no_unresolved_review_findings": true
+  },
+  "failure_behavior": {
+    "shape_hash_or_page_drift": "fixture_invalid_without_partial_result",
+    "classification_scan_profile_or_quarantine_blocker": "BLOCKED",
+    "quarantine_existing_divergent": "artifact_write_failed_without_replace",
+    "network_credential_or_tenant_write_attempt": "block_completion",
+    "s6_or_s7_absent": "BLOCKED_PENDING_S6_S7_APPROVAL"
+  }
+}

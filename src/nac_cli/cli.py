@@ -309,6 +309,20 @@ def build_parser() -> argparse.ArgumentParser:
     kg_business_case_type_get.add_argument(
         "--format", choices=["text", "json"], default=argparse.SUPPRESS
     )
+    kg_business_case_type_migration = kg_sub.add_parser(
+        "business-case-type-migration-dry-run",
+        help="Prüft S5-Inventar, Backfill-Plan, Quarantäne und gepinnte N-/N-1-Profil-Evaluation ausschließlich offline.",
+    )
+    kg_business_case_type_migration.add_argument("--fixture", type=Path, required=True)
+    kg_business_case_type_migration.add_argument("--quarantine-state", type=Path, required=True)
+    kg_business_case_type_migration.add_argument(
+        "--output",
+        type=Path,
+        default=Path("out/notary-kg/business-case-type-migration-s5.redacted.json"),
+    )
+    kg_business_case_type_migration.add_argument(
+        "--format", choices=["text", "json"], default=argparse.SUPPRESS
+    )
     kg_ontology_storage_contract = kg_sub.add_parser(
         "ontology-storage-contract",
         help="Prüft den Ontologie-Sizing- und Storage-Vertrag gegen das Geschäftsvorfall-Inventar.",
@@ -1598,6 +1612,8 @@ def command_kg(args: argparse.Namespace) -> int:
         ("site_id", "--site-id"),
         ("purpose", "--purpose"),
         ("registry_fixture", "--registry-fixture"),
+        ("fixture", "--fixture"),
+        ("quarantine_state", "--quarantine-state"),
     ):
         value = getattr(args, attribute, None)
         if value is not None:
@@ -1922,6 +1938,8 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Codex Agent Context Index Audit", "validate_codex_agent_context_index_audit.py"),
             ("Codex Agent Context Verification Contract", "validate_codex_agent_context_operating_model.py"),
             ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
+            ("Business Case Type Graph Read Edge", "validate_business_case_type_graph_read_edge.py"),
+            ("Business Case Type Migration S5", "validate_business_case_type_migration.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -1953,6 +1971,8 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_codex_agent_context_index_audit.py",
             "scripts/validate_verification_contracts_domain_pilot.py",
             "scripts/validate_business_case_type_runtime.py",
+            "scripts/validate_business_case_type_graph_read_edge.py",
+            "scripts/validate_business_case_type_migration.py",
         ]
         overall_rc = 0
         for script_name in validators:

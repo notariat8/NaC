@@ -1,6 +1,6 @@
 # BusinessCaseType Graph Read Edge S4 Implementation Plan
 
-**Status:** in progress; runtime implemented on the branch; WP1-WP8 complete; WP9 open until gates, Protected PR, and remote CI
+**Status:** runtime implemented offline in PR #617; WP9 remains open in the synchronizing S5 PR until remote CI is green; S4b writes remain open
 
 **Spec:** [BusinessCaseType Graph Read Edge S4 Design](../specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md)
 **Leading Issue:** [GitHub #616](https://github.com/notariat8/NaC/issues/616)
@@ -84,8 +84,8 @@ implementation slice.
 
 ## Completion Rule
 
-S4 is implemented only after all seven ACs pass, the strict gate succeeds, an
-independent review is clear, and the Protected PR checks are green. This
+S4 runtime was implemented offline in PR #617 after all seven ACs passed, the strict gate succeeded, an
+independent review was clear, and the Protected PR checks were green. This
 implemented branch state opens neither External Service nor Human Approval and allows
 exactly zero live Graph calls. S4b remains a separate issue for later writes;
 S3 is not silently extended.

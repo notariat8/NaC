@@ -1,0 +1,28 @@
+{
+  "schema_version": "nac.business-case-type-legacy-choice-mapping/v0.1",
+  "mapping_id": "business-case-type-legacy-choice-baseline",
+  "mapping_version": "2026-07-12.1",
+  "typed_namespaces": {
+    "source": "LegacyChoice",
+    "target": "BusinessCaseTypeId"
+  },
+  "normalization_allowed": false,
+  "mappings": [
+    {
+      "source": "handelsregisteranmeldung",
+      "target": "handelsregisteranmeldung"
+    },
+    {
+      "source": "immobilienkaufvertrag",
+      "target": "immobilienkaufvertrag"
+    },
+    {
+      "source": "online-gmbh-gruendung",
+      "target": "online-gmbh-gruendung"
+    },
+    {
+      "source": "unterschriftsbeglaubigung",
+      "target": "unterschriftsbeglaubigung"
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "schema_version": "nac.business-case-type-migration-s5/v0.1",
+  "contract_id": "notary-kg.business_case_type_migration_s5",
+  "title": "BusinessCaseType deterministic offline migration S5",
+  "status": "implemented_offline_pending_protected_pr",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/618",
+  "slice": {
+    "id": "S5",
+    "offline_only": true,
+    "allowed_live_calls": 0,
+    "allowed_tenant_writes": 0,
+    "s6_immutable_evidence_available": false,
+    "s7_live_approval_available": false
+  },
+  "classification": {
+    "evaluation_order": [
+      "unresolved",
+      "etag_skipped",
+      "missing",
+      "already_canonical_or_conflict",
+      "already_canonical_or_unknown",
+      "mappable_or_unknown"
+    ],
+    "classes_exact": [
+      "already_canonical",
+      "mappable",
+      "conflict",
+      "unknown",
+      "missing",
+      "etag_skipped",
+      "unresolved"
+    ],
+    "business_values_allow_only_null_or_nonempty_string": true,
+    "normalization_allowed": false,
+    "duplicate_record_refs_allowed": false
+  },
+  "mapping": {
+    "path": "workflows/migrations/business-case-type/legacy-choice.mapping.json",
+    "mapping_version": "2026-07-12.1",
+    "source_namespace": "LegacyChoice",
+    "target_namespace": "BusinessCaseTypeId",
+    "identity_mapping_across_typed_namespaces_allowed": true,
+    "sources_exact": [
+      "handelsregisteranmeldung",
+      "immobilienkaufvertrag",
+      "online-gmbh-gruendung",
+      "unterschriftsbeglaubigung"
+    ],
+    "direct_known_targets_required": true
+  },
+  "input_bundle": {
+    "fixture_root": "tests/fixtures/business-case-type-migration",
+    "data_classification_exact": "synthetic",
+    "contains_production_data": false,
+    "catalog_version_must_equal_runtime_catalog": true,
+    "record_ref_pattern": "^synref-[a-z0-9-]+$",
+    "matter_row_keys_exact": [
+      "record_ref",
+      "snapshot_etag",
+      "current_etag",
+      "legacy_choice",
+      "business_case_type_id",
+      "read_status"
+    ],
+    "max_pages": 1000,
+    "max_rows_per_page": 100,
+    "max_rows": 100000,
+    "first_page_number": 1,
+    "only_last_page_complete": true,
+    "floats_allowed": false,
+    "post_scan_fields_exact": [
+      "post_scan_observed_at",
+      "post_scan_registry_snapshot",
+      "post_scan_process_snapshot"
+    ],
+    "bindings_keys_exact": [
+      "site_hash",
+      "schema_hash",
+      "matter_list_hash",
+      "registry_list_hash",
+      "process_list_hash"
+    ],
+    "binding_values_exact": "lowercase_sha256",
+    "synthetic_approval_ref_pattern": "^synthetic-approval-[a-z0-9-]+$",
+    "synthetic_etag_suffix_max_length": 64,
+    "synthetic_etag_pattern": "^synthetic-etag-[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "max_fixture_bytes": 4194304,
+    "top_level_matter_pages_must_equal_second_scan": true
+  },
+  "plan": {
+    "planned_class_exact": "mappable",
+    "target_field_exact": "VorgangstypId",
+    "if_match_source": "current_etag",
+    "operation_page_size": 100,
+    "sort_key": "record_ref_hash",
+    "record_ref_hash": "sha256(exact_fixture_record_ref)",
+    "idempotency_key_components": [
+      "manifest_hash",
+      "record_ref_hash",
+      "target_id",
+      "current_etag"
+    ],
+    "partial_result_allowed": false
+  },
+  "quarantine": {
+    "classes_exact": [
+      "conflict",
+      "unknown",
+      "missing",
+      "etag_skipped",
+      "unresolved"
+    ],
+    "record_id_components": [
+      "manifest_hash",
+      "record_ref_hash",
+      "classification",
+      "current_etag"
+    ],
+    "observed_at_in_identity": false,
+    "publish_semantics": "atomic_hard_link_no_overwrite",
+    "existing_identical": "no_op",
+    "existing_divergent": "block",
+    "startup_reconciliation_required": true,
+    "close_or_delete_supported": false,
+    "persistent_not_immutable": true,
+    "filesystem_exclusive_lock_required": true,
+    "durability_failure_restores_previous_committed_index_or_output": true,
+    "nonempty_reconciled_store_blocks_ready": true,
+    "lock_held_through_readiness_and_output_commit": true,
+    "deterministic_recovery_marker_suffix": ".previous",
+    "nonblocking_existing_file_reads": true,
+    "max_record_bytes": 16384,
+    "max_index_bytes": 33554432,
+    "max_directory_entries": 100128
+  },
+  "manifest": {
+    "canonical_json": "json.dumps(sort_keys=True,separators=(',', ':'),ensure_ascii=True,allow_nan=False)",
+    "hash_algorithm": "sha256",
+    "repository_commit_required": true,
+    "binds_mapping_canonical_hash": true,
+    "binds_runtime_candidate_registry_hash": true,
+    "binds_item_and_row_etags": true,
+    "process_register_states_exact": [
+      "present",
+      "not_provisioned"
+    ],
+    "nullable_bpmn_links": true,
+    "matter_page_metadata_and_boundaries_bound": true,
+    "role_approval_references_stored_as_hashes": true,
+    "binds_independent_final_scan_pages_and_summaries": true,
+    "binds_post_scan_observed_at_and_snapshots": true,
+    "registry_snapshot_ids_must_exactly_equal_runtime_catalog": true,
+    "cross_scan_instability_is_readiness_blocker_not_manifest_error": true
+  },
+  "readiness": {
+    "ready_class_exact": "already_canonical",
+    "all_other_class_counts_must_equal": 0,
+    "scan_count_exact": 2,
+    "distinct_scan_ids": true,
+    "complete_scans_required": true,
+    "migration_writes_frozen_required": true,
+    "minimum_separation_seconds": 900,
+    "identical_count_and_hash_required": true,
+    "registry_and_process_snapshots_recomputed_after_scan_two": true,
+    "difference_behavior": "BLOCKED_two_new_scans_required",
+    "post_scan_observed_at_strictly_after_scan_two": true,
+    "independent_post_scan_snapshot_fields": [
+      "post_scan_registry_snapshot",
+      "post_scan_process_snapshot"
+    ],
+    "readiness_scope_exact": "S5_OFFLINE_ONLY",
+    "live_cutover_status_exact": "BLOCKED_PENDING_S6_S7_APPROVAL",
+    "independent_scan_page_sets_required": true,
+    "reconciled_quarantine_must_be_empty": true
+  },
+  "replay": {
+    "candidate_registry_path": "workflows/migrations/business-case-type/runtime-candidates.json",
+    "candidates_exact": [
+      "runtime-current",
+      "runtime-previous"
+    ],
+    "candidate_contract_versions_exact": [
+      "v2",
+      "v1"
+    ],
+    "scenarios_exact": [
+      "read-vorgangstyp-id",
+      "ignore-additive-registry-fields",
+      "unknown-id-fail-closed",
+      "new-type-without-legacy-read-only"
+    ],
+    "fixture_boolean_assertions_are_replay": false,
+    "executes_binary_or_deployment": false,
+    "mode_exact": "pinned_profile_evaluation_not_runtime_execution",
+    "failed_or_drifted_profile_evaluation_behavior": "BLOCKED"
+  },
+  "recovery": {
+    "rollback_steps_exact": [
+      "stop_mutating_workflows",
+      "preserve_intent_snapshots_etags_and_quarantine_for_s6",
+      "disable_canonical_write_and_invalidate_caches",
+      "require_executable_validation_before_switching_to_n_minus_1",
+      "conditionally_restore_projections_with_manifest_etags",
+      "readback_rescan_and_reopen_only_unambiguous_legacy_writes"
+    ],
+    "retains_columns_and_canonical_values": true,
+    "forward_recovery_legacy_substitutes_allowed": false,
+    "status_exact": "BLOCKED_PENDING_S6_S7_APPROVAL"
+  },
+  "redaction_and_io": {
+    "local_write_roots_exact": [
+      "out/notary-kg"
+    ],
+    "network_http_dns_graph_sharepoint_entra_allowed": false,
+    "credentials_tokens_certificates_allowed": false,
+    "tenant_schema_matter_registry_process_writes_allowed": false,
+    "raw_graph_responses_allowed": false,
+    "documents_persons_free_text_resolvable_matter_ids_allowed": false,
+    "stdout_fields_exact": [
+      "status",
+      "readiness_scope",
+      "live_cutover_status",
+      "allowed_live_calls",
+      "allowed_tenant_writes",
+      "reason_codes",
+      "class_counts",
+      "top_level_hashes"
+    ],
+    "git_admin_default_max_bytes": 1048576,
+    "packed_refs_max_bytes": 8388608,
+    "output_specific_filesystem_lock_required": true,
+    "conditional_rollback_on_replacement_inode": true,
+    "declared_recovery_marker_reconciled_before_write": true
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-S5-01",
+      "requirement": "Every synthetic matter is assigned to exactly one of seven classes in normative order; ambiguity, unknown, empty and conflicting values fail closed."
+    },
+    {
+      "id": "AC-S5-02",
+      "requirement": "The canonical manifest binds all versions, independently captured final-scan pages and summaries, pre-scan and post-scan snapshots, and item/row ETags, nullable BPMN links and explicit not_provisioned state."
+    },
+    {
+      "id": "AC-S5-03",
+      "requirement": "Only mappable rows plan an idempotent paged VorgangstypId operation bound to current ETag/If-Match; blocker rows persist locally in quarantine without live writes."
+    },
+    {
+      "id": "AC-S5-04",
+      "requirement": "READY is S5 offline readiness only and requires only already_canonical rows, two independently captured identical complete frozen scans separated by at least 900 seconds, exact full-catalog registry snapshots, and an empty reconciled quarantine."
+    },
+    {
+      "id": "AC-S5-05",
+      "requirement": "Pinned N and N-1 profile evaluation checks four fixed scenarios and profile hashes without claiming executable runtime, binary, deployment or release validation."
+    },
+    {
+      "id": "AC-S5-06",
+      "requirement": "Rollback preserves the fixed six-step order and columns/values, requires executable validation before switching to N-1, and forward recovery remains blocked pending S6 and S7."
+    },
+    {
+      "id": "AC-S5-07",
+      "requirement": "Contracts, validator, synthetic fixtures and tests pass with exactly zero live calls and zero tenant writes."
+    }
+  ],
+  "readiness_evidence_anchor": {
+    "base_manifest_hash_required": true,
+    "binds_backfill_plan_hash": true,
+    "binds_replay_scenarios_hash": true,
+    "binds_profile_evaluation_result_hash": true,
+    "binds_reconciled_quarantine_index_hash": true,
+    "hash_field_exact": "readiness_evidence_hash"
+  }
+}

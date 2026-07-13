@@ -288,3 +288,4 @@ The synchronous MVP path in this repository is `notary`. Subject-matter
 examples are derived only from [usecases/](../../usecases).
 
 - [BusinessCaseType Graph Read Edge S4](superpowers/specs/2026-07-11-business-case-type-graph-read-edge-s4-design.md) tracks Issue #616 for `Sites.Selected`/`read`, complete same-filter paging, local ETag evaluation, redaction, viewer isolation and the offline CLI `nac m365 teams-sharepoint business-case-type-read-plan`; S4b writes remain open.
+- [BusinessCaseType Migration S5](superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md) implements Issue #618 offline with seven inventory classes, exact legacy mapping, an idempotent backfill plan, persistent local quarantine, independently captured stable final scans, and N/N-1 profile evaluation; `READY` remains S5-offline and live calls and tenant writes remain zero.

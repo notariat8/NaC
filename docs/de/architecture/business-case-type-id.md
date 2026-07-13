@@ -1,7 +1,7 @@
 # ADR: Stabile BusinessCaseTypeId
 
-Status: Angenommen; S1/S2/S3 offline implementiert, S4 Read Edge in Umsetzung, kein Live-Apply
-Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616)
+Status: Angenommen; S1/S2/S3/S4 offline implementiert, S5 in Umsetzung, kein Live-Apply
+Issues: [GitHub #610](https://github.com/notariat8/NaC/issues/610), [GitHub #612](https://github.com/notariat8/NaC/issues/612), [GitHub #616](https://github.com/notariat8/NaC/issues/616), [GitHub #618](https://github.com/notariat8/NaC/issues/618)
 Datum: 2026-07-11
 
 ## Kontext
@@ -24,13 +24,13 @@ und der
 Issue #610 implementiert S1 und S2 ausschließlich offline in Verträgen,
 Validatoren, Inventar und Schema-Planung. Es wurden keine Graph-Requests
 ausgeführt, kein Tenant verändert und kein SharePoint-Schema live angewendet.
-S3 wird nach der
-[S3-Spec](../superpowers/specs/2026-07-11-business-case-type-runtime-s3-design.md)
+S1 bis S4 sind offline implementiert. S5 wird nach der
+[S5-Spec](../superpowers/specs/2026-07-12-business-case-type-migration-s5-design.md)
 und dem
-[S3-Implementierungsplan](../superpowers/plans/2026-07-11-business-case-type-runtime-s3.md)
-in Issue #612 ausschließlich offline umgesetzt. Der Status bleibt bis zu
-Code-, Vertrags-, Negativtest-, Strict-Gate- und Protected-PR-Nachweisen
-`in Umsetzung`. S4 bis S7 bleiben offen.
+[S5-Implementierungsplan](../superpowers/plans/2026-07-12-business-case-type-migration-s5.md)
+in Issue #618 ausschließlich offline umgesetzt. Der Status bleibt bis zu
+Code-, Vertrags-, Negativtest-, Strict-Gate-, Review- und Protected-PR-Nachweisen
+`in Umsetzung`. S6 und S7 bleiben offen.
 
 ## Entscheidung
 
@@ -169,8 +169,10 @@ List-IDs, paginierte `Akten`-Snapshots mit Item-ETags, den vollständigen
 `Vorgangsartenregister`-Snapshot sowie einen `Prozessregister`-Snapshot mit
 Zeilen-ETags und nullable BPMN-Links. Auch ein nicht vorhandenes
 `Prozessregister` wird explizit als `not_provisioned` belegt. Zusätzlich bindet
-das Manifest Runtime-/Vertragsversion N, den getesteten N-1-Kandidaten,
-Mapping-Version, Rollenfreigaben und Snapshot-Hashes.
+das Manifest Runtime-/Vertragsversion N, das gepinnte N-1-Profil,
+Mapping-Version, Rollenfreigaben und Snapshot-Hashes. Beide unabhängig
+erfassten Endscan-Seitenmengen und alle Post-Scan-Nachweise sind ebenfalls
+Bestandteil des Manifest-Hashes.
 
 Cutover ist nur zulässig, wenn jede Akte `already_canonical` ist und die Counts
 für `unknown`, `missing`, `conflict`, `etag_skipped` und `unresolved` exakt null
@@ -183,15 +185,16 @@ der Freigabe erneut gebunden.
 N-1-Kompatibilität ist eine Cutover-Voraussetzung: Der vorherige
 Runtime-Kandidat muss `VorgangstypId` lesen, additive Registry-Felder
 ignorieren, unbekannte IDs fail-closed behandeln und neue Typen ohne
-Legacy-Choice read-only anzeigen können. Ohne bestandenen N-/N-1-Replay gibt es
-keinen Live-Cutover.
+Legacy-Choice read-only anzeigen können. Die S5-Profil-Evaluation prüft nur
+statische Contract-Kompatibilität; ohne spätere ausführbare N-/N-1-Validierung
+gibt es weder Umschaltung noch Live-Cutover.
 
 Rollback löscht weder Spalten noch Werte und läuft strikt in dieser Reihenfolge:
 
 1. Akten-Neuanlage, Korrektur, Backfill, Cutover und abhängiges Routing stoppen.
 2. Rollback-Intent, aktuelle Snapshots/ETags und Quarantäne immutable sichern.
 3. Canonical-Write-Flag deaktivieren und Registry-/Prozess-Caches invalidieren.
-4. Auf den getesteten N-1-Kandidaten zurückschalten.
+4. Erst nach separater ausführbarer Validierung auf einen freigegebenen N-1-Kandidaten zurückschalten.
 5. Registry-/Prozessprojektionen nur bei Bedarf und nur ETag-gesichert auf den
    gebundenen Snapshot zurückführen; Spalten und kanonische Werte bleiben.
 6. Readback und vollständigen Rescan ausführen; nur eindeutig abbildbare
@@ -264,7 +267,7 @@ Zweckfreigabe.
 ## Explizite Umsetzungsslices
 
 Diese ADR ist angenommen. Issue #610 hat S1 und S2 am 2026-07-11 offline
-implementiert. S3 bis S7 bleiben offen und brauchen jeweils Review und passende
+implementiert. S3 und S4 sind offline implementiert; S5 bis S7 bleiben offen und brauchen jeweils Review und passende
 Tests, bevor ein Live-Apply erwogen wird.
 
 | Slice | Status | Erforderliche Änderung | Abnahmekante |
@@ -272,8 +275,8 @@ Tests, bevor ein Live-Apply erwogen wird.
 | S1 Vertrag | offline implementiert in #610 | Ontologie-, Inventory- und Viewer-Verträge auf unabhängiges `Vorgangsartenregister`, optionales `Prozessregister`, nullable BPMN-Links und Alias-Invarianten ausrichten | Validatoren beweisen viewer-unabhängige Typgültigkeit und blockieren Drift offline |
 | S2 Schema-Plan | offline implementiert in #610 | `Akten.VorgangstypId` und `Vorgangsartenregister` im verpflichtenden Default planen; `Prozessregister` und `BPMN Models` bleiben getrennte optionale Viewer-Provisionierung; Legacy-Choice unverändert lassen | 33 Plan-Schritte und 66 Workspace-Apply-Units; Dry-Run, Readiness, Snapshot- und Rollback-Plan; `BLOCKED_PENDING_S6_S7_APPROVAL` |
 | S3 Runtime | offline implementiert in #614 | `business_case_type_get`, inhaltsbasierte `CatalogVersion`, expliziten Runtime-Lifecycle, zweckgebundene Aliase und getrennte Registry-/Viewer-ETag-Caches offline implementieren | Spec, Domain-/Verification Contract, Validator, CLI, Negativtests, Strict-Gate, unabhängiger Review und Protected-PR-Checks bestehen ohne Graph-/Tenant-Zugriff |
-| S4 Graph Read Edge | in Umsetzung in #616; S4b-Writes offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
-| S5 Migration | offen | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
+| S4 Graph Read Edge | offline implementiert in #617; S4b-Writes offen | `case_create`, Korrektur-/Backfill-Pfad und optionale Prozessreads auf ausgewählte Felder, Paging, ETag, Site-Scope und Operationsrollen begrenzen | negative Autorisierung und Fake-Graph-Smokes beweisen keine breiten Rechte oder Viewer-Kopplung |
+| S5 Migration | in Umsetzung in #618; ausschließlich offline | Inventory-Dry-Run, idempotenten Backfill, persistente Quarantäne, Registry-/Prozess-Snapshots, stabile Endscans und N-1-Replay implementieren | alle sieben Klassen, ETag-Konflikte, Rollback-Reihenfolge und Forward-Recovery bestehen |
 | S6 Immutable Evidence | offen | durable Outbox, Broker/WORM-Events, Correlation, pseudonyme ActorRef, Retention, Access-Review und Reconciliation implementieren | ohne vollständigen Intent-/Ergebnis-/Readback-Nachweis bleibt jede Live-Mutation blockiert |
 | S7 Live-Freigabe | offen | separaten owner-gated Schema-/Backfill-Apply mit Funktionstrennung und Cleanup-Verbot vorbereiten | vollständige PR-Diff, N-/N-1-Rollback-Probe, negative Autorisierung und explizite duale Freigabe |
 
@@ -315,3 +318,9 @@ Vertragsvalidatoren und den
 Der aktive S4-Read-Edge bindet Graph REST v1.0 `GET` unveränderlich an Site, `Vorgangsartenregister`, Operation und Rolle. Zulässig sind ausschließlich `Sites.Selected` und ein vorhandener Site-Grant `read`; Paging muss `BusinessCaseTypeId`- und `CatalogVersion`-Filter beibehalten. Row-ETags werden erst nach vollständigem Read lokal verglichen und nie als Collection-`If-None-Match` gesendet. Ergebnisse bleiben redigiert und viewer-isoliert. Die Bedienkante ist `nac m365 teams-sharepoint business-case-type-read-plan`; sie ist offline und lädt weder Credentials noch HTTP/DNS/Graph-Clients. S4b-Writes bleiben offen.
 
 Traceability: **AC-S4-01:** exakter GET/Projection-Pfad; **AC-S4-02:** vollständiges Same-Filter-Paging; **AC-S4-03:** lokale ETag-Auswertung; **AC-S4-04:** exakte Permission/Grant-Bindung; **AC-S4-05:** strikte Typisierung und Viewer-Isolation; **AC-S4-06:** Redaction; **AC-S4-07:** CLI, Contracts, Validator, Tests, Dokumentation und Gates.
+
+## S5 Offline-Migration (#618)
+
+Der aktive S5-Slice implementiert ausschließlich offline die sieben disjunkten Inventarklassen, das exakt vierzeilige typisierte Legacy-Mapping, kanonisch gebundene Seiten und Snapshots, einen idempotenten `VorgangstypId`-Plan mit ETag, prozessserialisierte persistente lokale Quarantäne, zwei unabhängig erfasste stabile Endscans sowie hash-gepinnte N-/N-1-Profil-Evaluation. Separate Post-Scan-Snapshots werden erst nach Scan zwei akzeptiert und vollständig an das Manifest gebunden. `READY` bedeutet nur `S5_OFFLINE_ONLY`; Live-Cutover bleibt `BLOCKED_PENDING_S6_S7_APPROVAL`. Der Befehl `nac kg business-case-type-migration-dry-run` liest nur synthetische Fixtures; Live-Aufrufe und Tenant-Writes bleiben null.
+
+Traceability: **AC-S5-01** bis **AC-S5-07**, Domain-/Verification-Contract, Standalone-Validator, zentrale Offline-CLI, synthetische Fixtures und Strict-Gate.

@@ -50,6 +50,9 @@ JSON_HUMAN_TEXT_FIELDS = {
     "message",
     "warning",
 }
+JSON_TECHNICAL_IDENTIFIER_FIELDS = {
+    "workflows/migrations/business-case-type/legacy-choice.mapping.json": {"source", "target"},
+}
 GERMAN_ASCII_TRANSLITERATION_HINTS = (
     ("fuer", "für"),
     ("Fuer", "Für"),
@@ -460,7 +463,11 @@ def _scan_json_value_for_umlauts(value: object, rel_path: str, key: str | None =
     elif isinstance(value, list):
         for child in value:
             errors.extend(_scan_json_value_for_umlauts(child, rel_path, key))
-    elif isinstance(value, str) and key in JSON_HUMAN_TEXT_FIELDS:
+    elif (
+        isinstance(value, str)
+        and key in JSON_HUMAN_TEXT_FIELDS
+        and key not in JSON_TECHNICAL_IDENTIFIER_FIELDS.get(rel_path, set())
+    ):
         match = _find_ascii_transliteration(value)
         if match is not None:
             bad, good = match

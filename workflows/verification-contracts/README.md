@@ -46,3 +46,4 @@ can prove that a slice is complete.
   records guardrails that validators must keep enforced.
 
 - [business-case-type-graph-read-edge.verification.json](business-case-type-graph-read-edge.verification.json): Executable S4 acceptance contract for Issue #616 covering AC-S4-01 through AC-S4-07, exact `Sites.Selected`/`read` scope, same-filter paging, no collection `If-None-Match`, redaction, viewer isolation, offline CLI and zero live Graph calls.
+- [business-case-type-migration-s5.verification.json](business-case-type-migration-s5.verification.json): Executable S5 acceptance contract for Issue #618 covering AC-S5-01 through AC-S5-07, exact classification, canonical snapshots, idempotent planning, local quarantine, independently captured stable scans, pinned N/N-1 profile evaluation, explicit S5-offline readiness and zero live calls or tenant writes.

@@ -1,0 +1,41 @@
+{
+  "schema_version": "nac.business-case-type-migration-runtime-candidates/v0.1",
+  "registry_id": "business-case-type-migration-s5-replay-candidates",
+  "registry_version": "2026-07-12.1",
+  "scenarios_exact": [
+    "read-vorgangstyp-id",
+    "ignore-additive-registry-fields",
+    "unknown-id-fail-closed",
+    "new-type-without-legacy-read-only"
+  ],
+  "candidates": [
+    {
+      "candidate_id": "runtime-current",
+      "contract_version": "v2",
+      "profile": {
+        "canonical_field": "VorgangstypId",
+        "reads_canonical_id": true,
+        "ignores_additive_registry_fields": true,
+        "unknown_id_decision": "BLOCKED",
+        "unknown_id_reason_code": "unknown_business_case_type_id",
+        "new_type_without_legacy_decision": "READ_ONLY",
+        "legacy_choice_required_for_display": false
+      },
+      "profile_sha256": "8aac86a6f19b2a1b242cfec85ee181a02ba369e5799b67337ac7c421fe12b25f"
+    },
+    {
+      "candidate_id": "runtime-previous",
+      "contract_version": "v1",
+      "profile": {
+        "canonical_field": "VorgangstypId",
+        "reads_canonical_id": true,
+        "ignores_additive_registry_fields": true,
+        "unknown_id_decision": "BLOCKED",
+        "unknown_id_reason_code": "unknown_business_case_type_id",
+        "new_type_without_legacy_decision": "READ_ONLY",
+        "legacy_choice_required_for_display": false
+      },
+      "profile_sha256": "8aac86a6f19b2a1b242cfec85ee181a02ba369e5799b67337ac7c421fe12b25f"
+    }
+  ]
+}

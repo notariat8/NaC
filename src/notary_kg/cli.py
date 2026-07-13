@@ -23,6 +23,14 @@ from .business_case_type_runtime import (
     business_case_type_get,
 )
 from .business_case_type_transport import BusinessCaseTypeRegistryRow, RegistryFetchResult
+from .business_case_type_migration import MigrationValidationError
+from .business_case_type_migration_quarantine import ArtifactWriteError
+from .business_case_type_migration_runner import (
+    DEFAULT_OUTPUT as BUSINESS_CASE_TYPE_MIGRATION_DEFAULT_OUTPUT,
+    MigrationContractError,
+    RepositoryStateError,
+    run_offline_migration,
+)
 from .catalog import all_case_summaries, find_case, load_catalogs
 from .deep_process_routing import build_deep_process_candidate_routing
 from .editor import build_editor_view
@@ -167,6 +175,16 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
     )
     business_case_type_get_parser.add_argument("--registry-fixture", type=Path, required=True)
+
+    business_case_type_migration = subparsers.add_parser(
+        "business-case-type-migration-dry-run",
+        help="Run the synthetic-only S5 inventory, pinned N/N-1 profile evaluation, and readiness check offline.",
+    )
+    business_case_type_migration.add_argument("--fixture", type=Path, required=True)
+    business_case_type_migration.add_argument("--quarantine-state", type=Path, required=True)
+    business_case_type_migration.add_argument(
+        "--output", type=Path, default=BUSINESS_CASE_TYPE_MIGRATION_DEFAULT_OUTPUT
+    )
 
     subparsers.add_parser(
         "ontology-storage-contract",
@@ -665,6 +683,37 @@ def main(argv: list[str] | None = None) -> int:
             # details must never escape through tracebacks or exception text.
             print("ERROR: business-case-type lookup failed")
             return 1
+
+    if args.command == "business-case-type-migration-dry-run":
+        try:
+            rc, payload = run_offline_migration(
+                repo_root,
+                fixture=args.fixture,
+                quarantine_state=args.quarantine_state,
+                output=args.output,
+            )
+            _print_business_case_type_migration(payload, args.format)
+            return rc
+        except RepositoryStateError:
+            reason_code = "repository_state_unavailable"
+        except ArtifactWriteError:
+            reason_code = "artifact_write_failed"
+        except MigrationContractError:
+            reason_code = "contract_invalid"
+        except (MigrationValidationError, OSError, UnicodeError, json.JSONDecodeError):
+            reason_code = "fixture_invalid"
+        payload = {
+            "status": "ERROR",
+            "readiness_scope": "S5_OFFLINE_ONLY",
+            "live_cutover_status": "BLOCKED_PENDING_S6_S7_APPROVAL",
+            "allowed_live_calls": 0,
+            "allowed_tenant_writes": 0,
+            "reason_codes": [reason_code],
+            "class_counts": {},
+            "top_level_hashes": {},
+        }
+        _print_business_case_type_migration(payload, args.format)
+        return 1
 
     if args.command == "ontology-storage-contract":
         payload = build_ontology_storage_contract(repo_root)
@@ -1483,6 +1532,30 @@ def _print_business_case_type_lookup(payload: dict[str, object], output_format: 
     print(f"- selectable: {payload['selectable']}")
     print(f"- cache state: {payload['cache_state']}")
     print(f"- reason code: {payload['reason_code']}")
+
+
+def _print_business_case_type_migration(
+    payload: dict[str, object], output_format: str
+) -> None:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+        return
+
+    print("BusinessCaseType migration S5 offline dry-run")
+    print(f"- status: {payload['status']}")
+    print(f"- readiness scope: {payload['readiness_scope']}")
+    print(f"- live cutover status: {payload['live_cutover_status']}")
+    print(f"- allowed live calls: {payload['allowed_live_calls']}")
+    print(f"- allowed tenant writes: {payload['allowed_tenant_writes']}")
+    reason_codes = payload.get("reason_codes", [])
+    print(f"- reason codes: {', '.join(reason_codes) if reason_codes else 'none'}")
+    print("- class counts:")
+    for name, count in sorted(payload.get("class_counts", {}).items()):
+        print(f"  - {name}: {count}")
+    print("- evidence hashes:")
+    for name, digest in sorted(payload.get("top_level_hashes", {}).items()):
+        print(f"  - {name}: {digest}")
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

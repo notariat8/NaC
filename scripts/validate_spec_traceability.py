@@ -331,6 +331,13 @@ def validate_one_manifest(
         field="validation_commands",
         actual=validation_commands,
     )
+    if isinstance(validation_commands, list):
+        for command in validation_commands:
+            if isinstance(command, str) and ("\\n" in command or "\n" in command):
+                errors.append(
+                    f"Validierungsbefehl enthält Zeilenumbruch: {path_label}"
+                )
+
 
     if isinstance(acceptance_ids, list):
         for acceptance_id in acceptance_ids:

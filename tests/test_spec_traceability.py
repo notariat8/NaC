@@ -138,6 +138,25 @@ class SpecTraceabilityTest(unittest.TestCase):
 
             self.assertEqual(validate_spec_traceability.validate_manifest_blocks(), [])
 
+    def test_validator_rejects_escaped_newline_in_validation_command(self) -> None:
+        manifest = {
+            "schema_version": "nac.spec-traceability/v0.1",
+            "spec_id": "example-spec",
+            "leading_issue": "https://github.com/notariat8/NaC/issues/1",
+            "risk_gate": "Policy",
+            "delivery_mode": "Protected PR",
+            "acceptance_ids": ["AC-001"],
+            "validation_commands": ["python first.py\\npython second.py"],
+        }
+
+        errors = validate_spec_traceability.validate_one_manifest(
+            manifest, body_text="AC-001", path_label="example.md"
+        )
+
+        self.assertIn(
+            "Validierungsbefehl enthält Zeilenumbruch: example.md", errors
+        )
+
     def test_validator_reports_missing_acceptance_id_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

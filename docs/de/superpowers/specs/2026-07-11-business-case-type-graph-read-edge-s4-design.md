@@ -1,6 +1,6 @@
 # BusinessCaseType Graph Read Edge S4 Design
 
-Status: in Umsetzung; Runtime im Branch implementiert; Abschluss nach Gates und Protected PR
+Status: Runtime offline implementiert in PR #617; Governance-Synchronisierung im S5-PR bis zu grüner Remote-CI offen; S4b-Writes bleiben offen
 Datum: 11. Juli 2026
 Scope: offline geplante Microsoft-Graph-v1.0-Lesekante zwischen `nac_m365_graph` und dem bestehenden `notary_kg`-Domain-Port
 
