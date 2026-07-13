@@ -27,7 +27,10 @@ TEAMS_PACKAGE_RELATIVE_PATH = Path(
 )
 PAGE_NAME = "NaC-Testumgebung.aspx"
 PAGE_TITLE = "NaC-Testumgebung"
-PAGE_LAYOUT = "SingleWebPartAppPage"
+# The M365 CLI cannot add the first web part when SharePoint returns an empty
+# CanvasContent1 for a SingleWebPartAppPage. Article pages provide the initial
+# canvas section required by `spo page clientsidewebpart add`.
+PAGE_LAYOUT = "Article"
 APP_CATALOG_SCOPE = "tenant"
 TEAMS_INSTALLED_APPS_URL = (
     f"https://graph.microsoft.com/v1.0/teams/{TEAM_ID}/installedApps?$expand=teamsApp"
