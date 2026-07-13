@@ -16,6 +16,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
+    INITIAL_PAGE_CONTENT,
     PACKAGE_CONFIG_RELATIVE_PATH,
     PACKAGE_NAME,
     PACKAGE_RELATIVE_PATH,
@@ -177,6 +178,42 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self.assertEqual(self._value(page_add, "--layoutType"), "Article")
             web_part_add = runner.commands[9]
             self.assertEqual(self._value(web_part_add, "--webPartId"), WEB_PART_ID)
+
+    def test_empty_page_canvas_is_initialized_and_verified_before_web_part_add(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root)
+            page_get_count = 0
+
+            def empty_canvas_handler(command: tuple[str, ...]) -> FakeResult:
+                nonlocal page_get_count
+                if self._command_head(command) == ("spo", "page", "get"):
+                    page_get_count += 1
+                    content = "[]" if page_get_count == 1 else INITIAL_PAGE_CONTENT
+                    return FakeResult(stdout=json.dumps({"CanvasContent1": content}))
+                return self._create_handler(command)
+
+            runner = FakeRunner(empty_canvas_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+
+            self.assertEqual(evidence["status"], "PASSED")
+            self.assertEqual(evidence["classifications"]["initialize_page_canvas_if_empty"], "update")
+            self.assertEqual(page_get_count, 2)
+            content_command = next(
+                command
+                for command in runner.commands
+                if self._command_head(command) == ("spo", "page", "set")
+                and "--content" in command
+            )
+            self.assertEqual(self._value(content_command, "--name"), PAGE_NAME)
+            self.assertEqual(self._value(content_command, "--webUrl"), SITE_URL)
+            self.assertEqual(self._value(content_command, "--content"), INITIAL_PAGE_CONTENT)
+            heads = [self._command_head(command) for command in runner.commands]
+            self.assertLess(
+                heads.index(("spo", "page", "set")),
+                heads.index(("spo", "page", "clientsidewebpart", "add")),
+            )
 
     def test_existing_resources_are_updated_or_reused_without_duplicate_web_part(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
