@@ -31,6 +31,10 @@ PAGE_TITLE = "NaC-Testumgebung"
 # CanvasContent1 for a SingleWebPartAppPage. Article pages provide the initial
 # canvas section required by `spo page clientsidewebpart add`.
 PAGE_LAYOUT = "Article"
+INITIAL_PAGE_CONTENT = (
+    '[{"controlType":0,"pageSettingsSlice":'
+    '{"isDefaultDescription":true,"isDefaultThumbnail":true}}]'
+)
 APP_CATALOG_SCOPE = "tenant"
 TEAMS_INSTALLED_APPS_URL = (
     f"https://graph.microsoft.com/v1.0/teams/{TEAM_ID}/installedApps?$expand=teamsApp"
@@ -117,6 +121,7 @@ class SpfxSiteDeploymentPlan:
             "deploy_tenant_catalog_app_without_tenant_wide_activation",
             "install_or_reuse_app_on_target_site",
             "create_or_update_modern_page",
+            "initialize_page_canvas_if_empty",
             "add_or_reuse_web_part",
             "publish_page",
         )
@@ -417,6 +422,44 @@ def run_spfx_site_deployment(
             "inspect_page_web_parts",
             _m365("spo", "page", "get", "--name", PAGE_NAME, "--webUrl", SITE_URL, "--output", "json"),
         )
+        if _page_canvas_is_empty(page):
+            invoke(
+                "initialize_page_canvas_if_empty",
+                _m365(
+                    "spo",
+                    "page",
+                    "set",
+                    "--name",
+                    PAGE_NAME,
+                    "--webUrl",
+                    SITE_URL,
+                    "--content",
+                    INITIAL_PAGE_CONTENT,
+                    "--output",
+                    "none",
+                ),
+            )
+            page = invoke_json(
+                "verify_page_canvas_initialized",
+                _m365(
+                    "spo",
+                    "page",
+                    "get",
+                    "--name",
+                    PAGE_NAME,
+                    "--webUrl",
+                    SITE_URL,
+                    "--output",
+                    "json",
+                ),
+            )
+            if _page_canvas_is_empty(page):
+                raise _StepFailure(
+                    "verify_page_canvas_initialized",
+                    "unsafe_control_plane_response",
+                )
+            passed("initialize_page_canvas_if_empty", "update")
+            passed("verify_page_canvas_initialized", "reuse")
         web_part_exists = _contains_string(page, WEB_PART_ID)
         passed("inspect_page_web_parts", "reuse" if web_part_exists else "create")
         if web_part_exists:
@@ -757,6 +800,15 @@ def _validate_command(plan: SpfxSiteDeploymentPlan, argv: Sequence[str]) -> None
     if tuple(body[:3]) in {("teams", "app", "publish"), ("teams", "app", "update")}:
         if _option_value(lower, argv, "--filepath") != str(plan.teams_package_path):
             raise _StepFailure("validate_command", "teams_package_path_command_blocked")
+    if tuple(body[:2]) == ("spo", "page"):
+        page_name = _option_value(lower, argv, "--name") or _option_value(
+            lower, argv, "--pagename"
+        )
+        if page_name is not None and page_name != PAGE_NAME:
+            raise _StepFailure("validate_command", "page_scope_command_blocked")
+        content = _option_value(lower, argv, "--content")
+        if content is not None and content != INITIAL_PAGE_CONTENT:
+            raise _StepFailure("validate_command", "page_content_command_blocked")
     if tuple(body[:1]) == ("request",):
         if _option_value(lower, argv, "--url") != TEAMS_INSTALLED_APPS_URL:
             raise _StepFailure("validate_command", "teams_readback_url_blocked")
@@ -881,6 +933,20 @@ def _page_exists(payload: Any) -> bool:
             if value.lower() == PAGE_NAME.lower() or value.lower().endswith("/" + PAGE_NAME.lower()):
                 return True
     return False
+
+
+def _page_canvas_is_empty(payload: Any) -> bool:
+    if not isinstance(payload, dict) or not _has_field(payload, "CanvasContent1"):
+        return False
+    canvas = _field(payload, "CanvasContent1")
+    if isinstance(canvas, str):
+        try:
+            canvas = json.loads(canvas)
+        except json.JSONDecodeError as exc:
+            raise DeploymentPlanError("page canvas response is invalid") from exc
+    if not isinstance(canvas, list):
+        raise DeploymentPlanError("page canvas response must be a list")
+    return not canvas
 
 
 def _object_items(payload: Any) -> list[dict[str, Any]]:
