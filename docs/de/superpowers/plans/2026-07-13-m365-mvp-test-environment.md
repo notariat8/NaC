@@ -1,8 +1,8 @@
 # M365-MVP-Testumgebung Implementierungsplan
 
-**Datum:** 13. Juli 2026  
-**Issue:** [#620](https://github.com/notariat8/NaC/issues/620)  
-**Spec:** [M365-MVP-Testumgebung Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)  
+**Datum:** 13. Juli 2026
+**Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
+**Spec:** [M365-MVP-Testumgebung Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
 
 ## Zielzustand
