@@ -41,6 +41,13 @@ TEAMS_INSTALLED_APPS_URL = (
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_GUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+_TEAMS_VERSION_RE = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
+)
 _ALLOWED_COMMAND_PREFIXES = {
     ("spo", "app", "list"),
     ("spo", "app", "add"),
@@ -57,7 +64,6 @@ _ALLOWED_COMMAND_PREFIXES = {
     ("spo", "page", "clientsidewebpart", "add"),
     ("teams", "app", "list"),
     ("teams", "app", "publish"),
-    ("teams", "app", "update"),
     ("teams", "app", "install"),
     ("request",),
 }
@@ -229,6 +235,7 @@ def run_spfx_site_deployment(
     evidence["steps"].append({"name": "verify_package_sha256", "status": "PASSED"})
 
     command_count = 0
+    allowed_teams_catalog_detail_id: str | None = None
 
     def invoke(
         step: str,
@@ -238,7 +245,11 @@ def run_spfx_site_deployment(
     ) -> tuple[str, bool]:
         nonlocal command_count
         command = tuple(str(part) for part in argv)
-        _validate_command(plan, command)
+        _validate_command(
+            plan,
+            command,
+            allowed_teams_catalog_detail_id=allowed_teams_catalog_detail_id,
+        )
         command_count += 1
         try:
             result = command_runner.run(command)
@@ -530,7 +541,9 @@ def run_spfx_site_deployment(
                 ),
             )
             passed("download_teams_package", "update")
-            teams_manifest_app_id = _read_teams_manifest_app_id(plan.teams_package_path)
+            teams_manifest_app_id, teams_manifest_version = _read_teams_manifest_identity(
+                plan.teams_package_path
+            )
 
             teams_apps = invoke_json(
                 "inspect_teams_catalog",
@@ -547,22 +560,33 @@ def run_spfx_site_deployment(
             teams_app = _find_teams_app(teams_apps, teams_manifest_app_id)
             passed("inspect_teams_catalog", "update" if teams_app else "create")
             if teams_app:
-                teams_catalog_id = _required_string(teams_app, "id", "teams catalog app id")
-                invoke(
-                    "publish_or_update_teams_catalog_app",
+                teams_catalog_id = _required_guid(teams_app, "id", "teams catalog app id")
+                allowed_teams_catalog_detail_id = teams_catalog_id
+                teams_app_detail = invoke_json(
+                    "inspect_teams_catalog_app_version",
                     _m365(
-                        "teams",
-                        "app",
-                        "update",
-                        "--id",
-                        teams_catalog_id,
-                        "--filePath",
-                        str(plan.teams_package_path),
+                        "request",
+                        "--url",
+                        _teams_catalog_detail_url(teams_catalog_id),
+                        "--method",
+                        "get",
                         "--output",
-                        "none",
+                        "json",
                     ),
                 )
-                passed("publish_or_update_teams_catalog_app", "update")
+                publishing_state = _validate_teams_catalog_app_detail(
+                    teams_app_detail,
+                    teams_catalog_id=teams_catalog_id,
+                    teams_manifest_app_id=teams_manifest_app_id,
+                    teams_manifest_version=teams_manifest_version,
+                )
+                passed("inspect_teams_catalog_app_version", "reuse")
+                if publishing_state == "submitted":
+                    raise _StepFailure(
+                        "publish_or_update_teams_catalog_app",
+                        "teams_catalog_review_pending",
+                    )
+                passed("publish_or_update_teams_catalog_app", "reuse")
             else:
                 published = invoke_json(
                     "publish_or_update_teams_catalog_app",
@@ -576,7 +600,10 @@ def run_spfx_site_deployment(
                         "json",
                     ),
                 )
-                teams_catalog_id = _required_string(published, "id", "teams catalog app id")
+                teams_catalog_id = _validate_published_teams_app(
+                    published,
+                    teams_manifest_app_id=teams_manifest_app_id,
+                )
                 passed("publish_or_update_teams_catalog_app", "create")
 
             _, already_installed = invoke(
@@ -767,7 +794,12 @@ def _validate_catalog_app_record(record: Any) -> str:
     return _required_string(record, "ID", "app catalog id")
 
 
-def _validate_command(plan: SpfxSiteDeploymentPlan, argv: Sequence[str]) -> None:
+def _validate_command(
+    plan: SpfxSiteDeploymentPlan,
+    argv: Sequence[str],
+    *,
+    allowed_teams_catalog_detail_id: str | None = None,
+) -> None:
     if not argv or argv[0] != "m365":
         raise _StepFailure("validate_command", "non_m365_command_blocked")
     lower = tuple(part.lower() for part in argv)
@@ -788,16 +820,16 @@ def _validate_command(plan: SpfxSiteDeploymentPlan, argv: Sequence[str]) -> None
     catalog_scope = _option_value(lower, argv, "--appcatalogscope")
     if catalog_scope is not None and catalog_scope != APP_CATALOG_SCOPE:
         raise _StepFailure("validate_command", "app_catalog_scope_command_blocked")
+    allowed_urls = {SITE_URL, TEAMS_INSTALLED_APPS_URL}
+    if allowed_teams_catalog_detail_id is not None:
+        allowed_urls.add(_teams_catalog_detail_url(allowed_teams_catalog_detail_id))
     for part in argv:
-        if part.lower().startswith(("http://", "https://")) and part not in {
-            SITE_URL,
-            TEAMS_INSTALLED_APPS_URL,
-        }:
+        if part.lower().startswith(("http://", "https://")) and part not in allowed_urls:
             raise _StepFailure("validate_command", "unexpected_url_command_blocked")
     if tuple(body[:3]) == ("spo", "app", "add"):
         if _option_value(lower, argv, "--filepath") != str(plan.package_path):
             raise _StepFailure("validate_command", "package_path_command_blocked")
-    if tuple(body[:3]) in {("teams", "app", "publish"), ("teams", "app", "update")}:
+    if tuple(body[:3]) == ("teams", "app", "publish"):
         if _option_value(lower, argv, "--filepath") != str(plan.teams_package_path):
             raise _StepFailure("validate_command", "teams_package_path_command_blocked")
     if tuple(body[:2]) == ("spo", "page"):
@@ -810,11 +842,21 @@ def _validate_command(plan: SpfxSiteDeploymentPlan, argv: Sequence[str]) -> None
         if content is not None and content != INITIAL_PAGE_CONTENT:
             raise _StepFailure("validate_command", "page_content_command_blocked")
     if tuple(body[:1]) == ("request",):
-        if _option_value(lower, argv, "--url") != TEAMS_INSTALLED_APPS_URL:
+        request_urls = {TEAMS_INSTALLED_APPS_URL}
+        if allowed_teams_catalog_detail_id is not None:
+            request_urls.add(_teams_catalog_detail_url(allowed_teams_catalog_detail_id))
+        request_url = _option_value(lower, argv, "--url")
+        if request_url not in request_urls:
             raise _StepFailure("validate_command", "teams_readback_url_blocked")
-        if (_option_value(lower, argv, "--method") or "get").lower() != "get":
-            raise _StepFailure("validate_command", "teams_readback_method_blocked")
-        if any(option in lower for option in ("--body", "--filepath", "--resource")):
+        if tuple(argv) != _m365(
+            "request",
+            "--url",
+            request_url,
+            "--method",
+            "get",
+            "--output",
+            "json",
+        ):
             raise _StepFailure("validate_command", "teams_readback_option_blocked")
 
 
@@ -874,10 +916,100 @@ def _find_teams_app(payload: Any, external_id: str) -> dict[str, Any] | None:
     expected = external_id.strip().lower()
     if not expected:
         raise DeploymentPlanError("Teams manifest app id is missing")
-    for item in _object_items(payload):
+    matches: list[dict[str, Any]] = []
+    for item in _teams_catalog_items(payload):
         if _string_field(item, "externalId").strip().lower() == expected:
-            return item
-    return None
+            matches.append(item)
+    if len(matches) > 1:
+        raise DeploymentPlanError(
+            "Teams catalog contains duplicate entries for the manifest externalId"
+        )
+    return matches[0] if matches else None
+
+
+def _teams_catalog_items(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict) and "value" in payload:
+        items = payload["value"]
+        if not isinstance(items, list):
+            raise DeploymentPlanError("Teams catalog value must be a list")
+    else:
+        raise DeploymentPlanError(
+            "Teams catalog response must be a list or an object with a value list"
+        )
+    if any(not isinstance(item, dict) for item in items):
+        raise DeploymentPlanError("Teams catalog entries must be objects")
+    return items
+
+
+def _validate_teams_catalog_app_detail(
+    payload: Any,
+    *,
+    teams_catalog_id: str,
+    teams_manifest_app_id: str,
+    teams_manifest_version: str,
+) -> str:
+    if not isinstance(payload, dict):
+        raise DeploymentPlanError("Teams catalog detail response must be an object")
+    detail_catalog_id = _required_guid(payload, "id", "Teams catalog detail id")
+    detail_external_id = _required_guid(
+        payload,
+        "externalId",
+        "Teams catalog detail externalId",
+    )
+    if detail_catalog_id != teams_catalog_id:
+        raise DeploymentPlanError("Teams catalog detail id does not match the selected app")
+    if detail_external_id != teams_manifest_app_id:
+        raise DeploymentPlanError(
+            "Teams catalog detail externalId does not match the downloaded manifest"
+        )
+
+    definitions = _field(payload, "appDefinitions")
+    if not isinstance(definitions, list):
+        raise DeploymentPlanError("Teams catalog detail appDefinitions must be a list")
+    matching_definitions: list[dict[str, Any]] = []
+    for definition in definitions:
+        if not isinstance(definition, dict):
+            raise DeploymentPlanError("Teams catalog app definition must be an object")
+        version = _field(definition, "version")
+        publishing_state = _field(definition, "publishingState")
+        if not isinstance(version, str) or not _TEAMS_VERSION_RE.fullmatch(version):
+            raise DeploymentPlanError("Teams catalog app definition version is invalid")
+        if publishing_state not in {"published", "submitted", "rejected"}:
+            raise DeploymentPlanError("Teams catalog app definition publishingState is invalid")
+        if version == teams_manifest_version:
+            matching_definitions.append(definition)
+    if len(matching_definitions) != 1:
+        raise DeploymentPlanError(
+            "Teams catalog did not return exactly one definition for the manifest version"
+        )
+
+    publishing_state = _string_field(
+        matching_definitions[0],
+        "publishingState",
+    )
+    if publishing_state == "rejected":
+        raise DeploymentPlanError("Teams catalog rejected the matching manifest version")
+    return publishing_state
+
+
+def _validate_published_teams_app(
+    payload: Any,
+    *,
+    teams_manifest_app_id: str,
+) -> str:
+    teams_catalog_id = _required_guid(payload, "id", "teams catalog app id")
+    published_external_id = _required_guid(
+        payload,
+        "externalId",
+        "teams catalog app externalId",
+    )
+    if published_external_id != teams_manifest_app_id:
+        raise DeploymentPlanError(
+            "published Teams catalog externalId does not match the downloaded manifest"
+        )
+    return teams_catalog_id
 
 
 def _validate_installed_teams_app(
@@ -903,7 +1035,7 @@ def _validate_installed_teams_app(
         )
 
 
-def _read_teams_manifest_app_id(path: Path) -> str:
+def _read_teams_manifest_identity(path: Path) -> tuple[str, str]:
     try:
         with zipfile.ZipFile(path) as package:
             payload = json.loads(package.read("manifest.json").decode("utf-8"))
@@ -918,12 +1050,12 @@ def _read_teams_manifest_app_id(path: Path) -> str:
     if not isinstance(payload, dict):
         raise DeploymentPlanError("downloaded Teams manifest must be an object")
     app_id = payload.get("id")
-    if not isinstance(app_id, str) or not re.fullmatch(
-        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
-        app_id.strip(),
-    ):
+    version = payload.get("version")
+    if not isinstance(app_id, str) or not _GUID_RE.fullmatch(app_id):
         raise DeploymentPlanError("downloaded Teams manifest app id is invalid")
-    return app_id.strip().lower()
+    if not isinstance(version, str) or not _TEAMS_VERSION_RE.fullmatch(version):
+        raise DeploymentPlanError("downloaded Teams manifest version is invalid")
+    return app_id.lower(), version
 
 
 def _page_exists(payload: Any) -> bool:
@@ -1000,6 +1132,22 @@ def _required_string(payload: Any, name: str, label: str) -> str:
     if not value:
         raise DeploymentPlanError(f"{label} is missing")
     return value
+
+
+def _required_guid(payload: Any, name: str, label: str) -> str:
+    value = _required_string(payload, name, label)
+    if not _GUID_RE.fullmatch(value):
+        raise DeploymentPlanError(f"{label} is not a valid GUID")
+    return value.lower()
+
+
+def _teams_catalog_detail_url(teams_catalog_id: str) -> str:
+    if not _GUID_RE.fullmatch(teams_catalog_id):
+        raise DeploymentPlanError("Teams catalog detail URL requires a validated GUID")
+    return (
+        "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/"
+        f"{teams_catalog_id.lower()}?$expand=appDefinitions"
+    )
 
 
 def _sha256(path: Path) -> str:
