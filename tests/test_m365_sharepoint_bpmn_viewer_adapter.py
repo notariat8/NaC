@@ -20,7 +20,7 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_contract_defines_packageable_viewer_only_spfx(self) -> None:
         self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4")
-        self.assertEqual(self.contract["status"], "bff_read_site_scoped_mvp")
+        self.assertEqual(self.contract["status"], "bff_read_site_scoped_package_ready_activation_deferred")
         spfx = self.contract["spfx_surface"]
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
         self.assertEqual(spfx["framework_version"], "1.23.2")
@@ -39,10 +39,11 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_deployment_is_owner_approved_only_for_notary_team_01(self) -> None:
         deployment = self.contract["deployment_scope"]
-        self.assertEqual(deployment["approval"], "owner_approved")
+        self.assertEqual(deployment["approval"], "deferred_until_bff_activation")
+        self.assertTrue(deployment["activation_gate_required"])
         self.assertEqual(deployment["approved_workspace_ids"], ["notary_team_01"])
-        self.assertTrue(deployment["app_catalog_upload_allowed_now"])
-        self.assertTrue(deployment["site_scoped_install_allowed_now"])
+        self.assertFalse(deployment["app_catalog_upload_allowed_now"])
+        self.assertFalse(deployment["site_scoped_install_allowed_now"])
         self.assertFalse(deployment["tenant_wide_deploy_allowed_now"])
         self.assertFalse(deployment["other_workspace_deploy_allowed_now"])
 
@@ -116,7 +117,7 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         render = self.contract["package_render_contract"]
         self.assertEqual(render["request_plan_count"], 1)
         self.assertTrue(render["viewer_only"])
-        self.assertTrue(render["liveTenantAccess"])
+        self.assertFalse(render["liveTenantAccess"])
         self.assertEqual(
             render["dom_markers"],
             {
@@ -150,14 +151,14 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_runtime_readiness_matches_package_mode(self) -> None:
         readiness = self.contract["runtime_readiness"]
-        self.assertEqual(readiness["status"], "bff_read_site_scoped_runtime_ready")
+        self.assertEqual(readiness["status"], "bff_read_site_scoped_package_ready_activation_deferred")
         self.assertEqual(
             readiness["redacted_artifact_kind"],
             "redacted_bff_read_site_scoped_readiness_json",
         )
         self.assertTrue(readiness["spfx_package_allowed_now"])
-        self.assertTrue(readiness["app_catalog_upload_allowed_now"])
-        self.assertTrue(readiness["site_scoped_install_allowed_now"])
+        self.assertFalse(readiness["app_catalog_upload_allowed_now"])
+        self.assertFalse(readiness["site_scoped_install_allowed_now"])
         self.assertFalse(readiness["tenant_wide_deploy_allowed_now"])
         self.assertFalse(readiness["graph_access_allowed"])
         self.assertTrue(readiness["aad_http_client_allowed"])

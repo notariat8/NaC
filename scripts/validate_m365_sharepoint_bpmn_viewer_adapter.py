@@ -66,6 +66,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "store_secrets",
     "store_mandate_data",
     "store_real_matter_data",
+    "app_catalog_upload",
+    "site_scoped_install",
 }
 
 
@@ -124,7 +126,7 @@ def _validate_contract(
     expected = {
         "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4",
         "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
-        "status": "bff_read_site_scoped_mvp",
+        "status": "bff_read_site_scoped_package_ready_activation_deferred",
     }
     for key, value in expected.items():
         if payload.get(key) != value:
@@ -182,14 +184,18 @@ def _validate_contract(
     if not isinstance(deployment, dict):
         errors.append("deployment_scope must be an object")
     else:
-        if deployment.get("approval") != "owner_approved":
-            errors.append("deployment_scope.approval must be owner_approved")
+        if deployment.get("approval") != "deferred_until_bff_activation":
+            errors.append("deployment_scope.approval must be deferred_until_bff_activation")
+        if deployment.get("activation_gate_required") is not True:
+            errors.append("deployment_scope.activation_gate_required must be true")
         if deployment.get("approved_workspace_ids") != [APPROVED_WORKSPACE_ID]:
             errors.append("deployment_scope.approved_workspace_ids must contain only notary_team_01")
-        for flag in ("app_catalog_upload_allowed_now", "site_scoped_install_allowed_now"):
-            if deployment.get(flag) is not True:
-                errors.append(f"deployment_scope.{flag} must be true")
-        for flag in ("tenant_wide_deploy_allowed_now", "other_workspace_deploy_allowed_now"):
+        for flag in (
+            "app_catalog_upload_allowed_now",
+            "site_scoped_install_allowed_now",
+            "tenant_wide_deploy_allowed_now",
+            "other_workspace_deploy_allowed_now",
+        ):
             if deployment.get(flag) is not False:
                 errors.append(f"deployment_scope.{flag} must be false")
 
@@ -276,8 +282,8 @@ def _validate_contract(
                 errors.append(f"package_render_contract.{key} must be {value}")
         if render.get("viewer_only") is not True:
             errors.append("package_render_contract.viewer_only must be true")
-        if render.get("liveTenantAccess") is not True:
-            errors.append("package_render_contract.liveTenantAccess must be true")
+        if render.get("liveTenantAccess") is not False:
+            errors.append("package_render_contract.liveTenantAccess must be false until BFF activation")
         if render.get("dom_markers") != REQUIRED_DOM_MARKERS:
             errors.append("package_render_contract.dom_markers must match the package UI")
         privacy = render.get("privacy_guards")
@@ -296,15 +302,15 @@ def _validate_contract(
         for key, value in expected.items():
             if package_link.get(key) != value:
                 errors.append(f"spfx_package.{key} must be {value}")
-        for flag in (
-            "package_solution_enabled_now",
-            "app_catalog_deploy_owner_approved",
-            "site_scoped_install_allowed_now",
-        ):
-            if package_link.get(flag) is not True:
-                errors.append(f"spfx_package.{flag} must be true")
-        if package_link.get("executes_bff_requests_now") is not True:
-            errors.append("spfx_package.executes_bff_requests_now must be true")
+        if package_link.get("package_solution_enabled_now") is not True:
+            errors.append("spfx_package.package_solution_enabled_now must be true")
+        for flag in ("app_catalog_deploy_owner_approved", "site_scoped_install_allowed_now"):
+            if package_link.get(flag) is not False:
+                errors.append(f"spfx_package.{flag} must be false until BFF activation")
+        if package_link.get("executes_bff_requests_now") is not False:
+            errors.append("spfx_package.executes_bff_requests_now must be false until BFF activation")
+        if package_link.get("bff_activation_status") != "DEFERRED":
+            errors.append("spfx_package.bff_activation_status must be DEFERRED")
         for flag in ("tenant_wide_deploy_allowed_now", "executes_graph_requests_now"):
             if package_link.get(flag) is not False:
                 errors.append(f"spfx_package.{flag} must be false")
@@ -318,20 +324,21 @@ def _validate_contract(
         expected = {
             "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
             "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
-            "status": "bff_read_site_scoped_runtime_ready",
+            "status": "bff_read_site_scoped_package_ready_activation_deferred",
             "redacted_artifact_kind": "redacted_bff_read_site_scoped_readiness_json",
         }
         for key, value in expected.items():
             if readiness.get(key) != value:
                 errors.append(f"runtime_readiness.{key} must be {value}")
+        if readiness.get("spfx_package_allowed_now") is not True:
+            errors.append("runtime_readiness.spfx_package_allowed_now must be true")
         for flag in (
-            "spfx_package_allowed_now",
             "app_catalog_upload_allowed_now",
             "site_scoped_install_allowed_now",
+            "tenant_wide_deploy_allowed_now",
+            "graph_access_allowed",
+            "writes_allowed",
         ):
-            if readiness.get(flag) is not True:
-                errors.append(f"runtime_readiness.{flag} must be true")
-        for flag in ("tenant_wide_deploy_allowed_now", "graph_access_allowed", "writes_allowed"):
             if readiness.get(flag) is not False:
                 errors.append(f"runtime_readiness.{flag} must be false")
         if runtime_readiness_artifact and runtime_readiness_artifact.get("status") != readiness.get("status"):
@@ -361,23 +368,23 @@ def _validate_spfx_bpmn_viewer_skeleton(payload: dict[str, Any]) -> list[str]:
     if errors:
         return errors
     result = build_spfx_bpmn_viewer_skeleton_result(payload, render_fixture=fixture)
-    if result.get("status") != "PASSED":
-        return ["SPFx BPMN viewer package result must pass"]
+    if result.get("status") != "READY":
+        return ["SPFx BPMN viewer package result must be READY"]
     summary = result.get("summary", {})
-    for flag in (
-        "package_solution_enabled_now",
-        "app_catalog_deploy_owner_approved",
-        "site_scoped_install_allowed_now",
-    ):
-        if summary.get(flag) is not True:
-            errors.append(f"SPFx BPMN viewer package summary.{flag} must be true")
+    if summary.get("package_solution_enabled_now") is not True:
+        errors.append("SPFx BPMN viewer package summary.package_solution_enabled_now must be true")
+    for flag in ("app_catalog_deploy_owner_approved", "site_scoped_install_allowed_now"):
+        if summary.get(flag) is not False:
+            errors.append(f"SPFx BPMN viewer package summary.{flag} must be false until activation")
     for flag in ("tenant_wide_deploy_allowed_now", "executes_graph_requests_now"):
         if summary.get(flag) is not False:
             errors.append(f"SPFx BPMN viewer package summary.{flag} must be false")
     if summary.get("request_plan_count") != 1:
         errors.append("SPFx BPMN viewer package must expose exactly one NaC BFF request plan")
-    if summary.get("executes_bff_requests_now") is not True:
-        errors.append("SPFx BPMN viewer package summary must enable BFF reads")
+    if summary.get("executes_bff_requests_now") is not False:
+        errors.append("SPFx BPMN viewer package summary must defer BFF reads")
+    if summary.get("bff_activation_status") != "DEFERRED":
+        errors.append("SPFx BPMN viewer package summary must expose deferred activation")
     return errors
 
 
@@ -389,20 +396,20 @@ def _validate_bpmn_viewer_runtime_readiness(
     if errors:
         return errors
     result = build_bpmn_viewer_runtime_readiness_result(payload, skeleton=spfx_skeleton or None)
-    if result.get("status") != "PASSED":
-        return ["BPMN viewer runtime readiness result must pass"]
+    if result.get("status") != "READY":
+        return ["BPMN viewer runtime readiness result must be READY"]
     summary = result.get("summary", {})
     if summary.get("readiness_gate_count") != 3:
         errors.append("BPMN viewer runtime readiness must expose three readiness gates")
-    for flag in (
-        "package_build_allowed_now",
-        "package_solution_allowed_now",
-        "app_catalog_deploy_owner_approved",
-        "site_scoped_install_allowed_now",
-    ):
+    for flag in ("package_build_allowed_now", "package_solution_allowed_now"):
         if summary.get(flag) is not True:
             errors.append(f"BPMN viewer runtime readiness summary.{flag} must be true")
-    for flag in ("tenant_wide_deploy_allowed_now", "graph_access_allowed"):
+    for flag in (
+        "app_catalog_deploy_owner_approved",
+        "site_scoped_install_allowed_now",
+        "tenant_wide_deploy_allowed_now",
+        "graph_access_allowed",
+    ):
         if summary.get(flag) is not False:
             errors.append(f"BPMN viewer runtime readiness summary.{flag} must be false")
     return errors
@@ -418,7 +425,8 @@ def _validate_docs() -> list[str]:
             "npm run build",
             "notary_team_01",
             "site-scoped",
-            "owner-approved",
+            "DEFERRED",
+            "Aktivierungs-Gate",
             "TeamsTab",
             "api://funktion8.de/nac-bff",
             "Matter.Read",
@@ -434,7 +442,8 @@ def _validate_docs() -> list[str]:
             "npm run build",
             "notary_team_01",
             "site-scoped",
-            "owner-approved",
+            "DEFERRED",
+            "activation gate",
             "TeamsTab",
             "api://funktion8.de/nac-bff",
             "Matter.Read",

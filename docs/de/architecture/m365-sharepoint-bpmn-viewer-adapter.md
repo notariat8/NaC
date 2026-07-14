@@ -33,7 +33,7 @@ npm run build
 
 ## Bereitstellungsgrenze
 
-Die App-Catalog-Bereitstellung ist **owner-approved** und **site-scoped** ausschließlich für `notary_team_01`. `skipFeatureDeployment=false` erzwingt die Site-Installation. Tenant-weite Bereitstellung und jede Installation in einem anderen Workspace bleiben gesperrt.
+Die App-Catalog-Bereitstellung ist bis zur erfolgreichen BFF-Aktivierung **DEFERRED**. Erst das konsolidierte Aktivierungs-Gate darf Upload und **site-scoped** Installation ausschließlich für `notary_team_01` freigeben. `skipFeatureDeployment=false` erzwingt dann die Site-Installation; tenant-weite Bereitstellung und jede Installation in einem anderen Workspace bleiben gesperrt.
 
 Die Paketdefinition enthält genau eine Web-API-Anforderung: `NaC M365 BFF` / `Matter.Read`. Zusätzliche delegierte Scopes, Graph-Rechte, produktive Daten, weitere Sites und Schreibzugriffe sind nicht erlaubt.
 

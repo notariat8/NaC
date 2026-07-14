@@ -1551,7 +1551,7 @@ def main() -> int:
         return _emit(
             result,
             args.json,
-            return_code=0 if result["status"] == "PASSED" else 1,
+            return_code=0 if result["status"] == "READY" else 1,
         )
 
     if args.command == "spfx-bpmn-viewer-process-selection":
@@ -1581,7 +1581,7 @@ def main() -> int:
         return _emit(
             result,
             args.json,
-            return_code=0 if result["status"] == "PASSED" else 1,
+            return_code=0 if result["status"] == "READY" else 1,
         )
 
     if not args.owner_approved:

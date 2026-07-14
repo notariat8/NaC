@@ -33,7 +33,7 @@ npm run build
 
 ## Deployment boundary
 
-The App Catalog deployment is **owner-approved** and **site-scoped** only for `notary_team_01`. `skipFeatureDeployment=false` enforces site installation. Tenant-wide deployment and installation into any other workspace remain blocked.
+The App Catalog deployment remains **DEFERRED** until the BFF activation succeeds. Only the consolidated activation gate may then allow upload and **site-scoped** installation for `notary_team_01`. `skipFeatureDeployment=false` enforces that site installation; tenant-wide deployment and installation into any other workspace remain blocked.
 
 The package declares exactly one Web API request: `NaC M365 BFF` / `Matter.Read`. Additional delegated scopes, Graph permissions, production data, additional sites, and writes are forbidden.
 

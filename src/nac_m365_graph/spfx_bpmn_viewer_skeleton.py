@@ -70,6 +70,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "pnp",
     "microsoft_graph_sdk",
     "graph_beta",
+    "app_catalog_upload",
+    "site_scoped_install",
 }
 SPFX_SKELETON_REQUIRED_FILES = {
     ".gitignore",
@@ -169,8 +171,6 @@ def validate_spfx_bpmn_viewer_skeleton(
             "reproducible_build_required",
             "site_scoped_package",
             "teams_hosts_enabled",
-            "app_catalog_deploy_owner_approved",
-            "site_scoped_install_allowed_now",
             "aad_http_client_allowed",
         ):
             if spfx.get(flag) is not True:
@@ -181,6 +181,8 @@ def validate_spfx_bpmn_viewer_skeleton(
             "requires_custom_script",
             "loose_html_embedding_allowed",
             "tenant_wide_deploy_allowed_now",
+            "app_catalog_deploy_owner_approved",
+            "site_scoped_install_allowed_now",
             "graph_permissions_requested",
             "direct_graph_access_allowed",
             "sharepoint_writes_allowed",
@@ -203,8 +205,10 @@ def validate_spfx_bpmn_viewer_skeleton(
     else:
         if deployment.get("approved_workspace_id") != APPROVED_WORKSPACE_ID:
             errors.append("SPFx BPMN viewer skeleton deployment scope must be notary_team_01")
-        if deployment.get("approval") != "owner_approved":
-            errors.append("SPFx BPMN viewer skeleton deployment scope must be owner_approved")
+        if deployment.get("approval") != "deferred_until_bff_activation":
+            errors.append("SPFx BPMN viewer skeleton deployment scope must be deferred_until_bff_activation")
+        if deployment.get("activation_gate_required") is not True:
+            errors.append("SPFx BPMN viewer skeleton deployment scope must require the activation gate")
         if deployment.get("site_scoped") is not True:
             errors.append("SPFx BPMN viewer skeleton deployment must be site-scoped")
         if deployment.get("tenant_wide") is not False:
@@ -222,8 +226,8 @@ def validate_spfx_bpmn_viewer_skeleton(
             errors.append("SPFx BPMN viewer skeleton render content must be synthetic only")
         if render.get("viewer_only") is not True:
             errors.append("SPFx BPMN viewer skeleton render contract must be viewer-only")
-        if render.get("live_tenant_access") is not True:
-            errors.append("SPFx BPMN viewer skeleton render_contract.live_tenant_access must be true")
+        if render.get("live_tenant_access") is not False:
+            errors.append("SPFx BPMN viewer skeleton render_contract.live_tenant_access must be false until activation")
         for flag in ("graph_access", "writes_allowed", "real_matter_data_allowed"):
             if render.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer skeleton render_contract.{flag} must be false")
@@ -365,7 +369,9 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "verifyBpmnAsset",
             "crypto.subtle.digest",
             "AbortSignal",
-            "TextEncoder().encode(text).byteLength",
+            "streamingResponse.body?.getReader()",
+            "byteLength > MAX_RESPONSE_BYTES",
+            "new TextDecoder('utf-8', { fatal: true })",
         ):
             if required not in service_text:
                 errors.append(f"SPFx BPMN viewer BFF client missing {required!r}")
@@ -627,7 +633,7 @@ def build_spfx_bpmn_viewer_skeleton_result(
 
     render_case_results = _build_render_case_results(render_fixture)
     return {
-        "status": "PASSED",
+        "status": "READY",
         "summary": {
             "component": skeleton["spfx"]["component_name"],
             "spfx_component_type": skeleton["spfx"]["component_type"],
@@ -637,12 +643,13 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "data_source": skeleton["spfx"]["data_source"],
             "approved_workspace_id": skeleton["spfx"]["approved_workspace_id"],
             "package_solution_enabled_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "tenant_wide_deploy_allowed_now": False,
             "executes_graph_requests_now": False,
             "request_plan_count": 1,
-            "executes_bff_requests_now": True,
+            "executes_bff_requests_now": False,
+            "bff_activation_status": "DEFERRED",
         },
         "skeleton": {
             "schema_version": skeleton["schema_version"],
@@ -654,8 +661,8 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "workspaceId": skeleton["render_contract"]["workspace_id"],
             "componentProps": _redact_component_props(render_fixture["component_props"]),
             "request_plan_count": 1,
-            "liveTenantAccess": True,
-            "appCatalogDeployOwnerApproved": True,
+            "liveTenantAccess": False,
+            "appCatalogDeployOwnerApproved": False,
             "domMarkers": skeleton["render_contract"]["dom_markers"],
             "privacyGuards": skeleton["render_contract"]["privacy_guards"],
             "expectedRenderState": render_fixture["expected_render_state"],
@@ -674,8 +681,8 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "npm_ci_allowed_now": True,
             "build_allowed_now": True,
             "package_solution_enabled_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_only": True,
             "tenant_wide_deploy_allowed_now": False,
             "executes_graph_requests_now": False,

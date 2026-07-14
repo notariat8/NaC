@@ -1,7 +1,7 @@
 {
   "schema_version": "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4",
   "contract_id": "m365.sharepoint_bpmn_viewer_adapter",
-  "status": "bff_read_site_scoped_mvp",
+  "status": "bff_read_site_scoped_package_ready_activation_deferred",
   "last_update": "2026-07-14",
   "purpose": "Defines the site-scoped viewer-only SPFx adapter for the synthetic notary_team_01 test environment through the delegated NaC BFF read boundary.",
   "source_of_truth": {
@@ -39,14 +39,15 @@
     "writes_sharepoint_or_bpmn": false
   },
   "deployment_scope": {
-    "approval": "owner_approved",
+    "approval": "deferred_until_bff_activation",
     "approved_workspace_ids": [
       "notary_team_01"
     ],
-    "app_catalog_upload_allowed_now": true,
-    "site_scoped_install_allowed_now": true,
+    "app_catalog_upload_allowed_now": false,
+    "site_scoped_install_allowed_now": false,
     "tenant_wide_deploy_allowed_now": false,
-    "other_workspace_deploy_allowed_now": false
+    "other_workspace_deploy_allowed_now": false,
+    "activation_gate_required": true
   },
   "packaging_contract": {
     "package_json": "spfx/nac-bpmn-viewer/package.json",
@@ -102,7 +103,7 @@
     "workspace_id": "notary_team_01",
     "content_source": "nac_bff_redacted_dto",
     "viewer_only": true,
-    "liveTenantAccess": true,
+    "liveTenantAccess": false,
     "request_plan_count": 1,
     "dom_markers": {
       "component": "data-nac-component=\"test-workspace\"",
@@ -121,25 +122,27 @@
     "command": "nac m365 teams-sharepoint spfx-bpmn-viewer-skeleton --format json",
     "status": "bff_read_site_scoped_package",
     "package_solution_enabled_now": true,
-    "app_catalog_deploy_owner_approved": true,
-    "site_scoped_install_allowed_now": true,
+    "app_catalog_deploy_owner_approved": false,
+    "site_scoped_install_allowed_now": false,
     "tenant_wide_deploy_allowed_now": false,
     "executes_graph_requests_now": false,
-    "executes_bff_requests_now": true
+    "executes_bff_requests_now": false,
+    "bff_activation_status": "DEFERRED"
   },
   "runtime_readiness": {
     "artifact": "deploy/m365/teams-sharepoint/nac-bpmn-viewer.runtime-readiness.json",
     "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
-    "status": "bff_read_site_scoped_runtime_ready",
+    "status": "bff_read_site_scoped_package_ready_activation_deferred",
     "redacted_artifact_kind": "redacted_bff_read_site_scoped_readiness_json",
     "spfx_package_allowed_now": true,
-    "app_catalog_upload_allowed_now": true,
-    "site_scoped_install_allowed_now": true,
+    "app_catalog_upload_allowed_now": false,
+    "site_scoped_install_allowed_now": false,
     "tenant_wide_deploy_allowed_now": false,
     "graph_access_allowed": false,
     "writes_allowed": false,
     "aad_http_client_allowed": true,
-    "delegated_scope": "Matter.Read"
+    "delegated_scope": "Matter.Read",
+    "bff_activation_status": "DEFERRED"
   },
   "blocked_operations": [
     "tenant_wide_deploy",
@@ -162,7 +165,9 @@
     "store_real_matter_data",
     "microsoft_graph_permission_request",
     "aad_http_client_non_bff_resource",
-    "additional_delegated_scope"
+    "additional_delegated_scope",
+    "app_catalog_upload",
+    "site_scoped_install"
   ],
   "relationship_to_bpmn_js_editor": {
     "local_bpmn_js_editor_contract": "workflows/contracts/bpmn-js-editor.contract.json",

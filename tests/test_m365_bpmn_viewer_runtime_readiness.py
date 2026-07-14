@@ -29,7 +29,7 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         readiness = load_bpmn_viewer_runtime_readiness(DEFAULT_BPMN_VIEWER_RUNTIME_READINESS)
 
         self.assertEqual(validate_bpmn_viewer_runtime_readiness(readiness), [])
-        self.assertEqual(readiness["status"], "bff_read_site_scoped_runtime_ready")
+        self.assertEqual(readiness["status"], "bff_read_site_scoped_package_ready_activation_deferred")
         packaging = readiness["spfx_packaging_boundary"]
         self.assertTrue(packaging["package_lock_required"])
         self.assertTrue(packaging["npm_ci_allowed_now"])
@@ -39,7 +39,10 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         self.assertEqual(packaging["reproducible_commands"], ["npm ci", "npm run build"])
 
         deployment = readiness["app_catalog_deployment"]
-        self.assertEqual(deployment["approval"], "owner_approved")
+        self.assertEqual(deployment["approval"], "deferred_until_bff_activation")
+        self.assertTrue(deployment["activation_gate_required"])
+        self.assertFalse(deployment["app_catalog_upload_allowed_now"])
+        self.assertFalse(deployment["site_scoped_install_allowed_now"])
         self.assertEqual(deployment["approved_workspace_id"], "notary_team_01")
         self.assertTrue(deployment["site_scoped"])
         self.assertFalse(deployment["tenant_wide"])
@@ -47,19 +50,21 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
     def test_runtime_result_allows_only_bff_read_and_blocks_graph_and_writes(self) -> None:
         result = build_bpmn_viewer_runtime_readiness_result(load_bpmn_viewer_runtime_readiness())
 
-        self.assertEqual(result["status"], "PASSED")
+        self.assertEqual(result["status"], "READY")
         self.assertEqual(result["summary"]["readiness_gate_count"], 3)
         self.assertTrue(result["summary"]["package_build_allowed_now"])
         self.assertTrue(result["summary"]["package_solution_allowed_now"])
-        self.assertTrue(result["summary"]["app_catalog_deploy_owner_approved"])
-        self.assertTrue(result["summary"]["site_scoped_install_allowed_now"])
+        self.assertFalse(result["summary"]["app_catalog_deploy_owner_approved"])
+        self.assertFalse(result["summary"]["site_scoped_install_allowed_now"])
         self.assertFalse(result["summary"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(result["summary"]["graph_access_allowed"])
+        self.assertFalse(result["summary"]["bff_read_allowed"])
+        self.assertEqual(result["summary"]["bff_activation_status"], "DEFERRED")
         self.assertEqual(
             {gate["id"]: gate["status"] for gate in result["readinessGates"]},
             {
                 "spfx_packaging_boundary": "READY",
-                "app_catalog_deployment": "OWNER_APPROVED",
+                "app_catalog_deployment": "DEFERRED",
                 "synthetic_data_boundary": "ENFORCED",
             },
         )
@@ -135,10 +140,10 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["status"], "PASSED")
+        self.assertEqual(payload["status"], "READY")
         self.assertTrue(payload["guardrails"]["package_solution_allowed_now"])
-        self.assertTrue(payload["guardrails"]["app_catalog_deploy_owner_approved"])
-        self.assertTrue(payload["guardrails"]["site_scoped_install_allowed_now"])
+        self.assertFalse(payload["guardrails"]["app_catalog_deploy_owner_approved"])
+        self.assertFalse(payload["guardrails"]["site_scoped_install_allowed_now"])
         self.assertFalse(payload["guardrails"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(payload["guardrails"]["direct_graph_access_allowed"])
 

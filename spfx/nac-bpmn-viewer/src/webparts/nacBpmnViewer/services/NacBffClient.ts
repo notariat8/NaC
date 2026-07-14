@@ -94,10 +94,7 @@ export async function parseWorkspaceResponse(
   ) {
     throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
-  const text = await response.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
-    throw new Error('NAC_BFF_RESPONSE_INVALID');
-  }
+  const text = await readBoundedResponseText(response);
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -108,6 +105,50 @@ export async function parseWorkspaceResponse(
     throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
   return value;
+}
+
+async function readBoundedResponseText(response: HttpClientResponse): Promise<string> {
+  const streamingResponse = response as HttpClientResponse & {
+    readonly body: ReadableStream<Uint8Array> | null;
+  };
+  const reader = streamingResponse.body?.getReader();
+  if (!reader) {
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
+  }
+
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  try {
+    while (true) {
+      const result = await reader.read();
+      if (result.done) {
+        break;
+      }
+      if (!result.value) {
+        continue;
+      }
+      byteLength += result.value.byteLength;
+      if (byteLength > MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error('NAC_BFF_RESPONSE_INVALID');
+      }
+      chunks.push(result.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error('NAC_BFF_RESPONSE_INVALID');
+  }
 }
 
 export async function verifyBpmnAsset(

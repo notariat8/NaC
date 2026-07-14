@@ -47,6 +47,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "read_matter_payload",
     "store_tokens_or_secrets",
     "store_real_matter_data",
+    "app_catalog_upload",
+    "site_scoped_install",
 }
 REQUIRED_EVIDENCE_KEYS = {
     "spfx_packaging_boundary",
@@ -73,8 +75,8 @@ def validate_bpmn_viewer_runtime_readiness(
     errors: list[str] = []
     if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.3":
         errors.append("SPFx BPMN viewer runtime readiness schema_version is invalid")
-    if readiness.get("status") != "bff_read_site_scoped_runtime_ready":
-        errors.append("SPFx BPMN viewer runtime readiness status must be bff_read_site_scoped_runtime_ready")
+    if readiness.get("status") != "bff_read_site_scoped_package_ready_activation_deferred":
+        errors.append("SPFx BPMN viewer runtime readiness status must be bff_read_site_scoped_package_ready_activation_deferred")
 
     source_artifacts = readiness.get("source_artifacts")
     if not isinstance(source_artifacts, dict):
@@ -116,19 +118,20 @@ def build_bpmn_viewer_runtime_readiness_result(
     deployment = readiness["app_catalog_deployment"]
     data_boundary = readiness["synthetic_data_boundary"]
     return {
-        "status": "PASSED",
+        "status": "READY",
         "summary": {
             "component": skeleton["spfx"]["component_name"],
             "package_root": packaging["package_root"],
             "readiness_gate_count": 3,
             "package_build_allowed_now": True,
             "package_solution_allowed_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_id": APPROVED_WORKSPACE_ID,
             "tenant_wide_deploy_allowed_now": False,
             "graph_access_allowed": False,
-            "bff_read_allowed": True,
+            "bff_read_allowed": False,
+            "bff_activation_status": "DEFERRED",
         },
         "readiness": {
             "schema_version": readiness["schema_version"],
@@ -147,8 +150,8 @@ def build_bpmn_viewer_runtime_readiness_result(
             },
             {
                 "id": "app_catalog_deployment",
-                "status": "OWNER_APPROVED",
-                "allowed_now": True,
+                "status": "DEFERRED",
+                "allowed_now": False,
                 "approved_workspace_id": deployment["approved_workspace_id"],
                 "site_scoped": deployment["site_scoped"],
                 "tenant_wide": deployment["tenant_wide"],
@@ -168,8 +171,8 @@ def build_bpmn_viewer_runtime_readiness_result(
             "build_allowed_now": True,
             "package_solution_allowed_now": True,
             "generated_outputs_must_remain_ignored_and_untracked": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_only": True,
             "tenant_wide_deploy_allowed_now": False,
             "graph_permissions_requested": False,
@@ -240,16 +243,19 @@ def _validate_app_catalog_deployment(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["SPFx BPMN viewer runtime readiness app_catalog_deployment must be an object"]
     expected = {
-        "approval": "owner_approved",
+        "approval": "deferred_until_bff_activation",
         "approved_workspace_id": APPROVED_WORKSPACE_ID,
         "deployment_scope": "site_scoped",
     }
     for key, expected_value in expected.items():
         if value.get(key) != expected_value:
             errors.append(f"SPFx BPMN viewer runtime readiness app_catalog_deployment.{key} must be {expected_value}")
+    for flag in ("app_catalog_upload_allowed_now", "site_scoped_install_allowed_now"):
+        if value.get(flag) is not False:
+            errors.append(f"SPFx BPMN viewer runtime readiness app_catalog_deployment.{flag} must be false")
+    if value.get("activation_gate_required") is not True:
+        errors.append("SPFx BPMN viewer runtime readiness app_catalog_deployment.activation_gate_required must be true")
     for flag in (
-        "app_catalog_upload_allowed_now",
-        "site_scoped_install_allowed_now",
         "requires_sharepoint_admin_role",
         "requires_app_catalog_site",
         "requires_rollback_plan",

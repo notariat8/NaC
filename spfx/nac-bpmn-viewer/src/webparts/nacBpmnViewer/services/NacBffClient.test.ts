@@ -8,7 +8,7 @@ jest.mock('@microsoft/sp-http', () => ({
 }));
 
 import { webcrypto } from 'crypto';
-import { TextEncoder } from 'util';
+import { TextDecoder, TextEncoder } from 'util';
 import { AadHttpClient } from '@microsoft/sp-http';
 import type { AadHttpClientFactory, HttpClientResponse } from '@microsoft/sp-http';
 import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
@@ -48,15 +48,37 @@ const workspace: NacBffWorkspace = {
   }
 };
 
-function response(body: string, ok: boolean = true, contentLength?: string): HttpClientResponse {
+function responseFromChunks(
+  chunks: readonly Uint8Array[],
+  ok: boolean = true,
+  contentLength?: string
+): HttpClientResponse {
+  let index = 0;
   return {
     ok,
     headers: {
       get: (name: string): string | null =>
         name.toLowerCase() === 'content-length' ? contentLength ?? null : null
     },
-    text: async (): Promise<string> => body
+    body: {
+      getReader: () => ({
+        read: async (): Promise<{ done: boolean; value?: Uint8Array }> => {
+          if (index >= chunks.length) {
+            return { done: true };
+          }
+          const value = chunks[index];
+          index += 1;
+          return { done: false, value };
+        },
+        cancel: async (): Promise<void> => undefined,
+        releaseLock: (): void => undefined
+      })
+    }
   } as unknown as HttpClientResponse;
+}
+
+function response(body: string, ok: boolean = true, contentLength?: string): HttpClientResponse {
+  return responseFromChunks([new TextEncoder().encode(body)], ok, contentLength);
 }
 
 describe('NaC BFF client boundary', () => {
@@ -68,6 +90,10 @@ describe('NaC BFF client boundary', () => {
     Object.defineProperty(globalThis, 'TextEncoder', {
       configurable: true,
       value: TextEncoder
+    });
+    Object.defineProperty(globalThis, 'TextDecoder', {
+      configurable: true,
+      value: TextDecoder
     });
   });
 
@@ -162,6 +188,24 @@ describe('NaC BFF client boundary', () => {
     await expect(parseWorkspaceResponse(response('€'.repeat(22000))))
       .rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
     await expect(parseWorkspaceResponse(response('{}', true, 'not-a-number')))
+      .rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
+  });
+
+  it('stops a chunked response before buffering more than 64 KiB', async () => {
+    const chunks = [
+      new Uint8Array(40 * 1024),
+      new Uint8Array(25 * 1024)
+    ];
+    await expect(parseWorkspaceResponse(responseFromChunks(chunks)))
+      .rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
+  });
+
+  it('rejects a response without a readable body stream', async () => {
+    const missingBody = {
+      ok: true,
+      headers: { get: (): null => null }
+    } as unknown as HttpClientResponse;
+    await expect(parseWorkspaceResponse(missingBody))
       .rejects.toThrow('NAC_BFF_RESPONSE_INVALID');
   });
 
