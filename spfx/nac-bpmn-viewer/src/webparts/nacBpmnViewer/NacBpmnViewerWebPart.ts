@@ -19,7 +19,7 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
       userDisplayName: this.context.pageContext.user.displayName,
       hostName: this.context.sdks.microsoftTeams ? 'Microsoft Teams' : 'SharePoint',
       isDarkTheme: this.isDarkTheme,
-      loadWorkspace: () => loadNacBffWorkspace(this.context.aadHttpClientFactory)
+      loadWorkspace: (signal: AbortSignal) => loadNacBffWorkspace(this.context.aadHttpClientFactory, signal)
     });
 
     ReactDom.render(element, this.domElement);

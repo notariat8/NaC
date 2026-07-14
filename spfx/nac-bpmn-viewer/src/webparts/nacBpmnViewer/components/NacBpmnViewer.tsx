@@ -4,12 +4,14 @@ import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
 import { NacBffWorkspace, verifyBpmnAsset } from '../services/NacBffClient';
 import styles from './NacBpmnViewer.module.scss';
 
+const LOAD_TIMEOUT_MS = 10_000;
+
 export interface NacBpmnViewerProps {
   workspaceId: string;
   userDisplayName: string;
   hostName: string;
   isDarkTheme: boolean;
-  loadWorkspace: () => Promise<NacBffWorkspace>;
+  loadWorkspace: (signal: AbortSignal) => Promise<NacBffWorkspace>;
 }
 
 export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
@@ -17,12 +19,16 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   const fixture = syntheticWorkspaceFixture;
   const [workspace, setWorkspace] = React.useState<NacBffWorkspace | null>(null);
   const [loadFailed, setLoadFailed] = React.useState(false);
+  const [renderFailed, setRenderFailed] = React.useState(false);
 
   React.useEffect(() => {
+    const controller = new AbortController();
     let disposed = false;
+    const timeoutId = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
     setWorkspace(null);
     setLoadFailed(false);
-    props.loadWorkspace().then(async value => {
+    setRenderFailed(false);
+    props.loadWorkspace(controller.signal).then(async value => {
       await verifyBpmnAsset(value, fixture.bpmnXml, fixture.bpmnSha256);
       if (!disposed) {
         setWorkspace(value);
@@ -31,9 +37,12 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
       if (!disposed) {
         setLoadFailed(true);
       }
-    });
+    }).finally(() => window.clearTimeout(timeoutId));
+
     return () => {
       disposed = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [props.loadWorkspace]);
 
@@ -44,16 +53,30 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
 
     const viewer = new BpmnViewer({ container: containerRef.current });
     let disposed = false;
+    let destroyed = false;
+    const destroyViewer = (): void => {
+      if (!destroyed) {
+        viewer.destroy();
+        destroyed = true;
+      }
+    };
+
+    setRenderFailed(false);
     viewer.importXML(fixture.bpmnXml).then(() => {
       if (!disposed) {
         const canvas = viewer.get('canvas') as { zoom: (mode: string) => void };
         canvas.zoom('fit-viewport');
       }
-    }).catch(() => undefined);
+    }).catch(() => {
+      if (!disposed) {
+        destroyViewer();
+        setRenderFailed(true);
+      }
+    });
 
     return () => {
       disposed = true;
-      viewer.destroy();
+      destroyViewer();
     };
   }, [fixture.bpmnXml, props.workspaceId, workspace]);
 
@@ -65,6 +88,9 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   }
   if (workspace === null) {
     return <div className={styles.error}>Vorgangsdaten werden geladen.</div>;
+  }
+  if (renderFailed) {
+    return <div className={styles.error}>Prozessmodell ist derzeit nicht verfügbar.</div>;
   }
 
   const matter = workspace.matter;

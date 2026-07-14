@@ -83,6 +83,7 @@ SPFX_SKELETON_REQUIRED_FILES = {
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
     "src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
+    "src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx",
     "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
     "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
     "src/webparts/nacBpmnViewer/services/NacBffClient.ts",
@@ -363,6 +364,8 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "hasExactKeys",
             "verifyBpmnAsset",
             "crypto.subtle.digest",
+            "AbortSignal",
+            "TextEncoder().encode(text).byteLength",
         ):
             if required not in service_text:
                 errors.append(f"SPFx BPMN viewer BFF client missing {required!r}")
@@ -378,6 +381,7 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "verifyBpmnAsset",
             "rejects extra %s fields",
             "cryptographically binds packaged BPMN XML",
+            "uses the fixed AadHttpClient resource, route, purpose and correlation boundary",
         ):
             if required not in test_text:
                 errors.append(f"SPFx BPMN viewer BFF client test missing {required!r}")
@@ -390,6 +394,8 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "syntheticWorkspaceFixture",
             "loadWorkspace",
             "verifyBpmnAsset",
+            "AbortController",
+            "Prozessmodell ist derzeit nicht verfügbar.",
             *REQUIRED_DOM_MARKERS.values(),
         ):
             if required not in source_text:
@@ -397,6 +403,18 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         for blocked in ("Model" + "er", "save" + "XML", "start" + "Process", "execute" + "Workflow"):
             if blocked in source_text:
                 errors.append(f"SPFx BPMN viewer component contains blocked viewer marker {blocked!r}")
+
+    component_test = (
+        root / "src" / "webparts" / "nacBpmnViewer" / "components" / "NacBpmnViewer.test.tsx"
+    )
+    if component_test.is_file():
+        component_test_text = component_test.read_text(encoding="utf-8")
+        for required in (
+            "fails closed and destroys the viewer when BPMN import fails",
+            "aborts an outstanding BFF request when the component unmounts",
+        ):
+            if required not in component_test_text:
+                errors.append(f"SPFx BPMN viewer component test missing {required!r}")
 
     fixture = root / "src" / "webparts" / "nacBpmnViewer" / "fixtures" / "syntheticWorkspace.ts"
     if fixture.is_file():

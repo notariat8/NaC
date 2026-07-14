@@ -65,12 +65,14 @@ export interface NacBffWorkspace {
 }
 
 export async function loadNacBffWorkspace(
-  clientFactory: AadHttpClientFactory
+  clientFactory: AadHttpClientFactory,
+  signal: AbortSignal
 ): Promise<NacBffWorkspace> {
   const client = await clientFactory.getClient(NAC_BFF_RESOURCE_URI);
   const path = '/v1/workspaces/' + NAC_BFF_WORKSPACE_ID + '/matters/' + NAC_BFF_MATTER_ID;
   const url = NAC_BFF_BASE_URL + path + '?purpose=' + encodeURIComponent(NAC_BFF_PURPOSE);
   const response = await client.get(url, AadHttpClient.configurations.v1, {
+    signal,
     headers: {
       Accept: 'application/json',
       'X-Correlation-ID': createCorrelationId()
@@ -93,7 +95,7 @@ export async function parseWorkspaceResponse(
     throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
   const text = await response.text();
-  if (text.length > MAX_RESPONSE_BYTES) {
+  if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
     throw new Error('NAC_BFF_RESPONSE_INVALID');
   }
   let value: unknown;
@@ -192,9 +194,20 @@ function isBoundedText(value: unknown, maxLength: number): value is string {
 }
 
 function isIsoTimestamp(value: unknown): value is string {
-  return typeof value === 'string' &&
-    value.length <= 40 &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value);
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+  ) {
+    return false;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  const canonical = /\.\d{3}Z$/.test(value)
+    ? value
+    : value.slice(0, -1) + '.000Z';
+  return parsed.toISOString() === canonical;
 }
 
 function createCorrelationId(): string {

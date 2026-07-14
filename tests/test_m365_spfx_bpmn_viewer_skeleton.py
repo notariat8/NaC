@@ -56,6 +56,10 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
             skeleton["package_contract"]["bff_client_test"],
             "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
         )
+        self.assertEqual(
+            skeleton["package_contract"]["component_runtime_test"],
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx",
+        )
         self.assertEqual(skeleton["spfx"]["delegated_api_resource"], "api://funktion8.de/nac-bff")
         self.assertEqual(skeleton["spfx"]["delegated_api_scope"], "Matter.Read")
         self.assertFalse(skeleton["spfx"]["sharepoint_writes_allowed"])
@@ -117,12 +121,15 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         bff_client_test = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
         ).read_text(encoding="utf-8")
+        component_test = (
+            SPFX_ROOT / "src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx"
+        ).read_text(encoding="utf-8")
 
         for marker in REQUIRED_DOM_MARKERS.values():
             self.assertIn(marker, component)
         self.assertIn("Workspace nicht freigegeben.", component)
         self.assertIn("Vorgangsdaten sind derzeit nicht verfügbar.", component)
-        self.assertIn("loadNacBffWorkspace(this.context.aadHttpClientFactory)", webpart)
+        self.assertIn("loadNacBffWorkspace(this.context.aadHttpClientFactory, signal)", webpart)
         self.assertIn("source: 'package_bpmn_fixture'", fixture)
         self.assertIn("containsMatterData: false", fixture)
         self.assertIn("bpmnXml: sampleApprovedBpmnXml", fixture)
@@ -141,6 +148,8 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertIn("verifyBpmnAsset", component)
         self.assertIn("rejects extra %s fields", bff_client_test)
         self.assertIn("cryptographically binds packaged BPMN XML", bff_client_test)
+        self.assertIn("fails closed and destroys the viewer when BPMN import fails", component_test)
+        self.assertIn("aborts an outstanding BFF request when the component unmounts", component_test)
 
         combined = "\n".join(path.read_text(encoding="utf-8") for path in _iter_spfx_source_files(SPFX_ROOT))
         self.assertIn("AadHttpClient", combined)

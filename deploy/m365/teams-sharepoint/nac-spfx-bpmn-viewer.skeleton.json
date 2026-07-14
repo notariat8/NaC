@@ -94,7 +94,8 @@
       "SharePointWebPart",
       "TeamsTab"
     ],
-    "bff_client_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
+    "bff_client_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+    "component_runtime_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx"
   },
   "test_fixtures": {
     "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",

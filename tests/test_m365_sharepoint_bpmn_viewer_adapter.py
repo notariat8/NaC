@@ -80,6 +80,10 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
             packaging["bff_client_test"],
             "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
         )
+        self.assertEqual(
+            packaging["component_runtime_test"],
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx",
+        )
 
     def test_contract_allows_only_the_delegated_bff_permission_path(self) -> None:
         boundary = self.contract["graph_free_boundary"]
