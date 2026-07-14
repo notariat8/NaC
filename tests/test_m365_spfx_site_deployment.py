@@ -27,7 +27,6 @@ from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
     SOLUTION_PRODUCT_ID,
     SOLUTION_TITLE,
     TEAM_ID,
-    TEAMS_INSTALLED_APPS_URL,
     WEB_PART_ID,
     WORKSPACE_ID,
     DeploymentPlanError,
@@ -39,6 +38,7 @@ from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
 APP_CATALOG_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 TEAMS_CATALOG_ID = "11111111-2222-3333-4444-555555555555"
 TEAMS_EXTERNAL_ID = "66666666-7777-8888-9999-aaaaaaaaaaaa"
+TEAMS_INSTALLED_APPS_URL = deployment_module._teams_installed_apps_url(TEAMS_EXTERNAL_ID)
 TEAMS_VERSION = "0.1.0"
 TEAMS_CATALOG_DETAIL_URL = (
     f"https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/{TEAMS_CATALOG_ID}"
@@ -256,6 +256,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self.assertNotIn(("spo", "app", "install"), heads)
             self.assertNotIn(("spo", "page", "add"), heads)
             self.assertNotIn(("spo", "page", "clientsidewebpart", "add"), heads)
+            self.assertNotIn(("teams", "app", "install"), heads)
             self._assert_commands_are_strictly_scoped(runner.commands, include_teams=True)
             request_urls = [
                 self._value(command, "--url")
@@ -267,19 +268,30 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 [TEAMS_CATALOG_DETAIL_URL, TEAMS_INSTALLED_APPS_URL],
             )
 
-            teams_install = next(
-                command
-                for command in runner.commands
-                if self._command_head(command) == ("teams", "app", "install")
-            )
-            self.assertEqual(self._value(teams_install, "--teamId"), TEAM_ID)
-
     def test_no_teams_catalog_match_preserves_publish_install_and_readback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_package_fixture(root)
             plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
-            runner = FakeRunner(self._create_handler)
+            installed = False
+
+            def create_then_install_handler(command: tuple[str, ...]) -> FakeResult:
+                nonlocal installed
+                head = self._command_head(command)
+                if head == ("teams", "app", "install"):
+                    installed = True
+                    return FakeResult()
+                if (
+                    head == ("request",)
+                    and self._value(command, "--url") == TEAMS_INSTALLED_APPS_URL
+                ):
+                    payload = (
+                        self._installed_teams_apps_payload() if installed else {"value": []}
+                    )
+                    return FakeResult(stdout=json.dumps(payload))
+                return self._create_handler(command)
+
+            runner = FakeRunner(create_then_install_handler)
 
             evidence = run_spfx_site_deployment(plan, runner)
             heads = [self._command_head(command) for command in runner.commands]
@@ -297,7 +309,10 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self.assertIn(("teams", "app", "publish"), heads)
             self.assertIn(("teams", "app", "install"), heads)
             self.assertNotIn(("teams", "app", "update"), heads)
-            self.assertEqual(request_urls, [TEAMS_INSTALLED_APPS_URL])
+            self.assertEqual(
+                request_urls,
+                [TEAMS_INSTALLED_APPS_URL, TEAMS_INSTALLED_APPS_URL],
+            )
 
     def test_package_mutation_is_blocked_before_the_first_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -776,6 +791,8 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
 
             def generic_conflict(command: tuple[str, ...]) -> FakeResult:
+                if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
+                    return FakeResult(stdout='{"value":[]}')
                 if self._command_head(command) == ("teams", "app", "install"):
                     return FakeResult(returncode=1, stderr="Conflict")
                 return self._existing_handler(command)
@@ -790,14 +807,106 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             )
             self.assertEqual(
                 self._command_head(runner.commands[-1]),
-                ("teams", "app", "install"),
+                ("request",),
             )
             request_urls = [
                 self._value(command, "--url")
                 for command in runner.commands
                 if self._command_head(command) == ("request",)
             ]
-            self.assertEqual(request_urls, [TEAMS_CATALOG_DETAIL_URL])
+            self.assertEqual(
+                request_urls,
+                [
+                    TEAMS_CATALOG_DETAIL_URL,
+                    TEAMS_INSTALLED_APPS_URL,
+                    TEAMS_INSTALLED_APPS_URL,
+                ],
+            )
+
+    def test_install_error_survives_failed_reconciliation_readback(self) -> None:
+        readback_failures = (
+            FakeResult(returncode=2, stderr="Graph unavailable"),
+            FakeResult(stdout="{not-json"),
+        )
+        for readback_failure in readback_failures:
+            with (
+                self.subTest(readback_failure=readback_failure),
+                tempfile.TemporaryDirectory() as tmp,
+            ):
+                root = Path(tmp)
+                self._write_package_fixture(root)
+                plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+                readback_count = 0
+
+                def failed_reconciliation(command: tuple[str, ...]) -> FakeResult:
+                    nonlocal readback_count
+                    if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
+                        readback_count += 1
+                        if readback_count == 1:
+                            return FakeResult(stdout='{"value":[]}')
+                        return readback_failure
+                    if self._command_head(command) == ("teams", "app", "install"):
+                        return FakeResult(returncode=1)
+                    return self._existing_handler(command)
+
+                runner = FakeRunner(failed_reconciliation)
+                evidence = run_spfx_site_deployment(plan, runner)
+
+                self.assertEqual(evidence["status"], "FAILED")
+                self.assertEqual(
+                    evidence["steps"][-1]["name"],
+                    "install_or_reuse_teams_app_on_target_team",
+                )
+                self.assertEqual(
+                    evidence["steps"][-1]["error"]["category"],
+                    "control_plane_command_failed",
+                )
+                self.assertEqual(evidence["steps"][-1]["error"]["exit_code"], 1)
+
+    def test_parallel_install_race_is_reconciled_by_exact_readback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+            readback_count = 0
+
+            def raced_install(command: tuple[str, ...]) -> FakeResult:
+                nonlocal readback_count
+                if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
+                    readback_count += 1
+                    payload = (
+                        {"value": []}
+                        if readback_count == 1
+                        else self._installed_teams_apps_payload()
+                    )
+                    return FakeResult(stdout=json.dumps(payload))
+                if self._command_head(command) == ("teams", "app", "install"):
+                    return FakeResult(returncode=1)
+                return self._existing_handler(command)
+
+            runner = FakeRunner(raced_install)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+            request_urls = [
+                self._value(command, "--url")
+                for command in runner.commands
+                if self._command_head(command) == ("request",)
+            ]
+
+            self.assertEqual(evidence["status"], "PASSED")
+            self.assertEqual(
+                evidence["classifications"]["install_or_reuse_teams_app_on_target_team"],
+                "reuse",
+            )
+            self.assertIn(("teams", "app", "install"), heads)
+            self.assertEqual(
+                request_urls,
+                [
+                    TEAMS_CATALOG_DETAIL_URL,
+                    TEAMS_INSTALLED_APPS_URL,
+                    TEAMS_INSTALLED_APPS_URL,
+                ],
+            )
 
     def test_rejected_missing_or_malformed_catalog_detail_fails_closed(self) -> None:
         malformed = self._teams_catalog_detail()
@@ -839,9 +948,60 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 self.assertNotIn(("teams", "app", "update"), heads)
                 self.assertNotIn(("teams", "app", "install"), heads)
 
+    def test_teams_install_preflight_fails_closed_before_write(self) -> None:
+        unsafe_payloads = (
+            {"value": "not-a-list"},
+            {"value": [None]},
+            {"value": [{"id": "missing-teams-app"}]},
+            self._installed_teams_apps_payload(
+                catalog_id="ffffffff-ffff-ffff-ffff-ffffffffffff"
+            ),
+            self._installed_teams_apps_payload(
+                external_id="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+            ),
+            {
+                "value": [
+                    *self._installed_teams_apps_payload()["value"],
+                    *self._installed_teams_apps_payload()["value"],
+                ]
+            },
+            {
+                **self._installed_teams_apps_payload(),
+                "@odata.nextLink": "https://graph.microsoft.com/v1.0/next-page",
+            },
+        )
+        for payload in unsafe_payloads:
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._write_package_fixture(root)
+                plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+                def unsafe_preflight(command: tuple[str, ...]) -> FakeResult:
+                    if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
+                        return FakeResult(stdout=json.dumps(payload))
+                    return self._existing_handler(command)
+
+                runner = FakeRunner(unsafe_preflight)
+                evidence = run_spfx_site_deployment(plan, runner)
+                heads = [self._command_head(command) for command in runner.commands]
+
+                self.assertEqual(evidence["status"], "FAILED")
+                self.assertEqual(
+                    evidence["steps"][-1]["name"],
+                    "inspect_teams_app_installation_on_target_team",
+                )
+                self.assertEqual(
+                    evidence["steps"][-1]["error"]["category"],
+                    "unsafe_control_plane_response",
+                )
+                self.assertNotIn(("teams", "app", "install"), heads)
+
     def test_teams_install_readback_requires_exact_catalog_and_manifest_identity(self) -> None:
         unsafe_payloads = (
             {"value": []},
+            {"value": "not-a-list"},
+            {"value": [None]},
+            {"value": [{"id": "missing-teams-app"}]},
             self._installed_teams_apps_payload(
                 catalog_id="ffffffff-ffff-ffff-ffff-ffffffffffff"
             ),
@@ -861,9 +1021,16 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 self._write_package_fixture(root)
                 plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
 
+                readback_count = 0
+
                 def unsafe_readback(command: tuple[str, ...]) -> FakeResult:
+                    nonlocal readback_count
                     if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
-                        return FakeResult(stdout=json.dumps(payload))
+                        readback_count += 1
+                        response = {"value": []} if readback_count == 1 else payload
+                        return FakeResult(stdout=json.dumps(response))
+                    if self._command_head(command) == ("teams", "app", "install"):
+                        return FakeResult()
                     return self._existing_handler(command)
 
                 runner = FakeRunner(unsafe_readback)
