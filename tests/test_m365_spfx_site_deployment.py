@@ -15,6 +15,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from nac_m365_graph import spfx_site_deployment as deployment_module  # noqa: E402
 from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
     INITIAL_PAGE_CONTENT,
     PACKAGE_CONFIG_RELATIVE_PATH,
@@ -38,6 +39,11 @@ from nac_m365_graph.spfx_site_deployment import (  # noqa: E402
 APP_CATALOG_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 TEAMS_CATALOG_ID = "11111111-2222-3333-4444-555555555555"
 TEAMS_EXTERNAL_ID = "66666666-7777-8888-9999-aaaaaaaaaaaa"
+TEAMS_VERSION = "0.1.0"
+TEAMS_CATALOG_DETAIL_URL = (
+    f"https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/{TEAMS_CATALOG_ID}"
+    "?$expand=appDefinitions"
+)
 RAW_SECRET = "raw-session-token-do-not-emit"
 
 
@@ -231,7 +237,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self.assertEqual(evidence["classifications"]["add_or_reuse_web_part"], "reuse")
             self.assertEqual(
                 evidence["classifications"]["publish_or_update_teams_catalog_app"],
-                "update",
+                "reuse",
             )
             self.assertEqual(
                 evidence["classifications"]["install_or_reuse_teams_app_on_target_team"],
@@ -239,8 +245,8 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             )
             heads = [self._command_head(command) for command in runner.commands]
             self.assertIn(("spo", "app", "upgrade"), heads)
-            self.assertIn(("teams", "app", "update"), heads)
             self.assertIn(("request",), heads)
+            self.assertNotIn(("teams", "app", "update"), heads)
             app_add = next(
                 command
                 for command in runner.commands
@@ -251,6 +257,15 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self.assertNotIn(("spo", "page", "add"), heads)
             self.assertNotIn(("spo", "page", "clientsidewebpart", "add"), heads)
             self._assert_commands_are_strictly_scoped(runner.commands, include_teams=True)
+            request_urls = [
+                self._value(command, "--url")
+                for command in runner.commands
+                if self._command_head(command) == ("request",)
+            ]
+            self.assertEqual(
+                request_urls,
+                [TEAMS_CATALOG_DETAIL_URL, TEAMS_INSTALLED_APPS_URL],
+            )
 
             teams_install = next(
                 command
@@ -258,6 +273,31 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 if self._command_head(command) == ("teams", "app", "install")
             )
             self.assertEqual(self._value(teams_install, "--teamId"), TEAM_ID)
+
+    def test_no_teams_catalog_match_preserves_publish_install_and_readback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+            runner = FakeRunner(self._create_handler)
+
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+            request_urls = [
+                self._value(command, "--url")
+                for command in runner.commands
+                if self._command_head(command) == ("request",)
+            ]
+
+            self.assertEqual(evidence["status"], "PASSED")
+            self.assertEqual(
+                evidence["classifications"]["publish_or_update_teams_catalog_app"],
+                "create",
+            )
+            self.assertIn(("teams", "app", "publish"), heads)
+            self.assertIn(("teams", "app", "install"), heads)
+            self.assertNotIn(("teams", "app", "update"), heads)
+            self.assertEqual(request_urls, [TEAMS_INSTALLED_APPS_URL])
 
     def test_package_mutation_is_blocked_before_the_first_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -458,7 +498,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 [("spo", "app", "list")],
             )
 
-    def test_teams_download_is_replaceable_and_manifest_id_drives_catalog_update(self) -> None:
+    def test_teams_download_is_replaceable_and_published_manifest_version_is_reused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_package_fixture(root)
@@ -476,8 +516,258 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 for command in runner.commands
                 if self._command_head(command) == ("teams", "app", "update")
             ]
-            self.assertEqual(len(updates), 2)
-            self.assertTrue(all(self._value(command, "--id") == TEAMS_CATALOG_ID for command in updates))
+            self.assertEqual(updates, [])
+            detail_requests = [
+                command
+                for command in runner.commands
+                if self._command_head(command) == ("request",)
+                and self._value(command, "--url") == TEAMS_CATALOG_DETAIL_URL
+            ]
+            self.assertEqual(len(detail_requests), 2)
+
+    def test_duplicate_teams_external_ids_fail_before_detail_or_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+            def duplicate_handler(command: tuple[str, ...]) -> FakeResult:
+                if self._command_head(command) == ("teams", "app", "list"):
+                    return FakeResult(
+                        stdout=json.dumps(
+                            [
+                                self._teams_catalog_app(),
+                                self._teams_catalog_app(
+                                    catalog_id="22222222-3333-4444-5555-666666666666"
+                                ),
+                            ]
+                        )
+                    )
+                return self._existing_handler(command)
+
+            runner = FakeRunner(duplicate_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+
+            self.assertEqual(evidence["status"], "FAILED")
+            self.assertEqual(
+                evidence["steps"][-1]["error"]["category"],
+                "unsafe_control_plane_response",
+            )
+            self.assertNotIn(("request",), heads)
+            self.assertNotIn(("teams", "app", "update"), heads)
+            self.assertNotIn(("teams", "app", "install"), heads)
+
+    def test_malformed_or_mixed_teams_catalog_payloads_fail_before_publish(self) -> None:
+        unsafe_payloads = (
+            None,
+            {},
+            {"items": []},
+            {"value": {}},
+            [self._teams_catalog_app(), None],
+            {"value": [self._teams_catalog_app(), "not-an-object"]},
+        )
+        for payload in unsafe_payloads:
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._write_package_fixture(root)
+                plan = build_spfx_site_deployment_plan(
+                    repo_root=root,
+                    include_teams=True,
+                )
+
+                def malformed_catalog(command: tuple[str, ...]) -> FakeResult:
+                    if self._command_head(command) == ("teams", "app", "list"):
+                        return FakeResult(stdout=json.dumps(payload))
+                    return self._create_handler(command)
+
+                runner = FakeRunner(malformed_catalog)
+                evidence = run_spfx_site_deployment(plan, runner)
+                heads = [self._command_head(command) for command in runner.commands]
+
+                self.assertEqual(evidence["status"], "FAILED")
+                self.assertEqual(
+                    evidence["steps"][-1]["error"]["category"],
+                    "unsafe_control_plane_response",
+                )
+                self.assertNotIn(("teams", "app", "publish"), heads)
+                self.assertNotIn(("teams", "app", "install"), heads)
+                self.assertNotIn(("request",), heads)
+
+    def test_malformed_catalog_id_never_reaches_request_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+            def malformed_id_handler(command: tuple[str, ...]) -> FakeResult:
+                if self._command_head(command) == ("teams", "app", "list"):
+                    return FakeResult(
+                        stdout=json.dumps(
+                            [self._teams_catalog_app(catalog_id="not-a-guid")]
+                        )
+                    )
+                return self._existing_handler(command)
+
+            runner = FakeRunner(malformed_id_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+
+            self.assertEqual(evidence["status"], "FAILED")
+            self.assertEqual(
+                evidence["steps"][-1]["error"]["category"],
+                "unsafe_control_plane_response",
+            )
+            self.assertNotIn(("request",), heads)
+            self.assertNotIn(("teams", "app", "install"), heads)
+
+    def test_catalog_detail_request_rejects_every_nonexact_variant(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+            exact = (
+                "m365",
+                "request",
+                "--url",
+                TEAMS_CATALOG_DETAIL_URL,
+                "--method",
+                "get",
+                "--output",
+                "json",
+            )
+            deployment_module._validate_command(
+                plan,
+                exact,
+                allowed_teams_catalog_detail_id=TEAMS_CATALOG_ID,
+            )
+
+            unsafe_commands = {
+                "beta": (
+                    *exact[:3],
+                    TEAMS_CATALOG_DETAIL_URL.replace("/v1.0/", "/beta/"),
+                    *exact[4:],
+                ),
+                "alternate_query": (
+                    *exact[:3],
+                    TEAMS_CATALOG_DETAIL_URL + "&$select=id",
+                    *exact[4:],
+                ),
+                "post": (*exact[:5], "post", *exact[6:]),
+                "body": (*exact, "--body", "{}"),
+                "resource": (*exact, "--resource", "graph"),
+                "file_path": (*exact, "--filePath", str(plan.teams_package_path)),
+                "extra_option": (*exact, "--headers", "{}"),
+            }
+            for variant, command in unsafe_commands.items():
+                with self.subTest(variant=variant):
+                    with self.assertRaises(deployment_module._StepFailure):
+                        deployment_module._validate_command(
+                            plan,
+                            command,
+                            allowed_teams_catalog_detail_id=TEAMS_CATALOG_ID,
+                        )
+
+    def test_downloaded_teams_manifest_requires_exact_id_and_version(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+            def malformed_manifest_handler(command: tuple[str, ...]) -> FakeResult:
+                if self._command_head(command) == (
+                    "spo",
+                    "app",
+                    "teamspackage",
+                    "download",
+                ):
+                    path = Path(self._value(command, "--fileName"))
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(path, "w") as package:
+                        package.writestr(
+                            "manifest.json",
+                            json.dumps(
+                                {
+                                    "id": TEAMS_EXTERNAL_ID,
+                                    "version": "not-a-version",
+                                }
+                            ),
+                        )
+                    return FakeResult()
+                return self._existing_handler(command)
+
+            runner = FakeRunner(malformed_manifest_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+
+            self.assertEqual(evidence["status"], "FAILED")
+            self.assertEqual(
+                evidence["steps"][-1]["error"]["category"],
+                "unsafe_control_plane_response",
+            )
+            self.assertNotIn(("teams", "app", "list"), heads)
+            self.assertNotIn(("request",), heads)
+
+    def test_submitted_matching_version_stops_with_review_pending_category(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+            def submitted_handler(command: tuple[str, ...]) -> FakeResult:
+                if self._is_request_for(command, TEAMS_CATALOG_DETAIL_URL):
+                    return FakeResult(
+                        stdout=json.dumps(
+                            self._teams_catalog_detail(publishing_state="submitted")
+                        )
+                    )
+                return self._existing_handler(command)
+
+            runner = FakeRunner(submitted_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+
+            self.assertEqual(evidence["status"], "FAILED")
+            self.assertEqual(
+                evidence["steps"][-1]["error"]["category"],
+                "teams_catalog_review_pending",
+            )
+            self.assertEqual(runner.commands[-1][0:2], ("m365", "request"))
+            self.assertEqual(
+                self._value(runner.commands[-1], "--url"),
+                TEAMS_CATALOG_DETAIL_URL,
+            )
+            self.assertNotIn(("teams", "app", "update"), heads)
+            self.assertNotIn(("teams", "app", "install"), heads)
+
+    def test_ambiguous_matching_version_definitions_fail_before_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_package_fixture(root)
+            plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
+
+            def ambiguous_handler(command: tuple[str, ...]) -> FakeResult:
+                if self._is_request_for(command, TEAMS_CATALOG_DETAIL_URL):
+                    detail = self._teams_catalog_detail()
+                    definitions = detail["appDefinitions"]
+                    assert isinstance(definitions, list)
+                    definitions.append(
+                        {"version": TEAMS_VERSION, "publishingState": "published"}
+                    )
+                    return FakeResult(stdout=json.dumps(detail))
+                return self._existing_handler(command)
+
+            runner = FakeRunner(ambiguous_handler)
+            evidence = run_spfx_site_deployment(plan, runner)
+            heads = [self._command_head(command) for command in runner.commands]
+
+            self.assertEqual(evidence["status"], "FAILED")
+            self.assertEqual(
+                evidence["steps"][-1]["error"]["category"],
+                "unsafe_control_plane_response",
+            )
+            self.assertNotIn(("teams", "app", "update"), heads)
+            self.assertNotIn(("teams", "app", "install"), heads)
 
     def test_generic_teams_conflict_is_not_accepted_as_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -502,7 +792,52 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 self._command_head(runner.commands[-1]),
                 ("teams", "app", "install"),
             )
-            self.assertNotIn(("request",), [self._command_head(c) for c in runner.commands])
+            request_urls = [
+                self._value(command, "--url")
+                for command in runner.commands
+                if self._command_head(command) == ("request",)
+            ]
+            self.assertEqual(request_urls, [TEAMS_CATALOG_DETAIL_URL])
+
+    def test_rejected_missing_or_malformed_catalog_detail_fails_closed(self) -> None:
+        malformed = self._teams_catalog_detail()
+        malformed["appDefinitions"] = [None]
+        unsafe_payloads = (
+            self._teams_catalog_detail(publishing_state="rejected"),
+            self._teams_catalog_detail(version="9.9.9"),
+            malformed,
+            self._teams_catalog_detail(
+                catalog_id="ffffffff-ffff-ffff-ffff-ffffffffffff"
+            ),
+            self._teams_catalog_detail(
+                external_id="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+            ),
+        )
+        for payload in unsafe_payloads:
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._write_package_fixture(root)
+                plan = build_spfx_site_deployment_plan(
+                    repo_root=root,
+                    include_teams=True,
+                )
+
+                def unsafe_detail(command: tuple[str, ...]) -> FakeResult:
+                    if self._is_request_for(command, TEAMS_CATALOG_DETAIL_URL):
+                        return FakeResult(stdout=json.dumps(payload))
+                    return self._existing_handler(command)
+
+                runner = FakeRunner(unsafe_detail)
+                evidence = run_spfx_site_deployment(plan, runner)
+                heads = [self._command_head(command) for command in runner.commands]
+
+                self.assertEqual(evidence["status"], "FAILED")
+                self.assertEqual(
+                    evidence["steps"][-1]["error"]["category"],
+                    "unsafe_control_plane_response",
+                )
+                self.assertNotIn(("teams", "app", "update"), heads)
+                self.assertNotIn(("teams", "app", "install"), heads)
 
     def test_teams_install_readback_requires_exact_catalog_and_manifest_identity(self) -> None:
         unsafe_payloads = (
@@ -527,7 +862,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 plan = build_spfx_site_deployment_plan(repo_root=root, include_teams=True)
 
                 def unsafe_readback(command: tuple[str, ...]) -> FakeResult:
-                    if self._command_head(command) == ("request",):
+                    if self._is_request_for(command, TEAMS_INSTALLED_APPS_URL):
                         return FakeResult(stdout=json.dumps(payload))
                     return self._existing_handler(command)
 
@@ -619,9 +954,11 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self._write_downloaded_teams_package(command)
             return FakeResult()
         if head == ("teams", "app", "list"):
-            return FakeResult(stdout="[]")
+            return FakeResult(stdout='{"value":[]}')
         if head == ("teams", "app", "publish"):
-            return FakeResult(stdout=json.dumps({"id": TEAMS_CATALOG_ID, "externalId": WEB_PART_ID}))
+            return FakeResult(
+                stdout=json.dumps({"id": TEAMS_CATALOG_ID, "externalId": TEAMS_EXTERNAL_ID})
+            )
         if head == ("request",):
             return FakeResult(stdout=json.dumps(self._installed_teams_apps_payload()))
         return FakeResult()
@@ -644,22 +981,42 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
             self._write_downloaded_teams_package(command)
             return FakeResult()
         if head == ("teams", "app", "list"):
-            return FakeResult(
-                stdout=json.dumps(
-                    [
-                        {
-                            "id": TEAMS_CATALOG_ID,
-                            "externalId": TEAMS_EXTERNAL_ID,
-                            "distributionMethod": "organization",
-                        }
-                    ]
-                )
-            )
+            return FakeResult(stdout=json.dumps([self._teams_catalog_app()]))
         if head == ("teams", "app", "install"):
             return FakeResult(returncode=1, stderr="App is already installed in this team")
         if head == ("request",):
+            if self._value(command, "--url") == TEAMS_CATALOG_DETAIL_URL:
+                return FakeResult(stdout=json.dumps(self._teams_catalog_detail()))
             return FakeResult(stdout=json.dumps(self._installed_teams_apps_payload()))
         return FakeResult()
+
+    @staticmethod
+    def _teams_catalog_app(
+        *,
+        catalog_id: str = TEAMS_CATALOG_ID,
+        external_id: str = TEAMS_EXTERNAL_ID,
+    ) -> dict[str, object]:
+        return {
+            "id": catalog_id,
+            "externalId": external_id,
+            "distributionMethod": "organization",
+        }
+
+    @staticmethod
+    def _teams_catalog_detail(
+        *,
+        catalog_id: str = TEAMS_CATALOG_ID,
+        external_id: str = TEAMS_EXTERNAL_ID,
+        version: str = TEAMS_VERSION,
+        publishing_state: str = "published",
+    ) -> dict[str, object]:
+        return {
+            "id": catalog_id,
+            "externalId": external_id,
+            "appDefinitions": [
+                {"version": version, "publishingState": publishing_state}
+            ],
+        }
 
     @staticmethod
     def _installed_teams_apps_payload(
@@ -688,7 +1045,7 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 json.dumps(
                     {
                         "manifestVersion": "1.17",
-                        "version": "0.1.0",
+                        "version": TEAMS_VERSION,
                         "id": TEAMS_EXTERNAL_ID,
                     }
                 ),
@@ -716,8 +1073,17 @@ class M365SpfxSiteDeploymentTests(unittest.TestCase):
                 self.assertEqual(self._value(command, "--teamId"), TEAM_ID)
             if self._command_head(command) == ("request",):
                 self.assertTrue(include_teams)
-                self.assertEqual(self._value(command, "--url"), TEAMS_INSTALLED_APPS_URL)
+                self.assertIn(
+                    self._value(command, "--url"),
+                    {TEAMS_CATALOG_DETAIL_URL, TEAMS_INSTALLED_APPS_URL},
+                )
                 self.assertEqual(self._value(command, "--method"), "get")
+
+    def _is_request_for(self, command: Sequence[str], url: str) -> bool:
+        return (
+            self._command_head(command) == ("request",)
+            and self._value(command, "--url") == url
+        )
 
     @staticmethod
     def _command_head(command: Sequence[str]) -> tuple[str, ...]:
