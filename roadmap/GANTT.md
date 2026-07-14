@@ -1,6 +1,6 @@
 # NaC Globaler Gantt
 
-Letzte Aktualisierung: 2026-07-11
+Letzte Aktualisierung: 2026-07-14
 
 Dieser globale Gantt wird mitgepflegt, wenn Roadmap, Scope, Status,
 Meilenstein oder das aktive Build-Board betroffen sind. Änderungen unter
@@ -82,7 +82,8 @@ gantt
     M365-App-geführtes Privilegienänderungs-Gate :         b1wa, after b1w, 7d
     Microsoft-first On-Prem-Zielarchitektur       :done,    b1wb, 2026-07-11, 1d
     Durable-Workflow-Kandidatenspitze             :         b1wc, after b1wb, 42d
-    SPFx Read-only Arbeitsfläche                  :         b1wd, after b1wc, 28d
+    M365-MVP-Testumgebung-Live-One-Shot           :done,    b1we, 2026-07-14, 1d
+    SPFx Read-only Workspace-Arbeitsfläche        :active,  b1wd, 2026-07-14, 28d
     Legal-Graph-Domänen-MVP planen              :active,  b1z, 2026-06-12, 14d
     Legal-Graph-Primärquellenpilot ohne Kommentarzugriff :done,   b1za, 2026-06-12, 7d
     Legal-Nemotron-Finetuning-Gates planen       :done,    b1zb, 2026-06-28, 2d
@@ -179,6 +180,14 @@ Application-Owner vorsieht. Eine kleine Entra-Gruppe wie `nac_platform_admins`
 bleibt Governance- und Betriebsgruppe. Menschliche Team-Owner, fachliche
 Aktenfreigabe, Vertretungsgrund, Dauer und Audit bleiben weiterhin
 verpflichtend.
+
+M365-Statushinweis 2026-07-14: Der owner-genehmigte M365-MVP-Testumgebung-
+Live-One-Shot für `notary_team_01` ist mit site-scoped SPFx-/Teams-
+Bereitstellung sowie synthetischem Graph-REST-v1.0-Schreib-, Lese- und
+Cleanup-Nachweis erfolgreich abgeschlossen. Dies ist ein enger Live-Meilenstein;
+die breite SPFx Read-only Workspace-Arbeitsfläche bleibt aktiv. Die
+NaC-BFF-Live-Aktivierung bleibt mangels bestehendem delegiertem Scope und
+öffentlichem HTTPS-Endpunkt ausdrücklich `DEFERRED`.
 
 ## Regel
 

@@ -1,6 +1,6 @@
 # Workflow Gantt
 
-Letzte Aktualisierung: 2026-07-11
+Letzte Aktualisierung: 2026-07-14
 
 ```mermaid
 gantt
@@ -44,6 +44,8 @@ gantt
     On-Prem-Connector-Grenzvertrag            :done,   w4n, 2026-06-28, 1d
     Microsoft-first On-Prem-Zielvertrag          :done,   w4ah, 2026-07-11, 1d
     Durable-Workflow-Spike                       :        w4ai, after w4ah, 42d
+    M365-MVP-Testumgebung-Live-One-Shot          :done,   w4aj, 2026-07-14, 1d
+    SPFx Read-only Workspace-Arbeitsfläche       :active, w4ak, 2026-07-14, 28d
     Ponytail-Agent-Tooling-Kandidat            :done,   w4v, 2026-06-29, 1d
     Ponytail-Skill-Only-Smoke-Runbook          :done,   w4w, 2026-06-29, 1d
     Ponytail-Skill-Only-Smoke-Ausführung       :done,   w4x, 2026-06-29, 1d
@@ -77,6 +79,7 @@ gantt
 | GNotKG-Kostenmodul | `src/nac_gnotkg/` plus `workflows/contracts/gnotkg-cost-review.contract.json` | Nutzbarer MVP | Zentrale Wertgebührenlogik mit GNotKG § 35-Höchstwerten, mandatsdatenfreier Reviewgraph und `xyflow` als reine Visualisierungsschicht. |
 | Lokaler Webserver | `src/nac_web/` plus `scripts/nac_web.py` | Heute nutzbar | Zeigt BPMN-SVG, BPMN-JSON, BPMN-XML/Editierfläche, KG-Editor-Views, GNotKG-Kostenansichten und KG-JSON lokal im Browser; BPMN-Speichern nutzt SHA-256-Konfliktprüfung, GNotKG-Quotes laufen per POST. |
 | Workflow-Verträge | `workflows/contracts/` plus `workflows/legal-model/` | Aktiv | Eingaben, Ausgaben, Freigaben, Datenklassen, Plugin-Abhängigkeiten sowie KG-Editor-, BPMN-js-Editor-, GNotKG-Kosten-, lokaler Webpreview-, Teams-/SharePoint-Graph-Datenebenen-, Secure-Document-Link-, Legal-Research-Connector-/Legal-Produkt-Referenz-Kandidaten-, Legal-Graph-, Legal-Source-Inventar-Lizenz-TDM-, Legal-Nemotron-Readiness-, Legal-Model-Card-AI-SBOM-Delta-, Legal-Model-Card-Artefaktvorschlag-, Legal-AI-SBOM-Delta-Artefaktvorschlag-, Legal-Model-Evaluationsbenchmark-, Kommentar-Connector-, archivierter NaC-On-Prem-Agent-Runtime-, Ponytail-Agent-Tooling-Kandidaten-, Ponytail-Skill-Only-Smoke-, archivierter NaC-Runtime-Smoke-, archivierter On-Prem-Connector-Grenz-, Mandatsdaten-Redaktions-, privater Betriebsrahmen-Gate-, Private-Payload-Ziel- und Zugriffsmatrixvertrag; KG-Fälle können zusätzlich sichere Workflow-Vertragsentwürfe aus ihren usecase-lokalen Graphen ableiten. OCI/ATP- und OCI-gebundene On-Prem-Agent-Verträge bleiben als Legacy-Artefakte auffindbar, sind aber keine aktive MVP-Spur. Der Ponytail-Skill-Only-Smoke ist Owner-gated bestanden und bleibt ohne Installation, Hook- oder Runtime-Aktivierung. Kommentar-, Legal-Nemotron-, Legal-Source-Inventar-, Legal-Model-Card-/AI-SBOM-, Legal-Model-Benchmark-, Ponytail-Agent-Tooling-, Ponytail-Skill-Only-Smoke-, Mandatsdaten- und Private-Payload-Verträge bleiben vor produktivem Zugriff durch Lizenzbasis-, TDM-, AVV-/DPA-, Berufsgeheimnis-, AI-SBOM-, Sicherheitsgrenzen-, Credential-, Hook-, Runtime-Aktivierungs-, Testmodus-, Privacy-, Benchmark-, Holdout-, Evaluation-, Model-Card-, Rollen-, Zweck-, Speicher-, Retention-, Verschlüsselungs- und Owner-Gates blockiert. |
+| M365-MVP-Testumgebung | `spfx/nac-bpmn-viewer/` plus `src/nac_m365_graph/` | Live-One-Shot done; breite SPFx-Arbeit aktiv; BFF `DEFERRED` | Der owner-genehmigte One-Shot in `notary_team_01` bestand am 2026-07-14 die site-scoped SPFx-/Teams-Bereitstellung und den synthetischen Graph-REST-v1.0-Schreib-, Lese- und Cleanup-Nachweis. Die breite Read-only Workspace-Arbeitsfläche bleibt aktiv; die Live-Entra-BFF-Aktivierung wartet auf bestehenden delegierten Scope und öffentlichen HTTPS-Endpunkt. |
 
 Der repo-weite Marken- und ID-Standard heißt `NaC` für `Notariat as Code`;
 alte Schreibweisen sind in Workflow-Dokumenten nicht mehr

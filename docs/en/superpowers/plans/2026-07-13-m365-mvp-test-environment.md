@@ -4,6 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365 MVP Test Environment Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
+**Live Status:** Owner-approved Live-One-Shot succeeded in `notary_team_01` on 14 July 2026; live BFF/Entra token validation DEFERRED
 
 ## Target State
 
@@ -87,9 +88,10 @@ that SPFx must never call Graph directly.
 
 ## Acceptance Evidence
 
-The package-ready slice is accepted when AC-620-01 through AC-620-07 are
-covered with their exact semantics in the machine-readable verification
-contract, all focused tests and validators pass, the package builds
-reproducibly, and deployment/smoke evidence is synthetic and redacted only.
-The BFF scope, public activation, and live token validation remain explicitly
-DEFERRED and are not reported as live-complete.
+The owner-approved Live-One-Shot completed successfully in `notary_team_01` on
+14 July 2026 with the site-scoped SPFx/Heft package, SharePoint/Teams gate,
+synthetic matter, BPMN, tasks/due date, role decisions, Graph REST `v1.0`
+readback, and run-owned cleanup. Evidence remains synthetic and redacted.
+Document pointers and `bpmn-js` lazy loading were not proven and remain open.
+The BFF scope, public activation, and live Entra token validation remain
+explicitly DEFERRED and are not reported as live-complete.

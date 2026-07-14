@@ -4,6 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365-MVP-Testumgebung Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
+**Live-Status:** Owner-approved Live-One-Shot am 14. Juli 2026 in `notary_team_01` erfolgreich; Live-BFF/Entra-Tokenvalidierung DEFERRED
 
 ## Zielzustand
 
@@ -89,10 +90,11 @@ zu ändern.
 
 ## Abnahmenachweis
 
-Der package-ready Slice ist abgenommen, wenn AC-620-01 bis AC-620-07 im
-maschinenlesbaren Verification Contract mit ihrer exakten Semantik
-abgedeckt sind, alle fokussierten Tests und Validatoren bestehen, das Paket
-reproduzierbar gebaut wurde und Deployment-/Smoke-Evidence ausschließlich
-synthetisch und redigiert ist. BFF-Scope, öffentliche Aktivierung und Live-
-Tokenvalidierung bleiben als DEFERRED ausgewiesen und werden nicht als live
+Der owner-approved Live-One-Shot wurde am 14. Juli 2026 in `notary_team_01`
+erfolgreich mit site-spezifischem SPFx-/Heft-Paket, SharePoint-/Teams-Gate,
+synthetischem Vorgang, BPMN, Aufgaben/Frist, Rollenentscheidungen, Graph REST
+`v1.0`-Readback und laufgebundenem Cleanup ausgeführt. Die Evidence bleibt
+synthetisch und redigiert. Dokumentzeiger und `bpmn-js`-Lazy-Loading sind nicht
+nachgewiesen und bleiben offen. BFF-Scope, öffentliche Aktivierung und Live-
+Entra-Tokenvalidierung bleiben ausdrücklich DEFERRED und werden nicht als live
 erfüllt dargestellt.

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import re
 import unittest
@@ -11,6 +13,25 @@ CONTRACT_PATH = (
     ROOT
     / "workflows/contracts/m365-mvp-test-environment.verification.contract.json"
 )
+LIVE_ATTESTATION_PATH = (
+    ROOT
+    / "workflows/verification-contracts/m365-mvp-test-environment-live.verification.json"
+)
+LIVE_EVIDENCE_PATH = (
+    ROOT
+    / "workflows/verification-contracts/evidence/"
+    "m365-mvp-test-environment-deploy.redacted.json"
+)
+DE_TARGET_PLAN = (
+    ROOT
+    / "docs/de/superpowers/plans/2026-07-11-microsoft-first-onprem-target-architecture.md"
+)
+EN_TARGET_PLAN = (
+    ROOT
+    / "docs/en/superpowers/plans/2026-07-11-microsoft-first-onprem-target-architecture.md"
+)
+ROADMAP_GANTT = ROOT / "roadmap/GANTT.md"
+WORKFLOWS_GANTT = ROOT / "workflows/GANTT.md"
 DE_SPEC = (
     ROOT
     / "docs/de/superpowers/specs/2026-07-13-m365-mvp-test-environment-design.md"
@@ -28,12 +49,243 @@ EN_PLAN = (
     / "docs/en/superpowers/plans/2026-07-13-m365-mvp-test-environment.md"
 )
 ACCEPTANCE_IDS = [f"AC-620-{number:02d}" for number in range(1, 8)]
+EXPECTED_LIVE_BINDING = {
+    "source_evidence_sha256_exact": (
+        "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea"
+    ),
+    "correlation_reference_sha256_exact": (
+        "71c65e747ecec83ce97879f44a84a5692da68730a6e614fce6fa7e4ab1bf3b50"
+    ),
+    "package_sha256_exact": (
+        "0c83b65bad8c690387d116213cfeb41c40e2c8cc3ba7c9b7b8f8cdf3d8439989"
+    ),
+}
+EXPECTED_VERIFIED_CLAIMS = [
+    "site-scoped SPFx/Heft package and App Catalog deployment gate",
+    "shared SharePoint and Teams package gate",
+    "synthetic matter status, two tasks and UTC due date",
+    "read-only bpmn-js viewer with BPMN instance binding",
+    "raw Microsoft Graph REST v1.0 write and targeted readback",
+    "assigned, valid-deputy and unauthorized role decisions",
+    "run-owned cleanup",
+    "no browser business logic, secrets, workflow timers or agentic runtime",
+]
+EXPECTED_NOT_VERIFIED = [
+    "document pointer rendering",
+    "bpmn-js lazy loading or code splitting",
+    "live BFF activation",
+    "live Entra token validation",
+]
+
+
+def validate_live_attestation(
+    attestation: dict[str, object], contract: dict[str, object]
+) -> list[str]:
+    errors: list[str] = []
+    live = contract.get("live_verification")
+    if not isinstance(live, dict):
+        return ["contract live_verification must be an object"]
+
+    expected_top_level = {
+        "schema_version": "nac.verification-contract/v0.1",
+        "contract_id": "verification.m365_mvp_test_environment_live_attestation",
+        "domain_contract_id": "verification.m365_mvp_test_environment",
+        "artifact_kind": "redacted_live_attestation",
+        "attestation_version": "1.0.0",
+        "status": "PASSED",
+        "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+        "source_contract_path": (
+            "workflows/contracts/"
+            "m365-mvp-test-environment.verification.contract.json"
+        ),
+    }
+    for key, expected in expected_top_level.items():
+        if attestation.get(key) != expected:
+            errors.append(f"attestation {key} must equal {expected!r}")
+
+    expected_scope = {
+        "execution_mode_exact": "Live-One-Shot",
+        "workspace_id_exact": "notary_team_01",
+        "data_class_exact": "synthetic_only",
+        "source_evidence_retained_in_repo": True,
+        "source_evidence_path_exact": (
+            "workflows/verification-contracts/evidence/"
+            "m365-mvp-test-environment-deploy.redacted.json"
+        ),
+    }
+    if attestation.get("verification_scope") != expected_scope:
+        errors.append("attestation verification_scope must match the reviewed scope")
+    if attestation.get("verified_claims_exact") != EXPECTED_VERIFIED_CLAIMS:
+        errors.append("attestation verified_claims_exact must match reviewed claims")
+    if attestation.get("explicitly_not_verified_exact") != EXPECTED_NOT_VERIFIED:
+        errors.append("attestation explicitly_not_verified_exact must remain exact")
+    if live.get("workspace_id_exact") != expected_scope["workspace_id_exact"]:
+        errors.append("contract workspace_id_exact must match the reviewed scope")
+    if live.get("verified_capabilities_exact") != EXPECTED_VERIFIED_CLAIMS:
+        errors.append("contract verified_capabilities_exact must match reviewed claims")
+    if live.get("not_verified_exact") != EXPECTED_NOT_VERIFIED:
+        errors.append("contract not_verified_exact must remain exact")
+
+    result_binding = attestation.get("result_binding")
+    if not isinstance(result_binding, dict):
+        errors.append("attestation result_binding must be an object")
+        return errors
+    if result_binding.get("result_exact") != "PASSED":
+        errors.append("attestation result_binding.result_exact must be PASSED")
+
+    sha256_pattern = re.compile(r"^[0-9a-f]{64}$")
+    for key, expected in EXPECTED_LIVE_BINDING.items():
+        attested_value = result_binding.get(key)
+        if attested_value != expected:
+            errors.append(f"attestation {key} does not match the reviewed value")
+        if not isinstance(attested_value, str) or not sha256_pattern.fullmatch(
+            attested_value
+        ):
+            errors.append(f"attestation {key} must be lowercase SHA-256")
+        if live.get(key) != attested_value:
+            errors.append(f"contract and attestation disagree on {key}")
+
+    expected_pull_request = {
+        "number_exact": 628,
+        "url_exact": "https://github.com/notariat8/NaC/pull/628",
+        "state_exact": "MERGED",
+        "merge_commit_sha_exact": "5092999768bd7e0fde575a7fe40cc1c198ec1e6c",
+    }
+    if result_binding.get("pull_request") != expected_pull_request:
+        errors.append("attestation must bind PASSED to merged PR #628")
+    if live.get("pull_request_number_exact") != 628:
+        errors.append("contract must bind live verification to PR #628")
+    if live.get("pull_request_url_exact") != expected_pull_request["url_exact"]:
+        errors.append("contract must bind live verification to the PR #628 URL")
+
+    expected_attestation_path = (
+        "workflows/verification-contracts/"
+        "m365-mvp-test-environment-live.verification.json"
+    )
+    if live.get("attestation_path_exact") != expected_attestation_path:
+        errors.append("contract must reference the versioned live attestation")
+    if live.get("attestation_version_exact") != attestation.get(
+        "attestation_version"
+    ):
+        errors.append("contract and attestation versions must match")
+    if live.get("result_exact") != attestation.get("status"):
+        errors.append("contract PASSED result must be bound to attestation status")
+
+    required_redaction = {
+        "redacted": True,
+        "hashes_only_for_source_evidence_and_correlation_reference": True,
+        "raw_source_evidence_included": False,
+        "raw_correlation_reference_included": False,
+        "raw_graph_responses_included": False,
+        "tokens_credentials_or_private_keys_included": False,
+        "mandate_or_production_data_included": False,
+    }
+    if attestation.get("redaction") != required_redaction:
+        errors.append("attestation redaction boundary is incomplete")
+
+    pass_condition = attestation.get("pass_condition")
+    if not isinstance(pass_condition, dict):
+        errors.append("attestation pass_condition must be an object")
+    else:
+        for key in (
+            "result_bound_to_all_three_sha256_values",
+            "result_bound_to_merged_pull_request_628",
+            "all_evidence_references_redacted",
+            "bff_activation_remains_deferred",
+            "live_entra_token_validation_remains_deferred",
+        ):
+            if pass_condition.get(key) is not True:
+                errors.append(f"attestation pass_condition.{key} must be true")
+
+    return errors
 
 
 class M365MvpTestEnvironmentVerificationContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        cls.live_attestation = json.loads(
+            LIVE_ATTESTATION_PATH.read_text(encoding="utf-8")
+        )
+
+    def test_live_attestation_validator_binds_passed_to_hashes_and_pr(self) -> None:
+        self.assertEqual(
+            validate_live_attestation(self.live_attestation, self.contract),
+            [],
+        )
+
+    def test_versioned_live_evidence_rehashes_to_attested_sha256(self) -> None:
+        self.assertTrue(LIVE_EVIDENCE_PATH.is_file())
+        evidence_sha256 = hashlib.sha256(LIVE_EVIDENCE_PATH.read_bytes()).hexdigest()
+        self.assertEqual(
+            evidence_sha256,
+            EXPECTED_LIVE_BINDING["source_evidence_sha256_exact"],
+        )
+
+    def test_live_attestation_rejects_scope_and_bff_claim_mutations(self) -> None:
+        wrong_workspace = copy.deepcopy(self.live_attestation)
+        wrong_workspace["verification_scope"]["workspace_id_exact"] = "other"
+        self.assertNotEqual(validate_live_attestation(wrong_workspace, self.contract), [])
+
+        false_bff_claim = copy.deepcopy(self.live_attestation)
+        false_bff_claim["verified_claims_exact"].append("live BFF activation")
+        false_bff_claim["explicitly_not_verified_exact"].remove(
+            "live BFF activation"
+        )
+        self.assertNotEqual(validate_live_attestation(false_bff_claim, self.contract), [])
+
+        wrong_contract = copy.deepcopy(self.contract)
+        wrong_contract["live_verification"]["workspace_id_exact"] = "other"
+        self.assertNotEqual(
+            validate_live_attestation(self.live_attestation, wrong_contract), []
+        )
+
+        false_contract_bff_claim = copy.deepcopy(self.contract)
+        false_contract_bff_claim["live_verification"][
+            "verified_capabilities_exact"
+        ].append("live BFF activation")
+        false_contract_bff_claim["live_verification"]["not_verified_exact"].remove(
+            "live BFF activation"
+        )
+        self.assertNotEqual(
+            validate_live_attestation(self.live_attestation, false_contract_bff_claim),
+            [],
+        )
+
+    def test_live_attestation_keeps_bff_and_token_validation_deferred(self) -> None:
+        self.assertEqual(
+            self.contract["bff_boundary"]["live_activation_status_exact"],
+            "DEFERRED",
+        )
+        self.assertEqual(
+            self.live_attestation["explicitly_not_verified_exact"][-2:],
+            ["live BFF activation", "live Entra token validation"],
+        )
+
+    def test_slice_3_links_issue_contract_and_live_attestation(self) -> None:
+        required_links = (
+            "https://github.com/notariat8/NaC/issues/620",
+            "../../../../workflows/contracts/"
+            "m365-mvp-test-environment.verification.contract.json",
+            "../../../../workflows/verification-contracts/"
+            "m365-mvp-test-environment-live.verification.json",
+        )
+        for path in (DE_TARGET_PLAN, EN_TARGET_PLAN):
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                for link in required_links:
+                    self.assertIn(link, text)
+
+    def test_bff_deferred_state_is_not_auto_scheduled_in_gantts(self) -> None:
+        gantt_row = re.compile(
+            r"^\s+NaC-BFF-Live-Aktivierung DEFERRED\s+:",
+            flags=re.MULTILINE,
+        )
+        for path in (ROADMAP_GANTT, WORKFLOWS_GANTT):
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotRegex(text, gantt_row)
+                self.assertIn("DEFERRED", text)
 
     def test_contract_binds_issue_scope_and_all_acceptance_ids(self) -> None:
         self.assertEqual(
