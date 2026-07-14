@@ -192,7 +192,9 @@ Readiness-CLI als `READY` vorbereitet. Das SPFx-Paket nutzt im Repository
 bereits ausschließlich `AadHttpClient -> NaC BFF`; Mandats-, Aufgaben-,
 Status- und Fristdaten sind aus der Paket-Fixture entfernt. Der vollständige
 Azure-/Entra-/Graph-/SPFx-Aktivierungsablauf ist zusätzlich über
-`bff-azure-activation-plan` hashgebunden. Die NaC-BFF-Live-Aktivierung bleibt
+`bff-azure-activation-plan` einschließlich SPFx-Quellmanifest, exakter
+Site-ID und vor Bicep gebundener Entra-`appId` hashgebunden. Die
+NaC-BFF-Live-Aktivierung bleibt
 bis zum einzigen konsolidierten Owner-Gate ausdrücklich `DEFERRED`.
 
 ## Regel

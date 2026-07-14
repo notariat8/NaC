@@ -60,9 +60,15 @@
       "lib",
       "dist",
       "temp",
-      "sharepoint/solution"
+      "sharepoint/solution",
+      "lib-commonjs",
+      "release",
+      "jest-output"
     ],
-    "generated_paths_excluded_from_recursive_source_scans": true
+    "generated_paths_excluded_from_recursive_source_scans": true,
+    "bff_client_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+    "bpmn_asset_sha256_verified_in_browser": true,
+    "bff_dto_exact_shape_required": true
   },
   "synthetic_data_boundary": {
     "workspace_id": "notary_team_01",

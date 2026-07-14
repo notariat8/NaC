@@ -1,7 +1,7 @@
 import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
 import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
-import { NacBffWorkspace } from '../services/NacBffClient';
+import { NacBffWorkspace, verifyBpmnAsset } from '../services/NacBffClient';
 import styles from './NacBpmnViewer.module.scss';
 
 export interface NacBpmnViewerProps {
@@ -22,7 +22,8 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
     let disposed = false;
     setWorkspace(null);
     setLoadFailed(false);
-    props.loadWorkspace().then(value => {
+    props.loadWorkspace().then(async value => {
+      await verifyBpmnAsset(value, fixture.bpmnXml, fixture.bpmnSha256);
       if (!disposed) {
         setWorkspace(value);
       }

@@ -27,6 +27,28 @@ SITE_ID = (
     "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,"
     "56fc9349-e123-4252-ae2a-05d5d61c9b38"
 )
+API_CLIENT_ID_BINDING = {
+    "resolution": "unique_by_app_id_uri",
+    "source": "entra_application.appId",
+    "app_id_uri": API_APP_URI,
+    "bicep_parameter": "bffApiAudience",
+    "must_be_uuid": True,
+    "must_equal_token_audience": True,
+    "bind_before_azure_deploy": True,
+    "evidence_name": "entra_api_client_id_binding_redacted",
+}
+
+_SPFX_ROOT = "spfx/nac-bpmn-viewer"
+_SPFX_GENERATED_DIRECTORIES = {
+    "dist",
+    "jest-output",
+    "lib",
+    "lib-commonjs",
+    "node_modules",
+    "release",
+    "sharepoint",
+    "temp",
+}
 
 _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
@@ -50,6 +72,11 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
         missing.append(package_error)
     elif package_binding is not None:
         artifacts.append(package_binding)
+    spfx_binding, spfx_error = _spfx_source_manifest_binding(root)
+    if spfx_error:
+        missing.append(spfx_error)
+    elif spfx_binding is not None:
+        artifacts.append(spfx_binding)
     gates = {
         "offline_readiness_ready": readiness.get("status") == "READY",
         "activation_contract_valid": _activation_contract_valid(root),
@@ -79,6 +106,7 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
             "function_base_url": f"https://{FUNCTION_APP}.azurewebsites.net",
             "api_app_display_name": API_APP_DISPLAY_NAME,
             "api_app_uri": API_APP_URI,
+            "api_client_id_binding": dict(API_CLIENT_ID_BINDING),
             "delegated_scope": DELEGATED_SCOPE,
             "workspace_id": WORKSPACE_ID,
             "matter_id": MATTER_ID,
@@ -104,10 +132,12 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
         "required_evidence": [
             "azure_deployment_outputs_redacted",
             "entra_api_scope_binding_redacted",
+            "entra_api_client_id_binding_redacted",
             "managed_identity_sites_selected_binding_redacted",
             "site_read_grant_redacted",
             "function_health_and_authorization_smoke_redacted",
             "spfx_package_and_api_approval_redacted",
+            "spfx_source_manifest_and_package_sha256_redacted",
             "synthetic_workspace_readback_redacted",
             "assigned_deputy_and_denied_access_smoke_redacted",
             "idempotency_readback_redacted",
@@ -137,8 +167,8 @@ def format_azure_bff_activation_plan(plan: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _artifact_bindings(root: Path) -> tuple[list[dict[str, str]], list[str]]:
-    bindings: list[dict[str, str]] = []
+def _artifact_bindings(root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    bindings: list[dict[str, Any]] = []
     missing: list[str] = []
     for relative in _ARTIFACT_PATHS:
         path = root / relative
@@ -152,6 +182,48 @@ def _artifact_bindings(root: Path) -> tuple[list[dict[str, str]], list[str]]:
             }
         )
     return bindings, missing
+
+
+def _spfx_source_manifest_binding(
+    root: Path,
+) -> tuple[dict[str, Any] | None, str | None]:
+    package_root = root / _SPFX_ROOT
+    if not package_root.is_dir():
+        return None, "generated:spfx-source-manifest"
+
+    entries: list[dict[str, str]] = []
+    for path in sorted(package_root.rglob("*")):
+        relative_to_package = path.relative_to(package_root)
+        if any(
+            part in _SPFX_GENERATED_DIRECTORIES
+            for part in relative_to_package.parts
+        ):
+            continue
+        if path.is_symlink():
+            return None, f"symlink:{path.relative_to(root).as_posix()}"
+        if not path.is_file():
+            continue
+        entries.append(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        )
+
+    if not entries:
+        return None, "generated:spfx-source-manifest"
+    canonical = json.dumps(
+        entries,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("ascii")
+    return {
+        "path": "generated:spfx-source-manifest",
+        "sha256": hashlib.sha256(canonical).hexdigest(),
+        "file_count": len(entries),
+        "entries": entries,
+    }, None
 
 
 def _function_package_binding(
@@ -196,9 +268,11 @@ def _activation_contract_valid(root: Path) -> bool:
         "function_app": FUNCTION_APP,
         "api_app_display_name": API_APP_DISPLAY_NAME,
         "api_app_uri": API_APP_URI,
+        "api_client_id_binding": API_CLIENT_ID_BINDING,
         "delegated_scope": DELEGATED_SCOPE,
         "workspace_id": WORKSPACE_ID,
         "matter_id": MATTER_ID,
+        "site_id": SITE_ID,
         "site_grant_role": "read",
         "managed_identity_graph_role": "Sites.Selected",
     }
@@ -242,12 +316,12 @@ def _activation_steps() -> list[dict[str, Any]]:
     definitions = (
         ("register_azure_providers", "azure_write", "Register only Microsoft.Web, Microsoft.Storage and Microsoft.OperationalInsights."),
         ("ensure_resource_group", "azure_write", "Create or reuse the bound test resource group in Germany West Central."),
-        ("ensure_entra_api_application", "entra_write", "Create or reuse the single-tenant NaC M365 BFF API and exact Matter.Read scope."),
-        ("deploy_bicep_baseline", "azure_write", "Deploy the hash-bound Function, UAMI, storage and observability baseline."),
+        ("ensure_entra_api_application", "entra_write", "Create or reuse exactly one single-tenant API by app ID URI, capture its UUID appId and bind it into a redacted runtime manifest for Matter.Read."),
+        ("deploy_bicep_baseline", "azure_write", "Verify the captured API appId binding, then deploy the hash-bound Function, UAMI, storage and observability baseline with that exact bffApiAudience."),
         ("assign_sites_selected", "graph_write", "Assign Graph application role Sites.Selected to the deployed UAMI."),
         ("grant_target_site_read", "graph_write", "Grant read only on the exact notary_team_01 SharePoint site."),
         ("deploy_function_package", "azure_write", "Deploy the deterministic Python package through OneDeploy remote build."),
-        ("build_and_deploy_spfx", "m365_write", "Build and upgrade the SPFx/Teams package with the exact BFF web API request."),
+        ("build_and_deploy_spfx", "m365_write", "Verify the bound SPFx source manifest, build and hash the generated .sppkg, then upgrade the site-scoped package with the exact BFF web API request."),
         ("approve_spfx_bff_scope", "m365_write", "Approve only NaC M365 BFF / Matter.Read for the SPFx principal."),
         ("seed_synthetic_workspace", "graph_write", "Create or reuse only the canonical synthetic matter, tasks, deadline and role assignment."),
         ("run_access_and_readback_smokes", "live_verify", "Verify assigned, deputy, denied and tamper-resistant BFF reads."),

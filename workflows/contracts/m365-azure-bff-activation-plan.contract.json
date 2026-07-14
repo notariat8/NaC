@@ -16,7 +16,18 @@
     "workspace_id": "notary_team_01",
     "matter_id": "NAC-SYN-MATTER-001",
     "site_grant_role": "read",
-    "managed_identity_graph_role": "Sites.Selected"
+    "managed_identity_graph_role": "Sites.Selected",
+    "api_client_id_binding": {
+      "resolution": "unique_by_app_id_uri",
+      "source": "entra_application.appId",
+      "app_id_uri": "api://funktion8.de/nac-bff",
+      "bicep_parameter": "bffApiAudience",
+      "must_be_uuid": true,
+      "must_equal_token_audience": true,
+      "bind_before_azure_deploy": true,
+      "evidence_name": "entra_api_client_id_binding_redacted"
+    },
+    "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38"
   },
   "execution": {
     "offline_plan_live_actions_exact": 0,

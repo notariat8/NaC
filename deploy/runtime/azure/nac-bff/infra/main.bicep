@@ -10,9 +10,7 @@ param location string = 'germanywestcentral'
 
 @description('Short deployment environment identifier used in resource names and tags.')
 @allowed([
-  'dev'
   'test'
-  'prod'
 ])
 param environmentName string = 'test'
 

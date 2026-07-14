@@ -34,7 +34,16 @@ BPMN_VIEWER_RUNTIME_READINESS = (
 DOC_DE = REPO_ROOT / "docs" / "de" / "architecture" / "m365-sharepoint-bpmn-viewer-adapter.md"
 DOC_EN = REPO_ROOT / "docs" / "en" / "architecture" / "m365-sharepoint-bpmn-viewer-adapter.md"
 QUALITY_GATE = REPO_ROOT / "scripts" / "quality_gate.py"
-GENERATED_PATHS = {"node_modules", "lib", "dist", "temp", "sharepoint/solution"}
+GENERATED_PATHS = {
+    "node_modules",
+    "lib",
+    "lib-commonjs",
+    "dist",
+    "temp",
+    "sharepoint/solution",
+    "release",
+    "jest-output",
+}
 REQUIRED_BLOCKED_OPERATIONS = {
     "tenant_wide_deploy",
     "deploy_other_workspace",

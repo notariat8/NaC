@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.6.27763",
-      "templateHash": "9475785805886651535"
+      "templateHash": "14963684813925800234"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
@@ -24,9 +24,7 @@
       "type": "string",
       "defaultValue": "test",
       "allowedValues": [
-        "dev",
-        "test",
-        "prod"
+        "test"
       ],
       "metadata": {
         "description": "Short deployment environment identifier used in resource names and tags."

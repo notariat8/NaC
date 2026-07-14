@@ -62,9 +62,24 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertEqual(packaging["package_output"], "sharepoint/solution/nac-bpmn-viewer.sppkg")
         self.assertEqual(
             set(packaging["generated_paths_ignored_untracked"]),
-            {"node_modules", "lib", "dist", "temp", "sharepoint/solution"},
+            {
+                "node_modules",
+                "lib",
+                "lib-commonjs",
+                "dist",
+                "temp",
+                "sharepoint/solution",
+                "release",
+                "jest-output",
+            },
         )
         self.assertTrue(packaging["generated_paths_excluded_from_recursive_source_scans"])
+        self.assertTrue(packaging["bpmn_asset_sha256_verified_in_browser"])
+        self.assertTrue(packaging["bff_dto_exact_shape_required"])
+        self.assertEqual(
+            packaging["bff_client_test"],
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+        )
 
     def test_contract_allows_only_the_delegated_bff_permission_path(self) -> None:
         boundary = self.contract["graph_free_boundary"]

@@ -50,6 +50,12 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertFalse(skeleton["spfx"]["graph_permissions_requested"])
         self.assertFalse(skeleton["spfx"]["direct_graph_access_allowed"])
         self.assertTrue(skeleton["spfx"]["aad_http_client_allowed"])
+        self.assertTrue(skeleton["spfx"]["bpmn_asset_sha256_verified_in_browser"])
+        self.assertTrue(skeleton["spfx"]["bff_dto_exact_shape_required"])
+        self.assertEqual(
+            skeleton["package_contract"]["bff_client_test"],
+            "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
+        )
         self.assertEqual(skeleton["spfx"]["delegated_api_resource"], "api://funktion8.de/nac-bff")
         self.assertEqual(skeleton["spfx"]["delegated_api_scope"], "Matter.Read")
         self.assertFalse(skeleton["spfx"]["sharepoint_writes_allowed"])
@@ -108,6 +114,9 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         bff_client = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
         ).read_text(encoding="utf-8")
+        bff_client_test = (
+            SPFX_ROOT / "src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
+        ).read_text(encoding="utf-8")
 
         for marker in REQUIRED_DOM_MARKERS.values():
             self.assertIn(marker, component)
@@ -126,6 +135,12 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertIn("func-nac-bff-test-funktion8.azurewebsites.net", bff_client)
         self.assertIn("MAX_RESPONSE_BYTES", bff_client)
         self.assertIn("isWorkspace", bff_client)
+        self.assertIn("hasExactKeys", bff_client)
+        self.assertIn("verifyBpmnAsset", bff_client)
+        self.assertIn("crypto.subtle.digest", bff_client)
+        self.assertIn("verifyBpmnAsset", component)
+        self.assertIn("rejects extra %s fields", bff_client_test)
+        self.assertIn("cryptographically binds packaged BPMN XML", bff_client_test)
 
         combined = "\n".join(path.read_text(encoding="utf-8") for path in _iter_spfx_source_files(SPFX_ROOT))
         self.assertIn("AadHttpClient", combined)

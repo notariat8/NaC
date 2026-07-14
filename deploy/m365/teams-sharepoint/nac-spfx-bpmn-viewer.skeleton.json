@@ -38,7 +38,9 @@
     "contains_real_matter_data": false,
     "delegated_api_resource": "api://funktion8.de/nac-bff",
     "delegated_api_scope": "Matter.Read",
-    "bff_endpoint": "https://func-nac-bff-test-funktion8.azurewebsites.net"
+    "bff_endpoint": "https://func-nac-bff-test-funktion8.azurewebsites.net",
+    "bpmn_asset_sha256_verified_in_browser": true,
+    "bff_dto_exact_shape_required": true
   },
   "deployment_scope": {
     "approval": "owner_approved",
@@ -83,16 +85,21 @@
       "lib",
       "dist",
       "temp",
-      "sharepoint/solution"
+      "sharepoint/solution",
+      "lib-commonjs",
+      "release",
+      "jest-output"
     ],
     "supported_hosts": [
       "SharePointWebPart",
       "TeamsTab"
-    ]
+    ],
+    "bff_client_test": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
   },
   "test_fixtures": {
     "render_contract": "tests/fixtures/m365/spfx-bpmn-viewer/render-contract.fixture.json",
-    "package_workspace": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
+    "package_workspace": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "bff_client_security": "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.test.ts"
   },
   "blocked_operations": [
     "tenant_wide_deploy",

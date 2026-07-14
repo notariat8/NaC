@@ -86,6 +86,7 @@ SPFX_SKELETON_REQUIRED_FILES = {
     "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
     "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
     "src/webparts/nacBpmnViewer/services/NacBffClient.ts",
+    "src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
     "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_color.png",
     "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_outline.png",
     "tsconfig.json",
@@ -94,8 +95,11 @@ SPFX_GENERATED_PATHS = {
     "node_modules",
     "dist",
     "lib",
+    "lib-commonjs",
     "temp",
     "sharepoint/solution",
+    "release",
+    "jest-output",
 }
 SPFX_SKELETON_BLOCKED_PATHS = SPFX_GENERATED_PATHS
 SPFX_SKELETON_BLOCKED_MARKERS = {
@@ -356,12 +360,27 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "NAC_BFF_PURPOSE = 'view_synthetic_matter_workspace'",
             "MAX_RESPONSE_BYTES",
             "isWorkspace",
+            "hasExactKeys",
+            "verifyBpmnAsset",
+            "crypto.subtle.digest",
         ):
             if required not in service_text:
                 errors.append(f"SPFx BPMN viewer BFF client missing {required!r}")
         for blocked in ("graph.microsoft.com", "MSGraphClient", "@microsoft/microsoft-graph-client"):
             if blocked in service_text:
                 errors.append(f"SPFx BPMN viewer BFF client contains blocked direct Graph marker {blocked!r}")
+
+    service_test = root / "src" / "webparts" / "nacBpmnViewer" / "services" / "NacBffClient.test.ts"
+    if service_test.is_file():
+        test_text = service_test.read_text(encoding="utf-8")
+        for required in (
+            "parseWorkspaceResponse",
+            "verifyBpmnAsset",
+            "rejects extra %s fields",
+            "cryptographically binds packaged BPMN XML",
+        ):
+            if required not in test_text:
+                errors.append(f"SPFx BPMN viewer BFF client test missing {required!r}")
 
     component = root / "src" / "webparts" / "nacBpmnViewer" / "components" / "NacBpmnViewer.tsx"
     if component.is_file():
@@ -370,6 +389,7 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             "bpmn-js/lib/Viewer",
             "syntheticWorkspaceFixture",
             "loadWorkspace",
+            "verifyBpmnAsset",
             *REQUIRED_DOM_MARKERS.values(),
         ):
             if required not in source_text:

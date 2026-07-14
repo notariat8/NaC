@@ -98,6 +98,14 @@ Repository-Paket ist jedoch vollständig auf `AadHttpClient -> NaC BFF`
 umgestellt. Die Regel „kein direkter Graph aus SPFx“ bleibt unverändert. Der
 Befehl `bff-azure-activation-plan` bindet alle zwölf Aktivierungs-,
 Zugriffs-, Idempotenz- und Evidence-Schritte mit einem gemeinsamen SHA-256.
+Der Hash umfasst ein kanonisches Manifest aller relevanten SPFx-Quellen; vor
+dem Deploy muss daraus das `.sppkg` gebaut und dessen SHA-256 als redigierte
+Evidence festgehalten werden. Da Entra die API-Client-ID erst bei der
+App-Erstellung vergibt, löst derselbe genehmigte Live-Lauf genau eine
+Anwendung über `api://funktion8.de/nac-bff` auf, prüft die UUID und bindet
+diese `appId` vor dem Bicep-Deploy als exakten `bffApiAudience`. Die Freigabe
+gilt ausschließlich für die vertraglich gebundene Site-ID von
+`notary_team_01`.
 
 ## Abnahmenachweis
 

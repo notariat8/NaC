@@ -46,6 +46,15 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         )
         self.assertNotIn("Microsoft.Resources/resourceGroups@", self.template)
 
+    def test_fixed_hostname_baseline_is_test_only(self) -> None:
+        self.assertRegex(
+            self.template,
+            r"@allowed\(\[\s*'test'\s*\]\)\s*"
+            r"param environmentName string = 'test'",
+        )
+        self.assertNotIn("'dev'", self.template)
+        self.assertNotIn("'prod'", self.template)
+
     def test_function_hostname_is_fixed_for_spfx_cutover(self) -> None:
         self.assertRegex(
             self.template,
