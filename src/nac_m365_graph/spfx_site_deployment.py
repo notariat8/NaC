@@ -36,9 +36,6 @@ INITIAL_PAGE_CONTENT = (
     '{"isDefaultDescription":true,"isDefaultThumbnail":true}}]'
 )
 APP_CATALOG_SCOPE = "tenant"
-TEAMS_INSTALLED_APPS_URL = (
-    f"https://graph.microsoft.com/v1.0/teams/{TEAM_ID}/installedApps?$expand=teamsApp"
-)
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GUID_RE = re.compile(
@@ -236,6 +233,7 @@ def run_spfx_site_deployment(
 
     command_count = 0
     allowed_teams_catalog_detail_id: str | None = None
+    allowed_teams_manifest_app_id: str | None = None
 
     def invoke(
         step: str,
@@ -249,6 +247,7 @@ def run_spfx_site_deployment(
             plan,
             command,
             allowed_teams_catalog_detail_id=allowed_teams_catalog_detail_id,
+            allowed_teams_manifest_app_id=allowed_teams_manifest_app_id,
         )
         command_count += 1
         try:
@@ -544,6 +543,8 @@ def run_spfx_site_deployment(
             teams_manifest_app_id, teams_manifest_version = _read_teams_manifest_identity(
                 plan.teams_package_path
             )
+            allowed_teams_manifest_app_id = teams_manifest_app_id
+            teams_installed_apps_url = _teams_installed_apps_url(teams_manifest_app_id)
 
             teams_apps = invoke_json(
                 "inspect_teams_catalog",
@@ -606,38 +607,90 @@ def run_spfx_site_deployment(
                 )
                 passed("publish_or_update_teams_catalog_app", "create")
 
-            _, already_installed = invoke(
-                "install_or_reuse_teams_app_on_target_team",
-                _m365(
-                    "teams",
-                    "app",
-                    "install",
-                    "--id",
-                    teams_catalog_id,
-                    "--teamId",
-                    TEAM_ID,
-                    "--output",
-                    "none",
-                ),
-                reuse_markers=("already installed in this team",),
-            )
             installed_apps = invoke_json(
-                "verify_teams_app_installed_on_target_team",
+                "inspect_teams_app_installation_on_target_team",
                 _m365(
                     "request",
                     "--url",
-                    TEAMS_INSTALLED_APPS_URL,
+                    teams_installed_apps_url,
                     "--method",
                     "get",
                     "--output",
                     "json",
                 ),
             )
-            _validate_installed_teams_app(
-                installed_apps,
-                teams_catalog_id=teams_catalog_id,
-                teams_manifest_app_id=teams_manifest_app_id,
+            try:
+                already_installed = _has_installed_teams_app(
+                    installed_apps,
+                    teams_catalog_id=teams_catalog_id,
+                    teams_manifest_app_id=teams_manifest_app_id,
+                )
+            except DeploymentPlanError as exc:
+                raise _StepFailure(
+                    "inspect_teams_app_installation_on_target_team",
+                    "unsafe_control_plane_response",
+                ) from exc
+            passed(
+                "inspect_teams_app_installation_on_target_team",
+                "reuse" if already_installed else "create",
             )
+            install_failure: _StepFailure | None = None
+            if not already_installed:
+                try:
+                    invoke(
+                        "install_or_reuse_teams_app_on_target_team",
+                        _m365(
+                            "teams",
+                            "app",
+                            "install",
+                            "--id",
+                            teams_catalog_id,
+                            "--teamId",
+                            TEAM_ID,
+                            "--output",
+                            "none",
+                        ),
+                    )
+                except _StepFailure as exc:
+                    if (
+                        exc.step != "install_or_reuse_teams_app_on_target_team"
+                        or exc.category
+                        not in {"command_runner_exception", "control_plane_command_failed"}
+                    ):
+                        raise
+                    install_failure = exc
+                try:
+                    installed_apps = invoke_json(
+                        "verify_teams_app_installed_on_target_team",
+                        _m365(
+                            "request",
+                            "--url",
+                            teams_installed_apps_url,
+                            "--method",
+                            "get",
+                            "--output",
+                            "json",
+                        ),
+                    )
+                except _StepFailure as exc:
+                    if install_failure is not None:
+                        raise install_failure from exc
+                    raise
+            try:
+                _validate_installed_teams_app(
+                    installed_apps,
+                    teams_catalog_id=teams_catalog_id,
+                    teams_manifest_app_id=teams_manifest_app_id,
+                )
+            except DeploymentPlanError as exc:
+                if install_failure is not None:
+                    raise install_failure from exc
+                raise _StepFailure(
+                    "verify_teams_app_installed_on_target_team",
+                    "unsafe_control_plane_response",
+                ) from exc
+            if install_failure is not None:
+                already_installed = True
             passed(
                 "install_or_reuse_teams_app_on_target_team",
                 "reuse" if already_installed else "create",
@@ -799,6 +852,7 @@ def _validate_command(
     argv: Sequence[str],
     *,
     allowed_teams_catalog_detail_id: str | None = None,
+    allowed_teams_manifest_app_id: str | None = None,
 ) -> None:
     if not argv or argv[0] != "m365":
         raise _StepFailure("validate_command", "non_m365_command_blocked")
@@ -820,7 +874,9 @@ def _validate_command(
     catalog_scope = _option_value(lower, argv, "--appcatalogscope")
     if catalog_scope is not None and catalog_scope != APP_CATALOG_SCOPE:
         raise _StepFailure("validate_command", "app_catalog_scope_command_blocked")
-    allowed_urls = {SITE_URL, TEAMS_INSTALLED_APPS_URL}
+    allowed_urls = {SITE_URL}
+    if allowed_teams_manifest_app_id is not None:
+        allowed_urls.add(_teams_installed_apps_url(allowed_teams_manifest_app_id))
     if allowed_teams_catalog_detail_id is not None:
         allowed_urls.add(_teams_catalog_detail_url(allowed_teams_catalog_detail_id))
     for part in argv:
@@ -842,7 +898,9 @@ def _validate_command(
         if content is not None and content != INITIAL_PAGE_CONTENT:
             raise _StepFailure("validate_command", "page_content_command_blocked")
     if tuple(body[:1]) == ("request",):
-        request_urls = {TEAMS_INSTALLED_APPS_URL}
+        request_urls: set[str] = set()
+        if allowed_teams_manifest_app_id is not None:
+            request_urls.add(_teams_installed_apps_url(allowed_teams_manifest_app_id))
         if allowed_teams_catalog_detail_id is not None:
             request_urls.add(_teams_catalog_detail_url(allowed_teams_catalog_detail_id))
         request_url = _option_value(lower, argv, "--url")
@@ -1018,21 +1076,52 @@ def _validate_installed_teams_app(
     teams_catalog_id: str,
     teams_manifest_app_id: str,
 ) -> None:
-    expected_catalog_id = teams_catalog_id.strip().lower()
-    expected_manifest_id = teams_manifest_app_id.strip().lower()
-    matches: list[dict[str, Any]] = []
-    for item in _object_items(payload):
-        teams_app = _field(item, "teamsApp")
-        if not isinstance(teams_app, dict):
-            continue
-        catalog_id = _string_field(teams_app, "id").strip().lower()
-        manifest_id = _string_field(teams_app, "externalId").strip().lower()
-        if catalog_id == expected_catalog_id and manifest_id == expected_manifest_id:
-            matches.append(item)
-    if len(matches) != 1:
+    if not _has_installed_teams_app(
+        payload,
+        teams_catalog_id=teams_catalog_id,
+        teams_manifest_app_id=teams_manifest_app_id,
+    ):
         raise DeploymentPlanError(
             "target team did not prove exactly one installed app with approved identities"
         )
+
+
+def _has_installed_teams_app(
+    payload: Any,
+    *,
+    teams_catalog_id: str,
+    teams_manifest_app_id: str,
+) -> bool:
+    if not isinstance(payload, dict) or not isinstance(payload.get("value"), list):
+        raise DeploymentPlanError("target team installed-app response must contain a value list")
+    if _field(payload, "@odata.nextLink") not in (None, ""):
+        raise DeploymentPlanError("target team installed-app response must not be paginated")
+    items = payload["value"]
+    if any(not isinstance(item, dict) for item in items):
+        raise DeploymentPlanError("target team installed-app entries must be objects")
+    expected_catalog_id = teams_catalog_id.strip().lower()
+    expected_manifest_id = teams_manifest_app_id.strip().lower()
+    matches: list[dict[str, Any]] = []
+    for item in items:
+        teams_app = _field(item, "teamsApp")
+        if not isinstance(teams_app, dict):
+            raise DeploymentPlanError("target team installed-app entry is missing teamsApp")
+        catalog_id = _string_field(teams_app, "id").strip().lower()
+        manifest_id = _string_field(teams_app, "externalId").strip().lower()
+        if manifest_id != expected_manifest_id:
+            raise DeploymentPlanError(
+                "target team installed-app response violated the manifest identity filter"
+            )
+        if catalog_id != expected_catalog_id:
+            raise DeploymentPlanError(
+                "target team installed-app response contains a catalog identity collision"
+            )
+        matches.append(item)
+    if len(matches) > 1:
+        raise DeploymentPlanError(
+            "target team returned duplicate installed apps with approved identities"
+        )
+    return len(matches) == 1
 
 
 def _read_teams_manifest_identity(path: Path) -> tuple[str, str]:
@@ -1147,6 +1236,16 @@ def _teams_catalog_detail_url(teams_catalog_id: str) -> str:
     return (
         "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/"
         f"{teams_catalog_id.lower()}?$expand=appDefinitions"
+    )
+
+
+def _teams_installed_apps_url(teams_manifest_app_id: str) -> str:
+    if not _GUID_RE.fullmatch(teams_manifest_app_id):
+        raise DeploymentPlanError("Teams installed-app URL requires a validated manifest GUID")
+    return (
+        f"https://graph.microsoft.com/v1.0/teams/{TEAM_ID}/installedApps?"
+        f"$filter=teamsApp/externalId%20eq%20'{teams_manifest_app_id.lower()}'"
+        "&$expand=teamsApp"
     )
 
 
