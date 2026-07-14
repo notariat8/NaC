@@ -24,7 +24,12 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   React.useEffect(() => {
     const controller = new AbortController();
     let disposed = false;
-    const timeoutId = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+      if (!disposed) {
+        setLoadFailed(true);
+      }
+    }, LOAD_TIMEOUT_MS);
     setWorkspace(null);
     setLoadFailed(false);
     setRenderFailed(false);

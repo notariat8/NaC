@@ -15,11 +15,6 @@ import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
 
 
 import {
-  NAC_BFF_BASE_URL,
-  NAC_BFF_MATTER_ID,
-  NAC_BFF_PURPOSE,
-  NAC_BFF_RESOURCE_URI,
-  NAC_BFF_WORKSPACE_ID,
   NacBffWorkspace,
   loadNacBffWorkspace,
   parseWorkspaceResponse,
@@ -89,10 +84,11 @@ describe('NaC BFF client boundary', () => {
 
     await expect(loadNacBffWorkspace(factory, controller.signal)).resolves.toEqual(workspace);
 
-    expect(getClient).toHaveBeenCalledWith(NAC_BFF_RESOURCE_URI);
+    expect(getClient).toHaveBeenCalledWith('api://funktion8.de/nac-bff');
     expect(get).toHaveBeenCalledWith(
-      NAC_BFF_BASE_URL + '/v1/workspaces/' + NAC_BFF_WORKSPACE_ID +
-        '/matters/' + NAC_BFF_MATTER_ID + '?purpose=' + encodeURIComponent(NAC_BFF_PURPOSE),
+      'https://func-nac-bff-test-funktion8.azurewebsites.net' +
+        '/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001' +
+        '?purpose=view_synthetic_matter_workspace',
       AadHttpClient.configurations.v1,
       expect.objectContaining({
         signal: controller.signal,

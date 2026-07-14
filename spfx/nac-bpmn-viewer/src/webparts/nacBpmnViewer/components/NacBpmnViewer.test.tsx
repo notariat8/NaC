@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/* eslint-disable @rushstack/pair-react-dom-render-unmount -- afterEach owns cleanup for every test root. */
 jest.mock('bpmn-js/lib/Viewer', () => ({
   __esModule: true,
   default: jest.fn()
@@ -91,6 +92,38 @@ describe('NaC BPMN viewer runtime boundary', () => {
     expect(root.textContent).toContain('Prozessmodell ist derzeit nicht verfügbar.');
     expect(root.textContent).not.toContain(workspace.matter.displayName);
     expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails the load after ten seconds even when the loader ignores abort', async () => {
+    jest.useFakeTimers();
+    let observedSignal: AbortSignal | undefined;
+    const loadWorkspace = (signal: AbortSignal): Promise<NacBffWorkspace> => {
+      observedSignal = signal;
+      return new Promise<NacBffWorkspace>(() => undefined);
+    };
+
+    try {
+      await act(async () => {
+        ReactDom.render(
+          <NacBpmnViewer
+            workspaceId="notary_team_01"
+            userDisplayName="Test User"
+            hostName="SharePoint"
+            isDarkTheme={false}
+            loadWorkspace={loadWorkspace}
+          />,
+          root
+        );
+      });
+      act(() => {
+        jest.advanceTimersByTime(10_000);
+      });
+
+      expect(observedSignal?.aborted).toBe(true);
+      expect(root.textContent).toContain('Vorgangsdaten sind derzeit nicht verfügbar.');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('aborts an outstanding BFF request when the component unmounts', async () => {

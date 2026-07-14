@@ -412,6 +412,7 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         for required in (
             "fails closed and destroys the viewer when BPMN import fails",
             "aborts an outstanding BFF request when the component unmounts",
+            "fails the load after ten seconds even when the loader ignores abort",
         ):
             if required not in component_test_text:
                 errors.append(f"SPFx BPMN viewer component test missing {required!r}")

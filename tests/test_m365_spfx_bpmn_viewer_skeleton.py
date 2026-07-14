@@ -150,6 +150,10 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertIn("cryptographically binds packaged BPMN XML", bff_client_test)
         self.assertIn("fails closed and destroys the viewer when BPMN import fails", component_test)
         self.assertIn("aborts an outstanding BFF request when the component unmounts", component_test)
+        self.assertIn(
+            "fails the load after ten seconds even when the loader ignores abort",
+            component_test,
+        )
 
         combined = "\n".join(path.read_text(encoding="utf-8") for path in _iter_spfx_source_files(SPFX_ROOT))
         self.assertIn("AadHttpClient", combined)
