@@ -98,6 +98,12 @@ machen die Abnahmeharness agentisch lesbar.
   als Microsoft-Kante sowie Python/FastAPI, deterministische Workflows, NVIDIA
   NeMo Agent Toolkit, PostgreSQL, Outbox/Broker und WORM als On-Prem-Kern;
   Temporal bleibt ein zeitbegrenzter, ergebnisoffener Spike-Kandidat.
+- [workflows/contracts/m365-azure-bff-activation-plan.contract.json](m365-azure-bff-activation-plan.contract.json):
+  Hashgebundener Offline-One-Shot-Plan für die feste Azure-Subscription,
+  Entra-API, Managed-Identity-Sites.Selected-Bindung, exakten Site-Read-Grant,
+  Azure-Functions-Deployment, SPFx-AadHttpClient-Cutover, synthetischen Seed,
+  Zugriffstests, Idempotenz und redigierte Evidence; Live-Aktionen bleiben bis
+  zum einzigen konsolidierten Owner-Gate ausgesetzt.
 - [workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json](m365-sharepoint-bpmn-viewer-adapter.contract.json):
   Vertrag für einen späteren read-only SPFx-BPMN-Viewer in SharePoint mit
   `bpmn-js`, Microsoft Graph REST only, freigegebenen BPMN-Modellkopien oder

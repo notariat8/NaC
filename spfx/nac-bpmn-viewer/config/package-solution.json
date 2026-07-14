@@ -3,11 +3,16 @@
   "solution": {
     "name": "nac-bpmn-viewer-client-side-solution",
     "id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
-    "version": "0.1.0.0",
+    "version": "0.2.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": false,
     "isDomainIsolated": false,
-    "webApiPermissionRequests": [],
+    "webApiPermissionRequests": [
+      {
+        "resource": "NaC M365 BFF",
+        "scope": "Matter.Read"
+      }
+    ],
     "developer": {
       "name": "notariat8",
       "websiteUrl": "https://github.com/notariat8/NaC",

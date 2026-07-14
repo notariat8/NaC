@@ -1,0 +1,83 @@
+{
+  "schema_version": "nac.m365-azure-bff-activation-plan/v1",
+  "contract_id": "m365.azure_bff_activation_plan",
+  "title": "M365 Azure BFF Activation Plan",
+  "purpose": "Bind the complete Azure, Entra, Graph, SPFx and synthetic evidence activation sequence into one deterministic offline plan before one consolidated owner gate.",
+  "command": "nac m365 teams-sharepoint bff-azure-activation-plan --format json",
+  "bindings": {
+    "subscription_id": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+    "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+    "location": "germanywestcentral",
+    "resource_group": "rg-nac-bff-test",
+    "function_app": "func-nac-bff-test-funktion8",
+    "api_app_display_name": "NaC M365 BFF",
+    "api_app_uri": "api://funktion8.de/nac-bff",
+    "delegated_scope": "Matter.Read",
+    "workspace_id": "notary_team_01",
+    "matter_id": "NAC-SYN-MATTER-001",
+    "site_grant_role": "read",
+    "managed_identity_graph_role": "Sites.Selected",
+    "api_client_id_binding": {
+      "resolution": "unique_by_app_id_uri",
+      "source": "entra_application.appId",
+      "app_id_uri": "api://funktion8.de/nac-bff",
+      "bicep_parameter": "bffApiAudience",
+      "must_be_uuid": true,
+      "must_equal_token_audience": true,
+      "bind_before_azure_deploy": true,
+      "evidence_name": "entra_api_client_id_binding_redacted"
+    },
+    "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+    "entra_api_contract": {
+      "sign_in_audience": "AzureADMyOrg",
+      "requested_access_token_version": 2,
+      "delegated_scope": "Matter.Read",
+      "readback_required_before_azure_deploy": true,
+      "readback_fields": [
+        "appId",
+        "identifierUris",
+        "signInAudience",
+        "api.requestedAccessTokenVersion",
+        "api.oauth2PermissionScopes"
+      ]
+    }
+  },
+  "execution": {
+    "offline_plan_live_actions_exact": 0,
+    "stop_on_first_error": true,
+    "steps_hash_bound": true,
+    "artifact_inputs_hash_bound": true,
+    "single_consolidated_owner_gate_required": true,
+    "idempotency_run_required": true,
+    "redacted_evidence_required": true,
+    "live_success_evidence_must_be_runner_generated": true,
+    "offline_plan_must_not_emit_live_success": true
+  },
+  "boundaries": {
+    "production_data_allowed": false,
+    "other_workspaces_allowed": false,
+    "direct_browser_graph_allowed": false,
+    "graph_beta_allowed": false,
+    "graph_sdk_allowed": false,
+    "sharepoint_legacy_api_allowed": false,
+    "credential_changes_allowed": false,
+    "automatic_deletion_allowed": false,
+    "automatic_rollback_allowed": false,
+    "synthetic_data_only": true
+  },
+  "required_live_sequence": [
+    "register_azure_providers",
+    "ensure_resource_group",
+    "ensure_entra_api_application",
+    "deploy_bicep_baseline",
+    "assign_sites_selected",
+    "grant_target_site_read",
+    "deploy_function_package",
+    "build_and_deploy_spfx",
+    "approve_spfx_bff_scope",
+    "seed_synthetic_workspace",
+    "run_access_and_readback_smokes",
+    "run_idempotency_and_evidence"
+  ],
+  "status": "OFFLINE_READY_LIVE_DEFERRED"
+}

@@ -30,10 +30,11 @@ REQUIRED_SOURCE_ARTIFACTS = {
 }
 REQUIRED_BLOCKED_OPERATIONS = {
     "tenant_wide_deploy",
-    "graph_permission_request",
+    "microsoft_graph_permission_request",
     "direct_graph_request",
     "ms_graph_client",
-    "aad_http_client",
+    "aad_http_client_non_bff_resource",
+    "additional_delegated_scope",
     "graph_sdk",
     "legacy_sharepoint_api",
     "pnp",
@@ -46,6 +47,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "read_matter_payload",
     "store_tokens_or_secrets",
     "store_real_matter_data",
+    "app_catalog_upload",
+    "site_scoped_install",
 }
 REQUIRED_EVIDENCE_KEYS = {
     "spfx_packaging_boundary",
@@ -70,10 +73,10 @@ def validate_bpmn_viewer_runtime_readiness(
 ) -> list[str]:
     del provisioning, mcp_contract
     errors: list[str] = []
-    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.2":
+    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.3":
         errors.append("SPFx BPMN viewer runtime readiness schema_version is invalid")
-    if readiness.get("status") != "synthetic_site_scoped_runtime_ready":
-        errors.append("SPFx BPMN viewer runtime readiness status must be synthetic_site_scoped_runtime_ready")
+    if readiness.get("status") != "bff_read_site_scoped_package_ready_activation_deferred":
+        errors.append("SPFx BPMN viewer runtime readiness status must be bff_read_site_scoped_package_ready_activation_deferred")
 
     source_artifacts = readiness.get("source_artifacts")
     if not isinstance(source_artifacts, dict):
@@ -115,18 +118,20 @@ def build_bpmn_viewer_runtime_readiness_result(
     deployment = readiness["app_catalog_deployment"]
     data_boundary = readiness["synthetic_data_boundary"]
     return {
-        "status": "PASSED",
+        "status": "READY",
         "summary": {
             "component": skeleton["spfx"]["component_name"],
             "package_root": packaging["package_root"],
             "readiness_gate_count": 3,
             "package_build_allowed_now": True,
             "package_solution_allowed_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_id": APPROVED_WORKSPACE_ID,
             "tenant_wide_deploy_allowed_now": False,
             "graph_access_allowed": False,
+            "bff_read_allowed": False,
+            "bff_activation_status": "DEFERRED",
         },
         "readiness": {
             "schema_version": readiness["schema_version"],
@@ -145,8 +150,8 @@ def build_bpmn_viewer_runtime_readiness_result(
             },
             {
                 "id": "app_catalog_deployment",
-                "status": "OWNER_APPROVED",
-                "allowed_now": True,
+                "status": "DEFERRED",
+                "allowed_now": False,
                 "approved_workspace_id": deployment["approved_workspace_id"],
                 "site_scoped": deployment["site_scoped"],
                 "tenant_wide": deployment["tenant_wide"],
@@ -166,14 +171,16 @@ def build_bpmn_viewer_runtime_readiness_result(
             "build_allowed_now": True,
             "package_solution_allowed_now": True,
             "generated_outputs_must_remain_ignored_and_untracked": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_only": True,
             "tenant_wide_deploy_allowed_now": False,
             "graph_permissions_requested": False,
             "direct_graph_access_allowed": False,
             "ms_graph_client_allowed": False,
-            "aad_http_client_allowed": False,
+            "aad_http_client_allowed": True,
+            "delegated_api_resource": "api://funktion8.de/nac-bff",
+            "delegated_scope": "Matter.Read",
             "graph_sdk_allowed": False,
             "legacy_sharepoint_api_allowed": False,
             "matter_document_content_reads_allowed": False,
@@ -236,16 +243,19 @@ def _validate_app_catalog_deployment(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["SPFx BPMN viewer runtime readiness app_catalog_deployment must be an object"]
     expected = {
-        "approval": "owner_approved",
+        "approval": "deferred_until_bff_activation",
         "approved_workspace_id": APPROVED_WORKSPACE_ID,
         "deployment_scope": "site_scoped",
     }
     for key, expected_value in expected.items():
         if value.get(key) != expected_value:
             errors.append(f"SPFx BPMN viewer runtime readiness app_catalog_deployment.{key} must be {expected_value}")
+    for flag in ("app_catalog_upload_allowed_now", "site_scoped_install_allowed_now"):
+        if value.get(flag) is not False:
+            errors.append(f"SPFx BPMN viewer runtime readiness app_catalog_deployment.{flag} must be false")
+    if value.get("activation_gate_required") is not True:
+        errors.append("SPFx BPMN viewer runtime readiness app_catalog_deployment.activation_gate_required must be true")
     for flag in (
-        "app_catalog_upload_allowed_now",
-        "site_scoped_install_allowed_now",
         "requires_sharepoint_admin_role",
         "requires_app_catalog_site",
         "requires_rollback_plan",
@@ -265,7 +275,7 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["SPFx BPMN viewer runtime readiness synthetic_data_boundary must be an object"]
     expected = {
-        "source": "package_fixture",
+        "source": "nac_bff_redacted_dto",
         "workspace_id": APPROVED_WORKSPACE_ID,
         "allowed_content_class": "synthetic_notarial_test_data_only",
     }
@@ -278,7 +288,6 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
         "graph_permission_requested",
         "graph_access_allowed",
         "ms_graph_client_allowed",
-        "aad_http_client_allowed",
         "graph_sdk_allowed",
         "legacy_sharepoint_api_allowed",
         "pnp_allowed",
@@ -287,6 +296,14 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
     ):
         if value.get(flag) is not False:
             errors.append(f"SPFx BPMN viewer runtime readiness synthetic_data_boundary.{flag} must be false")
+    if value.get("aad_http_client_allowed") is not True:
+        errors.append("SPFx BPMN viewer runtime readiness synthetic_data_boundary.aad_http_client_allowed must be true")
+    if value.get("delegated_api_resource") != "api://funktion8.de/nac-bff":
+        errors.append("SPFx BPMN viewer runtime readiness delegated_api_resource is invalid")
+    if value.get("delegated_scope") != "Matter.Read":
+        errors.append("SPFx BPMN viewer runtime readiness delegated_scope must be Matter.Read")
+    if value.get("bff_endpoint") != "https://func-nac-bff-test-funktion8.azurewebsites.net":
+        errors.append("SPFx BPMN viewer runtime readiness bff_endpoint is invalid")
     forbidden = set(_strings(value.get("forbidden_content_classes")))
     for item in ("matter_document_content", "mandate_payload", "credentials", "tokens_or_secrets"):
         if item not in forbidden:
@@ -300,7 +317,7 @@ def _validate_evidence_expectations(value: object) -> list[str]:
         return ["SPFx BPMN viewer runtime readiness evidence_expectations must be an object"]
     if value.get("command") != "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json":
         errors.append("SPFx BPMN viewer runtime readiness evidence command is invalid")
-    if value.get("output_kind") != "redacted_synthetic_site_scoped_readiness_json":
+    if value.get("output_kind") != "redacted_bff_read_site_scoped_readiness_json":
         errors.append("SPFx BPMN viewer runtime readiness evidence output_kind is invalid")
     includes = set(_strings(value.get("must_include")))
     for key in sorted(REQUIRED_EVIDENCE_KEYS - includes):

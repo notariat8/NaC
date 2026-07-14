@@ -10,9 +10,7 @@ param location string = 'germanywestcentral'
 
 @description('Short deployment environment identifier used in resource names and tags.')
 @allowed([
-  'dev'
   'test'
-  'prod'
 ])
 param environmentName string = 'test'
 
@@ -32,6 +30,12 @@ param bffApiAudience string
 ])
 param bffRequiredDelegatedScope string
 
+@description('Globally unique fixed Azure Function hostname for the approved synthetic MVP.')
+@allowed([
+  'func-nac-bff-test-funktion8'
+])
+param functionAppName string = 'func-nac-bff-test-funktion8'
+
 @description('Maximum Flex Consumption instances. The upper bound is a cost-control guardrail.')
 @minValue(1)
 @maxValue(10)
@@ -46,7 +50,6 @@ param httpPerInstanceConcurrency int = 16
 param tags object = {}
 
 var resourceToken = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
-var functionAppName = 'func-nac-bff-${environmentName}-${resourceToken}'
 var deploymentContainerName = 'function-releases'
 var corsAllowedOrigins = [
   'https://funktion8.sharepoint.com'
@@ -287,3 +290,5 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
 output functionAppResourceId string = functionApp.id
 output functionAppHostName string = functionApp.properties.defaultHostName
 output managedIdentityResourceId string = managedIdentity.id
+output managedIdentityClientId string = managedIdentity.properties.clientId
+output managedIdentityPrincipalId string = managedIdentity.properties.principalId

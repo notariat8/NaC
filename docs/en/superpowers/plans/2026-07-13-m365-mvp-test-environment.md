@@ -19,9 +19,13 @@ SPFx has no Graph permission and never calls Graph directly.
 The BFF core, server-side allowlist, Entra JWT validation, raw Graph REST
 `v1.0` adapters, deterministic Azure Functions package, and Bicep baseline are
 implemented offline and report `READY` through
-`nac m365 teams-sharepoint bff-azure-readiness`. The delegated BFF scope,
-Azure deployment, site grant, and live Entra token validation remain
-`DEFERRED` until the consolidated owner gate.
+`nac m365 teams-sharepoint bff-azure-readiness`. The new SPFx package
+loads dynamic matter data only from the fixed BFF endpoint through
+`AadHttpClient`; only the hash-bound BPMN XML remains in the package without
+matter data. The complete live sequence is hash-bound through
+`nac m365 teams-sharepoint bff-azure-activation-plan`. The delegated BFF
+scope, Azure deployment, site grant, and live Entra token validation remain
+`DEFERRED` until the single consolidated owner gate.
 
 ## Implementation Steps
 
@@ -31,9 +35,9 @@ Azure deployment, site grant, and live Entra token validation remain
    installable site-scoped package.
 2. **Enforce the browser and API boundary (AC-620-02).**
    Block Graph permission requests and direct Graph calls from SPFx. Define a
-   delegated NaC BFF scope as the only future dynamic API target, with
-   activation DEFERRED while no existing scope and HTTPS endpoint are
-   available.
+   delegated NaC BFF scope as the only dynamic API target. The new package
+   uses that boundary; live deployment remains DEFERRED until the bundled
+   scope and HTTPS activation.
 3. **Verify BFF identity, projection, and fail-closed behavior
    (AC-620-03, AC-620-04, AC-620-05).**
    Derive identity only from validated Entra token claims; resolve workspace,
@@ -41,7 +45,8 @@ Azure deployment, site grant, and live Entra token validation remain
    redacted status, tasks, due date, and BPMN to assigned users. Deny
    unassigned users and manipulated workspace, matter, purpose, or filter
    values without an existence leak. Live token validation and live BFF
-   delivery remain DEFERRED; the package-bound projection is package-ready.
+   delivery remain DEFERRED; the BFF client, DTO validation, and fail-closed
+   UI states are package-ready.
 4. **Protect SharePoint/Teams deployment and the Graph smoke (AC-620-06).**
    Verify package ID, SHA-256, SPFx version, site/team binding, and App Catalog
    responses. Idempotently deploy the app, page, web part, and optional Teams
@@ -87,8 +92,21 @@ Functions host, managed-identity IaC, storage network boundary, cost limits,
 JWT/JWKS hardening, and fixed `notary_team_01` Graph projection. Public
 activation happens in one consolidated owner gate: deploy Azure resources,
 configure the delegated Entra scope and exact site grant, deploy the source package through Azure Functions Flex OneDeploy with `--build-remote true`, and switch SPFx to the BFF through `AadHttpClient`. The ZIP is intentionally a reproducible source package; deployment without remote build is forbidden. Until that gate, the BFF
-does not replace the package-bound UI data source; SPFx must still never call
-Graph directly.
+leaves the previously deployed package version visible, while the new
+repository package is fully cut over to `AadHttpClient -> NaC BFF`. SPFx must
+still never call Graph directly. The `bff-azure-activation-plan` command
+binds all twelve activation, access, idempotency, and evidence steps under one
+SHA-256. The hash includes only Git-tracked SPFx package inputs, so local build
+outputs cannot change the binding. The later live runner must build the
+`.sppkg` from those inputs and record its SHA-256 as redacted evidence.
+Because Entra assigns the API client ID only when the application is created,
+the same approved live run must resolve exactly one application by
+`api://funktion8.de/nac-bff`, read back
+`api.requestedAccessTokenVersion=2` and `Matter.Read`, then bind the verified
+`appId` as the exact `bffApiAudience` before Bicep deployment. The offline
+plan explicitly makes no live-success claim; only the owner-gated runner may
+emit `PASSED` evidence from provider responses it captured itself. Approval
+is limited to the contract-bound `notary_team_01` site ID.
 
 ## Acceptance Evidence
 

@@ -46,6 +46,28 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
         )
         self.assertNotIn("Microsoft.Resources/resourceGroups@", self.template)
 
+    def test_fixed_hostname_baseline_is_test_only(self) -> None:
+        self.assertRegex(
+            self.template,
+            r"@allowed\(\[\s*'test'\s*\]\)\s*"
+            r"param environmentName string = 'test'",
+        )
+        self.assertNotIn("'dev'", self.template)
+        self.assertNotIn("'prod'", self.template)
+
+    def test_function_hostname_is_fixed_for_spfx_cutover(self) -> None:
+        self.assertRegex(
+            self.template,
+            r"@allowed\(\[\s*'func-nac-bff-test-funktion8'\s*\]\)\s*"
+            r"param functionAppName string = 'func-nac-bff-test-funktion8'",
+        )
+        self.assertEqual(self.template.count("name: functionAppName"), 1)
+        self.assertNotIn("var functionAppName", self.template)
+        self.assertIn(
+            "param functionAppName = 'func-nac-bff-test-funktion8'",
+            self.example_parameters,
+        )
+
     def test_baseline_contains_required_azure_native_resources(self) -> None:
         required_resource_types = [
             "Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31",
@@ -218,14 +240,26 @@ class NaCBffAzureIacContractTests(unittest.TestCase):
 
         self.assertNotRegex(lowered, r"output\s+\w*(key|secret|token|credential)\w*\s")
 
+    def test_template_outputs_identity_ids_required_for_graph_activation(self) -> None:
+        source = self.template
+        self.assertIn(
+            "output managedIdentityClientId string = managedIdentity.properties.clientId",
+            source,
+        )
+        self.assertIn(
+            "output managedIdentityPrincipalId string = managedIdentity.properties.principalId",
+            source,
+        )
+
     def test_example_parameters_are_synthetic_and_complete(self) -> None:
         required_terms = [
             "using './main.bicep'",
             "param location = 'germanywestcentral'",
             "param environmentName = 'test'",
             "param m365TenantId = '00000000-0000-0000-0000-000000000001'",
-            "param bffApiAudience = 'api://00000000-0000-0000-0000-000000000002'",
+            "param bffApiAudience = '00000000-0000-0000-0000-000000000002'",
             "param bffRequiredDelegatedScope = 'Matter.Read'",
+            "param functionAppName = 'func-nac-bff-test-funktion8'",
             "param maximumInstanceCount = 4",
             "param httpPerInstanceConcurrency = 16",
             "param tags = {",

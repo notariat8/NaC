@@ -107,14 +107,14 @@
     ],
     "template": {
       "path": "deploy/runtime/azure/nac-bff/infra/main.bicep",
-      "source_sha256": "28bf03adca16aed70b205a3210a72d6f822d998c12d8408d19cd832fc85acaae",
-      "compiled_sha256": "58a103de6f900c5dffacfaf95bab20d9d49e4503b902634330255131602a97d5",
+      "source_sha256": "46cf296298a1bdea0d846ebf322414fa9d41ef0d03af6a6e262e0722b576b282",
+      "compiled_sha256": "f43b012c53ac8ae1748c999a6937e8e1267288a46ce5a65c85e79e7276d2d951",
       "compiled_path": "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
     },
     "parameters": {
       "path": "deploy/runtime/azure/nac-bff/infra/main.example.bicepparam",
-      "source_sha256": "e1fc74f49097206ad9949cba6e2630239e6cfef0c1f906cafbb9e1d7f40d53cc",
-      "compiled_sha256": "c7f260beaba5bcd62fc7c331c134635f10260ece1e69aeb43920757665fb5d52",
+      "source_sha256": "89eb46158946e480861527b96bd75d8cf43d596d76fc61dfdeff8cabdeb78a7c",
+      "compiled_sha256": "7e21d0ddecb5d0003a886b127804641ed2d111fbb1bb7f819b0cba25de3bf23d",
       "compiled_path": "deploy/runtime/azure/nac-bff/infra/compiled/main.example.json"
     },
     "execution_boundary": {

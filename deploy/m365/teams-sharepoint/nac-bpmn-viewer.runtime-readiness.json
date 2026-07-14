@@ -1,9 +1,9 @@
 {
-  "schema_version": "nac.m365-bpmn-viewer-runtime-readiness/v0.2",
+  "schema_version": "nac.m365-bpmn-viewer-runtime-readiness/v0.3",
   "name": "nac-bpmn-viewer-runtime-readiness",
-  "status": "synthetic_site_scoped_runtime_ready",
-  "last_update": "2026-07-13",
-  "purpose": "Readiness contract for the reproducible, site-scoped SPFx package and its package-bound synthetic viewer data.",
+  "status": "bff_read_site_scoped_package_ready_activation_deferred",
+  "last_update": "2026-07-14",
+  "purpose": "Readiness contract for the site-scoped SPFx package, delegated NaC BFF read and hash-bound package BPMN asset.",
   "source_artifacts": {
     "viewer_contract": "workflows/contracts/m365-sharepoint-bpmn-viewer-adapter.contract.json",
     "spfx_skeleton": "deploy/m365/teams-sharepoint/nac-spfx-bpmn-viewer.skeleton.json",
@@ -46,27 +46,28 @@
     ]
   },
   "app_catalog_deployment": {
-    "approval": "owner_approved",
+    "approval": "deferred_until_bff_activation",
     "approved_workspace_id": "notary_team_01",
     "deployment_scope": "site_scoped",
     "site_scoped": true,
     "tenant_wide": false,
-    "app_catalog_upload_allowed_now": true,
-    "site_scoped_install_allowed_now": true,
+    "app_catalog_upload_allowed_now": false,
+    "site_scoped_install_allowed_now": false,
     "requires_sharepoint_admin_role": true,
     "requires_app_catalog_site": true,
     "requires_rollback_plan": true,
-    "requires_post_deploy_read_only_smoke": true
+    "requires_post_deploy_read_only_smoke": true,
+    "activation_gate_required": true
   },
   "synthetic_data_boundary": {
-    "source": "package_fixture",
+    "source": "nac_bff_redacted_dto",
     "workspace_id": "notary_team_01",
     "allowed_content_class": "synthetic_notarial_test_data_only",
     "viewer_only": true,
     "graph_permission_requested": false,
     "graph_access_allowed": false,
     "ms_graph_client_allowed": false,
-    "aad_http_client_allowed": false,
+    "aad_http_client_allowed": true,
     "graph_sdk_allowed": false,
     "legacy_sharepoint_api_allowed": false,
     "pnp_allowed": false,
@@ -77,11 +78,14 @@
       "mandate_payload",
       "credentials",
       "tokens_or_secrets"
-    ]
+    ],
+    "delegated_api_resource": "api://funktion8.de/nac-bff",
+    "delegated_scope": "Matter.Read",
+    "bff_endpoint": "https://func-nac-bff-test-funktion8.azurewebsites.net"
   },
   "evidence_expectations": {
     "command": "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json",
-    "output_kind": "redacted_synthetic_site_scoped_readiness_json",
+    "output_kind": "redacted_bff_read_site_scoped_readiness_json",
     "must_include": [
       "spfx_packaging_boundary",
       "app_catalog_deployment",
@@ -98,10 +102,8 @@
   },
   "blocked_operations": [
     "tenant_wide_deploy",
-    "graph_permission_request",
     "direct_graph_request",
     "ms_graph_client",
-    "aad_http_client",
     "graph_sdk",
     "legacy_sharepoint_api",
     "pnp",
@@ -113,7 +115,12 @@
     "read_matter_document_content",
     "read_matter_payload",
     "store_tokens_or_secrets",
-    "store_real_matter_data"
+    "store_real_matter_data",
+    "microsoft_graph_permission_request",
+    "aad_http_client_non_bff_resource",
+    "additional_delegated_scope",
+    "app_catalog_upload",
+    "site_scoped_install"
   ],
   "validation_commands": [
     "python3 -m unittest tests.test_m365_bpmn_viewer_runtime_readiness",

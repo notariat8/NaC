@@ -21,8 +21,12 @@ Der BFF-Core, die serverseitige Allowlist, Entra-JWT-Prüfung, rohe Graph-REST-
 `v1.0`-Adapter, das deterministische Azure-Functions-Paket und die Bicep-
 Baseline sind offline implementiert und über
 `nac m365 teams-sharepoint bff-azure-readiness` als `READY` prüfbar.
+Das neue SPFx-Paket lädt dynamische Vorgangsdaten nur noch per
+`AadHttpClient` vom festen BFF-Endpunkt; im Paket verbleibt ausschließlich
+das hashgebundene BPMN-XML ohne Mandatsdaten. Der vollständige Live-Ablauf ist
+über `nac m365 teams-sharepoint bff-azure-activation-plan` hashgebunden.
 Delegierter BFF-Scope, Azure-Bereitstellung, Site-Grant und Live-Entra-
-Tokenvalidierung bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
+Tokenvalidierung bleiben bis zum einzigen gebündelten Owner-Gate `DEFERRED`.
 
 ## Umsetzungsschritte
 
@@ -32,9 +36,9 @@ Tokenvalidierung bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
    installierbares site-scoped Paket prüfen.
 2. **Browser-/API-Grenze erzwingen (AC-620-02).**
    Graph-Permission-Requests und direkte Graph-Aufrufe aus SPFx blockieren.
-   Als einzigen späteren dynamischen API-Zielpfad den delegierten NaC-BFF-
-   Scope vorsehen, dessen Aktivierung ohne bestehenden Scope und HTTPS-
-   Endpunkt DEFERRED bleibt.
+   Als einzigen dynamischen API-Zielpfad den delegierten NaC-BFF-Scope
+   verwenden. Das neue Paket ist darauf umgestellt; sein Live-Deployment
+   bleibt bis zur gebündelten Scope-/HTTPS-Aktivierung DEFERRED.
 3. **BFF-Identität, Projektion und Fail-closed-Verhalten prüfen
    (AC-620-03, AC-620-04, AC-620-05).**
    Identität nur aus validierten Entra-Token-Claims ableiten; Workspace-, Site-
@@ -42,8 +46,8 @@ Tokenvalidierung bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
    Benutzer nur redigierten Status, Aufgaben, Frist und BPMN liefern.
    Unzugeordnete Benutzer sowie manipulierte Workspace-, Akten-, Zweck- oder
    Filterwerte ohne Existenzleck ablehnen. Live-Tokenvalidierung und Live-BFF-
-   Auslieferung bleiben DEFERRED; die paketgebundene Projektion ist
-   package-ready.
+   Auslieferung bleiben DEFERRED; BFF-Client, DTO-Validierung und
+   fail-closed UI-Zustände sind package-ready.
 4. **SharePoint-/Teams-Deployment und Graph-Smoke absichern (AC-620-06).**
    Paket-ID, SHA-256, SPFx-Version, Site-/Team-Binding und App-Catalog-
    Antworten prüfen. App, Seite, Webpart und optionales Teams-Paket idempotent
@@ -89,8 +93,23 @@ fixer `notary_team_01`-Graph-Projektion gehört zum Slice. Die öffentliche
 Aktivierung erfolgt in einem gebündelten Owner-Gate: Azure-Ressourcen
 bereitstellen, delegierten Entra-Scope und exakten Site-Grant konfigurieren,
 Paket als Azure-Functions-Flex-OneDeploy mit `--build-remote true` bereitstellen und SPFx per `AadHttpClient` auf den BFF umschalten. Das ZIP ist bewusst ein reproduzierbares Quellpaket; ein Deployment ohne Remote-Build ist unzulässig. Bis zu
-diesem Gate ersetzt der BFF die paketgebundene UI-Datenquelle noch nicht; die
-Regel „kein direkter Graph aus SPFx“ bleibt unverändert.
+diesem Gate bleibt die bereits bereitgestellte Altversion sichtbar; das neue
+Repository-Paket ist jedoch vollständig auf `AadHttpClient -> NaC BFF`
+umgestellt. Die Regel „kein direkter Graph aus SPFx“ bleibt unverändert. Der
+Befehl `bff-azure-activation-plan` bindet alle zwölf Aktivierungs-,
+Zugriffs-, Idempotenz- und Evidence-Schritte mit einem gemeinsamen SHA-256.
+Der Hash umfasst ausschließlich Git-getrackte SPFx-Paketinputs; lokale
+Buildausgaben können die Bindung daher nicht verändern. Vor dem Deploy muss
+daraus das `.sppkg` gebaut und dessen SHA-256 durch den späteren Live-Runner
+als redigierte Evidence festgehalten werden. Da Entra die API-Client-ID erst
+bei der App-Erstellung vergibt, muss derselbe genehmigte Live-Lauf genau eine
+Anwendung über `api://funktion8.de/nac-bff` auflösen,
+`api.requestedAccessTokenVersion=2` und `Matter.Read` zurücklesen und die
+geprüfte `appId` vor dem Bicep-Deploy als exakten `bffApiAudience` binden.
+Der Offline-Plan behauptet ausdrücklich keinen Live-Erfolg; `PASSED`-Evidence
+darf nur der owner-gated Runner aus selbst erfassten Providerantworten
+erzeugen. Die Freigabe gilt ausschließlich für die vertraglich gebundene
+Site-ID von `notary_team_01`.
 
 ## Abnahmenachweis
 

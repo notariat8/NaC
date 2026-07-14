@@ -54,9 +54,10 @@ REDACTED_OVERLAY_FORBIDDEN_MARKERS = {
 }
 REQUIRED_BLOCKED_OPERATIONS = {
     "tenant_wide_deploy",
-    "graph_permission_request",
+    "microsoft_graph_permission_request",
     "direct_graph_request",
-    "aad_http_client",
+    "aad_http_client_non_bff_resource",
+    "additional_delegated_scope",
     "write_bpmn_xml",
     "save_bpmn_model",
     "execute_workflow",
@@ -69,6 +70,8 @@ REQUIRED_BLOCKED_OPERATIONS = {
     "pnp",
     "microsoft_graph_sdk",
     "graph_beta",
+    "app_catalog_upload",
+    "site_scoped_install",
 }
 SPFX_SKELETON_REQUIRED_FILES = {
     ".gitignore",
@@ -82,8 +85,11 @@ SPFX_SKELETON_REQUIRED_FILES = {
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.ts",
     "src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json",
     "src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx",
+    "src/webparts/nacBpmnViewer/components/NacBpmnViewer.test.tsx",
     "src/webparts/nacBpmnViewer/fixtures/sampleBpmn.ts",
     "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts",
+    "src/webparts/nacBpmnViewer/services/NacBffClient.ts",
+    "src/webparts/nacBpmnViewer/services/NacBffClient.test.ts",
     "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_color.png",
     "teams/3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21_outline.png",
     "tsconfig.json",
@@ -92,14 +98,16 @@ SPFX_GENERATED_PATHS = {
     "node_modules",
     "dist",
     "lib",
+    "lib-commonjs",
     "temp",
     "sharepoint/solution",
+    "release",
+    "jest-output",
 }
 SPFX_SKELETON_BLOCKED_PATHS = SPFX_GENERATED_PATHS
 SPFX_SKELETON_BLOCKED_MARKERS = {
     "Graph" + "ServiceClient",
     "MS" + "GraphClient",
-    "Aad" + "HttpClient",
     "graph.microsoft" + ".com",
     "@" + "microsoft/microsoft-graph-client",
     "@" + "pnp",
@@ -130,10 +138,10 @@ def validate_spfx_bpmn_viewer_skeleton(
 ) -> list[str]:
     del mcp_contract
     errors: list[str] = []
-    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.2":
+    if skeleton.get("schema_version") != "nac.m365-spfx-bpmn-viewer-skeleton/v0.3":
         errors.append("SPFx BPMN viewer skeleton schema_version is invalid")
-    if skeleton.get("status") != "synthetic_site_scoped_package":
-        errors.append("SPFx BPMN viewer skeleton status must be synthetic_site_scoped_package")
+    if skeleton.get("status") != "bff_read_site_scoped_package":
+        errors.append("SPFx BPMN viewer skeleton status must be bff_read_site_scoped_package")
 
     spfx = skeleton.get("spfx")
     if not isinstance(spfx, dict):
@@ -149,7 +157,7 @@ def validate_spfx_bpmn_viewer_skeleton(
             "bpmn_js_mode": "viewer_only",
             "package_root": "spfx/nac-bpmn-viewer",
             "approved_workspace_id": APPROVED_WORKSPACE_ID,
-            "data_source": "package_fixture",
+            "data_source": "nac_bff_redacted_dto",
         }
         for key, value in expected.items():
             if spfx.get(key) != value:
@@ -163,8 +171,7 @@ def validate_spfx_bpmn_viewer_skeleton(
             "reproducible_build_required",
             "site_scoped_package",
             "teams_hosts_enabled",
-            "app_catalog_deploy_owner_approved",
-            "site_scoped_install_allowed_now",
+            "aad_http_client_allowed",
         ):
             if spfx.get(flag) is not True:
                 errors.append(f"SPFx BPMN viewer skeleton spfx.{flag} must be true")
@@ -174,14 +181,21 @@ def validate_spfx_bpmn_viewer_skeleton(
             "requires_custom_script",
             "loose_html_embedding_allowed",
             "tenant_wide_deploy_allowed_now",
+            "app_catalog_deploy_owner_approved",
+            "site_scoped_install_allowed_now",
             "graph_permissions_requested",
             "direct_graph_access_allowed",
-            "aad_http_client_allowed",
             "sharepoint_writes_allowed",
             "contains_real_matter_data",
         ):
             if spfx.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer skeleton spfx.{flag} must be false")
+        if spfx.get("delegated_api_resource") != "api://funktion8.de/nac-bff":
+            errors.append("SPFx BPMN viewer delegated_api_resource must be the NaC BFF")
+        if spfx.get("delegated_api_scope") != "Matter.Read":
+            errors.append("SPFx BPMN viewer delegated_api_scope must be Matter.Read")
+        if spfx.get("bff_endpoint") != "https://func-nac-bff-test-funktion8.azurewebsites.net":
+            errors.append("SPFx BPMN viewer bff_endpoint is invalid")
         if spfx.get("package_root") == "spfx/nac-bpmn-viewer":
             errors.extend(_validate_spfx_source_root(REPO_ROOT / spfx["package_root"]))
 
@@ -191,8 +205,10 @@ def validate_spfx_bpmn_viewer_skeleton(
     else:
         if deployment.get("approved_workspace_id") != APPROVED_WORKSPACE_ID:
             errors.append("SPFx BPMN viewer skeleton deployment scope must be notary_team_01")
-        if deployment.get("approval") != "owner_approved":
-            errors.append("SPFx BPMN viewer skeleton deployment scope must be owner_approved")
+        if deployment.get("approval") != "deferred_until_bff_activation":
+            errors.append("SPFx BPMN viewer skeleton deployment scope must be deferred_until_bff_activation")
+        if deployment.get("activation_gate_required") is not True:
+            errors.append("SPFx BPMN viewer skeleton deployment scope must require the activation gate")
         if deployment.get("site_scoped") is not True:
             errors.append("SPFx BPMN viewer skeleton deployment must be site-scoped")
         if deployment.get("tenant_wide") is not False:
@@ -204,13 +220,15 @@ def validate_spfx_bpmn_viewer_skeleton(
     else:
         if render.get("workspace_id") != APPROVED_WORKSPACE_ID:
             errors.append("SPFx BPMN viewer skeleton render_contract.workspace_id is invalid")
-        if render.get("content_source") != "package_fixture":
-            errors.append("SPFx BPMN viewer skeleton render content must come from package_fixture")
+        if render.get("content_source") != "nac_bff_redacted_dto":
+            errors.append("SPFx BPMN viewer skeleton render content must come from nac_bff_redacted_dto")
         if render.get("synthetic_data_only") is not True:
             errors.append("SPFx BPMN viewer skeleton render content must be synthetic only")
         if render.get("viewer_only") is not True:
             errors.append("SPFx BPMN viewer skeleton render contract must be viewer-only")
-        for flag in ("live_tenant_access", "graph_access", "writes_allowed", "real_matter_data_allowed"):
+        if render.get("live_tenant_access") is not False:
+            errors.append("SPFx BPMN viewer skeleton render_contract.live_tenant_access must be false until activation")
+        for flag in ("graph_access", "writes_allowed", "real_matter_data_allowed"):
             if render.get(flag) is not False:
                 errors.append(f"SPFx BPMN viewer skeleton render_contract.{flag} must be false")
         dom_markers = render.get("dom_markers")
@@ -309,8 +327,8 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
         solution = payload.get("solution", {})
         if solution.get("skipFeatureDeployment") is not False:
             errors.append("SPFx BPMN viewer package must be site-scoped")
-        if solution.get("webApiPermissionRequests"):
-            errors.append("SPFx BPMN viewer package must not request Web API or Graph permissions")
+        if solution.get("webApiPermissionRequests") != [{"resource": "NaC M365 BFF", "scope": "Matter.Read"}]:
+            errors.append("SPFx BPMN viewer package must request only NaC M365 BFF Matter.Read")
         if payload.get("paths", {}).get("zippedPackage") != "solution/nac-bpmn-viewer.sppkg":
             errors.append("SPFx BPMN viewer package-solution output path is invalid")
 
@@ -334,12 +352,56 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
                 rel = source_path.relative_to(REPO_ROOT)
                 errors.append(f"SPFx BPMN viewer {rel} contains blocked marker {marker!r}")
 
+    service = root / "src" / "webparts" / "nacBpmnViewer" / "services" / "NacBffClient.ts"
+    if service.is_file():
+        service_text = service.read_text(encoding="utf-8")
+        for required in (
+            "AadHttpClientFactory",
+            "api://funktion8.de/nac-bff",
+            "https://func-nac-bff-test-funktion8.azurewebsites.net",
+            "Matter.Read",
+            "NAC_BFF_WORKSPACE_ID = 'notary_team_01'",
+            "NAC_BFF_MATTER_ID = 'NAC-SYN-MATTER-001'",
+            "NAC_BFF_PURPOSE = 'view_synthetic_matter_workspace'",
+            "MAX_RESPONSE_BYTES",
+            "isWorkspace",
+            "hasExactKeys",
+            "verifyBpmnAsset",
+            "crypto.subtle.digest",
+            "AbortSignal",
+            "streamingResponse.body?.getReader()",
+            "byteLength > MAX_RESPONSE_BYTES",
+            "new TextDecoder('utf-8', { fatal: true })",
+        ):
+            if required not in service_text:
+                errors.append(f"SPFx BPMN viewer BFF client missing {required!r}")
+        for blocked in ("graph.microsoft.com", "MSGraphClient", "@microsoft/microsoft-graph-client"):
+            if blocked in service_text:
+                errors.append(f"SPFx BPMN viewer BFF client contains blocked direct Graph marker {blocked!r}")
+
+    service_test = root / "src" / "webparts" / "nacBpmnViewer" / "services" / "NacBffClient.test.ts"
+    if service_test.is_file():
+        test_text = service_test.read_text(encoding="utf-8")
+        for required in (
+            "parseWorkspaceResponse",
+            "verifyBpmnAsset",
+            "rejects extra %s fields",
+            "cryptographically binds packaged BPMN XML",
+            "uses the fixed AadHttpClient resource, route, purpose and correlation boundary",
+        ):
+            if required not in test_text:
+                errors.append(f"SPFx BPMN viewer BFF client test missing {required!r}")
+
     component = root / "src" / "webparts" / "nacBpmnViewer" / "components" / "NacBpmnViewer.tsx"
     if component.is_file():
         source_text = component.read_text(encoding="utf-8")
         for required in (
             "bpmn-js/lib/Viewer",
             "syntheticWorkspaceFixture",
+            "loadWorkspace",
+            "verifyBpmnAsset",
+            "AbortController",
+            "Prozessmodell ist derzeit nicht verfügbar.",
             *REQUIRED_DOM_MARKERS.values(),
         ):
             if required not in source_text:
@@ -348,13 +410,26 @@ def _validate_spfx_source_root(root: Path) -> list[str]:
             if blocked in source_text:
                 errors.append(f"SPFx BPMN viewer component contains blocked viewer marker {blocked!r}")
 
+    component_test = (
+        root / "src" / "webparts" / "nacBpmnViewer" / "components" / "NacBpmnViewer.test.tsx"
+    )
+    if component_test.is_file():
+        component_test_text = component_test.read_text(encoding="utf-8")
+        for required in (
+            "fails closed and destroys the viewer when BPMN import fails",
+            "aborts an outstanding BFF request when the component unmounts",
+            "fails the load after ten seconds even when the loader ignores abort",
+        ):
+            if required not in component_test_text:
+                errors.append(f"SPFx BPMN viewer component test missing {required!r}")
+
     fixture = root / "src" / "webparts" / "nacBpmnViewer" / "fixtures" / "syntheticWorkspace.ts"
     if fixture.is_file():
         fixture_text = fixture.read_text(encoding="utf-8")
         for required in (
             "workspaceId: 'notary_team_01'",
             "containsMatterData: false",
-            "source: 'package_fixture'",
+            "source: 'package_bpmn_fixture'",
             "bpmnXml: sampleApprovedBpmnXml",
         ):
             if required not in fixture_text:
@@ -558,7 +633,7 @@ def build_spfx_bpmn_viewer_skeleton_result(
 
     render_case_results = _build_render_case_results(render_fixture)
     return {
-        "status": "PASSED",
+        "status": "READY",
         "summary": {
             "component": skeleton["spfx"]["component_name"],
             "spfx_component_type": skeleton["spfx"]["component_type"],
@@ -568,11 +643,13 @@ def build_spfx_bpmn_viewer_skeleton_result(
             "data_source": skeleton["spfx"]["data_source"],
             "approved_workspace_id": skeleton["spfx"]["approved_workspace_id"],
             "package_solution_enabled_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "tenant_wide_deploy_allowed_now": False,
             "executes_graph_requests_now": False,
-            "request_plan_count": 0,
+            "request_plan_count": 1,
+            "executes_bff_requests_now": False,
+            "bff_activation_status": "DEFERRED",
         },
         "skeleton": {
             "schema_version": skeleton["schema_version"],
@@ -583,27 +660,36 @@ def build_spfx_bpmn_viewer_skeleton_result(
         "renderContract": {
             "workspaceId": skeleton["render_contract"]["workspace_id"],
             "componentProps": _redact_component_props(render_fixture["component_props"]),
-            "request_plan_count": 0,
+            "request_plan_count": 1,
             "liveTenantAccess": False,
-            "appCatalogDeployOwnerApproved": True,
+            "appCatalogDeployOwnerApproved": False,
             "domMarkers": skeleton["render_contract"]["dom_markers"],
             "privacyGuards": skeleton["render_contract"]["privacy_guards"],
             "expectedRenderState": render_fixture["expected_render_state"],
             "cases": render_case_results,
         },
-        "requestPlans": [],
+        "requestPlans": [
+            {
+                "resource": "api://funktion8.de/nac-bff",
+                "scope": "Matter.Read",
+                "method": "GET",
+                "endpoint": "https://func-nac-bff-test-funktion8.azurewebsites.net",
+            }
+        ],
         "guardrails": {
             "package_lock_required": True,
             "npm_ci_allowed_now": True,
             "build_allowed_now": True,
             "package_solution_enabled_now": True,
-            "app_catalog_deploy_owner_approved": True,
-            "site_scoped_install_allowed_now": True,
+            "app_catalog_deploy_owner_approved": False,
+            "site_scoped_install_allowed_now": False,
             "approved_workspace_only": True,
             "tenant_wide_deploy_allowed_now": False,
             "executes_graph_requests_now": False,
             "graph_permissions_requested": False,
-            "aad_http_client_allowed": False,
+            "aad_http_client_allowed": True,
+            "delegated_api_resource": "api://funktion8.de/nac-bff",
+            "delegated_api_scope": "Matter.Read",
             "legacy_sharepoint_api_allowed": False,
             "graph_sdk_allowed": False,
             "matter_document_content_reads_allowed": False,
