@@ -1,7 +1,7 @@
 # NaC Build Now
 
 Status: active development
-Last update: 2026-07-11
+Last update: 2026-07-14
 Branch: `main`
 
 ## What Is Being Built
@@ -46,6 +46,7 @@ for Fachpersonal without exposing `value` fields.
 | Unit tests | Implemented | `tests/test_notary_kg.py` |
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 | Microsoft-first / on-prem AI target architecture | Planned baseline implemented | `docs/de/architecture/microsoft-first-onprem-target-architecture.md`, `workflows/contracts/microsoft-first-onprem-target-architecture.contract.json`, `scripts/validate_microsoft_first_onprem_target_architecture.py` |
+| M365 MVP test environment in `notary_team_01` | Done live (#620; BFF deferred) | The owner-approved one-shot passed site-scoped SPFx/Teams deployment plus synthetic Graph REST v1.0 write, readback and cleanup on 2026-07-14; broad SPFx read-only workspace work remains active and live Entra BFF activation remains `DEFERRED`. |
 
 ## Sprint 0 Development Board
 
@@ -71,6 +72,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0018 | BusinessCaseType S3 offline runtime | Done offline (#614) | `AC-S3-01` through `AC-S3-06`, contracts, CLI, validator, negative tests, strict gate, independent review and Protected PR checks pass without Graph, credentials or tenant access. |
 | DEV-0019 | BusinessCaseType S4 Graph Read Edge | Done offline (#617) | `AC-S4-01` through `AC-S4-07`; exact `Sites.Selected` plus site grant `read`, same-filter paging, no collection `If-None-Match`, redaction/viewer isolation, offline CLI, contracts, validator and tests. S4b writes remain open. |
 | DEV-0020 | BusinessCaseType S5 offline migration | In progress (#618) | Inventory dry run, exact legacy mapping, idempotent backfill planning, persistent quarantine, deterministic snapshots, stable final scans and N-1 replay; no credentials, HTTP, Graph or tenant writes. |
+| DEV-0021 | M365 MVP test environment live one-shot in `notary_team_01` | Done live (#620; BFF deferred) | Owner-approved site-scoped SPFx/Teams deployment and synthetic Graph REST v1.0 write/read/cleanup passed on 2026-07-14 without permission or credential changes; broad SPFx read-only workspace work remains active, while live Entra BFF activation remains `DEFERRED`. |
 
 ## Roadmap Review Notes
 
@@ -90,6 +92,7 @@ for Fachpersonal without exposing `value` fields.
 | 2026-07-11 | Microsoft-first / on-prem AI target architecture | Teams, SPFx, SharePoint, Entra and Graph REST v1.0 form the Microsoft edge; Python/FastAPI, deterministic workflows, NeMo Agent Toolkit, PostgreSQL, outbox/broker and WORM remain on-prem. Temporal is a timeboxed candidate spike, not a selected platform. | Complete S3/S4, then run the durable-workflow spike before selecting an engine; live, credential and deployment actions remain separately owner-gated. |
 | 2026-07-05 | M365 application-owned privileged change path | Add as the next iteration for the Teams/SharePoint data plane. Standard users stay least-privilege; Teams, SharePoint schema, site permission and membership mutations move behind a controlled provisioning app/API. Direct Graph app owners are users or service principals, so `technical_owner_user` or a service principal is the technical owner anchor while `nac_platform_admins` is the governance group. | Implement as a separate owner-gated PR: dedicated provisioning app, technical app owner anchor, governance group, Graph REST mutation API, `Sites.Selected` runtime grants, drift/export evidence and explicit audit records. |
 | 2026-07-11 | BusinessCaseType S3 runtime | Start the viewer-independent offline runtime under Issue #612. CatalogVersion is content-based, runtime lifecycle is explicit, aliases are purpose-bound and registry/cache validation fails closed. | Mark implemented only after AC-S3-01 through AC-S3-06, contracts, CLI, validator, negative tests, strict gate, independent review and Protected PR checks pass; Graph REST integration remains S4. |
+| 2026-07-14 | M365 MVP test environment live one-shot | Record the owner-approved `notary_team_01` one-shot as done live under #620; this does not complete the broader SPFx read-only workspace. | Continue broad SPFx workspace work as active; activate the Entra BFF only in a separate owner-gated step after an existing delegated scope and public HTTPS endpoint are available. Until then BFF is `DEFERRED`. |
 
 ## Local Developer Commands
 

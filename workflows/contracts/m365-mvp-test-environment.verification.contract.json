@@ -2,7 +2,7 @@
   "schema_version": "nac.verification-contract/v0.1",
   "contract_id": "verification.m365_mvp_test_environment",
   "title": "M365 MVP test environment verification",
-  "status": "implementation_authorized_pending_protected_pr_and_live_evidence",
+  "status": "live_deployment_verified_bff_activation_deferred",
   "leading_issue": "https://github.com/notariat8/NaC/issues/620",
   "spec_id": "m365-mvp-test-environment",
   "delivery_mode": "Protected PR",
@@ -86,6 +86,36 @@
     "identity_source_exact": "validated Entra access token claims",
     "workspace_site_list_resolution_exact": "server-side allowlist"
   },
+  "live_verification": {
+    "verified_on_exact": "2026-07-14",
+    "approval_exact": "owner-approved",
+    "execution_mode_exact": "Live-One-Shot",
+    "result_exact": "PASSED",
+    "attestation_path_exact": "workflows/verification-contracts/m365-mvp-test-environment-live.verification.json",
+    "attestation_version_exact": "1.0.0",
+    "source_evidence_sha256_exact": "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea",
+    "correlation_reference_sha256_exact": "71c65e747ecec83ce97879f44a84a5692da68730a6e614fce6fa7e4ab1bf3b50",
+    "package_sha256_exact": "0c83b65bad8c690387d116213cfeb41c40e2c8cc3ba7c9b7b8f8cdf3d8439989",
+    "pull_request_number_exact": 628,
+    "pull_request_url_exact": "https://github.com/notariat8/NaC/pull/628",
+    "workspace_id_exact": "notary_team_01",
+    "verified_capabilities_exact": [
+      "site-scoped SPFx/Heft package and App Catalog deployment gate",
+      "shared SharePoint and Teams package gate",
+      "synthetic matter status, two tasks and UTC due date",
+      "read-only bpmn-js viewer with BPMN instance binding",
+      "raw Microsoft Graph REST v1.0 write and targeted readback",
+      "assigned, valid-deputy and unauthorized role decisions",
+      "run-owned cleanup",
+      "no browser business logic, secrets, workflow timers or agentic runtime"
+    ],
+    "not_verified_exact": [
+      "document pointer rendering",
+      "bpmn-js lazy loading or code splitting",
+      "live BFF activation",
+      "live Entra token validation"
+    ]
+  },
   "checks": [
     "python3 -m unittest tests.test_m365_mvp_test_environment_verification_contract",
     "python3 -m unittest tests.test_m365_spfx_bpmn_viewer_skeleton tests.test_m365_bpmn_viewer_runtime_readiness tests.test_m365_sharepoint_bpmn_viewer_adapter tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_smoke tests.test_m365_mvp_test_environment_deploy tests.test_m365_test_environment_bff tests.test_m365_runtime_env_bootstrap",
@@ -104,6 +134,7 @@
     "assigned, valid-deputy, and unauthorized role decisions",
     "run-owned cleanup result",
     "redacted live evidence for notary_team_01",
+    "versioned redacted live attestation bound to source evidence, correlation reference and package SHA-256 plus merged PR #628",
     "SharePoint and Teams visual proof",
     "green Protected PR checks and strict gate"
   ],
@@ -153,6 +184,7 @@
     "all_evidence_is_redacted": true,
     "cleanup_complete": true,
     "no_permission_or_credential_change": true,
+    "passed_result_bound_to_versioned_attestation": true,
     "bff_activation_remains_deferred": true
   },
   "failure_behavior": {
@@ -161,6 +193,7 @@
     "production_like_data": "block_execution",
     "readback_or_role_mismatch": "FAILED_then_targeted_run_owned_cleanup",
     "cleanup_incomplete": "FAILED_with_redacted_evidence",
+    "missing_or_mismatched_attestation_hash_or_pr_binding": "invalidate_PASSED_result",
     "missing_public_https_endpoint_or_delegated_scope": "keep_bff_activation_DEFERRED"
   },
   "deployment_control_plane": {

@@ -28,12 +28,21 @@ PR and a separate owner gate for live, credential or deployment actions.
 
 ## Slice 3: SPFx Read-Only Workspace
 
-- [ ] Show matter status, tasks, deadlines and document pointers read-only.
-- [ ] Integrate the existing `bpmn-js` viewer.
-- [ ] Provide Teams tab and SharePoint web part from one package.
-- [ ] Fix SPFx 1.22+/Heft, App Catalog, .sppkg, Teams publishing and the early admin gate.
-- [ ] Pin the BPMN model version per instance and load bpmn-js using lazy loading/code splitting.
-- [ ] Keep business logic, secrets, workflow timers and agentic runtime out of the browser.
+Status 14 July 2026: The owner-approved Live-One-Shot in `notary_team_01`
+succeeded; live BFF and live Entra token validation remain DEFERRED.
+
+Evidence binding: [Issue #620](https://github.com/notariat8/NaC/issues/620),
+[verification contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json),
+and [versioned redacted live attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json).
+
+- [x] Show matter status, tasks and deadlines read-only.
+- [ ] Show document pointers read-only.
+- [x] Integrate the existing `bpmn-js` viewer.
+- [x] Provide Teams tab and SharePoint web part from one package.
+- [x] Fix SPFx 1.22+/Heft, App Catalog, `.sppkg`, Teams publishing and the early admin gate.
+- [x] Bind the BPMN model version per instance.
+- [ ] Load `bpmn-js` using lazy loading/code splitting.
+- [x] Keep business logic, secrets, workflow timers and agentic runtime out of the browser.
 
 ## Slice 4: Durable Workflow Spike
 

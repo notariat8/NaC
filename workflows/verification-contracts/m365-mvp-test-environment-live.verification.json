@@ -1,0 +1,70 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_mvp_test_environment_live_attestation",
+  "domain_contract_id": "verification.m365_mvp_test_environment",
+  "title": "M365 MVP test environment redacted live attestation",
+  "artifact_kind": "redacted_live_attestation",
+  "attestation_version": "1.0.0",
+  "status": "PASSED",
+  "issued_on_exact": "2026-07-14",
+  "approval_exact": "owner-approved",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "source_contract_path": "workflows/contracts/m365-mvp-test-environment.verification.contract.json",
+  "verification_scope": {
+    "execution_mode_exact": "Live-One-Shot",
+    "workspace_id_exact": "notary_team_01",
+    "data_class_exact": "synthetic_only",
+    "source_evidence_retained_in_repo": true,
+    "source_evidence_path_exact": "workflows/verification-contracts/evidence/m365-mvp-test-environment-deploy.redacted.json"
+  },
+  "result_binding": {
+    "result_exact": "PASSED",
+    "source_evidence_sha256_exact": "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea",
+    "correlation_reference_sha256_exact": "71c65e747ecec83ce97879f44a84a5692da68730a6e614fce6fa7e4ab1bf3b50",
+    "package_sha256_exact": "0c83b65bad8c690387d116213cfeb41c40e2c8cc3ba7c9b7b8f8cdf3d8439989",
+    "pull_request": {
+      "number_exact": 628,
+      "url_exact": "https://github.com/notariat8/NaC/pull/628",
+      "state_exact": "MERGED",
+      "merge_commit_sha_exact": "5092999768bd7e0fde575a7fe40cc1c198ec1e6c"
+    }
+  },
+  "verified_claims_exact": [
+    "site-scoped SPFx/Heft package and App Catalog deployment gate",
+    "shared SharePoint and Teams package gate",
+    "synthetic matter status, two tasks and UTC due date",
+    "read-only bpmn-js viewer with BPMN instance binding",
+    "raw Microsoft Graph REST v1.0 write and targeted readback",
+    "assigned, valid-deputy and unauthorized role decisions",
+    "run-owned cleanup",
+    "no browser business logic, secrets, workflow timers or agentic runtime"
+  ],
+  "explicitly_not_verified_exact": [
+    "document pointer rendering",
+    "bpmn-js lazy loading or code splitting",
+    "live BFF activation",
+    "live Entra token validation"
+  ],
+  "redaction": {
+    "redacted": true,
+    "hashes_only_for_source_evidence_and_correlation_reference": true,
+    "raw_source_evidence_included": false,
+    "raw_correlation_reference_included": false,
+    "raw_graph_responses_included": false,
+    "tokens_credentials_or_private_keys_included": false,
+    "mandate_or_production_data_included": false
+  },
+  "pass_condition": {
+    "result_bound_to_all_three_sha256_values": true,
+    "result_bound_to_merged_pull_request_628": true,
+    "all_evidence_references_redacted": true,
+    "bff_activation_remains_deferred": true,
+    "live_entra_token_validation_remains_deferred": true
+  },
+  "failure_behavior": {
+    "missing_or_mismatched_hash_binding": "invalidate_PASSED_attestation",
+    "missing_or_mismatched_pull_request_binding": "invalidate_PASSED_attestation",
+    "raw_evidence_or_correlation_reference_detected": "block_completion",
+    "bff_or_live_token_validation_claimed": "invalidate_PASSED_attestation"
+  }
+}

@@ -1,0 +1,272 @@
+{
+  "schemaVersion": "nac.m365-mvp-test-environment-deploy-evidence/v0.1",
+  "status": "PASSED",
+  "scope": {
+    "workspaceRefSha256": "065f291b487b7a47fe455c8500a16a9496af67ac59b8cdaa7412f85b996d1d55",
+    "workspaceVerified": true
+  },
+  "ownerGate": {
+    "approved": true
+  },
+  "inputBinding": {
+    "status": "PASSED",
+    "contractSha256": "77c6ca8194fadafb371e22f9b32054fe67efb809427cfe7594e95f8e418d9b4b",
+    "provisionedStateSha256": "bdfe48ceb548e829815885af1e9bfc60f0e94fe0c3bfd3902de879c73ec0dd09",
+    "workspaceBindingSha256": "7472138b9cf0da2bc423b6dfe0e82dc838da3e00cb81c3f93705df16b3497983",
+    "rawResourceIdentifiersIncluded": false,
+    "controlPlanePlanBound": true
+  },
+  "controlPlane": {
+    "status": "PASSED",
+    "packageSha256": "0c83b65bad8c690387d116213cfeb41c40e2c8cc3ba7c9b7b8f8cdf3d8439989",
+    "siteScoped": true,
+    "teamsIncluded": true,
+    "commandsExecuted": 14,
+    "classifications": {
+      "inspect_tenant_app_catalog": "update",
+      "add_or_overwrite_tenant_app": "update",
+      "validate_site_scoped_app": "reuse",
+      "deploy_tenant_catalog_app_without_tenant_wide_activation": "update",
+      "inspect_target_site_apps": "reuse",
+      "install_or_reuse_app_on_target_site": "update",
+      "inspect_target_page": "update",
+      "create_or_update_modern_page": "update",
+      "inspect_page_web_parts": "reuse",
+      "add_or_reuse_web_part": "reuse",
+      "publish_page": "update",
+      "download_teams_package": "update",
+      "inspect_teams_catalog": "update",
+      "inspect_teams_catalog_app_version": "reuse",
+      "publish_or_update_teams_catalog_app": "reuse",
+      "inspect_teams_app_installation_on_target_team": "reuse",
+      "install_or_reuse_teams_app_on_target_team": "reuse",
+      "verify_teams_app_installed_on_target_team": "reuse"
+    },
+    "rawCommandOutputIncluded": false,
+    "steps": [
+      {
+        "name": "verify_package_sha256",
+        "status": "PASSED"
+      },
+      {
+        "name": "inspect_tenant_app_catalog",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "add_or_overwrite_tenant_app",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "validate_site_scoped_app",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "deploy_tenant_catalog_app_without_tenant_wide_activation",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "inspect_target_site_apps",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "install_or_reuse_app_on_target_site",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "inspect_target_page",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "create_or_update_modern_page",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "inspect_page_web_parts",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "add_or_reuse_web_part",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "publish_page",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "download_teams_package",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "inspect_teams_catalog",
+        "status": "PASSED",
+        "classification": "update"
+      },
+      {
+        "name": "inspect_teams_catalog_app_version",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "publish_or_update_teams_catalog_app",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "inspect_teams_app_installation_on_target_team",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "install_or_reuse_teams_app_on_target_team",
+        "status": "PASSED",
+        "classification": "reuse"
+      },
+      {
+        "name": "verify_teams_app_installed_on_target_team",
+        "status": "PASSED",
+        "classification": "reuse"
+      }
+    ]
+  },
+  "syntheticDataSmoke": {
+    "schema_version": "nac.m365-mvp-test-environment-smoke-evidence/v0.1",
+    "status": "PASSED",
+    "generated_at": "2026-07-14T07:40:12Z",
+    "summary": {
+      "workspaceScopeVerified": true,
+      "workspaceRefSha256": "065f291b487b7a47fe455c8500a16a9496af67ac59b8cdaa7412f85b996d1d55",
+      "syntheticMatterRefSha256": "b989ce1fd9fcf181c7675bc4909da69cf436c763f9b031f7b5b7feb5df6b2f61",
+      "correlationRefSha256": "71c65e747ecec83ce97879f44a84a5692da68730a6e614fce6fa7e4ab1bf3b50",
+      "matterWriteCount": 1,
+      "taskDeadlineWriteCount": 2,
+      "targetedReadbackCount": 3,
+      "roleDecisionCheckCount": 3,
+      "graphRestV1Only": true,
+      "canonicalInputBindingVerified": true
+    },
+    "inputBinding": {
+      "contractSha256": "77c6ca8194fadafb371e22f9b32054fe67efb809427cfe7594e95f8e418d9b4b",
+      "provisionedStateSha256": "bdfe48ceb548e829815885af1e9bfc60f0e94fe0c3bfd3902de879c73ec0dd09",
+      "workspaceBindingSha256": "7472138b9cf0da2bc423b6dfe0e82dc838da3e00cb81c3f93705df16b3497983"
+    },
+    "ownerGate": {
+      "required": true,
+      "approved": true
+    },
+    "roleChecks": [
+      {
+        "scenario": "assigned",
+        "expected": "ALLOW",
+        "actual": "ALLOW",
+        "passed": true
+      },
+      {
+        "scenario": "deputy",
+        "expected": "ALLOW",
+        "actual": "ALLOW",
+        "passed": true
+      },
+      {
+        "scenario": "deny",
+        "expected": "DENY",
+        "actual": "DENY",
+        "passed": true
+      }
+    ],
+    "bpmnFixture": {
+      "verified": true,
+      "packageBound": true,
+      "packageName": "@notariat8/nac-bpmn-viewer",
+      "packageVersion": "0.1.0",
+      "notation": "BPMN 2.0",
+      "modelVersion": "1.0.0",
+      "modelTitle": "Synthetic real-estate purchase matter",
+      "modelRefSha256": "b5e6735c2f9a6b48b446be5c43e6c59af4f46a6b5c9c094e4953b5e965c1409f",
+      "processRefSha256": "aafe2000dfafb43d21185ee7960b5006177d2a18d0419f3b682a8df55ff67f32",
+      "contentSha256": "1dd7203a515d434949ef9300d5738cf7318d842119ec689aaa7ba1f9a7a6d167",
+      "xmlParsed": true
+    },
+    "cleanup": {
+      "finallyExecuted": true,
+      "strategy": "created_items_only",
+      "attemptCount": 3,
+      "deleteCount": 3,
+      "verifiedAbsentCount": 3,
+      "automaticGlobalLeftoverDelete": false
+    },
+    "error": {
+      "code": null,
+      "cleanupCode": null,
+      "rawMessageStored": false
+    },
+    "privacy": {
+      "storesRawIds": false,
+      "storesRawGraphPaths": false,
+      "storesRawPayloads": false,
+      "storesRawGraphResponses": false,
+      "storesTokensOrSecrets": false,
+      "usesRealMatterData": false,
+      "readsSharePointFileContent": false
+    }
+  },
+  "accessDecisionVerification": {
+    "source": "deterministic_data_field_policy_evaluator",
+    "liveBffDecision": false,
+    "liveEntraBffActivation": "DEFERRED",
+    "deferredReason": "requires_new_delegated_scope_and_public_https_endpoint",
+    "failClosed": true,
+    "policyRequirements": [
+      "primary_assignment",
+      "deputy_reason",
+      "deputy_validity_window",
+      "deputy_approval",
+      "deputy_audit_event"
+    ],
+    "expected": {
+      "assigned": "ALLOW",
+      "deputy": "ALLOW",
+      "deny": "DENY"
+    },
+    "status": "PASSED",
+    "checks": [
+      {
+        "scenario": "assigned",
+        "expected": "ALLOW",
+        "actual": "ALLOW",
+        "passed": true
+      },
+      {
+        "scenario": "deputy",
+        "expected": "ALLOW",
+        "actual": "ALLOW",
+        "passed": true
+      },
+      {
+        "scenario": "deny",
+        "expected": "DENY",
+        "actual": "DENY",
+        "passed": true
+      }
+    ]
+  },
+  "boundaries": {
+    "graphApi": "https://graph.microsoft.com/v1.0",
+    "syntheticDataOnly": true,
+    "permissionChanges": false,
+    "credentialChanges": false,
+    "destructiveRollback": false,
+    "cleanupRequired": true
+  }
+}

@@ -1,6 +1,6 @@
 # M365 MVP Test Environment Design
 
-Status: SPFx/deployment path package-ready; live BFF path DEFERRED
+Status: Live deployment verified on 14 July 2026; live BFF path DEFERRED
 Date: 13 July 2026
 Scope: site-specific, synthetic-only test environment in workspace `notary_team_01`
 
@@ -162,11 +162,17 @@ owner-gated and limited to the approved workspace.
 
 ## Delivery Status
 
-The site-scoped SPFx/Teams package, deployment, and synthetic Graph smoke path
-is **package-ready**. The BFF core and its fail-closed contracts can be
-verified offline. Public BFF activation, delegated sign-in, and live token
-validation are **DEFERRED** because this slice must not create a delegated
-scope, public HTTPS endpoint, or credential.
+The owner-approved Live-One-Shot completed successfully in `notary_team_01` on
+14 July 2026. Verified scope comprises the site-scoped SPFx/Heft package, App
+Catalog and Teams gate, shared SharePoint/Teams package path, synthetic matter
+status with two tasks and a UTC due date, the read-only `bpmn-js` viewer with
+BPMN binding, role decisions, Graph REST `v1.0` write/readback, and run-owned
+cleanup. Document pointers and `bpmn-js` lazy loading/code splitting were not
+proven and remain open.
+
+The BFF core and its fail-closed contracts remain verifiable offline. Public
+BFF activation, delegated sign-in, and live Entra token validation remain
+explicitly **DEFERRED** and were not part of the successful Live-One-Shot.
 
 ## Non-goals
 

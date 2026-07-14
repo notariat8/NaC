@@ -30,12 +30,21 @@ Owner-Gate.
 
 ## Slice 3: SPFx Read-only Workspace
 
-- [ ] Aktenstatus, Aufgaben, Fristen und Dokumentzeiger read-only anzeigen.
-- [ ] Vorhandenen `bpmn-js`-Viewer integrieren.
-- [ ] Teams-Tab und SharePoint-Webpart aus demselben Paket bereitstellen.
-- [ ] SPFx 1.22+/Heft, App Catalog, .sppkg, Teams-Publishing und frühes Admin-Gate festschreiben.
-- [ ] BPMN-Modellversion je Instanz pinnen und bpmn-js per Lazy Loading/Code Splitting laden.
-- [ ] Keine Geschäftslogik, Secrets, Workflow-Timer oder Agentic Runtime im Browser.
+Status 14. Juli 2026: Der owner-approved Live-One-Shot in `notary_team_01` war
+erfolgreich; Live-BFF und Live-Entra-Tokenvalidierung bleiben DEFERRED.
+
+Nachweisbindung: [Issue #620](https://github.com/notariat8/NaC/issues/620),
+[Verification Contract](../../../../workflows/contracts/m365-mvp-test-environment.verification.contract.json)
+und [versionierte redigierte Live-Attestation](../../../../workflows/verification-contracts/m365-mvp-test-environment-live.verification.json).
+
+- [x] Aktenstatus, Aufgaben und Fristen read-only anzeigen.
+- [ ] Dokumentzeiger read-only anzeigen.
+- [x] Vorhandenen `bpmn-js`-Viewer integrieren.
+- [x] Teams-Tab und SharePoint-Webpart aus demselben Paket bereitstellen.
+- [x] SPFx 1.22+/Heft, App Catalog, `.sppkg`, Teams-Publishing und frühes Admin-Gate festschreiben.
+- [x] BPMN-Modellversion je Instanz binden.
+- [ ] `bpmn-js` per Lazy Loading/Code Splitting laden.
+- [x] Keine Geschäftslogik, Secrets, Workflow-Timer oder Agentic Runtime im Browser.
 
 ## Slice 4: Durable-Workflow-Spike
 
