@@ -27,7 +27,20 @@
       "bind_before_azure_deploy": true,
       "evidence_name": "entra_api_client_id_binding_redacted"
     },
-    "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38"
+    "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+    "entra_api_contract": {
+      "sign_in_audience": "AzureADMyOrg",
+      "requested_access_token_version": 2,
+      "delegated_scope": "Matter.Read",
+      "readback_required_before_azure_deploy": true,
+      "readback_fields": [
+        "appId",
+        "identifierUris",
+        "signInAudience",
+        "api.requestedAccessTokenVersion",
+        "api.oauth2PermissionScopes"
+      ]
+    }
   },
   "execution": {
     "offline_plan_live_actions_exact": 0,
@@ -36,7 +49,9 @@
     "artifact_inputs_hash_bound": true,
     "single_consolidated_owner_gate_required": true,
     "idempotency_run_required": true,
-    "redacted_evidence_required": true
+    "redacted_evidence_required": true,
+    "live_success_evidence_must_be_runner_generated": true,
+    "offline_plan_must_not_emit_live_success": true
   },
   "boundaries": {
     "production_data_allowed": false,

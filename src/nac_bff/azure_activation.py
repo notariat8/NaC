@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 from typing import Any
 
 from nac_bff.azure_readiness import build_azure_bff_readiness
@@ -21,6 +22,20 @@ FUNCTION_APP = "func-nac-bff-test-funktion8"
 API_APP_DISPLAY_NAME = "NaC M365 BFF"
 API_APP_URI = "api://funktion8.de/nac-bff"
 DELEGATED_SCOPE = "Matter.Read"
+REQUESTED_ACCESS_TOKEN_VERSION = 2
+ENTRA_API_CONTRACT = {
+    "sign_in_audience": "AzureADMyOrg",
+    "requested_access_token_version": REQUESTED_ACCESS_TOKEN_VERSION,
+    "delegated_scope": DELEGATED_SCOPE,
+    "readback_required_before_azure_deploy": True,
+    "readback_fields": [
+        "appId",
+        "identifierUris",
+        "signInAudience",
+        "api.requestedAccessTokenVersion",
+        "api.oauth2PermissionScopes",
+    ],
+}
 WORKSPACE_ID = "notary_team_01"
 MATTER_ID = "NAC-SYN-MATTER-001"
 SITE_ID = (
@@ -39,17 +54,6 @@ API_CLIENT_ID_BINDING = {
 }
 
 _SPFX_ROOT = "spfx/nac-bpmn-viewer"
-_SPFX_GENERATED_DIRECTORIES = {
-    "dist",
-    "jest-output",
-    "lib",
-    "lib-commonjs",
-    "node_modules",
-    "release",
-    "sharepoint",
-    "temp",
-}
-
 _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
     "deploy/runtime/azure/nac-bff/infra/main.bicep",
@@ -107,6 +111,7 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
             "api_app_display_name": API_APP_DISPLAY_NAME,
             "api_app_uri": API_APP_URI,
             "api_client_id_binding": dict(API_CLIENT_ID_BINDING),
+            "entra_api_contract": dict(ENTRA_API_CONTRACT),
             "delegated_scope": DELEGATED_SCOPE,
             "workspace_id": WORKSPACE_ID,
             "matter_id": MATTER_ID,
@@ -133,6 +138,7 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
             "azure_deployment_outputs_redacted",
             "entra_api_scope_binding_redacted",
             "entra_api_client_id_binding_redacted",
+            "entra_api_contract_readback_redacted",
             "managed_identity_sites_selected_binding_redacted",
             "site_read_grant_redacted",
             "function_health_and_authorization_smoke_redacted",
@@ -191,21 +197,31 @@ def _spfx_source_manifest_binding(
     if not package_root.is_dir():
         return None, "generated:spfx-source-manifest"
 
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--", _SPFX_ROOT],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None, "generated:spfx-source-manifest"
+    if completed.returncode != 0:
+        return None, "generated:spfx-source-manifest"
+
     entries: list[dict[str, str]] = []
-    for path in sorted(package_root.rglob("*")):
-        relative_to_package = path.relative_to(package_root)
-        if any(
-            part in _SPFX_GENERATED_DIRECTORIES
-            for part in relative_to_package.parts
-        ):
-            continue
+    for relative in sorted(
+        line.strip() for line in completed.stdout.splitlines() if line.strip()
+    ):
+        path = root / relative
         if path.is_symlink():
-            return None, f"symlink:{path.relative_to(root).as_posix()}"
+            return None, f"symlink:{relative}"
         if not path.is_file():
-            continue
+            return None, f"missing:{relative}"
         entries.append(
             {
-                "path": path.relative_to(root).as_posix(),
+                "path": relative,
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             }
         )
@@ -220,6 +236,7 @@ def _spfx_source_manifest_binding(
     ).encode("ascii")
     return {
         "path": "generated:spfx-source-manifest",
+        "source": "git_tracked_files_only",
         "sha256": hashlib.sha256(canonical).hexdigest(),
         "file_count": len(entries),
         "entries": entries,
@@ -269,6 +286,7 @@ def _activation_contract_valid(root: Path) -> bool:
         "api_app_display_name": API_APP_DISPLAY_NAME,
         "api_app_uri": API_APP_URI,
         "api_client_id_binding": API_CLIENT_ID_BINDING,
+        "entra_api_contract": ENTRA_API_CONTRACT,
         "delegated_scope": DELEGATED_SCOPE,
         "workspace_id": WORKSPACE_ID,
         "matter_id": MATTER_ID,
@@ -284,6 +302,8 @@ def _activation_contract_valid(root: Path) -> bool:
         "single_consolidated_owner_gate_required": True,
         "idempotency_run_required": True,
         "redacted_evidence_required": True,
+        "live_success_evidence_must_be_runner_generated": True,
+        "offline_plan_must_not_emit_live_success": True,
     }
     expected_boundaries = {
         "production_data_allowed": False,
@@ -316,8 +336,8 @@ def _activation_steps() -> list[dict[str, Any]]:
     definitions = (
         ("register_azure_providers", "azure_write", "Register only Microsoft.Web, Microsoft.Storage and Microsoft.OperationalInsights."),
         ("ensure_resource_group", "azure_write", "Create or reuse the bound test resource group in Germany West Central."),
-        ("ensure_entra_api_application", "entra_write", "Create or reuse exactly one single-tenant API by app ID URI, capture its UUID appId and bind it into a redacted runtime manifest for Matter.Read."),
-        ("deploy_bicep_baseline", "azure_write", "Verify the captured API appId binding, then deploy the hash-bound Function, UAMI, storage and observability baseline with that exact bffApiAudience."),
+        ("ensure_entra_api_application", "entra_write", "Create or reuse exactly one single-tenant API by app ID URI with api.requestedAccessTokenVersion=2, capture its UUID appId, and read back the exact Matter.Read contract before Azure deploy."),
+        ("deploy_bicep_baseline", "azure_write", "Verify the captured Entra v2 readback and API appId binding, then deploy the hash-bound Function, UAMI, storage and observability baseline with that exact bffApiAudience."),
         ("assign_sites_selected", "graph_write", "Assign Graph application role Sites.Selected to the deployed UAMI."),
         ("grant_target_site_read", "graph_write", "Grant read only on the exact notary_team_01 SharePoint site."),
         ("deploy_function_package", "azure_write", "Deploy the deterministic Python package through OneDeploy remote build."),

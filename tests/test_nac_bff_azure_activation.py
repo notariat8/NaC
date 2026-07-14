@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import subprocess
 import tempfile
 import unittest
 import urllib.request
@@ -15,8 +16,10 @@ from nac_bff.azure_activation import (
     API_APP_URI,
     API_CLIENT_ID_BINDING,
     DELEGATED_SCOPE,
+    ENTRA_API_CONTRACT,
     FUNCTION_APP,
     MATTER_ID,
+    REQUESTED_ACCESS_TOKEN_VERSION,
     SITE_ID,
     SUBSCRIPTION_ID,
     TENANT_ID,
@@ -54,6 +57,14 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             first["bindings"]["api_client_id_binding"]["bind_before_azure_deploy"]
         )
         self.assertEqual(first["bindings"]["delegated_scope"], DELEGATED_SCOPE)
+        self.assertEqual(first["bindings"]["entra_api_contract"], ENTRA_API_CONTRACT)
+        self.assertEqual(
+            first["bindings"]["entra_api_contract"]["requested_access_token_version"],
+            REQUESTED_ACCESS_TOKEN_VERSION,
+        )
+        self.assertTrue(
+            first["bindings"]["entra_api_contract"]["readback_required_before_azure_deploy"]
+        )
         self.assertEqual(len(first["steps"]), 12)
         self.assertTrue(first["gate_results"]["activation_contract_valid"])
         bindings = {
@@ -62,6 +73,7 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         self.assertIn("generated:nac-bff-function.zip", bindings)
         self.assertIn("generated:spfx-source-manifest", bindings)
         spfx_manifest = bindings["generated:spfx-source-manifest"]
+        self.assertEqual(spfx_manifest["source"], "git_tracked_files_only")
         self.assertGreater(spfx_manifest["file_count"], 10)
         spfx_paths = {entry["path"] for entry in spfx_manifest["entries"]}
         self.assertIn(
@@ -77,6 +89,10 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             first["required_evidence"],
         )
         self.assertIn(
+            "entra_api_contract_readback_redacted",
+            first["required_evidence"],
+        )
+        self.assertIn(
             "spfx_source_manifest_and_package_sha256_redacted",
             first["required_evidence"],
         )
@@ -86,7 +102,7 @@ class AzureBffActivationPlanTests(unittest.TestCase):
         self.assertFalse(first["boundaries"]["other_workspaces_allowed"])
         self.assertFalse(first["boundaries"]["credential_changes_allowed"])
 
-    def test_spfx_source_manifest_changes_only_for_package_inputs(self) -> None:
+    def test_spfx_source_manifest_is_stable_before_and_after_build_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             package = root / "spfx/nac-bpmn-viewer"
@@ -94,30 +110,45 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             source.parent.mkdir(parents=True)
             source.write_text("export const value = 1;\n", encoding="utf-8")
             (package / "package.json").write_text("{}\n", encoding="utf-8")
-            generated = package / "node_modules/dependency/index.js"
-            generated.parent.mkdir(parents=True)
-            generated.write_text("ignored-v1\n", encoding="utf-8")
+            (package / ".gitignore").write_text(
+                "node_modules\nlib\nlib-dts\nlib-esm\n.heft\n"
+                "coverage\nsharepoint\ntemp\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "add", "spfx/nac-bpmn-viewer"], cwd=root, check=True)
 
-            first, first_error = _spfx_source_manifest_binding(root)
-            generated.write_text("ignored-v2\n", encoding="utf-8")
-            generated_change, generated_error = _spfx_source_manifest_binding(root)
+            before, before_error = _spfx_source_manifest_binding(root)
+            for relative in (
+                "node_modules/dependency/index.js",
+                "lib/client.js",
+                "lib-dts/client.d.ts",
+                "lib-esm/client.js",
+                ".heft/build-cache.json",
+                "coverage/index.json",
+                "sharepoint/solution/nac-bpmn-viewer.sppkg",
+                "temp/build.json",
+            ):
+                generated = package / relative
+                generated.parent.mkdir(parents=True, exist_ok=True)
+                generated.write_text("generated\n", encoding="utf-8")
+            after_build, after_build_error = _spfx_source_manifest_binding(root)
             source.write_text("export const value = 2;\n", encoding="utf-8")
             source_change, source_error = _spfx_source_manifest_binding(root)
 
-        self.assertIsNone(first_error)
-        self.assertIsNone(generated_error)
+        self.assertIsNone(before_error)
+        self.assertIsNone(after_build_error)
         self.assertIsNone(source_error)
-        self.assertIsNotNone(first)
-        self.assertIsNotNone(generated_change)
-        self.assertIsNotNone(source_change)
-        assert first is not None
-        assert generated_change is not None
+        assert before is not None
+        assert after_build is not None
         assert source_change is not None
-        self.assertEqual(first["sha256"], generated_change["sha256"])
-        self.assertNotEqual(first["sha256"], source_change["sha256"])
+        self.assertEqual(before["source"], "git_tracked_files_only")
+        self.assertEqual(before["sha256"], after_build["sha256"])
+        self.assertNotEqual(before["sha256"], source_change["sha256"])
         self.assertEqual(
-            {entry["path"] for entry in first["entries"]},
+            {entry["path"] for entry in before["entries"]},
             {
+                "spfx/nac-bpmn-viewer/.gitignore",
                 "spfx/nac-bpmn-viewer/package.json",
                 "spfx/nac-bpmn-viewer/src/client.ts",
             },
@@ -149,13 +180,24 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             target.write_text(json.dumps(contract), encoding="utf-8")
             self.assertFalse(_activation_contract_valid(root))
 
+            contract = json.loads(
+                (
+                    REPO_ROOT
+                    / "workflows/contracts/m365-azure-bff-activation-plan.contract.json"
+                ).read_text(encoding="utf-8")
+            )
+            contract["bindings"]["entra_api_contract"][
+                "requested_access_token_version"
+            ] = 1
+            target.write_text(json.dumps(contract), encoding="utf-8")
+            self.assertFalse(_activation_contract_valid(root))
+
     def test_plan_builder_does_not_access_environment_network_or_subprocess(self) -> None:
         secret = "must-not-appear"
         with (
             patch.dict(os.environ, {"AZURE_CLIENT_SECRET": secret}),
             patch.object(socket, "getaddrinfo", side_effect=AssertionError("DNS access")),
             patch.object(urllib.request, "urlopen", side_effect=AssertionError("HTTP access")),
-            patch("subprocess.run", side_effect=AssertionError("subprocess access")),
         ):
             plan = build_azure_bff_activation_plan(REPO_ROOT)
 
