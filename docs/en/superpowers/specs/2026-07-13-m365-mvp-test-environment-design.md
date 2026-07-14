@@ -1,6 +1,6 @@
 # M365 MVP Test Environment Design
 
-Status: Live deployment verified on 14 July 2026; live BFF path DEFERRED
+Status: Live deployment verified on 14 July 2026; Azure BFF offline READY, live path DEFERRED
 Date: 13 July 2026
 Scope: site-specific, synthetic-only test environment in workspace `notary_team_01`
 
@@ -140,16 +140,17 @@ owner-gated and limited to the approved workspace.
   skipFeatureDeployment=false.
 - **AC-620-02:** SPFx never requests Microsoft Graph permissions and never
   calls Graph directly. Its only permitted dynamic API target is a delegated
-  NaC BFF scope. Activation remains explicitly DEFERRED while no existing
-  scope and public HTTPS endpoint are available.
+  NaC BFF scope. Scope, HTTPS endpoint, and SPFx cutover remain `DEFERRED`
+  until the consolidated owner gate.
 - **AC-620-03:** The BFF derives user identity exclusively from a validated
   Entra access token and resolves workspace, site, and list identifiers only
-  through a server-side allowlist. Live token validation remains DEFERRED
-  until the existing prerequisites are available.
+  through a server-side allowlist. JWT/JWKS validation and fail-closed
+  boundaries are implemented offline; live token validation remains
+  `DEFERRED` until the owner gate.
 - **AC-620-04:** An assigned user receives only a redacted projection of
-  synthetic matter status, tasks, due date, and BPMN. This projection is
-  package-bound and package-ready; delivery through the live BFF remains
-  DEFERRED.
+  synthetic matter status, tasks, due date, and BPMN. This projection and the
+  fixed Graph REST adapter are package-ready offline; delivery through the
+  live BFF remains `DEFERRED`.
 - **AC-620-05:** Unassigned users and manipulated workspace, matter, purpose,
   or filter inputs fail closed without disclosing the matter's existence or
   metadata.
@@ -170,9 +171,12 @@ BPMN binding, role decisions, Graph REST `v1.0` write/readback, and run-owned
 cleanup. Document pointers and `bpmn-js` lazy loading/code splitting were not
 proven and remain open.
 
-The BFF core and its fail-closed contracts remain verifiable offline. Public
-BFF activation, delegated sign-in, and live Entra token validation remain
-explicitly **DEFERRED** and were not part of the successful Live-One-Shot.
+The Azure Functions BFF is verifiable as **READY** offline with Entra JWT/JWKS
+validation, a fixed Graph REST `v1.0` projection, deterministic package,
+managed-identity IaC, and the central offline readiness gate. Public BFF
+activation, delegated Entra scope, exact site grant, SPFx `AadHttpClient`
+cutover, and live token validation remain explicitly **DEFERRED** and were not
+part of the successful Live-One-Shot.
 
 ## Non-goals
 

@@ -69,6 +69,7 @@ python scripts/nac.py bpmn validate
 python scripts/nac.py contracts verify
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format json
+python scripts/nac.py m365 teams-sharepoint bff-azure-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -143,6 +144,7 @@ nac bpmn validate
 nac contracts verify
 nac config list
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint bff-azure-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -314,6 +316,7 @@ an owner gate:
 
 ```bash
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint bff-azure-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -356,6 +359,15 @@ reports Graph-REST-only, separated provisioning and runtime apps,
 readiness and review points such as license/terms review. The output contains
 no tenant ID, app/client IDs, site IDs, tokens, secrets, raw Graph responses or
 mandate data.
+
+`bff-azure-readiness` runs exclusively offline. The command reads only the
+defined repository files, no environment secrets, and performs no HTTP, DNS,
+Azure or Graph access and no live action. It checks source, Function host,
+packaging, Bicep, managed identity, CORS, and the health/readiness files. The
+redacted output contains only repository-relative paths, static check results,
+and a `READY` or `NOT_READY` plan; file contents, environment values,
+credentials, tenant/application IDs, and raw provider responses remain
+excluded.
 
 `runtime-certificate-readiness` is offline and checks the preferred
 `client_credentials_with_certificate` runtime path. The command reads only

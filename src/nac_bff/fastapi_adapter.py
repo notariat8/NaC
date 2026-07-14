@@ -1,15 +1,30 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import asyncio
+from contextvars import ContextVar
+from functools import partial
+import math
+import re
+import threading
+import time
 from typing import Any, Callable
+import uuid
 
 from .test_environment import TestEnvironmentBff, ValidatedClaims
+
+
+REQUEST_TIMEOUT_SECONDS = 20.0
+_REQUEST_DEADLINE: ContextVar[float | None] = ContextVar(
+    "nac_bff_request_deadline", default=None
+)
 
 
 def create_fastapi_app(
     *,
     bff: TestEnvironmentBff,
     validated_claims_dependency: Callable[..., ValidatedClaims],
+    ready: bool = True,
 ) -> Any:
     """Create the ASGI adapter around already validated Entra claims.
 
@@ -32,12 +47,48 @@ def create_fastapi_app(
         redoc_url=None,
         openapi_url=None,
     )
+    readiness = _StagedReadiness(ready=ready)
+
+    @app.middleware("http")
+    async def request_boundary(request: Request, call_next):
+        correlation_id = _correlation_id(request.headers.get("X-Correlation-ID"))
+        request.state.correlation_id = correlation_id
+        deadline_token = _REQUEST_DEADLINE.set(
+            time.monotonic() + REQUEST_TIMEOUT_SECONDS
+        )
+        try:
+            response = await call_next(request)
+        except TimeoutError:
+            response = JSONResponse(
+                status_code=503,
+                content={"detail": "service unavailable"},
+            )
+        except Exception:
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": "internal server error"},
+            )
+        finally:
+            _REQUEST_DEADLINE.reset(deadline_token)
+        for name, value in _security_headers().items():
+            response.headers[name] = value
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():
         return JSONResponse(
             status_code=200,
             content={"status": "ok"},
+            headers=_security_headers(),
+        )
+
+    @app.get("/readyz", include_in_schema=False)
+    async def readyz():
+        is_ready = readiness.is_ready()
+        return JSONResponse(
+            status_code=200 if is_ready else 503,
+            content={"status": "ready" if is_ready else "unavailable"},
             headers=_security_headers(),
         )
 
@@ -50,13 +101,18 @@ def create_fastapi_app(
         purpose, request_filters = _parse_workspace_query(
             request.query_params.multi_items()
         )
-        response = bff.get_workspace(
+        response = await run_sync_with_request_budget(
+            bff.get_workspace,
             claims=claims,
             workspace_id=workspace_id,
             matter_id=matter_id,
             purpose=purpose,
             request_filters=request_filters,
         )
+        if response.status_code == 200:
+            readiness.mark_ready()
+        elif response.status_code == 503:
+            readiness.mark_unavailable()
         return JSONResponse(
             status_code=response.status_code,
             content=response.body,
@@ -74,6 +130,28 @@ def create_fastapi_app(
 
     return app
 
+
+
+async def run_sync_with_request_budget(
+    function: Callable[..., Any],
+    /,
+    *args: object,
+    **kwargs: object,
+) -> Any:
+    """Run blocking work off-loop with one request-local monotonic deadline."""
+
+    deadline = _REQUEST_DEADLINE.get()
+    if deadline is None:
+        deadline = time.monotonic() + REQUEST_TIMEOUT_SECONDS
+    remaining = deadline - time.monotonic()
+    if not math.isfinite(remaining) or remaining <= 0:
+        raise TimeoutError("request deadline exceeded")
+    loop = asyncio.get_running_loop()
+    future = loop.run_in_executor(None, partial(function, *args, **kwargs))
+    try:
+        return await asyncio.wait_for(asyncio.shield(future), timeout=remaining)
+    except asyncio.TimeoutError:
+        raise TimeoutError("request deadline exceeded") from None
 
 def create_unconfigured_app() -> Any:
     """Return a fail-closed image smoke target.
@@ -101,7 +179,11 @@ def create_unconfigured_app() -> Any:
         access_decision_port=_DenyAllAccess(),
         graph_rest_port=_UnavailableGraph(),
     )
-    return create_fastapi_app(bff=bff, validated_claims_dependency=_no_validated_claims)
+    return create_fastapi_app(
+        bff=bff,
+        validated_claims_dependency=_no_validated_claims,
+        ready=False,
+    )
 
 
 def _parse_workspace_query(
@@ -129,3 +211,32 @@ def _security_headers() -> dict[str, str]:
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
     }
+
+
+class _StagedReadiness:
+    """Cheap readiness state activated by a successful dependency-backed read."""
+
+    def __init__(self, *, ready: bool) -> None:
+        self._ready = bool(ready)
+        self._lock = threading.Lock()
+
+    def is_ready(self) -> bool:
+        with self._lock:
+            return self._ready
+
+    def mark_ready(self) -> None:
+        with self._lock:
+            self._ready = True
+
+    def mark_unavailable(self) -> None:
+        with self._lock:
+            self._ready = False
+
+
+_CORRELATION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+def _correlation_id(value: object) -> str:
+    if isinstance(value, str) and _CORRELATION_ID.fullmatch(value):
+        return value
+    return uuid.uuid4().hex

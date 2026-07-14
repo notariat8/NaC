@@ -1,0 +1,165 @@
+{
+  "schema_version": "nac.m365-azure-bff-offline-readiness/v1",
+  "contract_id": "m365.azure_bff_offline_readiness",
+  "title": "M365 Azure BFF Offline Readiness",
+  "status": "implemented_offline_gate",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "acceptance_ids": [
+    "AC-620-01",
+    "AC-620-02",
+    "AC-620-03",
+    "AC-620-04",
+    "AC-620-05",
+    "AC-620-06",
+    "AC-620-07"
+  ],
+  "verification_contract": "workflows/verification-contracts/m365-azure-bff-offline-readiness.verification.json",
+  "command": "nac m365 teams-sharepoint bff-azure-readiness --format json",
+  "purpose": "Produce a deterministic redacted READY or NOT_READY plan from repository files before any Azure BFF deployment or live verification.",
+  "input_boundary": {
+    "repository_files_only": true,
+    "categories": [
+      "source",
+      "function_host",
+      "packaging",
+      "bicep",
+      "managed_identity",
+      "cors",
+      "readiness_files"
+    ],
+    "source_root": "src/nac_bff",
+    "function_host_root": "deploy/runtime/azure/nac-bff",
+    "package_builder": "deploy/runtime/azure/nac-bff/build_package.py",
+    "dependency_lock": "deploy/runtime/azure/nac-bff/requirements.txt",
+    "bicep_template": "deploy/runtime/azure/nac-bff/infra/main.bicep",
+    "bicep_example_parameters": "deploy/runtime/azure/nac-bff/infra/main.example.bicepparam",
+    "compile_evidence": "workflows/verification-contracts/m365-azure-bff-offline-readiness.verification.json"
+  },
+  "offline_boundary": {
+    "reads_environment": false,
+    "reads_secret_files": false,
+    "executes_http": false,
+    "executes_dns": false,
+    "accesses_azure": false,
+    "accesses_graph": false,
+    "performs_live_actions": false,
+    "writes_files": false
+  },
+  "output_contract": {
+    "statuses": [
+      "READY",
+      "NOT_READY"
+    ],
+    "deterministic": true,
+    "redacted": true,
+    "includes": [
+      "summary",
+      "boundaries",
+      "redaction",
+      "checks",
+      "plan"
+    ],
+    "exit_codes": {
+      "READY": 0,
+      "NOT_READY": 2
+    }
+  },
+  "redaction": {
+    "file_contents_included": false,
+    "environment_values_included": false,
+    "credentials_included": false,
+    "tenant_or_application_ids_included": false,
+    "raw_provider_responses_included": false,
+    "repo_relative_paths_allowed": true
+  },
+  "required_static_guards": {
+    "function_host": [
+      "python_v2_asgi_host",
+      "empty_route_prefix"
+    ],
+    "packaging": [
+      "exact_direct_and_transitive_dependency_lock",
+      "sha256_artifact_hashes_for_every_distribution",
+      "azure_identity_1_25_3",
+      "two_byte_identical_in_memory_builds",
+      "fixed_zip_metadata",
+      "embedded_manifest_binds_every_payload_and_lock",
+      "python_compile_and_reachable_import_closure",
+      "local_settings_excluded",
+      "tests_excluded"
+    ],
+    "bicep": [
+      "resource_group_scope",
+      "germany_west_central",
+      "flex_consumption",
+      "python_3_12",
+      "no_secret_parameters",
+      "no_graph_provisioning",
+      "pinned_bicep_build_output_hash",
+      "pinned_bicep_build_params_output_hash"
+    ],
+    "managed_identity": [
+      "user_assigned_identity",
+      "client_id_bound_managed_identity_credential",
+      "managed_identity_graph_scope",
+      "storage_shared_key_disabled",
+      "storage_managed_identity_binding",
+      "application_insights_aad_authentication",
+      "no_client_secret_certificate_or_default_credential_chain"
+    ],
+    "cors": [
+      "non_empty_parameter_allowlist",
+      "no_wildcard",
+      "credentials_disabled",
+      "no_implicit_function_origin"
+    ],
+    "readiness_files": [
+      "healthz",
+      "readyz",
+      "fail_closed_unconfigured_app"
+    ]
+  },
+  "acceptance_traceability": {
+    "AC-620-01": "supporting_only_function_package_not_spfx_sppkg",
+    "AC-620-02": "server_side_bff_graph_boundary",
+    "AC-620-03": "validated_bff_source_and_uami_adapter",
+    "AC-620-04": "redacted_projection_source_packaged_and_manifest_bound",
+    "AC-620-05": "fail_closed_source_and_import_closure",
+    "AC-620-06": "deterministic_package_and_redacted_evidence",
+    "AC-620-07": "zero_environment_secret_network_azure_graph_or_live_access"
+  },
+  "evidence": {
+    "implementation": "src/nac_bff/azure_readiness.py",
+    "package_builder": "deploy/runtime/azure/nac-bff/build_package.py",
+    "dependency_lock": "deploy/runtime/azure/nac-bff/requirements.txt",
+    "tests": "tests/test_nac_bff_azure_readiness.py",
+    "validator": "scripts/validate_m365_azure_bff_offline_readiness.py",
+    "verification_contract": "workflows/verification-contracts/m365-azure-bff-offline-readiness.verification.json",
+    "quality_gate_profile": "strict",
+    "contains_matter_data": false,
+    "contains_credentials": false
+  },
+  "evidence_dependencies": {
+    "live_verification_contract": {
+      "path": "workflows/verification-contracts/m365-mvp-test-environment-live.verification.json",
+      "sha256": "c55be3abaf0807b37851ada42a49c8eb1a88be1c6cd1dce70c57896b1c8fac81",
+      "status": "PASSED",
+      "schema_version": "nac.verification-contract/v0.1",
+      "contract_id": "verification.m365_mvp_test_environment_live_attestation",
+      "leading_issue": "https://github.com/notariat8/NaC/issues/620"
+    },
+    "live_redacted_evidence": {
+      "path": "workflows/verification-contracts/evidence/m365-mvp-test-environment-deploy.redacted.json",
+      "sha256": "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea",
+      "status": "PASSED",
+      "schema_version": "nac.m365-mvp-test-environment-deploy-evidence/v0.1"
+    }
+  },
+  "deployment_boundary": {
+    "technology": "Azure Functions Flex Consumption OneDeploy",
+    "source_package": true,
+    "remote_build_required": true,
+    "required_cli_flag": "--build-remote true",
+    "local_vendored_site_packages_required": false
+  }
+}

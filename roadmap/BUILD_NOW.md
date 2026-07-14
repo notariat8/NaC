@@ -47,6 +47,7 @@ for Fachpersonal without exposing `value` fields.
 | Strict quality gate | Active | `python scripts/quality_gate.py --profile strict` |
 | Microsoft-first / on-prem AI target architecture | Planned baseline implemented | `docs/de/architecture/microsoft-first-onprem-target-architecture.md`, `workflows/contracts/microsoft-first-onprem-target-architecture.contract.json`, `scripts/validate_microsoft_first_onprem_target_architecture.py` |
 | M365 MVP test environment in `notary_team_01` | Done live (#620; BFF deferred) | The owner-approved one-shot passed site-scoped SPFx/Teams deployment plus synthetic Graph REST v1.0 write, readback and cleanup on 2026-07-14; broad SPFx read-only workspace work remains active and live Entra BFF activation remains `DEFERRED`. |
+| Azure Functions BFF for the M365 test environment | Ready offline (#620; live activation deferred) | Python/FastAPI Function host, Entra JWT/JWKS validation, fixed Graph REST v1.0 projection, deterministic package, managed-identity Bicep, bounded networking/CORS/cost controls and the central offline readiness CLI are implemented; Azure/Entra/Graph writes and SPFx cutover remain one consolidated owner gate. |
 
 ## Sprint 0 Development Board
 
@@ -73,6 +74,7 @@ for Fachpersonal without exposing `value` fields.
 | DEV-0019 | BusinessCaseType S4 Graph Read Edge | Done offline (#617) | `AC-S4-01` through `AC-S4-07`; exact `Sites.Selected` plus site grant `read`, same-filter paging, no collection `If-None-Match`, redaction/viewer isolation, offline CLI, contracts, validator and tests. S4b writes remain open. |
 | DEV-0020 | BusinessCaseType S5 offline migration | In progress (#618) | Inventory dry run, exact legacy mapping, idempotent backfill planning, persistent quarantine, deterministic snapshots, stable final scans and N-1 replay; no credentials, HTTP, Graph or tenant writes. |
 | DEV-0021 | M365 MVP test environment live one-shot in `notary_team_01` | Done live (#620; BFF deferred) | Owner-approved site-scoped SPFx/Teams deployment and synthetic Graph REST v1.0 write/read/cleanup passed on 2026-07-14 without permission or credential changes; broad SPFx read-only workspace work remains active, while live Entra BFF activation remains `DEFERRED`. |
+| DEV-0022 | Azure Functions BFF offline deployment readiness | Ready offline (#620) | The central readiness command reports `READY`; source, token validation, fixed Graph adapters, Function package, Bicep, managed identity, CORS, storage network and health endpoints pass tests and validators without Azure, Entra or Graph writes. |
 
 ## Roadmap Review Notes
 

@@ -361,6 +361,11 @@ def build_checks(profile: str) -> list[tuple[str, str, list[str]]]:
                     [sys.executable, "scripts/validate_m365_release_readiness_gate.py"],
                 ),
                 (
+                    "m365_azure_bff_offline_readiness",
+                    "M365 Azure BFF Offline Readiness",
+                    [sys.executable, "scripts/validate_m365_azure_bff_offline_readiness.py"],
+                ),
+                (
                     "m365_sharepoint_bpmn_viewer_adapter",
                     "M365 SharePoint BPMN Viewer Adapter",
                     [sys.executable, "scripts/validate_m365_sharepoint_bpmn_viewer_adapter.py"],

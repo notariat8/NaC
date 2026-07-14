@@ -1,6 +1,6 @@
 # M365-MVP-Testumgebung Design
 
-Status: Live-Deployment am 14. Juli 2026 verifiziert; BFF-Livepfad DEFERRED
+Status: Live-Deployment am 14. Juli 2026 verifiziert; Azure-BFF offline READY, Livepfad DEFERRED
 Datum: 13. Juli 2026
 Scope: site-spezifische, ausschließlich synthetische Testumgebung im Workspace `notary_team_01`
 
@@ -145,16 +145,17 @@ Live-Aktionen bleiben owner-gated und auf den freigegebenen Workspace begrenzt.
   TeamsTab und setzt skipFeatureDeployment=false.
 - **AC-620-02:** SPFx fordert niemals Microsoft-Graph-Berechtigungen an und
   ruft Graph nie direkt auf. Einziger zulässiger dynamischer API-Zielpfad ist
-  ein delegierter NaC-BFF-Scope. Seine Aktivierung bleibt ohne bereits
-  vorhandenen Scope und öffentlichen HTTPS-Endpunkt ausdrücklich DEFERRED.
+  ein delegierter NaC-BFF-Scope. Scope, HTTPS-Endpunkt und SPFx-Umschaltung
+  bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
 - **AC-620-03:** Der BFF leitet die Benutzeridentität ausschließlich aus einem
   validierten Entra-Access-Token ab und löst Workspace-, Site- und Listen-IDs
-  ausschließlich über eine serverseitige Allowlist auf. Die Live-
-  Tokenvalidierung bleibt bis zu den vorhandenen Voraussetzungen DEFERRED.
+  ausschließlich über eine serverseitige Allowlist auf. JWT/JWKS-Prüfung und
+  Fail-closed-Grenzen sind offline implementiert; die Live-Tokenvalidierung
+  bleibt bis zum Owner-Gate `DEFERRED`.
 - **AC-620-04:** Ein zugeordneter Benutzer erhält ausschließlich eine
   redigierte Projektion aus synthetischem Aktenstatus, Aufgaben, Frist und
-  BPMN. Diese Projektion ist paketgebunden package-ready; die Auslieferung
-  über den Live-BFF bleibt DEFERRED.
+  BPMN. Diese Projektion und der fixe Graph-REST-Adapter sind offline
+  package-ready; die Auslieferung über den Live-BFF bleibt `DEFERRED`.
 - **AC-620-05:** Nicht zugeordnete Benutzer sowie manipulierte Workspace-,
   Akten-, Zweck- oder Filtereingaben scheitern fail-closed, ohne Existenz oder
   Metadaten der Akte preiszugeben.
@@ -175,10 +176,12 @@ synthetische Aktenstatus mit zwei Aufgaben und UTC-Frist, der read-only
 Write/Readback und das laufgebundene Cleanup. Dokumentzeiger und Lazy Loading/
 Code Splitting für `bpmn-js` sind nicht nachgewiesen und bleiben offen.
 
-Der BFF-Core und seine Fail-closed-Verträge sind offline prüfbar. Die
-öffentliche BFF-Aktivierung, delegierte Anmeldung und Live-Entra-
-Tokenvalidierung sind weiterhin ausdrücklich **DEFERRED** und nicht Bestandteil
-des erfolgreichen Live-One-Shots.
+Der Azure-Functions-BFF ist mit Entra-JWT/JWKS-Prüfung, fixer Graph-REST-
+`v1.0`-Projektion, deterministischem Paket, Managed-Identity-IaC und zentralem
+Offline-Readiness-Gate als **READY** prüfbar. Öffentliche BFF-Aktivierung,
+delegierter Entra-Scope, exakter Site-Grant, SPFx-`AadHttpClient`-Umschaltung
+und Live-Tokenvalidierung bleiben ausdrücklich **DEFERRED** und waren nicht
+Bestandteil des erfolgreichen Live-One-Shots.
 
 ## Nichtziele
 

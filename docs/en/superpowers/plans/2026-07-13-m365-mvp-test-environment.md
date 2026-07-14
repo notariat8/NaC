@@ -4,7 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365 MVP Test Environment Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
-**Live Status:** Owner-approved Live-One-Shot succeeded in `notary_team_01` on 14 July 2026; live BFF/Entra token validation DEFERRED
+**Live Status:** Owner-approved Live-One-Shot succeeded in `notary_team_01` on 14 July 2026; Azure BFF offline READY, live activation DEFERRED
 
 ## Target State
 
@@ -16,10 +16,12 @@ uses raw Graph REST v1.0 for list and item data, reads back the created records
 by exact ID, writes redacted evidence, and removes only its own test records.
 SPFx has no Graph permission and never calls Graph directly.
 
-The BFF core, server-side allowlist, and fail-closed contracts are implemented
-offline. The delegated BFF scope, public deployment, and live Entra token
-validation remain DEFERRED while no existing scope and public HTTPS endpoint
-are available.
+The BFF core, server-side allowlist, Entra JWT validation, raw Graph REST
+`v1.0` adapters, deterministic Azure Functions package, and Bicep baseline are
+implemented offline and report `READY` through
+`nac m365 teams-sharepoint bff-azure-readiness`. The delegated BFF scope,
+Azure deployment, site grant, and live Entra token validation remain
+`DEFERRED` until the consolidated owner gate.
 
 ## Implementation Steps
 
@@ -80,11 +82,13 @@ or Entra scopes.
 
 ## BFF Activation after Issue #620
 
-The BFF core implementation belongs to this slice; its public activation does
-not. Activation happens in a separate owner-gated scope only after an existing
-public HTTPS endpoint and an existing delegated Entra scope are proven. The
-BFF then replaces the package-bound UI data source without changing the rule
-that SPFx must never call Graph directly.
+The offline BFF implementation belongs to this slice, including the Azure
+Functions host, managed-identity IaC, storage network boundary, cost limits,
+JWT/JWKS hardening, and fixed `notary_team_01` Graph projection. Public
+activation happens in one consolidated owner gate: deploy Azure resources,
+configure the delegated Entra scope and exact site grant, deploy the source package through Azure Functions Flex OneDeploy with `--build-remote true`, and switch SPFx to the BFF through `AadHttpClient`. The ZIP is intentionally a reproducible source package; deployment without remote build is forbidden. Until that gate, the BFF
+does not replace the package-bound UI data source; SPFx must still never call
+Graph directly.
 
 ## Acceptance Evidence
 

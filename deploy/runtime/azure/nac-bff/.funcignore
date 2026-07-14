@@ -1,0 +1,10 @@
+.git*
+# Source ZIP is deployed with Flex OneDeploy --build-remote true.
+.python_packages/
+.venv/
+__pycache__/
+build_package.py
+dist/
+infra/
+local.settings.json
+tests/

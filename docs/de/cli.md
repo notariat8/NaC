@@ -70,6 +70,7 @@ python scripts/nac.py bpmn validate
 python scripts/nac.py contracts verify
 python scripts/nac.py config list
 python scripts/nac.py m365 teams-sharepoint application-owner-readiness --format json
+python scripts/nac.py m365 teams-sharepoint bff-azure-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 python scripts/nac.py m365 teams-sharepoint runtime-certificate-readiness --format json
 python scripts/nac.py m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -144,6 +145,7 @@ nac bpmn validate
 nac contracts verify
 nac config list
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint bff-azure-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -317,6 +319,7 @@ brauchen ein Owner-Gate:
 
 ```bash
 nac m365 teams-sharepoint application-owner-readiness --format json
+nac m365 teams-sharepoint bff-azure-readiness --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -359,6 +362,15 @@ App, `nac_platform_admins` als Governance-Gruppe, Owner-Gates,
 Sites.Selected-Readiness und Reviewpunkte wie Lizenz-/Terms-Check. Die Ausgabe
 enthält keine Tenant-ID, App-/Client-IDs, Site-IDs, Tokens, Secrets,
 Graph-Rohantworten oder Mandatsdaten.
+
+`bff-azure-readiness` arbeitet ausschließlich offline. Der Befehl liest nur
+die festgelegten Repository-Dateien, keine Environment-Secrets, und führt
+keine HTTP-, DNS-, Azure- oder Graph-Zugriffe sowie keine Live-Aktion aus. Er
+prüft Source, Function Host, Packaging, Bicep, Managed Identity, CORS und die
+Health-/Readiness-Dateien. Die redigierte Ausgabe enthält nur repo-relative
+Pfade, statische Prüfergebnisse und einen Plan mit `READY` oder `NOT_READY`;
+Dateiinhalte, Environment-Werte, Credentials, Tenant-/App-IDs und
+Provider-Rohantworten bleiben ausgeschlossen.
 
 `runtime-certificate-readiness` ist offline und prüft den bevorzugten
 Runtime-Pfad `client_credentials_with_certificate`. Der Befehl liest nur

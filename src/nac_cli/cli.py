@@ -24,6 +24,10 @@ from nac_agent_ops.batch_run_envelope import (
     format_batch_run_envelope_status,
     load_batch_run_envelope,
 )
+from nac_bff.azure_readiness import (
+    build_azure_bff_readiness,
+    format_azure_bff_readiness,
+)
 from nac_gnotkg.costs import quote_fee
 from nac_git.worktree_hygiene import build_worktree_audit, format_worktree_audit_text
 from nac_identity.customer_onboarding import build_customer_tenant_plan, build_live_dns_check_result
@@ -677,6 +681,7 @@ def build_parser() -> argparse.ArgumentParser:
             "validate",
             "plan",
             "application-owner-readiness",
+            "bff-azure-readiness",
             "business-case-type-read-plan",
             "bpmn-viewer-plan",
             "matter-access-plan",
@@ -2439,6 +2444,14 @@ def _print_batch_approval_payload(payload: dict, output_format: str) -> None:
 def command_m365(args: argparse.Namespace) -> int:
     repo_root = resolve_repo_root(args.repo_root)
     if args.m365_command == "teams-sharepoint":
+        if args.teams_sharepoint_command == "bff-azure-readiness":
+            readiness = build_azure_bff_readiness(repo_root)
+            if args.format == "json":
+                print_json(readiness)
+            else:
+                print(format_azure_bff_readiness(readiness).rstrip())
+            return 0 if readiness["status"] == "READY" else 2
+
         if args.teams_sharepoint_command == "business-case-type-read-plan":
             plan = build_business_case_type_read_plan(
                 repo_root,

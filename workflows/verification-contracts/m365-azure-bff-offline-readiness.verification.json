@@ -1,0 +1,183 @@
+{
+  "schema_version": "nac.verification-contract/v0.1",
+  "contract_id": "verification.m365_azure_bff_offline_readiness",
+  "domain_contract_id": "m365.azure_bff_offline_readiness",
+  "title": "M365 Azure BFF offline readiness verification",
+  "status": "passed",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/620",
+  "acceptance_ids": [
+    "AC-620-01",
+    "AC-620-02",
+    "AC-620-03",
+    "AC-620-04",
+    "AC-620-05",
+    "AC-620-06",
+    "AC-620-07"
+  ],
+  "acceptance_traceability": {
+    "AC-620-01": "Satisfied by the referenced live verification contract and redacted SPFx/Teams deployment evidence; this BFF contract only preserves package compatibility.",
+    "AC-620-02": "The referenced live verification proves the current SharePoint/Teams read path; this contract adds the delegated BFF edge while keeping Graph access server-side.",
+    "AC-620-03": "Readiness requires validated BFF source wiring and an explicit client-id-bound ManagedIdentityCredential adapter.",
+    "AC-620-04": "The deterministic OneDeploy source package binds the redacted BFF projection, exact dependency closure and mandatory remote-build metadata.",
+    "AC-620-05": "The packaged first-party import closure includes the fail-closed role, case, purpose and filter boundary.",
+    "AC-620-06": "The referenced live evidence proves the synthetic workflow; this contract adds byte-identical source packages and manifest/compile evidence.",
+    "AC-620-07": "Readiness reads repository files only; CI independently recompiles and compares Bicep outputs without Azure or Graph access."
+  },
+  "applies_when": {
+    "paths": [
+      "src/nac_bff/azure_readiness.py",
+      "src/nac_bff/composition.py",
+      "deploy/runtime/azure/nac-bff/build_package.py",
+      "deploy/runtime/azure/nac-bff/requirements.txt",
+      "deploy/runtime/azure/nac-bff/infra/main.bicep",
+      "deploy/runtime/azure/nac-bff/infra/main.example.bicepparam",
+      "scripts/validate_m365_azure_bff_offline_readiness.py",
+      "tests/test_nac_bff_azure_readiness.py",
+      "workflows/contracts/m365-azure-bff-offline-readiness.contract.json",
+      "workflows/verification-contracts/m365-azure-bff-offline-readiness.verification.json"
+    ]
+  },
+  "required_context": {
+    "always_on": [
+      "AGENTS.md",
+      "Issue #620 acceptance criteria and no-new-credential boundary"
+    ],
+    "scoped": [
+      "workflows/contracts/AGENTS.md",
+      "workflows/contracts/README.md"
+    ],
+    "runtime": [
+      "fresh focused test output",
+      "fresh standalone validator output",
+      "fresh repository diff"
+    ]
+  },
+  "checks": [
+    "python3 -m unittest tests.test_nac_bff_azure_readiness",
+    "python3 scripts/validate_m365_azure_bff_offline_readiness.py",
+    "python3 deploy/runtime/azure/nac-bff/build_package.py --output <temporary-path>",
+    "python3 scripts/nac.py m365 teams-sharepoint bff-azure-readiness --format json",
+    "git diff --check"
+  ],
+  "invariants": [
+    "The central command emits only READY or NOT_READY and remains redacted.",
+    "Readiness reads repository files only and performs no HTTP, DNS, Azure, Graph, environment or secret access.",
+    "Every runtime and transitive dependency is exactly pinned and has at least one SHA-256 artifact hash.",
+    "The package is built twice in memory and must be byte-identical with fixed ZIP metadata.",
+    "The embedded manifest binds every payload file and the dependency lock digest.",
+    "Every packaged Python file compiles and every reachable first-party or external import resolves to package content or the exact lock.",
+    "The reachable BFF composition uses ManagedIdentityCredential with the UAMI client ID and never a client secret, certificate or broad credential chain.",
+    "Bicep READY requires source-hash-bound output from pinned bicep build and bicep build-params commands."
+  ],
+  "thresholds": {
+    "required_acceptance_ids": 7,
+    "exact_locked_package_count": 24,
+    "minimum_hashes_per_locked_package": 1,
+    "deterministic_in_memory_build_count": 2,
+    "allowed_environment_reads": 0,
+    "allowed_network_calls": 0,
+    "allowed_secret_reads": 0,
+    "allowed_live_actions": 0
+  },
+  "dependency_lock_evidence": {
+    "status": "PASSED",
+    "path": "deploy/runtime/azure/nac-bff/requirements.txt",
+    "sha256": "84028846a18b275e03dacb295c57c175667f1ff612187457469272ee2f1f98a7",
+    "package_count": 24,
+    "direct_dependencies": {
+      "azure-functions": "1.24.0",
+      "azure-identity": "1.25.3",
+      "cryptography": "45.0.5",
+      "fastapi": "0.116.1"
+    },
+    "python_runtime": "3.12",
+    "platform": "linux-x86_64",
+    "resolver": "uv pip compile",
+    "artifact_hashes_required": true,
+    "contains_credentials": false
+  },
+  "bicep_compile_evidence": {
+    "status": "PASSED",
+    "compiler": "bicep-cli",
+    "compiler_version": "0.45.6",
+    "compiler_release": "https://github.com/Azure/bicep/releases/tag/v0.45.6",
+    "commands": [
+      "az bicep build --file deploy/runtime/azure/nac-bff/infra/main.bicep --stdout",
+      "az bicep build-params --file deploy/runtime/azure/nac-bff/infra/main.example.bicepparam --stdout"
+    ],
+    "template": {
+      "path": "deploy/runtime/azure/nac-bff/infra/main.bicep",
+      "source_sha256": "28bf03adca16aed70b205a3210a72d6f822d998c12d8408d19cd832fc85acaae",
+      "compiled_sha256": "58a103de6f900c5dffacfaf95bab20d9d49e4503b902634330255131602a97d5",
+      "compiled_path": "deploy/runtime/azure/nac-bff/infra/compiled/main.json"
+    },
+    "parameters": {
+      "path": "deploy/runtime/azure/nac-bff/infra/main.example.bicepparam",
+      "source_sha256": "e1fc74f49097206ad9949cba6e2630239e6cfef0c1f906cafbb9e1d7f40d53cc",
+      "compiled_sha256": "c7f260beaba5bcd62fc7c331c134635f10260ece1e69aeb43920757665fb5d52",
+      "compiled_path": "deploy/runtime/azure/nac-bff/infra/compiled/main.example.json"
+    },
+    "execution_boundary": {
+      "network_accessed": false,
+      "environment_read": false,
+      "secret_read": false,
+      "azure_accessed": false,
+      "graph_accessed": false,
+      "repository_files_written": false
+    }
+  },
+  "required_evidence": [
+    "Issue #620 acceptance traceability",
+    "exact transitive dependency lock digest and package count",
+    "two byte-identical in-memory Function packages",
+    "embedded file and dependency-lock manifest verification",
+    "Python compilation and reachable import-closure verification",
+    "explicit UAMI ManagedIdentityCredential adapter verification",
+    "pinned Bicep template and parameter compile output hashes",
+    "redacted central CLI and validator output"
+  ],
+  "evidence_policy": {
+    "repository_metadata_only": true,
+    "redacted_only": true,
+    "matter_or_person_data_allowed": false,
+    "environment_values_allowed": false,
+    "credentials_tokens_certificates_allowed": false,
+    "raw_provider_responses_allowed": false,
+    "network_access_allowed": false,
+    "live_actions_allowed": false
+  },
+  "pass_condition": {
+    "all_checks_pass": true,
+    "all_acceptance_ids_traced": true,
+    "dependency_lock_matches_exactly": true,
+    "package_build_manifest_and_imports_validate": true,
+    "managed_identity_adapter_validate": true,
+    "bicep_compile_evidence_status": "PASSED",
+    "no_environment_or_secret_reads": true,
+    "no_network_or_live_actions": true
+  },
+  "failure_behavior": {
+    "lock_or_hash_drift": "NOT_READY",
+    "package_nondeterminism_or_manifest_mismatch": "NOT_READY",
+    "missing_first_party_or_locked_external_import": "NOT_READY",
+    "missing_uami_adapter_or_reachable_secret_certificate_credential": "NOT_READY",
+    "missing_failed_or_stale_bicep_compile_evidence": "NOT_READY",
+    "environment_secret_network_azure_or_graph_attempt": "block_completion"
+  },
+  "evidence_dependencies": {
+    "live_verification_contract": {
+      "path": "workflows/verification-contracts/m365-mvp-test-environment-live.verification.json",
+      "sha256": "c55be3abaf0807b37851ada42a49c8eb1a88be1c6cd1dce70c57896b1c8fac81",
+      "status": "PASSED",
+      "schema_version": "nac.verification-contract/v0.1",
+      "contract_id": "verification.m365_mvp_test_environment_live_attestation",
+      "leading_issue": "https://github.com/notariat8/NaC/issues/620"
+    },
+    "live_redacted_evidence": {
+      "path": "workflows/verification-contracts/evidence/m365-mvp-test-environment-deploy.redacted.json",
+      "sha256": "65f0276a248f533e95caf35b63bc3c402108226734bf3f939d85a7cddbc9c1ea",
+      "status": "PASSED",
+      "schema_version": "nac.m365-mvp-test-environment-deploy-evidence/v0.1"
+    }
+  }
+}

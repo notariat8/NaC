@@ -4,7 +4,7 @@
 **Issue:** [#620](https://github.com/notariat8/NaC/issues/620)
 **Spec:** [M365-MVP-Testumgebung Design](../specs/2026-07-13-m365-mvp-test-environment-design.md)
 **Delivery Mode:** Protected PR
-**Live-Status:** Owner-approved Live-One-Shot am 14. Juli 2026 in `notary_team_01` erfolgreich; Live-BFF/Entra-Tokenvalidierung DEFERRED
+**Live-Status:** Owner-approved Live-One-Shot am 14. Juli 2026 in `notary_team_01` erfolgreich; Azure-BFF offline READY, Live-Aktivierung DEFERRED
 
 ## Zielzustand
 
@@ -17,10 +17,12 @@ liest die erzeugten Einträge gezielt zurück, schreibt redigierte Evidence und
 entfernt nur seine eigenen Testeinträge. SPFx besitzt keine Graph-Berechtigung
 und ruft Graph nie direkt auf.
 
-Der BFF-Core, die serverseitige Allowlist und die Fail-closed-Verträge werden
-offline implementiert. Delegierter BFF-Scope, öffentliche Bereitstellung und
-Live-Entra-Tokenvalidierung bleiben DEFERRED, solange kein bereits vorhandener
-Scope und öffentlicher HTTPS-Endpunkt verfügbar sind.
+Der BFF-Core, die serverseitige Allowlist, Entra-JWT-Prüfung, rohe Graph-REST-
+`v1.0`-Adapter, das deterministische Azure-Functions-Paket und die Bicep-
+Baseline sind offline implementiert und über
+`nac m365 teams-sharepoint bff-azure-readiness` als `READY` prüfbar.
+Delegierter BFF-Scope, Azure-Bereitstellung, Site-Grant und Live-Entra-
+Tokenvalidierung bleiben bis zum gebündelten Owner-Gate `DEFERRED`.
 
 ## Umsetzungsschritte
 
@@ -81,12 +83,14 @@ keine Rechte, Credentials, Zertifikate oder Entra-Scopes.
 
 ## BFF-Aktivierung nach Issue #620
 
-Die Implementierung des BFF-Cores gehört zum Slice, seine öffentliche
-Aktivierung nicht. Diese erfolgt erst in einem getrennten owner-gated Scope,
-wenn ein vorhandener öffentlicher HTTPS-Endpunkt und ein vorhandener
-delegierter Entra-Scope nachgewiesen sind. Dann ersetzt der BFF die
-paketgebundene UI-Datenquelle, ohne die Regel „kein direkter Graph aus SPFx“
-zu ändern.
+Die Offline-Implementierung des BFF-Cores einschließlich Azure-Functions-Host,
+Managed-Identity-IaC, Storage-Netzgrenze, Kostenlimits, JWT/JWKS-Härtung und
+fixer `notary_team_01`-Graph-Projektion gehört zum Slice. Die öffentliche
+Aktivierung erfolgt in einem gebündelten Owner-Gate: Azure-Ressourcen
+bereitstellen, delegierten Entra-Scope und exakten Site-Grant konfigurieren,
+Paket als Azure-Functions-Flex-OneDeploy mit `--build-remote true` bereitstellen und SPFx per `AadHttpClient` auf den BFF umschalten. Das ZIP ist bewusst ein reproduzierbares Quellpaket; ein Deployment ohne Remote-Build ist unzulässig. Bis zu
+diesem Gate ersetzt der BFF die paketgebundene UI-Datenquelle noch nicht; die
+Regel „kein direkter Graph aus SPFx“ bleibt unverändert.
 
 ## Abnahmenachweis
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Mapping, Protocol
+from typing import Any, Callable, ContextManager, Mapping, Protocol
 
 from nac_mvp_test_environment import (
     BPMN_PROCESS_KEY,
@@ -166,12 +166,14 @@ class TestEnvironmentBff:
         expected_tenant_id: str,
         access_decision_port: AccessDecisionPort,
         graph_rest_port: GraphRestPort,
+        request_budget_factory: Callable[[], ContextManager[None]] | None = None,
     ) -> None:
         if not isinstance(expected_tenant_id, str) or not expected_tenant_id.strip():
             raise ValueError("expected_tenant_id is required")
         self._expected_tenant_id = expected_tenant_id
         self._access_decision_port = access_decision_port
         self._graph_rest_port = graph_rest_port
+        self._request_budget_factory = request_budget_factory
 
     def get_workspace(
         self,
@@ -181,6 +183,7 @@ class TestEnvironmentBff:
         matter_id: str,
         purpose: str,
         request_filters: Mapping[str, object] | None = None,
+        _budget_bound: bool = False,
     ) -> BffResponse:
         if not isinstance(claims, ValidatedClaims):
             return _error(401, "authentication required")
@@ -199,6 +202,19 @@ class TestEnvironmentBff:
             return _error(403, "access denied")
         if claims.tenant_id != self._expected_tenant_id:
             return _error(403, "access denied")
+        if self._request_budget_factory is not None and not _budget_bound:
+            try:
+                with self._request_budget_factory():
+                    return self.get_workspace(
+                        claims=claims,
+                        workspace_id=workspace_id,
+                        matter_id=matter_id,
+                        purpose=purpose,
+                        request_filters=request_filters,
+                        _budget_bound=True,
+                    )
+            except Exception:
+                return _error(503, "service unavailable")
 
         try:
             decision = self._access_decision_port.decide(

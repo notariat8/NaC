@@ -185,9 +185,12 @@ M365-Statushinweis 2026-07-14: Der owner-genehmigte M365-MVP-Testumgebung-
 Live-One-Shot für `notary_team_01` ist mit site-scoped SPFx-/Teams-
 Bereitstellung sowie synthetischem Graph-REST-v1.0-Schreib-, Lese- und
 Cleanup-Nachweis erfolgreich abgeschlossen. Dies ist ein enger Live-Meilenstein;
-die breite SPFx Read-only Workspace-Arbeitsfläche bleibt aktiv. Die
-NaC-BFF-Live-Aktivierung bleibt mangels bestehendem delegiertem Scope und
-öffentlichem HTTPS-Endpunkt ausdrücklich `DEFERRED`.
+die breite SPFx Read-only Workspace-Arbeitsfläche bleibt aktiv. Der
+Azure-Functions-BFF ist mit Entra-JWT-Prüfung, fixer Graph-REST-v1.0-
+Projektion, deterministischem Paket, Managed-Identity-Bicep und Offline-
+Readiness-CLI als `READY` vorbereitet. Die NaC-BFF-Live-Aktivierung bleibt bis
+zum gebündelten Azure-/Entra-/Site-Grant-/SPFx-Owner-Gate ausdrücklich
+`DEFERRED`.
 
 ## Regel
 
