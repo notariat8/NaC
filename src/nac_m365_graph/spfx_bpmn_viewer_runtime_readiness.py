@@ -30,10 +30,11 @@ REQUIRED_SOURCE_ARTIFACTS = {
 }
 REQUIRED_BLOCKED_OPERATIONS = {
     "tenant_wide_deploy",
-    "graph_permission_request",
+    "microsoft_graph_permission_request",
     "direct_graph_request",
     "ms_graph_client",
-    "aad_http_client",
+    "aad_http_client_non_bff_resource",
+    "additional_delegated_scope",
     "graph_sdk",
     "legacy_sharepoint_api",
     "pnp",
@@ -70,10 +71,10 @@ def validate_bpmn_viewer_runtime_readiness(
 ) -> list[str]:
     del provisioning, mcp_contract
     errors: list[str] = []
-    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.2":
+    if readiness.get("schema_version") != "nac.m365-bpmn-viewer-runtime-readiness/v0.3":
         errors.append("SPFx BPMN viewer runtime readiness schema_version is invalid")
-    if readiness.get("status") != "synthetic_site_scoped_runtime_ready":
-        errors.append("SPFx BPMN viewer runtime readiness status must be synthetic_site_scoped_runtime_ready")
+    if readiness.get("status") != "bff_read_site_scoped_runtime_ready":
+        errors.append("SPFx BPMN viewer runtime readiness status must be bff_read_site_scoped_runtime_ready")
 
     source_artifacts = readiness.get("source_artifacts")
     if not isinstance(source_artifacts, dict):
@@ -127,6 +128,7 @@ def build_bpmn_viewer_runtime_readiness_result(
             "approved_workspace_id": APPROVED_WORKSPACE_ID,
             "tenant_wide_deploy_allowed_now": False,
             "graph_access_allowed": False,
+            "bff_read_allowed": True,
         },
         "readiness": {
             "schema_version": readiness["schema_version"],
@@ -173,7 +175,9 @@ def build_bpmn_viewer_runtime_readiness_result(
             "graph_permissions_requested": False,
             "direct_graph_access_allowed": False,
             "ms_graph_client_allowed": False,
-            "aad_http_client_allowed": False,
+            "aad_http_client_allowed": True,
+            "delegated_api_resource": "api://funktion8.de/nac-bff",
+            "delegated_scope": "Matter.Read",
             "graph_sdk_allowed": False,
             "legacy_sharepoint_api_allowed": False,
             "matter_document_content_reads_allowed": False,
@@ -265,7 +269,7 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["SPFx BPMN viewer runtime readiness synthetic_data_boundary must be an object"]
     expected = {
-        "source": "package_fixture",
+        "source": "nac_bff_redacted_dto",
         "workspace_id": APPROVED_WORKSPACE_ID,
         "allowed_content_class": "synthetic_notarial_test_data_only",
     }
@@ -278,7 +282,6 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
         "graph_permission_requested",
         "graph_access_allowed",
         "ms_graph_client_allowed",
-        "aad_http_client_allowed",
         "graph_sdk_allowed",
         "legacy_sharepoint_api_allowed",
         "pnp_allowed",
@@ -287,6 +290,14 @@ def _validate_synthetic_data_boundary(value: object) -> list[str]:
     ):
         if value.get(flag) is not False:
             errors.append(f"SPFx BPMN viewer runtime readiness synthetic_data_boundary.{flag} must be false")
+    if value.get("aad_http_client_allowed") is not True:
+        errors.append("SPFx BPMN viewer runtime readiness synthetic_data_boundary.aad_http_client_allowed must be true")
+    if value.get("delegated_api_resource") != "api://funktion8.de/nac-bff":
+        errors.append("SPFx BPMN viewer runtime readiness delegated_api_resource is invalid")
+    if value.get("delegated_scope") != "Matter.Read":
+        errors.append("SPFx BPMN viewer runtime readiness delegated_scope must be Matter.Read")
+    if value.get("bff_endpoint") != "https://func-nac-bff-test-funktion8.azurewebsites.net":
+        errors.append("SPFx BPMN viewer runtime readiness bff_endpoint is invalid")
     forbidden = set(_strings(value.get("forbidden_content_classes")))
     for item in ("matter_document_content", "mandate_payload", "credentials", "tokens_or_secrets"):
         if item not in forbidden:
@@ -300,7 +311,7 @@ def _validate_evidence_expectations(value: object) -> list[str]:
         return ["SPFx BPMN viewer runtime readiness evidence_expectations must be an object"]
     if value.get("command") != "nac m365 teams-sharepoint bpmn-viewer-runtime-readiness --format json":
         errors.append("SPFx BPMN viewer runtime readiness evidence command is invalid")
-    if value.get("output_kind") != "redacted_synthetic_site_scoped_readiness_json":
+    if value.get("output_kind") != "redacted_bff_read_site_scoped_readiness_json":
         errors.append("SPFx BPMN viewer runtime readiness evidence output_kind is invalid")
     includes = set(_strings(value.get("must_include")))
     for key in sorted(REQUIRED_EVIDENCE_KEYS - includes):

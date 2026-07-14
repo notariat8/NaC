@@ -1,9 +1,9 @@
 {
-  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.2",
+  "schema_version": "nac.m365-spfx-bpmn-viewer-skeleton/v0.3",
   "name": "nac-spfx-bpmn-viewer",
-  "status": "synthetic_site_scoped_package",
-  "last_update": "2026-07-13",
-  "purpose": "Packageable site-scoped SPFx BPMN viewer for workspace notary_team_01 using only package-bound synthetic notarial test data.",
+  "status": "bff_read_site_scoped_package",
+  "last_update": "2026-07-14",
+  "purpose": "Packageable site-scoped SPFx BPMN viewer for notary_team_01 using a delegated NaC BFF read and a hash-bound package BPMN asset.",
   "spfx": {
     "framework": "SharePoint Framework",
     "framework_version": "1.23.2",
@@ -15,7 +15,7 @@
     "bpmn_js_mode": "viewer_only",
     "package_root": "spfx/nac-bpmn-viewer",
     "approved_workspace_id": "notary_team_01",
-    "data_source": "package_fixture",
+    "data_source": "nac_bff_redacted_dto",
     "source_package_included_now": true,
     "package_lock_required": true,
     "npm_ci_allowed_now": true,
@@ -33,9 +33,12 @@
     "tenant_wide_deploy_allowed_now": false,
     "graph_permissions_requested": false,
     "direct_graph_access_allowed": false,
-    "aad_http_client_allowed": false,
+    "aad_http_client_allowed": true,
     "sharepoint_writes_allowed": false,
-    "contains_real_matter_data": false
+    "contains_real_matter_data": false,
+    "delegated_api_resource": "api://funktion8.de/nac-bff",
+    "delegated_api_scope": "Matter.Read",
+    "bff_endpoint": "https://func-nac-bff-test-funktion8.azurewebsites.net"
   },
   "deployment_scope": {
     "approval": "owner_approved",
@@ -45,10 +48,10 @@
   },
   "render_contract": {
     "workspace_id": "notary_team_01",
-    "content_source": "package_fixture",
+    "content_source": "nac_bff_redacted_dto",
     "synthetic_data_only": true,
     "viewer_only": true,
-    "live_tenant_access": false,
+    "live_tenant_access": true,
     "graph_access": false,
     "writes_allowed": false,
     "real_matter_data_allowed": false,
@@ -93,9 +96,7 @@
   },
   "blocked_operations": [
     "tenant_wide_deploy",
-    "graph_permission_request",
     "direct_graph_request",
-    "aad_http_client",
     "write_bpmn_xml",
     "save_bpmn_model",
     "execute_workflow",
@@ -107,6 +108,9 @@
     "sharepoint_csom",
     "pnp",
     "microsoft_graph_sdk",
-    "graph_beta"
+    "graph_beta",
+    "microsoft_graph_permission_request",
+    "aad_http_client_non_bff_resource",
+    "additional_delegated_scope"
   ]
 }

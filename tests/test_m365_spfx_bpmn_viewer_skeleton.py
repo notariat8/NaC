@@ -32,13 +32,13 @@ SPFX_ROOT = REPO_ROOT / "spfx" / "nac-bpmn-viewer"
 
 
 class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
-    def test_package_contract_validates_site_scoped_synthetic_mode(self) -> None:
+    def test_package_contract_validates_site_scoped_bff_read_mode(self) -> None:
         skeleton = load_spfx_bpmn_viewer_skeleton(DEFAULT_SPFX_BPMN_VIEWER_SKELETON)
         fixture = load_spfx_bpmn_viewer_render_fixture(DEFAULT_SPFX_BPMN_VIEWER_RENDER_FIXTURE)
 
         self.assertEqual(validate_spfx_bpmn_viewer_skeleton(skeleton, render_fixture=fixture), [])
-        self.assertEqual(skeleton["schema_version"], "nac.m365-spfx-bpmn-viewer-skeleton/v0.2")
-        self.assertEqual(skeleton["status"], "synthetic_site_scoped_package")
+        self.assertEqual(skeleton["schema_version"], "nac.m365-spfx-bpmn-viewer-skeleton/v0.3")
+        self.assertEqual(skeleton["status"], "bff_read_site_scoped_package")
         self.assertEqual(skeleton["spfx"]["framework_version"], "1.23.2")
         self.assertEqual(skeleton["spfx"]["build_tool"], "Heft")
         self.assertEqual(skeleton["spfx"]["approved_workspace_id"], APPROVED_WORKSPACE_ID)
@@ -49,7 +49,9 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertFalse(skeleton["spfx"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(skeleton["spfx"]["graph_permissions_requested"])
         self.assertFalse(skeleton["spfx"]["direct_graph_access_allowed"])
-        self.assertFalse(skeleton["spfx"]["aad_http_client_allowed"])
+        self.assertTrue(skeleton["spfx"]["aad_http_client_allowed"])
+        self.assertEqual(skeleton["spfx"]["delegated_api_resource"], "api://funktion8.de/nac-bff")
+        self.assertEqual(skeleton["spfx"]["delegated_api_scope"], "Matter.Read")
         self.assertFalse(skeleton["spfx"]["sharepoint_writes_allowed"])
         self.assertFalse(skeleton["spfx"]["contains_real_matter_data"])
 
@@ -82,7 +84,10 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
             "Synthetic read-only NaC workspace for Teams and SharePoint",
         )
         self.assertFalse(solution["solution"]["skipFeatureDeployment"])
-        self.assertEqual(solution["solution"]["webApiPermissionRequests"], [])
+        self.assertEqual(
+            solution["solution"]["webApiPermissionRequests"],
+            [{"resource": "NaC M365 BFF", "scope": "Matter.Read"}],
+        )
         self.assertIn("SharePointWebPart", manifest["supportedHosts"])
         self.assertIn("TeamsTab", manifest["supportedHosts"])
 
@@ -90,7 +95,7 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         for generated in SPFX_GENERATED_PATHS:
             self.assertFalse(any(path == generated or path.startswith(f"{generated}/") for path in scanned))
 
-    def test_current_ui_dom_contract_is_explicit_and_fail_closed(self) -> None:
+    def test_current_ui_uses_only_the_delegated_bff_and_hash_bound_bpmn(self) -> None:
         component = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/components/NacBpmnViewer.tsx"
         ).read_text(encoding="utf-8")
@@ -100,32 +105,32 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         fixture = (
             SPFX_ROOT / "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
         ).read_text(encoding="utf-8")
+        bff_client = (
+            SPFX_ROOT / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
+        ).read_text(encoding="utf-8")
 
         for marker in REQUIRED_DOM_MARKERS.values():
             self.assertIn(marker, component)
         self.assertIn("Workspace nicht freigegeben.", component)
-        self.assertIn("workspaceId: 'notary_team_01'", webpart)
-        self.assertIn("source: 'package_fixture'", fixture)
+        self.assertIn("Vorgangsdaten sind derzeit nicht verfügbar.", component)
+        self.assertIn("loadNacBffWorkspace(this.context.aadHttpClientFactory)", webpart)
+        self.assertIn("source: 'package_bpmn_fixture'", fixture)
         self.assertIn("containsMatterData: false", fixture)
         self.assertIn("bpmnXml: sampleApprovedBpmnXml", fixture)
-        self.assertIn("matterLabel: 'Synthetische Testakte NAC-SYN-MATTER-001'", fixture)
-        self.assertEqual(fixture.count("id: 'NAC-SYN-"), 2)
-        self.assertIn("id: 'NAC-SYN-TASK-001'", fixture)
-        self.assertIn("title: 'Vertragsentwurf prüfen'", fixture)
-        self.assertIn("id: 'NAC-SYN-DEADLINE-001'", fixture)
-        self.assertIn(
-            "deadlineLabel: '31.08.2026, 18:00 Uhr (2026-08-31T16:00:00Z)'",
-            fixture,
-        )
-        self.assertIn(
-            "dueLabel: '31.08.2026, 18:00 Uhr (2026-08-31T16:00:00Z)'",
-            fixture,
-        )
+        self.assertNotIn("NAC-SYN-TASK-001", fixture)
+        self.assertNotIn("deadlineLabel", fixture)
+
+        self.assertIn("AadHttpClientFactory", bff_client)
+        self.assertIn("api://funktion8.de/nac-bff", bff_client)
+        self.assertIn("Matter.Read", bff_client)
+        self.assertIn("func-nac-bff-test-funktion8.azurewebsites.net", bff_client)
+        self.assertIn("MAX_RESPONSE_BYTES", bff_client)
+        self.assertIn("isWorkspace", bff_client)
 
         combined = "\n".join(path.read_text(encoding="utf-8") for path in _iter_spfx_source_files(SPFX_ROOT))
+        self.assertIn("AadHttpClient", combined)
         for marker in (
             "MSGraphClient",
-            "AadHttpClient",
             "graph.microsoft.com",
             "@microsoft/microsoft-graph-client",
             "bpmn-js/lib/Modeler",
@@ -146,20 +151,23 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         self.assertTrue(any("graph_permissions_requested" in error for error in errors))
         self.assertTrue(any("writes_allowed" in error for error in errors))
 
-    def test_package_result_exposes_owner_approved_site_scope_without_request_plans(self) -> None:
+    def test_package_result_exposes_one_delegated_bff_request_plan(self) -> None:
         result = build_spfx_bpmn_viewer_skeleton_result(load_spfx_bpmn_viewer_skeleton())
 
         self.assertEqual(result["status"], "PASSED")
         self.assertEqual(result["summary"]["approved_workspace_id"], APPROVED_WORKSPACE_ID)
-        self.assertEqual(result["summary"]["request_plan_count"], 0)
+        self.assertEqual(result["summary"]["request_plan_count"], 1)
         self.assertTrue(result["summary"]["package_solution_enabled_now"])
         self.assertTrue(result["summary"]["app_catalog_deploy_owner_approved"])
         self.assertTrue(result["summary"]["site_scoped_install_allowed_now"])
         self.assertFalse(result["summary"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(result["summary"]["executes_graph_requests_now"])
-        self.assertEqual(result["requestPlans"], [])
+        self.assertEqual(len(result["requestPlans"]), 1)
+        self.assertEqual(result["requestPlans"][0]["resource"], "api://funktion8.de/nac-bff")
+        self.assertEqual(result["requestPlans"][0]["scope"], "Matter.Read")
         self.assertEqual(result["renderContract"]["domMarkers"], REQUIRED_DOM_MARKERS)
         self.assertFalse(result["guardrails"]["graph_permissions_requested"])
+        self.assertTrue(result["guardrails"]["aad_http_client_allowed"])
         self.assertFalse(result["guardrails"]["sharepoint_writes_allowed"])
 
     def test_fixture_process_selection_remains_local_and_read_only(self) -> None:
@@ -202,11 +210,12 @@ class M365SpfxBpmnViewerSkeletonTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "PASSED")
         self.assertEqual(payload["summary"]["spfx_version"], "1.23.2")
-        self.assertEqual(payload["summary"]["request_plan_count"], 0)
+        self.assertEqual(payload["summary"]["request_plan_count"], 1)
         self.assertTrue(payload["guardrails"]["package_lock_required"])
         self.assertTrue(payload["guardrails"]["app_catalog_deploy_owner_approved"])
         self.assertFalse(payload["guardrails"]["tenant_wide_deploy_allowed_now"])
         self.assertFalse(payload["guardrails"]["executes_graph_requests_now"])
+        self.assertTrue(payload["guardrails"]["aad_http_client_allowed"])
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.6.27763",
-      "templateHash": "2536393702628148052"
+      "templateHash": "9475785805886651535"
     },
     "description": "Azure-native NaC BFF baseline for a resource-group deployment in Germany West Central."
   },
@@ -57,6 +57,16 @@
         "description": "Single delegated scope required on inbound BFF access tokens for this synthetic MVP."
       }
     },
+    "functionAppName": {
+      "type": "string",
+      "defaultValue": "func-nac-bff-test-funktion8",
+      "allowedValues": [
+        "func-nac-bff-test-funktion8"
+      ],
+      "metadata": {
+        "description": "Globally unique fixed Azure Function hostname for the approved synthetic MVP."
+      }
+    },
     "maximumInstanceCount": {
       "type": "int",
       "defaultValue": 4,
@@ -85,7 +95,6 @@
   },
   "variables": {
     "resourceToken": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('environmentName')))]",
-    "functionAppName": "[format('func-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))]",
     "deploymentContainerName": "function-releases",
     "corsAllowedOrigins": [
       "https://funktion8.sharepoint.com",
@@ -265,7 +274,7 @@
     {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2024-04-01",
-      "name": "[variables('functionAppName')]",
+      "name": "[parameters('functionAppName')]",
       "location": "[parameters('location')]",
       "tags": "[variables('resourceTags')]",
       "kind": "functionapp,linux",
@@ -330,7 +339,7 @@
     {
       "type": "Microsoft.Web/sites/config",
       "apiVersion": "2024-04-01",
-      "name": "[format('{0}/{1}', variables('functionAppName'), 'appsettings')]",
+      "name": "[format('{0}/{1}', parameters('functionAppName'), 'appsettings')]",
       "properties": {
         "APPLICATIONINSIGHTS_AUTHENTICATION_STRING": "[format('ClientId={0};Authorization=AAD', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), '2023-01-31').clientId)]",
         "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('Microsoft.Insights/components', format('appi-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), '2020-02-02').ConnectionString]",
@@ -347,7 +356,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', format('appi-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]",
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
         "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]",
         "[resourceId('Microsoft.Storage/storageAccounts', format('stnacbff{0}', variables('resourceToken')))]"
       ]
@@ -356,15 +365,23 @@
   "outputs": {
     "functionAppResourceId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      "value": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
     },
     "functionAppHostName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-04-01').defaultHostName]"
+      "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2024-04-01').defaultHostName]"
     },
     "managedIdentityResourceId": {
       "type": "string",
       "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken')))]"
+    },
+    "managedIdentityClientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), '2023-01-31').clientId]"
+    },
+    "managedIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-nac-bff-{0}-{1}', parameters('environmentName'), variables('resourceToken'))), '2023-01-31').principalId]"
     }
   }
 }

@@ -29,7 +29,7 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         readiness = load_bpmn_viewer_runtime_readiness(DEFAULT_BPMN_VIEWER_RUNTIME_READINESS)
 
         self.assertEqual(validate_bpmn_viewer_runtime_readiness(readiness), [])
-        self.assertEqual(readiness["status"], "synthetic_site_scoped_runtime_ready")
+        self.assertEqual(readiness["status"], "bff_read_site_scoped_runtime_ready")
         packaging = readiness["spfx_packaging_boundary"]
         self.assertTrue(packaging["package_lock_required"])
         self.assertTrue(packaging["npm_ci_allowed_now"])
@@ -44,7 +44,7 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         self.assertTrue(deployment["site_scoped"])
         self.assertFalse(deployment["tenant_wide"])
 
-    def test_runtime_result_is_ready_but_graph_and_writes_remain_blocked(self) -> None:
+    def test_runtime_result_allows_only_bff_read_and_blocks_graph_and_writes(self) -> None:
         result = build_bpmn_viewer_runtime_readiness_result(load_bpmn_viewer_runtime_readiness())
 
         self.assertEqual(result["status"], "PASSED")
@@ -67,7 +67,9 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         self.assertFalse(guardrails["graph_permissions_requested"])
         self.assertFalse(guardrails["direct_graph_access_allowed"])
         self.assertFalse(guardrails["ms_graph_client_allowed"])
-        self.assertFalse(guardrails["aad_http_client_allowed"])
+        self.assertTrue(guardrails["aad_http_client_allowed"])
+        self.assertEqual(guardrails["delegated_api_resource"], "api://funktion8.de/nac-bff")
+        self.assertEqual(guardrails["delegated_scope"], "Matter.Read")
         self.assertFalse(guardrails["legacy_sharepoint_api_allowed"])
         self.assertFalse(guardrails["sharepoint_writes_allowed"])
         self.assertFalse(guardrails["workflow_execution_allowed"])
@@ -95,7 +97,10 @@ class M365BpmnViewerRuntimeReadinessTests(unittest.TestCase):
         self.assertEqual(lock["packages"][""]["name"], package["name"])
         self.assertEqual(lock["packages"][""]["version"], package["version"])
         self.assertFalse(solution["solution"]["skipFeatureDeployment"])
-        self.assertEqual(solution["solution"]["webApiPermissionRequests"], [])
+        self.assertEqual(
+            solution["solution"]["webApiPermissionRequests"],
+            [{"resource": "NaC M365 BFF", "scope": "Matter.Read"}],
+        )
 
         tracked = subprocess.run(
             ["git", "ls-files", "--", "spfx/nac-bpmn-viewer"],

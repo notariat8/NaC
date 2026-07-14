@@ -305,16 +305,28 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         ui_fixture = (
             spfx_root / "src/webparts/nacBpmnViewer/fixtures/syntheticWorkspace.ts"
         ).read_text(encoding="utf-8")
+        bff_client = (
+            spfx_root / "src/webparts/nacBpmnViewer/services/NacBffClient.ts"
+        ).read_text(encoding="utf-8")
+        for value in (WORKSPACE_ID, BPMN_PROCESS_KEY, BPMN_SHA256):
+            self.assertIn(value, ui_fixture)
         for value in (
-            WORKSPACE_ID,
             MATTER_ID,
             MATTER_STATUS,
             DEADLINE,
-            BPMN_PROCESS_KEY,
-            BPMN_SHA256,
             *(str(task[key]) for task in TASKS for key in ("task_id", "title", "step_code", "status")),
         ):
-            self.assertIn(value, ui_fixture)
+            self.assertNotIn(value, ui_fixture)
+        for value in (
+            WORKSPACE_ID,
+            MATTER_ID,
+            BPMN_PROCESS_KEY,
+            BPMN_SHA256,
+            "api://funktion8.de/nac-bff",
+            "Matter.Read",
+            "https://func-nac-bff-test-funktion8.azurewebsites.net",
+        ):
+            self.assertIn(value, bff_client)
 
     def test_writer_creates_redacted_json_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

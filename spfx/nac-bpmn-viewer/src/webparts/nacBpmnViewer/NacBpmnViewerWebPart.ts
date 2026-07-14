@@ -4,6 +4,7 @@ import { IReadonlyTheme } from '@microsoft/sp-component-base';
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { NacBpmnViewer, NacBpmnViewerProps } from './components/NacBpmnViewer';
+import { loadNacBffWorkspace } from './services/NacBffClient';
 
 export interface NacBpmnViewerWebPartProps {
   workspaceId: string;
@@ -17,7 +18,8 @@ export default class NacBpmnViewerWebPart extends BaseClientSideWebPart<NacBpmnV
       workspaceId: 'notary_team_01',
       userDisplayName: this.context.pageContext.user.displayName,
       hostName: this.context.sdks.microsoftTeams ? 'Microsoft Teams' : 'SharePoint',
-      isDarkTheme: this.isDarkTheme
+      isDarkTheme: this.isDarkTheme,
+      loadWorkspace: () => loadNacBffWorkspace(this.context.aadHttpClientFactory)
     });
 
     ReactDom.render(element, this.domElement);

@@ -19,8 +19,8 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
     def test_contract_defines_packageable_viewer_only_spfx(self) -> None:
-        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.3")
-        self.assertEqual(self.contract["status"], "synthetic_site_scoped_mvp")
+        self.assertEqual(self.contract["schema_version"], "nac.m365-sharepoint-bpmn-viewer-adapter/v0.4")
+        self.assertEqual(self.contract["status"], "bff_read_site_scoped_mvp")
         spfx = self.contract["spfx_surface"]
         self.assertEqual(spfx["delivery"], "SharePoint Framework Web Part")
         self.assertEqual(spfx["framework_version"], "1.23.2")
@@ -66,20 +66,28 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         )
         self.assertTrue(packaging["generated_paths_excluded_from_recursive_source_scans"])
 
-    def test_contract_is_graph_free_and_contains_no_permission_path(self) -> None:
+    def test_contract_allows_only_the_delegated_bff_permission_path(self) -> None:
         boundary = self.contract["graph_free_boundary"]
-        for value in boundary.values():
-            self.assertFalse(value)
+        self.assertFalse(boundary["graph_permissions_requested"])
+        self.assertFalse(boundary["direct_graph_access_allowed"])
+        self.assertFalse(boundary["ms_graph_client_allowed"])
+        self.assertFalse(boundary["graph_sdk_allowed"])
+        self.assertTrue(boundary["aad_http_client_allowed"])
+        self.assertTrue(boundary["web_api_permission_requests_allowed"])
+        self.assertEqual(boundary["delegated_api_resource"], "api://funktion8.de/nac-bff")
+        self.assertEqual(boundary["delegated_scope"], "Matter.Read")
 
         invalid = copy.deepcopy(self.contract)
-        invalid["graph_free_boundary"]["aad_http_client_allowed"] = True
+        invalid["graph_free_boundary"]["delegated_scope"] = "Matter.Write"
         errors = _validate_contract(invalid, {}, {}, {}, {})
-        self.assertIn("graph_free_boundary.aad_http_client_allowed must be false", errors)
+        self.assertIn("graph_free_boundary.delegated_scope must be Matter.Read", errors)
 
-    def test_contract_uses_only_package_bound_synthetic_data(self) -> None:
+    def test_contract_uses_bff_redacted_synthetic_data_and_package_bpmn(self) -> None:
         synthetic = self.contract["synthetic_data_boundary"]
         self.assertEqual(synthetic["workspace_id"], "notary_team_01")
-        self.assertEqual(synthetic["source"], "package_fixture")
+        self.assertEqual(synthetic["source"], "nac_bff_redacted_dto")
+        self.assertFalse(synthetic["browser_reads_sharepoint_content"])
+        self.assertTrue(synthetic["bff_reads_sharepoint_metadata"])
         self.assertTrue(synthetic["synthetic_data_only"])
         self.assertFalse(synthetic["contains_real_matter_data"])
         self.assertFalse(synthetic["reads_sharepoint_content"])
@@ -87,9 +95,9 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         self.assertFalse(synthetic["writes_allowed"])
 
         render = self.contract["package_render_contract"]
-        self.assertEqual(render["request_plan_count"], 0)
+        self.assertEqual(render["request_plan_count"], 1)
         self.assertTrue(render["viewer_only"])
-        self.assertFalse(render["liveTenantAccess"])
+        self.assertTrue(render["liveTenantAccess"])
         self.assertEqual(
             render["dom_markers"],
             {
@@ -105,10 +113,11 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
         for operation in {
             "tenant_wide_deploy",
             "deploy_other_workspace",
-            "graph_permission_request",
+            "microsoft_graph_permission_request",
             "direct_graph_request",
             "ms_graph_client",
-            "aad_http_client",
+            "aad_http_client_non_bff_resource",
+            "additional_delegated_scope",
             "graph_sdk",
             "legacy_sharepoint_api",
             "pnp",
@@ -122,16 +131,18 @@ class M365SharePointBpmnViewerAdapterTests(unittest.TestCase):
 
     def test_runtime_readiness_matches_package_mode(self) -> None:
         readiness = self.contract["runtime_readiness"]
-        self.assertEqual(readiness["status"], "synthetic_site_scoped_runtime_ready")
+        self.assertEqual(readiness["status"], "bff_read_site_scoped_runtime_ready")
         self.assertEqual(
             readiness["redacted_artifact_kind"],
-            "redacted_synthetic_site_scoped_readiness_json",
+            "redacted_bff_read_site_scoped_readiness_json",
         )
         self.assertTrue(readiness["spfx_package_allowed_now"])
         self.assertTrue(readiness["app_catalog_upload_allowed_now"])
         self.assertTrue(readiness["site_scoped_install_allowed_now"])
         self.assertFalse(readiness["tenant_wide_deploy_allowed_now"])
         self.assertFalse(readiness["graph_access_allowed"])
+        self.assertTrue(readiness["aad_http_client_allowed"])
+        self.assertEqual(readiness["delegated_scope"], "Matter.Read")
         self.assertFalse(readiness["writes_allowed"])
 
     def test_validator_passes(self) -> None:

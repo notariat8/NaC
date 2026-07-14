@@ -188,9 +188,12 @@ Cleanup-Nachweis erfolgreich abgeschlossen. Dies ist ein enger Live-Meilenstein;
 die breite SPFx Read-only Workspace-Arbeitsfläche bleibt aktiv. Der
 Azure-Functions-BFF ist mit Entra-JWT-Prüfung, fixer Graph-REST-v1.0-
 Projektion, deterministischem Paket, Managed-Identity-Bicep und Offline-
-Readiness-CLI als `READY` vorbereitet. Die NaC-BFF-Live-Aktivierung bleibt bis
-zum gebündelten Azure-/Entra-/Site-Grant-/SPFx-Owner-Gate ausdrücklich
-`DEFERRED`.
+Readiness-CLI als `READY` vorbereitet. Das SPFx-Paket nutzt im Repository
+bereits ausschließlich `AadHttpClient -> NaC BFF`; Mandats-, Aufgaben-,
+Status- und Fristdaten sind aus der Paket-Fixture entfernt. Der vollständige
+Azure-/Entra-/Graph-/SPFx-Aktivierungsablauf ist zusätzlich über
+`bff-azure-activation-plan` hashgebunden. Die NaC-BFF-Live-Aktivierung bleibt
+bis zum einzigen konsolidierten Owner-Gate ausdrücklich `DEFERRED`.
 
 ## Regel
 
