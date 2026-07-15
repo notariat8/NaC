@@ -1,0 +1,659 @@
+{
+  "schema_version": "nac.m365-azure-bff-live-activation/v1",
+  "contract_id": "m365.azure_bff_live_activation",
+  "title": "M365 Azure BFF Live Activation Runner",
+  "status": "OFFLINE_READY",
+  "leading_issue": "https://github.com/notariat8/NaC/issues/632",
+  "parent_issue": "https://github.com/notariat8/NaC/issues/620",
+  "acceptance_ids": [
+    "AC-632-01",
+    "AC-632-02",
+    "AC-632-03",
+    "AC-632-04",
+    "AC-632-05",
+    "AC-632-06",
+    "AC-632-07",
+    "AC-632-08"
+  ],
+  "purpose": "Execute the hash-bound Azure, Entra, Microsoft Graph REST v1.0 and site-scoped SPFx activation plan exactly once under one immutable owner approval binding; MVP resume is disabled until every provider write has provider-specific read-only reconciliation.",
+  "source_offline_plan": {
+    "contract_path": "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
+    "command": "nac m365 teams-sharepoint bff-azure-activation-plan --format json",
+    "required_status": "READY",
+    "expected_activation_sha256_source": "activation_hash emitted by the offline plan from the final clean approved commit",
+    "expected_activation_sha256_pattern": "^[0-9a-f]{64}$",
+    "expected_activation_sha256_must_be_captured_after_approved_commit_exists": true,
+    "hash_recomputations_required": 2,
+    "both_recomputations_must_equal_expected": true
+  },
+  "runner_interface": {
+    "command": "nac m365 teams-sharepoint bff-azure-activate-live",
+    "required_arguments": [
+      "--owner-approved",
+      "--execute-live-activation",
+      "--expected-activation-hash <64-lowercase-hex>",
+      "--approval-reference <immutable-github-issue-comment-url>",
+      "--approval-body-sha256 <64-lowercase-hex>",
+      "--approved-commit <40-lowercase-hex>",
+      "--approved-tree <40-lowercase-hex>",
+      "--azure-cli-toolchain-sha256 <64-lowercase-hex>",
+      "--m365-cli-sha256 <64-lowercase-hex>",
+      "--m365-node-sha256 <64-lowercase-hex>",
+      "--build-python-sha256 <64-lowercase-hex>",
+      "--build-node-sha256 <64-lowercase-hex>",
+      "--build-npm-cli-sha256 <64-lowercase-hex>",
+      "--gh-cli-sha256 <64-lowercase-hex>",
+      "--provisioner-certificate-sha256 <64-lowercase-hex>",
+      "--reason <non-empty-owner-reason>",
+      "--correlation-id <safe-correlation-id>"
+    ],
+    "resume_argument_exposed": false,
+    "resume_request_behavior": "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP",
+    "shell_execution_allowed": false,
+    "argv_allowlist_required": true,
+    "attestation_preparation": {
+      "command": "nac m365 teams-sharepoint bff-azure-activation-attestations --bff-attestation-provisioner-certificate <public-certificate-path> --format json",
+      "provider_requests_exact": 0,
+      "private_key_reads_exact": 0,
+      "output_status_required": "READY",
+      "output_fields_required": [
+        "toolchain_attestations",
+        "toolchain_attestations_sha256",
+        "live_cli_arguments"
+      ]
+    },
+    "finalization_recovery": {
+      "command": "nac m365 teams-sharepoint bff-azure-activation-recovery",
+      "same_owner_binding_arguments_as_live_runner_required": true,
+      "owner_approved_required": true,
+      "read_only_inspection_default": true,
+      "unlock_argument_exact": "--confirm-unlock",
+      "provider_requests_exact": 0,
+      "resume_enabled": false,
+      "automatic_unlock_allowed": false,
+      "output_fields_allowlisted": true
+    }
+  },
+  "consolidated_owner_gate": {
+    "gate_count_exact": 1,
+    "owner_approved_exact": true,
+    "expected_activation_sha256_required": true,
+    "expected_activation_sha256_pattern": "^[0-9a-f]{64}$",
+    "expected_activation_sha256_must_equal_final_clean_approved_commit_plan": true,
+    "immutable_approval_reference": {
+      "kind_exact": "github_issue_comment_snapshot",
+      "issue_url_exact": "https://github.com/notariat8/NaC/issues/632",
+      "parent_issue_url_context": "https://github.com/notariat8/NaC/issues/620",
+      "url_pattern": "^https://github\\.com/notariat8/NaC/issues/632#issuecomment-[1-9][0-9]*$",
+      "owner_author_required": true,
+      "owner_author_login_exact": "ofunk",
+      "database_id_required": true,
+      "created_at_required": true,
+      "updated_at_must_equal_created_at": true,
+      "body_sha256_required": true,
+      "body_sha256_must_match_runner_argument": true
+    },
+    "approval_payload_fields_exact": [
+      "owner-approved",
+      "expected_activation_sha256",
+      "approved_commit_sha",
+      "approved_tree_sha",
+      "target_binding_sha256",
+      "permission_boundary_sha256",
+      "step_sequence_sha256",
+      "toolchain_attestations_sha256",
+      "no_automatic_rollback_or_deletion"
+    ],
+    "per_step_or_implicit_approval_allowed": false,
+    "approval_reuse_for_different_hash_commit_tree_or_target_allowed": false,
+    "approval_reuse_for_different_toolchain_allowed": false,
+    "toolchain_attestation_binding": {
+      "field_exact": "toolchain_attestations_sha256",
+      "pattern": "^[0-9a-f]{64}$",
+      "input_fields_exact": [
+        "azure_cli_toolchain_sha256",
+        "m365_cli_sha256",
+        "m365_node_sha256",
+        "build_python_sha256",
+        "build_node_sha256",
+        "build_npm_cli_sha256",
+        "gh_cli_sha256",
+        "provisioner_certificate_sha256"
+      ],
+      "each_input_pattern": "^[0-9a-f]{64}$",
+      "canonical_payload": "UTF-8 JSON object containing exactly input_fields_exact, sorted keys, compact separators and one trailing newline",
+      "combined_hash": "lowercase SHA-256 of canonical_payload",
+      "individual_digests_are_non_secret": true,
+      "approval_reuse_for_different_individual_or_combined_digest_allowed": false,
+      "includes_public_credential_material_only": true,
+      "private_key_digest_or_content_allowed": false,
+      "runtime_executable_bytes_mode": "digest_verified_single_read_sealed_memfd",
+      "linux_memfd_and_proc_fd_required": true,
+      "node_runtime_bundle_digest_fields": [
+        "m365_cli_sha256",
+        "build_npm_cli_sha256"
+      ],
+      "node_runtime_bundle_digest_scope": "all trusted regular files below the package root except npm-generated node_modules/.bin command shims",
+      "runtime_node_module_bytes_mode": "owner_bound_full_tree_manifest_and_per_load_sha256_verified_exact_bytes",
+      "runtime_unmanifested_or_changed_module_execution_allowed": false,
+      "runtime_native_node_addons_allowed": false,
+      "runtime_module_symlinks_allowed": false,
+      "runtime_path_swap_behavior": "resolved module must remain manifest-allowlisted and exact bytes are O_NOFOLLOW/fstat/SHA-256 verified before compile or evaluation"
+    }
+  },
+  "git_execution_gate": {
+    "approved_commit_sha_required": true,
+    "approved_tree_sha_required": true,
+    "head_must_equal_approved_commit": true,
+    "head_tree_must_equal_approved_tree": true,
+    "worktree_command": "git status --porcelain=v1 --untracked-files=all",
+    "worktree_output_must_equal": "",
+    "tracked_changes_allowed": false,
+    "untracked_files_allowed": false,
+    "submodule_drift_allowed": false,
+    "cleanliness_checked_before_live_approval": true,
+    "cleanliness_rechecked_immediately_before_first_write": true
+  },
+  "exact_target": {
+    "azure": {
+      "subscription_id": "37cd9645-6cb9-4278-88ee-e80377cd951c",
+      "tenant_id": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+      "location": "germanywestcentral",
+      "resource_group": "rg-nac-bff-test",
+      "function_app": "func-nac-bff-test-funktion8",
+      "function_base_url": "https://func-nac-bff-test-funktion8.azurewebsites.net",
+      "deployment_mode": "Azure Functions Flex Consumption OneDeploy",
+      "remote_build_flag_exact": "--build-remote true"
+    },
+    "entra_api": {
+      "display_name": "NaC M365 BFF",
+      "app_id_uri": "api://funktion8.de/nac-bff",
+      "sign_in_audience": "AzureADMyOrg",
+      "requested_access_token_version": 2,
+      "delegated_scope": "Matter.Read",
+      "application_resolution": "exactly_one_by_app_id_uri",
+      "resolved_app_id_must_be_uuid": true,
+      "resolved_app_id_binds_bicep_parameter": "bffApiAudience"
+    },
+    "test_client": {
+      "client_id": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
+      "purpose": "delegated assigned-deputy-denied live verification only"
+    },
+    "workspace": {
+      "workspace_id": "notary_team_01",
+      "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+      "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+      "team_display_name": "NaC-Notar-01",
+      "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a"
+    },
+    "lists": {
+      "Akten": "588d4a41-f538-4f37-acfb-63ff283e0910",
+      "AufgabenFristen": "720ef1d4-8496-4ecb-aa1f-5fa4568343f2",
+      "Vertretungsfreigaben": "ec12d339-d9b7-45e9-be45-38dadd917746",
+      "AuditJournalLite": "327181c2-e402-48e9-bcfa-1f5081b45d9c"
+    },
+    "app_catalog": {
+      "scope": "tenant",
+      "tenant_domain": "funktion8.sharepoint.com",
+      "package_name": "nac-bpmn-viewer.sppkg",
+      "solution_product_id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
+      "catalog_record_resolution": "exactly_one_by_solution_product_id_after_add_or_overwrite",
+      "resolved_catalog_record_id_must_be_uuid": true,
+      "tenant_wide_activation_allowed": false
+    },
+    "spfx_solution": {
+      "name": "nac-bpmn-viewer-client-side-solution",
+      "product_id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
+      "version": "0.2.0.0",
+      "package_path": "spfx/nac-bpmn-viewer/sharepoint/solution/nac-bpmn-viewer.sppkg",
+      "site_scoped": true,
+      "skip_feature_deployment": false,
+      "web_api_permission_resource": "NaC M365 BFF",
+      "web_api_permission_scope": "Matter.Read"
+    },
+    "page": {
+      "name": "NaC-Testumgebung.aspx",
+      "title": "NaC-Testumgebung",
+      "layout": "Article",
+      "url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01/SitePages/NaC-Testumgebung.aspx"
+    },
+    "webpart": {
+      "id": "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21",
+      "alias": "NacBpmnViewerWebPart",
+      "title": "NaC Vorgangsansicht"
+    },
+    "synthetic_matter": {
+      "matter_id": "NAC-SYN-MATTER-001",
+      "matter_type": "immobilienkaufvertrag",
+      "purpose": "view_synthetic_matter_workspace",
+      "data_class": "synthetic_only"
+    },
+    "execution_identities": {
+      "graph_provisioner_display_name": "NaC M365 Provisioning",
+      "graph_provisioner_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+      "graph_authentication_mode_exact": "client_credentials_with_certificate",
+      "m365_cli_connected_as_exact": "ofunk@funktion8.de",
+      "m365_cli_test_client_id_binding": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
+      "tenant_id_exact": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+      "public_certificate_sha256_owner_bound": true,
+      "certificate_revalidated_before_each_token_fetch": true,
+      "private_key_regular_non_symlink_owner_only_mode_exact": [
+        "0400",
+        "0600"
+      ],
+      "private_key_digest_or_content_in_evidence_allowed": false
+    }
+  },
+  "permission_boundary": {
+    "microsoft_graph": {
+      "base_url_exact": "https://graph.microsoft.com/v1.0",
+      "rest_only": true,
+      "beta_allowed": false,
+      "sdk_allowed": false,
+      "pnp_allowed": false,
+      "legacy_sharepoint_api_allowed": false
+    },
+    "managed_identity_graph_application_roles_exact": [
+      "Sites.Selected"
+    ],
+    "managed_identity_additional_graph_roles_allowed": false,
+    "site_permission_site_id_exact": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+    "site_permission_roles_exact": [
+      "read"
+    ],
+    "site_permission_duplicate_grants_allowed": false,
+    "spfx_graph_permissions_exact": [],
+    "spfx_delegated_bff_scopes_exact": [
+      "Matter.Read"
+    ],
+    "client_secret_or_certificate_creation_allowed": false,
+    "broader_existing_permission_on_target_identity_is_blocking": true
+  },
+  "prewrite_inventory": {
+    "must_complete_before_any_provider_write": true,
+    "single_read_only_snapshot_required": true,
+    "duplicate_checks_exact": [
+      "Entra applications by exact appId URI",
+      "Entra API service principals for the resolved application",
+      "managed-identity service principals for the exact Azure identity",
+      "Sites.Selected role assignments on the exact managed identity",
+      "target-site permissions for the exact managed identity",
+      "App Catalog records by exact SPFx solution ProductId",
+      "SPFx delegated API permission requests for NaC M365 BFF/Matter.Read",
+      "site installation for the exact SPFx solution ProductId",
+      "NaC-Testumgebung.aspx page and NacBpmnViewerWebPart instances",
+      "canonical synthetic keys in Akten, AufgabenFristen, Vertretungsfreigaben and AuditJournalLite"
+    ],
+    "broader_permission_checks_exact": [
+      "all Microsoft Graph application roles on the exact managed identity equal [Sites.Selected]",
+      "all exact-target site permission roles equal [read]",
+      "SPFx Microsoft Graph permissions equal []",
+      "SPFx delegated API scopes equal [NaC M365 BFF/Matter.Read]",
+      "tenant-wide SPFx activation is false",
+      "no client secret or certificate creation is requested"
+    ],
+    "zero_or_one_exact_match_required": true,
+    "duplicate_or_broader_result_behavior": "stop_before_first_write"
+  },
+  "state_machine": {
+    "states_exact": [
+      "OFFLINE_READY",
+      "LIVE_APPROVED",
+      "FAILED_PARTIAL",
+      "PASSED"
+    ],
+    "initial_state": "OFFLINE_READY",
+    "transitions": [
+      "OFFLINE_READY -> LIVE_APPROVED after the single owner gate, exact-target preflight, clean approved commit/tree, lock acquisition and first activation-hash recomputation all pass",
+      "LIVE_APPROVED -> FAILED_PARTIAL on the first error after any provider or tenant write",
+      "LIVE_APPROVED -> PASSED only after all twelve steps and final invariants pass",
+      "FAILED_PARTIAL is terminal for the MVP and requires human review plus a new run only after provider-specific read-only reconciliation exists",
+      "PASSED is terminal"
+    ],
+    "pre_write_failure_state_change_allowed": false,
+    "passed_with_skipped_or_failed_step_allowed": false
+  },
+  "exclusive_lock": {
+    "kind_exact": "target_global_activation_lock",
+    "required_before_live_preflight": true,
+    "single_execution_host_required": true,
+    "scope_components": [
+      "tenant_id",
+      "subscription_id",
+      "workspace_id"
+    ],
+    "path_template": "<host-temporary-directory>/nac-m365-bff-live-activation-locks/<target-binding-sha256>.lock",
+    "host_scope_exact": "all worktrees and clones on the single execution host",
+    "cross_host_coordination_provided": false,
+    "independent_of_output_path_activation_hash_and_correlation_id": true,
+    "acquisition": "atomic_create_exclusive_and_nonblocking_os_lock",
+    "file_mode": "0600",
+    "second_holder_behavior": "fail_before_first_write",
+    "stale_lock_auto_break_allowed": false,
+    "manual_stale_lock_review_required": true,
+    "held_until_terminal_ledger_event_is_fsynced": true,
+    "finalization_recovery_command_required": true,
+    "recovery_inspection_is_read_only": true,
+    "unlock_requires_owner_approved_and_confirm_unlock": true
+  },
+  "host_success_receipt": {
+    "required_for_passed": true,
+    "host_scope_exact": "all worktrees and clones on the single execution host",
+    "toolchain_attestations_sha256_required": true,
+    "toolchain_attestations_sha256_pattern": "^[0-9a-f]{64}$",
+    "toolchain_attestations_sha256_must_equal_consolidated_owner_gate": true,
+    "receipt_reuse_for_different_toolchain_allowed": false,
+    "fields_exact": [
+      "schema_version",
+      "status",
+      "activation_hash",
+      "approval_body_sha256",
+      "approval_reference_sha256",
+      "approved_commit_sha",
+      "approved_tree_sha",
+      "toolchain_attestations_sha256",
+      "target_binding_sha256",
+      "evidence_sha256",
+      "final_commit_marker_sha256",
+      "final_state_sha256",
+      "receipt_sha256"
+    ]
+  },
+  "atomic_ledger": {
+    "required": true,
+    "directory_template": "out/m365/teams-sharepoint/bff-live-activation/<expected-activation-sha256>/ledger",
+    "event_files": "<six-digit-sequence>-<step-id>-<phase>.redacted.json",
+    "append_only": true,
+    "hash_chained": true,
+    "canonical_json": "UTF-8, sorted keys, compact separators, trailing newline",
+    "atomic_commit": "write same-directory temporary file, fsync file, rename without replacement, fsync directory",
+    "terminal_step_phases_exactly_one_of": [
+      "PASSED",
+      "FAILED"
+    ],
+    "raw_provider_output_allowed": false,
+    "provider_write_and_local_ledger_cross_system_atomicity_claimed": false,
+    "crash_window_requires_provider_specific_read_only_reconciliation": true,
+    "resume_before_all_reconcilers_exist_allowed": false
+  },
+  "prebuilt_deployment_inputs": {
+    "static_artifacts_required_before_final_git_and_plan_binding": true,
+    "resolved_parameters_required_after_exact_entra_readback_before_bicep_write": true,
+    "manifest_path_template": "out/m365/teams-sharepoint/bff-live-activation/<expected-activation-sha256>/prepared/prepared-inputs.redacted.json",
+    "manifest_fields_exact": [
+      "schema_version",
+      "approved_commit_sha",
+      "approved_tree_sha",
+      "activation_hash",
+      "bicep_snapshot_sha256",
+      "bicep_parameters_snapshot_sha256",
+      "function_package_sha256",
+      "spfx_package_sha256",
+      "prepared_inputs_sha256"
+    ],
+    "artifacts_exact": [
+      "immutable Bicep template snapshot",
+      "immutable resolved Bicep parameter snapshot with the verified Entra appId binding",
+      "prebuilt Azure Functions OneDeploy package bytes",
+      "prebuilt site-scoped SPFx .sppkg bytes"
+    ],
+    "all_bytes_hash_bound_to_approved_commit_tree_and_activation_hash": true,
+    "provider_write_may_build_rebuild_or_mutate_inputs": false,
+    "static_hash_or_byte_drift_behavior": "stop_before_first_write",
+    "resolved_parameter_or_manifest_drift_behavior": "stop_before_bicep_write_with_FAILED_PARTIAL_after_prior_Entra_write"
+  },
+  "final_pre_write_binding": {
+    "occurs_after": [
+      "approval snapshot validation",
+      "exact account and target read-only preflight",
+      "complete duplicate and broader-permission inventory checks",
+      "exclusive lock acquisition",
+      "new ledger initialization",
+      "prebuilt package and Bicep snapshot preparation"
+    ],
+    "ordered_checks": [
+      "git status output is exactly empty",
+      "HEAD equals approved commit and HEAD tree equals approved tree",
+      "rebuild offline activation plan from repository files",
+      "offline plan status equals READY",
+      "recomputed activation_hash equals expected_activation_sha256",
+      "recomputed activation_hash equals the earlier gate-time recomputation",
+      "static Function, SPFx and Bicep snapshots equal the owner-bound commit, tree and activation hash",
+      "append and fsync redacted PRE_WRITE_BINDING event; after exact Entra create-or-reuse readback, atomically bind the resolved parameter snapshot and full prepared-input manifest before the Bicep write",
+      "recheck git status output is exactly empty",
+      "invoke the first allowlisted write without any intervening repository or plan mutation"
+    ],
+    "hash_mismatch_behavior": "stop_before_first_write"
+  },
+  "execution": {
+    "stop_on_first_error": true,
+    "step_order_may_change": false,
+    "automatic_rollback_allowed": false,
+    "automatic_deletion_allowed": false,
+    "delete_uninstall_retract_purge_or_remove_commands_allowed": false,
+    "foreign_or_preexisting_resource_mutation_allowed": false,
+    "synthetic_create_or_exact_reuse_only": true,
+    "resume": {
+      "mvp_enabled": false,
+      "cli_flag_exposed": false,
+      "request_behavior": "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP",
+      "enablement_prerequisite": "provider-specific read-only reconciliation exists and is independently verified for every write step and every crash window",
+      "failed_partial_behavior": "remain_FAILED_PARTIAL_and_require_human_review",
+      "blind_retry_allowed": false
+    }
+  },
+  "steps": [
+    {
+      "order": 1,
+      "id": "register_azure_providers",
+      "mode": "azure_write",
+      "exact_targets": [
+        "Microsoft.Web",
+        "Microsoft.Storage",
+        "Microsoft.OperationalInsights"
+      ],
+      "idempotency": "register only providers not already Registered; read back each exact namespace"
+    },
+    {
+      "order": 2,
+      "id": "ensure_resource_group",
+      "mode": "azure_write",
+      "exact_target": "37cd9645-6cb9-4278-88ee-e80377cd951c/rg-nac-bff-test@germanywestcentral",
+      "idempotency": "create when absent or reuse only exact name, subscription, location and approved tags"
+    },
+    {
+      "order": 3,
+      "id": "ensure_entra_api_application",
+      "mode": "entra_write",
+      "exact_target": "api://funktion8.de/nac-bff",
+      "idempotency": "zero matches permits one create; one exact match permits reuse or bounded update; duplicate matches stop"
+    },
+    {
+      "order": 4,
+      "id": "deploy_bicep_baseline",
+      "mode": "azure_write",
+      "exact_target": "rg-nac-bff-test/func-nac-bff-test-funktion8",
+      "idempotency": "deploy only the prebuilt hash-bound Bicep and parameter snapshots with exact verified Entra appId as bffApiAudience and read back outputs"
+    },
+    {
+      "order": 5,
+      "id": "assign_sites_selected",
+      "mode": "graph_write",
+      "exact_target": "deployed user-assigned managed identity service principal",
+      "idempotency": "create or reuse exactly one Sites.Selected application-role assignment; any additional Graph role stops"
+    },
+    {
+      "order": 6,
+      "id": "grant_target_site_read",
+      "mode": "graph_write",
+      "exact_target": "notary_team_01 site_id with role read",
+      "idempotency": "create or reuse exactly one managed-identity grant with roles exactly [read]; duplicates or broader roles stop"
+    },
+    {
+      "order": 7,
+      "id": "deploy_function_package",
+      "mode": "azure_write",
+      "exact_target": "func-nac-bff-test-funktion8",
+      "idempotency": "OneDeploy the prebuilt hash-bound Function package bytes with remote build; do not rebuild or mutate package bytes during provider execution"
+    },
+    {
+      "order": 8,
+      "id": "build_and_deploy_spfx",
+      "mode": "m365_write",
+      "exact_target": "tenant App Catalog ProductId b7a5417c-0dd3-4e69-87c7-95adfd7e8a58 and exact notary_team_01 site/page/webpart",
+      "idempotency": "deploy the prebuilt hash-bound .sppkg bytes, add or overwrite one catalog record, site-install or upgrade, and create or update the exact page/webpart without tenant-wide activation; no live-phase rebuild is allowed"
+    },
+    {
+      "order": 9,
+      "id": "approve_spfx_bff_scope",
+      "mode": "m365_write",
+      "exact_target": "NaC M365 BFF/Matter.Read",
+      "idempotency": "approve or reuse only the exact delegated BFF scope; Graph or additional delegated scopes stop"
+    },
+    {
+      "order": 10,
+      "id": "seed_synthetic_workspace",
+      "mode": "graph_write",
+      "exact_target": "NAC-SYN-MATTER-001 in the four exact allowlisted list IDs",
+      "idempotency": "create missing canonical synthetic rows or reuse one exact row per canonical key; duplicates stop and are never auto-deleted"
+    },
+    {
+      "order": 11,
+      "id": "run_access_and_readback_smokes",
+      "mode": "live_verify",
+      "exact_target": "healthz before authentication; assigned allow, valid deputy allow, unauthorized deny and tampered-input deny without existence leakage; deterministic restoration to assigned synthetic state; final authenticated synthetic read; then readyz",
+      "ordered_checks_exact": [
+        "GET /healthz succeeds before any authentication attempt",
+        "assigned-user authenticated synthetic read succeeds with an allowlisted redacted DTO",
+        "valid-deputy authenticated synthetic read succeeds with an allowlisted redacted DTO",
+        "unauthorized and manipulated-input authenticated requests fail closed without existence leakage",
+        "temporary synthetic access state is restored deterministically to the captured assigned baseline",
+        "authenticated synthetic read after restoration succeeds",
+        "GET /readyz succeeds only after the successful authenticated read"
+      ],
+      "restoration_is_bounded_test_state_restoration_not_provider_rollback": true,
+      "synchronous_restoration_attempted_in_finally": true,
+      "process_termination_before_verified_restoration_cannot_pass": true,
+      "sigkill_restoration_claimed": false,
+      "crash_recovery": "FAILED_PARTIAL_or_incomplete_run_requires_read_only_reconciliation_and_manual_recovery",
+      "restoration_failure_behavior": "FAILED_PARTIAL_and_stop_without_readyz_or_later_step",
+      "idempotency": "bounded BFF and Graph REST v1.0 verification with deterministic synthetic-state restoration",
+      "authenticated_denial_response_exact": {
+        "status": 403,
+        "error": {
+          "code": "ACCESS_DENIED"
+        }
+      },
+      "denial_response_same_for_unauthorized_and_manipulated_input": true,
+      "m365_process_boundary_403_normalization": "only_exact_allowlisted_BFF_GET_and_exact_CLI_403_status_message_are_normalized_to_authenticated_denial_response_exact",
+      "raw_nonzero_stdout_stderr_or_response_body_forwarded": false
+    },
+    {
+      "order": 12,
+      "id": "run_idempotency_and_evidence",
+      "mode": "live_verify",
+      "exact_target": "same activation hash, targets and canonical keys",
+      "idempotency": "read-only convergence across all resources, zero duplicate readback, causal deployment-input binding, final ledger and allowlisted redacted evidence; replaying provider writes is not claimed"
+    }
+  ],
+  "evidence_policy": {
+    "artifact_path_template": "out/m365/teams-sharepoint/bff-live-activation/<expected-activation-sha256>/activation.redacted.json",
+    "strict_top_level_allowlist": [
+      "schema_version",
+      "status",
+      "started_at_utc",
+      "finished_at_utc",
+      "activation_hash",
+      "approved_commit_sha",
+      "approved_tree_sha",
+      "approval_reference_sha256",
+      "toolchain_attestations_sha256",
+      "target_binding_sha256",
+      "permission_boundary_sha256",
+      "ledger_head_sha256",
+      "step_results",
+      "summary"
+    ],
+    "step_result_allowlist": [
+      "order",
+      "id",
+      "status",
+      "attempt",
+      "classification",
+      "http_status",
+      "stable_error_code",
+      "request_sha256",
+      "response_sha256",
+      "resource_reference_sha256"
+    ],
+    "summary_field_allowlist_exact": [
+      "required_step_count",
+      "passed_step_count",
+      "failed_step_count",
+      "duplicate_count",
+      "broader_permission_count",
+      "automatic_rollback_count",
+      "automatic_deletion_count",
+      "writes_started",
+      "ledger_hash_chain_valid",
+      "prebuilt_inputs_verified",
+      "healthz_before_auth_passed",
+      "authenticated_read_passed",
+      "readyz_after_authenticated_read_passed",
+      "synthetic_state_restored",
+      "assigned_access_passed",
+      "deputy_access_passed",
+      "denied_access_passed",
+      "tampered_access_passed",
+      "resume_enabled"
+    ],
+    "raw_target_ids_in_evidence_allowed": false,
+    "raw_urls_or_graph_paths_allowed": false,
+    "raw_commands_or_provider_responses_allowed": false,
+    "stdout_or_stderr_allowed": false,
+    "headers_tokens_cookies_credentials_certificates_or_private_keys_allowed": false,
+    "environment_values_allowed": false,
+    "people_mandate_document_or_production_data_allowed": false,
+    "unknown_fields_behavior": "reject_artifact",
+    "secret_sentinel_match_behavior": "reject_artifact_and_remain_or_enter_FAILED_PARTIAL",
+    "local_trust_boundary": {
+      "tamper_evident_against_accidental_or_cross_process_mutation": true,
+      "cryptographically_authentic_against_same_os_account": false,
+      "formal_legal_audit_claimed": false,
+      "formal_audit_requires": "external_immutable_or_signature_lane",
+      "formal_audit_lane_status": "DEFERRED_OUTSIDE_SYNTHETIC_MVP"
+    }
+  },
+  "pass_condition": {
+    "final_state_exact": "PASSED",
+    "all_twelve_steps_passed_once": true,
+    "ledger_hash_chain_valid": true,
+    "exact_targets_reconciled": true,
+    "permissions_exactly_sites_selected_and_site_read": true,
+    "duplicates_exact": 0,
+    "automatic_rollbacks_exact": 0,
+    "automatic_deletions_exact": 0,
+    "prebuilt_inputs_verified": true,
+    "toolchain_attestations_match_owner_gate_and_host_success_receipt": true,
+    "healthz_before_auth_passed": true,
+    "authenticated_read_passed": true,
+    "readyz_after_authenticated_read_passed": true,
+    "synthetic_state_restored": true,
+    "resume_enabled": false,
+    "evidence_allowlist_valid": true,
+    "assigned_access_passed": true,
+    "deputy_access_passed": true,
+    "denied_access_passed": true,
+    "tampered_access_passed": true,
+    "write_replay_idempotency_claimed": false
+  },
+  "failure_behavior": {
+    "gate_hash_git_target_permission_duplicate_or_lock_failure_before_first_write": "stop_with_current_state_and_zero_writes",
+    "first_error_after_any_write": "append_FAILED_event_set_FAILED_PARTIAL_release_lock_and_stop_except_when_finalization_integrity_cannot_be_proved",
+    "resume_request": "reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP",
+    "automatic_recovery_rollback_or_deletion": "forbidden",
+    "human_remediation": "requires a new explicit owner decision; changed bindings require a new consolidated owner gate",
+    "finalization_integrity_failure": "retain_lock_write_redacted_recovery_marker_and_require_owner_bound_read_only_reconcile_before_explicit_unlock"
+  },
+  "verification_contract": "workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml"
+}

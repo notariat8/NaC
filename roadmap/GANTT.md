@@ -193,9 +193,19 @@ bereits ausschließlich `AadHttpClient -> NaC BFF`; Mandats-, Aufgaben-,
 Status- und Fristdaten sind aus der Paket-Fixture entfernt. Der vollständige
 Azure-/Entra-/Graph-/SPFx-Aktivierungsablauf ist zusätzlich über
 `bff-azure-activation-plan` einschließlich SPFx-Quellmanifest, exakter
-Site-ID und vor Bicep gebundener Entra-`appId` hashgebunden. Die
-NaC-BFF-Live-Aktivierung bleibt
-bis zum einzigen konsolidierten Owner-Gate ausdrücklich `DEFERRED`.
+Site-ID und vor Bicep gebundener Entra-`appId` hashgebunden.
+Der Aktivierungs-Track wird jetzt von Issue #632 mit `AC-632-01` bis
+`AC-632-08` geführt; Issue #620 bleibt Parent-Kontext der MVP-Testumgebung.
+Der zwölfstufige owner-gated Live-Runner ist offline mit exakter
+`ofunk`-Freigabebindung, vollständiger Pre-Write-Duplikat-/Breitrechteinventur,
+zielglobalem Lock, vorgebauten hashgebundenen Function-/SPFx-Paketen und
+Bicep-/Parameter-Snapshots, `healthz` vor Auth, `readyz` nach
+authentifiziertem Read, synthetischer Zustandswiederherstellung,
+hashverkettetem Ledger und exakt allowlisteter Evidence vorbereitet. Resume
+ist für den MVP bis zu providerspezifischer read-only Reconciliation aller
+Write-Schritte und Crash-Fenster deaktiviert. Die NaC-BFF-Live-Aktivierung
+selbst bleibt bis zum einzigen konsolidierten Owner-Gate ausdrücklich
+`DEFERRED`.
 
 ## Regel
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -30,6 +31,7 @@ from nac_m365_graph.mvp_test_environment_deploy import (
     write_mvp_test_environment_deploy_artifact,
 )
 from nac_m365_graph.privileged_change import DEFAULT_PROVISIONED_STATE
+from nac_m365_graph.node_runtime_integrity import build_node_runtime_manifest
 
 
 PASSED_ROLE_CHECKS = [
@@ -38,6 +40,24 @@ PASSED_ROLE_CHECKS = [
     {"scenario": "deny", "expected": "DENY", "actual": "DENY", "passed": True},
 ]
 _DEFAULT_RUNNER = object()
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_user_toolchain(root: Path) -> tuple[Path, Path, str, str]:
+    binary = root / "m365-runtime" / "dist" / "index.js"
+    node_bin = root / "node-bin"
+    binary.parent.mkdir(parents=True)
+    node_bin.mkdir()
+    binary.write_text("#!/bin/sh\n", encoding="utf-8")
+    node = node_bin / "node"
+    node.write_text("#!/bin/sh\n", encoding="utf-8")
+    binary.chmod(0o700)
+    node.chmod(0o700)
+    bundle_digest = build_node_runtime_manifest(binary.parent.parent).digest
+    return binary, node_bin, bundle_digest, _file_sha256(node)
 
 
 class MvpTestEnvironmentDeployTests(unittest.TestCase):
@@ -336,32 +356,34 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASSED")
 
     @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
-    def test_m365_runner_uses_explicit_binary_home_node_path_and_shell_false(self, run) -> None:
+    def test_m365_runner_uses_pinned_tools_minimal_env_timeout_and_shell_false(self, run) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            binary = root / "m365-bin" / "m365"
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
             home = root / "m365-home"
-            node_bin = root / "node-bin"
-            binary.parent.mkdir()
             home.mkdir()
-            node_bin.mkdir()
-            binary.write_text("#!/bin/sh\n", encoding="utf-8")
-            (node_bin / "node").write_text("#!/bin/sh\n", encoding="utf-8")
-            binary.chmod(0o700)
-            (node_bin / "node").chmod(0o700)
             run.return_value = subprocess.CompletedProcess([str(binary), "status"], 0, "{}", "")
 
             runner = M365CliCommandRunner(
                 binary=binary,
                 home=home,
                 node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                timeout_seconds=17,
                 environ={
-                    "PATH": "/usr/bin",
+                    "PATH": "/untrusted/path",
                     "LANG": "de_DE.UTF-8",
+                    "LC_ALL": "C.UTF-8",
+                    "TZ": "UTC",
+                    "NODE_OPTIONS": "--require=/tmp/payload.js",
+                    "NODE_EXTRA_CA_CERTS": "/tmp/rogue-ca.pem",
+                    "HTTP_PROXY": "http://attacker.invalid",
+                    "HTTPS_PROXY": "http://attacker.invalid",
+                    "NO_PROXY": "*",
+                    "http_proxy": "http://attacker.invalid",
                     "M365_RUNTIME_CLIENT_SECRET": "runtime-secret",
-                    "M365_RUNTIME_CERTIFICATE_PATH": "/secret/runtime.pem",
                     "M365_PROVISIONER_PRIVATE_KEY": "provisioner-key",
-                    "M365_PROVISIONER_ACCESS_TOKEN": "provisioner-token",
                     "AZURE_CLIENT_SECRET": "azure-secret",
                     "GRAPH_ACCESS_TOKEN": "graph-token",
                 },
@@ -370,77 +392,479 @@ class MvpTestEnvironmentDeployTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         call = run.call_args
-        self.assertEqual(call.args[0][0], str(binary.resolve()))
-        self.assertEqual(call.args[0][1:], ["status", "--output", "json"])
+        process_argv = call.args[0]
+        self.assertRegex(process_argv[0], r"^/proc/self/fd/[0-9]+$")
+        self.assertEqual(
+            process_argv[1:3], ["--preserve-symlinks", "--require"]
+        )
+        self.assertEqual(
+            process_argv[-4:],
+            [str(binary), "status", "--output", "json"],
+        )
         self.assertFalse(call.kwargs["shell"])
-        self.assertEqual(call.kwargs["env"]["HOME"], str(home.resolve()))
-        self.assertEqual(call.kwargs["env"]["PATH"].split(os.pathsep)[0], str(node_bin.resolve()))
-        self.assertEqual(call.kwargs["env"]["LANG"], "de_DE.UTF-8")
-        for forbidden in (
-            "M365_RUNTIME_CLIENT_SECRET",
-            "M365_RUNTIME_CERTIFICATE_PATH",
-            "M365_PROVISIONER_PRIVATE_KEY",
-            "M365_PROVISIONER_ACCESS_TOKEN",
-            "AZURE_CLIENT_SECRET",
-            "GRAPH_ACCESS_TOKEN",
-        ):
-            self.assertNotIn(forbidden, call.kwargs["env"])
+        self.assertEqual(call.kwargs["cwd"], binary.parent)
+        self.assertEqual(call.kwargs["timeout"], 17.0)
+        self.assertEqual(len(call.kwargs["pass_fds"]), 4)
+        environment = call.kwargs["env"]
+        self.assertRegex(
+            environment["NAC_NODE_RUNTIME_MANIFEST"],
+            r"^/proc/self/fd/[0-9]+$",
+        )
+        self.assertEqual(
+            {
+                key: value
+                for key, value in environment.items()
+                if key != "NAC_NODE_RUNTIME_MANIFEST"
+            },
+            {
+                "HOME": str(home),
+                "LANG": "de_DE.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "PATH": os.pathsep.join(("/usr/bin", "/bin")),
+                "TZ": "UTC",
+                "CLIMICROSOFT365_NOUPDATE": "1",
+                "NODE": process_argv[0],
+            },
+        )
 
     @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
-    def test_m365_readiness_requires_authenticated_expected_tenant_session(self, run) -> None:
+    def test_m365_runner_reattests_cli_immediately_before_subprocess(self, run) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            binary = Path(tmp) / "m365"
-            binary.write_text("#!/bin/sh\n", encoding="utf-8")
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            binary.write_text("#!/bin/sh\n# replaced\n", encoding="utf-8")
             binary.chmod(0o700)
-            runner = M365CliCommandRunner(binary=binary, environ={"PATH": "/usr/bin"})
 
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_RUNTIME_BUNDLE_MISMATCH$",
+            ):
+                runner.run(("m365", "status", "--output", "json"))
+
+        run.assert_not_called()
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_reattests_node_immediately_before_subprocess(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            node = node_bin / "node"
+            node.write_text("#!/bin/sh\n# replaced\n", encoding="utf-8")
+            node.chmod(0o700)
+
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_NODE_BINARY_SHA256_MISMATCH$",
+            ):
+                runner.run(("m365", "status", "--output", "json"))
+
+        run.assert_not_called()
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_blocks_destructive_unknown_and_free_arguments(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            blocked = (
+                ("m365", "spo", "app", "remove", "--id", "13074f16-12e3-4237-9a20-000000000001"),
+                ("m365", "status", "free", "--output", "json"),
+                (
+                    "m365",
+                    "request",
+                    "--url",
+                    "https://graph.microsoft.com/v1.0/me?$select=id",
+                    "--resource",
+                    "https://graph.microsoft.com",
+                    "--method",
+                    "delete",
+                    "--output",
+                    "json",
+                ),
+                (
+                    "m365",
+                    "spo",
+                    "app",
+                    "list",
+                    "--appCatalogScope",
+                    "tenant",
+                    "--output",
+                    "json",
+                    "free",
+                ),
+            )
+            for command in blocked:
+                with self.subTest(command=command), self.assertRaisesRegex(
+                    M365CliReadinessError,
+                    "^M365_CLI_COMMAND_NOT_ALLOWLISTED$",
+                ):
+                    runner.run(command)
+
+        run.assert_not_called()
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_allows_every_real_bff_and_spfx_command_schema(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            solution = root / "run" / "spfx" / "nac-bpmn-viewer" / "sharepoint" / "solution"
+            solution.mkdir(parents=True)
+            sppkg = str(solution / "nac-bpmn-viewer.sppkg")
+            teams_zip = str(solution / "nac-bpmn-viewer.zip")
+            identifier = "13074f16-12e3-4237-9a20-000000000001"
+            site = "https://funktion8.sharepoint.com/sites/NaC-Notar-01"
+            team = "124f1b11-207d-4307-bfd1-ac0fd73aa90a"
+            page = "NaC-Testumgebung.aspx"
+            graph_catalog = (
+                "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/"
+                f"{identifier}?$expand=appDefinitions"
+            )
+            graph_installed = (
+                f"https://graph.microsoft.com/v1.0/teams/{team}/installedApps?"
+                "$filter=teamsApp/externalId%20eq%20'"
+                f"{identifier}'&$expand=teamsApp"
+            )
+            commands = [
+                ("m365", "status", "--output", "json"),
+                ("m365", "spo", "serviceprincipal", "grant", "list", "--output", "json"),
+                ("m365", "spo", "serviceprincipal", "permissionrequest", "list", "--output", "json"),
+                ("m365", "spo", "serviceprincipal", "permissionrequest", "approve", "--id", identifier, "--output", "none"),
+                ("m365", "spo", "app", "list", "--appCatalogScope", "tenant", "--output", "json"),
+                ("m365", "spo", "app", "get", "--name", "nac-bpmn-viewer.sppkg", "--appCatalogScope", "tenant", "--output", "json"),
+                ("m365", "spo", "app", "add", "--filePath", sppkg, "--appCatalogScope", "tenant", "--output", "none"),
+                ("m365", "spo", "app", "add", "--filePath", sppkg, "--appCatalogScope", "tenant", "--overwrite", "--output", "none"),
+                ("m365", "spo", "app", "deploy", "--id", identifier, "--appCatalogScope", "tenant", "--output", "none"),
+                ("m365", "spo", "app", "instance", "list", "--siteUrl", site, "--output", "json"),
+                ("m365", "spo", "app", "install", "--id", identifier, "--siteUrl", site, "--appCatalogScope", "tenant", "--output", "none"),
+                ("m365", "spo", "app", "upgrade", "--id", identifier, "--siteUrl", site, "--appCatalogScope", "tenant", "--output", "none"),
+                ("m365", "spo", "page", "list", "--webUrl", site, "--output", "json"),
+                ("m365", "spo", "page", "get", "--name", page, "--webUrl", site, "--output", "json"),
+                ("m365", "spo", "page", "set", "--name", page, "--webUrl", site, "--layoutType", "Article", "--title", "NaC-Testumgebung", "--output", "none"),
+                ("m365", "spo", "page", "add", "--name", page, "--webUrl", site, "--layoutType", "Article", "--title", "NaC-Testumgebung", "--output", "none"),
+                ("m365", "spo", "page", "set", "--name", page, "--webUrl", site, "--content", '[{"controlType":0,"pageSettingsSlice":{"isDefaultDescription":true,"isDefaultThumbnail":true}}]', "--output", "none"),
+                ("m365", "spo", "page", "clientsidewebpart", "add", "--webUrl", site, "--pageName", page, "--webPartId", "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21", "--output", "none"),
+                ("m365", "spo", "page", "set", "--name", page, "--webUrl", site, "--publish", "--output", "none"),
+                ("m365", "spo", "app", "teamspackage", "download", "--appName", "nac-bpmn-viewer.sppkg", "--fileName", teams_zip, "--output", "none"),
+                ("m365", "teams", "app", "list", "--distributionMethod", "organization", "--output", "json"),
+                ("m365", "teams", "app", "publish", "--filePath", teams_zip, "--output", "json"),
+                ("m365", "teams", "app", "update", "--id", identifier, "--filePath", teams_zip, "--output", "none"),
+                ("m365", "teams", "app", "install", "--id", identifier, "--teamId", team, "--output", "none"),
+                ("m365", "request", "--url", graph_catalog, "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", graph_installed, "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://graph.microsoft.com/v1.0/me?$select=id", "--resource", "https://graph.microsoft.com", "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001?purpose=view_synthetic_matter_workspace", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
+                ("m365", "request", "--url", "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/notary_team_01/matters/NAC-SYN-MATTER-001?purpose=view_synthetic_matter_workspace&site_id=foreign", "--resource", "api://funktion8.de/nac-bff", "--method", "get", "--output", "json"),
+            ]
+            run.return_value = subprocess.CompletedProcess([], 0, "{}", "")
+            for command in commands:
+                with self.subTest(command=command):
+                    self.assertEqual(runner.run(command).returncode, 0)
+
+        self.assertEqual(run.call_count, len(commands))
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_readiness_binds_exact_user_app_tenant_and_public_cloud(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+
+            canonical = {
+                "connectedAs": "ofunk@funktion8.de",
+                "appId": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
+                "appTenant": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
+                "cloudType": "Public",
+            }
             run.return_value = subprocess.CompletedProcess(
                 [str(binary), "status"],
                 0,
-                json.dumps(
-                    {
-                        "connectedAs": "ofunk@funktion8.de",
-                        "appTenant": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
-                        "cloudType": "Public",
-                    }
-                ),
+                json.dumps(canonical),
                 "",
             )
             self.assertTrue(runner.check_readiness())
 
-            run.return_value = subprocess.CompletedProcess(
-                [str(binary), "status"],
-                0,
-                json.dumps(
-                    {
-                        "connectedAs": "ofunk@funktion8.de",
-                        "appTenant": "870c862b-56f7-4c9b-b0d9-f1f7d32c835c",
-                        "cloudType": "USGov",
-                    }
-                ),
-                "",
-            )
-            self.assertFalse(runner.check_readiness())
+            for field, wrong_value in (
+                ("connectedAs", "other@funktion8.de"),
+                ("appId", "00000000-0000-0000-0000-000000000000"),
+                ("appTenant", "00000000-0000-0000-0000-000000000000"),
+                ("cloudType", "USGov"),
+            ):
+                payload = {**canonical, field: wrong_value}
+                run.return_value = subprocess.CompletedProcess(
+                    [str(binary), "status"],
+                    0,
+                    json.dumps(payload),
+                    "",
+                )
+                with self.subTest(field=field):
+                    self.assertFalse(runner.check_readiness())
 
+    def test_m365_runner_rejects_path_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path_binary = root / "path-bin" / "m365"
+            path_binary.parent.mkdir()
+            path_binary.write_text("#!/bin/sh\n", encoding="utf-8")
+            path_binary.chmod(0o700)
+            with (
+                patch.object(M365CliCommandRunner, "_LOCAL_BINARY", root / "missing"),
+                self.assertRaisesRegex(
+                    M365CliReadinessError,
+                    "^M365_CLI_BINARY_UNAVAILABLE$",
+                ),
+            ):
+                M365CliCommandRunner(environ={"PATH": str(path_binary.parent)})
+
+    def test_m365_runner_rejects_world_writable_binary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "m365-runtime/dist/index.js"
+            binary.parent.mkdir(parents=True)
+            binary.write_text("#!/bin/sh\n", encoding="utf-8")
+            binary.chmod(0o777)
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_BINARY_MODE_UNSAFE$",
+            ):
+                M365CliCommandRunner(
+                    binary=binary,
+                    expected_binary_sha256=_file_sha256(binary),
+                    environ={},
+                )
+
+    def test_m365_runner_rejects_binary_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "m365-real"
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.chmod(0o700)
+            binary = root / "m365"
+            binary.symlink_to(target)
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_BINARY_SYMLINK_REJECTED$",
+            ):
+                M365CliCommandRunner(
+                    binary=binary,
+                    expected_binary_sha256=_file_sha256(target),
+                    environ={},
+                )
+
+    def test_m365_runner_requires_and_verifies_user_owned_binary_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "m365-runtime/dist/index.js"
+            binary.parent.mkdir(parents=True)
+            binary.write_text("#!/bin/sh\n", encoding="utf-8")
+            binary.chmod(0o700)
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_BINARY_SHA256_INVALID$",
+            ):
+                M365CliCommandRunner(binary=binary, environ={})
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_RUNTIME_BUNDLE_MISMATCH$",
+            ):
+                M365CliCommandRunner(
+                    binary=binary,
+                    expected_binary_sha256="0" * 64,
+                    environ={},
+                )
+
+    def test_m365_runner_requires_hash_for_user_owned_node(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, _ = _write_user_toolchain(root)
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_NODE_BINARY_SHA256_REQUIRED$",
+            ):
+                M365CliCommandRunner(
+                    binary=binary,
+                    node_bin=node_bin,
+                    expected_binary_sha256=binary_sha256,
+                    environ={},
+                )
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_timeout_is_bounded_and_redacted(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                timeout_seconds=0.5,
+                environ={},
+            )
+            run.side_effect = subprocess.TimeoutExpired(
+                cmd=[str(binary), "status"],
+                timeout=0.5,
+                output="secret-output",
+                stderr="secret-error",
+            )
+            with self.assertRaisesRegex(
+                M365CliReadinessError,
+                "^M365_CLI_COMMAND_TIMEOUT$",
+            ) as captured:
+                runner.run(("m365", "status", "--output", "json"))
+
+        self.assertIsNone(captured.exception.__cause__)
+        self.assertNotIn("secret", str(captured.exception))
+        self.assertEqual(run.call_args.kwargs["timeout"], 0.5)
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_redacts_nonzero_process_output(self, run) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
             run.return_value = subprocess.CompletedProcess(
                 [str(binary), "status"],
-                0,
-                json.dumps(
-                    {
-                        "connectedAs": "",
-                        "appTenant": "00000000-0000-0000-0000-000000000000",
-                        "cloudType": "Public",
-                    }
-                ),
-                "",
+                1,
+                "access-token-value",
+                "tenant secret detail",
             )
-            self.assertFalse(runner.check_readiness())
+            result = runner.run(("m365", "status", "--output", "json"))
+
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "M365_CLI_COMMAND_FAILED")
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_normalizes_only_exact_allowlisted_bff_403(self, run) -> None:
+        base_url = (
+            "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/"
+            "notary_team_01/matters/NAC-SYN-MATTER-001"
+            "?purpose=view_synthetic_matter_workspace"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "request"],
+                1,
+                "",
+                "Error: Request failed with status code 403",
+            )
+            for url in (base_url, f"{base_url}&site_id=foreign"):
+                with self.subTest(url=url):
+                    result = runner.run(
+                        (
+                            "m365",
+                            "request",
+                            "--url",
+                            url,
+                            "--resource",
+                            "api://funktion8.de/nac-bff",
+                            "--method",
+                            "get",
+                            "--output",
+                            "json",
+                        )
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertEqual(result.stderr, "")
+                    self.assertEqual(
+                        json.loads(result.stdout),
+                        {"status": 403, "error": {"code": "ACCESS_DENIED"}},
+                    )
+
+    @patch("nac_m365_graph.mvp_test_environment_deploy.subprocess.run")
+    def test_m365_runner_rejects_ambiguous_or_body_injected_403(self, run) -> None:
+        base_url = (
+            "https://func-nac-bff-test-funktion8.azurewebsites.net/v1/workspaces/"
+            "notary_team_01/matters/NAC-SYN-MATTER-001"
+            "?purpose=view_synthetic_matter_workspace"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary, node_bin, binary_sha256, node_sha256 = _write_user_toolchain(root)
+            runner = M365CliCommandRunner(
+                binary=binary,
+                node_bin=node_bin,
+                expected_binary_sha256=binary_sha256,
+                expected_node_sha256=node_sha256,
+                environ={},
+            )
+            run.return_value = subprocess.CompletedProcess(
+                [str(binary), "request"],
+                1,
+                "untrusted body says Request failed with status code 403",
+                "Request failed with status code 500",
+            )
+            result = runner.run(
+                (
+                    "m365",
+                    "request",
+                    "--url",
+                    base_url,
+                    "--resource",
+                    "api://funktion8.de/nac-bff",
+                    "--method",
+                    "get",
+                    "--output",
+                    "json",
+                )
+            )
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "M365_CLI_COMMAND_FAILED")
 
     def test_m365_runner_rejects_unavailable_explicit_binary(self) -> None:
-        with self.assertRaisesRegex(M365CliReadinessError, "unavailable"):
+        with self.assertRaisesRegex(
+            M365CliReadinessError,
+            "^M365_CLI_BINARY_UNAVAILABLE$",
+        ):
             M365CliCommandRunner(
                 binary="/missing/nac-m365",
-                environ={"PATH": ""},
+                environ={},
             )
 
     def test_modified_state_is_rejected_before_plan_readiness_or_any_write(self) -> None:

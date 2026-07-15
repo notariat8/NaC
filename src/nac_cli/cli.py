@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -27,6 +28,9 @@ from nac_agent_ops.batch_run_envelope import (
 from nac_bff.azure_activation import (
     build_azure_bff_activation_plan,
     format_azure_bff_activation_plan,
+)
+from nac_bff.azure_activation_attestations import (
+    build_activation_attestation_plan,
 )
 from nac_bff.azure_readiness import (
     build_azure_bff_readiness,
@@ -686,6 +690,9 @@ def build_parser() -> argparse.ArgumentParser:
             "plan",
             "application-owner-readiness",
             "bff-azure-activation-plan",
+            "bff-azure-activation-attestations",
+            "bff-azure-activate-live",
+            "bff-azure-activation-recovery",
             "bff-azure-readiness",
             "business-case-type-read-plan",
             "bpmn-viewer-plan",
@@ -1255,6 +1262,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Blockiert den Evidence-Export, wenn Runtime-Smoke- oder Runtime-Metadata-Artefakte fehlen.",
     )
+    teams_sharepoint.add_argument("--bff-attestation-azure-cli", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-m365-cli", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-m365-node", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-build-python", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-build-node", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-build-npm-cli", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-gh-cli", type=Path)
+    teams_sharepoint.add_argument("--bff-attestation-provisioner-certificate", type=Path)
     teams_sharepoint.add_argument("--owner-approved", action="store_true", help="Pflicht für Live-Apply.")
     teams_sharepoint.add_argument("--format", choices=["text", "json"], default="text")
     m365.set_defaults(func=command_m365)
@@ -1965,6 +1980,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             ("Business Case Type Runtime", "validate_business_case_type_runtime.py"),
             ("Business Case Type Graph Read Edge", "validate_business_case_type_graph_read_edge.py"),
             ("Business Case Type Migration S5", "validate_business_case_type_migration.py"),
+            ("M365 Azure BFF Live Activation Contract", "validate_m365_azure_bff_live_activation.py"),
         ]
         overall_rc = 0
         for title, script_name in validators:
@@ -1998,6 +2014,7 @@ def command_contracts(args: argparse.Namespace) -> int:
             "scripts/validate_business_case_type_runtime.py",
             "scripts/validate_business_case_type_graph_read_edge.py",
             "scripts/validate_business_case_type_migration.py",
+            "scripts/validate_m365_azure_bff_live_activation.py",
         ]
         overall_rc = 0
         for script_name in validators:
@@ -2456,6 +2473,41 @@ def command_m365(args: argparse.Namespace) -> int:
             else:
                 print(format_azure_bff_activation_plan(plan).rstrip())
             return 0 if plan["status"] == "READY" else 2
+
+        if args.teams_sharepoint_command == "bff-azure-activation-attestations":
+            if args.bff_attestation_provisioner_certificate is None:
+                payload = {
+                    "schema_version": "nac.m365-azure-bff-activation-attestations/v1",
+                    "status": "NOT_READY",
+                    "error": {"code": "PROVISIONER_CERTIFICATE_PATH_REQUIRED"},
+                    "reads_private_key": False,
+                    "executes_provider_requests": False,
+                }
+            else:
+                payload = build_activation_attestation_plan(
+                    provisioner_certificate_path=(
+                        args.bff_attestation_provisioner_certificate
+                    ),
+                    azure_cli_path=args.bff_attestation_azure_cli,
+                    m365_cli_path=args.bff_attestation_m365_cli,
+                    m365_node_path=args.bff_attestation_m365_node,
+                    build_python_path=args.bff_attestation_build_python,
+                    build_node_path=args.bff_attestation_build_node,
+                    build_npm_cli_path=args.bff_attestation_build_npm_cli,
+                    gh_cli_path=args.bff_attestation_gh_cli,
+                )
+            if args.format == "json":
+                print_json(payload)
+            else:
+                print(f"STATUS: {payload['status']}")
+                if payload["status"] == "READY":
+                    print(
+                        "Toolchain attestations: "
+                        f"{payload['toolchain_attestations_sha256']}"
+                    )
+                else:
+                    print(f"ERROR: {payload['error']['code']}")
+            return 0 if payload["status"] == "READY" else 2
 
         if args.teams_sharepoint_command == "bff-azure-readiness":
             readiness = build_azure_bff_readiness(repo_root)
@@ -7609,11 +7661,346 @@ def print_validation(errors: list[str], warnings: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = sys.argv[1:] if argv is None else argv
+    live_activation_index = _bff_azure_activate_live_command_index(effective_argv)
+    if live_activation_index is not None:
+        return _run_bff_azure_activate_live_command(effective_argv, live_activation_index)
+    recovery_index = _bff_azure_activation_recovery_command_index(effective_argv)
+    if recovery_index is not None:
+        return _run_bff_azure_activation_recovery_command(
+            effective_argv, recovery_index
+        )
     command_index = _business_case_type_read_plan_command_index(effective_argv)
     if command_index is not None:
         return _run_business_case_type_read_plan_command(effective_argv, command_index)
     args = build_parser().parse_args(effective_argv)
     return args.func(args)
+
+
+def _bff_azure_activate_live_command_index(argv: list[str]) -> int | None:
+    command = ("m365", "teams-sharepoint", "bff-azure-activate-live")
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _bff_azure_activation_recovery_command_index(argv: list[str]) -> int | None:
+    command = ("m365", "teams-sharepoint", "bff-azure-activation-recovery")
+    for index in range(len(argv) - len(command) + 1):
+        if tuple(argv[index : index + len(command)]) == command:
+            return index
+    return None
+
+
+def _add_bff_azure_owner_binding_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
+    parser.add_argument("--owner-approved", action="store_true")
+    parser.add_argument("--expected-activation-hash", required=True)
+    parser.add_argument("--approval-reference", required=True)
+    parser.add_argument("--approval-body-sha256", required=True)
+    parser.add_argument("--approved-commit", required=True)
+    parser.add_argument("--approved-tree", required=True)
+    parser.add_argument("--azure-cli-toolchain-sha256", required=True)
+    parser.add_argument("--m365-cli-sha256", required=True)
+    parser.add_argument("--m365-node-sha256", required=True)
+    parser.add_argument("--build-python-sha256", required=True)
+    parser.add_argument("--build-node-sha256", required=True)
+    parser.add_argument("--build-npm-cli-sha256", required=True)
+    parser.add_argument("--gh-cli-sha256", required=True)
+    parser.add_argument("--provisioner-certificate-sha256", required=True)
+    parser.add_argument("--reason", required=True)
+    parser.add_argument("--correlation-id", required=True)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+
+
+def _live_activation_request_from_args(args: argparse.Namespace):
+    from nac_bff.azure_activation_runner import LiveActivationRequest
+
+    return LiveActivationRequest(
+        expected_activation_hash=args.expected_activation_hash,
+        owner_approval_reference=args.approval_reference,
+        approval_body_sha256=args.approval_body_sha256,
+        approved_commit=args.approved_commit,
+        approved_tree=args.approved_tree,
+        azure_cli_toolchain_sha256=args.azure_cli_toolchain_sha256,
+        m365_cli_sha256=args.m365_cli_sha256,
+        m365_node_sha256=args.m365_node_sha256,
+        build_python_sha256=args.build_python_sha256,
+        build_node_sha256=args.build_node_sha256,
+        build_npm_cli_sha256=args.build_npm_cli_sha256,
+        gh_cli_sha256=args.gh_cli_sha256,
+        provisioner_certificate_sha256=args.provisioner_certificate_sha256,
+        reason=args.reason,
+        correlation_id=args.correlation_id,
+        owner_approved=args.owner_approved,
+        execute_live_activation=True,
+        resume=False,
+    )
+
+
+def _run_bff_azure_activation_recovery_command(
+    argv: list[str], command_index: int
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint bff-azure-activation-recovery",
+        description=(
+            "Prueft einen gebundenen Finalization-Lock read-only oder gibt ihn "
+            "nach expliziter Owner-Bestaetigung frei; kein Resume und kein Providerzugriff."
+        ),
+    )
+    _add_bff_azure_owner_binding_arguments(parser)
+    parser.add_argument("--confirm-unlock", action="store_true")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    if "--owner-approved" not in command_argv:
+        output_format = "json" if "json" in command_argv else "text"
+        return _emit_bff_azure_activation_error("OWNER_GATE_CLOSED", output_format)
+    args = parser.parse_args(command_argv)
+    try:
+        from nac_bff.azure_activation_runner import (
+            reconcile_azure_bff_live_activation_lock,
+        )
+
+        request = _live_activation_request_from_args(args)
+        result = reconcile_azure_bff_live_activation_lock(
+            repo_root=resolve_repo_root(args.repo_root),
+            request=request,
+            confirm_unlock=args.confirm_unlock,
+        )
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "FINALIZATION_RECOVERY_RUNTIME_UNAVAILABLE", args.format
+        )
+    _print_bff_azure_activation_result(result, args.format)
+    return 0 if result.get("error", {}).get("code") in {
+        "FINALIZATION_RECOVERY_REQUIRED",
+        "FINALIZATION_STALE_SUCCESS_LOCK",
+        "FINALIZATION_LOCK_RECONCILED",
+    } else 2
+
+
+def _run_bff_azure_activate_live_command(argv: list[str], command_index: int) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nac m365 teams-sharepoint bff-azure-activate-live",
+        description=(
+            "Fuehrt die hash-, Commit- und Tree-gebundene Azure-BFF-Aktivierung "
+            "unter einem konsolidierten Owner-Gate aus."
+        ),
+    )
+    _add_bff_azure_owner_binding_arguments(parser)
+    parser.add_argument("--execute-live-activation", action="store_true")
+    command_argv = argv[:command_index] + argv[command_index + 3 :]
+    if (
+        "--owner-approved" not in command_argv
+        or "--execute-live-activation" not in command_argv
+    ):
+        output_format = (
+            "json"
+            if any(
+                command_argv[index : index + 2] == ["--format", "json"]
+                for index in range(len(command_argv) - 1)
+            )
+            else "text"
+        )
+        return _emit_bff_azure_activation_error("OWNER_GATE_CLOSED", output_format)
+    args = parser.parse_args(command_argv)
+
+    # Keep credential and provider initialization behind both explicit live gates.
+    if args.owner_approved is not True or args.execute_live_activation is not True:
+        payload = {
+            "schema_version": "nac.m365-azure-bff-live-activation-cli/v1",
+            "status": "BLOCKED",
+            "error": {"code": "OWNER_GATE_CLOSED"},
+            "writes_started": False,
+        }
+        _print_bff_azure_activation_result(payload, args.format)
+        return 2
+
+    try:
+        from nac_bff.azure_activation_composition import build_live_activation_execution_port
+        from nac_bff.azure_activation_runner import (
+            DEFAULT_OUTPUT_ROOT,
+            LiveActivationRequest,
+            run_azure_bff_live_activation,
+        )
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "LIVE_ACTIVATION_RUNTIME_UNAVAILABLE", args.format
+        )
+
+    try:
+        repo_root = resolve_repo_root(args.repo_root)
+        request = _live_activation_request_from_args(args)
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "LIVE_ACTIVATION_CONFIG_INVALID", args.format
+        )
+    try:
+        execution_port = build_live_activation_execution_port(repo_root, request)
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "LIVE_ACTIVATION_FACTORY_FAILED", args.format
+        )
+    try:
+        result = run_azure_bff_live_activation(
+            repo_root=repo_root,
+            request=request,
+            execution_port=execution_port,
+            output_root=DEFAULT_OUTPUT_ROOT,
+        )
+    except Exception:
+        return _emit_bff_azure_activation_error(
+            "LIVE_ACTIVATION_EXECUTION_FAILED", args.format
+        )
+    _print_bff_azure_activation_result(result, args.format)
+    return 0 if result.get("status") == "PASSED" else 2
+
+
+def _emit_bff_azure_activation_error(code: str, output_format: str) -> int:
+    payload = {
+        "schema_version": "nac.m365-azure-bff-live-activation-cli/v1",
+        "status": "BLOCKED",
+        "error": {"code": code},
+        "writes_started": False,
+    }
+    _print_bff_azure_activation_result(payload, output_format)
+    return 2
+
+
+def _print_bff_azure_activation_result(result: dict[str, Any], output_format: str) -> None:
+    result = _redact_bff_azure_activation_result(result)
+    if output_format == "json":
+        print_json(result)
+        return
+    print(f"STATUS: {result.get('status', 'BLOCKED')}")
+    error = result.get("error")
+    if isinstance(error, dict) and isinstance(error.get("code"), str):
+        print(f"ERROR: {error['code']}")
+    for step in result.get("step_results", []):
+        if not isinstance(step, dict):
+            continue
+        step_id = step.get("id")
+        status = step.get("status")
+        if isinstance(step_id, str) and isinstance(status, str):
+            print(f"{step_id}: {status}")
+
+
+def _redact_bff_azure_activation_result(result: dict[str, Any]) -> dict[str, Any]:
+    evidence_scalar_keys = (
+        "schema_version",
+        "status",
+        "started_at_utc",
+        "finished_at_utc",
+        "activation_hash",
+        "approved_commit_sha",
+        "approved_tree_sha",
+        "approval_reference_sha256",
+        "toolchain_attestations_sha256",
+        "target_binding_sha256",
+        "permission_boundary_sha256",
+        "ledger_head_sha256",
+        "correlation_reference_sha256",
+        "writes_started",
+    )
+    redacted = {
+        key: result[key]
+        for key in evidence_scalar_keys
+        if key in result
+        and (isinstance(result.get(key), (str, bool)) or result.get(key) is None)
+    }
+    error = result.get("error")
+    if isinstance(error, dict) and isinstance(error.get("code"), str):
+        redacted["error"] = {"code": error["code"]}
+
+    step_keys = (
+        "order",
+        "id",
+        "status",
+        "attempt",
+        "classification",
+        "http_status",
+        "stable_error_code",
+        "request_sha256",
+        "response_sha256",
+        "resource_reference_sha256",
+    )
+    steps = result.get("step_results")
+    if isinstance(steps, list):
+        redacted["step_results"] = [
+            {key: step[key] for key in step_keys if key in step}
+            for step in steps
+            if isinstance(step, dict)
+        ]
+
+    summary_count_keys = (
+        "required_step_count",
+        "passed_step_count",
+        "failed_step_count",
+        "duplicate_count",
+        "broader_permission_count",
+        "automatic_rollback_count",
+        "automatic_deletion_count",
+    )
+    summary_bool_keys = (
+        "writes_started",
+        "ledger_hash_chain_valid",
+        "prebuilt_inputs_verified",
+        "healthz_before_auth_passed",
+        "authenticated_read_passed",
+        "readyz_after_authenticated_read_passed",
+        "synthetic_state_restored",
+        "assigned_access_passed",
+        "deputy_access_passed",
+        "denied_access_passed",
+        "tampered_access_passed",
+        "resume_enabled",
+    )
+    summary = result.get("summary")
+    if isinstance(summary, dict):
+        safe_summary = {
+            key: summary[key]
+            for key in summary_count_keys
+            if type(summary.get(key)) is int and summary[key] >= 0
+        }
+        safe_summary.update(
+            {
+                key: summary[key]
+                for key in summary_bool_keys
+                if type(summary.get(key)) is bool
+            }
+        )
+        if len(safe_summary) == len(summary_count_keys) + len(summary_bool_keys):
+            redacted["summary"] = safe_summary
+
+    recovery = result.get("recovery")
+    if isinstance(recovery, dict):
+        recovery_bool_keys = (
+            "lock_held",
+            "committed_artifacts_valid",
+            "resume_enabled",
+        )
+        recovery_hash_keys = (
+            "state_sha256",
+            "ledger_head_sha256",
+            "reconcile_marker_sha256",
+        )
+        safe_recovery = {
+            key: recovery[key]
+            for key in recovery_bool_keys
+            if type(recovery.get(key)) is bool
+        }
+        safe_recovery.update(
+            {
+                key: recovery[key]
+                for key in recovery_hash_keys
+                if isinstance(recovery.get(key), str)
+                and re.fullmatch(r"[0-9a-f]{64}", recovery[key])
+            }
+        )
+        if all(key in safe_recovery for key in recovery_bool_keys) and all(
+            key in safe_recovery for key in ("state_sha256", "ledger_head_sha256")
+        ):
+            redacted["recovery"] = safe_recovery
+    return redacted
 
 
 def _business_case_type_read_plan_command_index(argv: list[str]) -> int | None:

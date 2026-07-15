@@ -186,7 +186,7 @@ class TestEnvironmentBff:
         _budget_bound: bool = False,
     ) -> BffResponse:
         if not isinstance(claims, ValidatedClaims):
-            return _error(401, "authentication required")
+            return _error(401, "AUTHENTICATION_REQUIRED")
 
         # Scope checks precede access and data ports so manipulated identifiers
         # cannot be used for probing or arbitrary Graph path construction. All
@@ -199,9 +199,9 @@ class TestEnvironmentBff:
             or not isinstance(request_filters, (Mapping, type(None)))
             or bool(request_filters)
         ):
-            return _error(403, "access denied")
+            return _error(403, "ACCESS_DENIED")
         if claims.tenant_id != self._expected_tenant_id:
-            return _error(403, "access denied")
+            return _error(403, "ACCESS_DENIED")
         if self._request_budget_factory is not None and not _budget_bound:
             try:
                 with self._request_budget_factory():
@@ -214,7 +214,7 @@ class TestEnvironmentBff:
                         _budget_bound=True,
                     )
             except Exception:
-                return _error(503, "service unavailable")
+                return _error(503, "SERVICE_UNAVAILABLE")
 
         try:
             decision = self._access_decision_port.decide(
@@ -225,12 +225,12 @@ class TestEnvironmentBff:
                 purpose=ALLOWED_PURPOSE,
             )
         except Exception:
-            return _error(403, "access denied")
+            return _error(403, "ACCESS_DENIED")
 
         if not isinstance(decision, AccessDecision) or decision.mode is AccessMode.DENY:
-            return _error(403, "access denied")
+            return _error(403, "ACCESS_DENIED")
         if decision.mode not in {AccessMode.ASSIGNED, AccessMode.DEPUTY}:
-            return _error(403, "access denied")
+            return _error(403, "ACCESS_DENIED")
 
         try:
             raw_projection = self._graph_rest_port.read_synthetic_workspace(
@@ -238,14 +238,14 @@ class TestEnvironmentBff:
                 matter_id=ALLOWED_MATTER_ID,
             )
         except Exception:
-            return _error(503, "service unavailable")
+            return _error(503, "SERVICE_UNAVAILABLE")
 
         if not raw_projection:
-            return _error(404, "resource not found")
+            return _error(404, "RESOURCE_NOT_FOUND")
         try:
             dto = _build_redacted_dto(raw_projection, access_mode=decision.mode.value)
         except _ProjectionError:
-            return _error(503, "service unavailable")
+            return _error(503, "SERVICE_UNAVAILABLE")
         return BffResponse(status_code=200, body=dto)
 
 
@@ -302,5 +302,8 @@ def _build_redacted_dto(raw: Mapping[str, Any], *, access_mode: str) -> dict[str
     }
 
 
-def _error(status_code: int, detail: str) -> BffResponse:
-    return BffResponse(status_code=status_code, body={"detail": detail})
+def _error(status_code: int, code: str) -> BffResponse:
+    return BffResponse(
+        status_code=status_code,
+        body={"status": status_code, "error": {"code": code}},
+    )
