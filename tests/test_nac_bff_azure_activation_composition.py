@@ -1203,9 +1203,12 @@ class LocalActivationAdapterTests(unittest.TestCase):
         )
         if node_candidate is None:
             self.skipTest("Node.js is not installed")
-        node = node_candidate.resolve(strict=True)
+        node_source = node_candidate.resolve(strict=True)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
+            node = root / "node"
+            shutil.copyfile(node_source, node)
+            node.chmod(0o700)
             runtime = root / "runtime"
             runtime.mkdir()
             dependency = runtime / "dependency.cjs"
