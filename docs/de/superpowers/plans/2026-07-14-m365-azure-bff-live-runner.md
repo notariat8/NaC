@@ -103,6 +103,19 @@ sich ein Einzelwert oder der kombinierte Hash, ist eine neue konsolidierte
 Owner-Freigabe erforderlich. Abschluss-Evidence und hostweiter Success-Receipt
 müssen denselben kombinierten Hash enthalten, sonst ist `PASSED` gesperrt.
 
+Auf Ubuntu-Hosts mit
+`kernel.apparmor_restrict_unprivileged_userns=1` muss der Live-Prozess
+explizit über das repo-gebundene Profil
+`deploy/runtime/azure/nac-bff/apparmor/nac-azure-cli-sealed-runtime`
+gestartet werden:
+`aa-exec -p nac-azure-cli-sealed-runtime -- <live-command>`. Der Bootstrap
+prüft den aktiven Profilnamen fail-closed. Er verwendet eine synchronisierte
+Parent/Child-UID-/GID-Abbildung, übernimmt die bereits attestierte Azure-CLI
+vor dem Namespace-Wechsel in ein privates, nicht geheimes Staging und prüft
+Digest, Größe und schreibgeschützten Modus beim Kopieren in das private
+read-only-tmpfs erneut. Globale Sysctl-Abschaltungen und Codex-spezifische
+Profile sind keine zulässige Produktkante.
+
 Unmittelbar vor jedem lokalen Python- oder Node-Prozess werden ausführbare
 Bytes über genau einen `O_NOFOLLOW`-/`fstat`-/SHA-256-geprüften Lesezugriff
 in versiegelte Linux-`memfd`-Dateien kopiert. `m365_cli_sha256` und

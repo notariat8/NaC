@@ -94,6 +94,7 @@ _ARTIFACT_PATHS = (
     "deploy/runtime/azure/nac-bff/infra/compiled/main.json",
     "deploy/runtime/azure/nac-bff/build_package.py",
     "deploy/runtime/azure/nac-bff/requirements.txt",
+    "deploy/runtime/azure/nac-bff/apparmor/nac-azure-cli-sealed-runtime",
     "spfx/nac-bpmn-viewer/config/package-solution.json",
     "spfx/nac-bpmn-viewer/package-lock.json",
     "spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/services/NacBffClient.ts",

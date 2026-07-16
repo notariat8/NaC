@@ -331,6 +331,8 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shutil
+import signal
 import stat
 import sys
 import tempfile
@@ -339,6 +341,7 @@ TAMPER_EXIT = 86
 ISOLATION_EXIT = 87
 CHUNK_SIZE = 1024 * 1024
 MAX_CLOUD_SELECTION_BYTES = 4096
+REQUIRED_APPARMOR_PROFILE = "nac-azure-cli-sealed-runtime (unconfined)"
 
 def fail(code):
     raise SystemExit(code)
@@ -490,7 +493,7 @@ def copy_private_azure_config(source, destination, expected_cloud_selection_sha2
 def validate_private_azure_profile(config_root):
     profile = config_root / "azureProfile.json"
     try:
-        payload = json.loads(profile.read_text(encoding="utf-8"))
+        payload = json.loads(profile.read_text(encoding="utf-8-sig"))
         subscriptions = payload["subscriptions"]
     except (OSError, KeyError, TypeError, ValueError):
         fail(TAMPER_EXIT)
@@ -511,23 +514,216 @@ def validate_private_azure_profile(config_root):
     ):
         fail(TAMPER_EXIT)
 
-def isolate():
+def validate_host_userns_profile(
+    restriction_path=Path("/proc/sys/kernel/apparmor_restrict_unprivileged_userns"),
+    label_path=Path("/proc/self/attr/current"),
+):
+    try:
+        restriction = restriction_path.read_text(encoding="ascii").strip()
+    except FileNotFoundError:
+        return
+    except OSError:
+        fail(ISOLATION_EXIT)
+    if restriction != "1":
+        return
+    try:
+        label = label_path.read_text(encoding="ascii").strip()
+    except OSError:
+        fail(ISOLATION_EXIT)
+    if label != REQUIRED_APPARMOR_PROFILE:
+        fail(ISOLATION_EXIT)
+
+def close_fd(descriptor):
+    try:
+        os.close(descriptor)
+    except OSError:
+        pass
+
+def write_proc_mapping(path, payload):
+    flags = os.O_WRONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        if os.write(descriptor, payload) != len(payload):
+            raise OSError("short proc mapping write")
+    finally:
+        os.close(descriptor)
+
+def write_id_maps(pid, uid, gid, proc_root=Path("/proc")):
+    process_root = proc_root / str(pid)
+    try:
+        write_proc_mapping(process_root / "setgroups", b"deny")
+    except OSError:
+        pass
+    try:
+        write_proc_mapping(
+            process_root / "uid_map",
+            f"0 {uid} 1\n".encode("ascii"),
+        )
+        write_proc_mapping(
+            process_root / "gid_map",
+            f"0 {gid} 1\n".encode("ascii"),
+        )
+    except (OSError, ValueError):
+        return False
+    return True
+
+def cleanup_staging(path):
+    try:
+        for current_text, directories, _files in os.walk(
+            path,
+            topdown=True,
+            followlinks=False,
+        ):
+            current = Path(current_text)
+            os.chmod(current, 0o700)
+            for name in directories:
+                child = current / name
+                metadata = child.lstat()
+                if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(
+                    metadata.st_mode
+                ):
+                    os.chmod(child, 0o700)
+        shutil.rmtree(path)
+    except OSError:
+        return False
+    return not path.exists()
+
+def stage_verified_package(source_root, manifest):
+    staging = Path(tempfile.mkdtemp(prefix="nac-azure-cli-source-"))
+    try:
+        os.chmod(staging, 0o700)
+        for record in manifest["directories"]:
+            (staging / record["path"]).mkdir(parents=True, exist_ok=True)
+        for record in manifest["files"]:
+            copy_verified(
+                source_root / record["path"],
+                staging / record["path"],
+                record,
+            )
+        for record in reversed(manifest["directories"]):
+            os.chmod(staging / record["path"], record["mode"] & ~0o222)
+    except (KeyError, OSError, TypeError, ValueError):
+        cleanup_staging(staging)
+        fail(TAMPER_EXIT)
+    return staging
+
+def copy_staged_verified(source, destination, record):
+    staged_record = dict(record)
+    staged_record["uid"] = os.getuid()
+    staged_record["mode"] = record["mode"] & ~0o222
+    copy_verified(source, destination, staged_record)
+
+def terminate_child(pid, cleanup_root):
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+    cleanup_staging(cleanup_root)
+
+def arm_parent_death_signal(libc, parent_pid):
+    pr_set_pdeathsig = 1
+    if libc.prctl(pr_set_pdeathsig, signal.SIGKILL, 0, 0, 0) != 0:
+        return False
+    return os.getppid() == parent_pid
+
+def exit_with_child_status(pid, cleanup_root):
+    def forward(signum, _frame):
+        try:
+            os.kill(pid, signum)
+        except ProcessLookupError:
+            pass
+
+    for signum in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, forward)
+    try:
+        _, status = os.waitpid(pid, 0)
+    except (ChildProcessError, OSError):
+        terminate_child(pid, cleanup_root)
+        fail(ISOLATION_EXIT)
+    cleanup_ready = cleanup_staging(cleanup_root)
+    if not cleanup_ready:
+        os._exit(ISOLATION_EXIT)
+    if os.WIFEXITED(status):
+        os._exit(os.WEXITSTATUS(status))
+    if os.WIFSIGNALED(status):
+        signum = os.WTERMSIG(status)
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+        os._exit(128 + signum)
+    os._exit(ISOLATION_EXIT)
+
+def enter_mapped_user_namespace(libc, clone_newuser, uid, gid, cleanup_root):
+    parent_pid = os.getpid()
+    try:
+        ready_read, ready_write = os.pipe()
+        continue_read, continue_write = os.pipe()
+    except OSError:
+        cleanup_staging(cleanup_root)
+        fail(ISOLATION_EXIT)
+    try:
+        pid = os.fork()
+    except OSError:
+        for descriptor in (ready_read, ready_write, continue_read, continue_write):
+            close_fd(descriptor)
+        cleanup_staging(cleanup_root)
+        fail(ISOLATION_EXIT)
+    if pid == 0:
+        if not arm_parent_death_signal(libc, parent_pid):
+            for descriptor in (
+                ready_read,
+                ready_write,
+                continue_read,
+                continue_write,
+            ):
+                close_fd(descriptor)
+            fail(ISOLATION_EXIT)
+        close_fd(ready_read)
+        close_fd(continue_write)
+        if libc.unshare(clone_newuser) != 0:
+            close_fd(ready_write)
+            close_fd(continue_read)
+            fail(ISOLATION_EXIT)
+        try:
+            if os.write(ready_write, b"R") != 1:
+                fail(ISOLATION_EXIT)
+            close_fd(ready_write)
+            if os.read(continue_read, 1) != b"G":
+                fail(ISOLATION_EXIT)
+        except OSError:
+            fail(ISOLATION_EXIT)
+        finally:
+            close_fd(ready_write)
+            close_fd(continue_read)
+        return
+    close_fd(ready_write)
+    close_fd(continue_read)
+    try:
+        child_ready = os.read(ready_read, 1) == b"R"
+        if not child_ready or not write_id_maps(pid, uid, gid):
+            terminate_child(pid, cleanup_root)
+            fail(ISOLATION_EXIT)
+        if os.write(continue_write, b"G") != 1:
+            terminate_child(pid, cleanup_root)
+            fail(ISOLATION_EXIT)
+    except OSError:
+        terminate_child(pid, cleanup_root)
+        fail(ISOLATION_EXIT)
+    finally:
+        close_fd(ready_read)
+        close_fd(continue_write)
+    exit_with_child_status(pid, cleanup_root)
+
+def isolate(cleanup_root):
     libc = ctypes.CDLL(None, use_errno=True)
     clone_newns = 0x00020000
     clone_newuser = 0x10000000
     uid = os.getuid()
     gid = os.getgid()
-    if libc.unshare(clone_newuser) != 0:
-        fail(ISOLATION_EXIT)
-    try:
-        Path("/proc/self/setgroups").write_text("deny", encoding="ascii")
-    except OSError:
-        pass
-    try:
-        Path("/proc/self/uid_map").write_text(f"0 {uid} 1\n", encoding="ascii")
-        Path("/proc/self/gid_map").write_text(f"0 {gid} 1\n", encoding="ascii")
-    except OSError:
-        fail(ISOLATION_EXIT)
+    enter_mapped_user_namespace(libc, clone_newuser, uid, gid, cleanup_root)
     if libc.unshare(clone_newns) != 0:
         fail(ISOLATION_EXIT)
     ms_rec = 16384
@@ -551,12 +747,14 @@ def main():
         fail(TAMPER_EXIT)
     if manifest.get("schema") != "nac-azure-cli-sealed-runtime-v1":
         fail(TAMPER_EXIT)
+    source_root = Path(manifest["source_root"])
     verify_only = len(sys.argv) >= 4 and sys.argv[2] == "--nac-internal-verify-only"
     if verify_only:
         destination = Path(sys.argv[3])
         azure_argv = []
         libc = None
         private_config = None
+        package_source = source_root
     else:
         try:
             source_config = Path(os.environ.get("AZURE_CONFIG_DIR") or (Path(os.environ["HOME"]) / ".azure"))
@@ -574,7 +772,9 @@ def main():
             )
         ):
             fail(TAMPER_EXIT)
-        destination, private_config, libc = isolate()
+        validate_host_userns_profile()
+        package_source = stage_verified_package(source_root, manifest)
+        destination, private_config, libc = isolate(package_source)
         copy_private_azure_config(
             source_config,
             private_config,
@@ -582,13 +782,23 @@ def main():
         )
         validate_private_azure_profile(private_config)
         azure_argv = sys.argv[2:]
-    source_root = Path(manifest["source_root"])
     try:
         for record in manifest["directories"]:
             target = destination / record["path"]
             target.mkdir(parents=True, exist_ok=True)
         for record in manifest["files"]:
-            copy_verified(source_root / record["path"], destination / record["path"], record)
+            if verify_only:
+                copy_verified(
+                    package_source / record["path"],
+                    destination / record["path"],
+                    record,
+                )
+            else:
+                copy_staged_verified(
+                    package_source / record["path"],
+                    destination / record["path"],
+                    record,
+                )
         extension_root = destination / ".nac-empty-extensions"
         extension_root.mkdir(mode=0o500)
         for record in reversed(manifest["directories"]):

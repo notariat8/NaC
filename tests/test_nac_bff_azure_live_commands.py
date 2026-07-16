@@ -3,8 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from pathlib import Path
@@ -86,6 +88,223 @@ class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
             source,
         )
         self.assertIn('os.environ["AZURE_CONFIG_DIR"] = str(private_config)', source)
+
+    def test_sealed_bootstrap_uses_parent_written_user_namespace_maps(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+
+        self.assertIn("pid = os.fork()", source)
+        self.assertIn("write_id_maps(pid, uid, gid)", source)
+        self.assertIn("package_source = stage_verified_package(source_root, manifest)", source)
+        self.assertIn("destination, private_config, libc = isolate(package_source)", source)
+        self.assertIn('os.read(ready_read, 1) == b"R"', source)
+        self.assertIn('os.read(continue_read, 1) != b"G"', source)
+        self.assertNotIn("/proc/self/uid_map", source)
+        self.assertNotIn("/proc/self/gid_map", source)
+
+    def test_sealed_bootstrap_writes_exact_single_id_maps(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        write_id_maps = namespace["write_id_maps"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            process_root = Path(tmp) / "123"
+            process_root.mkdir()
+            for name in ("setgroups", "uid_map", "gid_map"):
+                (process_root / name).touch()
+
+            self.assertTrue(write_id_maps(123, 1000, 1001, Path(tmp)))
+            self.assertEqual((process_root / "setgroups").read_bytes(), b"deny")
+            self.assertEqual((process_root / "uid_map").read_bytes(), b"0 1000 1\n")
+            self.assertEqual((process_root / "gid_map").read_bytes(), b"0 1001 1\n")
+
+    def test_sealed_bootstrap_fails_closed_when_id_map_write_fails(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        write_id_maps = namespace["write_id_maps"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            process_root = Path(tmp) / "123"
+            process_root.mkdir()
+            (process_root / "setgroups").touch()
+            (process_root / "uid_map").touch()
+
+            self.assertFalse(write_id_maps(123, 1000, 1001, Path(tmp)))
+
+    def test_sealed_bootstrap_stages_verified_package_before_isolation(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        stage_verified_package = namespace["stage_verified_package"]
+        copy_staged_verified = namespace["copy_staged_verified"]
+        cleanup_staging = namespace["cleanup_staging"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source_root = Path(tmp) / "source"
+            source_root.mkdir()
+            nested = source_root / "azure" / "module"
+            nested.mkdir(parents=True)
+            payload = nested / "module.py"
+            payload.write_text("VALUE = 1\n", encoding="utf-8")
+            metadata = payload.stat()
+            directory_records = []
+            for directory in (source_root / "azure", nested):
+                directory_metadata = directory.stat()
+                directory_records.append(
+                    {
+                        "path": directory.relative_to(source_root).as_posix(),
+                        "mode": directory_metadata.st_mode & 0o7777,
+                    }
+                )
+            manifest = {
+                "directories": directory_records,
+                "files": [
+                    {
+                        "path": "azure/module/module.py",
+                        "uid": metadata.st_uid,
+                        "mode": metadata.st_mode & 0o7777,
+                        "size": metadata.st_size,
+                        "sha256": hashlib.sha256(payload.read_bytes()).hexdigest(),
+                    }
+                ],
+            }
+
+            staging = stage_verified_package(source_root, manifest)
+
+            self.assertEqual(
+                (staging / "azure" / "module" / "module.py").read_bytes(),
+                payload.read_bytes(),
+            )
+            self.assertEqual(staging.stat().st_mode & 0o777, 0o700)
+            destination = Path(tmp) / "destination.py"
+            copy_staged_verified(
+                staging / "azure" / "module" / "module.py",
+                destination,
+                manifest["files"][0],
+            )
+            self.assertEqual(destination.read_bytes(), payload.read_bytes())
+            self.assertEqual(
+                destination.stat().st_mode & 0o777,
+                (metadata.st_mode & 0o777) & ~0o222,
+            )
+            self.assertTrue(cleanup_staging(staging))
+            self.assertFalse(staging.exists())
+
+    def test_sealed_bootstrap_child_dies_when_supervisor_is_killed(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        prefix = source.rsplit("\nmain()\n", 1)[0]
+        helper = (
+            "import ctypes, os, time\n"
+            f"namespace = {{}}\nexec({prefix!r}, namespace)\n"
+            "pid = os.fork()\n"
+            "if pid == 0:\n"
+            "    parent_pid = os.getppid()\n"
+            "    libc = ctypes.CDLL(None, use_errno=True)\n"
+            "    if not namespace['arm_parent_death_signal'](libc, parent_pid):\n"
+            "        os._exit(90)\n"
+            "    print(os.getpid(), flush=True)\n"
+            "    time.sleep(30)\n"
+            "    os._exit(91)\n"
+            "time.sleep(30)\n"
+        )
+        supervisor = subprocess.Popen(
+            [os.sys.executable, "-c", helper],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        child_pid = None
+        try:
+            assert supervisor.stdout is not None
+            child_pid = int(supervisor.stdout.readline().strip())
+            os.kill(supervisor.pid, signal.SIGKILL)
+            supervisor.wait(timeout=5)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                status = Path(f"/proc/{child_pid}/stat")
+                if not status.exists():
+                    break
+                fields = status.read_text(encoding="ascii").split()
+                if len(fields) >= 3 and fields[2] == "Z":
+                    break
+                time.sleep(0.05)
+            else:
+                self.fail("mapped child survived supervisor SIGKILL")
+        finally:
+            if supervisor.poll() is None:
+                supervisor.kill()
+                supervisor.wait(timeout=5)
+            if supervisor.stdout is not None:
+                supervisor.stdout.close()
+            if supervisor.stderr is not None:
+                supervisor.stderr.close()
+            if child_pid is not None:
+                try:
+                    os.kill(child_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_sealed_bootstrap_accepts_bom_prefixed_bound_azure_profile(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        validate_private_azure_profile = namespace[
+            "validate_private_azure_profile"
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp) / "azureProfile.json"
+            profile.write_text(
+                json.dumps(
+                    {
+                        "subscriptions": [
+                            {
+                                "id": EXPECTED_SUBSCRIPTION_ID,
+                                "tenantId": EXPECTED_TENANT_ID,
+                                "environmentName": EXPECTED_CLOUD_NAME,
+                                "isDefault": True,
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8-sig",
+            )
+
+            validate_private_azure_profile(Path(tmp))
+
+    def test_sealed_bootstrap_requires_dedicated_profile_when_restricted(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        validate_host_userns_profile = namespace["validate_host_userns_profile"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            restriction = Path(tmp) / "restriction"
+            label = Path(tmp) / "label"
+            restriction.write_text("1\n", encoding="ascii")
+            label.write_text(
+                "nac-azure-cli-sealed-runtime (unconfined)\n",
+                encoding="ascii",
+            )
+
+            validate_host_userns_profile(restriction, label)
+            label.write_text("unprivileged_userns (enforce)\n", encoding="ascii")
+            with self.assertRaisesRegex(SystemExit, "87"):
+                validate_host_userns_profile(restriction, label)
+
+    def test_sealed_bootstrap_allows_host_without_apparmor_restriction(self) -> None:
+        source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE
+        namespace: dict[str, object] = {}
+        exec(source.rsplit("\nmain()\n", 1)[0], namespace)
+        validate_host_userns_profile = namespace["validate_host_userns_profile"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            restriction = Path(tmp) / "restriction"
+            restriction.write_text("0\n", encoding="ascii")
+
+            validate_host_userns_profile(restriction, Path(tmp) / "missing-label")
 
     def test_sealed_bootstrap_omits_default_cloud_selection(self) -> None:
         source = azure_cli_sealed_runtime._BOOTSTRAP_SOURCE

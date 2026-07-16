@@ -1,0 +1,11 @@
+# Ubuntu restricts unprivileged user namespaces unless an explicitly selected
+# AppArmor profile grants userns. NaC still performs its own digest, command,
+# credential, private-mount and target-boundary enforcement inside that
+# namespace; this profile grants no host capability.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile nac-azure-cli-sealed-runtime flags=(unconfined) {
+  userns,
+}
