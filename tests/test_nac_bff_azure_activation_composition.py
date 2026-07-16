@@ -1196,13 +1196,14 @@ class LocalActivationAdapterTests(unittest.TestCase):
 
     def test_node_runtime_loader_is_inherited_by_real_child_process(self) -> None:
         detected = shutil.which("node")
-        node = (
+        node_candidate = (
             BUILD_NODE_EXECUTION_PATH
             if BUILD_NODE_EXECUTION_PATH.is_file()
             else Path(detected) if detected else None
         )
-        if node is None:
+        if node_candidate is None:
             self.skipTest("Node.js is not installed")
+        node = node_candidate.resolve(strict=True)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             runtime = root / "runtime"
