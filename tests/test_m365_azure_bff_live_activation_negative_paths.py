@@ -70,6 +70,7 @@ STEPS = (
 # classifications asserted below. The contract IDs remain the audit vocabulary.
 VERIFICATION_MARKERS = {
     "wrong_owner_login": "APPROVAL_OWNER_MISMATCH",
+    "wrong_owner_association": "APPROVAL_OWNER_MISMATCH",
     "duplicates": "AZURE_RESOURCE_INVENTORY_DUPLICATE",
     "dirty_tree": "GIT_WORKTREE_NOT_CLEAN",
     "health_auth_ready_order": "ordered_probe_sequence_exact",
@@ -256,6 +257,28 @@ class M365AzureBffLiveActivationNegativePathTests(unittest.TestCase):
                 result = verifier.verify(request, _context(root), plan)
         self.assertEqual(
             result, {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
+        )
+
+    def test_owner_association_contract_is_exact_and_fail_closed(self) -> None:
+        self.assertEqual(
+            VERIFICATION_MARKERS["wrong_owner_association"],
+            "APPROVAL_OWNER_MISMATCH",
+        )
+        contract = json.loads(
+            (
+                REPO_ROOT
+                / "workflows/contracts/m365-azure-bff-live-activation.contract.json"
+            ).read_text(encoding="utf-8")
+        )
+        snapshot = contract["consolidated_owner_gate"][
+            "immutable_approval_reference"
+        ]
+        self.assertEqual(
+            snapshot["owner_author_associations_exact"], ["OWNER", "MEMBER"]
+        )
+        self.assertEqual(
+            snapshot["missing_or_malformed_author_association_behavior"],
+            "reject_with_APPROVAL_OWNER_MISMATCH",
         )
 
     def test_duplicate_target_resource_is_rejected_by_inventory_validator(self) -> None:

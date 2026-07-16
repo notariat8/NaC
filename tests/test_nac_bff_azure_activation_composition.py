@@ -734,6 +734,16 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
             {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
         )
 
+    def test_valid_organization_member_snapshot_passes(self) -> None:
+        temporary, request, context, plan, comment = self._fixture()
+        self.addCleanup(temporary.cleanup)
+        comment["author_association"] = "MEMBER"
+
+        self.assertEqual(
+            self._verify(request, context, plan, comment),
+            {"status": "PASSED", "code": "APPROVAL_SNAPSHOT_VERIFIED"},
+        )
+
     def test_toolchain_attestation_tamper_breaks_approval_binding(self) -> None:
         temporary, request, context, plan, comment = self._fixture()
         self.addCleanup(temporary.cleanup)
@@ -778,7 +788,20 @@ class GitHubApprovalVerifierTests(unittest.TestCase):
     def test_wrong_owner_is_distinct_from_snapshot_mismatch(self) -> None:
         mutations = (
             lambda request, comment: comment.update(user={"login": "other"}),
-            lambda request, comment: comment.update(author_association="MEMBER"),
+            lambda request, comment: comment.pop("user"),
+            lambda request, comment: comment.update(user="ofunk"),
+            lambda request, comment: comment.update(author_association="CONTRIBUTOR"),
+            lambda request, comment: comment.update(author_association="NONE"),
+            lambda request, comment: comment.update(author_association="COLLABORATOR"),
+            lambda request, comment: comment.update(author_association="FIRST_TIME_CONTRIBUTOR"),
+            lambda request, comment: comment.update(author_association="FIRST_TIMER"),
+            lambda request, comment: comment.update(author_association="MANNEQUIN"),
+            lambda request, comment: comment.update(author_association="member"),
+            lambda request, comment: comment.update(author_association="UNKNOWN"),
+            lambda request, comment: comment.update(author_association=None),
+            lambda request, comment: comment.update(author_association=["MEMBER"]),
+            lambda request, comment: comment.update(author_association={"value": "MEMBER"}),
+            lambda request, comment: comment.pop("author_association"),
         )
         for index, mutate in enumerate(mutations):
             with self.subTest(index=index):

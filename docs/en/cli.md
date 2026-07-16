@@ -381,7 +381,11 @@ excluded.
 Issue [#632](https://github.com/notariat8/NaC/issues/632);
 [#620](https://github.com/notariat8/NaC/issues/620) remains parent context
 only. `bff-azure-activate-live` accepts exactly one immutable comment from
-exact GitHub login `ofunk` on Issue #632. Before the first provider write, the
+exact GitHub login `ofunk` on Issue #632. GitHub must report
+`author_association` exactly as `OWNER` or, for an organization-owned
+repository, `MEMBER`; missing, malformed, or any other value stops before the
+first provider write with `APPROVAL_OWNER_MISMATCH`. Before the first provider
+write, the
 complete duplicate and broader-permission inventory, target-global lock, and
 prebuilt hash-bound Function/SPFx packages and Bicep/parameter snapshots must
 pass. Step 11 checks `healthz` before auth, authenticated reads and deny cases,

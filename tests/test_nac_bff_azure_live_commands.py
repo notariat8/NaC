@@ -27,7 +27,24 @@ from nac_bff.azure_live_commands import (
 )
 
 
-class AzureLiveCommandTests(unittest.TestCase):
+class _IsolatedAzureConfigTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        temporary = tempfile.TemporaryDirectory(prefix="nac-azure-cli-test-")
+        self.addCleanup(temporary.cleanup)
+        home = Path(temporary.name)
+        environment = patch.dict(
+            os.environ,
+            {
+                "HOME": str(home),
+                "AZURE_CONFIG_DIR": str(home / ".azure"),
+            },
+        )
+        environment.start()
+        self.addCleanup(environment.stop)
+
+
+class AzureLiveCommandTests(_IsolatedAzureConfigTestCase):
     def test_allowlist_contains_only_required_command_families(self) -> None:
         self.assertEqual(
             ALLOWED_COMMAND_PREFIXES,
@@ -429,7 +446,7 @@ class AzureLiveCommandTests(unittest.TestCase):
         process.assert_not_called()
 
 
-class AzureLiveReadinessTests(unittest.TestCase):
+class AzureLiveReadinessTests(_IsolatedAzureConfigTestCase):
     def test_resolves_only_trusted_absolute_binary_and_lists_tmp_candidate_first(self) -> None:
         self.assertEqual(
             AZURE_CLI_CANDIDATES[0],

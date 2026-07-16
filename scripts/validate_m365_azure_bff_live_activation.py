@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from typing import Any
 
 import yaml
@@ -50,6 +51,8 @@ APPROVAL_FIELDS = [
     "step_sequence_sha256", "toolchain_attestations_sha256",
     "no_automatic_rollback_or_deletion",
 ]
+OWNER_ASSOCIATIONS = ["OWNER", "MEMBER"]
+
 TOOLCHAIN_ATTESTATION_FIELDS = [
     "azure_cli_toolchain_sha256", "m365_cli_sha256",
     "m365_node_sha256", "build_python_sha256", "build_node_sha256",
@@ -90,7 +93,8 @@ STEP_IDS = [
     "run_access_and_readback_smokes", "run_idempotency_and_evidence",
 ]
 NEGATIVE_TEST_IDS = [
-    "wrong_hash", "wrong_owner_login", "toolchain_attestation_tamper",
+    "wrong_hash", "wrong_owner_login", "wrong_owner_association",
+    "toolchain_attestation_tamper",
     "dirty_tree", "wrong_target", "duplicates", "broader_permissions",
     "race", "secret_sentinel", "prepared_input_drift",
     "health_auth_ready_order", "synthetic_restoration_failure",
@@ -135,6 +139,9 @@ EXACT_LIST_IDS = {
 NEGATIVE_ASSERTIONS: dict[str, dict[str, Any]] = {
     "wrong_hash": {"stable_error_code": "ACTIVATION_HASH_MISMATCH"},
     "wrong_owner_login": {"stable_error_code": "APPROVAL_OWNER_MISMATCH"},
+    "wrong_owner_association": {
+        "stable_error_code": "APPROVAL_OWNER_MISMATCH"
+    },
     "dirty_tree": {"stable_error_code": "GIT_WORKTREE_NOT_CLEAN"},
     "wrong_target": {"stable_error_code": "TARGET_BINDING_MISMATCH"},
     "duplicates": {
@@ -205,6 +212,8 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "inspect_uami_sites_selected", "inspect_site_read_permission",
         "/healthz", "/readyz", "restore_assigned",
         "toolchain_attestations_sha256", "sealed_toolchain",
+        "_APPROVED_OWNER_ASSOCIATIONS",
+        "not isinstance(author_association, str)",
         "build_node_runtime_integrity_payloads",
     ),
     ATTESTATION_PATH: (
@@ -314,7 +323,11 @@ def main() -> int:
 
 
 def _run_behavioral_tests(repo_root: Path) -> list[str]:
+    temporary = tempfile.TemporaryDirectory(prefix="nac-bff-validator-")
+    test_home = Path(temporary.name)
     env = dict(os.environ)
+    env["HOME"] = str(test_home)
+    env["AZURE_CONFIG_DIR"] = str(test_home / ".azure")
     src = str((repo_root / "src").resolve())
     current = env.get("PYTHONPATH")
     env["PYTHONPATH"] = src if not current else os.pathsep.join((src, current))
@@ -330,6 +343,8 @@ def _run_behavioral_tests(repo_root: Path) -> list[str]:
         )
     except (OSError, subprocess.SubprocessError):
         return ["behavioral verification suite could not execute"]
+    finally:
+        temporary.cleanup()
     if completed.returncode != 0:
         return [
             "behavioral verification suite failed; run the exact listed unittest "
@@ -412,6 +427,24 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
     if not isinstance(gate, dict):
         errors.append("domain consolidated_owner_gate must be an object")
     else:
+        approval_reference = gate.get("immutable_approval_reference")
+        if not isinstance(approval_reference, dict):
+            errors.append(
+                "domain immutable_approval_reference must be an object"
+            )
+        else:
+            _require_values(
+                approval_reference,
+                {
+                    "owner_author_login_exact": "ofunk",
+                    "owner_author_associations_exact": OWNER_ASSOCIATIONS,
+                    "missing_or_malformed_author_association_behavior": (
+                        "reject_with_APPROVAL_OWNER_MISMATCH"
+                    ),
+                },
+                "domain immutable approval reference",
+                errors,
+            )
         _require_list(
             gate, "approval_payload_fields_exact", APPROVAL_FIELDS,
             "domain approval payload fields", errors,
@@ -663,6 +696,12 @@ def _validate_verification(verification: dict[str, Any], errors: list[str]) -> N
             errors.append("verification exact tenant/subscription/workspace/site/team bindings differ")
         if bindings.get("list_ids") != EXACT_LIST_IDS:
             errors.append("verification exact list IDs differ")
+        if bindings.get("owner_author_associations_exact") != OWNER_ASSOCIATIONS:
+            errors.append("verification owner associations differ")
+        if bindings.get(
+            "missing_or_malformed_author_association_behavior"
+        ) != "reject_with_APPROVAL_OWNER_MISMATCH":
+            errors.append("verification malformed owner association behavior differs")
     if verification.get("thresholds") != THRESHOLDS:
         errors.append("verification thresholds must equal the exact Issue #632 thresholds")
     negative = verification.get("negative_tests")
@@ -764,6 +803,17 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
         for marker in markers:
             if marker not in text:
                 errors.append(f"missing source marker {marker!r} in {relative.as_posix()}")
+    try:
+        composition_tree = ast.parse(
+            (repo_root / COMPOSITION_PATH).read_text(encoding="utf-8")
+        )
+    except (OSError, SyntaxError):
+        errors.append("composition owner association allowlist is unavailable")
+    else:
+        if _literal_assignment(
+            composition_tree, "_APPROVED_OWNER_ASSOCIATIONS"
+        ) != tuple(OWNER_ASSOCIATIONS):
+            errors.append("composition owner association allowlist differs")
     for relative in TEST_PATHS:
         if not (repo_root / relative).is_file():
             errors.append(f"missing activation test source: {relative.as_posix()}")

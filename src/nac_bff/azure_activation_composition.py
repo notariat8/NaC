@@ -169,6 +169,7 @@ _COMMENT_RE = re.compile(
     r"^https://github\.com/notariat8/NaC/issues/632#issuecomment-([1-9][0-9]*)$"
 )
 _APPROVED_OWNER_LOGIN = "ofunk"
+_APPROVED_OWNER_ASSOCIATIONS = ("OWNER", "MEMBER")
 _MAX_CREDENTIAL_FILE_BYTES = 1024 * 1024
 _APPROVAL_KEYS = {
     "owner-approved",
@@ -322,7 +323,8 @@ class GitHubApprovalVerifier:
         if (
             not isinstance(author, dict)
             or author.get("login") != _APPROVED_OWNER_LOGIN
-            or (author_association is not None and author_association != "OWNER")
+            or not isinstance(author_association, str)
+            or author_association not in _APPROVED_OWNER_ASSOCIATIONS
         ):
             return {"status": "FAILED", "code": "APPROVAL_OWNER_MISMATCH"}
         if (

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -52,6 +53,41 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         self.assertTrue(
             any("toolchain attestation fields" in error for error in errors)
         )
+
+    def test_owner_association_contract_and_source_mutations_fail(self) -> None:
+        payload = self._domain()
+        payload["consolidated_owner_gate"]["immutable_approval_reference"][
+            "owner_author_associations_exact"
+        ] = ["OWNER", "COLLABORATOR"]
+        self._write_domain(payload)
+        verification = self._verification()
+        verification["exact_bindings"]["owner_author_associations_exact"] = [
+            "OWNER",
+            "COLLABORATOR",
+        ]
+        verification["exact_bindings"][
+            "missing_or_malformed_author_association_behavior"
+        ] = "allow"
+        self._write_verification(verification)
+        composition = self.root / validator.COMPOSITION_PATH
+        composition.write_text(
+            composition.read_text(encoding="utf-8").replace(
+                "(\"OWNER\", \"MEMBER\")",
+                "(\"OWNER\", \"COLLABORATOR\")",
+            ),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate(self.root)
+
+        self.assertTrue(
+            any("owner_author_associations_exact" in error for error in errors)
+        )
+        self.assertIn("verification owner associations differ", errors)
+        self.assertIn(
+            "verification malformed owner association behavior differs", errors
+        )
+        self.assertIn("composition owner association allowlist differs", errors)
 
     def test_runner_summary_schema_mutation_fails(self) -> None:
         path = self.root / validator.RUNNER_PATH
@@ -137,6 +173,12 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
         )
         self.assertFalse(process.call_args.kwargs["check"])
         self.assertEqual(process.call_args.kwargs["timeout"], 180)
+        environment = process.call_args.kwargs["env"]
+        self.assertNotEqual(environment["HOME"], os.environ.get("HOME"))
+        self.assertEqual(
+            Path(environment["AZURE_CONFIG_DIR"]).parent,
+            Path(environment["HOME"]),
+        )
 
     def test_behavioral_verification_fails_closed_without_raw_output(self) -> None:
         completed = validator.subprocess.CompletedProcess(
@@ -194,7 +236,15 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
                 continue
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("\n".join(markers) + "\n", encoding="utf-8")
+            if relative == validator.COMPOSITION_PATH:
+                source = (
+                    "_APPROVED_OWNER_ASSOCIATIONS = (\"OWNER\", \"MEMBER\")\n"
+                    + "\n".join(f"# {marker}" for marker in markers)
+                    + "\n"
+                )
+            else:
+                source = "\n".join(markers) + "\n"
+            path.write_text(source, encoding="utf-8")
         marker_text = "# executable behavioral fixture\n"
         for relative in validator.TEST_PATHS:
             path = self.root / relative
