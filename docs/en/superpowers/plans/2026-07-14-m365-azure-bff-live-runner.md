@@ -146,8 +146,13 @@ Azure CLI never executes the original mutable wrapper. Its interpreter,
 bootstrap, and manifest are sealed in `memfd` files; the complete owner-bound
 `site-packages` tree is reverified per file, copied into a private user/mount
 namespace, and remounted read-only. Host Azure configuration is copied through
-stable symlink-free reads into a second private `tmpfs`; `clouds.config` is
-forbidden. Every Azure CLI process validates exactly one default profile bound
+stable symlink-free reads into a second private `tmpfs`. Custom
+`clouds.config` remains forbidden; only the exact bounded Azure CLI selection
+containing section `[AzureCloud]` and solely the approved `subscription` is
+accepted as preflight metadata. Its stably measured SHA-256 is bound into the
+sealed runtime manifest, revalidated immediately before omission, and the file
+is not copied into the private `tmpfs`. Every
+Azure CLI process validates exactly one default profile bound
 to the approved tenant, approved subscription and `environmentName == AzureCloud`.
 All extension
 sources are rebound to one empty read-only directory and dynamic extension

@@ -55,6 +55,7 @@ def prepare_sealed_azure_cli_runtime(
     interpreter_path: Path,
     interpreter_digest: str,
     allowed_uids: set[int],
+    cloud_selection_sha256: str | None,
 ) -> SealedAzureCliRuntime | None:
     """Bind executable bytes and a complete package manifest to sealed memfds."""
 
@@ -63,6 +64,16 @@ def prepare_sealed_azure_cli_runtime(
         return None
     tree_digest, payload = manifest
     payload["tree_digest"] = tree_digest
+    if cloud_selection_sha256 is not None and (
+        not isinstance(cloud_selection_sha256, str)
+        or len(cloud_selection_sha256) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in cloud_selection_sha256
+        )
+    ):
+        return None
+    payload["cloud_selection_sha256"] = cloud_selection_sha256
 
     interpreter = _read_regular_file(
         interpreter_path,
@@ -327,6 +338,7 @@ import tempfile
 TAMPER_EXIT = 86
 ISOLATION_EXIT = 87
 CHUNK_SIZE = 1024 * 1024
+MAX_CLOUD_SELECTION_BYTES = 4096
 
 def fail(code):
     raise SystemExit(code)
@@ -396,31 +408,84 @@ def copy_config_file(source, destination):
         fail(TAMPER_EXIT)
     os.chmod(destination, stat.S_IMODE(before.st_mode) & ~0o022)
 
-def copy_private_azure_config(source, destination):
+def config_file_digest(source):
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        path_before = source.lstat()
+        if path_before.st_size > MAX_CLOUD_SELECTION_BYTES:
+            fail(TAMPER_EXIT)
+        descriptor = os.open(source, flags)
+    except OSError:
+        fail(TAMPER_EXIT)
+    digest = hashlib.sha256()
+    try:
+        before = os.fstat(descriptor)
+        if (stat.S_ISLNK(path_before.st_mode) or not stat.S_ISREG(before.st_mode) or before.st_uid not in {0, os.getuid()} or before.st_mode & (stat.S_IWGRP | stat.S_IWOTH) or before.st_size > MAX_CLOUD_SELECTION_BYTES or (before.st_dev, before.st_ino) != (path_before.st_dev, path_before.st_ino)):
+            fail(TAMPER_EXIT)
+        while True:
+            chunk = os.read(descriptor, CHUNK_SIZE)
+            if not chunk:
+                break
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    try:
+        path_after = source.lstat()
+    except OSError:
+        fail(TAMPER_EXIT)
+    if signature(before) != signature(after) or signature(after) != signature(path_after):
+        fail(TAMPER_EXIT)
+    return digest.hexdigest()
+
+def copy_private_azure_config(source, destination, expected_cloud_selection_sha256):
     if not source.is_absolute():
         fail(TAMPER_EXIT)
     try:
         root = source.lstat()
     except FileNotFoundError:
+        if expected_cloud_selection_sha256 is not None:
+            fail(TAMPER_EXIT)
         return
     except OSError:
         fail(TAMPER_EXIT)
     if stat.S_ISLNK(root.st_mode) or not stat.S_ISDIR(root.st_mode):
         fail(TAMPER_EXIT)
+    root_signature = signature(root)
+    cloud_selection_seen = False
     for current_text, directories, files in os.walk(source, topdown=True, followlinks=False):
         current = Path(current_text)
         relative = current.relative_to(source)
         directories.sort()
         files.sort()
         for name in directories:
+            if relative == Path(".") and name == "clouds.config":
+                fail(TAMPER_EXIT)
             metadata = (current / name).lstat()
             if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
                 fail(TAMPER_EXIT)
             (destination / relative / name).mkdir(parents=True, exist_ok=True)
         for name in files:
             if relative == Path(".") and name == "clouds.config":
-                fail(TAMPER_EXIT)
+                if (
+                    expected_cloud_selection_sha256 is None
+                    or config_file_digest(current / name)
+                    != expected_cloud_selection_sha256
+                ):
+                    fail(TAMPER_EXIT)
+                cloud_selection_seen = True
+                continue
             copy_config_file(current / name, destination / relative / name)
+    try:
+        root_after = source.lstat()
+    except OSError:
+        fail(TAMPER_EXIT)
+    if signature(root_after) != root_signature:
+        fail(TAMPER_EXIT)
+    if cloud_selection_seen != (expected_cloud_selection_sha256 is not None):
+        fail(TAMPER_EXIT)
+    if (destination / "clouds.config").exists():
+        fail(TAMPER_EXIT)
 
 def validate_private_azure_profile(config_root):
     profile = config_root / "azureProfile.json"
@@ -497,8 +562,24 @@ def main():
             source_config = Path(os.environ.get("AZURE_CONFIG_DIR") or (Path(os.environ["HOME"]) / ".azure"))
         except (KeyError, TypeError, ValueError):
             fail(TAMPER_EXIT)
+        expected_cloud_selection_sha256 = manifest.get(
+            "cloud_selection_sha256"
+        )
+        if expected_cloud_selection_sha256 is not None and (
+            not isinstance(expected_cloud_selection_sha256, str)
+            or len(expected_cloud_selection_sha256) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in expected_cloud_selection_sha256
+            )
+        ):
+            fail(TAMPER_EXIT)
         destination, private_config, libc = isolate()
-        copy_private_azure_config(source_config, private_config)
+        copy_private_azure_config(
+            source_config,
+            private_config,
+            expected_cloud_selection_sha256,
+        )
         validate_private_azure_profile(private_config)
         azure_argv = sys.argv[2:]
     source_root = Path(manifest["source_root"])

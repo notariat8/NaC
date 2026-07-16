@@ -30,6 +30,7 @@ NODE_RUNTIME_INTEGRITY_PATH = Path(
 AZURE_CLI_SEALED_RUNTIME_PATH = Path(
     "src/nac_bff/azure_cli_sealed_runtime.py"
 )
+AZURE_LIVE_COMMANDS_PATH = Path("src/nac_bff/azure_live_commands.py")
 BFF_TEST_ENVIRONMENT_PATH = Path("src/nac_bff/test_environment.py")
 README_PATH = Path("workflows/contracts/README.md")
 QUALITY_GATE_PATH = Path("scripts/quality_gate.py")
@@ -255,8 +256,16 @@ SOURCE_MARKERS: dict[Path, tuple[str, ...]] = {
         "nac-azure-cli-sealed-runtime-v1", "F_ADD_SEALS", "F_SEAL_WRITE",
         "clone_newuser", "clone_newns", "ms_remount", "ms_rdonly",
         "copy_private_azure_config", "validate_private_azure_profile",
+        "config_file_digest", "cloud_selection_sha256",
+        "MAX_CLOUD_SELECTION_BYTES = 4096",
+        'if (destination / "clouds.config").exists()',
         "azureProfile.json", "clouds.config", "AZURE_CONFIG_DIR",
         "AZURE_CLI_RUNTIME_ISOLATION_UNAVAILABLE",
+    ),
+    AZURE_LIVE_COMMANDS_PATH: (
+        "_exact_default_cloud_selection_digest", "_MAX_CLOUD_SELECTION_BYTES",
+        "ConfigParser", "O_NONBLOCK",
+        "AZURE_CLI_CUSTOM_CLOUD_CONFIG_REJECTED",
     ),
     BFF_TEST_ENVIRONMENT_PATH: (
         '"status": status_code', '"error": {"code": code}',
@@ -493,9 +502,18 @@ def _validate_domain(domain: dict[str, Any], errors: list[str]) -> None:
                 ),
                 "azure_cli_cloud_name_exact": "AzureCloud",
                 "azure_cli_custom_cloud_config_allowed": False,
+                "azure_cli_default_cloud_selection_metadata_mode": (
+                    "exact_AzureCloud_subscription_only_preflight_then_omitted"
+                ),
+                "azure_cli_default_cloud_selection_binding_mode": (
+                    "stable_preflight_sha256_sealed_manifest_revalidated_"
+                    "before_omission"
+                ),
+                "azure_cli_default_cloud_selection_max_bytes": 4096,
                 "azure_cli_config_mode": (
-                    "stable_nofollow_copy_to_private_mount_namespace_tmpfs_plus_"
-                    "per_process_exact_profile_binding"
+                    "stable_nofollow_exact_default_selection_preflight_then_"
+                    "omitted_from_private_mount_namespace_tmpfs_plus_per_"
+                    "process_exact_profile_binding"
                 ),
                 "azure_deployment_template_mode": (
                     "repo_compiled_reproducible_hash_bound_arm_json"
@@ -814,6 +832,19 @@ def _validate_source_and_test_markers(repo_root: Path, errors: list[str]) -> Non
             composition_tree, "_APPROVED_OWNER_ASSOCIATIONS"
         ) != tuple(OWNER_ASSOCIATIONS):
             errors.append("composition owner association allowlist differs")
+    try:
+        azure_live_tree = ast.parse(
+            (repo_root / AZURE_LIVE_COMMANDS_PATH).read_text(encoding="utf-8")
+        )
+    except (OSError, SyntaxError):
+        errors.append("Azure CLI cloud selection size binding is unavailable")
+    else:
+        if _literal_assignment(
+            azure_live_tree, "_MAX_CLOUD_SELECTION_BYTES"
+        ) != 4096:
+            errors.append(
+                "Azure CLI cloud selection size must equal contract value 4096"
+            )
     for relative in TEST_PATHS:
         if not (repo_root / relative).is_file():
             errors.append(f"missing activation test source: {relative.as_posix()}")

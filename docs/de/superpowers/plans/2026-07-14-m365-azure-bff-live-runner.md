@@ -158,8 +158,12 @@ Interpreter, Bootstrap und Manifest liegen in versiegelten `memfd`-Dateien;
 der vollständig owner-gebundene `site-packages`-Baum wird pro Datei erneut
 geprüft in einen privaten User-/Mount-Namespace kopiert und dort read-only
 remounted. Die Host-Azure-Konfiguration wird über stabile, symlinkfreie Reads
-in ein zweites privates `tmpfs` kopiert; `clouds.config` ist verboten. Jeder
-Azure-CLI-Prozess prüft dort genau ein Default-Profil mit dem freigegebenen
+in ein zweites privates `tmpfs` kopiert. Eine benutzerdefinierte
+`clouds.config` bleibt verboten; nur die exakt begrenzte Azure-CLI-Auswahl
+mit dem Abschnitt `[AzureCloud]` und ausschließlich der freigegebenen
+`subscription` wird als Preflight-Metadatum akzeptiert. Ihr stabil gemessener
+SHA-256 wird im versiegelten Runtime-Manifest gebunden, unmittelbar vor dem
+Auslassen erneut geprüft und die Datei nicht in das private `tmpfs` übernommen. Jeder Azure-CLI-Prozess prüft dort genau ein Default-Profil mit dem freigegebenen
 Tenant, der freigegebenen Subscription und `environmentName == AzureCloud`.
 Alle Extension-Quellen
 werden auf ein leeres, read-only Verzeichnis umgebunden und die dynamische

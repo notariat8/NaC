@@ -153,6 +153,23 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             any("bicep_parameters_snapshot_sha256" in error for error in errors)
         )
 
+    def test_cloud_selection_size_contract_binding_mutation_fails(
+        self,
+    ) -> None:
+        source = self.root / validator.AZURE_LIVE_COMMANDS_PATH
+        source.write_text(
+            source.read_text(encoding="utf-8").replace(
+                "_MAX_CLOUD_SELECTION_BYTES = 4096",
+                "_MAX_CLOUD_SELECTION_BYTES = 1024",
+            ),
+            encoding="utf-8",
+        )
+
+        self.assertIn(
+            "Azure CLI cloud selection size must equal contract value 4096",
+            validator.validate(self.root),
+        )
+
     def test_behavioral_verification_runs_exact_modules(self) -> None:
         completed = validator.subprocess.CompletedProcess(
             args=[], returncode=0, stdout="ok", stderr=""
@@ -239,6 +256,12 @@ class M365AzureBffLiveActivationContractTest(unittest.TestCase):
             if relative == validator.COMPOSITION_PATH:
                 source = (
                     "_APPROVED_OWNER_ASSOCIATIONS = (\"OWNER\", \"MEMBER\")\n"
+                    + "\n".join(f"# {marker}" for marker in markers)
+                    + "\n"
+                )
+            elif relative == validator.AZURE_LIVE_COMMANDS_PATH:
+                source = (
+                    "_MAX_CLOUD_SELECTION_BYTES = 4096\n"
                     + "\n".join(f"# {marker}" for marker in markers)
                     + "\n"
                 )
