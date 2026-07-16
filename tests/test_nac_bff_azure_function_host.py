@@ -193,7 +193,7 @@ class AzureBffCompositionTests(unittest.TestCase):
         )
         self.assertEqual(
             (data.status_code, data.json()),
-            (401, {"detail": "authentication required"}),
+            (401, {"status": 401, "error": {"code": "AUTHENTICATION_REQUIRED"}}),
         )
 
     def test_configured_app_stages_readiness_until_dependency_backed_success(self) -> None:
@@ -333,7 +333,7 @@ class AzureBffCompositionTests(unittest.TestCase):
             )
             elapsed = time.monotonic() - started
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json(), {"detail": "service unavailable"})
+        self.assertEqual(response.json(), {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
         self.assertLess(elapsed, 0.1)
 
     def test_invalid_correlation_id_is_not_reflected(self) -> None:

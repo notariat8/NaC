@@ -320,6 +320,10 @@ brauchen ein Owner-Gate:
 ```bash
 nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint bff-azure-readiness --format json
+nac m365 teams-sharepoint bff-azure-activation-plan --format json
+nac m365 teams-sharepoint bff-azure-activation-attestations --bff-attestation-provisioner-certificate <public-certificate-path> --format json
+nac m365 teams-sharepoint bff-azure-activate-live --owner-approved --execute-live-activation --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> --format json
+nac m365 teams-sharepoint bff-azure-activation-recovery --owner-approved --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> [--confirm-unlock] --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -371,6 +375,29 @@ Health-/Readiness-Dateien. Die redigierte Ausgabe enthält nur repo-relative
 Pfade, statische Prüfergebnisse und einen Plan mit `READY` oder `NOT_READY`;
 Dateiinhalte, Environment-Werte, Credentials, Tenant-/App-IDs und
 Provider-Rohantworten bleiben ausgeschlossen.
+
+`bff-azure-activation-attestations` misst lokal die acht nicht-geheimen Ausführungs-Digests und gibt den kombinierten Owner-Hash samt vollständiger Live-CLI-Argumentmap aus. Der Befehl liest keinen Private Key und führt keine Provider-Anfrage aus. Optionale `--bff-attestation-*`-Pfade dürfen ausschließlich die dokumentierten, fest gepinnten Ausführungspfade explizit bestätigen; jede Abweichung führt zu `NOT_READY`.
+
+`bff-azure-activation-recovery` ist die einzige Recovery-Kante für einen nach einem Finalisierungsfehler bewusst gehaltenen Lock. Ohne `--confirm-unlock` prüft sie ausschließlich die gebundenen lokalen State-, Ledger-, Evidence- und Marker-Artefakte. Das Entsperren verlangt zusätzlich `--confirm-unlock`, schreibt einen redigierten Reconcile-Marker und führt weder Providerzugriffe noch Resume, Rollback oder automatische Löschungen aus.
+
+`bff-azure-activation-plan` erzeugt den hashgebundenen Offline-Plan für
+Aktivierungs-Issue [#632](https://github.com/notariat8/NaC/issues/632);
+[#620](https://github.com/notariat8/NaC/issues/620) bleibt ausschließlich
+Parent-Kontext. `bff-azure-activate-live` akzeptiert genau einen
+unveränderlichen Kommentar des exakten GitHub-Logins `ofunk` aus Issue #632.
+Vor dem ersten Provider-Write müssen die vollständige Duplikat- und
+Breitrechteinventur, der zielglobale Lock sowie die vorgebauten und
+hashgebundenen Function-/SPFx-Pakete und Bicep-/Parameter-Snapshots bestanden
+sein. Schritt 11 prüft `healthz` vor Auth, authentifizierte Reads und Deny-
+Fälle, stellt den synthetischen Assigned-Ausgangszustand deterministisch
+wieder her und prüft `readyz` erst nach einem weiteren authentifizierten Read.
+Die Evidence einschließlich `summary` folgt exakten Feld-Allowlists.
+
+Resume ist im MVP deaktiviert: Die CLI bietet kein `--resume`; jeder
+Resume-Versuch muss vor Lock oder Providerzugriff mit
+`RESUME_DISABLED_FOR_MVP` stoppen. Freischaltung setzt providerspezifische
+read-only Reconciliation für jeden Write-Schritt und jedes Crash-Fenster sowie
+eine unabhängige Prüfung voraus.
 
 `runtime-certificate-readiness` ist offline und prüft den bevorzugten
 Runtime-Pfad `client_credentials_with_certificate`. Der Befehl liest nur

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -19,12 +20,15 @@ from nac_bff.azure_activation import (
     ENTRA_API_CONTRACT,
     FUNCTION_APP,
     MATTER_ID,
+    M365_CLI_OWNER_UPN,
+    PROVISIONER_CLIENT_ID,
     REQUESTED_ACCESS_TOKEN_VERSION,
     SITE_ID,
     SUBSCRIPTION_ID,
     TENANT_ID,
     WORKSPACE_ID,
     _activation_contract_valid,
+    _function_package_binding,
     _spfx_source_manifest_binding,
     build_azure_bff_activation_plan,
 )
@@ -57,6 +61,12 @@ class AzureBffActivationPlanTests(unittest.TestCase):
             first["bindings"]["api_client_id_binding"]["bind_before_azure_deploy"]
         )
         self.assertEqual(first["bindings"]["delegated_scope"], DELEGATED_SCOPE)
+        self.assertEqual(
+            first["bindings"]["provisioner_client_id"], PROVISIONER_CLIENT_ID
+        )
+        self.assertEqual(
+            first["bindings"]["m365_cli_owner_upn"], M365_CLI_OWNER_UPN
+        )
         self.assertEqual(first["bindings"]["entra_api_contract"], ENTRA_API_CONTRACT)
         self.assertEqual(
             first["bindings"]["entra_api_contract"]["requested_access_token_version"],
@@ -153,6 +163,29 @@ class AzureBffActivationPlanTests(unittest.TestCase):
                 "spfx/nac-bpmn-viewer/src/client.ts",
             },
         )
+
+    def test_package_binding_never_executes_manipulated_top_level_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            builder = root / "deploy/runtime/azure/nac-bff/build_package.py"
+            builder.parent.mkdir(parents=True)
+            marker = root / "top-level-code-executed"
+            source = (
+                (REPO_ROOT / "deploy/runtime/azure/nac-bff/build_package.py")
+                .read_text(encoding="utf-8")
+                + f"\nPath({str(marker)!r}).write_text('executed')\n"
+            )
+            builder.write_text(source, encoding="utf-8")
+            digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+            with patch(
+                "nac_bff.azure_activation._PACKAGE_BUILDER_SHA256", digest
+            ):
+                binding, error = _function_package_binding(root)
+
+        self.assertIsNone(binding)
+        self.assertEqual(error, "generated:nac-bff-function.zip")
+        self.assertFalse(marker.exists())
 
     def test_activation_contract_rejects_wrong_site_or_client_binding(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

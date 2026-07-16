@@ -244,29 +244,48 @@ def _post_token_form(endpoint: str, form: dict[str, str]) -> str:
 
 def _build_client_assertion(config: CertificateGraphConfig, token_endpoint: str) -> str:
     try:
-        from cryptography import x509
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.asymmetric import padding
-    except ImportError as exc:
-        raise GraphConfigError("cryptography is required for Microsoft 365 certificate authentication") from exc
-
-    try:
         key_bytes = config.private_key_path.read_bytes()
         cert_bytes = config.certificate_path.read_bytes()
     except OSError as exc:
         raise GraphConfigError(f"cannot read Microsoft 365 certificate credential file: {exc}") from exc
 
+    return _build_client_assertion_from_bytes(
+        config,
+        token_endpoint,
+        certificate_bytes=cert_bytes,
+        private_key_bytes=key_bytes,
+    )
+
+
+def _build_client_assertion_from_bytes(
+    config: CertificateGraphConfig,
+    token_endpoint: str,
+    *,
+    certificate_bytes: bytes,
+    private_key_bytes: bytes,
+) -> str:
+    try:
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import padding
+    except ImportError as exc:
+        raise GraphConfigError(
+            "cryptography is required for Microsoft 365 certificate authentication"
+        ) from exc
+
     password = config.private_key_password.encode("utf-8") if config.private_key_password else None
     try:
-        private_key = serialization.load_pem_private_key(key_bytes, **{"password": password})
+        private_key = serialization.load_pem_private_key(
+            private_key_bytes, **{"password": password}
+        )
     except (TypeError, ValueError) as exc:
         raise GraphConfigError("cannot load Microsoft 365 client private key") from exc
 
     try:
-        certificate = x509.load_pem_x509_certificate(cert_bytes)
+        certificate = x509.load_pem_x509_certificate(certificate_bytes)
     except ValueError:
         try:
-            certificate = x509.load_der_x509_certificate(cert_bytes)
+            certificate = x509.load_der_x509_certificate(certificate_bytes)
         except ValueError as exc:
             raise GraphConfigError("cannot load Microsoft 365 client certificate") from exc
 

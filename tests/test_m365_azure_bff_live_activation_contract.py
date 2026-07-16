@@ -1,0 +1,226 @@
+from __future__ import annotations
+
+import ast
+import json
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+from unittest.mock import patch
+
+import yaml
+
+from scripts import validate_m365_azure_bff_live_activation as validator
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+class M365AzureBffLiveActivationContractTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._temp = tempfile.TemporaryDirectory()
+        self.root = Path(self._temp.name)
+        self._copy_contracts()
+        self._write_valid_sources()
+
+    def tearDown(self) -> None:
+        self._temp.cleanup()
+
+    def test_structured_fixture_passes(self) -> None:
+        self.assertEqual(validator.validate(self.root), [])
+
+    def test_issue_and_acceptance_binding_mutation_fails(self) -> None:
+        payload = self._domain()
+        payload["leading_issue"] = validator.PARENT_ISSUE
+        payload["acceptance_ids"] = payload["acceptance_ids"][:-1]
+        self._write_domain(payload)
+        errors = validator.validate(self.root)
+        self.assertTrue(any("leading_issue" in error for error in errors))
+        self.assertTrue(any("acceptance_ids" in error for error in errors))
+
+    def test_toolchain_approval_binding_mutation_fails(self) -> None:
+        payload = self._domain()
+        payload["consolidated_owner_gate"][
+            "approval_payload_fields_exact"
+        ].remove("toolchain_attestations_sha256")
+        payload["consolidated_owner_gate"][
+            "toolchain_attestation_binding"
+        ]["input_fields_exact"].pop()
+        self._write_domain(payload)
+        errors = validator.validate(self.root)
+        self.assertTrue(any("approval payload fields" in error for error in errors))
+        self.assertTrue(
+            any("toolchain attestation fields" in error for error in errors)
+        )
+
+    def test_runner_summary_schema_mutation_fails(self) -> None:
+        path = self.root / validator.RUNNER_PATH
+        source = path.read_text(encoding="utf-8")
+        source = source.replace("'resume_enabled'", "'removed_resume_enabled'", 1)
+        path.write_text(source, encoding="utf-8")
+        self.assertIn(
+            "runner _SUMMARY_EVIDENCE_KEYS must equal the contract field set",
+            validator.validate(self.root),
+        )
+
+    def test_manifest_and_step_order_mutations_fail(self) -> None:
+        payload = self._domain()
+        payload["prebuilt_deployment_inputs"]["manifest_fields_exact"].pop()
+        payload["steps"][0]["order"] = 2
+        self._write_domain(payload)
+        errors = validator.validate(self.root)
+        self.assertTrue(any("prepared-input manifest" in error for error in errors))
+        self.assertTrue(any("ordered twelve-step" in error for error in errors))
+
+    def test_verification_threshold_and_negative_test_mutations_fail(self) -> None:
+        payload = self._verification()
+        payload["thresholds"]["required_summary_fields"] = 8
+        payload["negative_tests"][0]["id"] = "wrong-contract"
+        self._write_verification(payload)
+        errors = validator.validate(self.root)
+        self.assertTrue(any("thresholds" in error for error in errors))
+        self.assertTrue(any("negative tests" in error for error in errors))
+
+    def test_negative_production_classification_mutation_fails(self) -> None:
+        payload = self._verification()
+        payload["negative_tests"][0]["assert"]["stable_error_code"] = (
+            "GENERIC_ERROR"
+        )
+        self._write_verification(payload)
+        errors = validator.validate(self.root)
+        self.assertTrue(
+            any(
+                "negative test wrong_hash assertion stable_error_code"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_resume_code_and_required_source_marker_mutations_fail(self) -> None:
+        runner = self.root / validator.RUNNER_PATH
+        runner.write_text(
+            runner.read_text(encoding="utf-8").replace(
+                "RESUME_DISABLED_FOR_MVP", "RESUME_UNSUPPORTED"
+            ),
+            encoding="utf-8",
+        )
+        composition = self.root / validator.COMPOSITION_PATH
+        composition.write_text(
+            composition.read_text(encoding="utf-8").replace(
+                "bicep_parameters_snapshot_sha256", "bicep_snapshot_only"
+            ),
+            encoding="utf-8",
+        )
+        errors = validator.validate(self.root)
+        self.assertTrue(any("RESUME_DISABLED_FOR_MVP" in error for error in errors))
+        self.assertTrue(
+            any("bicep_parameters_snapshot_sha256" in error for error in errors)
+        )
+
+    def test_behavioral_verification_runs_exact_modules(self) -> None:
+        completed = validator.subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="ok", stderr=""
+        )
+        with patch.object(
+            validator.subprocess, "run", return_value=completed
+        ) as process:
+            self.assertEqual(validator._run_behavioral_tests(REPO_ROOT), [])
+        argv = process.call_args.args[0]
+        self.assertEqual(
+            argv,
+            [
+                validator.sys.executable,
+                "-m",
+                "unittest",
+                *validator.BEHAVIOR_TEST_MODULES,
+            ],
+        )
+        self.assertFalse(process.call_args.kwargs["check"])
+        self.assertEqual(process.call_args.kwargs["timeout"], 180)
+
+    def test_behavioral_verification_fails_closed_without_raw_output(self) -> None:
+        completed = validator.subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="NAC_SECRET_SENTINEL_632", stderr="token"
+        )
+        with patch.object(validator.subprocess, "run", return_value=completed):
+            errors = validator._run_behavioral_tests(REPO_ROOT)
+        self.assertEqual(len(errors), 1)
+        self.assertNotIn("NAC_SECRET_SENTINEL_632", errors[0])
+        self.assertNotIn("token", errors[0])
+
+    def test_strict_quality_gate_registers_validator(self) -> None:
+        from scripts import quality_gate
+
+        checks = {
+            check_id: command
+            for check_id, _title, command in quality_gate.build_checks("strict")
+        }
+        self.assertEqual(
+            checks["m365_azure_bff_live_activation"],
+            [
+                validator.sys.executable,
+                "scripts/validate_m365_azure_bff_live_activation.py",
+            ],
+        )
+
+    def _copy_contracts(self) -> None:
+        for relative in (validator.DOMAIN_PATH, validator.VERIFICATION_PATH):
+            destination = self.root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(REPO_ROOT / relative, destination)
+
+    def _write_valid_sources(self) -> None:
+        runner = self.root / validator.RUNNER_PATH
+        runner.parent.mkdir(parents=True, exist_ok=True)
+        runner.write_text(
+            "\n".join(
+                (
+                    f"_EVIDENCE_KEYS = {set(validator.TOP_LEVEL_FIELDS)!r}",
+                    f"_STEP_EVIDENCE_KEYS = {set(validator.STEP_FIELDS)!r}",
+                    f"_SUMMARY_EVIDENCE_KEYS = {set(validator.SUMMARY_FIELDS)!r}",
+                    f"_SUMMARY_COUNT_KEYS = {set(validator.SUMMARY_COUNT_FIELDS)!r}",
+                    'RESUME_ERROR = "RESUME_DISABLED_FOR_MVP"',
+                    'TOOLCHAIN_ERROR = "TOOLCHAIN_ATTESTATION_INVALID"',
+                    'RECOVERY_CALL = "reconcile_azure_bff_live_activation_lock"',
+                    'RECOVERY_RESULT = "FINALIZATION_LOCK_RECONCILED"',
+                )
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        ast.parse(runner.read_text(encoding="utf-8"))
+        for relative, markers in validator.SOURCE_MARKERS.items():
+            if relative == validator.RUNNER_PATH:
+                continue
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("\n".join(markers) + "\n", encoding="utf-8")
+        marker_text = "# executable behavioral fixture\n"
+        for relative in validator.TEST_PATHS:
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(marker_text, encoding="utf-8")
+
+    def _domain(self) -> dict:
+        return json.loads(
+            (self.root / validator.DOMAIN_PATH).read_text(encoding="utf-8")
+        )
+
+    def _write_domain(self, payload: dict) -> None:
+        (self.root / validator.DOMAIN_PATH).write_text(
+            json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+        )
+
+    def _verification(self) -> dict:
+        return yaml.safe_load(
+            (self.root / validator.VERIFICATION_PATH).read_text(encoding="utf-8")
+        )
+
+    def _write_verification(self, payload: dict) -> None:
+        (self.root / validator.VERIFICATION_PATH).write_text(
+            yaml.safe_dump(payload, sort_keys=False), encoding="utf-8"
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

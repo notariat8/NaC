@@ -28,6 +28,21 @@
       "evidence_name": "entra_api_client_id_binding_redacted"
     },
     "site_id": "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38",
+    "site_url": "https://funktion8.sharepoint.com/sites/NaC-Notar-01",
+    "team_id": "124f1b11-207d-4307-bfd1-ac0fd73aa90a",
+    "list_ids": {
+      "Akten": "588d4a41-f538-4f37-acfb-63ff283e0910",
+      "AufgabenFristen": "720ef1d4-8496-4ecb-aa1f-5fa4568343f2",
+      "Vertretungsfreigaben": "ec12d339-d9b7-45e9-be45-38dadd917746",
+      "AuditJournalLite": "327181c2-e402-48e9-bcfa-1f5081b45d9c"
+    },
+    "app_catalog_scope": "tenant",
+    "spfx_solution_id": "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58",
+    "spfx_web_part_id": "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21",
+    "spfx_page_name": "NaC-Testumgebung.aspx",
+    "cli_test_client_id": "c86dded6-9723-4b8d-91f2-e0fd70e25839",
+    "provisioner_client_id": "6845f6c3-896c-4e44-a50f-2a5086a13fac",
+    "m365_cli_owner_upn": "ofunk@funktion8.de",
     "entra_api_contract": {
       "sign_in_audience": "AzureADMyOrg",
       "requested_access_token_version": 2,

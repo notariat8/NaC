@@ -2,7 +2,7 @@ import * as React from 'react';
 import BpmnViewer from 'bpmn-js/lib/Viewer';
 import { syntheticWorkspaceFixture } from '../fixtures/syntheticWorkspace';
 import { NacBffWorkspace, verifyBpmnAsset } from '../services/NacBffClient';
-import styles from './NacBpmnViewer.module.scss';
+import { nacBpmnViewerStyles as styles, nacBpmnViewerStyleSheet } from './NacBpmnViewer.styles';
 
 const LOAD_TIMEOUT_MS = 10_000;
 
@@ -86,16 +86,16 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
   }, [fixture.bpmnXml, props.workspaceId, workspace]);
 
   if (props.workspaceId !== fixture.workspaceId) {
-    return <div className={styles.error}>Workspace nicht freigegeben.</div>;
+    return <ViewerError message="Workspace nicht freigegeben." />;
   }
   if (loadFailed) {
-    return <div className={styles.error}>Vorgangsdaten sind derzeit nicht verfügbar.</div>;
+    return <ViewerError message="Vorgangsdaten sind derzeit nicht verfügbar." />;
   }
   if (workspace === null) {
-    return <div className={styles.error}>Vorgangsdaten werden geladen.</div>;
+    return <ViewerError message="Vorgangsdaten werden geladen." />;
   }
   if (renderFailed) {
-    return <div className={styles.error}>Prozessmodell ist derzeit nicht verfügbar.</div>;
+    return <ViewerError message="Prozessmodell ist derzeit nicht verfügbar." />;
   }
 
   const matter = workspace.matter;
@@ -105,6 +105,7 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
 
   return (
     <main className={styles.workspace + (props.isDarkTheme ? ' ' + styles.dark : '')} data-nac-component="test-workspace">
+      <style>{nacBpmnViewerStyleSheet}</style>
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>NaC Testnotariat</span>
@@ -160,6 +161,15 @@ export function NacBpmnViewer(props: NacBpmnViewerProps): JSX.Element {
         <span>Keine Mandatsdaten</span>
       </footer>
     </main>
+  );
+}
+
+function ViewerError(props: { message: string }): JSX.Element {
+  return (
+    <>
+      <style>{nacBpmnViewerStyleSheet}</style>
+      <div className={styles.error}>{props.message}</div>
+    </>
   );
 }
 

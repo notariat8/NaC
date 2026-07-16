@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import ast
 import hashlib
-import importlib.util
+import io
 import json
 from pathlib import Path
+import stat
 import subprocess
 from typing import Any
+import zipfile
 
 from nac_bff.azure_readiness import build_azure_bff_readiness
 
@@ -42,6 +45,21 @@ SITE_ID = (
     "funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,"
     "56fc9349-e123-4252-ae2a-05d5d61c9b38"
 )
+SITE_URL = "https://funktion8.sharepoint.com/sites/NaC-Notar-01"
+TEAM_ID = "124f1b11-207d-4307-bfd1-ac0fd73aa90a"
+LIST_IDS = {
+    "Akten": "588d4a41-f538-4f37-acfb-63ff283e0910",
+    "AufgabenFristen": "720ef1d4-8496-4ecb-aa1f-5fa4568343f2",
+    "Vertretungsfreigaben": "ec12d339-d9b7-45e9-be45-38dadd917746",
+    "AuditJournalLite": "327181c2-e402-48e9-bcfa-1f5081b45d9c",
+}
+APP_CATALOG_SCOPE = "tenant"
+SPFX_SOLUTION_ID = "b7a5417c-0dd3-4e69-87c7-95adfd7e8a58"
+SPFX_WEB_PART_ID = "3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21"
+SPFX_PAGE_NAME = "NaC-Testumgebung.aspx"
+CLI_TEST_CLIENT_ID = "c86dded6-9723-4b8d-91f2-e0fd70e25839"
+PROVISIONER_CLIENT_ID = "6845f6c3-896c-4e44-a50f-2a5086a13fac"
+M365_CLI_OWNER_UPN = "ofunk@funktion8.de"
 API_CLIENT_ID_BINDING = {
     "resolution": "unique_by_app_id_uri",
     "source": "entra_application.appId",
@@ -54,8 +72,24 @@ API_CLIENT_ID_BINDING = {
 }
 
 _SPFX_ROOT = "spfx/nac-bpmn-viewer"
+_GIT_EXECUTABLE = Path("/usr/bin/git")
+_PACKAGE_BUILDER_SHA256 = (
+    "96a55638359f3e89d16ed577ccdc425754d3ecf0aed1d5c03f1282833a630f36"
+)
+_PACKAGE_HOST_FILES = ("function_app.py", "host.json", "requirements.txt")
+_PACKAGE_SOURCE_PACKAGES = ("nac_bff", "nac_m365_graph")
+_PACKAGE_SOURCE_MODULES = ("nac_mvp_test_environment.py",)
+_PACKAGE_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _ARTIFACT_PATHS = (
     "workflows/contracts/m365-azure-bff-activation-plan.contract.json",
+    "workflows/contracts/m365-azure-bff-live-activation.contract.json",
+    "src/nac_bff/azure_activation_runner.py",
+    "src/nac_bff/azure_activation_composition.py",
+    "src/nac_bff/approved_git_tree.py",
+    "src/nac_bff/azure_live_commands.py",
+    "src/nac_bff/graph_activation.py",
+    "src/nac_bff/live_synthetic_workspace.py",
+    "src/nac_cli/cli.py",
     "deploy/runtime/azure/nac-bff/infra/main.bicep",
     "deploy/runtime/azure/nac-bff/infra/compiled/main.json",
     "deploy/runtime/azure/nac-bff/build_package.py",
@@ -93,6 +127,7 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
         "direct_browser_graph_forbidden": True,
         "synthetic_data_only": True,
         "stop_on_first_error": True,
+        "source_commit_bound": bool(_source_commit(root)),
     }
     status = "READY" if all(gates.values()) else "BLOCKED"
     payload: dict[str, Any] = {
@@ -116,10 +151,24 @@ def build_azure_bff_activation_plan(repo_root: Path) -> dict[str, Any]:
             "workspace_id": WORKSPACE_ID,
             "matter_id": MATTER_ID,
             "site_id": SITE_ID,
+            "site_url": SITE_URL,
+            "team_id": TEAM_ID,
+            "list_ids": dict(LIST_IDS),
+            "app_catalog_scope": APP_CATALOG_SCOPE,
+            "spfx_solution_id": SPFX_SOLUTION_ID,
+            "spfx_web_part_id": SPFX_WEB_PART_ID,
+            "spfx_page_name": SPFX_PAGE_NAME,
+            "cli_test_client_id": CLI_TEST_CLIENT_ID,
+            "provisioner_client_id": PROVISIONER_CLIENT_ID,
+            "m365_cli_owner_upn": M365_CLI_OWNER_UPN,
             "site_grant_role": "read",
             "managed_identity_graph_role": "Sites.Selected",
         },
         "gate_results": gates,
+        "source_control": {
+            "commit": _source_commit(root),
+            "clean_tree_required_for_live_execution": True,
+        },
         "missing_artifacts": missing,
         "artifact_bindings": artifacts,
         "steps": _activation_steps(),
@@ -197,9 +246,23 @@ def _spfx_source_manifest_binding(
     if not package_root.is_dir():
         return None, "generated:spfx-source-manifest"
 
+    git = _trusted_git_executable()
+    if git is None:
+        return None, "generated:spfx-source-manifest"
     try:
         completed = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--", _SPFX_ROOT],
+            [
+                git,
+                "--no-optional-locks",
+                "-C",
+                str(root),
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--",
+                _SPFX_ROOT,
+            ],
             check=False,
             capture_output=True,
             text=True,
@@ -217,8 +280,10 @@ def _spfx_source_manifest_binding(
         path = root / relative
         if path.is_symlink():
             return None, f"symlink:{relative}"
+        if not path.exists():
+            continue
         if not path.is_file():
-            return None, f"missing:{relative}"
+            return None, f"invalid:{relative}"
         entries.append(
             {
                 "path": relative,
@@ -248,23 +313,128 @@ def _function_package_binding(
 ) -> tuple[dict[str, str] | None, str | None]:
     builder_path = root / "deploy/runtime/azure/nac-bff/build_package.py"
     try:
-        spec = importlib.util.spec_from_file_location(
-            "nac_bff_activation_package_builder",
-            builder_path,
-        )
-        if spec is None or spec.loader is None:
+        builder_source = builder_path.read_bytes()
+        if hashlib.sha256(builder_source).hexdigest() != _PACKAGE_BUILDER_SHA256:
             return None, "generated:nac-bff-function.zip"
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        package = module.build_package_bytes()
-        if module.validate_package(package):
+        tree = ast.parse(builder_source.decode("utf-8"), filename=str(builder_path))
+        if not _package_builder_ast_is_declarative(tree):
             return None, "generated:nac-bff-function.zip"
-    except (OSError, ValueError, ImportError, AttributeError):
+        package = _build_function_package_bytes(root)
+    except (OSError, UnicodeError, SyntaxError, ValueError, zipfile.BadZipFile):
         return None, "generated:nac-bff-function.zip"
     return {
         "path": "generated:nac-bff-function.zip",
         "sha256": hashlib.sha256(package).hexdigest(),
     }, None
+
+
+def _package_builder_ast_is_declarative(tree: ast.Module) -> bool:
+    expected_literals = {
+        "_HOST_FILES": _PACKAGE_HOST_FILES,
+        "_SOURCE_PACKAGES": _PACKAGE_SOURCE_PACKAGES,
+        "_SOURCE_MODULES": _PACKAGE_SOURCE_MODULES,
+        "_ZIP_TIMESTAMP": _PACKAGE_ZIP_TIMESTAMP,
+    }
+    observed: dict[str, object] = {}
+    for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.FunctionDef)):
+            continue
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            if not isinstance(target, ast.Name):
+                return False
+            if target.id in expected_literals:
+                try:
+                    observed[target.id] = ast.literal_eval(node.value)
+                except (ValueError, TypeError):
+                    return False
+                continue
+            if target.id in {
+                "_LOCKED_IMPORTS",
+                "_FORBIDDEN_REACHABLE_AUTH_MARKERS",
+            }:
+                try:
+                    ast.literal_eval(node.value)
+                except (ValueError, TypeError):
+                    return False
+                continue
+            if target.id in {
+                "HOST_ROOT",
+                "REPO_ROOT",
+                "SRC_ROOT",
+                "DEFAULT_OUTPUT",
+            }:
+                continue
+            return False
+        if isinstance(node, ast.If) and _is_main_guard(node.test):
+            continue
+        return False
+    return observed == expected_literals
+
+
+def _is_main_guard(test: ast.expr) -> bool:
+    return bool(
+        isinstance(test, ast.Compare)
+        and isinstance(test.left, ast.Name)
+        and test.left.id == "__name__"
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value == "__main__"
+    )
+
+
+def _build_function_package_bytes(root: Path) -> bytes:
+    host_root = root / "deploy/runtime/azure/nac-bff"
+    src_root = root / "src"
+    files: dict[str, bytes] = {}
+    for name in _PACKAGE_HOST_FILES:
+        files[name] = (host_root / name).read_bytes()
+    for package_name in _PACKAGE_SOURCE_PACKAGES:
+        package_root = src_root / package_name
+        for path in sorted(package_root.rglob("*.py")):
+            relative = path.relative_to(src_root).as_posix()
+            content = path.read_bytes()
+            ast.parse(content.decode("utf-8"), filename=relative)
+            files[relative] = content
+    for name in _PACKAGE_SOURCE_MODULES:
+        content = (src_root / name).read_bytes()
+        ast.parse(content.decode("utf-8"), filename=name)
+        files[name] = content
+    files["package-manifest.json"] = _function_package_manifest(files)
+
+    target = io.BytesIO()
+    with zipfile.ZipFile(target, mode="w") as package:
+        for package_path, content in sorted(files.items()):
+            info = zipfile.ZipInfo(package_path, date_time=_PACKAGE_ZIP_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            package.writestr(info, content, compresslevel=9)
+    return target.getvalue()
+
+
+def _function_package_manifest(files: dict[str, bytes]) -> bytes:
+    document = {
+        "formatVersion": 2,
+        "pythonRuntime": "3.12",
+        "deployment": {
+            "technology": "oneDeploy",
+            "remoteBuildRequired": True,
+            "remoteBuildFlag": "--build-remote true",
+            "sourcePackage": True,
+        },
+        "dependencyLock": {
+            "path": "requirements.txt",
+            "sha256": hashlib.sha256(files["requirements.txt"]).hexdigest(),
+        },
+        "files": [
+            {"path": file_path, "sha256": hashlib.sha256(content).hexdigest()}
+            for file_path, content in sorted(files.items())
+        ],
+    }
+    return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
 def _activation_contract_valid(root: Path) -> bool:
@@ -291,6 +461,16 @@ def _activation_contract_valid(root: Path) -> bool:
         "workspace_id": WORKSPACE_ID,
         "matter_id": MATTER_ID,
         "site_id": SITE_ID,
+        "site_url": SITE_URL,
+        "team_id": TEAM_ID,
+        "list_ids": LIST_IDS,
+        "app_catalog_scope": APP_CATALOG_SCOPE,
+        "spfx_solution_id": SPFX_SOLUTION_ID,
+        "spfx_web_part_id": SPFX_WEB_PART_ID,
+        "spfx_page_name": SPFX_PAGE_NAME,
+        "cli_test_client_id": CLI_TEST_CLIENT_ID,
+        "provisioner_client_id": PROVISIONER_CLIENT_ID,
+        "m365_cli_owner_upn": M365_CLI_OWNER_UPN,
         "site_grant_role": "read",
         "managed_identity_graph_role": "Sites.Selected",
     }
@@ -362,3 +542,41 @@ def _activation_steps() -> list[dict[str, Any]]:
 def _payload_hash(payload: dict[str, Any]) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(canonical.encode("ascii")).hexdigest()
+
+
+def _source_commit(root: Path) -> str:
+    git = _trusted_git_executable()
+    if git is None:
+        return ""
+    try:
+        completed = subprocess.run(
+            [git, "-C", str(root), "rev-parse", "--verify", "HEAD^{commit}"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    commit = completed.stdout.strip().lower()
+    if (
+        completed.returncode != 0
+        or len(commit) != 40
+        or any(character not in "0123456789abcdef" for character in commit)
+    ):
+        return ""
+    return commit
+
+
+def _trusted_git_executable() -> str | None:
+    try:
+        metadata = _GIT_EXECUTABLE.stat()
+    except OSError:
+        return None
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != 0
+        or metadata.st_mode & 0o022
+    ):
+        return None
+    return str(_GIT_EXECUTABLE)

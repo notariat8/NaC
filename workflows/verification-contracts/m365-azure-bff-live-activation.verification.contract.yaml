@@ -1,0 +1,425 @@
+schema_version: nac.verification-contract/v0.1
+contract_id: verification.m365_azure_bff_live_activation
+domain_contract_id: m365.azure_bff_live_activation
+title: M365 Azure BFF live activation verification
+status: OFFLINE_READY
+leading_issue: https://github.com/notariat8/NaC/issues/632
+parent_issue: https://github.com/notariat8/NaC/issues/620
+acceptance_ids:
+  - AC-632-01
+  - AC-632-02
+  - AC-632-03
+  - AC-632-04
+  - AC-632-05
+  - AC-632-06
+  - AC-632-07
+  - AC-632-08
+
+applies_when:
+  paths:
+    - src/nac_bff/azure_activation.py
+    - src/nac_bff/azure_activation_attestations.py
+    - src/nac_bff/azure_activation_composition.py
+    - src/nac_bff/azure_activation_runner.py
+    - src/nac_bff/azure_live_commands.py
+    - src/nac_bff/azure_cli_sealed_runtime.py
+    - src/nac_bff/graph_activation.py
+    - src/nac_bff/live_synthetic_workspace.py
+    - src/nac_cli/cli.py
+    - src/nac_m365_graph/spfx_site_deployment.py
+    - src/nac_m365_graph/mvp_test_environment_deploy.py
+    - tests/test_nac_bff_azure_activation*.py
+    - tests/test_nac_bff_azure_activation_attestations.py
+    - tests/test_nac_bff_azure_live_commands.py
+    - tests/test_nac_bff_graph_activation.py
+    - tests/test_nac_bff_live_synthetic_workspace.py
+    - tests/test_m365_spfx_site_deployment.py
+    - tests/test_m365_mvp_test_environment_deploy.py
+    - workflows/contracts/m365-azure-bff-activation-plan.contract.json
+    - workflows/contracts/m365-azure-bff-live-activation.contract.json
+    - workflows/verification-contracts/m365-azure-bff-live-activation.verification.contract.yaml
+    - docs/de/superpowers/plans/2026-07-14-m365-azure-bff-live-runner.md
+    - docs/en/superpowers/plans/2026-07-14-m365-azure-bff-live-runner.md
+    - docs/de/cli.md
+    - docs/en/cli.md
+    - roadmap/GANTT.md
+
+required_context:
+  always_on:
+    - AGENTS.md
+    - Issue #632 acceptance criteria and stop conditions; Issue #620 as parent MVP context
+  scoped:
+    - workflows/contracts/AGENTS.md
+    - workflows/contracts/README.md
+    - docs/AGENTS.md
+  on_demand:
+    - workflows/contracts/m365-azure-bff-activation-plan.contract.json
+    - workflows/contracts/m365-azure-bff-offline-readiness.contract.json
+    - workflows/verification-contracts/m365-azure-bff-offline-readiness.verification.json
+    - deploy/m365/teams-sharepoint/nac-mvp.provisioned.f8.json
+    - spfx/nac-bpmn-viewer/config/package-solution.json
+    - spfx/nac-bpmn-viewer/src/webparts/nacBpmnViewer/NacBpmnViewerWebPart.manifest.json
+  runtime:
+    - immutable owner approval snapshot from Issue #632 authored by exact login ofunk
+    - fresh clean-worktree, HEAD and HEAD-tree output
+    - two fresh offline activation-plan outputs
+    - target-global lock, prebuilt hash-bound deployment inputs and verified new local ledger
+    - read-only provider preflight captured by injected adapters
+    - final allowlisted redacted evidence
+
+checks:
+  - PYTHONPATH=src python3 -m unittest tests.test_nac_m365_sealed_toolchain tests.test_nac_m365_node_runtime_integrity tests.test_nac_bff_azure_activation_attestations tests.test_nac_bff_azure_activation tests.test_nac_bff_azure_activation_cli tests.test_nac_bff_azure_activation_composition tests.test_nac_bff_azure_activation_runner tests.test_nac_bff_azure_live_commands tests.test_nac_bff_graph_activation tests.test_nac_bff_live_synthetic_workspace tests.test_m365_spfx_site_deployment tests.test_m365_mvp_test_environment_deploy
+  - python3 scripts/nac.py m365 teams-sharepoint bff-azure-activation-plan --format json
+  - python3 scripts/nac.py contracts verify
+  - python3 scripts/validate_spec_traceability.py
+  - python3 scripts/validate_language_parity.py
+  - python3 scripts/validate_doc_links.py
+  - python3 scripts/nac.py doctor --profile strict
+  - git diff --check
+
+exact_bindings:
+  expected_activation_sha256:
+    source: activation_hash emitted by the offline plan from the final clean approved commit
+    pattern: "^[0-9a-f]{64}$"
+    captured_after_approved_commit_exists: true
+  toolchain_attestations_sha256:
+    pattern: "^[0-9a-f]{64}$"
+    inputs_exact:
+      - azure_cli_toolchain_sha256
+      - m365_cli_sha256
+      - m365_node_sha256
+      - build_python_sha256
+      - build_node_sha256
+      - build_npm_cli_sha256
+      - gh_cli_sha256
+      - provisioner_certificate_sha256
+    each_input_pattern: "^[0-9a-f]{64}$"
+    canonical_payload: UTF-8 JSON object containing exactly inputs_exact, sorted keys, compact separators and one trailing newline
+    combined_hash: lowercase SHA-256 of canonical_payload
+  tenant_id: 870c862b-56f7-4c9b-b0d9-f1f7d32c835c
+  subscription_id: 37cd9645-6cb9-4278-88ee-e80377cd951c
+  workspace_id: notary_team_01
+  site_url: https://funktion8.sharepoint.com/sites/NaC-Notar-01
+  site_id: funktion8.sharepoint.com,31324d31-3074-4f1c-ba45-3b3fd5f5ce97,56fc9349-e123-4252-ae2a-05d5d61c9b38
+  team_id: 124f1b11-207d-4307-bfd1-ac0fd73aa90a
+  cli_test_client_id: c86dded6-9723-4b8d-91f2-e0fd70e25839
+  list_ids:
+    Akten: 588d4a41-f538-4f37-acfb-63ff283e0910
+    AufgabenFristen: 720ef1d4-8496-4ecb-aa1f-5fa4568343f2
+    Vertretungsfreigaben: ec12d339-d9b7-45e9-be45-38dadd917746
+    AuditJournalLite: 327181c2-e402-48e9-bcfa-1f5081b45d9c
+  app_catalog_scope: tenant
+  spfx_solution_product_id: b7a5417c-0dd3-4e69-87c7-95adfd7e8a58
+  page_name: NaC-Testumgebung.aspx
+  webpart_id: 3a7bba0c-f8c4-41d6-9ec9-f8a3f7e6fa21
+  matter_id: NAC-SYN-MATTER-001
+  graph_base_url: https://graph.microsoft.com/v1.0
+  graph_application_roles_exact:
+    - Sites.Selected
+  site_roles_exact:
+    - read
+
+invariants:
+  - The only run states are OFFLINE_READY, LIVE_APPROVED, FAILED_PARTIAL and PASSED.
+  - Exactly one consolidated gate supplies owner-approved, the expected activation hash, an immutable Issue #632 approval snapshot authored by exact GitHub login ofunk, the approved commit, the approved tree, all target and permission binding hashes and exactly one toolchain_attestations_sha256 binding; Issue #620 remains parent context only.
+  - toolchain_attestations_sha256 is derived only from the exact non-secret azure_cli_toolchain_sha256, m365_cli_sha256, m365_node_sha256, build_python_sha256, build_node_sha256, build_npm_cli_sha256, gh_cli_sha256 and provisioner_certificate_sha256 digests; approval reuse with any changed individual digest or combined hash is forbidden.
+  - Final evidence and the host success receipt contain the same toolchain_attestations_sha256 value as the consolidated owner gate; a mismatch blocks PASSED.
+  - The offline bff-azure-activation-attestations command derives the eight individual digests, combined hash and live CLI argument map without provider requests or private-key reads; inventing expected values inside live execution is forbidden.
+  - Immediately before every local Python or Node subprocess, executable bytes are copied from one O_NOFOLLOW/fstat/SHA-256 verified read into sealed Linux memfds; m365_cli_sha256 and build_npm_cli_sha256 bind deterministic full runtime-module-tree manifests, while sealed CommonJS/ESM loaders reject unmanifested, symlinked, native or changed module bytes and compile or evaluate only the exact per-load O_NOFOLLOW/fstat/SHA-256 verified bytes.
+  - Azure CLI never executes the original mutable wrapper: its root-owned interpreter, bootstrap and manifest are sealed in memfds, the owner-bound full site-packages tree is copied with per-file O_NOFOLLOW/fstat/SHA-256 verification into a private user/mount namespace and remounted read-only; host Azure configuration is stably copied into a second private tmpfs, custom clouds.config is rejected, and every Azure CLI process validates exactly one default azureProfile.json subscription bound to the approved tenant, subscription and AzureCloud environment; all extension roots are replaced with one empty read-only private directory, dynamic extension installation is disabled, and unavailable namespace isolation fails before any provider request.
+  - Azure deployment consumes only the repository-committed, reproducibly compiled and hash-bound ARM JSON snapshot; runtime Bicep compilation, config-selected Bicep binaries and dynamic Bicep installation are forbidden.
+  - SPFx executes direct manifest-allowlisted Heft entrypoints without node_modules/.bin or npm lifecycle shims; the complete post-npm-ci input tree, including native-addon bytes and project configuration, is verified before, between and after build steps. Manifest-bound assets are reverified for synchronous, callback, promise-read, stream and openAsBlob reads through captured verification primordials, captured Set candidate insertion/iteration and immutable own stream listener/push/emit delivery; CommonJS _load, _cache, the extension container, resolver, prototype container, prototype load, require and prototype _compile are pinned, each concrete module receives an immutable own require before execution, and the cache container retains a null prototype before and after delegated loads, pending-to-active-to-completed cache handoff requires matching verified-loader instance provenance, and bare builtins are normalized to canonical node: IDs; .cjs, .json and .node terminals cannot be replaced, and only the manifest-verified pinned Pirates registrar may install a .js transformer that receives immediately verified bytes; verified runtime-asset copies into generated outputs reject symlink destinations and use same-directory temporary files plus atomic rename; application-visible descriptor APIs for protected runtime files fail closed, while only the separately initialized internal ESM loader thread may use its primitive descriptor for the same no-follow, stable-stat and SHA-256 verification. The exact pinned unrs resolver is forced to its WASI implementation, Worker entries receive parent-PID-pinned sealed loaders; fork additionally uses immutable preload-bound executable, manifest, loader and NODE_OPTIONS values, and every public and low-level CommonJS, ESM, ChildProcess-prototype and process-binding spawn, exec and execFile variant plus native-addon execution is rejected. Only declared output directories that were absent from the isolated source copy may be read through stable O_NOFOLLOW/fstat reads; final SPPKG ZIP metadata and the three packager-generated random XML IDs are deterministically normalized, and the final package is SHA-256 bound with two-build reproducibility evidence. Downloaded Teams ZIPs are read once through one stable descriptor, allow only canonical root entries, an exact capability-free manifest field allowlist and validated PNG icons, and bind the SHA-256 of those same validated bytes before publish or update.
+  - provisioner_certificate_sha256 binds only the public certificate; private-key content and private-key digests are forbidden in approval and evidence, while the key path must be an owner-only regular non-symlink file.
+  - The public certificate digest and the owner-only private-key file boundary are revalidated immediately before every provisioning token fetch; certificate or key drift fails before Graph access.
+  - HEAD and HEAD tree equal the approved commit and tree, and git status --porcelain=v1 --untracked-files=all is empty before approval and immediately before the first write.
+  - The offline activation plan is recomputed twice from the final clean approved commit and both activation hashes equal the owner-gate expected_activation_sha256.
+  - The final recomputation is fsynced to the ledger immediately before the first allowlisted write, with no intervening repository or plan mutation.
+  - One exclusive nonblocking host-wide target-global lock covers tenant, subscription and workspace for the entire nonterminal run across all worktrees and clones on the single execution host regardless of output path, activation hash or correlation ID; cross-host coordination is not provided.
+  - Each step emits append-only, hash-chained, atomically committed redacted ledger events; completed steps are never blindly replayed.
+  - Local hash chains and receipts are tamper-evident against accidental or cross-process mutation but are not cryptographically authentic against an attacker controlling the same OS account; this synthetic MVP makes no formal legal audit claim, which requires a separately approved external immutable or signature lane.
+  - Function, SPFx and compiled ARM inputs are read from a trusted Git archive of the exact approved commit/tree, checked against ls-tree modes, blob IDs and per-file SHA-256 digests, with symlinks, gitlinks and traversal rejected; the checkout is never a production build input. Prepared Azure and M365 artifacts are handed only to the attested provider runtime as private, read-only-by-default, filename-preserving expected-SHA-256 snapshots exposed through an inherited directory descriptor, never through their mutable source path; file mode and SHA-256 are verified again after provider return. After exact Entra create-or-reuse readback, the resolved parameter snapshot and full prepared-input manifest, including the approved-tree snapshot digest, are atomically hash-bound before the Bicep write.
+  - MVP resume is disabled and no --resume CLI option is exposed; every resume request fails before lock acquisition or provider access until provider-specific read-only reconciliation exists and is independently verified for every write step and crash window.
+  - A finalization-integrity failure retains the target-global lock and writes a redacted recovery marker; bff-azure-activation-recovery performs owner-bound local inspection by default and unlocks only with --confirm-unlock, without provider requests, resume, rollback or automatic deletion.
+  - Execution stops on the first error; an error after a write yields FAILED_PARTIAL and no later step runs.
+  - Automatic rollback, deletion, uninstall, retract, remove and purge operations are forbidden, including after failure.
+  - Microsoft Graph access uses raw REST at https://graph.microsoft.com/v1.0 only; Graph beta, SDKs, PnP and legacy SharePoint APIs are forbidden.
+  - The managed identity has exactly Sites.Selected and no additional Microsoft Graph application role; its exact target-site permission has roles exactly [read] with no duplicate grant.
+  - SPFx has no Microsoft Graph permission and requests only NaC M365 BFF/Matter.Read; tenant-wide SPFx activation is forbidden.
+  - Tenant, subscription, workspace, site URL and ID, team, all four BFF list IDs, App Catalog solution ProductId, SPFx solution, page, webpart and synthetic matter match exact_bindings.
+  - All Entra application/service-principal, managed-identity role, site-grant, App Catalog, SPFx permission/install, page/webpart and synthetic-key duplicate checks plus all broader-permission checks complete read-only before the first provider write.
+  - Zero or one exact pre-existing object is handled idempotently where the domain contract permits it; duplicate Entra apps, grants, catalog ProductIds, page webparts or synthetic canonical keys stop the run.
+  - Step 11 proves healthz before authentication, successful authenticated reads, fail-closed denied and manipulated requests, verified restoration of the captured assigned synthetic state during normal execution, another authenticated read after restoration and readyz only after that authenticated read; synchronous aborts attempt restoration in finally, but SIGKILL restoration is not claimed and any process termination before verified restoration cannot pass.
+  - Unauthorized and manipulated authenticated BFF requests return the same generic 403 ACCESS_DENIED DTO. The M365 process boundary normalizes only the exact allowlisted BFF GET plus the exact CLI 403 status message; raw nonzero stdout, stderr and response bodies are never forwarded.
+  - PASSED requires all twelve ordered steps, zero unresolved ambiguity, zero duplicate creation, exact permission readback and valid allowlisted evidence.
+
+thresholds:
+  owner_gate_count: 1
+  activation_hash_recomputations: 2
+  required_steps: 12
+  allowed_failed_steps_for_pass: 0
+  allowed_skipped_steps_for_pass: 0
+  allowed_concurrent_lock_holders: 1
+  allowed_graph_application_roles: 1
+  allowed_target_site_roles: 1
+  allowed_duplicate_exact_resources: 0
+  allowed_automatic_rollbacks: 0
+  allowed_automatic_deletions: 0
+  allowed_unknown_evidence_fields: 0
+  allowed_secret_sentinel_matches: 0
+  allowed_resume_requests_reaching_lock_or_provider: 0
+  required_static_inputs_before_first_write: 3
+  required_resolved_inputs_before_bicep_write: 4
+  required_summary_fields: 19
+
+negative_tests:
+  - id: wrong_hash
+    arrange: Pass owner-approved with an expected activation hash differing by one hexadecimal character.
+    assert:
+      state: OFFLINE_READY
+      writes_exact: 0
+      stable_error_code: ACTIVATION_HASH_MISMATCH
+      later_steps_run: false
+  - id: wrong_owner_login
+    arrange: Return a valid immutable Issue #632 comment authored by any login other than exact login ofunk.
+    assert:
+      writes_exact: 0
+      stable_error_code: APPROVAL_OWNER_MISMATCH
+      lock_acquired: false
+  - id: toolchain_attestation_tamper
+    arrange: Change any one of azure_cli_toolchain_sha256, m365_cli_sha256, m365_node_sha256, build_python_sha256, build_node_sha256, build_npm_cli_sha256, gh_cli_sha256 or provisioner_certificate_sha256, or present a combined toolchain_attestations_sha256 that differs from the immutable approval payload.
+    assert:
+      provider_read_calls_exact: 0
+      provider_write_calls_exact: 0
+      writes_exact: 0
+      stable_error_codes:
+        - TOOLCHAIN_ATTESTATION_INVALID
+        - APPROVAL_PAYLOAD_MISMATCH
+      approval_reused: false
+  - id: dirty_tree
+    arrange: Add one tracked modification or one untracked file after approval.
+    assert:
+      writes_exact: 0
+      stable_error_code: GIT_WORKTREE_NOT_CLEAN
+      lock_released_after_terminal_ledger_event: true
+  - id: wrong_target
+    arrange: Substitute any tenant, subscription, workspace, site URL or ID, team, list ID, App Catalog ProductId, page, webpart or matter binding.
+    assert:
+      writes_exact: 0
+      stable_error_code: TARGET_BINDING_MISMATCH
+      provider_write_adapter_called: false
+  - id: duplicates
+    arrange: Return two matching Entra apps or API service principals, managed-identity service principals or role assignments, site grants, App Catalog ProductIds, SPFx permission requests or installs, page webparts, or canonical synthetic rows during the full read-only prewrite inventory.
+    assert:
+      writes_exact: 0
+      stable_error_codes:
+        - API_APPLICATION_DUPLICATE
+        - API_SERVICE_PRINCIPAL_DUPLICATE
+        - UAMI_SERVICE_PRINCIPAL_DUPLICATE
+        - GRAPH_ROLE_ASSIGNMENT_DUPLICATE
+        - SITE_PERMISSION_DUPLICATE
+        - AZURE_RESOURCE_INVENTORY_DUPLICATE
+        - TEAMS_CATALOG_APP_DUPLICATE
+        - TEAMS_INSTALLATION_DUPLICATE
+        - SPFX_BFF_PERMISSION_STATE_DUPLICATE
+        - SPFX_TARGET_PAGE_DUPLICATE
+        - SPFX_PAGE_WEBPART_DUPLICATE
+        - SYNTHETIC_DUPLICATE_BLOCKED
+      automatic_deletions_exact: 0
+  - id: broader_permissions
+    arrange: Return a managed-identity Graph role in addition to Sites.Selected, a target-site role other than read, an SPFx Graph permission or an extra delegated scope.
+    assert:
+      writes_exact: 0
+      stable_error_codes:
+        - GRAPH_ROLE_ASSIGNMENT_BROADER
+        - SITE_PERMISSION_BROADER
+        - SPFX_BFF_GRANT_BROADER_OR_DUPLICATE
+        - SPFX_BFF_PERMISSION_REQUEST_UNEXPECTED
+      automatic_permission_downgrade_attempted: false
+  - id: race
+    arrange: Start two runners against the same tenant, subscription and workspace with different output paths, activation hashes or correlation IDs while the first holds the target-global lock.
+    assert:
+      successful_lock_holders_exact: 1
+      second_runner_writes_exact: 0
+      second_runner_error_code: ACTIVATION_LOCK_HELD
+      stale_lock_auto_break_attempted: false
+  - id: secret_sentinel
+    arrange: Inject NAC_SECRET_SENTINEL_632 into environment values, provider stdout and provider stderr for both success and failure paths.
+    assert:
+      sentinel_matches_in_ledger_exact: 0
+      sentinel_matches_in_evidence_exact: 0
+      stable_error_code: SENSITIVE_VALUE_REJECTED
+      raw_stdout_or_stderr_fields_exact: 0
+      evidence_validation_result: REJECT_ON_ANY_MATCH
+  - id: prepared_input_drift
+    arrange: Change one byte in a static Function/SPFx/Bicep snapshot after prewrite binding, or in the resolved Bicep parameter snapshot/full manifest after exact Entra readback and before the Bicep write.
+    assert:
+      writes_exact: 0
+      stable_error_codes:
+        - STATIC_PREPARED_INPUTS_MISMATCH
+        - PREPARED_ARTIFACT_HASH_MISMATCH
+        - PREPARED_INPUTS_MANIFEST_MISMATCH
+        - AZURE_DEPLOYMENT_INPUT_DRIFT
+      package_rebuild_attempted: false
+  - id: health_auth_ready_order
+    arrange: Make readyz run before a successful authenticated read or make healthz run after the first authentication attempt.
+    assert:
+      state: FAILED_PARTIAL
+      later_steps_run: false
+      ordered_probe_sequence_exact:
+        - assigned
+        - deputy
+        - denied
+        - tampered
+        - restore_assigned
+        - final_assigned_read
+        - readyz
+  - id: synthetic_restoration_failure
+    arrange: Mutate the bounded synthetic access state for a deputy or deny check and fail deterministic restoration to the captured assigned baseline.
+    assert:
+      state: FAILED_PARTIAL
+      readyz_called: false
+      later_steps_run: false
+      stable_error_code: SYNTHETIC_STATE_RESTORATION_FAILED
+  - id: first_error_after_write
+    arrange: Make one write succeed, atomically record it, then fail the next step.
+    assert:
+      state: FAILED_PARTIAL
+      later_steps_run: false
+      automatic_rollbacks_exact: 0
+      automatic_deletions_exact: 0
+  - id: resume_disabled
+    arrange: Supply --resume or set resume true before provider-specific read-only reconcilers exist for every write step and crash window.
+    assert:
+      state: OFFLINE_READY
+      lock_acquired: false
+      provider_read_calls_exact: 0
+      provider_write_calls_exact: 0
+      stable_error_code: RESUME_DISABLED_FOR_MVP
+
+required_evidence:
+  - Immutable Issue #632 owner approval snapshot metadata for exact login ofunk and body SHA-256, stored only as a reference hash in the final artifact; Issue #620 remains parent context.
+  - Approved commit and tree plus two matching activation-hash recomputations.
+  - Exact target-binding and permission-boundary SHA-256 values.
+  - The owner-bound toolchain_attestations_sha256 derived from exactly eight non-secret execution digests, repeated unchanged in final evidence and the host success receipt.
+  - Target-global lock acquisition and release events proving output-path, activation-hash and correlation-ID independence without host secrets or process environment.
+  - Prepared-input manifest hashes for the Function package, site-scoped SPFx package, Bicep template snapshot and resolved Bicep parameter snapshot.
+  - Hash-chained per-step ledger head and exactly twelve terminal PASSED step records for PASSED.
+  - Redacted readback proving exactly Sites.Selected, exact target-site read, exact BFF Matter.Read and zero broader permissions.
+  - Redacted read-only convergence summary proving causal deployment-input binding, zero duplicate readback and no automatic rollback or deletion; replaying provider writes is not claimed.
+  - Redacted ordered probe and restoration summary proving healthz before auth, authenticated read before readyz and verified restoration to assigned synthetic state; incomplete/crashed runs remain non-success and require read-only reconciliation plus manual recovery.
+  - Negative-test output for wrong hash, wrong owner login, toolchain_attestation_tamper, dirty tree, wrong target, duplicates, broader permissions, target-global lock race, prepared-input drift, probe order, synthetic restoration, secret sentinel, partial failure and disabled resume.
+
+host_success_receipt:
+  required_for_passed: true
+  toolchain_attestations_sha256_must_equal_owner_gate_and_evidence: true
+  fields_exact:
+    - schema_version
+    - status
+    - activation_hash
+    - approval_body_sha256
+    - approval_reference_sha256
+    - approved_commit_sha
+    - approved_tree_sha
+    - toolchain_attestations_sha256
+    - target_binding_sha256
+    - evidence_sha256
+    - final_commit_marker_sha256
+    - final_state_sha256
+    - receipt_sha256
+
+evidence_policy:
+  local_trust_boundary:
+    tamper_evident_against_accidental_or_cross_process_mutation: true
+    cryptographically_authentic_against_same_os_account: false
+    formal_legal_audit_claimed: false
+    formal_audit_requires: external_immutable_or_signature_lane
+    formal_audit_lane_status: DEFERRED_OUTSIDE_SYNTHETIC_MVP
+  top_level_allowlist_exact:
+    - schema_version
+    - status
+    - started_at_utc
+    - finished_at_utc
+    - activation_hash
+    - approved_commit_sha
+    - approved_tree_sha
+    - approval_reference_sha256
+    - toolchain_attestations_sha256
+    - target_binding_sha256
+    - permission_boundary_sha256
+    - ledger_head_sha256
+    - step_results
+    - summary
+  step_field_allowlist_exact:
+    - order
+    - id
+    - status
+    - attempt
+    - classification
+    - http_status
+    - stable_error_code
+    - request_sha256
+    - response_sha256
+    - resource_reference_sha256
+  summary_field_allowlist_exact:
+    - required_step_count
+    - passed_step_count
+    - failed_step_count
+    - duplicate_count
+    - broader_permission_count
+    - automatic_rollback_count
+    - automatic_deletion_count
+    - writes_started
+    - ledger_hash_chain_valid
+    - prebuilt_inputs_verified
+    - healthz_before_auth_passed
+    - authenticated_read_passed
+    - readyz_after_authenticated_read_passed
+    - synthetic_state_restored
+    - assigned_access_passed
+    - deputy_access_passed
+    - denied_access_passed
+    - tampered_access_passed
+    - resume_enabled
+  redacted_only: true
+  strict_unknown_field_rejection: true
+  raw_ids_urls_paths_commands_payloads_or_provider_responses_allowed: false
+  stdout_stderr_headers_tokens_cookies_environment_or_credentials_allowed: false
+  people_mandate_document_or_production_data_allowed: false
+
+pass_condition:
+  final_state: PASSED
+  all_checks_pass: true
+  owner_gate_count_exact: 1
+  approved_clean_commit_and_tree_match: true
+  both_activation_hash_recomputations_match: true
+  all_exact_targets_match: true
+  all_twelve_steps_pass_once: true
+  permissions_exactly_sites_selected_and_site_read: true
+  duplicate_count_exact: 0
+  automatic_rollback_count_exact: 0
+  automatic_deletion_count_exact: 0
+  ledger_hash_chain_valid: true
+  prebuilt_inputs_verified: true
+  toolchain_attestations_match_owner_gate_and_host_success_receipt: true
+  healthz_before_auth_passed: true
+  authenticated_read_passed: true
+  readyz_after_authenticated_read_passed: true
+  synthetic_state_restored: true
+  assigned_access_passed: true
+  deputy_access_passed: true
+  denied_access_passed: true
+  tampered_access_passed: true
+  resume_enabled: false
+  evidence_allowlist_valid: true
+  write_replay_idempotency_claimed: false
+  secret_sentinel_matches_exact: 0
+
+failure_behavior:
+  owner_gate_hash_git_target_permission_duplicate_or_lock_failure: stop_before_first_write
+  first_error_after_any_write: set_FAILED_PARTIAL_append_redacted_terminal_event_and_stop
+  resume_request: reject_before_lock_or_provider_access_with_RESUME_DISABLED_FOR_MVP
+  finalization_integrity_failure: retain_lock_and_require_owner_bound_local_reconcile
+  ledger_corruption_or_provider_ambiguity: remain_FAILED_PARTIAL_and_require_human_review
+  evidence_unknown_field_or_secret_sentinel: reject_evidence_and_block_PASSED
+  binding_change_including_any_toolchain_digest: require_new_consolidated_owner_gate
+  automatic_rollback_or_deletion: forbidden

@@ -317,6 +317,10 @@ an owner gate:
 ```bash
 nac m365 teams-sharepoint application-owner-readiness --format json
 nac m365 teams-sharepoint bff-azure-readiness --format json
+nac m365 teams-sharepoint bff-azure-activation-plan --format json
+nac m365 teams-sharepoint bff-azure-activation-attestations --bff-attestation-provisioner-certificate <public-certificate-path> --format json
+nac m365 teams-sharepoint bff-azure-activate-live --owner-approved --execute-live-activation --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> --format json
+nac m365 teams-sharepoint bff-azure-activation-recovery --owner-approved --expected-activation-hash <64-lowercase-hex> --approval-reference https://github.com/notariat8/NaC/issues/632#issuecomment-<id> --approval-body-sha256 <64-lowercase-hex> --approved-commit <40-lowercase-hex> --approved-tree <40-lowercase-hex> --azure-cli-toolchain-sha256 <64-lowercase-hex> --m365-cli-sha256 <64-lowercase-hex> --m365-node-sha256 <64-lowercase-hex> --build-python-sha256 <64-lowercase-hex> --build-node-sha256 <64-lowercase-hex> --build-npm-cli-sha256 <64-lowercase-hex> --gh-cli-sha256 <64-lowercase-hex> --provisioner-certificate-sha256 <64-lowercase-hex> --reason "<owner-reason>" --correlation-id <safe-correlation-id> [--confirm-unlock] --format json
 nac m365 teams-sharepoint runtime-certificate-expiry-monitor --runtime-certificate-warning-days 90 --runtime-certificate-critical-days 30 --format json
 nac m365 teams-sharepoint runtime-certificate-readiness --format json
 nac m365 teams-sharepoint runtime-env-bootstrap --format json
@@ -368,6 +372,27 @@ redacted output contains only repository-relative paths, static check results,
 and a `READY` or `NOT_READY` plan; file contents, environment values,
 credentials, tenant/application IDs, and raw provider responses remain
 excluded.
+
+`bff-azure-activation-attestations` locally measures the eight non-secret execution digests and emits the combined owner hash plus the complete live CLI argument map. It reads no private key and makes no provider request. Optional `--bff-attestation-*` paths may only confirm the documented pinned execution paths explicitly; any mismatch returns `NOT_READY`.
+
+`bff-azure-activation-recovery` is the only recovery edge for a lock intentionally retained after a finalization failure. Without `--confirm-unlock` it only inspects the bound local state, ledger, evidence and marker artifacts. Unlocking additionally requires `--confirm-unlock`, writes a redacted reconcile marker and performs no provider request, resume, rollback or automatic deletion.
+
+`bff-azure-activation-plan` creates the hash-bound offline plan for activation
+Issue [#632](https://github.com/notariat8/NaC/issues/632);
+[#620](https://github.com/notariat8/NaC/issues/620) remains parent context
+only. `bff-azure-activate-live` accepts exactly one immutable comment from
+exact GitHub login `ofunk` on Issue #632. Before the first provider write, the
+complete duplicate and broader-permission inventory, target-global lock, and
+prebuilt hash-bound Function/SPFx packages and Bicep/parameter snapshots must
+pass. Step 11 checks `healthz` before auth, authenticated reads and deny cases,
+deterministically restores the assigned synthetic baseline, and checks
+`readyz` only after another authenticated read. Evidence, including `summary`,
+follows exact field allowlists.
+
+Resume is disabled for the MVP: the CLI exposes no `--resume`, and every
+resume request must stop before lock or provider access with
+`RESUME_DISABLED_FOR_MVP`. Enabling it requires provider-specific read-only
+reconciliation for every write step and crash window plus independent review.
 
 `runtime-certificate-readiness` is offline and checks the preferred
 `client_credentials_with_certificate` runtime path. The command reads only

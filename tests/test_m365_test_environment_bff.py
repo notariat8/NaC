@@ -202,7 +202,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         self.assertEqual((assigned.status_code, assigned.body["matter"]["accessMode"]), (200, "assigned"))
         self.assertEqual((deputy.status_code, deputy.body["matter"]["accessMode"]), (200, "deputy"))
         self.assertEqual(denied.status_code, 403)
-        self.assertEqual(denied.body, {"detail": "access denied"})
+        self.assertEqual(denied.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
         self.assertEqual(len(assigned_graph.calls), 1)
         self.assertEqual(len(deputy_graph.calls), 1)
         self.assertEqual(denied_graph.calls, [])
@@ -229,7 +229,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
                     "nac-synthetic-deputy", policy_state=state
                 )
                 self.assertEqual(response.status_code, 403)
-                self.assertEqual(response.body, {"detail": "access denied"})
+                self.assertEqual(response.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
                 self.assertEqual(graph.calls, [])
 
     def test_deputy_decision_is_visible_only_as_access_mode(self) -> None:
@@ -256,7 +256,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.body, {"detail": "access denied"})
+        self.assertEqual(response.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
         self.assertEqual(graph.calls, [])
 
     def test_unauthorized_and_manipulated_inputs_are_externally_indistinguishable(self) -> None:
@@ -271,7 +271,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
         expected_external_response = (denied.status_code, denied.body)
 
-        self.assertEqual(expected_external_response, (403, {"detail": "access denied"}))
+        self.assertEqual(expected_external_response, (403, {"status": 403, "error": {"code": "ACCESS_DENIED"}}))
         self.assertEqual(len(denied_access.calls), 1)
         self.assertEqual(denied_graph.calls, [])
 
@@ -350,7 +350,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         base_path = f"/v1/workspaces/{ALLOWED_WORKSPACE_ID}/matters/{ALLOWED_MATTER_ID}"
         baseline = client.get(base_path, params={"purpose": ALLOWED_PURPOSE})
         expected_external_response = (baseline.status_code, baseline.json())
-        self.assertEqual(expected_external_response, (403, {"detail": "access denied"}))
+        self.assertEqual(expected_external_response, (403, {"status": 403, "error": {"code": "ACCESS_DENIED"}}))
 
         manipulated_urls = (
             f"/v1/workspaces/notary_team_02/matters/{ALLOWED_MATTER_ID}?purpose={ALLOWED_PURPOSE}",
@@ -381,7 +381,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.body, {"detail": "authentication required"})
+        self.assertEqual(response.body, {"status": 401, "error": {"code": "AUTHENTICATION_REQUIRED"}})
         self.assertEqual(access.calls, [])
         self.assertEqual(graph.calls, [])
 
@@ -397,7 +397,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.body, {"detail": "access denied"})
+        self.assertEqual(response.body, {"status": 403, "error": {"code": "ACCESS_DENIED"}})
         self.assertEqual(access.calls, [])
         self.assertEqual(graph.calls, [])
 
@@ -410,7 +410,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
             purpose=ALLOWED_PURPOSE,
         )
         self.assertEqual(missing.status_code, 404)
-        self.assertEqual(missing.body, {"detail": "resource not found"})
+        self.assertEqual(missing.body, {"status": 404, "error": {"code": "RESOURCE_NOT_FOUND"}})
 
         failed_bff, _, _ = self._bff(graph_error=RuntimeError("SENSITIVE GRAPH ERROR"))
         failed = failed_bff.get_workspace(
@@ -420,7 +420,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
             purpose=ALLOWED_PURPOSE,
         )
         self.assertEqual(failed.status_code, 503)
-        self.assertEqual(failed.body, {"detail": "service unavailable"})
+        self.assertEqual(failed.body, {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
         self.assertNotIn("SENSITIVE", json.dumps(failed.body))
 
     def test_malformed_graph_projection_fails_closed_without_raw_values(self) -> None:
@@ -436,7 +436,7 @@ class M365TestEnvironmentBffTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.body, {"detail": "service unavailable"})
+        self.assertEqual(response.body, {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}})
         self.assertNotIn("DO_NOT_EXPOSE", json.dumps(response.body))
 
     def test_fastapi_adapter_module_imports_without_fastapi_installed(self) -> None:

@@ -301,7 +301,7 @@ class RawGraphV1ClientTests(unittest.TestCase):
 
         self.assertEqual(
             (response.status_code, response.body),
-            (503, {"detail": "service unavailable"}),
+            (503, {"status": 503, "error": {"code": "SERVICE_UNAVAILABLE"}}),
         )
         self.assertEqual(client.timeouts, [3.0, 1.0])
 
