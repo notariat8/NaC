@@ -63,7 +63,9 @@ match stops the run.
 ## One Consolidated Owner Gate
 
 The runner accepts exactly one owner approval. An immutably bound comment by
-exact GitHub login `ofunk` in Issue #632 must contain exactly these fields:
+exact GitHub login `ofunk` in Issue #632 must be reported by GitHub with
+`author_association` `OWNER` or, for an organization-owned repository,
+`MEMBER`, and must contain exactly these fields:
 
 ```json
 {

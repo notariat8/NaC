@@ -64,7 +64,9 @@ als ein Treffer stoppt den Lauf.
 ## Ein konsolidiertes Owner-Gate
 
 Der Runner akzeptiert genau eine Owner-Freigabe. Ein unveränderlich gebundener
-Snapshot eines Kommentars des exakten GitHub-Logins `ofunk` in Issue #632 muss exakt folgende Felder
+Snapshot eines Kommentars des exakten GitHub-Logins `ofunk` in Issue #632 muss
+von GitHub mit `author_association` `OWNER` oder, bei einem
+Organisations-Repository, `MEMBER` bestätigt sein und exakt folgende Felder
 enthalten:
 
 ```json

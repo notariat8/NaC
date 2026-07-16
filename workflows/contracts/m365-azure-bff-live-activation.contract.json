@@ -87,6 +87,11 @@
       "url_pattern": "^https://github\\.com/notariat8/NaC/issues/632#issuecomment-[1-9][0-9]*$",
       "owner_author_required": true,
       "owner_author_login_exact": "ofunk",
+      "owner_author_associations_exact": [
+        "OWNER",
+        "MEMBER"
+      ],
+      "missing_or_malformed_author_association_behavior": "reject_with_APPROVAL_OWNER_MISMATCH",
       "database_id_required": true,
       "created_at_required": true,
       "updated_at_must_equal_created_at": true,

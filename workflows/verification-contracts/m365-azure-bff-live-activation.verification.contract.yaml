@@ -82,6 +82,10 @@ exact_bindings:
     source: activation_hash emitted by the offline plan from the final clean approved commit
     pattern: "^[0-9a-f]{64}$"
     captured_after_approved_commit_exists: true
+  owner_author_associations_exact:
+    - OWNER
+    - MEMBER
+  missing_or_malformed_author_association_behavior: reject_with_APPROVAL_OWNER_MISMATCH
   toolchain_attestations_sha256:
     pattern: "^[0-9a-f]{64}$"
     inputs_exact:
@@ -121,7 +125,7 @@ exact_bindings:
 
 invariants:
   - The only run states are OFFLINE_READY, LIVE_APPROVED, FAILED_PARTIAL and PASSED.
-  - Exactly one consolidated gate supplies owner-approved, the expected activation hash, an immutable Issue #632 approval snapshot authored by exact GitHub login ofunk, the approved commit, the approved tree, all target and permission binding hashes and exactly one toolchain_attestations_sha256 binding; Issue #620 remains parent context only.
+  - Exactly one consolidated gate supplies owner-approved, the expected activation hash, an immutable Issue #632 approval snapshot authored by exact GitHub login ofunk with GitHub author_association exactly OWNER or MEMBER, the approved commit, the approved tree, all target and permission binding hashes and exactly one toolchain_attestations_sha256 binding; Issue #620 remains parent context only.
   - toolchain_attestations_sha256 is derived only from the exact non-secret azure_cli_toolchain_sha256, m365_cli_sha256, m365_node_sha256, build_python_sha256, build_node_sha256, build_npm_cli_sha256, gh_cli_sha256 and provisioner_certificate_sha256 digests; approval reuse with any changed individual digest or combined hash is forbidden.
   - Final evidence and the host success receipt contain the same toolchain_attestations_sha256 value as the consolidated owner gate; a mismatch blocks PASSED.
   - The offline bff-azure-activation-attestations command derives the eight individual digests, combined hash and live CLI argument map without provider requests or private-key reads; inventing expected values inside live execution is forbidden.
@@ -181,6 +185,12 @@ negative_tests:
       later_steps_run: false
   - id: wrong_owner_login
     arrange: Return a valid immutable Issue #632 comment authored by any login other than exact login ofunk.
+    assert:
+      writes_exact: 0
+      stable_error_code: APPROVAL_OWNER_MISMATCH
+      lock_acquired: false
+  - id: wrong_owner_association
+    arrange: Return an immutable Issue #632 comment from exact login ofunk with any missing, malformed or non-allowlisted author_association.
     assert:
       writes_exact: 0
       stable_error_code: APPROVAL_OWNER_MISMATCH

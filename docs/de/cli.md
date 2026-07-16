@@ -385,6 +385,9 @@ Aktivierungs-Issue [#632](https://github.com/notariat8/NaC/issues/632);
 [#620](https://github.com/notariat8/NaC/issues/620) bleibt ausschließlich
 Parent-Kontext. `bff-azure-activate-live` akzeptiert genau einen
 unveränderlichen Kommentar des exakten GitHub-Logins `ofunk` aus Issue #632.
+GitHub muss dafür `author_association` exakt als `OWNER` oder bei einem
+Organisations-Repository als `MEMBER` liefern; fehlende, ungültige oder andere
+Werte stoppen vor dem ersten Provider-Write mit `APPROVAL_OWNER_MISMATCH`.
 Vor dem ersten Provider-Write müssen die vollständige Duplikat- und
 Breitrechteinventur, der zielglobale Lock sowie die vorgebauten und
 hashgebundenen Function-/SPFx-Pakete und Bicep-/Parameter-Snapshots bestanden
